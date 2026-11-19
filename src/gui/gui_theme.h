@@ -25,7 +25,7 @@
 // key and every tone derived from them recomputed (theme_roles.h's THE BRIGHT
 // MIX, bright_mixed_tones).
 struct GuiThemeTones {
-    uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea); THE TITLE TONE on the Arc page, the bright mix's target and the launcher icon's ground
+    uint32_t ground;              // the flat ground everywhere outside the well and the keys (SurfaceArea); THE TITLE TONE on the Arc page, the bright mix's target and the launcher icon's ground
     uint32_t body_face;           // THE BODY TONE, the ground of everything under the title bar (WindowBackground, our own role; a Live theme's SurfaceArea): the palette's `face`, both icon rows, the status bar, the erase, the modal pane's and the keyboard's ground
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t title_text;          // the title bar's text and drawings (TitleForeground, our own role; a Live theme's ControlForeground; paint_title_bar)

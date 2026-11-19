@@ -219,13 +219,13 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // and publish the displayed fingerprint now instead of leaving it to the
     // tick. TWO OWNERS then cover what the sync rebuild does not, named for
     // the pixels they erase: the CLOCK CELL, for the restored playhead, and
-    // ROW 8'S LANE (2026-10-22), whose active tab's name beside the clock is
-    // the tab this switch changed (paint_bottom_row_buttons_and_clock; the
-    // tab strip's lane 2026-10-18 to 2026-10-22) — the state cell's owner,
-    // the lane whole, the name moving the line after it.
+    // THE TAB NAME beside the clock on the bottom icon row, the tab this
+    // switch changed (paint_bottom_row_buttons_and_clock; its owner the
+    // bottom row's lane whole). The status bar's selection count rides the
+    // tick's comparator like every selection write (refresh_status_bar).
     viewport.kick_waveform_sync();
     viewport.invalidate_clock_area();
-    viewport.invalidate_status_cell_area();
+    viewport.invalidate_tab_name_area();
 }
 
 // THE COLUMN ENTRY — the absolute form of the deleted `p` toggle (architect

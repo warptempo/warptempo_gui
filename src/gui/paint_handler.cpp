@@ -248,7 +248,7 @@ namespace {
 //   * A DESCRIPTION IS SENTENCE CASE — a label, a field prefix, the SECOND
 //     modifier line of a tooltip (a sentence-case clause with no terminal
 //     period, a caption: "Hold for the A/B audition"; architect 2026-10-31),
-//     a card, a prompt (a question), the row-8 state cell, and a panel's row
+//     a card, a prompt (a question), the status bar's line, and a panel's row
 //     labels and prose.
 //     A TOOLTIP'S FIRST LINE IS NEVER IN THIS CLASS any more (architect
 //     2026-09-12): it named a STATE or a REASON on a handful of buttons until
@@ -1179,7 +1179,8 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // notification card's first line states the same centering on its own cap
 // (pad + cap + pad, notification_card_h_px); the hover tooltip
 // seats its own caps under one pad (paint_shift_tooltip); the title bar's
-// items center their ink on the lane (logo_item_y).
+// note centers its ink on the bar's rows and its text stands on
+// title_baseline (paint_title_bar).
 //
 // THE WELL'S TEXT TAKES ANOTHER SEAT (2026-10-09, the program is Cool Edit;
 // the flat well 2026-11-01 night): THE RULER'S DIGITS stand on an AUTHORED
@@ -1245,9 +1246,9 @@ static constexpr const char* kSegmentSeparator = " | ";
 
 // -- history_walk_line ----------------------------------------------------
 //
-// THE `h` HISTORY MODE'S ONE LINE, composed for ROW 8'S STATE CELL — the
-// clock's neighbour since 2026-08-29's fold, the one-day status bar's LEFT
-// cell before that. While the mode stands this line is what that cell is for.
+// THE `h` HISTORY MODE'S ONE LINE, composed for THE STATUS BAR'S FIRST FIELD
+// (status_bar_text; send Z, 2026-11-19). While the mode stands this line is
+// what that field is for.
 //
 // THE SHAPE (architect 2026-09-28; the GitHub segment ahead of the scale
 // since 2026-09-29): SEGMENTS SEPARATED BY ` | `, every one alike — the
@@ -1317,14 +1318,10 @@ static std::string history_walk_line(AppState& app) {
     // `ahead` / `behind` / `diverged` / `offline` / `refused`
     // (github_status_word) — in the line's own `Label: value` shape, on BOTH
     // walks, because what the view's Save key does depends on it
-    // whichever walk is showing. It stands ahead of the scale because the state cell clips
-    // at the right block (paint_bottom_row_buttons_and_clock): where the line
-    // is wider than the cell — a narrow window's; the tablet's in-view cell,
-    // ~1097 device px at its 200 % since the view hides row 8's dead buttons
-    // (2026-10-07), holds `007/114 | GitHub: checking... | Scale: [-]1.0
-    // [+]1.1` whole, ~752 px of Tahoma's advances — the cut falls on the
-    // scale, which the diff lane also shows, and never on the word Ctrl+S
-    // forks on. A visit with no clone (the local fallback)
+    // whichever walk is showing. It stands ahead of the scale because the
+    // status bar clips its line at the panel's right edge (paint_status_bar):
+    // where the line is wider than the bar the cut falls on the scale, which
+    // the diff lane also shows, and never on the word Ctrl+S forks on. A visit with no clone (the local fallback)
     // has no segment, and neither has an Unchecked status. The position
     // always precedes it (`0/0` at worst), so the separator is unconditional.
     if (history_remote_walk_available(app)) {
@@ -4945,14 +4942,14 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
     // nothing to grab.
-    // THE TRIM LANE'S OWN GROUND (the theme's `ground` (Default's 242424,
-    // materials.h), the palette's `face`), the well's margins beside it, and
-    // over it THE WELL'S FRAME's share of the lane — its top line on the
-    // lane's first row, its line under the trough on the last, its sides
-    // (paint_well_frame_rows; architect 2026-11-17, session 140); the trough
-    // and the pill render_trim_flags', on the waveform area's columns. The
-    // frame paints before the early returns below, so it stands whatever
-    // the bar does.
+    // THE TRIM LANE'S OWN GROUND (the palette's `face`, the theme's body
+    // tone `body_face`), across the panel's whole width, and over it THE
+    // WELL'S LINES' share of the lane — its top line on the lane's first
+    // row, its line under the trough on the last (paint_well_frame_rows;
+    // architect 2026-11-17, session 140; edge to edge since 2026-11-19);
+    // the trough and the pill render_trim_flags', on the waveform area's
+    // columns. The lines paint before the early returns below, so they stand
+    // whatever the bar does.
     const GuiRect trim_row = top_trim_row_area(app);
     if (trim_row.w > 0 && trim_row.h > 0) {
         paint_cell_rect(cr, trim_row, palette().face);
@@ -5104,8 +5101,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 //
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
-// row — THROUGH THE ONE-W FRAME LINE under the lane (the well's frame's,
-// 2026-11-17) TO THE CANVAS'S LAST ROW (200 %: rows 248 .. 1327, on the
+// row — THROUGH THE ONE-W LINE under the lane (the lane's foot line, one of
+// the well's lines) TO THE CANVAS'S LAST ROW (200 %: rows 248 .. 1327, on the
 // line's real span of columns: at a whole place the column left of the
 // marker's and the marker's own), so no gap stands between the apex and
 // the stem (his "small gap": the rows under the lane, 249 .. 250 today,
@@ -5693,23 +5690,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // reads (clock_invalidate_rect, main.cpp). Runs whole on every exposure
     // like the top button rows (it shapes no text beyond the clock's one
     // memoised-cell run, so a narrow clip pays almost nothing for it) and is
-    // the LAST thing this painter does: with the status chain gone the row has
-    // no other tenant.
-    //
-    // (THE STATUS CHAIN AND ITS PER-CELL EXPOSURE GATE WERE HERE UNTIL
-    // 2026-08-13, when the architect moved the chain into the TAB ROW. Deleted
-    // with it, all of them producer-less once it left: the gate itself — a
-    // cairo clip-extents test against the clock cell's right edge, whose ONE
-    // purpose was to keep the per-frame clock damage from paying for the
-    // chain's HarfBuzz shaping, and there is no shaping left on this row to
-    // pay for; the span arithmetic between that cell and the right block's
-    // left edge, with its degenerate-span early return; and the read of the
-    // painter's own TransportLeft stash as the chain's right anchor. The chain
-    // itself was deleted on 2026-08-29 and its three STATE strings are the
-    // STATE CELL right of the clock since 2026-08-29's evening fold — the
-    // STATE LINE on the row's ground since 2026-10-03 — painted by
-    // paint_bottom_row_buttons_and_clock: one string, not a ladder, and the
-    // resolved readout retired with the one-day bar that carried it.)
+    // the LAST thing this painter does: the row's other tenant is the active
+    // tab's name beside the clock, painted by the same function; the process
+    // line stands in the status bar under the row (paint_status_bar).
     paint_bottom_row_buttons_and_clock(cr);
 }
 
@@ -8696,9 +8679,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                                                 part.h);
                           });
     // THE GROUND SPLIT: the chrome erase above covers the exposed rect less
-    // the canvas's paint area; the well's margins then take the ground and
-    // the frame's lines and sides their tone (paint_canvas_column_frame,
-    // above), and the waveform area is the GPU's
+    // the canvas's paint area; the well's lines then take their tone
+    // (paint_canvas_column_frame, above), and the waveform area is the GPU's
     // (the block above): its `waveform_canvas` ground with the horizontal
     // grid over it (render_canvas, render.h's row-6 canvas paragraph) is the
     // list's first record, so a cold frame (loading, no audio, or no plate
@@ -8750,12 +8732,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     that moves nothing keeps the backbuffer and its bytes.
     {
         paint_canvas_column_frame(cr, app, canvas_paint);
-        // THE FRAME OVER THE UPPER LANES ON A FRAME WITH NO AUDIO (render.h's
-        // THE WELL'S FRAME): their own painters (paint_trim,
+        // THE WELL'S LINES OVER THE UPPER LANES ON A FRAME WITH NO AUDIO
+        // (render.h's THE WELL'S LINES): their own painters (paint_trim,
         // paint_ruler_row) run in the plate branch alone, so here, where
-        // render_background left those lanes the ground, the frame's share of
-        // the trim lane's top through the marker lane's foot is painted
-        // here, and the frame stands whole in every frame class.
+        // render_background left those lanes the body tone, the lines' share
+        // of the trim lane's top through the marker lane's foot is painted
+        // here, and the lines stand whole in every frame class.
         if (!plate_branch) {
             const GuiRect trim_lane = top_trim_row_area(app);
             const GuiRect marker_lane = top_marker_row_area(app);
@@ -8908,8 +8890,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      then THE STEREO DIVIDER'S ROWS (render_waveform_divider,
         //      2026-10-16).
         //   3. the toolbar band and the unified bottom row (its
-        //      chrome, buttons, clock, the tab's name AND state cell in one
-        //      painter),
+        //      chrome, buttons, clock and the tab's name in one painter),
+        //      and the status bar under it (paint_status_bar),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
         //      below them paints on). (THE PROGRAM'S FRAME, paint_program_frame,

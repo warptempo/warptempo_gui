@@ -191,8 +191,8 @@ namespace {
 //   THE ICON ROW, at the window's top, at its natural height;
 //   GAP 1 — flexible band of blank window ground;
 //   THE CENTERED BLOCK — the trim lane, the ruler, the marker lane, the
-//     lane's foot line, then THE WAVEFORM, the canvas's interior (the
-//     margins' ground beside it, waveform_area's x);
+//     lane's foot line, then THE WAVEFORM, the canvas's interior, every one
+//     of them across the panel's whole width (waveform_area's x 0);
 //   GAP 2 — flexible blank window ground;
 //   THE WELL'S FOOT, THE BOTTOM ICON ROW and THE STATUS BAR at the window's
 //   foot.
@@ -1400,8 +1400,8 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // culls the line by and the ruler's head stands on (the nearest lattice
 // point on the lattice's own index, displayed_column_at), so the damage is
 // built on the column the paint uses — and the box is placed at
-// area.x + col, the canvas standing the column's margin in from the window's
-// side since 2026-10-09.
+// area.x + col, the canvas's own origin (0 since the canvas went edge to
+// edge, send Z, 2026-11-19).
 GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
                                  int px_col) {
     const int col = area.x + px_col;
@@ -1478,28 +1478,17 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
                          span.x1 - span.x0, static_cast<double>(area.h)});
 }
 
-// (THE STATUS CELL'S RECT IS DELETED — 2026-08-13, when the architect moved
-// the whole status chain into the TAB ROW: "just put that text in the tab row,
-// there's plenty of space there". The bottom row's middle-right span it named
-// — from the clock's reserved cell to the arrow cluster's left edge — has no
-// tenant left, so the span arithmetic, its degenerate-order widening and its
-// two pre-first-paint fallbacks all went with it, and the painter's
-// TransportLeft stash is read by the roster machinery alone again. The chain
-// chain itself was deleted on 2026-08-29 and its two surviving STATE strings
-// are BACK ON THIS ROW that evening, as the STATE CELL right of the clock —
-// laid out with the clock and clipped at the right block's edge, damaged
-// through Viewport::invalidate_status_cell_area, which takes THE LANE WHOLE
-// because the cell reserves no width to erase inside. So the row has THREE
-// rect owners now: that one, the clock cell below and
-// Viewport::invalidate_modal_dialog_area's lane.)
+// (THE BOTTOM ROW HAS THREE RECT OWNERS: the clock cell below, the tab
+// name's lane (Viewport::invalidate_tab_name_area) and
+// Viewport::invalidate_modal_dialog_area's lane. The process line stands in
+// the status bar under the row, status_bar_area above.)
 
 // THE CLOCK'S RECT — the unified bottom row's reserved cell as the
 // painter last drew it, inside its field at the lane's left (AppState::clock_cell_rect,
 // whose stash contract is at the field). Narrow by construction: on_redraw
 // clips to the damage region, so paint_bottom_strip runs but its buttons, the
-// clock field's two vertical lines and the whole state line — a field pad
-// (kStatusPanelPadPx, paint_handler.cpp) right of the field — fall outside the
-// clip and cost nothing (the field's top and bottom lines and the ground
+// clock field's two vertical lines and the tab's name right of the field
+// fall outside the clip and cost nothing (the field's top and bottom lines and the ground
 // round them cross the box and are repainted identically under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. At a window narrow
 // enough for the right block to cover the clock, the cases the box reaches
@@ -1509,8 +1498,8 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // cell's width is the shaped widest specimen (one width at
 // every time) and only the painter knows its origin,
 // so a move of the cell moves nothing here. What stands beside the clock is THE
-// STATE CELL, whose own owner is Viewport::invalidate_status_cell_area and
-// whose rect is the lane WHOLE — see the record just above.
+// ACTIVE TAB'S NAME, whose own owner is Viewport::invalidate_tab_name_area and
+// whose rect is the lane WHOLE.
 //
 // THE CELL IS THE TIMESTAMP ALONE (architect 2026-10-18: the tab letter and
 // its pipe left it; the active tab's name stands on the ground beside the
@@ -1792,8 +1781,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     //
     // The viewport-mutation and invalidation helpers are methods on the
     // Viewport struct (viewport.{cpp,h}), including the bottom row's own
-    // three — invalidate_status_cell_area, invalidate_clock_area and
-    // invalidate_modal_dialog_area. Every other
+    // three — invalidate_tab_name_area, invalidate_clock_area and
+    // invalidate_modal_dialog_area — and the status bar's
+    // invalidate_status_bar_area. Every other
     // cross-cutting operation is a method on its owning struct constructed
     // below — stop_playback_if_playing / toggle_playback
     // on playback_lifecycle, save on save_ops, request_close /

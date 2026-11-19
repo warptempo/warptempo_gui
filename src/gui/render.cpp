@@ -273,7 +273,7 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
 // THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; flat
 // since 2026-11-01 night; the rule and its row at render.h's
 // waveform_divider, the one geometry owner): across the area's columns, ONE
-// LINE OF THE WELL'S FRAME'S TONE (the palette's `well_border`; architect
+// LINE OF THE WELL'S LINES' TONE (the palette's `well_border`; architect
 // 2026-11-17, session 140, D2) cut to the area's rows —
 // CHROME ON THE CANVAS, painted through the sink so the GL canvas draws it
 // from its list (canvas_sink.h's head). ITS OWN PASS, AFTER THE PLATE AND THE CENTER
@@ -1022,9 +1022,9 @@ void render_trim_flags(cairo_t* cr,
         viewport_end_sample, viewport_lattice_origin, waveform_area.w);
 
     // THE BAR'S COLUMNS ARE THE WAVEFORM AREA'S: waveform_area's x and its
-    // effective width, one W inside the well's frame (render.h's THE WELL'S
-    // FRAME, architect 2026-11-17, session 140), whose columns and lines
-    // paint_trim paints.
+    // effective width, the panel's whole width (send Z, 2026-11-19: edge to
+    // edge; render.h's well_columns), across which paint_trim paints the
+    // lane and its lines.
     const int lane_x   = waveform_area.x;
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
@@ -1181,9 +1181,9 @@ namespace {
 
 // THE WAVEFORM'S COLUMNS ARE THE MARKER LANE'S CLIP (architect 2026-09-26):
 // every flag box, every flag-editor box and every hit rect either publishes
-// is confined to window x in [x0, x0 + w) — the columns the waveform paints —
-// so the well's frame and the margin beside w carry nothing of a flag, and a
-// flag running past the last column is cut off at it. These two are the one
+// is confined to window x in [x0, x0 + w) — the columns the waveform paints,
+// the panel's whole width since the canvas went edge to edge (send Z,
+// 2026-11-19) — so a flag running past the last column is cut off at it. These two are the one
 // spelling of
 // that clip: the paint clip each painter sets before it draws (vertically the
 // band it paints in, unchanged) and the hit rect's matching trim, so the claim
@@ -2671,8 +2671,8 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // (installed_theme), its slug and group the list row's; then THE
     // PROGRAM'S THIRTEEN off the palette's role table (palette_file.h), THE
     // CHROME'S THIRTY-THREE off the chrome's (theme_file.h), each member the mixed
-    // row's tone, and THE PANEL'S FACE the theme's ground (the flat look,
-    // materials.h's head) — the tables covering the struct exactly
+    // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
+    // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.
     g_theme = GuiTheme{theme.slug, theme.group,
                        bright_mixed_tones(theme.tones, bright_mix)};
@@ -2915,8 +2915,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // `area` is read above, superseding "the window is the clip"): a box past
     // the left edge falls off at column 0 and a box past the last column is
     // cut off at it, exactly as the cached flag pass clips its resting boxes,
-    // so nothing of the field paints on the well's frame beside the
-    // waveform. A field cut off at an edge is READ BY
+    // so nothing of the field paints past the waveform's columns. A field cut off at an edge is READ BY
     // Esc, A PAN AND A REOPEN (architect 2026-10-25): the marker-lane editors
     // are modals since that day, so nothing pans while one stands, and the
     // open does not pan to it either — the field travels with its marker,
@@ -3175,8 +3174,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // above.
     if (ride_cells) {
         // The marker lane's last column, one past it: the waveform area's
-        // (the lane's face stands on the area's columns, inside the well's
-        // frame, render.h's THE WELL'S FRAME; this painter's clip holds the
+        // (the lane's face stands on the area's columns, the panel's whole
+        // width, render.h's well_columns; this painter's clip holds the
         // same columns).
         const int well_end = area.x + area.w;
         // The cells, off the ONE composer and the ONE measurer the flag pass
@@ -3228,7 +3227,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             // label's one box covers its gaps — the lane's flat `lane_face`
             // (paint_cues' box) through the lane's columns, the ground past
             // them, which the painter's clip (the waveform's columns, above)
-            // cuts, so nothing lands on the well's frame. ON REAL EDGES (the no-grid arc,
+            // cuts, so nothing lands past the lane's columns. ON REAL EDGES (the no-grid arc,
             // 2026-11-15): the box's two edges are the field's right edge
             // plus real offsets, filled at exact coverage over the lane's
             // cues — an opaque box laid at its real edges hides a

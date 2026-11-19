@@ -248,7 +248,7 @@ void GuiTargetRender::trigger() {
         // only with a frame damage invites): the scanner's last line goes
         // with this write, so the canvas is damaged here, not left to
         // whatever else the triggering mutator damaged (the completion
-        // damages the status cell alone).
+        // damages the status bar alone).
         viewport.invalidate_waveform_area();
     }
 
@@ -341,7 +341,7 @@ void GuiTargetRender::stamp_updating() {
         return;
     }
     app.queue_progress_text = "Updating...";
-    viewport.invalidate_status_cell_area();
+    viewport.invalidate_status_bar_area();
 }
 
 // (THE 2026-08-13 FIELD REPORT — "the Updating.../Rendering... notices are
@@ -349,9 +349,8 @@ void GuiTargetRender::stamp_updating() {
 // its damage or its painter. Its three real causes, and the honest statement
 // that the chain's move into the tab row fixed none of them, are recorded once
 // at GuiInputHandler::tick_promote_render_status, this label's archival twin;
-// the label's home is ROW 8'S STATE CELL, right of the clock, since
-// 2026-08-29's evening fold, and the three causes are untouched by that move
-// too.
+// the label stands in the status bar under the bottom icon row (send Z,
+// 2026-11-19), and the three causes are untouched by that move too.
 // The half that belongs HERE: this stamp fires only where the update really
 // becomes a wait — the synthesis miss below and trigger()'s busy branch — so
 // an update served by either synchronous reuse rung is silent by the
@@ -385,7 +384,7 @@ void GuiTargetRender::tick_updating_hold() {
     // arriving late. Guarded on the text being OURS — an archival "Rendering..."
     // in the shared slot belongs to a live session and is not ours to erase.
     if (app.queue_progress_text == "Updating...") {
-        viewport.invalidate_status_cell_area();
+        viewport.invalidate_status_bar_area();
         app.queue_progress_text.clear();
     }
 }
@@ -420,7 +419,7 @@ void GuiTargetRender::dispatch_render_now() {
         // still on screen.
         run_active_ = false;
         if (app.queue_progress_text == "Updating...") {
-            viewport.invalidate_status_cell_area();
+            viewport.invalidate_status_bar_area();
             app.queue_progress_text.clear();
         }
         return;
@@ -811,10 +810,9 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
 
     if (outcome != RenderOutcome::Success && !run_active_ &&
         app.queue_progress_text == "Updating...") {
-        // Clear status. Match finalize_render_run by invalidating the state
-        // cell before clearing queue_progress_text;
-        // invalidate_status_cell_area covers the BOTTOM ROW'S LANE WHOLE,
-        // which is the label's whole home since 2026-08-29's fold.
+        // Clear status. Match finalize_render_run by damaging the status
+        // bar's lane (invalidate_status_bar_area) before clearing
+        // queue_progress_text.
         //
         // The guard is on the text being ours, the test every clear on this
         // side takes. A cancelled preview is often drained after an archival
@@ -828,7 +826,7 @@ void GuiTargetRender::on_render_done(RenderOutcome outcome) {
         // pending — clearing here would blink the label off between two renders
         // of one continuous gesture. The run's own end clears it
         // (tick_updating_hold, once the quiet window passes with the work idle).
-        viewport.invalidate_status_cell_area();
+        viewport.invalidate_status_bar_area();
         app.queue_progress_text.clear();
     }
 
@@ -942,10 +940,9 @@ void GuiTargetRender::complete_successful_buffer(
         is_dirty_ = false;
     }
 
-    // Clear status. Match finalize_render_run by invalidating the state cell
-    // before clearing queue_progress_text; invalidate_status_cell_area covers
-    // the BOTTOM ROW'S LANE WHOLE, the label's whole home since 2026-08-29's
-    // fold. The guard is on the text being ours, the same test the four
+    // Clear status. Match finalize_render_run by damaging the status bar's
+    // lane (invalidate_status_bar_area) before clearing queue_progress_text.
+    // The guard is on the text being ours, the same test the four
     // sibling clears take (tick_updating_hold, dispatch_render_now's early
     // refusal, on_render_done's failure arm and cancel_in_flight_update): an
     // empty slot and a sibling's string — an archival "Rendering..." — are both
@@ -961,7 +958,7 @@ void GuiTargetRender::complete_successful_buffer(
     // with the work idle). Outside a run this is the ordinary immediate clear it
     // has always been.
     if (!run_active_ && app.queue_progress_text == "Updating...") {
-        viewport.invalidate_status_cell_area();
+        viewport.invalidate_status_bar_area();
         app.queue_progress_text.clear();
     }
 }
@@ -1266,7 +1263,7 @@ void GuiTargetRender::cancel_in_flight_update() {
     // to is going away, so any run goes with it and this clear is unheld.
     run_active_ = false;
     if (app.queue_progress_text == "Updating...") {
-        viewport.invalidate_status_cell_area();
+        viewport.invalidate_status_bar_area();
         app.queue_progress_text.clear();
     }
 }

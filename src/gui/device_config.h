@@ -189,14 +189,14 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            key, "around 33"; the square key of 2026-11-02
 //                            reversed 2026-11-03, the retrofit: the key's
 //                            face key_width wide (below) and this key its
-//                            height, 17 W as constructed — 70 x 34 device
-//                            px on the tablet at 35 x 17): the program's
+//                            height, 28 W as constructed — 72 x 56 device
+//                            px on the tablet at 36 x 28): the program's
 //                            key's height IN W
 //                            (one W = 2 device px on the tablet at 200 %,
 //                            render.h's scaled_px, the rebase of
 //                            2026-11-05; render.h's icon_case_h_px), the
-//                            key glyph's ink following it (9 * key_height /
-//                            17, paint_key_glyph), an integer in [10, 50] in
+//                            key's drawing a fixed 16 W box whatever the
+//                            height (paint_key_glyph), an integer in [10, 50] in
 //                            canonical spelling (parse_key_height below),
 //                            live at the settings editor's OK, the window
 //                            re-laid-out at once
@@ -208,12 +208,12 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            then; the first-run value the defaults file's
 //   key_width=<w>            THE KEY'S FACE WIDTH (architect 2026-11-06,
 //                            session 78, a tuning key like key_height):
-//                            the program's key's face width IN W, 35 W as
+//                            the program's key's face width IN W, 36 W as
 //                            constructed — 72 device px on the tablet at 200 %
 //                            (render.h's icon_case_w_px, the band's,
 //                            the bottom icon row's and every controls row's
-//                            walk reading it; the glyph follows key_height
-//                            alone), an
+//                            walk reading it; the drawing a fixed 16 W box),
+//                            an
 //                            integer in [10, 50] in canonical spelling
 //                            (parse_key_width below), live at the
 //                            settings editor's OK, the window re-laid-out
@@ -226,8 +226,8 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            value the defaults file's
 //   run_gap=<w>              THE RUN GAP (architect 2026-11-07, session 87,
 //                            his "agree", a tuning key like key_width): the
-//                            ground between two runs' faces IN W, 22 W as
-//                            constructed — 44 device px on the tablet at 200 %
+//                            ground between two runs' faces IN W, 6 W as
+//                            constructed — 12 device px on the tablet at 200 %
 //                            (render.h's program_run_gap_px, its one
 //                            reader: the band's runs, row 8's groups, the
 //                            render player's and every controls row's group
@@ -1243,7 +1243,7 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 36 W, 72
 // device px on the tablet at 200 %, is ARC'S ICON BUTTON'S WIDTH, border
 // included (architect 2026-11-18, send Z: "about 72 device pixel width").
-// The width alone moves: the glyph follows key_height (paint_key_glyph).
+// The width alone moves; the drawing is a fixed 16 W box (paint_key_glyph).
 // A width the band cannot hold brings its overflow rule — the left runs
 // clipped short of the right run, the third run's keys gone from its tail
 // (THE FIT at paint_icon_row's width math, paint_handler.cpp). The settings

@@ -499,7 +499,7 @@
 // the text, the dim text, the key dim ink, the title, sidebar and ruler
 // texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection and list
 // press texts, the cards' words, the faces, the lanes (the trim
-// bar's trough and the well's frame among them, 2026-11-17), the Arc page's
+// bar's trough and the well's lines among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,
 // the ruler's digits, the disabled key's face and border), the waveform's
 // tones, the cue outline, the inactive cue and its outline
@@ -518,7 +518,7 @@
 // canonically full white", his Live 12 reference shot). It is never proposed
 // as a role or a mix.
 //
-// Where a theme makes the lane, the trim bar's trough, the well's frame or
+// Where a theme makes the lane, the trim bar's trough, the well's lines or
 // the dim text coincide with the ground, that is Live's own number —
 // accepted, not a bug, no backstop (architect 2026-11-05; the trough
 // 2026-11-17: Live's transparent ScrollbarInnerTrack).

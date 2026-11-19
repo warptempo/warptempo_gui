@@ -175,7 +175,7 @@ SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
     // the kerning option's (2026-11-05: a run shaped with `kern` off is
     // another run of the same bytes), then the text's: the uses' faces
     // differ in the first, so the ruler's
-    // timestamps, the cue labels, the keys' legends and the title bar's runs never collide, and
+    // timestamps, the cue labels, the word buttons' words and the title bar's runs never collide, and
     // the size (the Keys face's live `osk_font_px`, 2026-10-29 night) keys a
     // committed size's runs apart from the old size's.
     constexpr std::size_t kMemoCap = 4096;

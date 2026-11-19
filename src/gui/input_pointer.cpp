@@ -2239,8 +2239,8 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         TouchNavZoomState& z = app.touch_nav_zoom;
         // The waveform's own column AS A REAL PLACE (the centroid's real
         // window x less the area's x — architect 2026-11-15, the no-grid arc:
-        // the pivot is where the fingers are, not the pixel that holds them;
-        // the canvas standing the column's margin in since 2026-10-09), CLAMPED
+        // the pivot is where the fingers are, not the pixel that holds them),
+        // CLAMPED
         // INTO THE WAVEFORM'S COLUMNS before the frame is read under it: the
         // second finger may join over chrome and the pen's previous point may
         // lie off the canvas, and the seat HOLDS this column for the phase
@@ -2989,9 +2989,7 @@ void GuiInputHandler::clear_modal_dialog_press() {
 // and the press was hit against). A press edge changes that face's fill and
 // the glyph repainted over it, both inside the face, and nothing else the
 // modal paints reads the press bits (paint_modal_dialog's row: `pressed`).
-// THE LEGEND IS NOT IN THIS RECT, unlike the roster's: the stash holds no
-// extent for it, it does not change with a press, and the stateful rows'
-// as-painted `enabled` bit needs no covering clip here — a run whose clip
+// The stateful rows' as-painted `enabled` bit needs no covering clip here — a run whose clip
 // misses a key's extent keeps the bit that key was last painted with
 // (paint_modal_dialog's carry), so the comparator still reads what is on
 // screen. EVERY EDGE OF THE TWO PRESS BITS COMES THROUGH HERE: the pointer
@@ -5118,10 +5116,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // press in the band that is not on a button a consumed nothing — which
     // includes the bare ground beside the clock, the lane's pointer-inert
     // span (the status chain that shared that ground until 2026-08-13 took
-    // no clicks either, and took none away with it) — and the STATE CELL
-    // right of the clock since 2026-08-29 is that same inert ground, a text
-    // cell with no rect of its own to test, as is the active tab's name
-    // beside the clock (2026-10-22). THE CLOCK'S FIELD IS ON A BUTTON: the
+    // no clicks either, and took none away with it) — and the active tab's
+    // name beside the clock (2026-10-22) is that same inert ground, a text
+    // with no rect of its own to test. THE CLOCK'S FIELD IS ON A BUTTON: the
     // PLAY key's second rect (architect 2026-10-27,
     // RedesignButtonFace::field), so a press there is the key's. ABOVE it stand
     // the well's foot (inert chrome, the frame's bottom line) and
@@ -5352,10 +5349,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // THE BAND IS trim_bar_press_area (main.cpp) — the exact band the
             // plain endcap/bar drags and the span-framing long press claim,
             // so every trim press reads ONE accessor: the lane's rows on the
-            // waveform area's columns. The margin's ground and the well's
-            // frame beside it in those rows are no press target and set no
-            // bound ("ground is not a button", architect 2026-11-02); a
-            // barrel press there falls to the return below.
+            // waveform area's columns, the panel's whole width since the
+            // canvas went edge to edge (send Z, 2026-11-19); a barrel press
+            // outside the band falls to the return below.
             if (inside_top) {
                 const GuiRect trim_band = trim_bar_press_area(app);
                 if (rect_contains(trim_band, x, y)) {

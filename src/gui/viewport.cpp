@@ -157,11 +157,17 @@ void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1) {
     }
 }
 
-// THE STATE CELL'S DAMAGE — the BOTTOM ROW'S lane whole (the cell is the
-// clock's neighbour since 2026-08-29's fold). The caller inventory and the
-// reasoning for taking the lane rather than a span of it are at the
-// declaration, viewport.h.
-void Viewport::invalidate_status_cell_area() {
+// THE PROCESS LINE'S DAMAGE — the status bar's lane whole (send Z,
+// 2026-11-19). The caller inventory and why the writers declare it beside
+// the tick's comparator are at the declaration, viewport.h.
+void Viewport::invalidate_status_bar_area() {
+    const GuiRect t = status_bar_area(app);
+    if (t.w > 0 && t.h > 0) gui.invalidate_region(t.x, t.y, t.w, t.h);
+}
+
+// THE TAB NAME'S DAMAGE — the bottom icon row's lane whole (the reason at
+// the declaration, viewport.h).
+void Viewport::invalidate_tab_name_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
@@ -867,7 +873,7 @@ void Viewport::apply_zoom_change(double new_zoom_level) {
     owe_clock_check();
     // Flags live in the top strip — rect positions change when the viewport
     // scale changes (the selected marker's lane text rides its flag there;
-    // row 8's state cell says nothing a zoom can move). The top strip's rows
+    // the status bar says nothing a zoom can move). The top strip's rows
     // above the viewport's lanes are owed a check (damage_window_top_rows).
     const GuiRect ts = top_strip_area(app);
     damage_window_top_rows(app, gui, ts.y + ts.h);

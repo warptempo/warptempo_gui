@@ -1301,9 +1301,11 @@ void GuiInputHandler::commit_trim_drag() {
 // (trim_bound_frame_at_x's head).
 //
 // THE SAME FRAME: another place can hold the nearest bound's own resting
-// frame (every place at and past the last frame's lands on total-1 by the
-// wall; at a zoom where a px is under a frame, a stretch of places shares
-// one), and there is nothing to write.
+// frame (in Source view, and in a Target view with no map, every place at
+// and past the last frame's lands on total-1 by the wall, while in a mapped
+// Target view the frame under the strip's right edge can stand a few frames
+// short of it — trim_bound_frame_at_x's head; at a zoom where a px is under
+// a frame, a stretch of places shares one), and there is nothing to write.
 //
 // THE PARTNER WALL: the nearest bound's new frame would land ON or PAST its
 // partner (a begin at or past the end, an end at or before the begin). WHAT

@@ -7835,7 +7835,7 @@ struct AppState {
         // PAIR, and four call sites spelling that fork is four places for a
         // Local tab to keep showing commit flags. Its readers, re-derived by
         // grep on displayed_delta: the flag cache's rebuild (waveform_cache.cpp)
-        // and the WALK LINE (row 8's state cell) — it had two more until 2026-08-18,
+        // and the WALK LINE (the status bar's first field) — it had two more until 2026-08-18,
         // the mode's diff-span framing and paint_trim's diff-span substitution,
         // both deleted with the trim bar's return to the ordinary framing.
         // The mode's OWN focus: an index into `flags` below, -1 for none. It is
@@ -8475,8 +8475,8 @@ struct AppState {
     //
     // EVENTS, not state: something happened that answers an act, or that the
     // user was not watching. What is TRUE right now (the render's progress
-    // line, the `h` walk's line) lives in ROW 8'S STATE CELL, right of the
-    // clock; what HAPPENED becomes a CARD here. The model,
+    // line, the `h` walk's line) lives in THE STATUS BAR under the bottom
+    // icon row; what HAPPENED becomes a CARD here. The model,
     // the ops and the whole inventory of what is and is not notified are at
     // notifications.h (GuiNotifications), whose head is the ruling whole.
     // This is only what the product remembers.
@@ -8625,10 +8625,8 @@ struct AppState {
     };
     BatchProgress batch_progress;
 
-    // Non-interactive status text — ROW 8'S STATE CELL, right of the clock
-    // (2026-08-29's evening fold; it was the one-day STATUS BAR's left cell
-    // that morning, the tab row's status chain ranked it tier 2 from
-    // 2026-08-13, and the bottom row carried it before that) — giving the user
+    // Non-interactive status text — THE STATUS BAR'S FIRST FIELD outside the
+    // `h` view (status_bar_text; architect 2026-11-19, send Z) — giving the user
     // visual feedback while no other UI is updating. Driven by the shared batch
     // runner (the iteration/BPM sweeps), startup loading, Ctrl+Alt+R, and
     // target-preview updates — not a manual queue. Empty means "no status".
@@ -12986,28 +12984,16 @@ std::pair<long long, long long> compute_trim_samples(
 //   painter publishes no clock cell, and a zero cell is already this owner's
 //   honest widening.
 //
-// THE ROW'S OTHER TWO TENANTS NEED NO RECT FUNCTION. The transport buttons on
+// THE ROW'S OTHER TENANTS NEED NO RECT FUNCTION. The transport buttons on
 // the left and the arrow cluster flush at the right are the button tenants:
 // their damage rides the roster machinery (the face writers and the tick
-// comparator), exactly as the top rows' buttons do. The MODAL takes the LANE
-// whole through Viewport::invalidate_modal_dialog_area, which spells
-// bottom_row_area directly.
-//
-// (THE STATUS CELL'S OWNER LIVED HERE UNTIL 2026-08-13, when the architect
-// moved the whole status chain — the four-tier ladder and the critical chip —
-// into the TAB ROW, from which the chain was deleted whole on 2026-08-29. Its
-// span ran from the clock's cell to the arrow cluster's
-// left edge and it was this row's high-traffic string owner; the three STATE
-// strings are BACK ON THIS ROW as the STATE CELL, right of the clock, under
-// Viewport::invalidate_status_cell_area — which takes the LANE WHOLE, the cell
-// reserving no width of its own to erase inside — after one day on a status
-// bar of their own. (The dirty `*` that rode the clock's run from 2026-09-09
-// retired 2026-10-05, Save's grey being the mark.) And the two
-// families that
-// shared the old owner — the string writers and the dialog editors' repaint
-// sites — are two populations with two owners, each inventoried at its own
-// declaration in viewport.h. A route touching the clock AND the state cell
-// spells both, the cell's owner covering the clock's rect as a superset.)
+// comparator), exactly as the top rows' buttons do. The ACTIVE TAB'S NAME
+// beside the clock takes the LANE whole through
+// Viewport::invalidate_tab_name_area, its extent published nowhere; the
+// MODAL takes the LANE whole through Viewport::invalidate_modal_dialog_area.
+// Both spell bottom_row_area directly. The process line is not on this row:
+// it stands in the status bar under it (status_bar_area below,
+// Viewport::invalidate_status_bar_area).
 GuiRect clock_invalidate_rect(const AppState& a);
 GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
                                  int col);

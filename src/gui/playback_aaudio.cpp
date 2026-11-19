@@ -597,7 +597,7 @@ bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
 // stream-lifetime figure rides in the same line, unsubtracted, because it is
 // the one number that says whether this device drops frames at all.
 //
-// A DIAGNOSTIC AND NOTHING MORE: no notification card, no state cell, no
+// A DIAGNOSTIC AND NOTHING MORE: no notification card, no status line, no
 // engine behaviour. An underrun is already audible, and the product cannot
 // grow the buffer without giving up the LOW_LATENCY mode the car's transport
 // wants — so the honest answer is to be able to name what happened, not to

@@ -319,7 +319,7 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     // The ruler's ticks over the ruler they stand on, the canvas (architect
     // 2026-11-17, session 140, ruling 3: the ruler wears the canvas's tone).
     const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), canvas_a);
-    // The trim bar's trough and the well's frame, each Live's role over the
+    // The trim bar's trough and the well's lines, each Live's role over the
     // ground they stand on (the head's COMPOSITED block; architect
     // 2026-11-17, session 140).
     const Rgba ground_a  = rgba(roles["SurfaceArea"]);

@@ -208,10 +208,10 @@ void Selection::set_single_selection(int idx) {
     if (idx >= 0) app.selected_markers.insert(idx);
     seat_focus((idx >= 0) ? idx : -1);
     // NO RECT OF ITS OWN (the publish's head): a selection change moves
-    // nothing on the bottom row (the state cell carries only the two
-    // progress-class strings, which no selection writes; the keys there are
-    // the tick's comparator's) and nothing in the top strip but the stems'
-    // heads, which ride the publish's same-event flag rebuild with the
+    // nothing on the bottom row (its keys are the tick's comparator's), the
+    // status bar's selection count is the tick's status bar comparator's
+    // (refresh_status_bar, main.cpp), and nothing in the top strip moves but
+    // the stems' heads, which ride the publish's same-event flag rebuild with the
     // stems.
     publish_selection_change();
 }

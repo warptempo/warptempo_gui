@@ -3276,10 +3276,11 @@ private:
     // the blink. THE DRIFT IS THE PEN'S GEOMETRY — the hover point slides
     // along the pen's axis as the tip rises — NOT THE HAND. 36 device px sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
-    // the neighboring button, a key pitch (the face and the one-W gap, 36 W,
-    // 72 device px on the tablet at key_width's default 35, 2026-11-04; a
-    // key_width under 17 W brings the pitch inside the slop while the width
-    // is tuned), and below a move to
+    // the neighboring button, a key pitch (a linked group's, the face less
+    // its shared seam, 35 W, 70 device px on the tablet at key_width's
+    // default 36 — materials.h's key_link_pitch_px; a key_width under 19 W
+    // brings the pitch inside the slop while the width is tuned), and below
+    // a move to
     // the next lit row, a list row (26 W, 52 device px — folder_overlay.h's
     // kListRowW, 2026-11-04 night), so one row's deliberate step rearms.
     // Authored in W as every chrome length, though the drift is physical:

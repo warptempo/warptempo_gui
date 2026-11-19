@@ -231,13 +231,11 @@ void GuiInputHandler::finalize_render_run() {
     // never promoted and so erases nothing here, and a sibling's string in the
     // slot is not ours to take down: a preview's
     // "Updating..." belongs to the run hold and is cleared by its own owner.
-    // Invalidate before the
-    // clear — invalidate_status_cell_area covers the bottom row's lane whole,
-    // the label's home since 2026-08-29's fold, the one-day status bar's that
-    // morning and the tab row's from 2026-08-13, and the label lives nowhere
-    // else — keeping the ordering every status-clear path takes.
+    // The status bar's lane is damaged with the clear (invalidate_status_bar_area,
+    // whose inventory and reason are at its declaration, viewport.h), the
+    // ordering every status-clear path takes.
     if (status_promoted_) {
-        viewport.invalidate_status_cell_area();
+        viewport.invalidate_status_bar_area();
         app.queue_progress_text.clear();
     }
     // Drop the deferred message and disarm the signal, both unconditionally.
@@ -344,7 +342,7 @@ void GuiInputHandler::tick_promote_render_status() {
     // without ever touching another owner's message. The batch's direct write
     // raises the same bit for the same reason.
     status_promoted_ = true;
-    viewport.invalidate_status_cell_area();
+    viewport.invalidate_status_bar_area();
 }
 
 // THE FIELD REPORT OF 2026-08-13 AND WHAT IT ACTUALLY WAS, recorded here
@@ -375,10 +373,9 @@ void GuiInputHandler::tick_promote_render_status() {
 // What the relayout DID change is where a shown label lands: the chain went
 // from the bottom-LEFT lead-in to the gutter between the clock and the arrows.
 // The 2026-08-13 move to the tab row's top right addressed that and nothing
-// else. THE LABEL'S HOME TODAY IS ROW 8'S STATE CELL, right of the clock
-// (2026-08-29's evening fold, after that morning's one-day status bar;
-// paint_bottom_row_buttons_and_clock) — the fourth surface it has had, and the three causes above
-// are untouched by every one of the moves.
+// else. THE LABEL STANDS IN THE STATUS BAR under the bottom icon row
+// (architect 2026-11-19, send Z; status_bar_text, paint_handler.cpp), and
+// the three causes above are untouched by every one of the moves.
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {
     if (app.active_audio_view == 'T' &&
@@ -913,7 +910,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     //    worker or out of the pump that ran after its kill drained, so the
     //    preview that wrote it is dead or superseded, and an explicit command
     //    outranks a derived preview.
-    viewport.invalidate_status_cell_area();
+    viewport.invalidate_status_bar_area();
     app.queue_progress_text = buf;
     status_promoted_        = true;
 

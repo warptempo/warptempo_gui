@@ -1161,19 +1161,21 @@ double gui_scale_factor();
 // 2026-10-29, on five mock sheets varying only the keys' height: "around
 // 33"; its default 33 device px again since 2026-11-03, the retrofit, the
 // square key of 2026-11-02 reversed; 34 device px since 2026-11-04 night,
-// the face 70 x 34 on the tablet at the defaults): the live value IN W
-// (scaled_px's axis;
-// 17 W = 34 device px at 200 % since the rebase of 2026-11-05), read by
-// icon_case_h_px (the case paragraph below; the face's width is the
-// `key_width` tuning key's, its seat next) and by paint_key_glyph's ink
-// size (paint_handler.cpp), nothing else. It is the scale's shape —
+// the face 70 x 34 on the tablet then): the live value IN W (scaled_px's
+// axis; 28 W = 56 device px at 200 %, Arc's icon button's height, send Z),
+// read by icon_case_h_px (the case paragraph below; the face's width is the
+// `key_width` tuning key's, its seat next) and by the line-box baselines of
+// the text on key-tall boxes — the entries (entry_baseline: the clock's,
+// the NOISE case's, the fields') and the word buttons' words, in
+// paint_handler.cpp — nothing else; the
+// key's drawing is a fixed 16 W box (paint_key_glyph). It is the scale's shape —
 // render.h's accessors are free functions with no AppState, so the value
 // lives as file-scope state in render.cpp, pushed by the same TWO
 // application points: gui_main's startup read of the device config, before
 // the window exists and so before the first layout, and the settings
 // editor's `key_height=` commit (GuiInputHandler::apply_key_height, which
 // re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_key_height); the construction state is 17 (kKeyHeightDefaultW),
+// (parse_key_height); the construction state is 28 (kKeyHeightDefaultW),
 // the first-run value the shipped defaults file's (device_config.h's THE
 // FIRST-RUN VALUES). It settles into a constexpr once he rules the
 // number, and this pair goes.
@@ -1182,15 +1184,16 @@ int  key_height_w();
 
 // THE KEY'S FACE WIDTH, THE `key_width` TUNING KEY'S SEAT (architect
 // 2026-11-06, session 78: the width a tuning key like the height until he
-// rules the number): the live value IN W (scaled_px's axis; 35 W = 70
-// device px at 200 %), read by icon_case_w_px (the case paragraph
-// below) and nothing else — every face's width, walk and hit box reads
-// that accessor; the glyph follows the height alone. The key_height seat's
+// rules the number): the live value IN W (scaled_px's axis; 36 W = 72
+// device px at 200 %, Arc's icon button's width, send Z), read by
+// icon_case_w_px (the case paragraph below) and nothing else — every face's
+// width, walk and hit box reads that accessor; the drawing is a fixed 16 W
+// box whatever the key's size (paint_key_glyph). The key_height seat's
 // shape exactly — file-scope state in render.cpp, pushed by gui_main's
 // startup read of the device config before the window exists and by the
 // settings editor's `key_width=` commit (GuiInputHandler::apply_key_width,
 // which re-lays-out at once). The grammar and the range are
-// device_config.h's (parse_key_width); the construction state is 35
+// device_config.h's (parse_key_width); the construction state is 36
 // (kKeyWidthDefaultW), the first-run value the shipped defaults file's. It settles into a constexpr once he
 // rules the number, and this pair goes.
 void set_key_width_w(int w);
@@ -1199,7 +1202,8 @@ int  key_width_w();
 // THE RUN GAP, THE `run_gap` TUNING KEY'S SEAT (architect 2026-11-07,
 // session 87, his "agree": the ground between two runs a tuning key like the
 // key's two sides until he rules the number): the live value IN W
-// (scaled_px's axis; 22 W = 44 device px at 200 %), read by
+// (scaled_px's axis; 6 W = 12 device px at 200 %, Arc's gap between toolbar
+// groups, send Z), read by
 // program_run_gap_px (the run gap paragraph below) and nothing else — every
 // reader of the gap, the band's runs, row 8's groups, the render player's
 // row and the controls rows, takes that accessor. The key_width seat's shape
@@ -1207,7 +1211,7 @@ int  key_width_w();
 // read of the device config before the window exists and by the settings
 // editor's `run_gap=` commit (GuiInputHandler::apply_run_gap, which
 // re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_run_gap); the construction state is 22 (kRunGapDefaultW), the
+// (parse_run_gap); the construction state is 6 (kRunGapDefaultW), the
 // first-run value the shipped defaults file's. It settles into a constexpr once he rules the number,
 // and this pair goes.
 void set_run_gap_w(int w);
@@ -2494,7 +2498,8 @@ inline int status_bar_lane_h_px() {
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
 // (clip_to_waveform_columns, render.cpp), the columns standing at the
-// canvas's own x since 2026-10-09 (waveform_area, the column's margin) — and
+// canvas's own x (waveform_area's, the panel's left edge since the canvas
+// went edge to edge, send Z, 2026-11-19) — and
 // the flag iterator admits a marker whose triangle can reach into them (its
 // painted reach cue_chip_paint_reach_px left of its column, 14 device px on
 // the tablet at 200 %), so a marker just past the last
@@ -3429,7 +3434,7 @@ inline std::array<WaveformWellRows, 2> waveform_well_rows(const GuiRect& area) {
 // divider's rows across `area` — between the upper well's last row and the
 // lower well's first (waveform_well_rows, so the press and the paint read
 // one geometry, waveform_divider). A press, a touch-down or a pen-down there
-// answers exactly as the canvas column's margins do: nothing
+// answers exactly as the well's other chrome does: nothing
 // (point_on_nav_surface, input_pointer.cpp, the one reader for every claim
 // — the press and the pen's and the finger's pan zone). A gesture that began
 // in a well keeps running when it crosses these rows (the drags read motion
@@ -4820,9 +4825,9 @@ void render_trim_flags(cairo_t* cr,
 // gate and every other lane consumer read, whatever the strip's lane heights
 // are. Kept as a struct rather than a bare GuiRect so the call sites
 // that thread it through keep naming what they are threading.
-// `columns_x` is THE WAVEFORM'S FIRST COLUMN in the surface's x (2026-10-09:
-// the canvas stands the column's margin in from the window's side,
-// waveform_area's x) — the origin the cues' columns are counted from and the
+// `columns_x` is THE WAVEFORM'S FIRST COLUMN in the surface's x
+// (waveform_area's x, 0 since the canvas went edge to edge, send Z,
+// 2026-11-19) — the origin the cues' columns are counted from and the
 // clip's left edge (clip_to_waveform_columns).
 struct FlagLaneRects {
     GuiRect marker_lane;

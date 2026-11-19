@@ -631,61 +631,38 @@ struct Viewport {
     // caller of this owner that relied on its rect reaching the window's
     // top is covered by one check rather than by a list.
     void invalidate_waveform_area();
-    // ROW 8'S STATE CELL — the clock's neighbour (architect 2026-08-29, the
-    // evening the STATUS BAR folded back into this row). The cell carries what
-    // is TRUE RIGHT NOW: the `h` walk line, else the process line — the
-    // render / batch progress string. So this is the owner
-    // for every route that changes what those answer — and, since 2026-09-09,
-    // for the one route that flips the CLOCK'S DIRTY SUFFIX, the lane's other
-    // piece of state (the inventory below). (The bar was the window's last lane
-    // for one day and carried a THIRD string, the resolved readout, in a right
-    // cell; that readout RETIRED WHOLE with the bar — Ctrl+Shift+J copies the
-    // value and Ctrl+J goes to the marker it came from — and every caller
-    // that served it alone went with it. The chain that ranked all three lived
-    // on the tab row from 2026-08-13 and was deleted at the bar's landing; its
-    // transient tier and its critical chip left for the notification cards the
-    // same day — notifications.h; the stack has its own owner below.)
+    // THE STATUS BAR'S DAMAGE FOR THE PROCESS LINE (architect 2026-11-19,
+    // send Z: the state line moved off the bottom icon row into the status
+    // bar under it): status_bar_area whole, the bar's own lane. The bar is
+    // STATE — the tick's comparator (refresh_status_bar, main.cpp) holds the
+    // composed string against the one last painted and damages this same
+    // lane while they differ, so no change of the bar can go stale. These
+    // calls are the WRITERS' OWN DECLARATION beside it, for one reason: the
+    // comparator runs at the tick, ahead of the pump's worker completions
+    // (GuiPlatform::pump's order), so a line a completion clears would
+    // reach the screen one beat after the picture that completion also
+    // damaged; the writer's own damage puts both in one frame. A field
+    // written elsewhere (the selection count) rides the comparator alone.
     //
-    // THE RECT IS THE BOTTOM ROW'S LANE WHOLE, not a span of it, and
-    // deliberately: the cell is the row's STATE LINE on the ground since
-    // 2026-10-03 (paint_bottom_row_buttons_and_clock), whose span only the
-    // painter knows — it starts the state air past the active tab's name
-    // after the clock's field and is clipped one run gap short of the right
-    // block, both measured at paint — so a shorter
-    // new string must erase a longer old one and there is no published box to
-    // erase inside. The lane is the bottom row's band across the window,
-    // cheaper than the arithmetic a fitted rect would need, and neither string
-    // changes at the scanner's per-frame cadence (the product's per-frame
-    // changer, the clock, is this row's too, with its own cell owner below —
-    // and this rect covers that one as a superset).
-    //
-    // THE AUTHORITATIVE CALLER INVENTORY, re-derived by grep 2026-10-22 —
-    // membership is "this route changes what the LANE shows", which is the
-    // progress line's writers and the tab switch, ten sites:
-    //   * GuiActiveViews' tab switch (2026-10-22): the active tab's name
-    //     beside the clock;
+    // THE CALLER INVENTORY — membership is "this route writes the process
+    // line, queue_progress_text", nine sites:
     //   * input_render_dispatch's THREE (the promote, the BATCH'S OWN WRITE at
-    //     each cell's dispatch — which took the park's retraction's place in
-    //     this list on 2026-09-11, a sweep's line being state — and
-    //     finalize_render_run);
+    //     each cell's dispatch, and finalize_render_run);
     //   * target_render's SIX (the "Updating..." stamp, the run hold's late
     //     clear, the TWO context-ending clears — the target view leaving and
     //     the T->S exit — the render-done failure clear and the completion
-    //     tail's guarded one);
-    // (Undo::recompute_dirty's tail was the tenth until 2026-10-05, damaging
-    // the lane for row 8's dirty `*` on a transition; the mark retired, SAVE
-    // BEING THE DIRTY MARK — architect, plain_save_actionable — and Save's
-    // face is repainted by the roster's per-tick comparator.)
-    // The `h` WALK LINE has no site of its own here and never did: it rides
-    // the mode's edges, which invalidate the whole window.
-    //
-    // Routes that damage the whole window (the loads, the resize path) cover
-    // this lane as a superset and are deliberately unlisted; the TOP STRIP AND
-    // THE WAVEFORM do not (invalidate_top_strip stops at the waveform's top
-    // and invalidate_waveform_area's rect ends at the waveform's bottom, both
-    // above this row), so a route that changes the cell AND repaints markers
-    // spells both.
-    void invalidate_status_cell_area();
+    //     tail's guarded one).
+    // The `h` WALK LINE has no site of its own here: it rides the mode's
+    // edges, which invalidate the whole window. Routes that damage the whole
+    // window (the loads, the resize path) cover this lane as a superset.
+    void invalidate_status_bar_area();
+    // THE ACTIVE TAB'S NAME beside the clock on the bottom icon row (2026-10-22;
+    // paint_bottom_row_buttons_and_clock): its one route of change is the tab
+    // switch (GuiActiveViews' switch), its one caller. THE RECT IS THE BOTTOM
+    // ROW'S LANE WHOLE, deliberately: the name's extent is measured only at
+    // paint and published nowhere, so "Tab A" and "Tab B" erase each other
+    // only inside the lane; it covers the clock cell as a superset.
+    void invalidate_tab_name_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole), WITH THE
     // MODAL FAMILY'S WHOLE AREA while a prompt, a dialog editor or the
@@ -829,17 +806,9 @@ struct Viewport {
     //     write and the trim commit's park left with 2026-11-07's ruling,
     //     session 88: no trim writer moves the playhead.)
     //
-    // (THE SECOND POPULATION — routes that landed a playhead AND rewrote the
-    // RESOLVED READOUT, each calling this owner and the readout's in turn — is
-    // GONE with the readout, 2026-08-29: the A/B tab switch, the undo/redo
-    // restore, the position nudges' shared tail and the load-in-place tail
-    // all kept their clock call above and dropped the other one (the trim
-    // commit writers did too, until their park left, 2026-11-07). Nothing on this row pairs with a second surface any more —
-    // the STATE CELL that replaced the readout is damaged by the progress
-    // line's writers (invalidate_status_cell_area
-    // above, whose inventory is authoritative), and its rect
-    // is this row's whole lane, which covers this cell as a superset where a
-    // route does spell both.) Routes that damage the
+    // ONE ROUTE SPELLS A SECOND SURFACE BESIDE THIS CELL: the A/B tab switch,
+    // whose tab name beside the clock takes invalidate_tab_name_area (above),
+    // the bottom row's lane whole, a superset of this cell. Routes that damage the
     // WHOLE window (the S/T audio-view toggle's full-window invalidate, the
     // loads, the resize path) cover this cell as a superset and are
     // deliberately unlisted; routes that funnel
@@ -931,8 +900,9 @@ struct Viewport {
 
     // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the shift
     // tooltip; the Settings dropdown beside it until 2026-10-21): it hangs
-    // outside the strip that owns it — above its owner's face, in the logo
-    // lane over the band or over the well above the bottom row — so
+    // outside the strip that owns it — under a top icon row key's face, over
+    // the well's top lanes, or above any other owner's face (tooltip_box_rect)
+    // — so
     // invalidate_top_strip alone would leave its overhang stale. The
     // hide edge damages the surface's own published rect, as painted, and
     // the show edge the rect its painter will lay the box out on

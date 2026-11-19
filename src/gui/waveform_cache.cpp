@@ -1499,9 +1499,9 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // displayed span (recovered_painter_spp, warp_frame_map_view.h) — the same
     // width the live trim pass and the hit tests use (this pass stages it
     // for them at the tail), so flags stay column-aligned with the trim/stem
-    // verticals below them. The surface stays the window's width; the
-    // columns beside the waveform's (the well's frame and the margin) stay
-    // unpainted.
+    // verticals below them. The surface is the window's width, the
+    // waveform's columns the panel's whole width (send Z, 2026-11-19: edge
+    // to edge).
     //
     // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
     // resize-window basis split). The numerator here is the DISPLAYED span
@@ -1597,9 +1597,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // read, in CLIENT coordinates: the context below is translated so that
     // client row origin_y is the surface's row 0, and the painters never see
     // the surface's own rows.
-    // THE COLUMNS' ORIGIN is the canvas's (waveform_area's x, the column's
-    // margin and the well's frame, 2026-10-09 / 2026-11-18) — a function of
-    // the scale and the window's width, both of which the fingerprint keys
+    // THE COLUMNS' ORIGIN is the canvas's (waveform_area's x, 0 since the
+    // canvas went edge to edge, send Z, 2026-11-19), kept a read so the lane
+    // rects stay the accessors' own; the window's width and the scale, which
+    // the lanes' geometry reads, are keyed by the fingerprint
     // (fp_gui_scale_percent, fp_area_w).
     const FlagLaneRects flag_lanes{top_marker_row_area(app),
                                    waveform_area(app).x};
