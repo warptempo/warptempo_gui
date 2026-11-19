@@ -1459,7 +1459,7 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 // label's horizontal lengths), as offsets from the marker's EXACT PLACE: the
 // first present segment's box opens the fill lead past the mark (the
 // label's lead less the fill's pad, render.h's cue_fill_lead_px — the lead
-// the fill's reach right, the chip's outline W and the gap, so the
+// the chip's nominal rows, one W and the gap, so the
 // boxes follow the triangle's rows, architect 2026-10-26 ~12:40; the W
 // 2026-11-04), each box
 // is ITS TEXT'S OWN WIDTH, UNROUNDED, with the fill's pad either side (the
@@ -1501,15 +1501,14 @@ static CueSegmentBoxes cue_segment_boxes(const double (&w)[3],
 enum class GuiFlagSide { Live, Added, Removed, Changed };
 
 // The resolved paint of ONE cue (the palette block's marker-lane paragraph,
-// render.h, owns the look): THE CHIP'S fill and outline (CoverageStampPass::chip,
-// the outline's triangle under the fill's), whether the cue PUBLISHES ITS
+// render.h, owns the look): THE CHIP'S fill (CoverageStampPass::chip, the
+// whole triangle, no outline), whether the cue PUBLISHES ITS
 // STEM ENTRY (every selected cue, enabled or disabled, MarkerStem: the stem
 // is the selection's), and whether its label is STRUCK (show_cue_label's bar). The
 // label's other look is the segment's own (inert, or the text tone,
 // materials.h's `text`); the selection never reaches it.
 struct FlagFace {
     GuiColor fill;
-    GuiColor outline;
     bool     stem;
     bool     struck;
 };
@@ -1525,19 +1524,22 @@ struct FlagFace {
 // THE TABLE ("stem" the publication of the cue's stem entry, MarkerStem,
 // painted wherever it is published; "label" the label's ink, the segment's
 // `inert` on the history rows):
-//   side      flag        fill          outline               stem      label      strike
-//   LIVE      DISABLED    inactive_cue  inactive_cue_outline  selected  inert      `strike`
-//   LIVE      ENABLED     cue_fill      cue_outline           selected  sidebar    `strike`
-//   REMOVED   any         inactive_cue  inactive_cue_outline  selected  inert      always
-//   ADDED     any         cue_fill      cue_outline           selected  sidebar    never
-//   CHANGED   any         cue_fill      cue_outline           selected  sidebar    per segment
+//   side      flag        fill          stem      label      strike
+//   LIVE      DISABLED    inactive_cue  selected  inert      `strike`
+//   LIVE      ENABLED     cue_fill      selected  sidebar    `strike`
+//   REMOVED   any         inactive_cue  selected  inert      always
+//   ADDED     any         cue_fill      selected  sidebar    never
+//   CHANGED   any         cue_fill      selected  sidebar    per segment
 // — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
 // THE `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys' face, mixed
 // toward the ground at the `bright_mix` key as the keys are; architect
 // 2026-11-13, session 119: "we revert the rule so that markers get accent
 // color instead of icon glyph color, and we simply tune the accent
-// itself"; theme_roles.h's THE BRIGHT MIX), in THE OUTLINE, Live's dark
-// line 111111, selected or not. EVERY
+// itself"; theme_roles.h's THE BRIGHT MIX), selected or not, WITH NO
+// OUTLINE — the fill takes the whole triangle the outline had, the chip's
+// footprint unchanged (architect 2026-11-19, send AA, RULINGS §8 / §9, his
+// pick A 2: "I would consider removing the outline of the chips because,
+// for example, the scroll bar has no outline"). EVERY
 // SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
 // 2026-11-11, session 106: "disabled markers also get the dark stem, same as
 // enabled ones") — a solid one-W `cue_outline` line from the chip's apex
@@ -1549,11 +1551,7 @@ struct FlagFace {
 // never cross, so the stem stands through a disable toggle of a selected
 // marker while its chip flips. A DISABLED CHIP IS SOLID GREY (architect
 // 2026-11-05, "disabled marker gets dim label"): the `inactive_cue` 5D5D5D
-// fill in THE DISABLED OUTLINE, `inactive_cue_outline` (architect
-// 2026-11-12, session 114, and 2026-11-13, session 121: the `cue_outline`
-// moved 75 % of the way toward Desktop, the marker lane's floor, Default's
-// 242424 — theme_roles.h's DERIVED block), the
-// playhead on it or not, selected or not; THE STEM STAYS `cue_outline` on
+// fill alone, the playhead on it or not, selected or not; THE STEM STAYS `cue_outline` on
 // every selected cue, disabled too — the stem is the one mark of the
 // selection. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect
 // 2026-11-05: "only 1 playhead onscreen ever"): the focused member has no
@@ -1597,19 +1595,16 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
     const GuiPalette& p = palette();
     switch (side) {
         case GuiFlagSide::Live:
-            return disabled
-                       ? FlagFace{p.inactive_cue, p.inactive_cue_outline,
-                                  selected, strike}
-                       : FlagFace{p.cue_fill, p.cue_outline, selected, strike};
+            return disabled ? FlagFace{p.inactive_cue, selected, strike}
+                            : FlagFace{p.cue_fill, selected, strike};
         case GuiFlagSide::Removed:
-            return FlagFace{p.inactive_cue, p.inactive_cue_outline, selected,
-                            true};
+            return FlagFace{p.inactive_cue, selected, true};
         case GuiFlagSide::Added:
-            return FlagFace{p.cue_fill, p.cue_outline, selected, false};
+            return FlagFace{p.cue_fill, selected, false};
         case GuiFlagSide::Changed:
-            return FlagFace{p.cue_fill, p.cue_outline, selected, false};
+            return FlagFace{p.cue_fill, selected, false};
     }
-    return FlagFace{p.cue_fill, p.cue_outline, selected, strike};
+    return FlagFace{p.cue_fill, selected, strike};
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
@@ -1746,8 +1741,8 @@ static CuePassScratch g_cue_pass_scratch;
 // box from its own chip's left edge to its text's end, so a later cue
 // hides an earlier label only across its own extent, a selected label as at
 // rest (2026-11-02); then
-// the chips LEFT TO RIGHT, each in its face's fill and outline
-// (resolve_flag_face, 2026-11-04); then the
+// the chips LEFT TO RIGHT, each in its face's fill, no outline
+// (resolve_flag_face; architect 2026-11-19, send AA); then the
 // publication — one FlagHitRect per cue (its label box and its
 // chip, both clipped to the waveform's columns),
 // and one MarkerStem per cue whose face says `stem` — every SELECTED cue,
@@ -1891,8 +1886,8 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // PASS'S CLIP OF THE LANE'S ROWS (above; whole pixels, the stamp's clip
     // box): EACH CHIP AT ITS MARK'S EXACT x (architect 2026-11-14, send J:
     // the window x of the cue's exact place, CueDraw::x — its apex on the
-    // stem's center), on the lane's last rows, its outer triangle under its
-    // fill's, each pixel at its exact coverage over what the labels and the
+    // stem's center), on the lane's last rows, its one triangle in its fill,
+    // each pixel at its exact coverage over what the labels and the
     // chips to its left laid there, so a right chip cuts its left
     // neighbour's as before, its edge soft. Its contract
     // holds here: the label pass above changed no clip (each struck bar's
@@ -1903,8 +1898,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     CoverageStampPass chips;
     chips.begin(cr);
     for (const CueDraw& c : cues)
-        chips.chip(static_cast<double>(x0) + c.x, chip_yb, c.face.fill,
-                   c.face.outline);
+        chips.chip(static_cast<double>(x0) + c.x, chip_yb, c.face.fill);
     chips.end();
     cairo_restore(cr);
 
@@ -2424,8 +2418,7 @@ bool cue_paints_alike(const CueDraw& a, const CueDraw& b) {
         return p.r == q.r && p.g == q.g && p.b == q.b;
     };
     if (a.x != b.x || a.segments_are_cells != b.segments_are_cells ||
-        !same_color(a.face.fill, b.face.fill) ||
-        !same_color(a.face.outline, b.face.outline))
+        !same_color(a.face.fill, b.face.fill))
         return false;
     for (std::size_t s = 0; s < a.seg.size(); ++s) {
         const CueSegment& p = a.seg[s];
@@ -2673,7 +2666,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // BRIGHT MIX: its bright tones toward its ground at `bright_mix`, every
     // tone derived from them recomputed) and copied for the word readers
     // (installed_theme), its slug and group the list row's; then THE
-    // PROGRAM'S THIRTEEN off the palette's role table (palette_file.h), THE
+    // PROGRAM'S TWELVE off the palette's role table (palette_file.h), THE
     // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the mixed
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
@@ -3061,8 +3054,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // x-height band centered in it; render.h's EDITING paragraph): the
     // band's top and height are read off the one derivation
     // (cue_band_top_px, cue_band_h_px, render.h), never re-derived here —
-    // real y, on the tablet from 9.03 to 29.97 under the lane's top, 7.03
-    // of field above and below inside the outline. THE TEXT stands on the
+    // real y, on the tablet from 6.23 to 29.09 under the lane's 32 rows,
+    // 4.23 of field above and 0.91 below inside the 2-row outlines (the 16 W
+    // lane, 2026-11-19, send AA). THE TEXT stands on the
     // lane's whole inner height, so a descender or a history bracket below
     // the baseline paints whole.
     const double band_y = static_cast<double>(lane.y) + cue_band_top_px();

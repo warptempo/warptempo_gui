@@ -265,7 +265,7 @@ bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
 // walk with the same boundary idiom.
 //
 // A CUE IS TWO RECTS (FlagHitRect, render.h, 2026-10-09): its label's box and
-// its triangle — the outlined chip's hit box (cue_chip_hit_left_px) —
+// its triangle — the chip's hit box (cue_chip_hit_left_px) —
 // and the walk follows the cue painter's own order
 // (render.cpp's paint_cues, render.h's marker-lane paragraph): THE CHIPS
 // paint last, left to right, so a press on any chip answers the

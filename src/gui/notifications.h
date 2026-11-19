@@ -748,65 +748,15 @@ inline std::string lowercase_initial(std::string_view s) {
     return out;
 }
 
-// The card's width is its content's, clamped to [this, kNotificationMaxWidthPx
-// below]. Authored px, scaled like every other length.
+// THE CARD'S WIDTH IS ITS CONTENT'S, UNDER THE CEILING BELOW AND NO FLOOR
+// (architect 2026-11-19, send AA: "agree" — RULINGS §8, each card its text's
+// width, notifyd's way, as the approved picture tmp/sendZ/VIEW/Z_07 drew the
+// struck card at its content's 363 device px): the box is the chrome plus the
+// whole sentence's shaped width, ceiled to the whole px that contains it
+// (paint_notifications), clamped only by notification_card_max_w_px. Two
+// sentences of different widths are two widths of card ("There is nothing to
+// undo" and "…to redo" a few px apart included).
 //
-// THE FLOOR IS THE UNDO CARD'S OWN WIDTH (architect 2026-09-01): he steps undo
-// and redo deliberately as a sanity check, and the two walls' cards — "There
-// is nothing to undo" and "There is nothing to redo", the same sentence but
-// for one letter — came out a few pixels apart and the difference read as a
-// flicker between two presses of the same shape. Raising the floor above BOTH
-// makes them one card: the clamp answers the floor for every sentence shorter
-// than it, so the pair, and every other short refusal with them, paints at one
-// width.
-//
-// THE MEASUREMENT, at 100 % in the card's own face (the one sans at 16 px,
-// Liberation Sans then): "There is nothing to
-// undo" shapes to 172.73 px
-// and "…to redo" to 169.16, and the card then added its chrome — four pads
-// and two button boxes, 4 x 7 + 2 x 32 = 92 — for 265 px and 262 px (the
-// chrome of the day the floor was measured; today's is below).
-// 272 was the next multiple of 8 above the wider of the two, which is the
-// number this constant is: a clean authored round-up with 7 px of air over the
-// sentence that set it, so a face retune of a pixel or two does not silently
-// put the pair back at two widths. THE X'S RETIREMENT (2026-10-01) SHRANK THE
-// CHROME AND MOVED NOT THE FLOOR, and neither did the text's matched right
-// air the same night: today's chrome is three pads, the glyph's inset and
-// the glyph's one box, 3 x 7 + 5 + 32 = 58 (the derivation at the painter,
-// paint_notifications), which put the pair at 231 px and 228 px, both under
-// 272, so the clamp still answers the floor for both and they still paint
-// at one width; the width rule was not part of either ruling and the floor
-// keeps the number it was measured at. NOR DID THE GLYPH'S RETURN
-// (2026-10-24): the chrome ring + pad + the glyph's seat + the gap + pad +
-// ring is 1 + 18 + 34 + 10 + 18 + 1 = 82 device px on the tablet, and the pair
-// shapes to about 237 and 232 device px in the body face's 22, both near
-// 320 against the floor's 594. NOR DID THE FACES' CHANGES: under
-// the body face at the recorded Windows metrics less the tracking
-// (gui_font.h; 2026-10-06) the pair shapes through the live chokepoint to
-// 118.7 and 116.1 Windows px in Tahoma at every gui_scale, which with the
-// 40 px of chrome below is 159 and 156, both under the floor, which still
-// answers for both (measured 2026-10-06). AUTHORED (WINDOWS) PX, so the
-// relation holds at every gui_scale — the sentence and the floor scale together
-// through scaled_px.
-//
-// IT DOES NOT MEET THE CEILING: kNotificationMaxWidthPx is 698 W and
-// notification_card_max_w_px already floors its window safety here, so the
-// clamp's own precondition (floor <= ceiling) is untouched by the rise and a
-// window too narrow for the floor keeps overhanging exactly as before.
-// 297 W SINCE THE REBASE TO 200 % (architect 2026-11-05: the 198 Windows px
-// of 2026-10-02 times 1.5, so the tablet's 594 device px stand; the figures
-// above are the device numbers). At the Windows pixel the pair shaped to
-// about 140 and 137 px at that day's 13-px face, and the chrome — three 5-px
-// pads, the 3-px inset and the 22-px box, 40 px — put them near 180, the
-// floor answering for both. NOR DID NOTIFYD'S BUBBLE (send AA's stage D1,
-// 2026-11-19): its chrome is 14 + 16 + 6 + 15 = 51 W, so the pair at 12 W
-// Regular stays far under the floor, which still answers for both — and
-// for every short card, THE STRUCK CARD "2 warp markers coincide" among
-// them, 594 device px wide on the tablet where the approved picture
-// (tmp/sendZ/VIEW/Z_07) drew it at its content's 363: the floor is a
-// ruling the design did not take up, kept until he rules it.
-inline constexpr double kNotificationMinWidthPx = 297.0;
-
 // THE CARD'S CEILING, THE LAPTOP'S CARD WIDTH (its source), AUTHORED AND SCALED (architect
 // 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
 // 1920 px laptop, so this constant is that width made CANONICAL — the same
@@ -891,12 +841,10 @@ int notification_card_h_px();
 // NOT A DESIGN (architect 2026-08-31, retiring `window / 3`): the ceiling is
 // what the design says a card is wide, and the clamp only keeps a card inside
 // a window too narrow for it (the tablet's portrait panel, a contrived
-// window). IT NEVER ANSWERS BELOW THE FLOOR: the painter clamps a card's
-// content width into [floor, this] and THE ROOM BELOW IS THIS SAME NUMBER, so
-// a bound under the floor would put painted pixels outside the rect that
-// clips and publishes them. A window narrower than the floor itself
-// therefore keeps the floor and lets a card overhang, exactly as the retired
-// fraction did — the contrived window this file declines to cater for.
+// window). The painter clamps a card's content width under this, and THE
+// ROOM BELOW IS THIS SAME NUMBER, so every painted card lies inside the rect
+// that clips and publishes it (no floor since 2026-11-19, send AA; never
+// below zero).
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,

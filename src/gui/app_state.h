@@ -2226,11 +2226,12 @@ enum class RedesignButton {
     // accent along its foot inside the border from the left over t of the
     // inner width (the volume-colored fill of 2026-11-11 retired), none at
     // -inf — where t is the level's TRAVEL FRACTION (level_travel_fraction below, the
-    // square-law taper); THE NUMBER in it, the level to one decimal
-    // ("0.0", "-9.0", "-inf", format_level_db_face; the file keeps the exact
-    // value) in the Body face, the text tone, AT -inf TOO (architect
-    // 2026-11-17, send U: the case is still enabled there), at the entry's
-    // pen on its line-box baseline; disabled, the number at 35 % over the
+    // square-law taper); THE NUMBER in it, one decimal under 10 dB of
+    // magnitude and none from 10 ("0.0", "-9.5", "-22", "-inf",
+    // format_level_db_face; the file keeps the exact value) in the Body
+    // face, the text tone, AT -inf TOO (architect 2026-11-17, send U: the
+    // case is still enabled there), CENTERED in the entry on its line-box
+    // baseline (architect 2026-11-19, send AA); disabled, the number at 35 % over the
     // entry's fill and no line. THE CASE IS THE LEVEL'S
     // ONE ROAD: no
     // Settings row (architect 2026-11-05 night, a key shown and edited on
@@ -3024,7 +3025,7 @@ inline constexpr bool redesign_button_is_level_case(RedesignButton b) {
 // slider shows -60.0 at its last step and -inf below it, and from -inf a
 // rise reads -60.0 first (level_db_from_travel). The level is THE EXACT
 // TAPER, a double (architect 2026-11-05 night: double precision live and in
-// the file, one decimal on the face — device_config.h's THE LEVEL GRAMMAR),
+// the file, its short spelling on the face — device_config.h's THE LEVEL GRAMMAR),
 // clamped to [kLevelDbMin, kLevelDbMax], a negative zero normalized to 0.0;
 // the fill is drawn from the exact level's fraction and the file keeps the
 // exact level, so the picture and the file agree. Two readers of each:
@@ -6662,12 +6663,13 @@ struct AppState {
     // when the timestamp moved off the status line into the transport row's
     // centre; the row unification merged that row and the status line into
     // the one bottom row a day later; the cell sits at the row's left since
-    // 2026-09-29, in its time field since 2026-10-05, the field one field pad
-    // in from the lane's edge since 2026-10-08). It is a PAINTER
+    // 2026-09-29; since 2026-11-19, send AA, plain text at kBottomLeftPenW,
+    // no entry, the cell the timestamp's own box — the specimen's advance by
+    // the line box, bottom_left_clock_cell). It is a PAINTER
     // STASH in the roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
-    // a SHAPED specimen's ink box in the live face (time_field_metrics,
-    // paint_handler.cpp; the ink box since 2026-11-05), which only the
+    // a SHAPED specimen's advance and ink in the live face (time_field_metrics,
+    // paint_handler.cpp), which only the
     // painter measures.
     //
     // ITS ONE CONSUMER IS clock_invalidate_rect, which hands it to every route

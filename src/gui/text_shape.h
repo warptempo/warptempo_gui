@@ -219,11 +219,9 @@ double ink_left_px(const ShapedRun& run);
 // edge of its ink, measured the same way (the run's own positioned glyphs'
 // outline boxes, unrounded); an empty run answers 0. ITS CONSUMERS: THE
 // TITLE BAR'S RIGHT GROUP (render.h's title bar block): the clock run's last
-// ink 6 W inside the panel's right edge and the
-// percent run's last ink one space advance and the battery's one W of air
-// short of the glyph cell (paint_handler.cpp's logo_legend_layout, which
-// reads ink_left_px for the clock's and the percent's first ink columns —
-// the drawn pipe's and the lamps' seats, 2026-11-05); and THE TIME FIELDS' CELL
+// ink 8 W inside the panel's right edge (paint_handler.cpp's
+// logo_legend_layout, which reads ink_left_px for the percent's first ink
+// column — the lamps' seat); and THE TIME FIELDS' CELL
 // (architect 2026-11-05, kTimeShape's block): the cell's width is the
 // whole hull of the widest-digit specimen's ink width, the ink centered in
 // it exactly, so its pads read equal on both sides.

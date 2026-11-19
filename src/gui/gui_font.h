@@ -268,7 +268,7 @@ double gui_font_x_ink_px(const GuiFont& f);
 // the design's unhinted bounds rounded, the first measure, miss the
 // hinter's own rows (Bold 12: 8.38 rounds to 8, the paint 9). Its readers:
 // the title bar's right group (the alphabet of its runs in the Bold 12 W,
-// the cap band the battery, the pipe and the lamps stand on — render.h's
+// the cap band the battery and the lamps stand on — render.h's
 // title bar block). A reader takes the integers as they are.
 // Measured once per file,
 // em and set and kept (a set is a constant of its reader's), GUI thread
@@ -317,9 +317,9 @@ GuiStrikeBand gui_font_strike_band(const GuiFont& f);
 //   THE PIPE SITS ON THE DIGITS' BAND (architect 2026-10-09 ~21:20, "the
 //   pipe should be even"): "|" (U+007C) takes the "0"'s ink centre, so its
 //   overhang above and below the digits beside it is the same — wherever
-//   the face shows one (the labels' grammar, a typed line); the title bar's
-//   right group draws its own block instead since 2026-11-05 (render.h's
-//   title bar block) and shows no glyph pipe.
+//   the face shows one (the labels' grammar, a typed line, the status bar's
+//   field separator, and the title bar's right group's text pipe since
+//   2026-11-19, send AA — render.h's title bar block).
 // THE LIFTS ARE DERIVED at the install from each file's own unscaled
 // outline bounds (gui_font_bundled.cpp), in em units. THE MATCH IS BY GLYPH
 // ID after substitution (text_shape compares a shaped glyph's id against

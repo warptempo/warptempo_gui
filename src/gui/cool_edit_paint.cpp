@@ -443,20 +443,15 @@ void CoverageStampPass::triangle(double ax, double ay, double h,
     }
 }
 
-// THE CHIP (the rule at THE CUE'S CHIP, cool_edit_paint.h; the lengths
-// render.h's cue block, read at the pass's first chip): the outer of height
-// H with its apex at (x, yb), then the fill, its apex the fill's drop above
-// and its height the fill's.
-void CoverageStampPass::chip(double x, double yb, GuiColor fill,
-                             std::optional<GuiColor> outline) {
+// THE CHIP (the rule at THE CUE'S CHIP, cool_edit_paint.h; the height
+// render.h's cue block, read at the pass's first chip): the one triangle of
+// height H with its apex at (x, yb), in the fill.
+void CoverageStampPass::chip(double x, double yb, GuiColor fill) {
     if (!chip_read_) {
-        chip_h_      = cue_chip_h_exact_px();
-        chip_drop_   = cue_chip_fill_drop_px();
-        chip_fill_h_ = cue_chip_fill_h_px();
-        chip_read_   = true;
+        chip_h_    = cue_chip_h_exact_px();
+        chip_read_ = true;
     }
-    if (outline) triangle(x, yb, chip_h_, *outline);
-    triangle(x, yb - chip_drop_, chip_fill_h_, fill);
+    triangle(x, yb, chip_h_, fill);
 }
 
 void CoverageStampPass::end() {
@@ -466,10 +461,9 @@ void CoverageStampPass::end() {
     dirty_any_ = false;
 }
 
-void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill,
-                       std::optional<GuiColor> outline) {
+void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill) {
     CoverageStampPass pass;
     pass.begin(cr);
-    pass.chip(x, yb, fill, outline);
+    pass.chip(x, yb, fill);
     pass.end();
 }

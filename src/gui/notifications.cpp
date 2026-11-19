@@ -34,18 +34,15 @@ int notification_card_max_w_px(const AppState& a) {
     // kNotificationMaxWidthPx in notifications.h): the ceiling is what
     // `a.width / 3` gave on the 1920 px laptop, where the number was taken,
     // kept as an authored length rather than a fraction of the window.
-    const int floor_w   = scaled_px(kNotificationMinWidthPx);
     const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
-    // THE WINDOW IS A SAFETY BELOW THE CEILING AND NOTHING ABOVE THE FLOOR:
-    // the stack sits inside the panel's columns (well_columns, THE EDGE
-    // RULE; notification_stack_bound), so a window that cannot hold the
-    // ceiling gets what it has; a window that cannot hold the FLOOR
-    // keeps the floor and lets the card overhang, because this number is also
-    // the ROOM the painter clips to and publishes within (a bound under
-    // the floor would strand pixels outside it).
+    // THE WINDOW IS A SAFETY BELOW THE CEILING: the stack sits inside the
+    // panel's columns (well_columns, THE EDGE RULE; notification_stack_bound),
+    // so a window that cannot hold the ceiling gets what it has. This number
+    // is also the ROOM the painter clips to and publishes within, and with no
+    // floor (architect 2026-11-19, send AA) no card is wider than it.
     const WellColumns well = well_columns(a);
     const int room_w = well.end - well.x - 2 * scaled_px(kNotificationSeatW);
-    return std::max(floor_w, std::min(ceiling_w, room_w));
+    return std::max(0, std::min(ceiling_w, room_w));
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
@@ -410,10 +407,11 @@ void GuiNotifications::sync_struck_card(int sample_rate, long total_frames) {
     std::string words = std::to_string(count) + " warp markers coincide";
     if (card != nullptr) {
         // RE-WORDED IN PLACE: the same card, its seat in the stack kept. ITS
-        // OWN PAINTED RECT IS DAMAGED (new words on an unmoved rect — the
-        // width floor holds every short card at one width, so "2" and "3"
-        // lay out alike — are a change the stack's rect compare cannot
-        // see), and the stack's owner damages what a new width moved.
+        // OWN PAINTED RECT IS DAMAGED (new words on an unmoved rect — "2"
+        // and "3" shape to one width, the digits' tabular advance — are a
+        // change the stack's rect compare cannot see), and the stack's owner
+        // damages what a new width moved ("9" to "10": each card its
+        // content's width since 2026-11-19, send AA).
         if (card->text != words) {
             card->text = std::move(words);
             for (const AppState::NotificationPainted& p : st.painted)

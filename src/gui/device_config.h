@@ -1100,8 +1100,8 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
 // beside them until the AUDIO case's retirement, 2026-11-11, the voice at
 // 0 dB since; the two integer grammars of 2026-10-28 and 2026-10-31 night,
 // [-30, 0] in whole dB, are this one since; THE EXACT DOUBLE since
-// 2026-11-05 night, his "single decimal is what ableton does" — the face
-// shows one decimal, the file keeps the value whole): the value is `-inf`,
+// 2026-11-05 night — the face shows its own short spelling, the file keeps
+// the value whole): the value is `-inf`,
 // or a DECIMAL dB in [-60.0, 0.0] — an optional `-`, digits with no leading
 // zero but a lone `0`, then optionally `.` and ONE OR MORE digits; no `+`,
 // no exponent, no leading `.`. THE WRITER SPELLS THE SHORTEST DECIMAL THAT
@@ -1112,9 +1112,10 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
 // rewrites them canonical; the value is std::from_chars' on the checked
 // text, the range checked on the value; "-0", "-0.0", "-0.00…" are refused
 // (zero is unsigned), as every other spelling is. THE FACE PRINTS ONE
-// DECIMAL (format_level_db_face: the level rounded to the tenth, "0.0",
-// "-9.0", "-inf"), the band's NOISE case's number alone. THE RANGE IS THE
-// SLIDER'S FLOOR: the case reads -60.0 at its last step and -inf below it
+// DECIMAL UNDER 10 dB OF MAGNITUDE AND NONE FROM 10 ON (format_level_db_face,
+// architect 2026-11-19, send AA: "0.0", "-9.5", "-22", "-60", "-inf"), the
+// band's NOISE case's number alone. THE RANGE IS THE
+// SLIDER'S FLOOR: the case reads -60 at its last step and -inf below it
 // ("-60 then -inf"; the taper at level_db_from_travel, app_state.h). -inf
 // is the infinity (kLevelDbOff), the noise's one off switch (noise.h's
 // head); THE ATTENUATION refuses it
@@ -1132,7 +1133,8 @@ inline constexpr double kLevelDbOff = -std::numeric_limits<double>::infinity();
 inline constexpr const char* kLevelGrammarReason =
     "must be -inf or a decimal in [-60.0, 0.0]";
 // THE FILE'S SPELLING (the shortest round-trip decimal, fixed; `-inf`) and
-// THE FACE'S (one decimal; `-inf`), device_config.cpp.
+// THE FACE'S (one decimal under 10 dB of magnitude, none from 10; `-inf`),
+// device_config.cpp.
 std::string format_level_db(double db);
 std::string format_level_db_face(double db);
 inline std::optional<double> parse_level_db(std::string_view v) {

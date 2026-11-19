@@ -49,14 +49,14 @@ struct GuiBattery {
 // or its exclamation mark (2026-11-17), render.h's title bar block.
 enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 
-// THE LEGEND — "92% <glyph> | 2:12 PM" — AS THREE COMPOSED PARTS, laid right
-// to left by the painter (render.h's title bar block): THE CLOCK RUN, the
-// glyph, and the PERCENT RUN. THE PIPE between the glyph and the clock is
-// NOT COMPOSED: it never changes, and it is the layout's own drawn block on
-// the runs' ink rows (kLogoPipeW, render.h; architect 2026-11-05, his pick
-// p1 of tmp/s46 — a drawn one-W bar in place of the face's glyph, which
-// "reads oddly" in the Bold). THE TWO LAMPS left of the percent are the
-// layout's too, their state the tick's (AppState::clip_lamp_lit).
+// THE LEGEND — "92% <glyph>  |  2:12 PM" — AS THREE COMPOSED PARTS, laid
+// right to left by the painter as one text run (render.h's title bar block):
+// THE CLOCK, the glyph, and the PERCENT. THE TEXT PIPE before the clock
+// ("  |  ", the status bar's field separator; architect 2026-11-19, send
+// AA) and the space after the percent are NOT COMPOSED: they never change,
+// and the layout joins them to the parts' runs. THE TWO LAMPS left of the
+// percent are the layout's too, their state the tick's
+// (AppState::clip_lamp_lit).
 struct GuiLogoLegend {
     std::string  percent;   // "92%", or empty: no battery, or no level read
     GuiLogoGlyph glyph = GuiLogoGlyph::Charging;

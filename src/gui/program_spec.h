@@ -40,8 +40,8 @@
 // THE WELL, flat regions RUNNING THE PANEL'S WHOLE WIDTH, EDGE TO EDGE, its
 // lines one W of `well_border` (render.h's THE WELL'S EDGES) — the line
 // under the band, THE TRIM BAR (Arc's scrollbar: the 12-W trough, the pill
-// on it), its line, THE RULER FLIPPED (19 W, Thunar's header), its line,
-// THE MARKER LANE of Cool Edit's cues (20 W, Thunar's row; the flag
+// on it), its line, THE RULER FLIPPED (16 W), its line,
+// THE MARKER LANE of Cool Edit's cues (16 W, the ruler's height; the flag
 // editor's box on its whole rows), its line, THE CANVAS — the waveform
 // area, its grid and its center lines, its two channels' wells with the
 // stereo divider between them — and the well's foot; then THE BOTTOM ICON
@@ -91,9 +91,10 @@ struct ProgramSpec {
     // (THE STRIPS' RUN GAP AND PADS are render.h's: the `run_gap` tuning
     // key, the toolbar pads, the panel's inset kEdgeInsetW — THE EDGE RULE
     // at well_columns, the strips' seats paint_handler.cpp's icon_row_seats
-    // and bottom_row_seats. THE TIME FIELDS are Arc's entry since send Z's
-    // stage C, their lengths paint_handler.cpp's (kEntryPadsW, kEntryPenW),
-    // the tab's name's pen past the clock's entry its kTabNameGapW.)
+    // and bottom_row_seats. THE TIME FIELDS are plain text since send AA
+    // (2026-11-19), the overlays' slots paint_handler.cpp's (kEntryPadsW,
+    // kEntryPenW), the bottom icon row's left run's pen render.h's
+    // kBottomLeftPenW.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
     // (THE WELL'S SIDE MARGIN, 12 W round the frame of 2026-11-17, retired

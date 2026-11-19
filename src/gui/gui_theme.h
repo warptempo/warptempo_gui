@@ -71,9 +71,8 @@ struct GuiThemeTones {
     uint32_t center;              // each channel's zero line (= the ink)
     uint32_t cue;                 // THE ACCENT: a lit or pressed key's face, every checked key's, NOISE's progress line, the on-screen keyboard's lit keys too (ViewCheckControlEnabledOn)
     uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (= the accent, cue)
-    uint32_t cue_outline;         // an enabled chip's outline, the selection stem, the rings, the ruler head's outline (ControlContrastFrame)
+    uint32_t cue_outline;         // the selection stem, the lead-in ring (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
-    uint32_t inactive_cue_outline; // a disabled chip's outline, the `h` view's removed items' too (ControlContrastFrame 75 % toward Desktop, the marker lane)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
     uint32_t playhead_line;       // the playhead's canvas line (white half way to the head)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
@@ -139,10 +138,7 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // tone, and ITS BORDER 272727, the well's border 2A2A2A at 55 % over it AND
 // THE PLAYHEAD'S
 // LINE 81E1EA, white half way to the head (architect 2026-11-12, session
-// 113) AND THE DISABLED CHIP'S OUTLINE 242424, ControlContrastFrame 75 % of
-// the way toward Desktop, the marker lane's floor (architect 2026-11-12,
-// session 114, and 2026-11-13, session 121; theme_roles.h's DERIVED block)
-// AND THE ENABLED CHIP'S FILL FFAD56, the accent
+// 113) AND THE ENABLED CHIP'S FILL FFAD56, the accent
 // (ViewCheckControlEnabledOn; architect 2026-11-13, session 119) AND THE
 // TRIM BAR'S TROUGH 242424, Default's ScrollbarInnerTrack 00000000 over the
 // ground — Live's transparent track, so the ground itself — and THE WELL'S
@@ -203,7 +199,6 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0xFFAD56, // cue_fill
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
-    0x242424, // inactive_cue_outline
     0x03C3D5, // playhead_head
     0x81E1EA, // playhead_line
     0xFFFFFF, // scanner

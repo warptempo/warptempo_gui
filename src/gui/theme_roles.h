@@ -135,12 +135,11 @@
 //                                     other key's press is Arc's lit look
 //     key face, magnify core
 //                            363636 = SurfaceBackground (the core below)
-//     cue outline            111111 = ControlContrastFrame — THE ENABLED
-//                                     CHIP'S OUTLINE (a disabled chip's is
-//                                     the DERIVED block's inactive cue
-//                                     outline), THE SELECTION STEM on every
-//                                     selected chip, the rings, the ruler
-//                                     head's outline
+//     cue outline            111111 = ControlContrastFrame — THE SELECTION
+//                                     STEM on every selected chip and the
+//                                     lead-in ring (no chip and no ruler
+//                                     head wears an outline since
+//                                     2026-11-19, send AA)
 //     text                   B5B5B5 = ControlForeground (the keys' glyphs, the
 //                                     clocks, the status bar)
 //     dim text, well frame   757575 = TextDisabled (the scrub channel; the
@@ -383,8 +382,8 @@
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
 //   (b − a) per channel, rounded half to even and clamped; "X at t over Y"
 //   is mix(Y, X, t)). The cue fill above and every tone below but the
-//   inactive cue outline and the Arc page's three (the ruler's digits, the
-//   disabled key's face and border: no bright tone under them) are ONE BODY
+//   Arc page's three (the ruler's digits, the disabled key's face and
+//   border: no bright tone under them) are ONE BODY
 //   (fill_dependent_tones, theme_roles.cpp) reading the row's own words, so
 //   the install recomputes them off the mixed bright tones (THE BRIGHT MIX,
 //   below) — the inert prints among them, over the mixed inert faces, the
@@ -424,36 +423,6 @@
 //                                     here. HALF WAY TO THE MIXED HEAD at the
 //                                     install (architect 2026-11-13, session
 //                                     119: "that rule should stay the same")
-//     inactive cue outline   242424 = ControlContrastFrame + 0.75 ·
-//                                     (Desktop − ControlContrastFrame),
-//                                     THE DISABLED CHIP'S OUTLINE, the `h`
-//                                     view's removed items' too: the enabled
-//                                     chip's outline moved 75 % OF THE WAY
-//                                     TOWARD DESKTOP, THE MARKER LANE'S
-//                                     FLOOR the chip stands on, so a disabled
-//                                     chip's edge recedes as if blended into
-//                                     the lane (architect 2026-11-12, session
-//                                     114: "the disable outline, I think,
-//                                     should be a different rule in the code,
-//                                     so no change to the themes needed"; 75 %
-//                                     his pick on the tablet over 50 %;
-//                                     2026-11-13, session 121: "this will be
-//                                     marker lane ground ... this is supposed
-//                                     to be a sort of alpha effect, even
-//                                     though it's not truly an alpha" — SB
-//                                     Gunmetal_mod 0B0D11 toward 24262D ->
-//                                     1E2026). Its 0.75 is its own number, not
-//                                     the bright mix's, and THE BRIGHT MIX
-//                                     NEVER TOUCHES THIS TONE: it is read off
-//                                     the row's own roles, never a bright
-//                                     word, and is no bright tone itself (his
-//                                     "the disabled color wasn't brightness
-//                                     modulated by the ground"). The
-//                                     selection stem of a selected disabled
-//                                     chip, the ruler
-//                                     head's outline and the lead-in ring stay
-//                                     the cue outline (resolve_flag_face,
-//                                     render.cpp)
 //     lit press fill         C68743 = THE ACCENT DARKENED BY THE PRESS RATIO:
 //                                     the accent (cue) · (mean(press face) /
 //                                     mean(key face)) per channel, the means
@@ -571,7 +540,7 @@
 // bar's trough and the well's lines among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,
 // the ruler's digits, the disabled key's face and border), the waveform's
-// tones, the cue outline, the inactive cue and its outline
+// tones, the cue outline, the inactive cue
 // (dark: "those weren't bright to begin with") and the scanner (below). At
 // the default 75 on the reference row: the accent FFAD56 -> C88B4A, the
 // head 03C3D5 -> 0B9BA9 and its line 81E1EA

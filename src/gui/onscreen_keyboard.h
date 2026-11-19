@@ -694,9 +694,9 @@ inline double block_x_px(const GuiRect& band) {
 //   shortfall_px = (the keyboard's foot − the natural band) − the line's
 //     first row, THE FIRST ROW THE LINE TOUCHES (lower_center_line_top_row,
 //     render.h; architect 2026-11-14, send J: the line is centered on its
-//     band's exact zero, so on an odd band its first row is the
-//     half-covered one above the zero's row, on an even band — the
-//     tablet's at key_height 28 — the first whole row above the zero);
+//     band's exact zero, so on an odd band — the tablet's at key_height
+//     28 since send AA — its first row is the half-covered one above the
+//     zero's row, on an even band the first whole row above the zero);
 //   shortfall_px ≤ 0: each pad the floor;
 //   else extra_w = the shortfall in whole W ROUNDED UP (px over the device
 //     px per W), MADE EVEN by one W when odd, split equally — each pad
@@ -719,7 +719,7 @@ inline double block_x_px(const GuiRect& band) {
 // Worked on the tablet at 200 % (2304 x 1440), the band standing on the
 // line over the bottom icon row (its first row 1306, foot_y; send AA's stage
 // D2, 2026-11-19), the line over the lower channel's center on rows
-// 1042..1043:
+// 1038..1040 (its first row 1038; send AA's lanes):
 //   AT THE DEFAULTS (key_height 28, osk_key_h 30): the floor 7.5 W, 15 px;
 //     the natural band 15 + 300 + 8 + 4 + 15 = 342 rows from 964, above the
 //     line → each pad 15 px, the floor binding; the band 964–1305, its top

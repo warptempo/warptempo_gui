@@ -205,17 +205,23 @@ std::string format_level_db(double db) {
     return std::string(buf, res.ptr);
 }
 
-// THE LEVELS' SPELLING ON THE FACE (architect 2026-11-05 night, "single
-// decimal is what ableton does"): `-inf`, else the level rounded to the
-// tenth and normalized (+0.0, so -0.04 prints "0.0", never "-0.0"), `%.1f`
-// — "0.0", "-9.0", "-15.6", "-60.0". The band's two cases' number
-// (paint_level_case) and nothing else: the file keeps the exact value
-// (format_level_db).
+// THE LEVEL'S SPELLING ON THE FACE (architect 2026-11-19, send AA, RULINGS
+// §8: "doesn't need decimals once it hits 10. So it should either have
+// single digit with one decimal or double digits with no decimal. That'll
+// tighten it up"): `-inf`; else the level rounded to the tenth and
+// normalized (+0.0, so -0.04 prints "0.0", never "-0.0") — a magnitude under
+// 10 AFTER THAT ROUNDING prints it, `%.1f` ("0.0", "-9.5", "-9.9"); from 10
+// on, the LEVEL rounded to the whole dB, `%.0f` ("-10", "-22", "-60"), so
+// -9.96 prints "-10". NOISE's number (paint_level_case) and nothing else:
+// the file keeps the exact value (format_level_db).
 std::string format_level_db_face(double db) {
     if (db == kLevelDbOff) return "-inf";
+    const double tenth = std::nearbyint(db * 10.0) / 10.0 + 0.0;
     char buf[32];
-    std::snprintf(buf, sizeof(buf), "%.1f",
-                  std::nearbyint(db * 10.0) / 10.0 + 0.0);
+    if (std::fabs(tenth) < 10.0)
+        std::snprintf(buf, sizeof(buf), "%.1f", tenth);
+    else
+        std::snprintf(buf, sizeof(buf), "%.0f", std::nearbyint(db) + 0.0);
     return std::string(buf);
 }
 

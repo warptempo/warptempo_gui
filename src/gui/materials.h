@@ -112,9 +112,11 @@
 // from the hi-fi theme"); the tooltip names the act.
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
-// the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE AND THE
-// TIME FIELDS are Arc's entry (paint_entry), NOISE's level its progress line,
-// a dialog editor's its focus line (send AA's stage D2). THE ON-SCREEN
+// the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and a
+// dialog editor's field are Arc's entry (paint_entry), NOISE's level its
+// progress line, a dialog editor's its focus line (send AA's stage D2); THE
+// TIME FIELDS are plain text since 2026-11-19 (send AA; paint_handler.cpp's
+// THE TIME FIELDS). THE ON-SCREEN
 // KEYBOARD'S KEYS are one grid of Arc's button tones with shared lines
 // since send AA's stage D2 (paint_handler.cpp's paint_onscreen_keyboard);
 // THE SCRUB'S THUMB AWAITS THE NEXT STAGE: today's flat key and today's
@@ -185,8 +187,8 @@
 // ruler's face the canvas's). Where a theme makes the lane, the trough, the lines or the dim
 // text coincide with the ground, that is Live's own number — ACCEPTED, not
 // a bug, no backstop (architect 2026-11-05).
-// THE TIME FIELDS are Arc's entry since 2026-11-19 (send Z; paint_entry
-// below): the ruler's — the canvas's — tone in a one-W `well_border` ring.
+// ARC'S ENTRY (NOISE's case, a dialog editor's field; paint_entry below):
+// the ruler's — the canvas's — tone in a one-W `well_border` ring.
 //
 // THE WELL'S FRAME TONE. `well_frame` is THE GRAMMAR'S ONE FRAME TONE
 // (architect 2026-11-02, M14 "d"), Default's 757575 (TextDisabled, the dim
@@ -374,9 +376,8 @@ void paint_linked_group(cairo_t* cr, int x, int y,
 void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state);
 
 // ARC'S ENTRY on `box` (architect 2026-11-19, send Z; DESIGN §3, the kit's
-// body_entry; G3 `entry`) — NOISE's case, the bottom icon row's clock and
-// the controls rows' time fields (the render player's two, the score
-// viewer's clock and page cell), ONE PAINTER: GTK's box order as the word
+// body_entry; G3 `entry`) — NOISE's case and a dialog editor's field (the
+// time fields plain text since 2026-11-19, send AA), ONE PAINTER: GTK's box order as the word
 // button's — THE FILL on the padding box (`box` one border in, corners
 // key_inner_corner_px) in `ruler_face`, the canvas's tone (Arc's
 // $base_color, 404552 on arc_dark), THEN THE RING over it (the outer rounded

@@ -379,9 +379,9 @@ struct WaveformCache {
 // THE SURFACE HOLDS THE ROWS ITS INK CAN REACH (2026-10-13): the window's
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
-// foot) — the ruler lane, the marker lane and the foot line, 40 + 40 + 2 =
-// 82 device rows on the tablet at 200 % where the whole strip from row 0 is
-// 252 at key_height 28 (re-derived 2026-11-19, send Z). Every cue pixel is
+// foot) — the ruler lane, the marker lane and the foot line, 34 + 32 + 2 =
+// 68 device rows on the tablet at 200 % where the whole strip from row 0 is
+// 238 at key_height 28 (re-derived 2026-11-19, send AA). Every cue pixel is
 // inside the marker lane's rows BY THE PAINTER'S OWN CLIP, not by a bound on
 // the font: paint_cues (render.cpp) paints every label's text and strike
 // and every chip under ONE clip of the lane's rows over the waveform's

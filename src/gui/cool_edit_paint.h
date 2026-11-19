@@ -19,13 +19,12 @@
 // 2026-11-01 — and `playhead_line` — the line's one static tone in the
 // canvas, Default's 81E1EA, white half way to the head (2026-11-12) —
 // palette_file.h's role table, as the
-// marker's chip is the palette's `cue_fill` (the accent, 2026-11-13) in
-// its `cue_outline` (2026-11-05), a
-// disabled one's `inactive_cue` in its `inactive_cue_outline` (2026-11-12).
+// marker's chip is the palette's `cue_fill` (the accent, 2026-11-13), a
+// disabled one's `inactive_cue`, no outline (2026-11-19, send AA).
 // THE TRIANGLES ARE SMOOTH-EDGED AT THEIR EXACT PLACES (architect 2026-11-14,
 // send J, reopening 2026-10-26's aliased staircase: "I think the chips
 // should also go anti-aliased"): the cue's chip and the playhead's head are
-// one drawing, two 45° triangles stamped at exact coverage
+// one drawing, one 45° triangle stamped at exact coverage
 // (CoverageStampPass::chip, below).
 
 // (THE KEY — every key of the band, the bottom icon row and the controls
@@ -41,7 +40,8 @@
 
 // (THE TIME FIELD'S PAINTER — paint_ce_time_field, a flat `key_face` box,
 // no ring, 2026-11-01 night to 2026-11-19 — is retired: every time field is
-// Arc's entry since send Z's stage C, materials.h's paint_entry.)
+// plain text since send AA, 2026-11-19, paint_handler.cpp's THE TIME
+// FIELDS.)
 
 // (THE TAB STRIP — paint_ce_tab_strip, ce_tab_strip_layout, kCeTabCount and
 // ce_tab_growth_px, Cool Edit's Organizer tabs, 2026-10-18 — IS REMOVED with
@@ -54,31 +54,27 @@
 // out. It'd make them snap in and out of sharpness. You'd have a sharp chip
 // next to a blurrier one ... I think the chips should also go
 // anti-aliased" — and, to the apex standing exactly on the stem's center,
-// "Agree on both."): A SMOOTH-EDGED DOWN-POINTING TRIANGLE IN ITS ONE-W
-// OUTLINE AT EVERY POSITION, the landing's included, ITS APEX EXACTLY ON THE
-// MARK'S EXACT x — the stem's center, the playhead line's center (reopening
-// 2026-11-06's "it should point at the right column", the apex one cell
-// right of the stem's center, and 2026-10-26's aliased staircase). The
-// geometry is render.h's cue block (cue_chip_h_px, cue_chip_fill_drop_px,
-// cue_chip_fill_h_px), with H the chip's height and yb THE BOTTOM EDGE of
-// the row the apex stands on:
-//   THE OUTER, in the outline's color: apex (x, yb), height and half-base H
-//     — its sides at 45°, the envelope of the staircase it replaces and its
-//     area;
-//   THE FILL, in the fill's color, over it: the outer inset by one W across
-//     each of its three edges — its top edge one W under the outer's, its
-//     apex W · √2 above the outer's (a 45° side moved one W across itself
-//     moves √2 W along a row), so its height and half-base are
-//     H − W − W · √2.
-// A chip with no `outline` is the fill's triangle alone, at the same place.
-// NO SHADOW (architect 2026-11-02, the well's part of the flat look). The
-// colors are resolve_flag_face's for a cue (render.cpp, the one table: the
-// fill `cue_fill` in the `cue_outline`, a disabled chip's `inactive_cue` in
-// the `inactive_cue_outline`) and the `playhead_head` in the `cue_outline`
-// for the playhead's head (the same chip, mock k1, 2026-11-04).
-// PAINTED THROUGH THE COVERAGE STAMP (CoverageStampPass::chip, below): each
+// "Agree on both."): A SMOOTH-EDGED DOWN-POINTING TRIANGLE AT EVERY
+// POSITION, the landing's included, ITS APEX EXACTLY ON THE MARK'S EXACT x
+// — the stem's center, the playhead line's center (reopening 2026-11-06's
+// "it should point at the right column", the apex one cell right of the
+// stem's center, and 2026-10-26's aliased staircase). The geometry is
+// render.h's cue block (cue_chip_h_exact_px), with H the chip's height and
+// yb THE BOTTOM EDGE of the row the apex stands on: apex (x, yb), height
+// and half-base H, its sides at 45°, ALL OF IT THE FILL — NO OUTLINE
+// (architect 2026-11-19, send AA, RULINGS §8 / §9, his pick A 2 of Z_10:
+// "I would consider removing the outline of the chips because, for
+// example, the scroll bar has no outline"; "no outline, the outer size
+// kept"): the fill takes the whole triangle the outline had, so the
+// footprint, the apex, the hull, the two extents and the label's lead are
+// what they were. NO SHADOW (architect 2026-11-02, the well's part of the
+// flat look). The color is resolve_flag_face's for a cue (render.cpp, the
+// one table: `cue_fill`, a disabled chip's `inactive_cue`) and the
+// `playhead_head` for the playhead's head (the same chip, mock k1,
+// 2026-11-04).
+// PAINTED THROUGH THE COVERAGE STAMP (CoverageStampPass::chip, below): the
 // triangle's exact coverage of each pixel (coverage_of_triangle,
-// coverage_stamp.h), the outer's then the fill's over it, straight into the
+// coverage_stamp.h), straight into the
 // target — the flag cache's surface for the lane's cues (one pass for the
 // whole lane, paint_cues, render.cpp), the backbuffer for the ruler's head.
 // THE PAINTED EXTENT is [x − H, x + H]: for a mark on column `col` (x within
@@ -86,8 +82,7 @@
 // cue_chip_paint_reach_px, every cull's and damage box's; the hit boxes
 // keep their own extent (cue_chip_hit_left_px / cue_chip_hit_right_px).
 // One chip alone (the playhead's head): a one-chip pass.
-void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill,
-                       std::optional<GuiColor> outline = std::nullopt);
+void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 
 // -- THE COVERAGE STAMP ---------------------------------------------------------
 
@@ -139,7 +134,7 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill,
 // borders, faces and accents (materials.h's paint_linked_group, send Z,
 // 2026-11-19); THE ROUNDED RING, a word button's and an entry's border;
 // THE ROUNDED RECT CUT, NOISE's progress line (paint_entry); the
-// down-pointing 45° triangle; and THE CHIP, two of them (THE CUE'S CHIP
+// down-pointing 45° triangle; and THE CHIP, one of them (THE CUE'S CHIP
 // above: the lane's cues, paint_cues, and the ruler's head).
 class CoverageStampPass {
 public:
@@ -175,10 +170,8 @@ public:
     // in `color`: nothing where h <= 0.
     void triangle(double ax, double ay, double h, GuiColor color);
     // THE CHIP at the mark's exact x, its apex on the row edge `yb` (THE
-    // CUE'S CHIP above): the outer triangle in `outline` where given, the
-    // fill's over it.
-    void chip(double x, double yb, GuiColor fill,
-              std::optional<GuiColor> outline);
+    // CUE'S CHIP above): the one triangle of height H in `fill`.
+    void chip(double x, double yb, GuiColor fill);
     void end();
 
 private:
@@ -206,9 +199,7 @@ private:
     static constexpr int kKeptWords = 4;
     KeptWord          kept_[kKeptWords]{};
     int               kept_next_ = 0;
-    // The chip's lengths (render.h's cue block), read at the first chip.
+    // The chip's height (render.h's cue block), read at the first chip.
     bool              chip_read_   = false;
     double            chip_h_      = 0.0;
-    double            chip_drop_   = 0.0;
-    double            chip_fill_h_ = 0.0;
 };

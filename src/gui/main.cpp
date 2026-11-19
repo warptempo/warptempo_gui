@@ -153,14 +153,14 @@ namespace {
 // COLUMN, flat regions RUNNING THE PANEL'S WHOLE WIDTH (render.h's THE
 // WELL'S EDGES): the TRIM lane (trim_lane_h_px(), the line under the top
 // icon row, Arc's 12-W scrollbar trough with its pill and the line under
-// it, 14 W), the RULER lane (ruler_lane_h_px(), Thunar's column header in
-// Arc's tones, 19 W — the Bold Small (10 W) timestamps on their line-box
+// it, 14 W), the RULER lane (ruler_lane_h_px(), the column header in
+// Arc's tones, 16 W since send AA — the Bold Small (10 W) timestamps on their line-box
 // baseline, the ticks and the PLAYHEAD'S HEAD on its foot rows — and its
 // line; a PLACEMENT LANE: a motionless click places the playhead
 // and every drag there does nothing but the head's, which drags the playhead
 // (2026-10-09), the navigation surface being the waveform alone
 // (point_on_placement_lanes and point_on_playhead_head, input_pointer.cpp)),
-// the MARKER lane (marker_lane_h_px(), 20 W, Thunar's row at 9 pt, Cool
+// the MARKER lane (marker_lane_h_px(), 16 W since send AA, the ruler's height, Cool
 // Edit's cues, the label's box and the flag editor's the whole lane)
 // and THE LANE'S FOOT
 // LINE (lane_foot_line_h_px(), one hairline), whose bottom edge is the
@@ -237,11 +237,12 @@ namespace {
 //   2026-10-01 — MainActivity.java's head): THE BAND 142 (the title bar
 //   0–55, the top icon row's pad 56–69, its faces 70–125, its pad 126–141)
 //   + THE TRIM LANE 28 (the line 142–143, the trough 144–167, the line
-//   168–169) + THE RULER LANE 40 (the ruler 170–207, the line 208–209) +
-//   THE MARKER LANE 40 (210–249) + THE FOOT LINE 2 (250–251) = 252 above;
+//   168–169) + THE RULER LANE 34 (the ruler 170–201, the line 202–203) +
+//   THE MARKER LANE 32 (204–235) + THE FOOT LINE 2 (236–237) = 238 above
+//   (the ruler and the marker lane 16 W each since 2026-11-19, send AA);
 //   134 below (THE WELL'S FOOT 1306–1307, THE BOTTOM ICON ROW 1308–1393, its
 //   faces 1324–1379, THE STATUS BAR'S LINE 1394–1395 and THE BAR 1396–1439);
-//   leftover 1054: the waveform 1054 rows on 252–1305, both gaps 0; the
+//   leftover 1068: the waveform 1068 rows on 238–1305, both gaps 0; the
 //   waveform the panel's whole width, columns 0–2303.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
@@ -311,8 +312,8 @@ namespace {
 // title bar, the outer pad, the key (its height the `key_height` tuning
 // key, 2026-10-29) and the inner pad (render.h's band paragraph,
 // icon_row_h_px), the well's four lanes the trim bar, the ruler, the marker
-// lane and the lane's foot line (render.h's well lanes block): 28 + 40 + 40
-// + 2 = 110 device rows on the tablet — THE WELL'S FOOT one W too
+// lane and the lane's foot line (render.h's well lanes block): 28 + 34 + 32
+// + 2 = 96 device rows on the tablet — THE WELL'S FOOT one W too
 // (well_foot_h_px), THE BOTTOM ICON ROW the strip (bottom_row_h_px) and THE
 // STATUS BAR its line and its bar (status_bar_lane_h_px; send Z,
 // 2026-11-19).
@@ -398,8 +399,8 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 200 and key_height 28 the lanes leave 1440 − 252 − 134 = 1054
-// device rows (2026-11-19, send Z). No
+// gui_scale 200 and key_height 28 the lanes leave 1440 − 238 − 134 = 1068
+// device rows (2026-11-19, send AA). No
 // color moves a lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -516,9 +517,9 @@ GuiRect waveform_area(const AppState& a) {
     // bottom icon row (80 + 280 + 70 = 430) and the status bar (10 + 220)
     // take 1370 before the well's lanes, so the top of the vocabulary lands
     // on this floor (one W is 10 device px there). (The host runs far below
-    // it: the tablet at 200 % on its 1440-tall surface, where they take 386
-    // at the default key and leave the waveform 1054, the stack record at the
-    // lane table above; re-derived 2026-11-19, send Z.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // it: the tablet at 200 % on its 1440-tall surface, where they take 372
+    // at the default key and leave the waveform 1068, the stack record at the
+    // lane table above; re-derived 2026-11-19, send AA.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
@@ -1488,13 +1489,15 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // Viewport::invalidate_modal_dialog_area's lane. The process line stands in
 // the status bar under the row, status_bar_area above.)
 
-// THE CLOCK'S RECT — the unified bottom row's reserved cell as the
-// painter last drew it, inside its field at the lane's left (AppState::clock_cell_rect,
-// whose stash contract is at the field). Narrow by construction: on_redraw
-// clips to the damage region, so paint_bottom_strip runs but its buttons, the
-// clock field's two vertical lines and the tab's name right of the field
-// fall outside the clip and cost nothing (the field's top and bottom lines and the ground
-// round them cross the box and are repainted identically under it), which is what makes this
+// THE CLOCK'S RECT — the unified bottom row's timestamp cell as the
+// painter last drew it, the timestamp's own box at the lane's left
+// (AppState::clock_cell_rect, whose stash contract is at the field; the
+// specimen's advance by the line box since 2026-11-19, send AA,
+// bottom_left_clock_cell). Narrow by construction: on_redraw
+// clips to the damage region, so paint_bottom_strip runs but its buttons and
+// the text pipe and tab name right of the timestamp fall outside the clip
+// and cost nothing (the ground round the digits is repainted identically
+// under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. At a window narrow
 // enough for the right block to cover the clock, the cases the box reaches
 // are inside the clip and repaint over the clock in it, the block painted
@@ -1506,9 +1509,10 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // ACTIVE TAB'S NAME, whose own owner is Viewport::invalidate_tab_name_area and
 // whose rect is the lane WHOLE.
 //
-// THE CELL IS THE TIMESTAMP ALONE (architect 2026-10-18: the tab letter and
-// its pipe left it; the active tab's name stands on the ground beside the
-// field since 2026-10-22, outside the cell). (The cell reserved one more cell for the dirty `*` until the mark
+// THE CELL IS THE TIMESTAMP ALONE (architect 2026-10-18; the text pipe and
+// the active tab's name after it since 2026-11-19, send AA, outside the
+// cell, their pen the specimen's advance so they never move with the
+// digits). (The cell reserved one more cell for the dirty `*` until the mark
 // retired, architect 2026-10-05, Save's grey being the mark.)
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE

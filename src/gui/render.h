@@ -319,7 +319,7 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's THIRTEEN (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
@@ -328,13 +328,12 @@ struct TrimRange {
 //                 channel's zero, over it (ROW 6); THE MARKER'S CHIP
 //                 (architect 2026-11-04; 2026-11-05) — `cue_fill` every
 //                 enabled fill (the accent since 2026-11-13, session
-//                 119), `cue_outline` its one-W outline, the
-//                 selected marker's stem and the two rings — warp and
-//                 phase reset alike (the strike, the warp column's alone, is
-//                 the invalid mark, THE MARKER LANE below); the disabled cue's `inactive_cue`,
-//                 its chip's fill and the inert label, and its
-//                 `inactive_cue_outline`, the disabled chip's outline
-//                 (architect 2026-11-12, session 114); the playhead's two
+//                 119) — NO OUTLINE since 2026-11-19 (send AA) —
+//                 `cue_outline` the selected marker's stem and the
+//                 lead-in ring — warp and phase reset alike (the strike,
+//                 the warp column's alone, is the invalid mark, THE MARKER
+//                 LANE below); the disabled cue's `inactive_cue`, its
+//                 chip's fill alone; the playhead's two
 //                 roles,
 //                 `playhead_head` — its triangle in the ruler — and
 //                 `playhead_line` — its static light cyan 81E1EA in the
@@ -514,7 +513,6 @@ struct GuiPalette {
     GuiColor cue_fill;
     GuiColor cue_outline;
     GuiColor inactive_cue;
-    GuiColor inactive_cue_outline;
     GuiColor playhead_head;
     GuiColor playhead_line;
     GuiColor scanner;
@@ -667,9 +665,9 @@ void install_true_colors(bool on);
 // every canvas line the same W, waveform_line_px). THE ROWS ON THE TABLET
 // (200 %; main.cpp's lane table the record; at key_height 28, its default
 // since send Z): rows 142 .. 143 the line under the top icon row, the
-// trough 144 .. 167, rows 168 .. 169 its line, the ruler 170 .. 207, rows
-// 208 .. 209 its line, the marker lane 210 .. 249, rows 250 .. 251 its
-// line, the canvas 252 .. 1305, rows 1306 .. 1307 the well's foot
+// trough 144 .. 167, rows 168 .. 169 its line, the ruler 170 .. 201, rows
+// 202 .. 203 its line, the marker lane 204 .. 235, rows 236 .. 237 its
+// line, the canvas 238 .. 1305, rows 1306 .. 1307 the well's foot
 // (architect: "waveform height ok to take from"; "it's okay if it takes
 // away from the waveform height", 2026-11-18).
 //
@@ -825,7 +823,7 @@ void install_true_colors(bool on);
 // show_cue_label's head, paint_cues) — ON
 // THE LANE'S ONE BASELINE
 // at rest and in the editor (cue_baseline_px, the line-box rule at
-// marker_lane_h_px: +14 W of the lane's 20, 28 device rows at 200 %) —
+// marker_lane_h_px: +12 W of the lane's 16, 24 device rows at 200 %) —
 // `show_cue_label`,
 // render.cpp,
 // the one painter of every label look on the face; and THE STEM, ON EVERY
@@ -950,11 +948,8 @@ void install_true_colors(bool on);
 //             2026-11-02; the inert look's reason 2026-10-10 ~12:20, "the
 //             arrow needs to be legible for me, but the text doesn't …
 //             since it's disabled, it's inert"): the `inactive_cue` 5D5D5D
-//             fill in the `inactive_cue_outline` (architect 2026-11-12,
-//             session 114, and 2026-11-13, session 121: the `cue_outline`
-//             moved 75 % of the way toward Desktop, the marker lane's
-//             floor, Default's 242424 — theme_roles.h's DERIVED block), the
-//             label in the `inactive_cue`,
+//             fill alone, no outline (architect 2026-11-19, send AA, the
+//             chip's outline retired), the label inert,
 //             the playhead on it or not; the same inert label on a tie
 //             follower's cells (one look for inert cue text). A disabled
 //             marker is selectable (architect 2026-10-07 ~15:10), and
@@ -1473,8 +1468,8 @@ constexpr int kMinWindowHeightPx = 480;
 // of the un-maximized 28-row bar, so the baseline +18), every drawing on it
 // in the same tone; THE CAP BAND the alphabet's painted ink rows above that
 // baseline (gui_font_ink_band of kLogoLegendInkSet in the Bold; on the
-// tablet 17 rows, rows 19 .. 35 over the baseline at 36) — what the pipe, the battery and the lamps
-// stand on. No shadow (the flat look). paint_title_bar paints it; its right
+// tablet 17 rows, rows 19 .. 35 over the baseline at 36) — what the battery
+// and the lamps stand on. No shadow (the flat look). paint_title_bar paints it; its right
 // group's layout is logo_legend_layout (paint_handler.cpp), the painter's
 // and the tick's damage's one road.
 //   ON THE LEFT, THE NOTE: the `icons` set's MusicNote16th (the BPM key's
@@ -1483,28 +1478,36 @@ constexpr int kMinWindowHeightPx = 480;
 //     for 16 W text, 16 · 12 / 16 = 12 W), on the ink-box road (icons.h):
 //     its ink length the box's share of the drawing's ink
 //     (icons::ink_px_in_box: Papirus's note inks 8 x 14 of its 16 units, so
-//     21 device px tall in the 24-px box), ITS INK'S LEFT EDGE kEdgeInsetW
-//     = 6 W inside the panel (12 device px), ITS INK CENTERED ON THE BAR'S
-//     ROWS EXACTLY (both sets' notes ink symmetrically in their canvas, so
-//     this is the box centered, its top +8 W; on the tablet the ink 17.5 ..
-//     38.5). THEN THE BRAND, "Warptempo" (kLogoBrand, a constant), its pen
-//     the note's BOX plus kTitleBrandGapW = 7 W (the box's left edge the
-//     ink's less the drawing's own left margin in the box; on the tablet the
-//     pen at 12 − 6 + 24 + 14 = 44 with Papirus's note, whose ink starts 4
-//     of 16 units into its box).
-//   ON THE RIGHT, THE GROUP "[limiter][clip] 92% <battery> | 2:12 PM"
-//     (gui_battery.h's composer for the runs; the tick's refresh_logo_legend,
-//     main.cpp), LAID RIGHT TO LEFT on the baseline: the clock run with its
-//     LAST INK kEdgeInsetW inside the panel's right edge; kLogoPipeAirW (5
-//     W) of ground; THE DRAWN PIPE, kLogoPipeW (1 W) wide on THE CAP BAND's
-//     rows (2026-11-05: "the pipe at bold reads oddly", a block, not the
-//     glyph); kLogoPipeAirW of ground; THE BATTERY (below); one W
-//     (kLogoGlyphAirW) and one space advance; the percent run "92%" with its
-//     last ink there, so "100%" grows leftward, away from the clock;
-//     kLogoLampGapW (4 W) of ground; THE CLIP LAMP; one W (the key gap); THE
-//     LIMITER LAMP. Every air is measured from the runs' REAL ink edges
-//     (text_shape::ink_left_px / ink_right_px), nothing floored, so the
-//     block, the battery and the lamps stand at real x (the no-grid rule).
+//     21 device px tall in the 24-px box, its ink box 12 px wide), ITS
+//     INK'S LEFT EDGE kTitleNoteInsetW = 8 W inside the panel (16 device px;
+//     architect 2026-11-19, send AA, RULINGS §9: "the note in the logo looks
+//     good now. It looks like it's aligned with the buttons"), ITS INK
+//     CENTERED ON THE BAR'S ROWS EXACTLY (both sets' notes ink symmetrically
+//     in their canvas, so this is the box centered, its top +8 W; on the
+//     tablet the ink 17.5 .. 38.5). THEN THE BRAND, "Warptempo" (kLogoBrand,
+//     a constant), ITS PEN kTitleNoteGapW = 6 W AFTER THE NOTE'S INK'S RIGHT
+//     EDGE (architect 2026-11-19, send AA: "Maybe one more W spacing between
+//     the note and the warptempo font" — one more than the picture's 5),
+//     both off the drawing's real ink box, not its 12 W box (on the tablet
+//     the ink 16 .. 28 with Papirus's note, the pen 28 + 12 = 40).
+//   ON THE RIGHT, THE GROUP "[limiter][clip] 92% <battery>  |  2:12 PM" AS
+//     ONE TEXT RUN in the Bold 12 W (architect 2026-11-19, send AA, RULINGS
+//     §8: the pipe "could just become a text pipe, since we're going to use
+//     those text pipes in the status bar"; gui_battery.h's composer for the
+//     parts; the tick's refresh_logo_legend, main.cpp), LAID RIGHT TO LEFT
+//     on the baseline: the run "  |  2:12 PM" — the status bar's own field
+//     separator (two spaces each side of the pipe, kStatusFieldSeparator,
+//     paint_handler.cpp) then the clock — with its LAST INK
+//     kTitleRightInsetW = 8 W inside the panel's right edge (the note's
+//     inset mirrored); THE BATTERY (below), its cell's right edge on that
+//     run's pen; the run "92% " — the percent and a space — its advance
+//     ending on the cell's left edge, so "100%" grows leftward, away from
+//     the clock; kLogoLampGapW (4 W) of ground; THE CLIP LAMP; one W (the
+//     key gap); THE LIMITER LAMP. The insets and the lamps' gap are
+//     measured from the runs' REAL ink edges (text_shape::ink_left_px /
+//     ink_right_px), the battery between the runs' advances, nothing
+//     floored, so the battery and the lamps stand at real x (the no-grid
+//     rule).
 //   THE TWO LAMPS (architect 2026-11-05, sessions 46 / 47; the size, the
 //     rows and the gap 2026-11-06, session 63): two kLogoLampW = 8 W squares
 //     (16 x 16 device px), "LIMITER LEFT, CLIP RIGHT, mirroring the level
@@ -1617,10 +1620,9 @@ constexpr int kMinWindowHeightPx = 480;
 inline constexpr double kTitleBarW           = 28.0;
 inline constexpr double kTitleBaselineW      = 18.0;
 inline constexpr double kTitleNoteBoxW       = 12.0;  // the note's drawing box (the body's size)
-inline constexpr double kTitleBrandGapW      = 7.0;   // the note's box to the brand's pen
-inline constexpr double kLogoGlyphAirW       = 1.0;   // the battery's digit side, beside the space advance
-inline constexpr double kLogoPipeW           = 1.0;   // the drawn pipe's width
-inline constexpr double kLogoPipeAirW        = 5.0;   // ground on each side of it, ink to ink
+inline constexpr double kTitleNoteInsetW     = 8.0;   // the panel's left edge to the note's ink
+inline constexpr double kTitleNoteGapW       = 6.0;   // the note's ink's right edge to the brand's pen
+inline constexpr double kTitleRightInsetW    = 8.0;   // the right group's last ink to the panel's right edge
 inline constexpr double kLogoLampW           = 8.0;   // each lamp's square
 inline constexpr double kLogoLampGapW        = 4.0;   // the clip lamp to the percent's first ink
 inline constexpr const char* kLogoBrand = "Warptempo";
@@ -1975,13 +1977,12 @@ void paint_scrub_thumb(cairo_t* cr, const GuiRectF& box, bool pressed);
 // The device rows below are the tablet's, 200 %:
 //   THE TRIM   the line under the top icon row, THE TROUGH, the line under
 //              it (trim_lane_h_px): 14 W, 28 device rows (2 + 24 + 2).
-//   THE RULER  the ruler (ruler_h_px: Thunar's 3 W pad, the digits' line
-//              box, the pad; the ticks overlay its foot) and its line
-//              (ruler_lane_h_px): 19 W + 1 W, 38 + 2 device rows (6 + 26 +
-//              6).
-//   THE MARKER 20 W, the editor's box on its whole rows (marker_lane_h_px:
+//   THE RULER  the ruler (ruler_h_px: kRulerW, the digits' line box
+//              centered in it; the ticks overlay its foot) and its line
+//              (ruler_lane_h_px): 16 W + 1 W, 32 + 2 device rows.
+//   THE MARKER 16 W, the editor's box on its whole rows (marker_lane_h_px:
 //              the outline, the pad above, the legal set's band on the
-//              line-box baseline, the pad below, the outline): 40 device
+//              line-box baseline, the pad below, the outline): 32 device
 //              rows; the cue's chip its last rows (cue_chip_h_px, 13).
 //   THE LINE   the line between the lane and the canvas, one hairline
 //              (lane_foot_line_h_px, below): 2 device rows, 1 W.
@@ -2040,20 +2041,21 @@ inline int trim_lane_h_px() {
     return hairline_px() + trim_trough_h_px() + hairline_px();
 }
 // THE RULER'S TICKS (architect 2026-11-01 night, M5b / M5c / M5h; the major
-// 2026-11-03; the width one W since 2026-11-04, the unit; the rows 4 W and
-// 1 W since that night): ONE CANVAS LINE WIDE — waveform_line_px, the line
-// rule's W, 2 device px on the tablet at 200 %, 1 at 100 % — CENTERED ON
-// THE TICK'S OWN EXACT TIME'S PLACE (architect 2026-11-14, send J;
-// waveform_line_span's rule, RulerComb's tick_frames), the
-// major 4 W and the minor 1 W tall, 8 and 2 device rows on the tablet
-// (scaled_px, each floored at one row; the major 10 device rows of the text
-// round and the retrofit rounded to the unit). THEY OVERLAY THE RULER'S FOOT AND ADD
+// 2026-11-03; the width one W since 2026-11-04, the unit): ONE CANVAS LINE
+// WIDE — waveform_line_px, the line rule's W, 2 device px on the tablet at
+// 200 %, 1 at 100 % — CENTERED ON THE TICK'S OWN EXACT TIME'S PLACE
+// (architect 2026-11-14, send J; waveform_line_span's rule, RulerComb's
+// tick_frames), THE MAJOR 2 W (architect 2026-11-19, send AA, RULINGS §8:
+// "You can make the major 2W. Or you could just have it sit underneath the
+// text") and the minor 1 W tall, 4 and 2 device rows on the tablet
+// (scaled_px, each floored at one row). THEY OVERLAY THE RULER'S FOOT AND ADD
 // NO HEIGHT (architect 2026-11-03: "the ticks can be adjusted later — they
-// don't change height of anything else"): they stand in the ruler's bottom
-// pad, under the digits' ink — the major's 4 W in the pad's 6 W (8 rows in
-// 12 on the tablet), TWO W OF RULER CLEAR BETWEEN ITS TOP AND THE INK'S
-// FOOT (four device rows at 200 %; the minor 1 W; never over the ink).
-inline constexpr double kRulerMajorTickRowsW = 4.0;
+// don't change height of anything else"): in the 16 W ruler the digits'
+// line box ends 14 W down (its top 1 W, its 13 W), so the major's 2 W are
+// the two W under it, THREE W OF RULER CLEAR BETWEEN ITS TOP AND THE INK'S
+// FOOT on the baseline at +11 W (six device rows at 200 %; the minor 1 W;
+// never over the ink).
+inline constexpr double kRulerMajorTickRowsW = 2.0;
 inline constexpr double kRulerMinorTickRowsW = 1.0;
 inline int ruler_major_tick_h_px() {
     return scaled_px(kRulerMajorTickRowsW, 1);
@@ -2068,50 +2070,53 @@ inline int ruler_minor_tick_h_px() {
 // at the ruler's 10 W Bold) IS CENTERED AS PANGO CENTERS IT, its top
 // floor((box − line) / 2) W down, and THE BASELINE IS THE ASCENT UNDER
 // THAT — one whole-W offset through scaled_px, so on the tablet a whole
-// device row: +13 W in the 19 W ruler, +14 W in the 20 W marker lane, +15 W
+// device row: +11 W in the 16 W ruler, +12 W in the 16 W marker lane, +15 W
 // in the 22 W status bar. Its readers: the ruler's digits
 // (ruler_baseline_px), the cues' labels and the lane's editors
 // (cue_baseline_px) and the status bar (paint_status_bar). THE TITLE BAR'S
 // BASELINE IS A STATED +18 W of its 28 (xfwm's measured seat, kTitleBaselineW).
 double line_box_baseline(const GuiFont& font, double box_y, int box_w);
-// THE RULER IS THUNAR'S COLUMN HEADER (architect 2026-11-19, send Z: "Yes,
-// it looks good. ... we can go as very truthful"; DESIGN §1 / §4): THE
-// DIGITS' LINE BOX AND kRulerPadW, 3 W, ABOVE AND BELOW IT — Thunar's
-// header pads — so 3 + 13 + 3 = 19 W at the digits' Bold 10 W (Small,
-// gui_font.h; the line box 10 + 3 W, gui_font_line_box_w), each part
-// through scaled_px, rounded at the element: 38 device rows on the tablet at
-// 200 %. THE BASELINE by the line-box rule (line_box_baseline): the 13 W box
-// centered in 19, its top 3 W down, the baseline the ascent under it, +13 W
-// (26 device rows) under the ruler's top. The ticks overlay its foot (the
-// majors' 4 W in the bottom pad's 3 W and the line box's last W; the digits
-// have no descender ink there), the playhead's head its last rows.
-inline constexpr double kRulerPadW = 3.0;
-inline int ruler_line_box_w() {
-    return gui_font_line_box_w(gui_font(GuiFace::Small)).line();
-}
+// THE RULER, kRulerW = 16 W, AN AUTHORED HEIGHT (architect 2026-11-19, send
+// AA, RULINGS §8 / §9, his pick B 3 of Z_10: "the markers lane looks like,
+// if this was being designed by whoever designed Arc, it would be smaller in
+// height ... a tighter lane ... And perhaps for the ruler as well ... Maybe
+// the same height, then they both should shrink in sync" — the ruler and
+// the marker lane 16 W each; it replaces Thunar's column header's pads, 3 W
+// above and below the digits' line box, 19 W, of send Z): 16 W through
+// scaled_px, 32 device rows on the tablet at 200 %. Its digits stay the
+// Bold 10 W (Small, gui_font.h; the line box 10 + 3 W, gui_font_line_box_w)
+// — the header's weight. THE BASELINE by the line-box rule
+// (line_box_baseline): the 13 W box centered in 16, its top floor(3 / 2) =
+// 1 W down, the baseline the ascent under it, +11 W (22 device rows) under
+// the ruler's top. The ticks overlay its foot (the majors' 2 W under the
+// line box's foot, which they meet; the digits have no descender ink
+// there), the playhead's head its last rows.
+inline constexpr double kRulerW = 16.0;
 inline int ruler_baseline_px() {
-    return static_cast<int>(line_box_baseline(
-        gui_font(GuiFace::Small), 0.0, 2 * static_cast<int>(kRulerPadW) +
-                                           ruler_line_box_w()));
+    return static_cast<int>(line_box_baseline(gui_font(GuiFace::Small), 0.0,
+                                              static_cast<int>(kRulerW)));
 }
 inline int ruler_h_px() {
-    return scaled_px(kRulerPadW, 0) + scaled_px(ruler_line_box_w()) +
-           scaled_px(kRulerPadW, 0);
+    return scaled_px(kRulerW, 1);
 }
 inline int ruler_lane_h_px() {
     return ruler_h_px() + hairline_px();
 }
 // THE CUE'S CHIP'S LENGTHS (architect 2026-11-14 night, send J: the chip
-// and the ruler's head A SMOOTH-EDGED TRIANGLE IN ITS ONE-W OUTLINE AT
-// EVERY POSITION, its apex exactly on the mark's exact x — "I think the
-// chips should also go anti-aliased", "Agree on both."; the drawing and its
-// rule at cool_edit_paint.h's THE CUE'S CHIP). ITS SIZE IS WHAT THE
-// STAIRCASE'S WAS: the lengths below are the whole-cell chip's own numbers
-// (architect 2026-10-26, "I think we should make the triangle smaller";
-// 2026-11-04, the one-W outline, mock g1; 2026-11-12, the 4 W rows), read
-// now as device px of a triangle with real edges.
+// and the ruler's head A SMOOTH-EDGED TRIANGLE AT EVERY POSITION, its apex
+// exactly on the mark's exact x — "I think the chips should also go
+// anti-aliased", "Agree on both."; the drawing and its rule at
+// cool_edit_paint.h's THE CUE'S CHIP). ITS SIZE IS WHAT THE STAIRCASE'S
+// WAS: the lengths below are the whole-cell chip's own numbers (architect
+// 2026-10-26, "I think we should make the triangle smaller"; 2026-11-04,
+// the one-W outline's band, mock g1; 2026-11-12, the 4 W rows), read now as
+// device px of a triangle with real edges. NO OUTLINE SINCE 2026-11-19
+// (architect, send AA, his pick A 2: "the scroll bar has no outline";
+// "no outline, the outer size kept"): the fill takes the whole outer
+// triangle, so every length below — the outline's band among them — is
+// still the chip's.
 //
-// THE TRIANGLE'S ROWS, THE FILL'S NOMINAL HEIGHT: 4 W through scaled_px (8
+// THE TRIANGLE'S NOMINAL ROWS: 4 W through scaled_px (8
 // device px on the tablet at 200 %), rounded at the element like every
 // length off the canvas (architect 2026-10-26 ~13:40, on the row count as a
 // per-device number: "why density? why not just simple scale? tablet is
@@ -2125,34 +2130,32 @@ inline int ruler_lane_h_px() {
 // (cue_label_lead_px below). 8 at 200 %, 4 at 100 %, 2 at the scale's floor
 // of 50 % (is_gui_scale_percent, device_config.h) — no floor, no clamp.
 // READERS: the chip's height (cue_chip_h_px below) and the label's lead
-// (cue_label_lead_px, the fill's reach).
+// (cue_label_lead_px, the rows' reach).
 inline constexpr double kCueTriangleRowsW = 4.0;
 inline int cue_triangle_rows() {
     return scaled_px(kCueTriangleRowsW);
 }
-// THE CHIP'S HEIGHT H, the outer triangle's height and half-base in device
-// px — and the ruler's head's: THE FILL'S ROWS, ONE W ABOVE THEM AND
-// W · √2 BELOW (architect 2026-11-04, mock g1: the triangle "in a one-W
-// 111111 outline"; the one-W band across a 45° side is √2 W along a row), W
+// THE CHIP'S HEIGHT H, the triangle's height and half-base in device px —
+// and the ruler's head's: THE NOMINAL ROWS, ONE W ABOVE THEM AND W · √2
+// BELOW (architect 2026-11-04, mock g1: the triangle "in a one-W 111111
+// outline", the outline's band kept as fill since 2026-11-19, send AA; the
+// one-W band across a 45° side is √2 W along a row), W
 // hairline_px — THE EXACT SUM (architect 2026-11-15, the no-grid arc: the
 // √2 no longer rounded to a row; the triangle is stamped at exact coverage,
 // cool_edit_paint.h): cue_chip_h_exact_px, 8 + 2 + 2.83 = 12.83 on the
 // tablet at 200 %, 4 + 1 + 1.41 = 6.41 at 100 %. THE CHIP'S APEX STANDS ON
-// THE BOTTOM EDGE OF THE LANE'S LAST ROW (at 200 %, lane rows 210 .. 248,
-// its apex on the edge under row 248, its top edge 12.83 above it, inside
-// row 236). THE RULER'S HEAD IS
+// THE BOTTOM EDGE OF THE LANE'S LAST ROW (at 200 %, lane rows 204 .. 235,
+// its apex on the edge under row 235, its top edge 12.83 above it, inside
+// row 223). THE RULER'S HEAD IS
 // THE SAME CHIP (architect 2026-11-04, mock k1, "4 accept overlap"), its
 // apex on the bottom edge of the ruler's last row (200 %: ruler rows
-// 172 .. 207), so its top reaches into the ruler's
+// 170 .. 201, the head's hull rows 189 .. 201), so its top reaches into the ruler's
 // digits where it stands under a label — ACCEPTED ("timestamp not really
 // important for fine tune, just ballpark"): it paints over them as a chip
 // paints over a label (paint_ruler_row).
-// THE FILL IS THE OUTER INSET BY ONE W ACROSS EACH OF ITS THREE EDGES
-// (architect 2026-11-14, send J): its top edge one W under the outer's and
-// ITS APEX W · √2 ABOVE THE OUTER'S (cue_chip_fill_drop_px, the exact
-// product), so ITS HEIGHT and half-base are (H − W) − W · √2 — EXACTLY THE
-// FILL'S NOMINAL ROWS (cue_chip_fill_h_px: 8 on the tablet, 4 at 100 %),
-// the inset the same real W across all three edges.
+// THE WHOLE TRIANGLE IS THE FILL (architect 2026-11-19, send AA): a cue's
+// `cue_fill` or `inactive_cue`, the head's `playhead_head`, one triangle of
+// height H, no outline (CoverageStampPass::chip).
 // ONE SIZE, AND ITS WHOLE HULL DERIVED HERE: cue_chip_h_px is ceil(H), the
 // rows and half-columns that hold the chip — 13 on the tablet, 7 at 100 % —
 // what every WHOLE reader takes: the lane's seat (cue_above_chip_h_px), the
@@ -2165,13 +2168,6 @@ inline double cue_chip_h_exact_px() {
 }
 inline int cue_chip_h_px() {
     return static_cast<int>(std::ceil(cue_chip_h_exact_px()));
-}
-inline double cue_chip_fill_drop_px() {
-    return static_cast<double>(hairline_px()) * std::sqrt(2.0);
-}
-inline double cue_chip_fill_h_px() {
-    return cue_chip_h_exact_px() - static_cast<double>(hairline_px()) -
-           cue_chip_fill_drop_px();
 }
 // THE LABEL'S HORIZONTAL LENGTHS, WHOLE W through scaled_px (the text
 // round, architect 2026-11-03; whole W since 2026-11-04, the unit): THE
@@ -2205,20 +2201,21 @@ inline int cue_segment_gap_px() {
 inline int cue_segment_text_gap_px() {
     return 2 * cue_fill_pad_px() + cue_segment_gap_px();
 }
-// THE LABEL'S LEAD from the marker's column to its text IS THE FILL'S
-// REACH RIGHT, THE OUTLINE'S W AND THE GAP (architect 2026-10-26 ~12:40, on
+// THE LABEL'S LEAD from the marker's column to its text IS THE NOMINAL
+// ROWS' REACH RIGHT, ONE W AND THE GAP (architect 2026-10-26 ~12:40, on
 // the glass at nine rows: "It seems the lead-in was not scaled — increasing
 // rows seems to not move text, but it should, relative to what I tuned it
 // to"; the outline's W 2026-11-04, mock g1 shifting every label one W
-// right): the fill's nominal reach (its rows, cue_triangle_rows), one W
-// (hairline_px, the chip's outline), then THE GAP,
+// right): the nominal reach (the rows, cue_triangle_rows), one W
+// (hairline_px, the outline's band, the fill's own since 2026-11-19, send
+// AA — the lead unchanged by the outline's retirement), then THE GAP,
 // 6 W (kCueLabelGapW; 12 device px on the tablet at 200 %; architect
 // 2026-11-02, "flag text lead in at 12 pixels"; 13 device px from the text
 // round, 2026-11-03, back to 12, the whole W, with the unit, 2026-11-04)
 // through scaled_px, rounded at the element —
 // so the label follows the rows and keeps the gap. THE GAP IS MEASURED FROM
-// THE OUTLINE'S NOMINAL ONE-W EDGE BESIDE THE FILL'S REACH, not from the
-// chip's own widest reach: the outer's top corner stands H = rows + W +
+// THE NOMINAL ONE-W EDGE BESIDE THE ROWS' REACH, not from the
+// chip's own widest reach: the triangle's top corner stands H = rows + W +
 // W · √2 from the mark, so from it to the text's origin stand
 // the gap less W · √2 px, 9.17 on the tablet, AT EVERY ROW
 // COUNT — the lead and the chip's reach move together with the rows (the
@@ -2244,12 +2241,16 @@ inline int cue_fill_lead_px() {
 // kTooltipPadW, the tooltip block.)
 // THE MARKER LANE IS THUNAR'S ROW AT 9 pt (architect 2026-11-19, send Z;
 // DESIGN §1 / §4, measured on his 9 pt desktop shot: Thunar's side-pane and
-// list rows at a pitch of 20): kMarkerLaneW, 20 W through scaled_px — 40
-// device rows on the tablet at 200 % — A STATED NUMBER, no longer the time
-// field's height. THE LABEL'S BASELINE by the line-box rule
-// (line_box_baseline): the Label face's 14 W line box (Regular 12 W, 11 +
-// 3) centered in 20, its top 3 W down, the baseline the ascent under it,
-// +14 W (28 device rows) under the lane's top (cue_baseline_px). ITS WHOLE
+// list rows at a pitch of 20) — SINCE 2026-11-19 (architect, send AA,
+// RULINGS §8 / §9, his pick B 3 of Z_10: "the markers lane looks like, if
+// this was being designed by whoever designed Arc, it would be smaller in
+// height ... a tighter lane"; the ruler and the lane "should shrink in
+// sync") kMarkerLaneW, 16 W through scaled_px — 32 device rows on the
+// tablet at 200 % — the ruler's height (kRulerW), A STATED NUMBER. THE
+// LABEL'S BASELINE by the line-box rule (line_box_baseline): the Label
+// face's 14 W line box (Regular 12 W, 11 + 3) centered in 16, its top
+// floor(2 / 2) = 1 W down, the baseline the ascent under it, +12 W (24
+// device rows) under the lane's top (cue_baseline_px). ITS WHOLE
 // ROWS ARE THE FLAG EDITOR'S BOX — its outline (kCueEditorOutlineW, one W)
 // on the lane's first and last rows — and THE EDITOR'S BAND (the caret and
 // the selection) STANDS ON THAT BASELINE, the editor's text at the label's
@@ -2263,12 +2264,14 @@ inline int cue_fill_lead_px() {
 // authored (cue_editor_pad_above_px, cue_editor_pad_below_px). ON THE TABLET
 // AT 200 % (Liberation Sans Regular 24 px: ascender ink 17.39, x 12.68,
 // descent 5.09): k 5.09, the band 17.77 above the baseline and 5.09 below
-// (22.86), so from 10.23 to 33.09 under the lane's top: the pads 8.23 above
-// and 4.91 below inside the 2-row outlines. The band and the baseline are
-// real y on the face's metrics (the no-grid rule), the lane's height whole.
-// The chip's rows are the lane's bottom rows (cue_above_chip_h_px the
-// remainder above its hull: 40 − 13 = 27 on the tablet).
-inline constexpr double kMarkerLaneW = 20.0;
+// (22.86), so from 6.23 to 29.09 under the lane's top: the pads 4.23 above
+// and 0.91 below inside the 2-row outlines (the band's foot, the face's
+// descent, under one device row clear of the bottom outline's first row,
+// 30; both pads positive). The band and the baseline are real y on the
+// face's metrics (the no-grid rule), the lane's height whole. The chip's
+// rows are the lane's bottom rows (cue_above_chip_h_px the remainder above
+// its hull: 32 − 13 = 19 on the tablet).
+inline constexpr double kMarkerLaneW = 16.0;
 inline constexpr double kCueEditorOutlineW = 1.0;
 inline int cue_editor_outline_px() {
     return scaled_px(kCueEditorOutlineW, 1);
@@ -2307,11 +2310,11 @@ inline int cue_fill_h_px() {
 // send Z has not restyled yet keep it (the overlays, the keys' numbers).
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // THE CUE LABEL'S BASELINE AND THE EDITOR'S BAND under the marker lane's top
-// (the lane's rule above), REAL y: THE BASELINE the line-box rule's, +14 W
-// (28 device rows on the tablet at 200 %); THE BAND — the flag editor's
+// (the lane's rule above), REAL y: THE BASELINE the line-box rule's, +12 W
+// (24 device rows on the tablet at 200 %); THE BAND — the flag editor's
 // caret and selection band (render_flag_editor_box reads cue_band_top_px
 // and cue_band_h_px, never a second derivation) — its part above the
-// baseline over it (10.23 .. 33.09 on the tablet); THE PADS between the
+// baseline over it (6.23 .. 29.09 on the tablet); THE PADS between the
 // outline and the band what the two leave.
 // Every label segment — the resting label, the bound cells, the history's
 // two halves — and the flag editor's text ride the baseline (the editor's
@@ -2405,8 +2408,9 @@ GuiRect well_foot_area(const AppState& a);
 // THE PANEL'S INSET (architect 2026-11-19, send Z; DESIGN §2 / §3): kEdgeInsetW,
 // 6 W through scaled_px (12 device px on the tablet at 200 %) — THE KEYS'
 // OUTERMOST FACES in both icon rows stand this far inside the panel's left
-// and right edges (Arc's toolbar margin), and THE TITLE BAR's first ink (the
-// note's) and last ink (the clock's) the same.
+// and right edges (Arc's toolbar margin). (The title bar's first and last
+// ink stand 8 W in since 2026-11-19, send AA: kTitleNoteInsetW /
+// kTitleRightInsetW.)
 inline constexpr double kEdgeInsetW = 6.0;
 inline int edge_inset_px() {
     return scaled_px(kEdgeInsetW, 0);
@@ -2417,10 +2421,11 @@ inline int edge_inset_px() {
 // RULE, RETOLD (architect 2026-11-19, send Z; his 2026-11-03 "everything
 // that sits closest to the window edge on all screens should align to the
 // waveform canvas" with the canvas now the panel's width): THE LANES, THEIR
-// LINES AND THE CANVAS RUN THESE COLUMNS; THE KEYS' OUTERMOST FACES AND THE
-// TITLE BAR'S FIRST AND LAST INK STAND kEdgeInsetW INSIDE THEM (the band's
-// ends, icon_row_seats; the bottom icon row's and the controls rows',
-// bottom_row_seats; the title bar's, paint_title_bar); THE TOOLTIP'S BOX
+// LINES AND THE CANVAS RUN THESE COLUMNS; THE KEYS' OUTERMOST FACES STAND
+// kEdgeInsetW INSIDE THEM (the band's ends, icon_row_seats; the bottom icon
+// row's and the controls rows', bottom_row_seats), THE TITLE BAR'S FIRST
+// AND LAST INK 8 W (kTitleNoteInsetW / kTitleRightInsetW, paint_title_bar),
+// THE BOTTOM ICON ROW'S LEFT RUN'S PEN 14 W (kBottomLeftPenW); THE TOOLTIP'S BOX
 // AND THE MODAL PANE ARE HELD INSIDE THEM (the tooltip's clamp — its
 // shadow may hang past them — and modal_box_rect on these columns); THE
 // CARDS' STACK STANDS kNotificationSeatW (16 W) INSIDE THEM, notifyd's seat
@@ -2478,14 +2483,26 @@ inline int bottom_row_h_px() {
 // device rows on the tablet at 200 % (the line 1394 .. 1395, the bar 1396 ..
 // 1439), each part through scaled_px, rounded at the element. THE BAR IS
 // THE BODY TONE `body_face`, its text Regular 12 W (GuiFace::Body) in `text`,
-// THE PEN kStatusBarPenW (14 W) from the panel's left edge, THE BASELINE by
-// the line-box rule, +15 W of the 22 (line_box_baseline). Its content and
+// THE PEN kStatusBarPenW (14 W) from the panel's left edge — THUNAR'S
+// MEASURED INSET (his 9 pt shot: the status text 14 px in, 4 px above and
+// below it), KEPT over a 4 W margin of our own (architect 2026-11-19, send
+// AA, RULINGS §10: "Good. I agree with Tunar's 14W. And then we put the
+// timestamp line at 14W") — so the bottom icon row's left run above it
+// (kBottomLeftPenW, its own 14 W by the same ruling) starts on the same
+// column — THE BASELINE by the line-box rule, +15 W of the 22
+// (line_box_baseline). Its content and
 // its damage: paint_status_bar and status_bar_text (paint_handler.cpp).
 // INERT CHROME: no hit, no tooltip, no gesture. It stands under every
 // overlay and modal (the on-screen keyboard's band and the controls row
 // above it, both reading bottom_row_area).
 inline constexpr double kStatusBarPadW = 4.0;
 inline constexpr double kStatusBarPenW = 14.0;
+// THE BOTTOM ICON ROW'S LEFT RUN'S PEN (architect 2026-11-19, send AA,
+// RULINGS §10: "And then we put the timestamp line at 14W"): the timestamp,
+// its text pipe and the tab's name, plain text, from 14 W inside the
+// panel's left edge (28 device px on the tablet), the status bar's column
+// (paint_handler.cpp's bottom_left_run).
+inline constexpr double kBottomLeftPenW = 14.0;
 inline int status_bar_line_box_w() {
     return gui_font_line_box_w(gui_font(GuiFace::Body)).line();
 }
@@ -2519,11 +2536,11 @@ inline int status_bar_lane_h_px() {
 // (THE PROGRAM'S STACK IN WINDOWS PX — chrome_stack_authored_h — LEFT
 // 2026-11-03: every lane above and below the well is a skin length or a
 // hairline, derived at the element. On the tablet at 200 % and key_height
-// 28 (send Z): the band 142 device rows (56 + 14 + 56 + 16), the well's
-// lanes above the canvas 108 (28 + 40 + 40) and its foot line 2, the
-// well's foot 2, the bottom icon row 86 (16 + 56 + 14) and the status bar
-// 46 (2 + 44): the canvas 1054 rows of the surface's 1440 — main.cpp's lane
-// table the record.)
+// 28 (send Z; the ruler and the marker lane 16 W since send AA): the band
+// 142 device rows (56 + 14 + 56 + 16), the well's lanes above the canvas
+// 94 (28 + 34 + 32) and its foot line 2, the well's foot 2, the bottom icon
+// row 86 (16 + 56 + 14) and the status bar 46 (2 + 44): the canvas 1068
+// rows of the surface's 1440 — main.cpp's lane table the record.)
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
 // columns [0, w) — every triangle, label, editor field and hit rect
@@ -3415,12 +3432,12 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // ring's sides, the scanner and the zoom anchor's
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). On the tablet at 200 % and
-// key_height 28 (its default since send Z) the canvas is 1054 rows,
-// 252-1305 (main.cpp's lane table, re-derived 2026-11-19): the upper
-// well's band 526 rows (252-777), the divider rows 778-779 (one W), the
-// lower well's band 526 rows (780-1305) and NO SPARE ROW (1054 less the
-// divider's 2 is even; an odd remainder would be the canvas's last row, ONE
-// CHANNEL'S BAND below).
+// key_height 28 (its default since send Z) the canvas is 1068 rows,
+// 238-1305 (main.cpp's lane table, re-derived 2026-11-19, send AA: the
+// ruler and the marker lane 16 W each): the upper well's band 533 rows
+// (238-770), the divider rows 771-772 (one W), the lower well's band 533
+// rows (773-1305) and NO SPARE ROW (1068 less the divider's 2 is even; an
+// odd remainder would be the canvas's last row, ONE CHANNEL'S BAND below).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
 // divider of `divider_px` rows (waveform_divider_px live, the job's snapshot
@@ -3506,10 +3523,10 @@ inline CanvasRowSpan canvas_hline_span(const GuiRect& area, double yc,
 // (build_canvas_list's two branches), so the line stands whenever the
 // canvas has rows. ITS ONE READER is the on-screen keyboard's height floor
 // (onscreen_keyboard::edge_pad_px, architect 2026-11-08), which so stands
-// at or above the line's first row. On the tablet at 200 % the canvas 252
-// .. 1305 at key_height 28 (send Z, edge to edge; the bands 526 rows, even)
-// puts the zero at 1043.0 and the line on [1042, 1044) — rows 1042 .. 1043,
-// two whole rows — its first row 1042.
+// at or above the line's first row. On the tablet at 200 % the canvas 238
+// .. 1305 at key_height 28 (send AA; the bands 533 rows, odd) puts the zero
+// at 1039.5 and the line on [1038.5, 1040.5) — half of row 1038, row 1039
+// whole, half of row 1040 — its first row 1038.
 inline int lower_center_line_top_row(const GuiRect& area) {
     const WaveformChannelBand band =
         waveform_channel_band(area.h, waveform_divider_px(), 1);
@@ -5394,11 +5411,11 @@ struct HistoryDiffFlag {
 // hit_test_flag keeps working unchanged and answers a diff-flag index.
 //
 // THE ANATOMY IS THE LIVE CUE'S (the palette block's marker-lane paragraph):
-// every item ONE CUE at its one frame — the live lane's chip and outline, its
+// every item ONE CUE at its one frame — the live lane's chip, its
 // label in the label face — in THE HISTORY'S STYLES (HistoryDiffFlag's
 // paragraph above; resolve_flag_face's Removed / Added / Changed rows): a
-// REMOVED item the disabled style, the `inactive_cue` chip in the
-// `inactive_cue_outline` and the inactive label, its one segment STRUCK; an
+// REMOVED item the disabled style, the `inactive_cue` chip and the inactive
+// label, its one segment STRUCK; an
 // ADDED item the enabled style, the `cue_fill` chip (the accent) and the
 // text tone, its one segment plain; a CHANGED item the enabled
 // style, TWO SEGMENTS in the text tone — the older side's label struck, then
