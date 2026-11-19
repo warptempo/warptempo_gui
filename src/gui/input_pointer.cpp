@@ -2619,8 +2619,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(
     // the caret like I would expect on a touch screen, it drags the viewport
     // and the waveform". A finger in the field therefore reaches the
     // platform's editor-field query (touch_point_in_editor_field), which
-    // routes a DRAG to the CARET DRAG while a tap and the double press reach
-    // the field's own press — the third ruled divergence,
+    // routes a DRAG to the CARET DRAG while a tap reaches the field's own
+    // press at its lift (a field's vocabulary is a tap and a drag) — the
+    // third ruled divergence,
     // begin_touch_caret_drag's declaration — and a finger on a RIDING box
     // beside the field resolves to the pointer translation like any lane
     // press, where the editor's modal veil consumes it and closes nothing

@@ -4846,18 +4846,27 @@ struct TrimSpanColumns {
 TrimSpanColumns trim_span_columns(const TrimBoundColumn& begin,
                                   const TrimBoundColumn& end, int wave_w);
 
-// The source-frame -> displayed-domain mapping of the live trim paint pass
-// (GuiPaintHandler::paint_trim), its one caller since the two HIT sites began
-// reading that pass's publication (2026-09-24). Byte-identical to render.cpp's file-local
-// frame_to_paint_sample for every reachable (non-negative) trim bound: in a
-// mapped view the source frame is rounded once through map_source_to_target,
-// then rounded again; the identity (null/empty map) path returns the frame
-// as-is. A negative frame is guarded to 0 (unreachable — past-EOF is load-fatal
-// and bounds are never negative — kept for exactness vs the prior hit code).
-// The painter's one mapping owner, so a span's end is drawn — and, through
-// the stash, grabbed — on its bound's image. `map` is null in source view
-// (identity) and the item pixels' own map (displayed_or_live_target_map) in
-// target view.
+// The source-frame -> displayed-domain mapping of the trim bar's bounds: a
+// bound's image ROUNDED TO A WHOLE DISPLAYED FRAME. In a mapped view the
+// forward map (map_source_to_target) keeps the whole source frame's image
+// fractional, and this rounds it ONCE, nearbyint; the identity (null/empty
+// map) path returns the frame as-is. Byte-identical to render.cpp's
+// file-local frame_to_paint_sample for every reachable (non-negative) trim
+// bound, whose first rounding, of the source frame, is a no-op on a whole
+// frame. A negative frame is guarded to 0 (unreachable — past-EOF is
+// load-fatal and bounds are never negative — kept for exactness vs the
+// prior hit code). `map` is null in source view (identity) and the item
+// pixels' own map (displayed_or_live_target_map) in target view.
+// THE PAINTER'S ONE MAPPING OWNER, so a span's end is drawn — and, through
+// the stash, grabbed — on its bound's image; FOUR CALLERS, re-grepped
+// 2026-11-18, each placing a bound where the bar paints it: the bar's paint
+// pass (GuiPaintHandler::paint_trim, paint_handler.cpp), the sweep
+// highlight's columns (sweep_highlight_columns, app_state.cpp), the barrel's
+// bound-set click choosing the nearer cap (GuiInputHandler::
+// trim_bound_click, input_trim.cpp) and the endcap drag's grab offset on
+// the identity (trim_bound_place_x, input_trim.cpp — Source view, or a
+// target view with no map; a mapped domain's offset reads the unrounded
+// image instead, trim_bound_image_place_x).
 double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 

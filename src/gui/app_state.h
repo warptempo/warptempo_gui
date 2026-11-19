@@ -1242,7 +1242,9 @@ struct TrimDragState {
     // Its readers are update_trim_drag's two single-bound arms: the MAPPED
     // arm's bound is the source frame whose image stands under the towed
     // place (ON SCREEN IS AS PAINTED: the cap follows the pen for the whole
-    // drag, within half a displayed frame of the painter's rounding); the
+    // drag, off the towed place by the bound's rounding to a whole source
+    // frame plus the painter's to a whole displayed frame — the error's one
+    // statement, its bound and its px figures, at that arm); the
     // UNMAPPED arm reads it only where the towed place is at or past the
     // displayed total, to answer the source's end. The bridge (pair) drag
     // does not read it.
@@ -3230,8 +3232,9 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // DRAG (architect-tunable), shared by every press whose drag is a SWEEP or a
 // PAN — the press beginning a gesture over a surface rather than grabbing a
 // thing on it. THE GRAB SURFACES — a flag and the trim bar — read TWICE this
-// since 2026-09-29 (kGrabMovedThresholdPx below, where their membership and
-// its reason live). THE LIST IS RE-DERIVED FROM THE GATES THEMSELVES (it
+// since 2026-09-29 (grab_moved_threshold_px() below, the gate they read —
+// twice drag_moved_threshold_px() — where their membership and its reason
+// live). THE LIST IS RE-DERIVED FROM THE GATES THEMSELVES (it
 // once named "strip, region, trim, and the marker flag" long after
 // the strip drag's deletion and the two 2026-08-15 additions; re-derived
 // again 2026-08-18, when the region's editor was deleted into the trim drags
@@ -3342,9 +3345,11 @@ inline double real_travel_px(double x0, double y0, double x1, double y1) {
 // drag MOVES it — a click that rolls a few pixels on a flag or a trim endcap
 // must stay the click it meant to be, because the drag it would otherwise
 // become rewrites authored content or the trim, where a sweep or a pan that
-// begins early costs nothing. THE MEMBERSHIP, re-greped 2026-09-29 — three
-// states, every compare a `<` in on_motion (input_pointer.cpp), and nothing
-// else reads it:
+// begins early costs nothing. THE MEMBERSHIP, re-grepped 2026-11-18 — four
+// states read grab_moved_threshold_px() at five sites (input_pointer.cpp),
+// and nothing else reads it (kGrabMovedThresholdPx, the constant below, has
+// no reader); the three pending presses each compare a `<` in on_motion
+// (still a click under it), the hold record compares twice:
 //   * PendingMarkerPress — the flag's plain press, its click already acted at
 //     the press (2026-08-17); its crossing is the ONE fork for both of the
 //     flag's drags, the horizontal reposition drag and the value drag
@@ -3353,9 +3358,14 @@ inline double real_travel_px(double x0, double y0, double x1, double y1) {
 //   * PendingClickAct — the trim bar's deferred barrel bound-set click (the
 //     nearest end cap), the one member that latches NO `moved` of its own: its crossing
 //     RESOLVES the arm outright, running the set and handing over to the
-//     endcap drag above on the same event. THE TRIM BAR IS ONE SURFACE WITH
-//     ONE GATE, so the set and the drag it hands to cross at the same
-//     distance, as they always have.
+//     endcap drag above on the same event;
+//   * TrimBarPressSeed — the trim bar's long press, which frames the trim
+//     (architect 2026-11-18): read at the LIFT in on_button_release, the
+//     hold framing only while the real travel stays `<` the gate, and in
+//     on_motion, where travel reaching it (`>=`) drops the record, so a
+//     press that moved and came back is no hold.
+// THE TRIM BAR IS ONE SURFACE WITH ONE GATE, so the set, the drag it hands
+// to and the hold's stillness all read the same distance.
 // EVERY GATE MEASURES REAL TRAVEL (architect 2026-11-15, the no-grid arc):
 // the press's real place against the pointer's real place
 // (real_travel_px above), never two pixels' difference.
@@ -10880,7 +10890,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // THE PHASE-RESET COLUMN ANSWERS YES IN BOTH AUDIO VIEWS (architect
 // 2026-10-12, S+P's return; target view was its only view from 2026-09-21
 // until then): every positional act is legal on it in S+P and T+P alike —
-// the drop, the flag drag, the empty-lane create and the Left/Right nudge —
+// the drop, the flag drag and the Left/Right nudge (a tap on the empty lane
+// creates nothing) —
 // and what S+P leaves out is the lead-in overlay, a display matter owned at
 // the overlay band (paint_handler.cpp), never a refusal.
 // The arms are spelled per column so warp is never the else-branch.

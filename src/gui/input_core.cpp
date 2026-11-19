@@ -306,13 +306,13 @@ void GuiInputCore::resolve_touch_window_to_pointer() {
     // Pending -> Pointer, delivering what the window withheld: the synthesized
     // entry motion at the ORIGINAL down point (the pointer enter's own shape —
     // the first "the pointer is here" notification), the left press there, and
-    // any queued motion. Shared by all three pointer resolutions: the
-    // OFF-ZONE DOWN (on contact, 2026-09-25 — off the pan zone and outside
-    // an editor's field no window opens), the field's DOUBLE PRESS (on
-    // contact at its very down), and the TAP, which reaches here from the
-    // two surfaces that do open a window — the zone and the field — while
-    // their other resolution goes elsewhere (the crossing to single-finger
-    // nav, the armed sweep or the caret drag). The
+    // any queued motion. Shared by both pointer resolutions: the OFF-ZONE
+    // DOWN (on contact, 2026-09-25 — off the pan zone and outside an
+    // editor's field no window opens) and the TAP, which reaches here at its
+    // lift from the two surfaces that do open a window — the zone and the
+    // field (a field's vocabulary is a tap and a drag) — while their other
+    // resolution goes elsewhere (the crossing to single-finger nav, the
+    // armed sweep or the caret drag). The
     // tap's caller delivers the release and the focus-forked translation end
     // itself (deliver_touch_translation_end), immediately after.
     touch_phase_ = TouchPhase::Pointer;

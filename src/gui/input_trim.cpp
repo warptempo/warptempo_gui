@@ -202,12 +202,22 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 // under a pen place), is raised to AT LEAST the source's total where the
 // displayed frame is at or past the displayed total — never lowered, so the
 // answer stays monotone in the place — and the walls then hold it on
-// total-1. ONLY THE PLACES WITHIN HALF A DISPLAYED FRAME LEFT OF THE SOURCE
-// END'S REAL IMAGE CHANGE: the displayed total is that image rounded, and a
-// place at or past the real image already maps to the total or past it; a
-// place left of the displayed total answers what the inverse map gives, so
-// no pen inside the song lands on its end. Half a displayed frame is 1/40
-// px at most (q >= 20, kDeepestZoomMinFramesPerPx). In Source view, and in
+// total-1. ONLY THE PLACES AT OR PAST THE DISPLAYED TOTAL CHANGE, and they
+// reach at most half a displayed frame left of the source end's real image:
+// the displayed total is that image rounded, and a place at or past the
+// real image already maps to the total or past it; a place left of the
+// displayed total answers what the inverse map gives, so no pen left of
+// the last displayed frame lands on the end. Half a displayed frame is 1/40
+// px at most (q >= 20, kDeepestZoomMinFramesPerPx). THE BAND OF SOURCE
+// FRAMES THIS ANSWERS THE END: the frames whose own image stands at or past
+// the displayed total — under a speed-up up to half the last section's
+// ratio of frames, all painted on the last displayed frame with the end
+// (Sol's 720,007-frame piece under 16x: the source total's image 45,000.4375,
+// the displayed total 45,000, so source 720,000 .. 720,006). A bound
+// resting there is answered the end
+// as soon as a drag moves it, by a hair in EITHER direction (the endcap
+// drag's mapped arm, update_trim_drag, says why that side is chosen). In
+// Source view, and in
 // a target view with no map, the displayed frame is the source frame and
 // the rule changes nothing. The readers: the trim's conversions alone —
 // trim_bound_frame_at_x (the bound-set click, the TRIM sweep) and the
@@ -862,21 +872,41 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         const int64_t wall_active = static_cast<int64_t>(std::nearbyint(
             map_source_to_target(
                 static_cast<double>(audio.total_frames() - 1), dmap)));
-        // THE END PUSHED AGAINST THE CEILING ANSWERS THE SOURCE'S END — the
-        // bridge's form of trim_source_frame_reaching_end's rule: the ceiling
-        // is the last frame's ROUNDED image, and under a speed-up its inverse
-        // can stop short of total-1 (Sol's 4.00 x 2.00 piece: total-1 =
-        // 1,801,602 maps to 225,200.25, the ceiling 225,200, whose inverse is
-        // 1,801,600). So a pair whose end the pen pushes past the ceiling
-        // rests its end on total-1 (below). Only a push PAST it, a proposal
-        // beyond the last frame's displayed frame: an end that merely stands
-        // on the ceiling (a resting end there, the pen not past it) keeps
-        // the map's answer, so a bridge motion that leaves the end inside
-        // the song never lands it on total-1; the frames the push moves it
-        // across share the ceiling's displayed frame, within half a
-        // displayed frame of it (1/40 px at most, q >= 20). Frame 0 has no
-        // such gap (the floor 0 is exact on both sides), so the begin's
-        // floor keeps the map's answer.
+        // A BOUND PUSHED PAST ITS WALL RESTS ON THE WALL'S OWN SOURCE FRAME,
+        // ONE RULE AT BOTH WALLS (Sol's reviews, 2026-11-18) — the bridge's
+        // form of trim_source_frame_reaching_end's rule. The walls in the
+        // active domain are ROUNDED images: the floor 0 is displayed 0, which
+        // a begin rounding down to it shares with up to half the ratio's
+        // source frames under a speed-up (a begin at source 5 under 16x
+        // maps to 0.3125, displayed 0); the ceiling is the last frame's
+        // rounded image, whose inverse can stop short of total-1 (Sol's 4.00
+        // x 2.00 piece: total-1 = 1,801,602 maps to 225,200.25, the ceiling
+        // 225,200, whose inverse is 1,801,600). So the push is read off the
+        // PROPOSAL BEFORE THE CLAMPS below — the original's displayed frame
+        // plus the pen's delta past the wall — and a pushed bound rests on
+        // the wall's source frame: the begin on frame 0 (displayed 0 is
+        // source 0, the map seeded at {0, 0}), the end on total-1. The push
+        // is told apart from a pen that has not pushed even where the clamp
+        // leaves the delta 0 (a bound already painted on its wall; the
+        // zero-delta rule below would otherwise keep it where it rests):
+        // only a proposal PAST the wall counts — a bound merely standing on
+        // it, the pen not past it (no travel, or travel that the clamp does
+        // not cut), keeps what the zero-delta rule or the map gives it, so a
+        // bridge motion that leaves both bounds inside the song never lands
+        // either on a wall. THE PARTNER of the pushed bound keeps what the
+        // zero-delta rule (a delta clamped to 0) or the map (a delta the
+        // clamp shortened) gives it, at either wall alike, so the pair's gap
+        // can grow by the frames the pushed bound crosses — all inside the
+        // wall's one displayed frame, within half a displayed frame of it
+        // (1/40 px at most, q >= 20): the same accepted deformation as the
+        // source-wall belt's below. The two pushes are exclusive (the pair's
+        // displayed gap oe - ob is at most the ceiling, so one delta cannot
+        // carry the begin under 0 and the end over the ceiling). In Source
+        // view (an empty map) the begin's push is a strict no-op: ob is
+        // orig_begin exactly and the round trip is the identity, so the
+        // clamp's df = -ob already lands nb on snap(0) = 0, or keeps an
+        // orig_begin of 0 when the clamp leaves the delta 0 — frame 0 both.
+        const bool begin_pushed_past_wall = ob + df < 0;
         const bool end_pushed_past_wall = oe + df > wall_active;
         if (ob + df < 0)            df = -ob;
         if (oe + df < 0)            df = -oe;
@@ -893,9 +923,10 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // 2.00 piece), so a bridge pressed and dragged straight down past
         // the grab gate would otherwise write the trim with no travel. The
         // pair rides its delta off the originals, so a pen brought back to
-        // its press's frame restores them exactly. The one exception is the
-        // end pushed past the ceiling (below), which answers total-1 even
-        // when the ceiling clamps the delta to 0.
+        // its press's frame restores them exactly. The one exception is a
+        // bound pushed past its wall (above), which rests on the wall's
+        // source frame — the begin on 0, the end on total-1 — even when the
+        // wall clamps the delta to 0.
         int64_t nb = (df == 0) ? app.trim_drag.orig_begin_frame
                                : snap_authored_frame(map_target_to_source(
                                      static_cast<double>(ob + df), dmap));
@@ -913,6 +944,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // gap is invariant, so a belt that shortens the rigid delta by a frame
         // is the same accepted deformation the release's snap carries).
         const int64_t source_wall = audio.total_frames() - 1;
+        if (begin_pushed_past_wall) nb = 0;
         if (end_pushed_past_wall) ne = source_wall;
         if (nb < 0) nb = 0;
         if (ne < 0) ne = 0;
@@ -1036,17 +1068,39 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // WHAT THE CAP DOES: the trim bar paints it at its frame's image
         // ROUNDED to a whole displayed frame (trim_bound_place_x), so it
         // stands within half a displayed frame of the towed place's frame
-        // plus the image of half a source frame, at every travel, the
-        // grab's own included (half a displayed frame is 1/40 px at most,
-        // q >= 20) — under a speed-up several source frames share one
-        // painted place and the bound steps among them under a still cap;
+        // plus the image of half a source frame — (0.5 + 0.5 x slope)
+        // displayed frames, the slope the displayed frames per source frame
+        // in the bound's section — at every travel, the grab's own included,
+        // before the end's band, the strip clamp, the walls and the partner
+        // (THE ERROR'S ONE STATEMENT; TrimDragState points here). In px at
+        // q >= 20 (kDeepestZoomMinFramesPerPx): (0.5 + 0.5 x slope) / 20,
+        // 0.125 px through slope 4 (tempo 0.25 alone) and 0.425 px at the
+        // slowest supported section, slope 16 (tempo 0.25 x marker scale
+        // 0.5 x piece scale 0.5, value_format.h's floors, all legal at
+        // once), under 0.05 px under a speed-up (slope < 1). Under a
+        // speed-up several source frames share one painted place and the
+        // bound steps among them under a still cap;
         // under a slow-down one source frame spans its ratio of displayed
         // frames and the cap steps by that width, the grid's own truth,
         // never lag. THE FIRST MOTION CONTINUES FROM THE BOUND: at zero
         // travel the towed place's frame is the bound's image and its inverse
         // the bound to floating error, so a sub-pixel travel answers the
         // bound or its neighbor on the travel's side, never a frame against
-        // it. THE PEN AT ITS PRESS'S X HAS NOT TRAVELLED
+        // it — LEFT OF THE END'S BAND. INSIDE IT (the source frames whose
+        // image stands at or past the displayed total, painted on the last
+        // displayed frame with the end: trim_source_frame_reaching_end's
+        // head) EVERY TOWED PLACE STILL IN IT ANSWERS THE END, in both
+        // directions: Sol's 720,007-frame piece under 16x, an end at 720,004
+        // (image 45,000.25, the displayed total 45,000) drifting left
+        // 0.0078125 px at q = 20 tows to 45,000.09375, whose inverse is
+        // 720,001.5, raised to the total and walled on 720,006. That side is
+        // chosen because the other one is the worse error: a cap resting ON
+        // the end (720,006, image 45,000.375) drifting by the same hair
+        // would tow to 45,000.21875 and leave the end for 720,004 by unseen
+        // frames, silently turning a full trim into a sub-window (architect
+        // 2026-10-14: "trim at EOF is required for full render"); answered
+        // the end, it stays on 720,006. THE PEN AT ITS PRESS'S X HAS NOT
+        // TRAVELLED
         // (TrimDragState::press_x), and the bound stays as found — the else
         // of this arm: a press that never moves writes nothing, not even the
         // round trip's floating hair, and a crossing made by vertical travel
@@ -1091,12 +1145,25 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // stands at w + g: an end zone ends one px right of its bound
     // (trim_endcap_rect), so g < 1 px and the pen reaches the wall under one
     // px past the strip's right edge; a begin zone starts on its bound, so g
-    // >= 0 and the pen reaches frame 0 inside the strip; only a NARROW
-    // window's end zone, standing edge to edge right of the begin's, can
-    // carry a g of up to two zones' width (40 device px on the tablet),
-    // more than the 26 px of panel right of the strip's edge there, so such
-    // a grab reaches the end in a second stroke, the window wide by then.
-    // THE
+    // >= 0 and the pen reaches frame 0 inside the strip (in a mapped domain
+    // g is measured off the bound's unrounded image, which stands within
+    // half a displayed frame, 1/40 px at most, of the painted place the
+    // zone stands on, so each figure moves by that much);
+    // only a NARROW window's end zone, standing edge to edge right of the
+    // begin's, can carry a g of up to two zones' width (40 device px on the
+    // tablet), more than the 26 px of panel right of the strip's edge
+    // there, so such a grab can stop short of the end. A SECOND STROKE from
+    // the same grab place carries a smaller g — the bound has moved right
+    // under it by the first stroke's travel — and the window may still be
+    // narrow: Sol's round-2 piece (4.00 x 2.00) at Target FIT, q = 100,
+    // the pair [1,775,200, 1,776,000] at waveform-relative x 2219 / 2220,
+    // the end zone 2239 .. 2259 clipped to the lane's 2252; a grab at 2251
+    // carries g = 31, the
+    // first stroke to the panel's last px (x 2277) tows the end to 2246
+    // (1,796,800), the window 28 px, still under two zones; the second grab
+    // at 2251 carries g = 5 and reaches total-1 (1,801,602). The strokes
+    // are the narrow rule's accepted price: both ends of a narrow window
+    // stay grabbable. THE
     // GRAB CAN BEGIN ON A BOUND JUST OFF SCREEN (architect 2026-10-05): a
     // button sliding off an edge is grabbed by its visible columns
     // (hit_test_trim_endcap tests what the painter published), its bound up

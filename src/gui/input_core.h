@@ -1181,10 +1181,11 @@ private:
     // synthesized enter-motion at the ORIGINAL down point, the left press
     // there, then any queued motion (inside the slop by the window's own
     // test, the same real travel the GUI's gates measure). Shared
-    // by all three pointer resolutions — the OFF-ZONE DOWN (on contact,
-    // 2026-09-25), the editor field's DOUBLE PRESS (on contact), and the tap
-    // (whose caller then delivers the release + the translation end itself,
-    // through deliver_touch_translation_end).
+    // by both pointer resolutions — the OFF-ZONE DOWN (on contact,
+    // 2026-09-25: off the pan zone and outside an open editor's field) and
+    // the tap at its lift, from the pan zone or the field (whose caller then
+    // delivers the release + the translation end itself, through
+    // deliver_touch_translation_end).
     void resolve_touch_window_to_pointer();
     // Resolve the Pending window to SINGLE-FINGER NAV instead (the phone
     // model's slop-crossing arm, taken when the captured down point lay in
