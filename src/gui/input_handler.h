@@ -1703,7 +1703,7 @@ struct GuiInputHandler {
     // through take_chrome_press.
     void clear_redesign_button_press();
     // THE PRESS FACE'S DAMAGE for one roster button — the key's own painted
-    // extent, its face and legend (architect 2026-11-16, the beats; the
+    // extent, its face (architect 2026-11-16, the beats; the
     // press arc, 2026-11-05; the body's comment, input_pointer.cpp): the
     // arm's, the lift's and the walk's crossing's, TRIM's lamp edges, and
     // FOLLOW's and RESTR's put out by darken_zoom_lamps (architect
@@ -3995,8 +3995,8 @@ private:
     // (icons::select_set) and run the theme's apply shape for the glyphs
     // alone: the icon rasters dropped (a raster and its fit are the set's
     // drawing's) and the whole window invalidated — every surface that
-    // wears a glyph, the logo lane's battery cell (its seat the set's,
-    // render.h's LOGO LANE block) and the extents it moves among them. NO
+    // wears a glyph, the title bar's battery cell (its seat the set's,
+    // render.h's title bar block) and the extents it moves among them. NO
     // PALETTE, NO PLATE, NO FLAG CACHE: the set moves no color and nothing
     // on the canvas. It cards nothing: the screen is the answer. The commit
     // gates the no-op and writes the device config; the launch chooses the

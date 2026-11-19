@@ -81,7 +81,7 @@ namespace {
 // the authored gui_scale row heights (icon_row_h_px() — its key's rows, and
 // row 8's, the `key_height` tuning key's since 2026-10-29 —
 // the well's four, its foot, plus bottom_row_h_px() —
-// the unified bottom row), kRowGapPx and kFlagBottomLiftPx (see the
+// the bottom icon row — and the status bar's), kRowGapPx and kFlagBottomLiftPx (see the
 // geometry helpers below); nothing is window-proportional, and since row 7
 // nothing is font-proportional either.
 
@@ -141,63 +141,45 @@ namespace {
 //
 // Per-strip lane stacks with per-lane heights. Top and bottom strips DIFFER in
 // height; the waveform takes what they leave, and TWO FLEXIBLE GAPS stand
-// either side of it, both 0 (the vertical rule below). THE SIMPLE LAYOUT
-// (architect 2026-10-22, "redesign with dead simple layout"; program_spec.h's
-// head): the TOP strip is FIVE lanes — from the window edge inward (every
-// Windows-px length below the live chrome spec's, chrome_spec.h, or the
-// program's, program_spec.h):
-// the ICON ROW (icon_row_h_px(), AT THE SURFACE'S TOP since 2026-10-24 —
-// THE APP'S CAPTION, the window's own title bar lane 0 from 2026-10-05, is
-// removed: the tablet's window has none; render.h's caption note): THE
-// TOOLBAR BAND
-// (THE LOGO LANE — 36 W, 72 device px on the tablet at 200 %, render.h's
-// logo lane block — the key, the `key_width` tuning key's W wide by the
-// `key_height` tuning key's W tall (35 and 17 their defaults; 70 x 34
-// device px), and the strip pad, 19 W (38
-// device px), the keys' legends in it (the hi-fi metrics again since
-// 2026-11-03), on the
-// flat ground — render.h's program block),
-// then FLEXIBLE GAP 1, then THE CENTERED
-// BLOCK's four, THE WELL — THE PROGRAM'S CANVAS COLUMN, flat regions inside
-// one frame (architect 2026-10-09, the program is Cool Edit; 2026-11-01
-// night, "THE MAIN PAGE IS SETTLED"; THE FRAME 2026-11-17, session 140;
-// render.h's well paragraph, its lanes block and THE WELL'S FRAME):
-// the TRIM lane (trim_lane_h_px(), the frame's top line, Arc's 12-W
-// scrollbar trough with its pill and the frame's line under it, 14 W, 28
-// device px on the tablet), the RULER lane (ruler_lane_h_px(), Cool Edit's
-// flipped ruler in Live's tones, 36 rows and the frame's line (38 device
-// rows on the tablet)
-// — the Bold Small (8 W, 16 device px) timestamps' ink
-// centered between two pads, the ticks and the PLAYHEAD'S HEAD on its foot
-// rows — and a
-// PLACEMENT LANE: a motionless click places the playhead
+// either side of it, both 0 (the vertical rule below). THE PAGE ON ARC'S
+// NUMBERS (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §1, the
+// approved pictures Z_01 / Z_02): the TOP strip is FIVE lanes — from the
+// window edge inward:
+// THE BAND (icon_row_h_px(), at the surface's top): THE TITLE BAR (28 W,
+// render.h's title bar block) and THE TOP ICON ROW (Arc's toolbar: 7 W, the
+// key — the `key_width` tuning key's W wide by the `key_height` tuning
+// key's W tall, 36 x 28 their defaults — and 8 W; render.h's band
+// paragraph), then FLEXIBLE GAP 1, then THE WELL — THE PROGRAM'S CANVAS
+// COLUMN, flat regions RUNNING THE PANEL'S WHOLE WIDTH (render.h's THE
+// WELL'S EDGES): the TRIM lane (trim_lane_h_px(), the line under the top
+// icon row, Arc's 12-W scrollbar trough with its pill and the line under
+// it, 14 W), the RULER lane (ruler_lane_h_px(), Thunar's column header in
+// Arc's tones, 19 W — the Bold Small (10 W) timestamps on their line-box
+// baseline, the ticks and the PLAYHEAD'S HEAD on its foot rows — and its
+// line; a PLACEMENT LANE: a motionless click places the playhead
 // and every drag there does nothing but the head's, which drags the playhead
 // (2026-10-09), the navigation surface being the waveform alone
 // (point_on_placement_lanes and point_on_playhead_head, input_pointer.cpp)),
-// the MARKER lane (marker_lane_h_px(), the time field's 39 device rows on
-// the tablet,
-// Cool Edit's cues, the label's box and the flag editor's the whole lane)
+// the MARKER lane (marker_lane_h_px(), 20 W, Thunar's row at 9 pt, Cool
+// Edit's cues, the label's box and the flag editor's the whole lane)
 // and THE LANE'S FOOT
-// LINE (lane_foot_line_h_px(), one hairline, the frame's line), whose bottom
-// edge is the waveform top. EVERY LANE rides the gui_scale axis, the well's
-// lines one W rounded at the element (render.h's line rule, 2026-11-04). The
-// BOTTOM strip is TWO LANES: THE WELL'S FOOT (well_foot_h_px(), a hairline,
-// the frame's bottom line)
-// directly under the waveform, and THE UNIFIED BOTTOM ROW,
-// bottom_row_h_px() tall — the strip pad, the case, the strip pad, on the
-// window's foot — the clock in its flat time field, the active tab's
-// name and THE STATE LINE on the ground beside it, and, packed against the
-// right edge, the two skips (Go to Start, Go to End; 2026-10-24), the
-// MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp, owns its
-// membership), the step and walk, the nudge and play with Play / Stop last,
-// each a plain run of cases — the flexible gap 2 above both. NO
-// TENANT MOVES A LANE: the modal family's box and controls row (modal_box.h)
-// and the on-screen keyboard's band (onscreen_keyboard.h's placement block)
-// stand over the lanes, and every lane here keeps its rows under them.
-// ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect 2026-10-21:
-// strip_row_rect). (The tab strip, the column's air, the column's foot, the
-// dock bar and the border under row 8 stood as lanes 2026-10-09 to
-// 2026-10-22; git history.)
+// LINE (lane_foot_line_h_px(), one hairline), whose bottom edge is the
+// waveform top. EVERY LANE rides the gui_scale axis, its lines one W rounded
+// at the element (render.h's line rule). The BOTTOM strip is THREE LANES,
+// from the window's foot inward: THE STATUS BAR (status_bar_lane_h_px(), its
+// line and 22 W, Thunar's; render.h's status bar block), THE BOTTOM ICON ROW
+// (bottom_row_h_px(), 8 W, the key, 7 W) — the clock in its flat time
+// field and the active tab's name beside it, and, packed against the right
+// edge, the COPY / PASTE duo, the two skips, the MARKER-VERB GROUP
+// (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the step and
+// walk, the nudge and play with Play / Stop last, each a plain run of cases
+// — and THE WELL'S FOOT (well_foot_h_px(), a hairline) directly under the
+// waveform; the flexible gap 2 above them. NO TENANT MOVES A LANE: the
+// modal family's box and controls row (modal_box.h) and the on-screen
+// keyboard's band (onscreen_keyboard.h's placement block) stand over the
+// lanes above the status bar, and every lane here keeps its rows under
+// them. ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect 2026-10-21:
+// strip_row_rect).
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
 // (architect 2026-10-07 evening: the maximum height it carried — a render.h
@@ -212,7 +194,8 @@ namespace {
 //     lane's foot line, then THE WAVEFORM, the canvas's interior (the
 //     margins' ground beside it, waveform_area's x);
 //   GAP 2 — flexible blank window ground;
-//   THE WELL'S FOOT and THE UNIFIED BOTTOM ROW at the window's foot.
+//   THE WELL'S FOOT, THE BOTTOM ICON ROW and THE STATUS BAR at the window's
+//   foot.
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, which
@@ -224,7 +207,7 @@ namespace {
 // lane stack whichever side of it they sit on):
 //   leftover = win_h - (the top lanes whole) - the bottom strip's two lanes
 //              = centered_leftover_h; the lane's foot line is top lane
-//                4 and the well's foot bottom lane 1, so the waveform is
+//                4 and the well's foot bottom lane 2, so the waveform is
 //                the canvas's interior and nothing inside its area is a
 //                border,
 //   W        = max(0, leftover)                            = waveform_h,
@@ -241,56 +224,25 @@ namespace {
 // derivations stand, answering 0, and every consumer below still reads its
 // lane through them.
 //
-// THE STACKS BELOW, THE ONE RECORD, re-derived from the lane table
-// 2026-11-17 rather than adjusted (every line one W, 2 device px on
-// the tablet; the Program 11 W text, the ruler's Bold Small 8 W, the trim
-// bar's trough 12 W; the 36-W logo lane, the key and the strip pad 19
-// W; the device rows below the tablet's at 200 %, the unit the integer W
-// since the rebase of 2026-11-05), AT key_height 17 (the construction state's value, the template's until 2026-11-09; a tune moves the band's and
-// row 8's case rows and the well by their difference; key_width moves no
-// row), the waveform the
-// whole leftover and both gaps 0 in every stack (the rule above). Every
-// lane is its own composite of rounded parts (scaled_px's rule, the faces'
-// metrics each rounded at the element), so the device rows
-// below are read off the lane accessors, never off a total times the
-// factor. NO LANE ABOVE OR BELOW THE WELL IS A WINDOWS-PX LENGTH: THE BAND
-// IS THE LOGO LANE, THE KEY AND THE STRIP PAD; ROW 8 THE STRIP PAD, THE
-// KEY AND THE STRIP PAD — the logo lane 36 W, the key the `key_height`
-// key's W (icon_case_h_px), the pad 19 W (strip_pad_px), each SCALED WITH
-// gui_scale — AND THE WELL'S LANES ARE DERIVED IN DEVICE PX AT THE ELEMENT
-// (render.h's well lanes block). THE CANVAS — THE WELL'S INTERIOR — ON THE
-// TABLET AT 200 % AND key_height 17 IS 1077 DEVICE ROWS (the
-// rule at centered_leftover_h below), AND ITS WIDTH 2252 OF THE TABLET'S
-// 2304, 26 device px in from the left (waveform_area: the margin, 24 px,
-// and the well's frame, 2; no floor, architect 2026-11-18). Per
-// scale the well above the canvas is the trim lane (the frame's top line +
-// the trough + the frame's line) + the ruler lane (pad + the digits' ink +
-// pad, + the frame's line) + the marker lane (the time field's height:
-// outline + pad + band + pad + outline) + the lane's foot line: 28 (2 + 24
-// + 2) + 38 (12 + 12 + 12 + 2) + 39 (2 + 6 + 22 + 7 + 2) + 2 = 107
-// device rows on the tablet; the band the logo lane + the key + the strip
-// pad, 72 + 34 + 38 = 144; row 8 38 + 34 + 38 = 110.
+// THE STACKS BELOW, THE ONE RECORD (re-derived from the lane table
+// 2026-11-19, send Z; every line one W, 2 device px on the tablet; the text
+// 12 W, the ruler's 10 W; the device rows below the tablet's at 200 % and
+// key_height 28 — a tune moves the band's and the bottom icon row's case
+// rows and the canvas by their difference; key_width moves no row). Every
+// lane is its own composite of rounded parts (scaled_px's rule), so the
+// device rows below are read off the lane accessors, never off a total
+// times the factor.
 //   2304x1440 AT gui_scale 200, THE GLASS HOST AND THE ONE HOST (the
 //   tablet's WHOLE SURFACE, full screen with both system bars hidden since
-//   2026-10-01 — MainActivity.java's head — NO CAPTION since 2026-10-24;
-//   200 since the rebase of 2026-11-05, every device row below what it was
-//   at the 300 of 2026-10-06 .. 2026-11-05): the lanes are 144 band (72 + 34 + 38,
-//   rows 0–143, the logo lane 0–71, the faces 72–105) + 28 trim (rows
-//   144–145 the frame's top line, the trough 146–169, rows 170–171 the
-//   frame's line) + 38 ruler (172–207, rows 208–209 the frame's line) + 39
-//   marker (210–248) + 2 foot line (249–250) = 251 above (144 the band,
-//   107 the block) and 112 below (the well's foot, the frame's bottom line,
-//   1328–1329 and row 8 on 1330–1439, its faces 1368–1401), leftover 1077:
-//   the waveform 1077 on rows 251–1327 (its two wells 537 rows each round
-//   the divider's rows 788–789, the spare row 1327 the canvas's last,
-//   render.h's waveform_divider), both gaps 0 — 144 / 0 / 107 / 1077 / 0 /
-//   112; the waveform 2252 wide, 26 px in (columns 26–2277), the frame's
-//   sides on columns 24–25 and 2278–2279, the well's columns 24 and 2280
-//   (one past 2279). (The unit of 2026-11-04 took rows from the canvas,
-//   architect: "waveform height ok to take from"; the unit of 2 that night
-//   gave five back; the 12-W trough took eight, 2026-11-17. The
-//   laptop geometries once worked here — 1920 x H, 1024 x 600 — are gone
-//   with the laptop GUI, 2026-10-30: no host runs them.)
+//   2026-10-01 — MainActivity.java's head): THE BAND 142 (the title bar
+//   0–55, the top icon row's pad 56–69, its faces 70–125, its pad 126–141)
+//   + THE TRIM LANE 28 (the line 142–143, the trough 144–167, the line
+//   168–169) + THE RULER LANE 40 (the ruler 170–207, the line 208–209) +
+//   THE MARKER LANE 40 (210–249) + THE FOOT LINE 2 (250–251) = 252 above;
+//   134 below (THE WELL'S FOOT 1306–1307, THE BOTTOM ICON ROW 1308–1393, its
+//   faces 1324–1379, THE STATUS BAR'S LINE 1394–1395 and THE BAR 1396–1439);
+//   leftover 1054: the waveform 1054 rows on 252–1305, both gaps 0; the
+//   waveform the panel's whole width, columns 0–2303.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -355,16 +307,17 @@ namespace {
 // accessors' declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
-// and the lane owns every pixel it paints. The ICON lane is THE TOOLBAR
-// BAND, the logo lane, the key (its height the `key_height` tuning key,
-// 2026-10-29) and the strip pad (render.h's program and logo lane blocks,
+// and the lane owns every pixel it paints. The ICON lane is THE BAND, the
+// title bar, the outer pad, the key (its height the `key_height` tuning
+// key, 2026-10-29) and the inner pad (render.h's band paragraph,
 // icon_row_h_px), the well's four lanes the trim bar, the ruler, the marker
-// lane and the lane's foot line (render.h's well lanes block): 28 + 38 + 39
-// + 2 = 107 device rows on the tablet — THE
-// WELL'S FOOT one W too (well_foot_h_px), and the UNIFIED BOTTOM ROW the strip again
-// (bottom_row_h_px; the simple layout, 2026-10-22).
+// lane and the lane's foot line (render.h's well lanes block): 28 + 40 + 40
+// + 2 = 110 device rows on the tablet — THE WELL'S FOOT one W too
+// (well_foot_h_px), THE BOTTOM ICON ROW the strip (bottom_row_h_px) and THE
+// STATUS BAR its line and its bar (status_bar_lane_h_px; send Z,
+// 2026-11-19).
 constexpr int kTopLaneCount    = 5;
-constexpr int kBottomLaneCount = 2;
+constexpr int kBottomLaneCount = 3;
 // THE FIRST PROGRAM LANE, the band, AT THE WINDOW'S TOP since 2026-10-24
 // (the caption lane 0 above it 2026-10-05 to then).
 constexpr int kTopProgramLane      = 0;
@@ -384,8 +337,7 @@ constexpr int kTopLaneFootLane    = 4;
 static_assert(kTopFlexGapLane == kTopTrimLane);
 int top_lane_height(int lane) {
     switch (lane) {
-        // THE TOOLBAR BAND: the logo lane, the strip pad, the case, the
-        // strip pad.
+        // THE BAND: the title bar, the outer pad, the case, the inner pad.
         case kTopProgramLane: return icon_row_h_px();
         // THE WELL'S THREE (architect 2026-10-09, the program is Cool Edit;
         // flat since 2026-11-01 night; render.h's well lanes block the
@@ -394,27 +346,34 @@ int top_lane_height(int lane) {
         case kTopTrimLane:    return trim_lane_h_px();      // the trim bar
         case kTopRulerLane:   return ruler_lane_h_px();     // ruler / placement
         case kTopMarkerLane:  return marker_lane_h_px();    // the cues
-        // THE LANE'S FOOT LINE, the frame's line; bottom edge = waveform top.
+        // THE LANE'S FOOT LINE, one of the well's lines; bottom edge =
+        // waveform top.
         case kTopLaneFootLane: return lane_foot_line_h_px();
         default: return 0;
     }
 }
 // The bottom strip's TWO lanes, indexed from the WINDOW'S FOOT inward like
-// every lane table here: lane 0 is THE UNIFIED BOTTOM ROW on the window's
-// foot (2026-08-12, rows 8 and 9 merged: the clock left, the buttons flush
-// right; the layout is paint_bottom_row_buttons_and_clock's), lane 1 THE
-// WELL'S FOOT (the well's frame's bottom line since 2026-11-17, a row of
-// ground from the flat well, the program ring's last row before it). THE ORDER IS FIXED: no tenant of the row moves a lane — the
+// every lane table here: lane 0 is THE STATUS BAR on the window's foot
+// (architect 2026-11-19, send Z: its line and its 22 W; render.h's status
+// bar block), lane 1 THE BOTTOM ICON ROW (2026-08-12, rows 8 and 9 merged:
+// the clock left, the buttons flush right; the layout is
+// paint_bottom_row_buttons_and_clock's), lane 2 THE WELL'S FOOT (one of the
+// well's lines). THE ORDER IS FIXED: no tenant of the row moves a lane — the
 // modal family's box and controls row stand over these rows (modal_box.h)
 // and the on-screen keyboard's band over them (onscreen_keyboard.h's
-// placement block). GAP 2 sits ABOVE the two, in bottom_strip_h's total
+// placement block), both standing above the status bar. GAP 2 sits ABOVE the
+// three, in bottom_strip_h's total
 // rather than in a lane's inset, so lane 0 is flush with the window edge
 // like the top strip's own lane 0 (and gap 2 being 0, lane 1's top is the
 // waveform's bottom).
-constexpr int kBottomRowLane      = 0;
-constexpr int kBottomWellFootLane = 1;
+constexpr int kBottomStatusLane   = 0;
+constexpr int kBottomRowLane      = 1;
+constexpr int kBottomWellFootLane = 2;
 int bottom_lane_height(int lane) {
     switch (lane) {
+        // THE STATUS BAR (send Z, 2026-11-19): its line and the bar, on the
+        // window's foot (render.h's status_bar_lane_h_px).
+        case kBottomStatusLane:   return status_bar_lane_h_px();
         case kBottomRowLane:      return bottom_row_h_px();
         // THE WELL'S FOOT, the frame's bottom line; top edge = waveform bottom.
         case kBottomWellFootLane: return well_foot_h_px();
@@ -439,8 +398,8 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 200 and key_height 17 the lanes leave 1440 − 251 − 112 = 1077
-// device rows (2026-11-17). No
+// gui_scale 200 and key_height 28 the lanes leave 1440 − 252 − 134 = 1054
+// device rows (2026-11-19, send Z). No
 // color moves a lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -532,46 +491,34 @@ GuiRect waveform_area(const AppState& a) {
     // rule here.
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
-    // THE CANVAS'S INTERIOR ACROSS (architect 2026-10-09, the third part;
-    // program_spec.h's column_margin_px): the margin's ground stands in from
-    // each side of the window (column_margin_w_px), then THE WELL'S FRAME's
-    // one W each side (well_frame_w_px; architect 2026-11-17, session 140,
-    // render.h's THE WELL'S FRAME), and the interior is what those two leave,
-    // EVERY COLUMN OF IT — NO FLOOR (architect 2026-11-18, "I'll take your
-    // recommend."): the width is free because every basis that carries a
-    // span recovers the painter's q exactly at any width over 16 px
-    // (recovered_painter_spp, warp_frame_map_view.h, the proof). So the
-    // frame stands right inside the margin, 12 W from the glass, and with it
-    // the keys' outer faces, which stand on the frame's outer columns (THE
-    // EDGE RULE, render.h's well_columns; session 140's ruling, 2026-11-17).
-    // The trim bar, the ruler and the marker lane follow the
-    // canvas's columns, inside the frame. On the tablet's 2304 at 200 %: the
-    // frame on columns 24 .. 25 and 2278 .. 2279, the area 26 device px in
-    // and 2252 wide (the margin's 24, the frame's 2). On a 1920-px window at
-    // 100 %: the frame on columns 12 and 1907, the area 13 in and 1894 wide.
-    // The working column, the zoom map, every column mapping and hit test and
-    // the damage boxes read this rect (ON SCREEN IS AS PAINTED); THE EDGE
-    // RULE reads the frame's outer columns (render.h's well_columns).
-    const int side = column_margin_w_px();
-    const int frame = well_frame_w_px();
-    const int effective_w = std::max(0, w - 2 * side - 2 * frame);
-    const int inner_x = side + frame;
+    // THE CANVAS ACROSS IS THE PANEL'S WHOLE WIDTH — EDGE TO EDGE
+    // (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §1: "NO SIDE
+    // MARGINS: the lanes, their lines and the canvas run the panel's whole
+    // width"): the well's frame of 2026-11-17 and its 12 W margins are
+    // gone, so the area is x 0 .. the window's last column, EVERY COLUMN OF
+    // IT, no floor (every basis that carries a span recovers the painter's q
+    // exactly at any width over 16 px: recovered_painter_spp,
+    // warp_frame_map_view.h). On the tablet's 2304 at 200 %: x 0, 2304
+    // wide. The working column, the zoom map, every column mapping and hit
+    // test and the damage boxes read this rect (ON SCREEN IS AS PAINTED); THE
+    // EDGE RULE reads the same columns (render.h's well_columns).
+    const int effective_w = std::max(0, w);
+    const int inner_x = 0;
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, a constructive DOMAIN INVARIANT
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
     // the vocabulary reaches it: the lanes scale with gui_scale (lane by
     // lane, each from its rounded parts, which is not one multiply of the
-    // sum), the well's frame lines one W each (2026-11-04), and at the
-    // 1000 % ceiling (architect 2026-10-05) they PASS the tablet's 1440 rows
-    // at key_height's default 17: the band 360 + 170 + 190 = 720 and row 8
-    // 190 + 170 + 190 = 550 take 1270 before the well's lanes (the trim 140,
-    // the foot lines 10 + 10, the ruler round its 80-device-px face, the
-    // marker lane round the time field's 110), so the top of the vocabulary lands on this floor
-    // (since the rebase of 2026-11-05: one W is 10 device px there). (The
-    // host runs far below it: the tablet at 200 % on its 1440-tall surface,
-    // where they take 363 at the default key and leave the waveform 1077,
-    // the stack record at the lane table above; re-derived 2026-11-17.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // sum), the well's lines one W each (2026-11-04), and at the 1000 %
+    // ceiling (architect 2026-10-05) they PASS the tablet's 1440 rows at
+    // key_height's default 28: the band (280 + 70 + 280 + 80 = 710) and the
+    // bottom icon row (80 + 280 + 70 = 430) and the status bar (10 + 220)
+    // take 1370 before the well's lanes, so the top of the vocabulary lands
+    // on this floor (one W is 10 device px there). (The host runs far below
+    // it: the tablet at 200 % on its 1440-tall surface, where they take 386
+    // at the default key and leave the waveform 1054, the stack record at the
+    // lane table above; re-derived 2026-11-19, send Z.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
@@ -626,8 +573,8 @@ GuiRect waveform_area(const AppState& a) {
 // grows 1 W px each side"). Every damage rect and painter reads its lane
 // here, and every hit rect its rows: the well's three upper lanes are
 // pressed on the waveform area's columns alone (their press rects, below
-// top_marker_row_area), the margin's ground and the well's frame beside
-// them painted in the lane but no press target.
+// top_marker_row_area) — the panel's whole width since 2026-11-19 (send Z,
+// edge to edge).
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 1 (the ruler lane
 // 2, the marker lane lane 3 and the lane's foot line lane 4), and
@@ -672,7 +619,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
 // Lane 0 is the ICON row, at the window's top since 2026-10-24 (the app's
-// caption, lane 0 from 2026-10-05, removed), the logo lane over its keys (the thirty-one
+// caption, lane 0 from 2026-10-05, removed), the title bar over its keys (the thirty-one
 // view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
 // kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
 // count's authority; twenty-seven stand outside the `h` view and eighteen
@@ -681,7 +628,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // gesture and the span-framing long press), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
 // ladder and the playhead's head; a placement lane); lane 3 is the MARKER
-// lane (the cues); lane 4 is THE LANE'S FOOT LINE, the frame's line, whose
+// lane (the cues); lane 4 is THE LANE'S FOOT LINE, one of the well's lines, whose
 // bottom edge is
 // flush with the waveform area top. Every lane spans the window
 // (strip_row_rect, 2026-10-21). (top_caption_row_area and the sizing
@@ -715,12 +662,11 @@ GuiRect top_marker_row_area(const AppState& a) {
 // THE WELL'S LANES' PRESS RECTS — what a press on the trim bar, the ruler or
 // the marker lane claims: THE LANE'S WHOLE ROWS ON THE WAVEFORM AREA'S
 // COLUMNS, where each lane paints its face (the trough and its pill, the
-// ruler's face, the marker lane's cues). The lane rects above span the
-// window, and paint and damage keep them: the margin's ground beside the
-// well and the well's frame in a lane's rows are painted there but are no
-// press target — "ground is not a button" (architect 2026-11-02, R5 / R11),
-// and the frame is chrome, inert to every gesture. A press there falls to
-// the router's consumed nothing, as on any other ground. THE TRIM BAR'S HIT
+// ruler's face, the marker lane's cues) — the panel's whole width since
+// 2026-11-19 (send Z, edge to edge), so the lane rects and the press rects
+// coincide on a full window; anything a narrower area left beside it would
+// be ground, "ground is not a button" (architect 2026-11-02, R5 / R11). THE
+// TRIM BAR'S HIT
 // THE LANE'S WHOLE ROWS (architect 2026-11-17, ruling 4). A gesture begun
 // inside one runs on over the margin and the frame until the lift: the drags'
 // motions and releases never re-test these.
@@ -744,15 +690,14 @@ GuiRect marker_lane_press_area(const AppState& a) {
 }
 
 // THE WELL'S COLUMNS, THE LANE'S FOOT LINE (top lane 4) and THE WELL'S FOOT
-// (bottom lane 1) — render.h's well-edge accessors; the frame's one painter
+// (bottom lane 2) — render.h's well-edge accessors; the lines' one painter
 // is paint_well_frame_rows (paint_handler.cpp), the foot line's and the
-// foot's rows paint_canvas_column_frame's. THE WELL'S COLUMNS ARE ITS
-// FRAME'S OUTER COLUMNS (architect 2026-11-17, session 140): the waveform
-// area widened by the frame's W on each side.
+// foot's rows paint_canvas_column_frame's. THE WELL'S COLUMNS ARE THE
+// PANEL'S (architect 2026-11-19, send Z: edge to edge, the frame's sides
+// gone): the waveform area's own.
 WellColumns well_columns(const AppState& a) {
     const GuiRect area = waveform_area(a);
-    const int frame = well_frame_w_px();
-    return WellColumns{area.x - frame, area.x + area.w + frame};
+    return WellColumns{area.x, area.x + area.w};
 }
 
 GuiRect lane_foot_line_area(const AppState& a) {
@@ -765,18 +710,18 @@ GuiRect well_foot_area(const AppState& a) {
 
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
 // render.h's bottom-row block) — THE STRIP since the simple layout
-// (2026-10-22): the strip pad, the key, the strip pad on the flat ground,
-// the clock at the left in its flat time field with the active tab's
-// name and THE STATE LINE on the ground right of it, and, packed against the
+// (2026-10-22): Arc's inner pad 8 W, the key, the outer pad 7 W on the body
+// tone (send Z, 2026-11-19), the clock at the left in its flat time field
+// with the active tab's name on the ground right of it (THE STATE LINE
+// moved to the status bar that day), and, packed against the
 // right edge, the skips (Go to Start, Go to End; 2026-10-24), the
 // MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each a plain run of cases,
 // the run gap of bare ground between two (render.h's program_run_gap_px, the
-// `run_gap` tuning key). It is BOTTOM LANE 0, on the window's
-// foot
-// under the well's foot (lane 1, well_foot_area above), the window's whole
+// `run_gap` tuning key). It is BOTTOM LANE 1, over the status bar (lane 0)
+// and under the well's foot (lane 2, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal
 // family's controls row on its rows and the on-screen keyboard's band over
 // it are never lanes: modal_box.h, onscreen_keyboard.h's placement block).
@@ -791,19 +736,39 @@ GuiRect bottom_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, kBottomRowLane);
 }
 
+// THE STATUS BAR'S LANE (architect 2026-11-19, send Z; render.h's status
+// bar block): BOTTOM LANE 0, on the window's foot under the bottom icon
+// row, the window's whole width — its first hairline the line over the bar,
+// the rest the bar. Every overlay and modal stands above it (the controls
+// row and the on-screen keyboard's band read bottom_row_area), so the bar
+// stays painted under them.
+GuiRect status_bar_area(const AppState& a) {
+    return strip_row_rect(a, /*top_strip=*/false, kBottomStatusLane);
+}
+
 // THE HOVER TOOLTIP'S SEAT AND ITS DAMAGE BAND (the contract at the
 // declaration, app_state.h; architect 2026-11-07, session 91).
+// A FACE IN THE BAND — a top-row key's — gets its box under it (send Z,
+// 2026-11-19; the contract at tooltip_box_rect's declaration): its bottom
+// edge within the band's rows.
+static bool tooltip_face_in_band(const AppState& a, const GuiRectF& face) {
+    const GuiRect band = top_icon_row_area(a);
+    return face.y + face.h <= static_cast<double>(band.y + band.h);
+}
 GuiRectF tooltip_box_rect(const AppState& a, const GuiRectF& face, double w,
                           double h) {
     // LEFT-ALIGNED ON THE FACE: the box's left edge the face's.
     double x = face.x;
-    // ABOVE THE FACE: the box's bottom edge the gap (kTooltipGapW, render.h)
-    // over the face's top edge.
-    double y = face.y - static_cast<double>(tooltip_gap_px()) - h;
-    // THE EDGE RULE (architect 2026-11-02, M11 ruling 4): the box between the
-    // keys' outer columns — the right clamp first, pulling a box that would
-    // run past the right one back to end on it, then the left, so a box wider
-    // than the span pins its left edge.
+    // UNDER A TOP-ROW KEY, ABOVE EVERY OTHER FACE (send Z, 2026-11-19): the
+    // box's top edge the gap (kTooltipGapW, render.h) under a band face's
+    // bottom edge, else its bottom edge the gap over the face's top edge.
+    const double gap = static_cast<double>(tooltip_gap_px());
+    double y = tooltip_face_in_band(a, face) ? face.y + face.h + gap
+                                             : face.y - gap - h;
+    // THE EDGE RULE (retold 2026-11-19, send Z): the box inside the panel's
+    // columns — the right clamp first, pulling a box that would run past the
+    // right edge back to end on it, then the left, so a box wider than the
+    // panel pins its left edge.
     const WellColumns keys = well_columns(a);
     if (x + w > static_cast<double>(keys.end))
         x = static_cast<double>(keys.end) - w;
@@ -842,24 +807,26 @@ static GuiRect tooltip_owner_face(const AppState& a) {
 GuiRect tooltip_damage_band(const AppState& a) {
     const GuiRect face = tooltip_owner_face(a);
     if (face.w <= 0 || face.h <= 0) return GuiRect{0, 0, 0, 0};
-    // The bound's rows ending on the gap's top — or from the window's top
+    // The bound's rows on the box's side: starting on the gap's bottom under
+    // a band face, else ending on the gap's top — or from the window's top
     // where they would rise past it, which holds the clamped seat too.
     const int band_h = tooltip_damage_h_px();
-    const int y = std::max(0, face.y - tooltip_gap_px() - band_h);
+    const GuiRectF facef{static_cast<double>(face.x),
+                         static_cast<double>(face.y),
+                         static_cast<double>(face.w),
+                         static_cast<double>(face.h)};
+    const int y = tooltip_face_in_band(a, facef)
+                      ? face.y + face.h + tooltip_gap_px()
+                      : std::max(0, face.y - tooltip_gap_px() - band_h);
     return GuiRect{0, y, a.width, band_h};
 }
 
-// (THE STATUS BAR'S LANE IS DELETED — architect 2026-08-29, the evening of the
-// day it landed. A tenth lane stood on the window's foot for one day, carrying
-// the process line and the `h` walk line at its left and the resolved readout
-// at its right, and the architect ruled it off after seeing it: the state text
-// belongs on the toolbar he already reads, and the bar duplicated that panel's
-// own foot. `status_bar_area`, `status_bar_content_area`,
-// `kStatusBarContentPx`, the three height accessors, `paint_status_bar` and
-// the window-foot seam `kRedesignBottomLine` all went with it; the STATE TEXT
-// is row 8's own cell, right of the clock, and the RESOLVED READOUT retired
-// whole — Ctrl+Shift+J copies the value (2026-10-14) and Ctrl+J goes to its
-// source.)
+// (THE STATUS BAR IS BACK — architect 2026-11-18 / 2026-11-19, send Z,
+// superseding his ruling of 2026-08-29 that put the state text on the
+// toolbar: Thunar's bar under the bottom icon row, status_bar_area above,
+// its string paint_handler.cpp's status_bar_text. The RESOLVED READOUT stays
+// retired — "The text field would get very long and very short depending on
+// which marker I select".)
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
 // pair. (`Viewport::trim_range` is not "the target-view half" of a pair with
@@ -1456,7 +1423,7 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
     // lane's painter is clip-driven; a stash a narrow clip does not cover is
     // not republished — the trim bar's, a key's — and the ruler head's own
     // as-painted hit, whose hull is the head's rows inside these columns,
-    // is). THE ROWS ABOVE THE LANES — the logo lane and the toolbar band —
+    // is). THE ROWS ABOVE THE LANES — the title bar and the top icon row —
     // ARE LEFT OUT: nothing of the playhead stands there, and a column of
     // them repainted on every motion would lay a slice of a key's face in
     // its live state ahead of the tick's comparator (a face split for a
@@ -1577,8 +1544,9 @@ struct GuiProjectOutcome {
     std::string reopen;
 };
 
-// THE LOGO LANE'S LEGEND, ITS ONE WRITER (architect 2026-10-24; render.h's
-// logo lane block, gui_battery.h's composer): called once as the project
+// THE TITLE BAR'S RIGHT GROUP (the "logo legend": the battery and the clock),
+// ITS ONE WRITER (architect 2026-10-24; render.h's title bar block,
+// gui_battery.h's composer): called once as the project
 // set is built and then ON EVERY TICK, ahead of the tick's early returns —
 // the legend is the wall clock's and the host's, never the project's, so no
 // mode or load can hold it back. It recomposes only when the wall-clock
@@ -1604,6 +1572,22 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
     GuiRect r = logo_legend_extent(app, legend);
     const GuiRect& was = app.logo_legend_rect;
     if (was.w > 0 && was.h > 0) r = union_rect(r, was);
+    if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
+}
+
+// THE STATUS BAR'S COMPARATOR (architect 2026-11-19, send Z: the bar is
+// STATE, NEVER AN EVENT — DESIGN §5): ON EVERY TICK, ahead of the early
+// returns (a render's line moves under any mode), the live string
+// (status_bar_text, paint_handler.h — the painter's own composer) is held
+// against the one last painted (AppState::status_bar_painted), and the
+// bar's own lane is damaged — nothing else — while they differ or nothing
+// has been recorded (canvas_sink.h's contract: every visible change owes
+// declared damage). No timeout, no hold.
+void refresh_status_bar(AppState& app, GuiPlatform& gui) {
+    if (app.status_bar_painted_valid &&
+        status_bar_text(app) == app.status_bar_painted)
+        return;
+    const GuiRect r = status_bar_area(app);
     if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 
@@ -1636,7 +1620,7 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // pure read that reopens nothing (no timer, no retry: the tap on the struck
 // lamp and every launch press are the reopens). NO PIECE, NO STRIKE: before
 // the load — the fresh set's first ticks and the open's held frame, which
-// paints the logo lane as always — no engine exists yet (GuiPlayback is
+// paints the title bar as always — no engine exists yet (GuiPlayback is
 // brought up by the load, GuiFileLoader::load_file), and the read answers
 // true for a device nothing has asked for; so the strike is read only once
 // a piece is open (no_audio_to_dispatch_on, the roster's own no-piece term),
@@ -2553,7 +2537,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // the audio thread's cursor and mirrors it into the main-thread playhead,
     // invalidating just the columns and timestamp that changed. Also
     // detects natural end-of-playback via the session word's playing bit.
-    // THE LOGO LANE'S LEGEND before the first paint (refresh_logo_legend).
+    // THE TITLE BAR'S RIGHT GROUP before the first paint (refresh_logo_legend).
     refresh_logo_legend(app, gui);
     // THE FACE COMPARATOR'S OWN-RECT RECORD (the comparator's block in the
     // tick below, where the rule is): per roster key, the frame count at
@@ -2586,7 +2570,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // pointer pauses.
         notifications.fire_if_due();
 
-        // THE LOGO LANE'S LEGEND, ON EVERY TICK for the same reason: the
+        // THE TITLE BAR'S RIGHT GROUP, ON EVERY TICK for the same reason: the
         // wall clock and the battery move whatever the project is doing
         // (refresh_logo_legend, its rule and its damage). THE TWO LAMPS
         // BESIDE IT the same way (refresh_logo_lamps, 2026-11-05): the clip
@@ -2594,6 +2578,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // lamp owes its dark edge to the first tick past its hold.
         refresh_logo_legend(app, gui);
         refresh_logo_lamps(app, gui, audio, playback);
+        // THE STATUS BAR the same way (refresh_status_bar, send Z): its
+        // string is standing state, compared each tick with the one painted.
+        refresh_status_bar(app, gui);
 
         // THE DISPLAY KEEP-ALIVE (architect 2026-11-13, session 118; the
         // facts and the ruling — a brief window after a fast Stop — at
@@ -2690,14 +2677,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     with the marker lane's face and the cursor's head, the
             //     flag blit) is the plate branch's, so the lanes show the
             //     window's ground (render_background).
-            //   * ROW 8: the clock's field empty and no tab name
-            //     (clock_time_text and paint_bottom_row_buttons_and_clock's
-            //     no-piece arms), the state line empty (no progress text, no
-            //     `h` view).
+            //   * THE BOTTOM ICON ROW: the clock's field empty and no tab
+            //     name (clock_time_text and paint_bottom_row_buttons_and_clock's
+            //     no-piece arms); THE STATUS BAR empty (no progress text, no
+            //     selection, no `h` view).
             //   * THE KEYS grey and dark: redesign_button_enabled's and
-            //     redesign_button_selected's no-piece terms; the glyphs and
-            //     the legends as the roster draws them.
-            //   * THE LOGO LANE as always (refresh_logo_legend above).
+            //     redesign_button_selected's no-piece terms; the glyphs as
+            //     the roster draws them.
+            //   * THE TITLE BAR as always (refresh_logo_legend above).
             //   * NO CARD, NO TOOLTIP, NO OVERLAY: none can stand in a fresh
             //     set before its load (every press is dropped, and nothing
             //     raises a card ahead of the load).
@@ -2935,12 +2922,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // else); `t` and `p` happen to damage anyway and still go through here
         // rather than being trusted to. WHAT IT WATCHES, per roster button:
         // the enabled bit, the selected bit, the glyph index and THE DRAWING
-        // (2026-11-02; the printed word's from 2026-10-25: the key's glyph
-        // and its legend name the next press's act, arm for arm — FIT /
+        // (2026-11-02: the key's glyph names the next press's act — FIT /
         // RECALL and INHERIT / TIE move with no damage of their own; the
         // publication's coverage is the union of the old and new painted
         // extents, publish_button_face, and the damage below is that union
-        // or the whole strip, so a word's change repaints both).
+        // or the whole strip).
         // Placed ABOVE the loading/blank return below on purpose: loading and
         // total<=0 are themselves inputs to the enabled predicate, so the
         // transition INTO and OUT OF a load is exactly a drift this must catch.
@@ -2956,7 +2942,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // THE TWO STRIPS, EACH ITS OWN VERDICT: a key's home strip is
             // row 8 (redesign_button_in_transport_row) or the top strip. A
             // drifted key damages ONE RECT OF ITS OWN — its stashed painted
-            // extent united with the extent its live legend lays out — and
+            // extent united with its face — and
             // its home strip, whole, only under the named fallbacks (the
             // damage's rule below); a fallback on one strip leaves the other
             // strip's keys their own rects. The walk runs the whole roster.
@@ -2990,13 +2976,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // off redesign_button_glyph's nonzero arms — Save, Render and the
             // collapsed play/stop button (the read-only toggle wears one glyph
             // since 2026-10-21) — the term carries the index the press reads;
-            // THE DRAWING TERM beside it (2026-11-02; the printed legend's
-            // word held that seat from 2026-10-25 to 2026-11-02) is the
-            // painted Breeze glyph's own (redesign_button_icon's stateful
-            // overload, app_state.h), AND THE LEGEND'S (back 2026-11-03): the
-            // legend forks arm for arm with the drawing
-            // (redesign_button_legend's stateful overload), so a word's edge
-            // is always a drawing's edge and needs no term. FIT / RECALL and
+            // THE DRAWING TERM beside it (2026-11-02) is the painted glyph's
+            // own (redesign_button_icon's stateful overload, app_state.h).
+            // FIT / RECALL and
             // INHERIT / TIE move the drawing with no index, and Render's
             // Cancel drawing reads the progress modal besides, so the index
             // alone would miss those edges. RENDER'S mid-render Cancel face is the one that was quietly
@@ -3007,21 +2989,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // completion), the glyph predicate reading queue_running itself
             // with no per-tick mirror between them (architect 2026-09-24).
             // THE DAMAGE IS THE DRIFTED KEY'S OWN (architect 2026-11-16, the
-            // beats: the face and its legend, not the whole strip — a lamp
-            // tapped during a play adds a key's few pixels to the scanner's
-            // frames, not the strip): ONE RECT A DRIFTED KEY, THE UNION OF
-            // ITS STASHED PAINTED EXTENT AND THE EXTENT ITS LIVE LEGEND LAYS OUT
-            // (RedesignButtonFace::painted; key_painted_extent of the face
-            // and redesign_button_legend's live word, paint_handler.h — the
-            // rows' painters' own layout owner). That rect holds every pixel
-            // the drift can change — the face, the glyph on it, the legend's
-            // old word and its new one — and it is exactly the coverage
-            // publish_button_face asks before it refreshes the key's stash
-            // (the stashed extent united with the one the painter lays out,
-            // the same owner's answer for the same word, cut no wider at the
-            // band's overflow column), so the frame repaints the key and
-            // republishes it and this walk finds no drift at the next tick.
-            // A legend never widens a key or moves a neighbor (the faces'
+            // beats: the face, not the whole strip — a lamp tapped during a
+            // play adds a key's few pixels to the scanner's frames, not the
+            // strip): ONE RECT A DRIFTED KEY, THE UNION OF ITS STASHED PAINTED
+            // EXTENT AND ITS FACE (RedesignButtonFace::painted and ::rect —
+            // the key paints nothing outside its face since the printed
+            // legend under it retired, 2026-11-18, send Z). That rect holds
+            // every pixel the drift can change — the face and the glyph on it
+            // — and it is exactly the coverage publish_button_face asks
+            // before it refreshes the key's stash, so the frame repaints the
+            // key and republishes it and this walk finds no drift at the next
+            // tick. A drift never widens a key or moves a neighbor (the faces'
             // pitch is the row's), so no other key's seat follows a drift.
             // THE HOME STRIP STAYS, WHOLE, for a strip on which this tick
             // finds any of:
@@ -3029,8 +3007,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     hidden, yielded or overflowed has an empty rect and its
             //     stash refreshes unconditionally, so it does not drift), or
             //     whose published face is NOT THE WHOLE FACE (cut at the
-            //     band's overflow column: the layout owner wants the whole
-            //     face to seat a legend);
+            //     band's overflow column: its stash is the cut face);
             //   * A KEY THAT STILL DRIFTS AFTER A FRAME PAINTED ITS OWN RECT
             //     (face_narrow_frame: the frames begun when the rect was
             //     declared, against GuiPaintHandler::frames_begun now) — the
@@ -3087,11 +3064,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                     strip.whole = true;
                     continue;
                 }
-                const char* legend = redesign_button_legend(app, audio, id);
-                strip.rects[static_cast<size_t>(strip.n++)] = union_rect(
-                    f.painted,
-                    key_painted_extent(f.rect, legend != nullptr ? legend
-                                                                 : ""));
+                strip.rects[static_cast<size_t>(strip.n++)] =
+                    union_rect(f.painted, f.rect);
                 declared = frame_now;
             }
             if (top.whole) {

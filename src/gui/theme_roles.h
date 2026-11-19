@@ -131,8 +131,8 @@
 //                                     outline), THE SELECTION STEM on every
 //                                     selected chip, the rings, the ruler
 //                                     head's outline
-//     text                   B5B5B5 = ControlForeground (the keys' glyphs and
-//                                     legends, the markers' labels)
+//     text                   B5B5B5 = ControlForeground (the keys' glyphs, the
+//                                     clocks, the status bar)
 //     dim text, well frame   757575 = TextDisabled (the scrub channel and the
 //                                     tooltip border)
 //     inactive cue           5D5D5D = BackgroundClip
@@ -219,16 +219,17 @@
 //                                     the top line, the title bar" (2026-11-18).
 //                                     THE GROUND (SurfaceArea) STAYS THE TITLE
 //                                     TONE, THE BRIGHT MIX'S TARGET and the
-//                                     launcher icon's ground; until the send's
-//                                     stage B no painter reads this tone, but
-//                                     the lit-but-inert pairs below stand on it
+//                                     launcher icon's ground; the palette's
+//                                     `face` is this tone since the send's
+//                                     stage B, and the lit-but-inert pairs
+//                                     below stand on it
 //     title text             B5B5B5 = TitleForeground, xfwm's title text on
 //                                     the title bar (arc_dark AFB8C5)
 //     sidebar text           B5B5B5 = SidebarForeground, Arc's
 //                                     $dark_sidebar_fg (arc_dark BAC3CF): the
-//                                     marker labels' ink, the tooltip's and
-//                                     the cards' later (the send's stages B
-//                                     and D)
+//                                     marker labels' ink since the send's
+//                                     stage B, the tooltip's and the cards'
+//                                     in its stage D
 //   ROLE-NAMED, continued:
 //     core                   363636 = SurfaceBackground, THE KEY FACE, on
 //                                     every theme (architect 2026-11-07,
@@ -268,7 +269,7 @@
 //     key dim ink            5D5D5D = ViewCheckControlDisabledOff over
 //                                     SurfaceBackground (the key face; 8-digit
 //                                     D3D3D340 on SB Cielo / Onyx) — a
-//                                     disabled key's glyph and legend, the
+//                                     disabled key's glyph, the
 //                                     struck clip lamp's square
 //     trim span              696969 = ScrollbarInnerHandle over Desktop —
 //                                     THE TRIM BAR'S PILL at rest (an opaque
@@ -408,7 +409,7 @@
 //                                     than the key face the lit press comes
 //                                     out lighter — Live's numbers, no rule
 //     lit dim fill, text on lit dim
-//                            86623B, 201911 = THE LIT-BUT-INERT PAIR ON ARC'S
+//                            86623B, 2A221A = THE LIT-BUT-INERT PAIR ON ARC'S
 //                                     OWN NUMBERS (architect 2026-11-19, send
 //                                     Z: "let's do arcs numbers"; Arc's
 //                                     button:disabled:checked, G3:152-154: the
@@ -423,16 +424,19 @@
 //                                     242424 -> C88B4A -> 86623B; Arc at 100
 //                                     5294E2 over 383C4A -> 4C7EBC -> 44648E,
 //                                     at the default 75 the mixed 497CB9 ->
-//                                     456C9D -> 40597C), the glyph THE PRINT
-//                                     ON A LIT FACE AT 80 % OVER THAT FACE,
-//                                     mix(face, text on lit, 0.8) (Default
-//                                     070707 -> 201911; Arc FFFFFF -> DAE0E8,
-//                                     at 75 D9DEE5), per channel, rounded half
-//                                     to even and clamped — the print the
-//                                     approved picture's (the mock kit's
-//                                     BTN_LIT_INERT_GLYPH): the 0.6 opacity,
-//                                     read strictly, would dim the label too
-//                                     (Arc at 100 9AA1AF). The body tone is
+//                                     456C9D -> 40597C), the glyph DIMMED
+//                                     WITH THE BUTTON, as GTK's `opacity`
+//                                     dims the label (DESIGN §3; send Z's
+//                                     stage B, 2026-11-19, correcting the
+//                                     kit's brighter reading, which the
+//                                     approved picture Z_02 drew): (THE PRINT
+//                                     ON A LIT FACE AT 80 % OVER THE
+//                                     ACCENT-AT-75 % FACE) AT 60 % OVER THE
+//                                     BODY TONE, mix(body, mix(mix(body, cue,
+//                                     0.75), text on lit, 0.8), 0.6) (Default
+//                                     070707 -> 2A221A; Arc FFFFFF -> 9AA1AF,
+//                                     at 75 99A0AB), per channel, rounded half
+//                                     to even and clamped. The body tone is
 //                                     the theme's own, never mixed; the accent
 //                                     the installed one, so the pair follows
 //                                     THE BRIGHT MIX. One rule on every theme,
@@ -460,16 +464,16 @@
 //                                     (architect 2026-11-11, session 107),
 //                                     the black key face's ratio 1 as above
 //     radio lit dim fill, radio text on lit dim
-//                            655785, 1A1720 = THE RADIO KEY'S LIT-BUT-INERT
+//                            655785, 232029 = THE RADIO KEY'S LIT-BUT-INERT
 //                                     PAIR, the same rule on the purple
 //                                     (2026-11-19): the face (the radio lit
 //                                     fill at 75 % over the body tone) at 60 %
 //                                     over the body tone (Default: B595FC ->
 //                                     9179C6 -> 655785; Arc at 100 73D216 ->
-//                                     527F33), the glyph the print on a lit
-//                                     face at 80 % over that face (Default
-//                                     1A1720; Arc DCE5D6) — a tone of its own,
-//                                     since the print is over its own face;
+//                                     527F33), the glyph by the accent's rule
+//                                     on the purple (Default 232029; Arc at
+//                                     100 9DA79C) — a tone of its own, since
+//                                     the print is over its own face;
 //                                     key_ink parts it by the key's lit class.
 //                                     The radio class's own tones retire in
 //                                     the send's stage C ("we can let go of
@@ -512,8 +516,8 @@
 // and lit dim fills, the radio press and dim fills, the two inert prints
 // over the mixed inert faces, and the playhead line, white half way to the
 // mixed head. NEVER MIXED: the text tones ("never the glyph color itself":
-// the text, the dim text, the key dim ink — the keys' glyphs and legends,
-// the markers' labels), the print on a lit face, the selection and list
+// the text, the dim text, the key dim ink, the title, sidebar and ruler
+// texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection and list
 // press texts, the cards' words, the faces, the lanes (the trim
 // bar's trough and the well's frame among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,

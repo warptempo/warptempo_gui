@@ -39,19 +39,23 @@
 // THE SPLIT, STATE AND EVENTS (2026-08-29), which decides the surface: STATE
 // is what is true right now, replaced as it changes, never timed out and
 // never cleared by a key press — the render's progress line and the `h`
-// walk's line, which live in ROW 8'S STATE LINE, on the row's ground right of
-// the clock's time field (architect 2026-10-03: the normal face, the
-// flags' program face since 2026-10-26, left-aligned a group space past the field, clipped a group space short of
-// the right block; paint_bottom_row_buttons_and_clock, paint_handler.cpp,
-// owns that line) — A BATCH'S PROGRESS IS THE PROGRESS MODAL'S since
-// 2026-10-14 ("Rendering X of Y..." in the modal family's box from the Render
-// press to the batch's terminal, AppState::BatchProgress): the state line
-// still carries the sweep's line, but behind the modal, row 8 yielding to it
-// whole, so on screen the line is a single render's "Rendering..." and a
-// preview's "Updating..."; an
+// walk's line, which live in THE STATUS BAR, the window's last lane under
+// the bottom icon row (architect 2026-11-19, send Z: the process line "a
+// must-have" there, moved word for word from the bottom icon row's state
+// line; render.h's status bar block, paint_handler.cpp's status_bar_text the
+// one composer and paint_status_bar the painter: its first field, the
+// selection count and the history view's GitHub word beside it) — A BATCH'S
+// PROGRESS IS THE PROGRESS MODAL'S since 2026-10-14 ("Rendering X of Y..."
+// in the modal family's box from the Render press to the batch's terminal,
+// AppState::BatchProgress), and the status bar under the modal carries the
+// sweep's own line ("Rendering N of M <label>...") beside it, the bar
+// standing under every modal; on the main page the line is a single
+// render's "Rendering..." and a preview's "Updating..."; an
 // EVENT is an act answered with a sentence, or a background act that
 // finished badly — a CARD. The state surface has NO TIMEOUTS because nothing
-// in it is a claim about a past moment, so nothing there can go stale.
+// in it is a claim about a past moment, so nothing there can go stale, and
+// NO CARD RETIRES INTO IT (architect 2026-11-19: "No, I decline both of
+// those").
 //
 // THE STRICTNESS RULING (architect 2026-08-30: "go very verbose — a card for
 // every refusal / no-op that is silent today") and THE DELIBERATE-PRESS RULE
@@ -204,7 +208,7 @@
 //     commit" (architect 2026-11-17, send U: the worker found the sidecars
 //     clean and nothing owed, on_history_checkpoint_complete). UNDER
 //     `offline` THE KEY ASKS GITHUB AGAIN (architect 2026-09-28) and cards
-//     nothing, row 8's state cell carrying the answer.
+//     nothing, the status bar's walk line carrying the answer.
 //     The GitHub CHECK itself raises nothing — its failing readings print one
 //     stderr line each and the status word is state.
 //
@@ -832,12 +836,8 @@ inline double notification_glyph_seat_w_px(double ink_px) {
 
 // THE GAP FROM THE GLYPH'S SEAT TO THE TEXT'S PEN: kNotificationGlyphGapW
 // = 4 W (8 device px on the tablet at 200 %), scaled_px, rounded at the
-// element. A number of the cards' own, parted from the logo lane's brand
-// gap, kLogoBrandGapW (7 W): the two were one number (the retired
-// caption's title gap, a glyph then words, architect 2026-10-24) until the
-// brand gap left 8 device px on the logo lane's mocks (e1 / e2, render.h's
-// LOGO LANE block), and the architect kept the cards' 8 the same night
-// (2026-11-04: "keep the cards spacing").
+// element. A number of the cards' own (architect 2026-11-04: "keep the
+// cards spacing"; the cards' look is send Z's stage D).
 inline constexpr double kNotificationGlyphGapW = 4.0;
 
 // THE BODY FACE'S CAP HEIGHT, device px, ROUNDED: the em times the file's
@@ -878,7 +878,7 @@ int notification_card_h_px();
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
-// right-aligned on the keys' outer column (well_columns, THE EDGE RULE;
+// right-aligned on the panel's last column (well_columns, THE EDGE RULE;
 // architect 2026-11-02, M11 / M14), from THE CARD SEAT — the trim bar's
 // first trough row, read off the live lane table, so the first card's top
 // border stands on the trough's first row (architect 2026-10-08,

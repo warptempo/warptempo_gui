@@ -19,15 +19,12 @@
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
 // UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM: the key's face is a skin
-// length, the `key_width` tuning key's W wide (architect 2026-11-06, a
-// tuning key until he rules the number; 35 its default, 70 device px on
-// the tablet at 200 %) — Cool Edit's 23-W case (the retrofit of 2026-11-03
-// reversing the square key of 2026-11-02) — by the `key_height` tuning
-// key's W tall (17 its default; render.h's case block, icon_case_w_px /
-// icon_case_h_px), the face the whole key, its neighbors one W of ground
-// away (key_gap_px, architect 2026-11-04, the unit); its Breeze glyph
-// is centered on its face by its own ink-box road, its size following the
-// key's height (paint_key_glyph), its legend under it (paint_key_legend).
+// length, the `key_width` tuning key's W wide (36 its default, Arc's icon
+// button, send Z) by the `key_height` tuning key's W tall (28 its default;
+// render.h's case block, icon_case_w_px / icon_case_h_px), the face the
+// whole key, its neighbors one W of ground away (key_gap_px, architect
+// 2026-11-04, the unit); its glyph is centered on its face by its own
+// ink-box road, its size following the key's height (paint_key_glyph).
 // THE SIZE ON THE GLASS is gui_scale's (the device's choice, never this
 // header's).
 //
@@ -35,33 +32,27 @@
 // problem … redesign with dead simple layout", the mocks on the tablet), FLAT
 // SINCE 2026-11-01 (materials.h; the well 2026-11-01 night, "THE MAIN PAGE
 // IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
-// bottom: THE TOOLBAR BAND at the window's top — THE LOGO LANE (render.h's
-// logo lane block, 36 W), the key, THE STRIP PAD (19 W, render.h's
-// strip_pad_px; the keys' legends in it), its keys in plain runs on the
-// ground, the runs the `run_gap` tuning key's W apart (22 its default since
-// 2026-11-07; render.h's program_run_gap_px; the hi-fi's
-// lengths again since 2026-11-03, the retrofit, rounded to the unit on
-// 2026-11-04 night); then THE WELL,
-// flat regions
-// inside ONE FRAME (render.h's well paragraph, its lanes block, which
-// derives every length at the element, and THE WELL'S FRAME; architect
-// 2026-11-17, session 140) — the frame's top line, THE TRIM BAR (Arc's
-// scrollbar: the 12-W trough, the pill on it), the frame's line, THE RULER
-// FLIPPED, the frame's line, THE MARKER LANE of Cool Edit's cues (the flag
-// editor's box on its whole rows, "right now it's too small to click";
-// usability over accuracy, render.h's row-6 canvas paragraph), the frame's
-// line, THE CANVAS — the waveform area, its grid and its center lines, its
-// two channels' wells with the stereo divider between them in the frame's
-// tone — and the frame's bottom line, the well's foot, its sides one W
-// beside them; then ROW 8, THE STRIP PAD, the case, THE STRIP PAD, on the
-// window's foot. THE WELL STANDS 12 W IN FROM EACH SIDE of the window's
-// client area on the ground (column_margin_px), then the frame's W, the
-// lanes on THE WAVEFORM AREA's columns,
-// the frame's outer columns the outermost keys' faces' outer columns (THE
-// EDGE RULE; render.h's well_columns). (The band's head and foot lines and its panes,
-// the tab strip under it, the column's air, the column's foot, the dock bar,
-// row 8's bars and the border under row 8 stood 2026-10-09 to 2026-10-22;
-// the program ring round the column 2026-10-22 to 2026-11-02; git history.)
+// bottom, ON ARC'S NUMBERS SINCE 2026-11-19 (send Z; DESIGN §1, the one
+// table render.h's blocks derive): THE BAND at the window's top — THE
+// TITLE BAR (28 W, render.h's title bar block), Arc's toolbar pads 7 W
+// above the keys and 8 W below (render.h's toolbar pads), its keys in plain
+// runs, the runs the `run_gap` tuning key's W apart (6 its default); then
+// THE WELL, flat regions RUNNING THE PANEL'S WHOLE WIDTH, EDGE TO EDGE, its
+// lines one W of `well_border` (render.h's THE WELL'S EDGES) — the line
+// under the band, THE TRIM BAR (Arc's scrollbar: the 12-W trough, the pill
+// on it), its line, THE RULER FLIPPED (19 W, Thunar's header), its line,
+// THE MARKER LANE of Cool Edit's cues (20 W, Thunar's row; the flag
+// editor's box on its whole rows), its line, THE CANVAS — the waveform
+// area, its grid and its center lines, its two channels' wells with the
+// stereo divider between them — and the well's foot; then THE BOTTOM ICON
+// ROW, 8 W, the case, 7 W; then THE STATUS BAR, its line and 22 W, on the
+// window's foot. The keys' outermost faces stand 6 W inside the panel
+// (render.h's kEdgeInsetW and THE EDGE RULE at well_columns). (The band's
+// head and foot lines and its panes, the tab strip under it, the column's
+// air, the column's foot, the dock bar, row 8's bars and the border under
+// row 8 stood 2026-10-09 to 2026-10-22; the program ring round the column
+// 2026-10-22 to 2026-11-02; the well's frame and its margins 2026-11-17 to
+// 2026-11-19; git history.)
 //
 // THE CUE AND THE PLAYHEAD'S HEAD ARE DRAWN IN SKIN LENGTHS (render.h's cue
 // block and the label's lengths beside it): THE MARKER'S CHIP IS A
@@ -97,45 +88,16 @@ struct ProgramSpec {
     // the roster's and the render player's hot face is never lit, the hover
     // walks storing none (input_pointer.cpp's two writes read this).
     bool case_hot_face;
-    // (THE STRIPS' RUN GAP — row 8's group gap as the bars left it — AND
-    // THE STRIP PAD — settled 2026-10-23 — are render.h's since 2026-11-03,
-    // kStripPadW 19 since 2026-11-04 night (the retrofit reversed that
-    // morning's "half the key") and the run gap the `run_gap` tuning key's
-    // since 2026-11-07, 22 its default, the constexpr kRunGapW 22 before it.)
-    // THE STRIPS' ENDS ARE THE WELL'S FIRST AND LAST COLUMNS, NEVER THE
-    // WINDOW'S EDGES (architect 2026-10-23, "yes" to tying both strips' ends
-    // to the ring, the well's columns since the flat well — THE EDGE RULE;
-    // render.h's well_columns the one owner), so the strips and the well
-    // coincide at every scale. BOTH STRIPS ARE FLUSH WITH THE WELL at both
-    // ends (architect 2026-10-23, "shouldn't row 8 take the same rule as
-    // top strip?" — yes):
-    // the band's first face and row 8's clock field start on the well's
-    // first column, the band's right run's and row 8's block's last face
-    // end on its last column (the face the key, 2026-11-04) — the modals'
-    // controls row's seat
-    // (paint_handler.cpp's icon_row_seats for the band, bottom_row_seats for
-    // row 8 and the controls row), so neither strip nor the controls row
-    // carries a field here.
-    // (THE DARK TIME FIELD'S HEIGHT AND PAD are render.h's: kTimeFieldPadW
-    // and the height derived from it and the clock's cap, the marker lane's
-    // height too. THE ACTIVE TAB'S NAME AND THE STATE LINE'S AIR past the
-    // clock field are paint_handler.cpp's, kTabNameAirW and kStateAirW,
-    // 2026-11-03, 7 W since 2026-11-04 night.)
+    // (THE STRIPS' RUN GAP AND PADS are render.h's: the `run_gap` tuning
+    // key, the toolbar pads, the panel's inset kEdgeInsetW — THE EDGE RULE
+    // at well_columns, the strips' seats paint_handler.cpp's icon_row_seats
+    // and bottom_row_seats. THE TIME FIELD'S HEIGHT AND PAD are render.h's,
+    // kTimeFieldPadW; THE TAB'S NAME'S AIR past the clock field
+    // paint_handler.cpp's kTabNameAirW.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
-    // THE WELL'S SIDE MARGIN (Cool Edit's x = 202..207 of
-    // face before the canvas frame's dark column at 208; the mock's FX0 = 6
-    // and FX1 = WW − 7): this much ground from each side of the window's
-    // client area, then THE WELL'S FRAME's one W (architect 2026-11-17,
-    // session 140; render.h's THE WELL'S FRAME), then the waveform area —
-    // the trim bar's, the ruler's, the marker lane's and the canvas's
-    // columns, every column the two leave (main.cpp's waveform_area). 12 W
-    // (architect 2026-11-18, "I'll take your recommend.", the 16-px floor
-    // dropped; session 140's ruling of 2026-11-17: the keys' outer faces,
-    // which stand on the frame's outer columns, 12 W from the glass): the
-    // tablet's 24 device px, the frame's sides on columns 24 .. 25 and
-    // 2278 .. 2279 and the area 26 .. 2277; 12 px at 100 %.
-    int  column_margin_px;
+    // (THE WELL'S SIDE MARGIN, 12 W round the frame of 2026-11-17, retired
+    // 2026-11-19, send Z: the well runs the panel's whole width.)
     // THE CANVAS'S HORIZONTAL GRID (architect 2026-10-09, the design loop's
     // third mock set, "grid 4 per half channel"; Cool Edit's GrdL): each
     // channel's half height divided into this many, a line at every inner
@@ -157,7 +119,6 @@ struct ProgramSpec {
 
 inline constexpr ProgramSpec kProgramSpec = {
     .case_hot_face      = false,
-    .column_margin_px      = 12,
     .grid_divisions        = 4,
 };
 

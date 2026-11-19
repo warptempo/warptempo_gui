@@ -692,8 +692,9 @@ inline double block_x_px(const GuiRect& band) {
 //   shortfall_px = (the window's foot − the natural band) − the line's
 //     first row, THE FIRST ROW THE LINE TOUCHES (lower_center_line_top_row,
 //     render.h; architect 2026-11-14, send J: the line is centered on its
-//     band's exact zero, so on the tablet's odd band its first row is the
-//     half-covered one above the zero's row);
+//     band's exact zero, so on an odd band its first row is the
+//     half-covered one above the zero's row, on an even band — the
+//     tablet's at key_height 28 — the first whole row above the zero);
 //   shortfall_px ≤ 0: each pad the floor;
 //   else extra_w = the shortfall in whole W ROUNDED UP (px over the device
 //     px per W), MADE EVEN by one W when odd, split equally — each pad
@@ -712,22 +713,17 @@ inline double block_x_px(const GuiRect& band) {
 // (block_x_px) and the ground beside it is what the window's width leaves.
 // A canvas with no rows paints no line, so no line's floor (the pads the
 // floor).
-// Worked on the tablet at 200 % (2304 x 1440):
-//   AT THE DEFAULTS (key_height 17, osk_key_h 30): the floor 7.5 W, 15 px;
-//     the line on rows 1055..1057 (half, whole, half), its first row 1055;
-//     the natural band 15 + 300 + 8 + 15 = 338 rows from 1102 — 47 px =
-//     23.5 W short, up to 24, even → each pad 15 + 24 = 39 px, the band 386
-//     rows from 1054, its first key row's top 1093.
-//   AT HIS TUNING (key_height 25, osk_key_h 35): the floor 8.75 W, 17.5 px;
-//     the line on rows 1047..1049, its first row 1047; the natural band
-//     17.5 + 350 + 8 + 17.5 = 393 rows from 1047 — at the line, no
-//     shortfall → each pad 17.5 px, the floor binding, the band 393 rows
-//     from 1047, its first key row's top 1064.5 (every key row on a half
-//     row).
-//   THE FLOOR ALONE (key_height 17, osk_key_h 38): the floor 9.5 W, 19 px;
-//     the natural band 19 + 380 + 8 + 19 = 426 rows from 1014, 41 rows
-//     above the line's first row 1055 → each pad 19 px, the band 426 rows
-//     from 1014, its first key row's top 1033.
+// Worked on the tablet at 200 % (2304 x 1440), the band standing on the
+// bottom icon row's foot (row 1393) over the status bar (send Z, 2026-11-19):
+//   AT THE DEFAULTS (key_height 28, osk_key_h 30): the floor 7.5 W, 15 px;
+//     the line on rows 1042..1043 (the band even, two whole rows), its
+//     first row 1042; the natural band 15 + 300 + 8 + 15 = 338 rows from
+//     1056 — 14 px = 7 W short, made even 8 → each pad 15 + 8 = 23 px, the
+//     band 354 rows from 1040, its first key row's top 1063.
+//   AT osk_key_h 35 (his tuning's): the floor 8.75 W, 17.5 px; the natural
+//     band 17.5 + 350 + 8 + 17.5 = 393 rows from 1001, above the line's
+//     first row → each pad 17.5 px, the floor binding, its first key row's
+//     top 1018.5 (every key row on a half row).
 inline double edge_pad_floor_px() {
     return static_cast<double>(key_h_px()) / 4.0;
 }
@@ -812,7 +808,9 @@ inline bool stands(const AppState& a) {
 // the settings-keyboard mock): its band runs
 // across the program lanes — the band's width the lanes' (bottom_row_area's
 // x and width, the window's since 2026-10-21, when the program frame's
-// columns and bottom row went) — and stands DIRECTLY ON THE WINDOW'S FOOT,
+// columns and bottom row went) — and stands DIRECTLY ON THE BOTTOM ICON
+// ROW'S FOOT (the window's foot until the status bar took the rows under
+// it, 2026-11-19, send Z: the bar stays visible under the keyboard),
 // ITS TOP AT OR ABOVE THE LOWER CHANNEL'S CENTER LINE (the height floor,
 // architect 2026-11-08, edge_pad_px); THE BLOCK OF KEYS STANDS ON ITS SEAT,
 // THE `5` | `6` GAP ON THE WINDOW'S CENTER (architect 2026-11-08,
@@ -824,7 +822,7 @@ inline bool stands(const AppState& a) {
 // look 2026-11-01) — paint_onscreen_keyboard, materials.h's head. Under a dialog editor the modal
 // family's stack stands on it (modal_box.h's head: the box shortened to fit
 // and the controls row lifted onto the band, the space between the row's
-// cases and the first key row the strip pad plus this band's edge pad,
+// cases and the first key row the outer pad (7 W) plus this band's edge pad,
 // 2026-10-22; the box as much shorter as the floor grows the pad); under
 // the flag editor, the one editor with no dialog, it
 // stands alone over row 8 and the canvas's lower part, which keep their
@@ -839,20 +837,18 @@ inline bool stands(const AppState& a) {
 //   ALONE (the flag editor), on the tablet (200 %, 2304 x 1440), across x
 //     0..2303, the block of keys x 903..1550 (648 wide, its seat
 //     block_x_px) at osk_key_w 24:
-//     AT THE DEFAULTS (key_height 17, osk_key_h 30 W, the keys 48 x 60
-//     device px) the band 1054–1439 (39 + 308 + 39, the height floor's
-//     pads), its first key row's top 1093;
-//     AT HIS TUNING (key_height 25, osk_key_h 35 W, the keys 48 x 70) the
-//     band 1047–1439 (17.5 + 358 + 17.5), its first key row's top 1064.5.
-//     Row 8 is under it
+//     AT THE DEFAULTS (key_height 28, osk_key_h 30 W, the keys 48 x 60
+//     device px) the band 1040–1393 (23 + 308 + 23, the height floor's
+//     pads), its first key row's top 1063, the status bar under it
+//     (1394–1439, send Z).
+//     The bottom icon row is under it
 //     and unreachable: the keyboard's press claim takes the band, the ground
 //     beside the block included (claim_rect).
 //   UNDER A DIALOG EDITOR: the same band, the modal's stack on it (the
-//     arithmetic at modal_box.h's head; on the tablet at key_height 17 and
-//     the keyboard's defaults the controls row 944–1053, its faces
-//     982–1015, the box 144–943, its top under the band's rows 0–143 with
-//     the 72-row logo lane; at his tuning the controls row 921–1046, its
-//     faces 959–1008).
+//     arithmetic at modal_box.h's head; on the tablet at key_height 28 and
+//     the keyboard's defaults the controls row 954–1039, its faces
+//     970–1025, the box 142–953, its top under the band's rows 0–141 with
+//     the 56-row title bar).
 // ON SCREEN IS AS PAINTED: nothing under the band answers a press or the
 // touch pan zone — the waveform's painted rect stops at the
 // band's top (waveform_paint_area below, which point_on_nav_surface reads),
@@ -862,7 +858,8 @@ inline bool stands(const AppState& a) {
 // standing unless its name or its contract says so (modal_keyboard_h_px).
 
 // THE KEYBOARD'S BAND: the program lanes' x and width (bottom_row_area's,
-// the window's), standing on the window's foot (row 8's lane's foot), its
+// the window's), standing on the bottom icon row's lane's foot (over the
+// status bar since 2026-11-19, send Z), its
 // height surface_height_px (the height floor's, at the live geometry), the
 // block of keys on its seat in it (for_each_key, block_x_px). It OVERLAYS
 // what stands there: nothing in the
@@ -1054,8 +1051,8 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // starts ABOVE the waveform (the view bar's top row since 2026-10-14; the
 // panel's ceiling first moved above the waveform 2026-09-02), so every
 // waveform pass is clipped out whole while it stands, and the LANES it also
-// covers (the trim bar, the ruler, the marker lane, the well's frame and
-// row 8; the icon row stands above the box, every icon greyed under the folder overlay but the
+// covers (the trim bar, the ruler, the marker lane, the well's lines and
+// the bottom icon row; the icon row stands above the box, every icon greyed under the folder overlay but the
 // ones it leaves live) are not spared this way — their painters
 // run and the panel covers them, because they publish the roster's hit rects
 // (the record is at the paint-order block, paint_handler.cpp).

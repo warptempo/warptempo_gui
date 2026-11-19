@@ -28,7 +28,8 @@ constexpr bool palette_members_disjoint() {
 }
 static_assert(palette_members_disjoint());
 // The struct's members: the chrome's roles, the program's roles, and the
-// panel's `face` (the ground's own member, filled off the theme's ground).
+// panel's `face` (its own member, filled off the theme's body tone since
+// 2026-11-19, send Z).
 static_assert(sizeof(GuiPalette) ==
               (kGuiThemeRoleCount + kGuiPaletteRoleCount + 1) *
                   sizeof(GuiColor));

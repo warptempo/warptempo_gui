@@ -155,7 +155,7 @@ static inline double frame_to_paint_sample(
 
 void render_background(cairo_t* cr, int x, int y, int w, int h) {
     cairo_save(cr);
-    set_palette_source(cr, palette().ground);
+    set_palette_source(cr, palette().body_face);
     cairo_rectangle(cr, x, y, w, h);
     cairo_fill(cr);
     cairo_restore(cr);
@@ -230,8 +230,9 @@ void canvas_center_lines(GuiCanvasSink& sink, const GuiRect& area,
     // grid's row rule (canvas_hline), in the palette's `center`, the
     // channels' bands the plate's own (waveform_channel_band), so it is
     // TRULY CENTERED ON THE ZERO THE PLATE'S BARS STRADDLE (architect
-    // 2026-11-14, send J): on the tablet's odd band half a row, a whole row
-    // and half a row. Through the canvas sink (2026-10-13).
+    // 2026-11-14, send J): on an odd band half a row, a whole row and half
+    // a row; on an even band (the tablet's 526 rows at key_height 28, send
+    // Z) two whole rows. Through the canvas sink (2026-10-13).
     const int divider_px = waveform_divider_px();
     for (int ch = 0; ch < 2; ++ch) {
         const WaveformChannelBand band =
@@ -1527,11 +1528,11 @@ struct FlagFace {
 // painted wherever it is published; "label" the label's ink, the segment's
 // `inert` on the history rows):
 //   side      flag        fill          outline               stem      label      strike
-//   LIVE      DISABLED    inactive_cue  inactive_cue_outline  selected  inactive   `strike`
-//   LIVE      ENABLED     cue_fill      cue_outline           selected  text tone  `strike`
-//   REMOVED   any         inactive_cue  inactive_cue_outline  selected  inactive   always
-//   ADDED     any         cue_fill      cue_outline           selected  text tone  never
-//   CHANGED   any         cue_fill      cue_outline           selected  text tone  per segment
+//   LIVE      DISABLED    inactive_cue  inactive_cue_outline  selected  inert      `strike`
+//   LIVE      ENABLED     cue_fill      cue_outline           selected  sidebar    `strike`
+//   REMOVED   any         inactive_cue  inactive_cue_outline  selected  inert      always
+//   ADDED     any         cue_fill      cue_outline           selected  sidebar    never
+//   CHANGED   any         cue_fill      cue_outline           selected  sidebar    per segment
 // — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
 // THE `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys' face, mixed
 // toward the ground at the `bright_mix` key as the keys are; architect
@@ -1577,20 +1578,22 @@ struct FlagFace {
 // strike (struck) and its newer text's the ADDED row's (plain), so the
 // CHANGED face's own `struck` is false and no painter reads it
 // (render_history_diff_flags); the stem the selection's as on the live
-// rows. An inert label's text and its bar are the inactive label
+// rows. An inert label's text and its bar are the inert label (`text_dim`)
 // (CueSegment); the bar is part of the text (show_cue_label).
-// THE INERT LABEL (architect 2026-11-02, mock C3; the inert look's reason
+// THE LABELS' TWO INKS (architect 2026-11-19, send Z; DESIGN §4, Arc's
+// sidebar): THE SIDEBAR TEXT `sidebar_text` (Arc's $dark_sidebar_fg,
+// arc_dark BAC3CF) on every live label, and THE INERT LABEL `text_dim`
+// (Arc's insensitive text, arc_dark 7E838F; the inert look's reason
 // 2026-10-10 ~12:20, "the arrow needs to be legible for me, but the text
-// doesn't … since it's disabled, it's inert"): the one constant
-// `inactive_cue` 5D5D5D (palette_file.h), the disabled chip's fill too.
-// Every INERT label — a disabled cue's segments, a tie follower's cells and
-// a removed history item's label — wears it, one look for inert cue text,
-// selected or not. A
-// DISABLED STRUCK CUE — the red set counts disabled rows
-// (warp_red_flag_set_cached's (3)) — is the grey chip with its inactive
-// label struck. "Text tone" is materials.h's `text` (Default's B5B5B5), the words'
-// and the flags' one ink — every label on the lane's face with no fill,
-// selected or not.
+// doesn't … since it's disabled, it's inert") on every INERT label — a
+// disabled cue's segments, a tie follower's cells and a removed history
+// item's label — selected or not. THE LABEL'S INK AND THE CHIP'S FILL PART
+// HERE: the disabled chip keeps `inactive_cue` (Default 5D5D5D, the one
+// inert chip tone) while its label wears `text_dim`, the text tones being
+// Arc's (until 2026-11-19 the one `inactive_cue` inked both). A DISABLED
+// STRUCK CUE — the red set counts disabled rows
+// (warp_red_flag_set_cached's (3)) — is the grey chip with its inert label
+// struck.
 FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
                            bool selected) {
     const GuiPalette& p = palette();
@@ -1615,7 +1618,7 @@ FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
 // memo's shared handle, CueRun — null exactly when the segment is absent),
 // its face box [x0, x1) in window x, REAL EDGES (the text at x0 plus the
 // fill's pad; cue_segment_boxes off the cue's exact place),
-// and its look — the inactive label or the text tone, the selection never
+// and its look — the inert label or the sidebar text, the selection never
 // reaching it (2026-11-02) — and whether it is STRUCK.
 struct CueSegment {
     bool   present  = false;
@@ -1623,7 +1626,7 @@ struct CueSegment {
     double x0       = 0.0;
     double x1       = 0.0;
     // INERT: a disabled marker's segment or a tie follower's cell, the
-    // inactive label (`inactive_cue`, 2026-11-02).
+    // inert label (`text_dim` since 2026-11-19, send Z).
     bool   inert    = false;
     // STRUCK (architect 2026-10-26): its side's `struck` (resolve_flag_face)
     // — every segment of a coincident live marker; in the `h` view a removed
@@ -1875,12 +1878,12 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
 
         for (const CueSegment& s : c.seg) {
             if (!s.present) continue;
-            // The label's ink (resolve_flag_face's table): the inactive
-            // label or the text tone, selected or not; a struck segment's
-            // bar in the same ink (show_cue_label). The pen is the
-            // segment's exact one.
+            // The label's ink (resolve_flag_face's table): the inert label
+            // `text_dim` or the sidebar text `sidebar_text`, selected or not;
+            // a struck segment's bar in the same ink (show_cue_label). The
+            // pen is the segment's exact one.
             show_cue_label(cr, *s.run, cue_segment_text_x(s, pad), base,
-                           s.inert ? pal.inactive_cue : pal.text, s.struck,
+                           s.inert ? pal.text_dim : pal.sidebar_text, s.struck,
                            spans.data(), static_cast<int>(spans.size()));
         }
     }
@@ -2047,8 +2050,8 @@ void render_flag_boxes_impl(
     // cut off there. Released by the pass's closing restore.
     clip_to_waveform_columns(cr, lanes.columns_x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
-    // THE LABEL FACE for the whole pass (gui_font.h: Bold Label 11 W, 22
-    // device px on the tablet),
+    // THE LABEL FACE for the whole pass (gui_font.h: Regular Label 12 W, 24
+    // device px on the tablet, send Z),
     // every run carrying it (text_shape.h).
     const GuiFont font = gui_font(GuiFace::Label);
     // The pass's kept scratch (CuePassScratch), emptied for this pass.
@@ -2680,7 +2683,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
         g_palette.*(r.member) = hex(t.*(r.tone));
     for (const GuiThemeRole& r : kGuiThemeRoles)
         g_palette.*(r.member) = hex(t.*(r.tone));
-    g_palette.face = hex(t.ground);
+    g_palette.face = hex(t.body_face);
     ++g_palette_generation;
 }
 
@@ -3148,7 +3151,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //
     // Each segment wears its resting look — its box in the lane's flat face
     // through the well's columns, the ground past them, the text
-    // in the text tone or the inactive label, struck on a coincident marker —
+    // in the sidebar text or the inert label, struck on a coincident marker —
     // and none takes
     // the selected look while the field stands, each open having seated the
     // selection axis on the cell it edits.
@@ -3249,12 +3252,12 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                                          static_cast<double>(fill_h)},
                                 pal.face);
             const double tx = x0 + static_cast<double>(pad_l);
-            // The resting label's ink: the inactive label, else the text
-            // tone (resolve_flag_face's table; materials.h's text tones),
+            // The resting label's ink: the inert label `text_dim`, else the
+            // sidebar text `sidebar_text` (resolve_flag_face's table),
             // struck on a coincident marker — at its exact pen, uncut (the
             // riding run stands over whatever the lane holds).
             show_cue_label(cr, seg_run, tx, baseline,
-                           cell_dis ? pal.inactive_cue : pal.text, struck,
+                           cell_dis ? pal.text_dim : pal.sidebar_text, struck,
                            nullptr, 0);
             cursor_x = x0 + w;
         };

@@ -926,9 +926,8 @@ bool waveform_lower_half(const GuiRect& area, int y) {
 // and the MARKER lane, each claimed by its band walk's own rect test (a
 // point is in the lanes iff it is in either lane's PRESS RECT, BOTH AXES:
 // ruler_press_area / marker_lane_press_area, main.cpp — the lane's rows on
-// the waveform area's columns; the margin's ground and the well's frame
-// beside them are no press target, "ground is not a button", architect
-// 2026-11-02). THEY LEFT THE NAVIGATION SURFACE (architect
+// the waveform area's columns, the panel's whole width since 2026-11-19,
+// send Z — "ground is not a button", architect 2026-11-02). THEY LEFT THE NAVIGATION SURFACE (architect
 // 2026-09-25: "out of both — we want symmetry as much as possible; the
 // horizontal zoom ... was designed to unify the motions for zoom on both
 // devices"): off a flag, a motionless click or tap there places the playhead,
@@ -971,10 +970,8 @@ bool point_on_playhead_head(const AppState& app, double x, double y) {
 // touch road's (touch_point_in_pan_zone reads this owner).
 //
 // The waveform BAND is THE CANVAS'S INTERIOR, waveform_area exactly
-// (2026-10-09, the canvas framed): the well's frame and the margin of
-// ground beside it either side are the program's panel, not waveform, and
-// answer nothing, as
-// the frame's lines above and below do (the right gutter counted as waveform
+// (2026-10-09): the panel's whole width since 2026-11-19 (send Z, edge to
+// edge); the well's lines above and below answer nothing (the right gutter counted as waveform
 // while the waveform spanned the window, 2026-08-13 to 2026-10-09). The TRIM
 // BAR, the lanes and the flexible GAP band are outside it.
 //
@@ -1921,7 +1918,7 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
     // Outer is_updating gate, mirroring the two Space handlers: a NEW launch
     // while a target update is in flight would audition the stale target
     // buffer, which Space refuses — so the scrub launch refuses it too, and
-    // silently since 2026-09-04. Row 8's state cell already carries the
+    // silently since 2026-09-04. The status bar already carries the
     // preview render's own `Updating...` for as long as that render runs,
     // which is the rule stated in notifications.h's silent list as the second
     // member of the one-dimensional class — a bound key's refusal is silent
@@ -2912,9 +2909,9 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     // and the same tick the roster's walk uses, keyed on the Dialog half of
     // the owner's index space. THE TARGET IS THE BUTTON'S COLUMN, not the
     // face the press above reads (architect 2026-11-07, session 87;
-    // tooltip_column_rect, render.h: the face, its legend's pad under it and
-    // half the gap each side — every dialog button is a key with its legend
-    // under it on a controls row). EVERY dialog button has a hint, so there is
+    // tooltip_column_rect, render.h: the face and half the gap each side —
+    // every dialog button is a key on a controls row). EVERY dialog button
+    // has a hint, so there is
     // no membership term here — the column alone decides, and the painter's
     // stash carries the text. A held press starts no wait here either (the
     // writer's held term — the press arm above is the same press), and the
@@ -4822,7 +4819,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // STRUCK CLIP LAMP IS ITS THIRD (architect 2026-11-05 night, session 49:
     // "the strike + the tap"; render.h's THE TWO LAMPS' STRIKE): where
     // neither claimed it, a press on the clip lamp's square while the strike
-    // stands arms the Lamp kind (arm_clip_lamp_press) — the logo lane is the
+    // stands arms the Lamp kind (arm_clip_lamp_press) — the title bar is the
     // icon row's upper pad, inside this band. A ctrl press reaches none of
     // the three arms: the modifier gate consumes every press carrying the
     // barrel's ctrl on the band and row 8 (architect 2026-11-08, the barrel
@@ -5454,10 +5451,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             //
             // THE BAND IS EXACTLY ruler_press_area AND NOTHING BELOW IT (the
             // claim reads the press accessor and only it), ITS RECT ON BOTH
-            // AXES: the lane's rows on the waveform area's columns. The
-            // margin's ground and the well's frame beside the ruler's face
-            // are no press target and fall to the empty spot's consumed
-            // nothing below (the PLACEMENT LANES block, above
+            // AXES: the lane's rows on the waveform area's columns (the
+            // panel's whole width since 2026-11-19); anything beside them
+            // would fall to the empty spot's consumed nothing below (the PLACEMENT LANES block, above
             // point_on_playhead_head). The `h` VIEW never reaches this arm —
             // its own gate armed the same pending with the mode's deferred
             // land far above.
@@ -5547,8 +5543,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // trim bar already returned above; mh_index < 0 here).
                 // ONE lane to test: the flag and triangle lanes became the
                 // single marker lane in row 5, pressed on the waveform area's
-                // columns alone (marker_lane_press_area): the margin and the
-                // well's frame beside it fall to the return below.
+                // columns alone (marker_lane_press_area; the panel's whole
+                // width since 2026-11-19).
                 const GuiRect marker_lane = marker_lane_press_area(app);
                 const bool in_flag_or_tri =
                     rect_contains(marker_lane, x, y);
@@ -5583,9 +5579,10 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // stops all live at the claims; a standing A/B audition still
                 // ends, as at every press, before any claim
                 // (end_audition_for_press, the global A/B rule). That covers
-                // the margin's ground and the well's frame beside the trim bar,
-                // the ruler and the marker lane in their rows (off the three
-                // press rects, main.cpp's well_lane_press_rect), the
+                // any ground beside the trim bar, the ruler and the marker
+                // lane in their rows (off the three press rects, main.cpp's
+                // well_lane_press_rect; none on a full window since
+                // 2026-11-19), the
                 // inter-lane gaps, and any press in the FLEXIBLE GAP 1 band,
                 // (the centering rule's remainder, main.cpp's vertical rule: inside
                 // top_strip_area but in no lane, so it falls to exactly this
@@ -6531,8 +6528,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // pass it by.
         if (under_pointer && hot < 0) hot = i;
         // THE TOOLTIP'S TARGET IS THE KEY'S COLUMN (architect 2026-11-07,
-        // session 87; tooltip_column_rect, render.h): the face, its legend's
-        // pad and half the gap each side — wider than the face the press
+        // session 87; tooltip_column_rect, render.h): the face and half the
+        // gap each side — wider than the face the press
         // reads — and Play's clock field beside it. The rect the pointer is
         // in goes to the writer with the owner (the bypass chain measures
         // from it at the leave). The columns of a run tile, so the walk's
@@ -6946,27 +6943,23 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // THE PRESS FACE'S DAMAGE for the roster button at `index` — the arm, the
 // lift and the walk's inside crossing (the press arc, architect 2026-11-05)
 // — IS THE KEY'S OWN PAINTED EXTENT (architect 2026-11-16, the beats: the
-// face and its legend, not the whole strip, every key press and release):
-// RedesignButtonFace::painted, the face united with its legend's line box
-// as the row's painter last laid them out (key_legend_layout's extent,
-// whole px). WHAT A PRESS EDGE CHANGES IS INSIDE IT: the face's fill, a
-// whole-W box (paint_key's four looks), and the glyph repainted over it,
-// centered inside the face; the legend, print on the ground under the face,
-// changes nothing and is in the rect FOR THE STASH — publish_button_face
-// refreshes a key's as-painted bits only under a clip that covers its
-// painted extent, so a rect that is that extent keeps this frame a
-// publishing one and the tick's comparator reading what is on screen. The
-// rect holds the face, the glyph and the legend's box each whole; whatever
-// else of the strip it meets (the ground round the key, a neighbor's
-// overhanging legend) repaints as it stands, the rows' painters being
-// clip-driven. A KEY WITH NO PAINTED EXTENT (never painted, or not standing:
+// key, not the whole strip, every key press and release):
+// RedesignButtonFace::painted, the face as the row's painter last laid it
+// out (whole px; the printed legend under it retired 2026-11-18, send Z).
+// WHAT A PRESS EDGE CHANGES IS INSIDE IT: the face's fill, a whole-W box
+// (paint_key's four looks), and the glyph repainted over it, centered inside
+// the face — and publish_button_face refreshes a key's as-painted bits only
+// under a clip that covers its painted extent, so a rect that is that
+// extent keeps this frame a publishing one and the tick's comparator
+// reading what is on screen; the rows' painters being clip-driven, nothing
+// else repaints. A KEY WITH NO PAINTED EXTENT (never painted, or not standing:
 // hidden, yielded, overflowed) takes ITS HOME STRIP — row 8's fork, a
 // transport-row face its own bottom-strip lane, every other face the top
 // strip — the damage the lit flip's comparator pays (main.cpp).
 // TRIM's lamp edges take this rect too (set_trim_armed), and so do FOLLOW's
 // and RESTR's dark edges a user zoom or the `h` view's entry runs
 // (darken_zoom_lamps, architect 2026-11-17, send U): a lit flip moves the
-// face and the glyph's ink, never the legend.
+// face and the glyph's ink.
 void GuiInputHandler::invalidate_roster_press_face(int index) {
     const GuiRect painted =
         app.redesign_buttons[static_cast<size_t>(index)].painted;
@@ -7140,8 +7133,8 @@ void GuiInputHandler::finish_clip_lamp_press_release(
 // plus the fixed attenuation, and the switch: a rise from -inf lights the
 // voice and starts the loader, a fall to -inf fades it out; nothing freed
 // here, noise.h) — and THE CASE'S FACE RECT IS DAMAGED, the
-// published face (the number and the fill both inside it; the legend on the
-// ground does not change): THE LEVEL'S ONE DAMAGE — the per-tick comparator
+// published face (the number and the fill both inside it): THE LEVEL'S ONE
+// DAMAGE — the per-tick comparator
 // watches enabled, selected, glyph and drawing, no level, so every edge of
 // the case's value pays its own damage here, as the press arc's
 // invalidate_roster_press_face pays the press's. The case not standing (an
@@ -7750,8 +7743,8 @@ bool GuiInputHandler::handle_history_mode_press(
     // trim bar keeps its framing long press, the marker lane splits
     // flag-vs-stretch, and the waveform is the navigation surface. Each lane
     // is its PRESS RECT on both axes, the live walk's (main.cpp's
-    // well_lane_press_rect: the margin's ground and the well's frame beside
-    // the lanes fall to the tail's consumed nothing — the PLACEMENT LANES
+    // well_lane_press_rect: anything beside the lanes falls to the tail's
+    // consumed nothing — the PLACEMENT LANES
     // block, above point_on_playhead_head).
     {
         const GuiRect ruler = ruler_press_area(app);
@@ -7995,8 +7988,9 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit) {
 // names the box for as long as any pixel of it may stand; empty where no
 // box was ever painted). That is why every edge that takes a hint away must
 // come through here rather than leave it to a hover walk: the box hangs
-// OUTSIDE its strip (above its owner's face — over the logo lane for a band
-// key, over whatever stands above row 8 or a controls row for theirs), so
+// OUTSIDE its strip (under its owner's face for a band key, over the trim
+// lane and the ruler, since 2026-11-19, send Z; above it over whatever
+// stands above the bottom icon row or a controls row for theirs), so
 // no strip's damage reaches it. Surface-agnostic: the painted rect is
 // wherever that hint was drawn. Over the canvas the rect's repaint leaves
 // the hole's zeros, which the upload carries whole while a floater stood at

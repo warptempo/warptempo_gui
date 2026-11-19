@@ -5,8 +5,9 @@
 // (architect 2026-10-30) — become two FT faces, and the pixel table
 // (gui_font.h's kGuiFaceSizes) picks its uses among them.
 //
-// THE FACES (Liberation Sans and its Bold — the Regular the keys' legends'
-// alone, the Bold every other use's, gui_font.h's table — TrueType,
+// THE FACES (Liberation Sans and its Bold — the Regular the body text's,
+// the Bold the title bar's, the ruler's and the caps', gui_font.h's table
+// — TrueType,
 // FT_New_Memory_Face) are
 // FT faces wrapped as
 // cairo font faces — the FT-backed
@@ -303,6 +304,18 @@ double gui_font_descent_exact_px(const GuiFont& f) {
 }
 double gui_font_line_exact_px(const GuiFont& f) {
     return g_metrics[file_of(f.face)].line_em * gui_font_em_px(f);
+}
+
+// THE LINE BOX IN W (gui_font.h): the file's ascender and descender times
+// the use's em in W, each ceiled to a whole W (FreeType's own size-request
+// rounding, which Pango's line box reads). The tolerance keeps a product
+// that lands on a whole W from ceiling past it.
+GuiLineBoxW gui_font_line_box_w(const GuiFont& f) {
+    const FileMetrics& m = g_metrics[file_of(f.face)];
+    const auto up = [](double v) {
+        return static_cast<int>(std::ceil(v - 1e-9));
+    };
+    return GuiLineBoxW{up(m.ascent_em * f.em_w), up(m.descent_em * f.em_w)};
 }
 
 double gui_font_cap_px(const GuiFont& f) {

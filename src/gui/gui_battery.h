@@ -4,7 +4,7 @@
 #include <ctime>
 #include <string>
 
-// THE HOST'S BATTERY ACROSS THE SEAM, AND THE LOGO LANE'S LEGEND COMPOSED
+// THE HOST'S BATTERY ACROSS THE SEAM, AND THE TITLE BAR'S RIGHT GROUP COMPOSED
 // FROM IT AND THE WALL CLOCK (architect 2026-10-24; the legend's first design
 // stood in the menu row 2026-10-01 to 2026-10-05). The type is the seam's —
 // declared here so the GuiPlatform header and the GUI share ONE
@@ -12,8 +12,8 @@
 // GuiPlatform::battery_status fills it from what the host knows (the
 // contract is at its declaration), and the tick composes the legend
 // from it and the wall clock (main.cpp's tick, refresh_logo_legend, the
-// legend's one refresh site; render.h's logo lane block and
-// paint_handler.cpp's paint_logo_lane paint it).
+// legend's one refresh site; render.h's title bar block and
+// paint_handler.cpp's paint_title_bar paint it).
 
 struct GuiBattery {
     // WHETHER THE CABLE IS ATTACHED (architect 2026-11-05 night: the glyph
@@ -46,11 +46,11 @@ struct GuiBattery {
 // `icons` set's (Battery000Charging / Battery000; icons.h's head): Breeze's
 // battery outline with and without its plug (2026-11-02; the drawn bolt and
 // battery of 2026-10-24 retired), Papirus's upright battery with its bolt
-// or its exclamation mark (2026-11-17), render.h's logo lane block.
+// or its exclamation mark (2026-11-17), render.h's title bar block.
 enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 
 // THE LEGEND — "92% <glyph> | 2:12 PM" — AS THREE COMPOSED PARTS, laid right
-// to left by the painter (render.h's logo lane block): THE CLOCK RUN, the
+// to left by the painter (render.h's title bar block): THE CLOCK RUN, the
 // glyph, and the PERCENT RUN. THE PIPE between the glyph and the clock is
 // NOT COMPOSED: it never changes, and it is the layout's own drawn block on
 // the runs' ink rows (kLogoPipeW, render.h; architect 2026-11-05, his pick

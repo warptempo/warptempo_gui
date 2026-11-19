@@ -26,16 +26,16 @@
 // MIX, bright_mixed_tones).
 struct GuiThemeTones {
     uint32_t ground;              // the flat ground everywhere outside the well and the keys, the panel's `face` too (SurfaceArea); THE TITLE TONE on the Arc page, the bright mix's target and the launcher icon's ground
-    uint32_t body_face;           // THE BODY TONE, the ground of everything under the title bar on the Arc page (WindowBackground, our own role; a Live theme's SurfaceArea); no painter reads it before send Z's stage B
+    uint32_t body_face;           // THE BODY TONE, the ground of everything under the title bar (WindowBackground, our own role; a Live theme's SurfaceArea): the palette's `face`, both icon rows, the status bar, the erase, the modal pane's and the keyboard's ground
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
-    uint32_t title_text;          // the title bar's text on the Arc page (TitleForeground, our own role; a Live theme's ControlForeground); no painter reads it before stage B
-    uint32_t sidebar_text;        // the marker labels' ink on the Arc page, later the tooltip's and the cards' (SidebarForeground, our own role; a Live theme's ControlForeground); no painter reads it before stage B
+    uint32_t title_text;          // the title bar's text and drawings (TitleForeground, our own role; a Live theme's ControlForeground; paint_title_bar)
+    uint32_t sidebar_text;        // the live marker labels' ink, later the tooltip's and the cards' (SidebarForeground, our own role; a Live theme's ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
     uint32_t text_on_lit;         // what is printed on a lit key's face, its glyph and the on-screen keyboard's lit cap (StandbySelectionForeground, the selection's text); a word alone, read by key_ink (materials.h)
-    uint32_t key_dim_ink;         // a disabled key's glyph and legend (ViewCheckControlDisabledOff over the face)
+    uint32_t key_dim_ink;         // a disabled key's glyph (ViewCheckControlDisabledOff over the face)
     uint32_t key_dim_face;        // a disabled key's face on the Arc page (the key face at 55 % over the body tone, theme_roles.h's DERIVED block); no painter reads it before send Z's stage C
     uint32_t key_dim_border;      // a disabled key's border on the Arc page (well_border at 55 % over the body tone, the same block); no painter reads it before stage C
-    uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face, not a radio key's (text_on_lit at 80 % over lit_dim_fill, theme_roles.h's DERIVED block); a word alone, read by key_ink
+    uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face, not a radio key's ((text_on_lit at 80 % over the accent at 75 % over the body tone) at 60 % over the body tone, theme_roles.h's DERIVED block); a word alone, read by key_ink
     uint32_t key_face;            // an unchecked key at rest; the time fields (SurfaceBackground)
     uint32_t key_press_face;      // an unchecked key's face while a press stands on it (Desktop)
     uint32_t lit_press_fill;      // a checked key's face (not a radio key's) while a press stands on it: the accent darkened (cue · mean(key_press_face) / mean(key_face))
@@ -43,15 +43,15 @@ struct GuiThemeTones {
     uint32_t radio_lit_fill;      // a checked RADIO key's whole face, the purple (ScaleAwareness); materials.h's THE RADIO KEYS
     uint32_t radio_lit_press_fill; // a checked radio key's face while a press stands on it (radio_lit_fill · mean(key_press_face) / mean(key_face))
     uint32_t radio_lit_dim_fill;  // a checked-but-disabled radio key's face (radio_lit_fill by lit_dim_fill's rule)
-    uint32_t radio_text_on_lit_dim; // a checked-but-disabled radio key's glyph on that face (text_on_lit at 80 % over radio_lit_dim_fill); a word alone, read by key_ink
+    uint32_t radio_text_on_lit_dim; // a checked-but-disabled radio key's glyph on that face (text_on_lit_dim's rule on the purple); a word alone, read by key_ink
     uint32_t well_frame;          // the scrub's channel and the tooltip's border (TextDisabled)
     uint32_t ruler_face;          // the ruler (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the ruler face, the canvas)
-    uint32_t ruler_text;          // the ruler's digits on the Arc page (the text at 80 % over the ruler face, theme_roles.h's DERIVED block); no painter reads it before send Z's stage B
+    uint32_t ruler_text;          // the ruler's digits (the text at 80 % over the ruler face, theme_roles.h's DERIVED block; paint_ruler_row)
     uint32_t lane_face;           // the marker lane (Desktop)
     uint32_t trim_bar_face;       // the trim bar's trough, the 12-W lane under the pill (ScrollbarInnerTrack over the ground)
     uint32_t trim_span_face;      // the trim bar's pill at rest, the span (ScrollbarInnerHandle over Desktop)
-    uint32_t well_border;         // THE WELL'S FRAME: its one-W border round trim, ruler, marker lane and canvas, its three lane lines and the stereo divider (ClipBorder over the ground)
+    uint32_t well_border;         // THE WELL'S LINES: its one-W lines across the panel (under the top icon row, the trough, the ruler, the marker lane, the well's foot), the stereo divider and the status bar's line (ClipBorder over the ground)
     uint32_t selection_fill;      // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
     uint32_t selection_text;      // the selection pair's text; `selected_text` (StandbySelectionForeground, the bar's own partner)
     uint32_t list_press_fill;     // a list row's fill while a press stands on it (SelectionBackground)
@@ -60,7 +60,7 @@ struct GuiThemeTones {
     uint32_t score_pane_face;     // the score viewer's pane, the page's mat (= the ink)
     uint32_t card_face;           // the cards' box and their ring; `card_ground` / `card_frame` (Alert)
     uint32_t card_ink;            // the cards' words and class glyph; `card_text` (StandbySelectionForeground, the selection's text)
-    uint32_t clip_lamp;           // the logo lane's clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face
+    uint32_t clip_lamp;           // the title bar's clip lamp, lit (StandardVuMeter / Maximum); the limiter lamp lit wears card_face
     uint32_t level_fill;          // the NOISE level case's fill (RangeEditField over the key face), read by paint_level_case
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
@@ -128,8 +128,9 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // send Z: "let's do arcs numbers"; theme_roles.h's DERIVED block): a
 // checked-but-disabled key's face 86623B, (the accent FFAD56 at 75 % over
 // the body tone 242424, C88B4A) at 60 % over the body tone, and its glyph
-// 201911, the print 070707 at 80 % over that face; a radio key's inert face
-// 655785, the purple by the same rule, under 1A1720 AND THE THREE ROLES OF
+// 2A221A, (the print 070707 at 80 % over C88B4A) at 60 % over the body tone,
+// dimmed with the button as GTK's opacity dims it; a radio key's inert face
+// 655785, the purple by the same rule, under 232029 AND THE THREE ROLES OF
 // OUR OWN, each Default's own existing number (architect 2026-11-19, send
 // Z): THE BODY TONE 242424 (SurfaceArea), THE TITLE BAR'S TEXT and THE
 // SIDEBAR TEXT B5B5B5 (ControlForeground) AND THE ARC PAGE'S DERIVED THREE:
@@ -166,7 +167,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x5D5D5D, // key_dim_ink
     0x2E2E2E, // key_dim_face
     0x272727, // key_dim_border
-    0x201911, // text_on_lit_dim
+    0x2A221A, // text_on_lit_dim
     0x363636, // key_face
     0x2A2A2A, // key_press_face
     0xC68743, // lit_press_fill
@@ -174,7 +175,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0xB595FC, // radio_lit_fill
     0x8D74C4, // radio_lit_press_fill
     0x655785, // radio_lit_dim_fill
-    0x1A1720, // radio_text_on_lit_dim
+    0x232029, // radio_text_on_lit_dim
     0x757575, // well_frame
     0x393939, // ruler_face
     0x919191, // ruler_tick

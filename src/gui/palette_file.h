@@ -76,7 +76,7 @@
 // chrome role; both map a GuiPalette member to a GuiThemeTones member.
 // GuiPalette (render.h) keeps every member; install_palette (render.cpp)
 // fills every member off the installed theme's row — the program members
-// off this file's table, the panel's `face` off the theme's ground, the
+// off this file's table, the panel's `face` off the theme's body tone, the
 // chrome members off theme_file.h's — so every painter reads palette() and
 // no painter knows which table a color came from, nor which theme.
 //
@@ -252,12 +252,13 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // PAIR on Arc's own numbers (architect 2026-11-19, send Z: "let's do arcs
 // numbers"), a checked-but-disabled key's face 86623B — (the accent at 75 %
 // over the body tone 242424, C88B4A) at 60 % over the body tone — and its
-// glyph 201911, the print at 80 % over that face — each per channel,
+// glyph 2A221A, (the print at 80 % over C88B4A) at 60 % over the body
+// tone, dimmed with the button as GTK's opacity dims it — each per channel,
 // rounded half to even (the DERIVED block). THE RADIO KEYS' FOUR (architect
 // 2026-11-11, session 107: a lit radio key wears the purple): the face
 // B595FC, Default's ScaleAwareness; its press 8D74C4, the purple × 42 / 54;
 // its inert face 655785, the purple by the same rule (9179C6 at 60 % over
-// the body tone), under its own glyph 1A1720, the print at 80 % over it
+// the body tone), under its own glyph 232029 by the same rule
 // (the DERIVED block). THE RULER 393939 is the canvas's tone and THE CARDS'
 // INK 070707 the print's (architect 2026-11-17, session 140, ruling 3 and
 // D4). OUR OWN THREE ROLES (architect 2026-11-19, send Z; theme_roles.h's
@@ -300,7 +301,7 @@ static_assert(kDefault.text_on_lit     == 0x070707);
 static_assert(kDefault.key_dim_ink     == 0x5D5D5D);
 static_assert(kDefault.key_dim_face    == 0x2E2E2E);
 static_assert(kDefault.key_dim_border  == 0x272727);
-static_assert(kDefault.text_on_lit_dim == 0x201911);
+static_assert(kDefault.text_on_lit_dim == 0x2A221A);
 static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.lit_press_fill  == 0xC68743);
@@ -308,7 +309,7 @@ static_assert(kDefault.lit_dim_fill    == 0x86623B);
 static_assert(kDefault.radio_lit_fill  == 0xB595FC);
 static_assert(kDefault.radio_lit_press_fill == 0x8D74C4);
 static_assert(kDefault.radio_lit_dim_fill   == 0x655785);
-static_assert(kDefault.radio_text_on_lit_dim == 0x1A1720);
+static_assert(kDefault.radio_text_on_lit_dim == 0x232029);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x393939);
 static_assert(kDefault.ruler_tick      == 0x919191);

@@ -26,8 +26,8 @@ constexpr double k26Dot6 = 64.0;
 // before the unlock, which is what cairo requires.
 //
 // THE LOCK STAYS AROUND EVERY SHAPE, cached hb font or not: the uses share
-// one FT face per file at several sizes (the Bold file every use's but the
-// keys' legends, gui_font.h's table), cairo's lock sets this
+// one FT face per file at several sizes (gui_font.h's table), cairo's lock
+// sets this
 // scaled font's size on it, and hb-ft reads the face's live size for every
 // advance at shape time.
 class ScaledFontFace {
@@ -175,7 +175,7 @@ SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
     // the kerning option's (2026-11-05: a run shaped with `kern` off is
     // another run of the same bytes), then the text's: the uses' faces
     // differ in the first, so the ruler's
-    // timestamps, the cue labels, the keys' legends and the logo lane's runs never collide, and
+    // timestamps, the cue labels, the keys' legends and the title bar's runs never collide, and
     // the size (the Keys face's live `osk_font_px`, 2026-10-29 night) keys a
     // committed size's runs apart from the old size's.
     constexpr std::size_t kMemoCap = 4096;

@@ -71,6 +71,8 @@ struct LoadedSet {
     std::map<std::pair<int, uint32_t>, svg_icon::Document> bound_docs;
     std::map<std::pair<int, int>, Fit>          fits;
     std::map<GlyphKey, Surface>                 glyphs;
+    // ink_in_box's answers, per (drawing, box px): the zoom-8 probe once.
+    std::map<std::pair<int, int>, InkInBox>     in_box;
 };
 
 static_assert(static_cast<int>(GuiIconSet::Breeze) == 0 &&
@@ -209,6 +211,7 @@ void drop_rasters() {
         if (!set) continue;
         set->fits.clear();
         set->glyphs.clear();
+        set->in_box.clear();
     }
 }
 
@@ -216,6 +219,27 @@ InkSize glyph_ink_size(Icon icon, int ink_px) {
     if (ink_px <= 0) return InkSize{};
     const Fit& fit = fit_for(icon, ink_px);
     return InkSize{fit.w, fit.h};
+}
+
+InkInBox ink_in_box(Icon icon, int box_px) {
+    if (box_px <= 0) return InkInBox{};
+    LoadedSet& set = *loaded_set();
+    auto [it, fresh] =
+        set.in_box.try_emplace({static_cast<int>(icon), box_px});
+    if (!fresh) return it->second;
+    const svg_icon::Document& doc = set.docs[static_cast<size_t>(icon)];
+    constexpr double kProbeZoom = 8.0;
+    Surface probe(svg_icon::rasterise_zoom(doc, kProbeZoom));
+    const std::optional<AlphaBox> p = alpha_bounds(probe.get());
+    if (!p) return it->second;   // no ink: zeros
+    const double canvas = static_cast<double>(
+        std::max(cairo_image_surface_get_width(probe.get()),
+                 cairo_image_surface_get_height(probe.get())));
+    const double k = static_cast<double>(box_px) / canvas;   // px per probe px
+    it->second = InkInBox{
+        static_cast<int>(std::lround(std::max(p->w, p->h) * k)),
+        p->x * k, p->y * k};
+    return it->second;
 }
 
 void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,

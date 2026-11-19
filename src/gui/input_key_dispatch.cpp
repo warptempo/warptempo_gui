@@ -1079,7 +1079,7 @@ void GuiInputHandler::close_history_mode() {
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
-    // with it, and row 8's state cell rewrites its `x/y` walk line.
+    // with it, and the status bar rewrites its `x/y` walk line.
     // Narrow damage would have to know all three, and none of them is worth a
     // rect. It covers the republication's own damage too, which is why the
     // rebuild above emits its own and nothing here has to widen for it.
@@ -8488,10 +8488,10 @@ void GuiInputHandler::render_player_load_in_place() {
     // status bar's fold into row 8): the load wipes tmp/, which must never
     // race a batch publishing into it, so the refusal itself stays — and it
     // is no longer silent. It was silent for one day on the ground that the
-    // progress line was its explanation, and THAT LINE IS NOT ON SCREEN HERE:
-    // the state cell is row 8's, the modal row takes that lane whole while
-    // the player stands, so a refusal with nothing beside it would read as a
-    // dead button (the reasoning at load_in_place_render_blocked, and the
+    // progress line was its explanation; the status bar shows that line under
+    // the player since 2026-11-19 (send Z), but the card stays (no card
+    // retires into the bar, his ruling that day), a refusal with no answer at
+    // the press reading as a dead button (the reasoning at load_in_place_render_blocked, and the
     // batch-cell refusal one arm down is the same class). THE SENTENCE NAMES
     // THE ACT IT REFUSES (architect 2026-08-30, his own example): a bare "Render
     // running" was a fact with no verb, and a card answers a press. THE

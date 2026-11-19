@@ -267,15 +267,19 @@ void fill_dependent_tones(GuiThemeTones& t) {
     // block; architect 2026-11-19, send Z: "let's do arcs numbers"): the
     // face (the lit color at 75 % over the body tone) at 60 % over the body
     // tone, mix(body, mix(body, color, 0.75), 0.6), the inner word rounded;
-    // the print on it the print on a lit face at 80 % over that face,
-    // mix(face, print, 0.8) — the accent's pair and the purple's, each its
-    // own print.
-    const Rgb lit_dim   = mix(body, mix(body, on, 0.75), 0.6);
-    const Rgb radio_dim = mix(body, mix(body, radio, 0.75), 0.6);
-    t.lit_dim_fill          = packed(lit_dim);
-    t.text_on_lit_dim       = packed(mix(lit_dim, print, 0.8));
-    t.radio_lit_dim_fill    = packed(radio_dim);
-    t.radio_text_on_lit_dim = packed(mix(radio_dim, print, 0.8));
+    // the print on it DIMMED WITH THE BUTTON, as GTK's `opacity` dims the
+    // label (send Z's stage B, 2026-11-19, correcting stage A's kit reading):
+    // (the print on a lit face at 80 % over the color-at-75 % face) at 60 %
+    // over the body tone, mix(body, mix(mix(body, color, 0.75), print, 0.8),
+    // 0.6), each inner word rounded — the accent's pair and the purple's,
+    // each its own print.
+    const Rgb lit_75    = mix(body, on, 0.75);
+    const Rgb radio_75  = mix(body, radio, 0.75);
+    t.lit_dim_fill          = packed(mix(body, lit_75, 0.6));
+    t.text_on_lit_dim       = packed(mix(body, mix(lit_75, print, 0.8), 0.6));
+    t.radio_lit_dim_fill    = packed(mix(body, radio_75, 0.6));
+    t.radio_text_on_lit_dim =
+        packed(mix(body, mix(radio_75, print, 0.8), 0.6));
     // The enabled chip wears the accent (the head's ROLE-NAMED, cue).
     t.cue_fill             = packed(on);
     // The playhead's line, white exactly half way to the head (the head's

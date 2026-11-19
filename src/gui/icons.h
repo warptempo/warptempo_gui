@@ -21,10 +21,11 @@
 // each importer's one table the enumerator -> source list) and PAINTED IN
 // THE TEXT TONES — a lit key's in the print of its accent or purple face —
 // (materials.h) at ONE ROAD, THE INK BOX (below), each seat naming its own
-// ink length (the battery's the set's, render.h's LOGO LANE block):
+// ink length (the battery's the title bar's cap band, render.h's title bar
+// block):
 //   THE KEYS (architect 2026-11-01, M4 / M5: "Breeze is committed", one
-//   visual size; its printed legend under the key again since 2026-11-03,
-//   paint_key_legend): every key carries one — and since 2026-11-08 the
+//   visual size; no printed legend under the key since 2026-11-18, send
+//   Z): every key carries one — and since 2026-11-08 the
 //   on-screen keyboard's glyph keys, at the same one size
 //   (onscreen_keyboard::cap_icon: Tab FormatIndentMore, Enter KeyEnter, the
 //   rest shared drawings) —
@@ -32,13 +33,13 @@
 //   B5B5B5 at rest and pressed, `key_dim_ink` (Default's 5D5D5D) on a disabled key,
 //   `text_on_lit` (Default's 070707) on a lit one's accent face (a radio
 //   key's purple, 2026-11-11, session 107), pressed or
-//   not, and `text_on_lit_dim` (Default's 201911; a radio key's
-//   `radio_text_on_lit_dim`, 1A1720) on a lit disabled one's dimmed face
+//   not, and `text_on_lit_dim` (Default's 2A221A; a radio key's
+//   `radio_text_on_lit_dim`, 232029) on a lit disabled one's dimmed face
 //   (materials.h's key_ink; architect 2026-11-11, session 106; 2026-11-17,
 //   session 140; 2026-11-19, send Z).
-//   THE SEATS OFF THE KEYS (2026-11-02, M7): the logo lane's note
+//   THE SEATS OFF THE KEYS (2026-11-02, M7): the title bar's note
 //   (MusicNote16th, BPM's glyph too) and its battery + clock legend's glyph
-//   (Battery000Charging / Battery000) (paint_logo_lane), the list rows'
+//   (Battery000Charging / Battery000) (paint_title_bar), the list rows'
 //   folder and double note (Folder / ViewMediaTrack, SOURCE's glyph too,
 //   paint_folder_overlay), the cards' class glyphs (DialogInformation /
 //   DialogError, paint_notifications).
@@ -216,9 +217,9 @@ void drop_rasters();
 // keys' scaled_px of 9 / 17 of the `key_height` tuning key's W
 // (kKeyGlyphInkPerKeySide, paint_key_glyph, 9 W at the default 17, 18
 // device px on the tablet, 2026-11-04 night, his pick d1, one W over the 8
-// W before it), the logo lane's note scaled_px(9) (kLogoNoteInkW) and
-// battery glyph — Breeze's scaled_px(11) (kLogoGlyphInkW), Papirus's the
-// legend digits' ink rows (render.h's LOGO LANE block) — the list rows'
+// W before it), the title bar's note (the drawing's ink in a 12 W box,
+// ink_in_box below) and battery (the cap band's height, render.h's title
+// bar block) — the list rows'
 // scaled_px(13) (kListGlyphInkW, paint_handler.cpp), the cards' .525 of the first
 // line's inside height (kNotificationGlyphRatio, notifications.h). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and
@@ -232,6 +233,21 @@ struct InkSize {
     int w = 0, h = 0;
 };
 InkSize glyph_ink_size(Icon icon, int ink_px);
+
+// A DRAWING IN A BOX (architect 2026-11-19, send Z: the title bar's note "in
+// a 12 W drawing box", "the logo should take the same font size as the
+// body"): what the ink-box road needs to draw the drawing as if its whole
+// canvas were scaled into a `box_px` square — `ink_px` the ink's larger side
+// at that scale (the drawing's ink over its canvas's larger side, both read
+// off the fit's zoom-8 probe, times the box, rounded to the nearest px: the
+// road's sizes are whole), and `left` / `top` the ink box's offset inside
+// the box at that scale, real px. Zeros for a drawing with no ink.
+struct InkInBox {
+    int    ink_px = 0;
+    double left   = 0.0;
+    double top    = 0.0;
+};
+InkInBox ink_in_box(Icon icon, int box_px);
 
 // THE GLYPH, its INK BOX's top-left AT EXACTLY (x, y) — real device px
 // (architect 2026-11-15, the no-grid arc; render.h's hull holds the rule) —

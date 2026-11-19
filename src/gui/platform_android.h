@@ -545,7 +545,7 @@ public:
     void publish_media_state(const GuiMediaState& state);
 
     // THE HOST'S BATTERY (architect 2026-10-24): what the host knows of its
-    // battery NOW, for the logo lane's battery + clock legend (gui_battery.h
+    // battery NOW, for the title bar's battery + clock group (gui_battery.h
     // owns the type and the composer). CALLED ON EVERY TICK from the loop
     // thread — main.cpp's tick is the legend's one refresh site
     // (refresh_logo_legend), composing only when the wall-clock minute or

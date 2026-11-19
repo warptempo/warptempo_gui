@@ -29,7 +29,7 @@ enum class LandingKind { Walk, Restore };
 
 // THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
 // LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
-// now, and the rows above it — the toolbar band and its logo lane — are OWED
+// now, and the rows above it — the toolbar band and its title bar — are OWED
 // to every paint target a check
 // (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
 // (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
@@ -615,7 +615,7 @@ struct Viewport {
     // canvas (the plate, the grid, the center lines, the stems, the
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS
-    // ABOVE IT DRAW NONE OF THOSE: the toolbar band and its logo lane paint
+    // ABOVE IT DRAW NONE OF THOSE: the toolbar band and its title bar paint
     // the legend's battery and clock and the roster's faces (the app's
     // caption painted the window's state and the project's name too, until
     // 2026-10-24). Those FACES may be predicates over the view (Zoom to
@@ -663,7 +663,7 @@ struct Viewport {
     // membership is "this route changes what the LANE shows", which is the
     // progress line's writers and the tab switch, ten sites:
     //   * GuiActiveViews' tab switch (2026-10-22): the active tab's name
-    //     beside the clock, and the state line's x after it;
+    //     beside the clock;
     //   * input_render_dispatch's THREE (the promote, the BATCH'S OWN WRITE at
     //     each cell's dispatch — which took the park's retraction's place in
     //     this list on 2026-09-11, a sweep's line being state — and

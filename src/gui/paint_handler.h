@@ -46,10 +46,10 @@ struct GuiTargetRender;
 //   - GuiPlayback& is non-const because on_resize calls
 //     playback.resync_predictor(), which mutates atomic predictor state.
 
-// THE LOGO LANE'S LEGEND RECT for `legend` at this geometry (render.h's
-// logo lane block; paint_handler.cpp's logo_legend_layout, the painter's own
-// layout): the lane's rows from the legend's first ink column through the
-// well's right edge and one column of slack. The tick's damage for a changed legend
+// THE TITLE BAR'S RIGHT GROUP RECT for `legend` at this geometry (render.h's
+// title bar block; paint_handler.cpp's logo_legend_layout, the painter's own
+// layout): the bar's rows from the group's first ink column (the limiter
+// lamp's) through the panel's right edge. The tick's damage for a changed legend
 // (main.cpp's refresh_logo_legend) is this rect united with the one the
 // painter last published (AppState::logo_legend_rect).
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
@@ -60,14 +60,20 @@ GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // and the clip square is the struck lamp's hit box too
 // (GuiInputHandler::arm_clip_lamp_press and its lift), so the hit and the
 // picture are one rect. THE SQUARES ARE EXACT RECTS (architect 2026-11-15,
-// the no-grid arc: off the percent run's real ink edge and the runs' exact
-// ink top); a reader that names PIXELS takes the hull (render.h) — the
+// the no-grid arc: off the percent run's real ink edge, their top on the
+// title bar's cap band); a reader that names PIXELS takes the hull (render.h) — the
 // tick's damage, and the press, whose pointer is a whole pixel.
 struct LogoLampRects {
     GuiRectF limiter;
     GuiRectF clip;
 };
 LogoLampRects logo_lamp_rects(const AppState& app, const GuiLogoLegend& legend);
+
+// THE STATUS BAR'S STRING (architect 2026-11-19, send Z): its one composer,
+// the fields and their rules at the body (paint_handler.cpp), read by the
+// painter (GuiPaintHandler::paint_status_bar) and by the tick's comparator
+// (refresh_status_bar, main.cpp), so the two cannot disagree.
+std::string status_bar_text(AppState& app);
 // (THE CAPTION'S THREE BUTTONS' RECTS, caption_button_rects, went with the
 // caption, 2026-10-24.)
 
@@ -373,9 +379,9 @@ struct WaveformCache {
 // THE SURFACE HOLDS THE ROWS ITS INK CAN REACH (2026-10-13): the window's
 // width, and the client rows from THE RULER LANE'S TOP (top_ruler_row_area's
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
-// foot) — the ruler lane, the marker lane and the foot line, 38 + 39 + 2 =
-// 79 device rows on the tablet at 200 % where the whole strip from row 0 is
-// 251 at key_height 17 (re-derived 2026-11-17). Every cue pixel is
+// foot) — the ruler lane, the marker lane and the foot line, 40 + 40 + 2 =
+// 82 device rows on the tablet at 200 % where the whole strip from row 0 is
+// 252 at key_height 28 (re-derived 2026-11-19, send Z). Every cue pixel is
 // inside the marker lane's rows BY THE PAINTER'S OWN CLIP, not by a bound on
 // the font: paint_cues (render.cpp) paints every label's text and strike
 // and every chip under ONE clip of the lane's rows over the waveform's
@@ -662,16 +668,6 @@ struct FlagCache {
 
     ~FlagCache() { destroy_surface(); }
 };
-
-// A KEY'S PAINTED EXTENT FOR A LEGEND (architect 2026-11-16, the beats): the
-// face united with the line box of `legend` printed under it — the keys' one
-// layout owner's answer (key_legend_layout's `extent`, paint_handler.cpp:
-// what the rows' painters publish as RedesignButtonFace::painted and their
-// coverage tests read), given to the one reader outside the painters, THE
-// ROSTER'S FACE COMPARATOR (main.cpp), which damages a drifted key's stashed
-// extent united with the extent its live legend lays out. `face` is the
-// key's whole face; a face cut at the band's overflow column is not one.
-GuiRect key_painted_extent(const GuiRect& face, std::string_view legend);
 
 // -- GuiPaintHandler -----------------------------------------------------
 //
@@ -1201,11 +1197,14 @@ private:
     // which a narrow per-frame playhead damage must not pay for. Nothing painted
     // after them touches their lanes, the flag cache being transparent there.
     void paint_icon_row(cairo_t* cr);
-    // THE LOGO LANE (architect 2026-10-24; render.h's logo lane block): the
-    // band's upper pad — the note, the brand and the battery + clock
-    // legend with its glyph — painted by paint_icon_row over the band's
-    // ground; publishes the legend's rect (AppState::logo_legend_rect).
-    void paint_logo_lane(cairo_t* cr, const GuiRect& band);
+    // THE TITLE BAR (send Z, 2026-11-19; render.h's title bar block): the
+    // band's first 28 W — its own fill in the title tone, the note, the
+    // brand and the right group (the lamps, the percent, the battery, the
+    // pipe, the clock) — painted by paint_icon_row after the band's body
+    // tone; publishes the right group's rect (AppState::logo_legend_rect).
+    void paint_title_bar(cairo_t* cr, const GuiRect& band);
+    // THE STATUS BAR (send Z, 2026-11-19; the contract at the body).
+    void paint_status_bar(cairo_t* cr);
     // (THE TAB STRIP's painter, paint_tab_strip, 2026-10-18, is retired with
     // the strip, 2026-10-22.)
     // (THE PROGRAM'S FRAME's painter, paint_program_frame — its top row

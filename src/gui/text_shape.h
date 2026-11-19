@@ -128,11 +128,8 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // tablet's profile of a pinch put 3.5 % of all CPU on shaping the visible
 // labels at every flag-cache rebuild) and THE RULER'S TIMESTAMPS on the Small
 // face (paint_handler.cpp's paint_ruler_row, whose majors re-shaped the same
-// strings at every repaint a pan's damage reached the ruler), and THE
-// KEYS' LEGENDS on the Legend face (paint_handler.cpp's key_legend_layout,
-// laid out once for a strip's repaint gate and again for its paint, a fixed
-// vocabulary of a few dozen words; 2026-10-23, back 2026-11-03); the logo
-// lane's brand and battery + clock runs and the score row's page-cell
+// strings at every repaint a pan's damage reached the ruler); the title
+// bar's brand and battery + clock runs and the score row's page-cell
 // measure shape through it too. A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
@@ -210,9 +207,8 @@ void show_shaped_run_within(cairo_t* cr, const ShapedRun& run, double x,
 // stands in from the lane's edge (paint_bottom_row_buttons_and_clock), so
 // the line's origin is pulled back by this bearing — a placement off the
 // origin would read wider by whatever bearing the line's first glyph
-// carries; THE LOGO LANE (architect 2026-10-24, render.h's logo lane
-// block): the brand's first ink a gap past the note's last, and the
-// legend's runs and its glyph cell spaced off each other's ink; and THE
+// carries; THE TITLE BAR (render.h's title bar block): the right group's
+// runs and its battery cell spaced off each other's ink; and THE
 // TIME FIELDS' CELL (architect 2026-11-05, paint_handler.cpp's kTimeShape
 // block): the cell is the whole hull of the widest-digit specimen's ink
 // and every time field's run stands so that ink is centered in it exactly.
@@ -221,9 +217,9 @@ void show_shaped_run_within(cairo_t* cr, const ShapedRun& run, double x,
 double ink_left_px(const ShapedRun& run);
 // A RUN'S LAST INK, in pixels from the run's pen origin to the real right
 // edge of its ink, measured the same way (the run's own positioned glyphs'
-// outline boxes, unrounded); an empty run answers 0. ITS CONSUMERS: THE LOGO LANE'S LEGEND (architect
-// 2026-10-24, "the clock flush with the right edge of the buttons"): the
-// clock run's last ink on the well's last column and the
+// outline boxes, unrounded); an empty run answers 0. ITS CONSUMERS: THE
+// TITLE BAR'S RIGHT GROUP (render.h's title bar block): the clock run's last
+// ink 6 W inside the panel's right edge and the
 // percent run's last ink one space advance and the battery's one W of air
 // short of the glyph cell (paint_handler.cpp's logo_legend_layout, which
 // reads ink_left_px for the clock's and the percent's first ink columns —

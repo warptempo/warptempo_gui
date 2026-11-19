@@ -127,11 +127,10 @@ constexpr double kUnloadedZoomLevel = 2.0;
 // working zoom shows 2.4 s of source across the device's full width — the
 // tablet's 2304 at 44.1 kHz: 46; at 48 kHz 50 — and a strip narrower than the
 // display (chrome inside the window) keeps that same column and so shows a
-// little less than 2.4 s: a resize never moves the grid. THE STRIP IS NOT
-// THE DISPLAY even full screen: the waveform stands inside its side margins
-// and the well's frame (waveform_area, main.cpp) — on the tablet 2252 of the
-// display's 2304 device px — so W is the display's alone
-// and the column is 46 there (the strip's width would give 47).
+// little less than 2.4 s: a resize never moves the grid. W is the
+// display's alone; full screen on the tablet the strip is the display's
+// width since 2026-11-19 (send Z, edge to edge: waveform_area, main.cpp),
+// so the two coincide there and the column is 46.
 // W is GuiPlatform::display_width_px (the surface's width; the contract at
 // platform_android.h).
 // Spelled (24·sr)/(10·W): both operands are exact integers in a double and
@@ -1601,8 +1600,8 @@ struct TouchNavZoomState {
 // hold from a tap or a drag.
 // WHERE IT STARTS: a PLAIN press anywhere on the trim bar's lane — the pill's
 // ends, its body, or the bare trough beside it — the whole band
-// (trim_bar_press_area: the lane's rows on the waveform area's columns; the
-// margin's ground and the well's frame beside it arm nothing): the gesture
+// (trim_bar_press_area: the lane's rows on the waveform area's columns, the
+// panel's whole width since 2026-11-19): the gesture
 // frames rather than grabs, so the pill is no boundary for it. A press on the pill arms its pending drag beside
 // this record (route_trim_bar_press); one beside the pill arms this alone, and
 // can end only as a long press or as the consumed nothing a still trim-bar
@@ -1926,7 +1925,7 @@ enum class RedesignButton {
     // lamp rule's name. No modifier, no repeat, no long-press act.
     IconTrimArm,
     // THE PRESETS KEY (architect 2026-10-28 night; PRESETS and Breeze's
-    // bookmarks since 2026-11-07, the TRIM legend and the scissors going to
+    // bookmarks since 2026-11-07, the TRIM name and the scissors going to
     // the arm lamp before it), the zoom group's TAIL,
     // directly after the TRIM arm lamp and ahead of the iteration group (no
     // new separator: the iteration group's stays BPM's): BARE `t`, wearing
@@ -2231,8 +2230,8 @@ enum class RedesignButton {
     // ("0.0", "-9.0", "-inf", format_level_db_face; the file keeps the exact
     // value) in the Body face, the text tone on the fill and the face alike,
     // AT -inf TOO (architect 2026-11-17, send U: the case is still enabled
-    // there), centered by its cap band and its ink; its printed legend NOISE
-    // under the face as every key's. THE CASE IS THE LEVEL'S ONE ROAD: no
+    // there), centered by its cap band and its ink. THE CASE IS THE LEVEL'S
+    // ONE ROAD: no
     // Settings row (architect 2026-11-05 night, a key shown and edited on
     // the main page gets none, kSettingsEditorKeys).
     // THE DRAG IS RELATIVE on the travel (AppState::ChromePress's Level kind,
@@ -2387,8 +2386,8 @@ enum class RedesignButton {
     // architect session 93: "least used left, most used right"; 2 + 9 + 4 + 5
     // the day before, Copy at the verbs' tail; the
     // clock at the row's left with the
-    // tab name and the state line after it), the block's last face ending
-    // on the well's last column (architect 2026-09-29, the right-handed tablet's
+    // tab name after it), the block's last face ending
+    // 6 W inside the panel's last column (architect 2026-09-29, the right-handed tablet's
     // layout). The enum lists the
     // marker group, the old walk group and the arrows (the painted order
     // until 2026-10-18), and THE ONE PLAY/STOP BUTTON (bare Space) before
@@ -3560,8 +3559,7 @@ enum class DialogTrigger {
 // lowercase letter, or '\x1b' for Cancel, the one answer every prompt
 // shares), and `word`
 // the button's plain word, in Title Case — its glyph's key
-// (modal_word_icon), its legend in capitals (paint_key_legend, back
-// 2026-11-03) and its tooltip. The char is the answer's dispatch identity alone,
+// (modal_word_icon) and its tooltip. The char is the answer's dispatch identity alone,
 // reached by its button's press, never typed (architect 2026-10-30: no key
 // reaches a prompt).
 struct PromptAnswer {
@@ -4177,7 +4175,7 @@ struct GuiAuditionSequence {
 // damages the lanes that read the viewport, the zoom or the cursor
 // (Viewport::invalidate_waveform_area's rect, viewport.h, where the lanes
 // above it are inventoried) and OWES the row above them — the toolbar band
-// and its logo lane — a check
+// and its title bar — a check
 // instead of a repaint: each fingerprint is the WHOLE of what the paint of
 // those rows reads, so rows whose painted fingerprint equals the live one
 // would repaint exactly the pixels they already show, and rows whose
@@ -4226,7 +4224,7 @@ struct GuiIconRowFingerprint {
 };
 // (The tab strip's fingerprint, its lane, lit tab and two enabled bits,
 // left with the strip, 2026-10-22.)
-// The logo lane (paint_logo_lane, the band's upper pad since 2026-10-24):
+// The title bar (paint_title_bar, the band's first rows; send Z, 2026-11-19):
 // the legend the tick composed (AppState::logo_legend) — the note and the
 // brand are constants, the lane's rect the band's.
 struct GuiUpperRowsFingerprint {
@@ -5692,13 +5690,11 @@ struct AppState {
         // index of their own, and Render's Cancel drawing reads a term the
         // index does not (no progress modal standing).
         icons::Icon icon      = icons::Icon::DocumentOpen;
-        // THE PAINTED EXTENT (2026-10-23; back 2026-11-03 with the legends):
-        // the key's face united with its legend's line box as last painted
-        // (paint_handler.cpp's key_legend_layout), whose union with the next
-        // paint's extent is the publication's coverage test, so a legend
-        // that narrows (RECALL to FIT) is never stamped over its own wider
-        // ends. Empty until the button's first paint and whenever the key
-        // does not stand.
+        // THE PAINTED EXTENT (2026-10-23): the key's face as last painted —
+        // the face alone since the printed legend under it retired
+        // (2026-11-18, send Z) — whose union with the next paint's extent is
+        // the publication's coverage test. Empty until the button's first
+        // paint and whenever the key does not stand.
         GuiRect painted{0, 0, 0, 0};
         // THE SECOND RECT — ROW 8'S CLOCK, THE PLAY KEY'S ALONE (architect
         // 2026-10-27: a press on the clock's field is a press on Play /
@@ -5723,7 +5719,7 @@ struct AppState {
         // is not pressable; materials.h's THE CELL AND ITS FACE), asked
         // through the keys' one predicate, point_on_key — a whole box, so
         // the place's pixel answers it; the clock's field
-        // is no key, nor is the legend under the key.
+        // is no key.
         bool contains(const GuiPointerPlace& at) const {
             return point_on_key(rect, at.x, at.y) ||
                    rect_contains(field, at.rx, at.ry);
@@ -6667,13 +6663,13 @@ struct AppState {
     // the lane, which is the modal's own surface.
     GuiRect clock_cell_rect{0, 0, 0, 0};
 
-    // THE LOGO LANE'S LEGEND (architect 2026-10-24; render.h's logo lane
+    // THE TITLE BAR'S RIGHT GROUP (architect 2026-10-24; render.h's title bar
     // block): what the legend shows — STATE THE TICK WROTE, never a paint
     // derivation (refresh_logo_legend, main.cpp, its one writer: at the
     // project set's construction and on every tick, recomposing only when
     // the wall-clock minute or the host's battery answer moved, the two
     // `_minute` / `_battery` fields its memory) — and the legend's rect AS
-    // PAINTED (paint_logo_lane, its one publisher, zero before the lane's
+    // PAINTED (paint_title_bar, its one publisher, zero before the lane's
     // first paint), which with the new legend's own layout is the rect the
     // tick damages when the legend changes, and nothing else of the lane.
     GuiLogoLegend logo_legend{};
@@ -6693,7 +6689,7 @@ struct AppState {
     // re-arming it, dark on the first tick at or past its stamp; the clip
     // lamp STRUCK while the device cannot sound; each edge of a bit damages
     // its own square (logo_lamp_rects, paint_handler.h), nothing is damaged
-    // while a bit holds. paint_logo_lane reads the three bits.
+    // while a bit holds. paint_title_bar reads the three bits.
     //   clip_lamp_lit          THE CLIP LAMP: the device clamped a sample
     //                          on this tick's span or within the hold
     //                          before it — any view, anything the engine
@@ -6790,6 +6786,14 @@ struct AppState {
     // pre-paint hook; a target's debt clears when that target paints.
     std::array<GuiUpperRowsRecord, kGuiPaintTargetSlots> upper_rows_painted{};
     std::array<GuiClockRecord, kGuiPaintTargetSlots>     clock_painted{};
+    // THE STATUS BAR'S AS-PAINTED STRING (architect 2026-11-19, send Z; the
+    // composer status_bar_text and the painter paint_status_bar,
+    // paint_handler.cpp): written by the painter when its clip covered the
+    // whole lane, read by the tick's comparator (refresh_status_bar,
+    // main.cpp), which damages the lane while the live string differs or
+    // nothing has been recorded — the bar is state, never an event.
+    std::string status_bar_painted;
+    bool        status_bar_painted_valid = false;
 
     // THE ARMED CHROME PRESS — the redesigned rows' ACT-AT-RELEASE record, and
     // the CLICK FACE with it (architect 2026-08-13, generalizing the modal
@@ -7117,8 +7121,7 @@ struct AppState {
     // the `tooltip_delay_ms` tuning key (device_config.h, read live; render.h's
     // tooltip block), and these rules:
     //   * THE TARGET IS THE KEY'S COLUMN (tooltip_column_rect, render.h): its
-    //     face, the strip pad under it that carries its legend, and half the
-    //     key gap on each side, so a run's columns tile with no hole and the pen
+    //     face and half the key gap on each side, so a run's columns tile with no hole and the pen
     //     sliding along a run never leaves one. The same column on every
     //     tooltip-bearing key surface — the band (the level case among it),
     //     row 8 (Play's clock field an owner's rect beside its column), the
@@ -7285,9 +7288,9 @@ struct AppState {
     // live band keys show their tooltips): the overlay's opener and the
     // tooltip lamp — overlay_admits_button, the one membership — arrive,
     // wait, show and chain there as on the main page, the box in its one
-    // seat off the key's face (the band's box in the logo lane, which no
-    // overlay covers: the folder overlay and the modal family's box start
-    // under the band), painted last, over the overlay; its words the
+    // seat off the key's face (a band key's box under the key since
+    // 2026-11-19, send Z, over the trim lane and the ruler where an overlay
+    // stands), painted last, over the overlay; its words the
     // stateful overload's, read at paint time under whatever stands. Every
     // other roster key is dead there and silent, and a cue's lane is
     // covered. The rule's one expression is
@@ -7370,8 +7373,7 @@ struct AppState {
     // the `#` where its line is disabled); a moved marker is a removed item
     // and an added one. The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
-    // marker stands exactly where it stood. Row 8's state cell, beside the
-    // clock, carries the walk line: the member's position, then the
+    // marker stands exactly where it stood. The status bar carries the walk line: the member's position, then the
     // `GitHub: <word>` segment, then the `Scale:` segment when the `scale=`
     // value changed, separated by ` | ` (history_walk_line,
     // paint_handler.cpp, owns its shape).
@@ -8589,8 +8591,8 @@ struct AppState {
     // under the existing "Rendered N of M" card. A cancel while the batch is
     // still PARKED closes it at the cancel (GuiInputHandler::
     // cancel_batch_progress): the parked batch is disarmed and never runs.
-    // While it stands the state line's batch text (queue_progress_text) is
-    // still written but not on screen: row 8 yields to the modal whole.
+    // While it stands the status bar under it carries the batch's own line
+    // (queue_progress_text; the bar stands under every modal, send Z).
     struct BatchProgress {
         bool     active  = false;
         uint64_t session = 0;
@@ -10386,7 +10388,7 @@ GuiRect top_icon_row_area(const AppState& a);
 // layout, 2026-10-22; the tab strip's 2026-10-18 to then), the view bar's
 // top row. Every lane from here through the waveform's
 // bottom a viewport step repaints UNCONDITIONALLY; the row above it (the
-// band and its logo lane) repaints only when the fingerprint of their
+// band and its title bar) repaints only when the fingerprint of their
 // complete painted inputs differs from the one the paint buffer last painted
 // (GuiPaintHandler::upper_rows_fingerprint, settled by
 // settle_owed_lane_damage) — a band face may read the view (Zoom to Fit's
@@ -10409,14 +10411,14 @@ GuiRect top_ruler_row_area(const AppState& a);
 // lie off the pan zone, ScrollDragState's head drag).
 GuiRect top_marker_row_area(const AppState& a);
 // THE PRESS RECTS OF THOSE THREE LANES — each lane's rows on the waveform
-// area's columns, the margin and the well's frame beside it no press target
-// (the rule at their definitions, main.cpp). Every press gate on these lanes
+// area's columns, the panel's whole width since 2026-11-19, send Z (the rule
+// at their definitions, main.cpp). Every press gate on these lanes
 // reads these; paint and damage read the lane rects above.
 GuiRect trim_bar_press_area(const AppState& a);
 GuiRect ruler_press_area(const AppState& a);
 GuiRect marker_lane_press_area(const AppState& a);
-// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): bottom lane 0
-// on the window's foot, the strip pad, the case and the strip pad (the
+// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): bottom lane 1
+// over the status bar, Arc's inner pad, the case and the outer pad (the
 // simple layout, 2026-10-22; Cool Edit's dock bar over its content band and
 // the border under it 2026-10-09 to then), whatever stands over it (the
 // modal family's box and controls row, modal_box.h, and the on-screen
@@ -10425,10 +10427,14 @@ GuiRect marker_lane_press_area(const AppState& a);
 // row stood, 2026-08-11..12, the strip's whole surface at the unification,
 // the strip's one lane resting on the WINDOW'S FOOT from commit B, one of
 // two for the one day the STATUS BAR took that foot on 2026-08-29, the
-// strip's one lane again from that evening's fold, which put the bar's STATE
-// TEXT in this row's own cell beside the clock; each flexible gap is strip
-// geometry, not a lane.)
+// strip's one lane again from that evening's fold; each flexible gap is
+// strip geometry, not a lane.) Since 2026-11-19 (send Z) the STATUS BAR
+// stands under it on the window's foot, bottom lane 0, and the state text is
+// the bar's (status_bar_area below; notifications.h's head).
 GuiRect bottom_row_area(const AppState& a);
+// THE STATUS BAR'S LANE (main.cpp; render.h's status bar block): the line
+// and the bar under the bottom icon row, the window's whole width.
+GuiRect status_bar_area(const AppState& a);
 
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
@@ -10562,24 +10568,24 @@ inline DialogEditorStop dialog_editor_byte_at(
 // handed in moved so the box's text stands on the label's, the same day's
 // "the first char on the left of the tooltip should align horizontally with
 // the first char of the marker", marker_tooltip_box_rect):
-//   * ABOVE THE FACE: its bottom row the gap over the face's top row
-//     (box.y = face.y − gap − h; the gap 1 W, render.h's kTooltipGapW,
-//     2 device px on the tablet at 200 %). On the band that is the logo
-//     lane, over the brand, the lamps and the battery while the box stands,
-//     never over the well: on the tablet the band's face top is row 72, so a
-//     one-line box (43.14 rows, painted on 44) stands on rows 26..69 and a
-//     two-line box (67.52, on 68) on rows 2..69, the gap rows 70..71;
+//   * UNDER A TOP-ROW KEY, ABOVE EVERY OTHER FACE (architect 2026-11-19,
+//     send Z; DESIGN §9: the title bar no longer holds a top-row key's box):
+//     a face standing in the band (top_icon_row_area) gets the box UNDER it,
+//     its top row the gap under the face's bottom row (box.y = face.y +
+//     face.h + gap; the gap 1 W, render.h's kTooltipGapW, 2 device px on the
+//     tablet at 200 %) — over the trim bar and the ruler while it stands; a
+//     bottom-row key, a controls row's button and a cue get it ABOVE (box.y
+//     = face.y − gap − h), as before. On the tablet at key_height 28 the
+//     band's faces end on row 125, so a top-row key's box starts on row 128;
+//     the bottom row's faces start on row 1324, so its box ends on row 1321;
 //   * LEFT-ALIGNED ON THE FACE: box.x = face.x, one expression whether the
-//     box is wider or narrower than its face;
-//   * THEN HELD BETWEEN THE KEYS' OUTER COLUMNS (render.h's well_columns,
-//     THE EDGE RULE; architect 2026-11-02, M11 ruling 4: x 24 .. 2279 on the
-//     tablet, the well's frame's outer columns since 2026-11-17) — the right clamp first, so a box that would run past the right
-//     one is pulled in to end on it, then the left, so a box wider than the
-//     span pins its left edge there;
-//   * NEVER ABOVE THE WINDOW'S TOP: y ≥ 0, the box laying over its face's
-//     top rows where the face stands too near the top for the box and the
-//     gap (never on the tablet at 1 W: the band's two-line box keeps two
-//     rows above it).
+//     box is wider or narrower than its face (his 2026-11-07 pick, never
+//     centered);
+//   * THEN HELD INSIDE THE PANEL (render.h's well_columns, the panel's
+//     columns since 2026-11-19, THE EDGE RULE) — the right clamp first, so a
+//     box that would run past the right edge is pulled in to end on it, then
+//     the left, so a box wider than the panel pins its left edge there;
+//   * NEVER ABOVE THE WINDOW'S TOP: y ≥ 0.
 // THE BOX'S GEOMETRY IS EXACT (architect 2026-11-15, the no-grid arc):
 // `w` and `h` its text's real size and insets, the face a real rect, the
 // answer a GuiRectF — its bottom edge whole on the gap over a whole face,
@@ -10597,8 +10603,10 @@ inline DialogEditorStop dialog_editor_byte_at(
 // invalidate_modal_dialog_area for a dialog owner; the show edge where the
 // painter lays out no box — the show itself damages the box's own rect,
 // GuiPaintHandler::tooltip_box_for_show, 2026-11-16): THE FULL-WIDTH BAND of tooltip_damage_h_px() rows (the
-// box height's bound) ending on the gap's top over the owner's face, or from
-// the window's top where it would rise past it — so the box, at any width
+// box height's bound) on the box's side of the owner's face — starting on
+// the gap's bottom under a top-row key's face, ending on the gap's top over
+// every other face, or from the window's top where it would rise past it —
+// so the box, at any width
 // and either line count, clamped or not, lies inside it. A BAND, NOT THE
 // EXACT BOX, because the box's size is not known before its paint: a dialog
 // owner's words are composed by paint_modal_dialog in the frame that paints
@@ -15665,7 +15673,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // BIT (architect 2026-11-11, session 107: redesign_button_selected
     // answers the state's own fact under an overlay), so a lit one wears the
     // lit-but-inert look and an unlit one the rest face, both under the dim
-    // glyph and legend (materials.h's THE KEY).
+    // glyph (materials.h's THE KEY).
     if (folder_overlay_stands(a) || score_viewer_stands(a))
         return overlay_admits_button(a, b);
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
@@ -17083,7 +17091,7 @@ inline bool redesign_button_enabled(const AppState& a,
 // the bit is the state's own under every overlay, and a key the overlay
 // leaves dead (redesign_button_enabled's overlay arm) wears THE
 // LIT-BUT-INERT LOOK — the dimmed accent, or a radio key's dimmed purple,
-// under the dimmed print, its legend dim (materials.h's THE KEY) — exactly
+// under the dimmed print (materials.h's THE KEY) — exactly
 // as a key dead on a locked tab or under grid iterations does: ONE RULE for a
 // dead checked key everywhere. The opener and the tooltip lamp, the keys an
 // overlay leaves live, wear their live looks. A MODAL changes no key behind
@@ -18389,163 +18397,6 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     return {nullptr, nullptr};
 }
 
-// THE ROSTER'S LEGEND COLUMN (architect 2026-10-23, the hi-fi skin: "there's
-// no icons in these consoles … just a little label underneath"; BACK since
-// 2026-11-03, the retrofit, reversing the legends' retirement of
-// 2026-11-02; the table of legends, in the painter's roster order): each
-// button's act cut to a legend in capitals, printed UNDER its key in the
-// strip's bottom pad (paint_handler.cpp's key_legend_seat, the one
-// placement), the key's Breeze glyph on its face (redesign_button_icon,
-// below). The tooltip stays the act's name (above). THE `h` VIEW'S SIX
-// STAND-INS take their acts' own words (SESSION, CUMUL, REVERT, LOAD, OLDER,
-// NEWER). THIS TABLE IS EACH KEY'S RESTING WORD; THE PAINTERS READ THE
-// STATEFUL OVERLOAD BELOW, which names the act the key's next press runs
-// (architect 2026-10-25). PLAY RENDERS READS PLAYER since 2026-10-24
-// (architect: "the media player could be called the player instead of
-// play"), so the transport's PLAY names one key. ZOOM TO FIT READS FIT
-// since 2026-10-24 (architect; ZOOM 0 until then), and the three keys of
-// that day print their own words: START and END (the two skips on row 8)
-// and COPY (Copy Phase Resets), joined 2026-11-08 by PASTE (Paste Phase
-// Resets), the duo row 8's leftmost run.
-// THE TRIM PAIR (architect 2026-11-07, session 87): TRIM the arm lamp, and
-// PRESETS the trim presets list's opener (TRIM until that day).
-// THE TWO HISTORY TOGGLES print SESSION (the walk lamp's lit state) and
-// CUMUL (Toggle Cumulative cut as ADD SEL is). ZOOM IN AND ZOOM OUT READ IN
-// AND OUT (architect 2026-10-27: "Zoom In / Zoom Out, or In / Out if too
-// long"): ZOOM OUT runs 75.4 device px on the tablet at the 14-px legend,
-// past its key, and the pair is one shape, so both take the short form.
-// RESTRICT READS RESTR (architect 2026-10-29, "defer to your measurement"):
-// RESTRICT runs 70.0 device px and would crowd FOLLOW's legend beside it;
-// RESTR runs 47.5 (the 14-px legend, 2026-11-04 night).
-// THE FIT, AT THE LEGEND FACE'S 7 W EM, 14 device px on the tablet at 200 %
-// (kGuiFaceSizes, gui_font.h; 7 W since 2026-11-04 night, his pick over
-// the 8 W before it, "it does seem too large now") AGAINST THE FACE — the
-// `key_width` tuning key's width (architect 2026-11-06; render.h's case
-// block), at its default 35 W the 70-px face (materials.h's THE FACE AND
-// ITS GAP), measured 2026-11-04 night on the product's own shaping road
-// (the runs' advances): the widest words PRESETS 65.4 (the planner's
-// measure, 2026-11-07), MAGNIFY 63.8, DISCARD 63.0,
-// SESSION 62.3, HISTORY 61.7, FLATTEN 61.2, ADD SEL and SOURCE 59.9 device
-// px, so AT THE DEFAULT EVERY LEGEND FITS ITS FACE, the widest with about 2
-// px each side; the tightest neighbors, MAGNIFY beside FOLLOW (59.1), keep
-// about 10 px between their runs at the 72-px pitch. The rule stands for
-// any word to come and any width tuned: THE LEGEND NEVER WIDENS A KEY, and
-// one wider than its face overhangs onto the ground — a narrower face lets
-// the widest legends overhang, accepted while the width is tuned (MAGNIFY
-// from below 32 W, 64 device px, on the tablet). A smaller key_height leaves
-// the widths alone (the legend reads the face's width, never its height).
-inline constexpr const char* redesign_button_legend(RedesignButton b) {
-    switch (b) {
-        case RedesignButton::OpenProject:               return "OPEN";
-        case RedesignButton::Save:                      return "SAVE";
-        case RedesignButton::Undo:                      return "UNDO";
-        case RedesignButton::Redo:                      return "REDO";
-        case RedesignButton::Render:                    return "RENDER";
-        case RedesignButton::IconZoomIn:                return "IN";
-        case RedesignButton::IconZoomOut:               return "OUT";
-        case RedesignButton::IconZoomFitBest:           return "FIT";
-        case RedesignButton::IconWaveformMagnification: return "MAGNIFY";
-        case RedesignButton::IconFollow:                return "FOLLOW";
-        case RedesignButton::IconRestrict:              return "RESTR";
-        case RedesignButton::IconTrimArm:               return "TRIM";
-        case RedesignButton::IconTrimPresets:           return "PRESETS";
-        case RedesignButton::IconBpm:                   return "BPM";
-        case RedesignButton::IconIter:                  return "GRID";
-        case RedesignButton::IconFlatten:               return "FLATTEN";
-        case RedesignButton::IconListen:                return "PLAYER";
-        case RedesignButton::IconReadOnly:              return "LOCK";
-        case RedesignButton::IconScore:                 return "SCORE";
-        case RedesignButton::IconSettings:              return "SETUP";
-        case RedesignButton::IconTooltips:              return "TIPS";
-        case RedesignButton::IconNoiseLevel:            return "NOISE";
-        case RedesignButton::IconHistory:               return "HISTORY";
-        case RedesignButton::SessionHistory:            return "SESSION";
-        case RedesignButton::HistoryCumulative:         return "CUMUL";
-        case RedesignButton::HistoryRevert:             return "REVERT";
-        case RedesignButton::HistoryOlder:              return "OLDER";
-        case RedesignButton::HistoryNewer:              return "NEWER";
-        case RedesignButton::IconLoadInPlace:           return "LOAD";
-        case RedesignButton::ViewSource:                return "SOURCE";
-        case RedesignButton::ViewTarget:                return "TARGET";
-        case RedesignButton::ViewWarp:                  return "WARP";
-        case RedesignButton::ViewPhase:                 return "PHASE";
-        case RedesignButton::TransportPlayStop:         return "PLAY";
-        case RedesignButton::TransportSkipBack:         return "START";
-        case RedesignButton::TransportSkipForward:      return "END";
-        case RedesignButton::IconMarkerDrop:            return "DROP";
-        case RedesignButton::IconMarkerDelete:          return "DELETE";
-        case RedesignButton::IconMarkerDisable:         return "DISABLE";
-        case RedesignButton::IconMarkerInherit:         return "INHERIT";
-        case RedesignButton::IconJumpToDefiningMarker:  return "JUMP";
-        case RedesignButton::IconOpenTextEditor:        return "EDIT";
-        case RedesignButton::IconAddToSelection:        return "ADD SEL";
-        case RedesignButton::IconCopyPhaseResets:       return "COPY";
-        case RedesignButton::IconPastePhaseResets:      return "PASTE";
-        case RedesignButton::IconValueDrag:             return "DRAG";
-        case RedesignButton::TransportWalkPrevious:     return "PREV";
-        case RedesignButton::TransportWalk:             return "NEXT";
-        case RedesignButton::IconZoomOriginal:          return "CENTER";
-        case RedesignButton::TransportSwitchTab:        return "TAB";
-        case RedesignButton::TransportDown:             return "DOWN";
-        case RedesignButton::TransportUp:               return "UP";
-        case RedesignButton::TransportLeft:             return "LEFT";
-        case RedesignButton::TransportRight:            return "RIGHT";
-    }
-    return "";
-}
-
-// THE LEGEND NAMES THE ACT THE KEY'S NEXT PRESS RUNS (architect 2026-10-25;
-// back 2026-11-03) — the stateful overload every painter and every extent
-// reader takes (paint_handler.cpp's two strips, through key_legend_layout),
-// the constant table above its first line and every arm's forward, ARM FOR
-// ARM THE GLYPH'S (redesign_button_icon's stateful overload, below, whose
-// comment holds each arm's predicate and reason): PLAY reads STOP while the
-// transport is live; RENDER reads CANCEL where its next press cancels and no
-// progress modal stands; SAVE reads PULL, CHECK or COMMIT on Save's third
-// and fourth glyph index and in the `h` view; FIT reads RECALL where the
-// press restores the view the zoom-out left; INHERIT reads TIE under the lit
-// grid-iterations lamp. A TOGGLE KEEPS ITS PRINT IN BOTH STATES ("the toggle
-// acts keep their caption because they still are toggling"); DISABLE KEEPS
-// ITS SHORTHAND (architect 2026-10-25: "we already use shorthand, like ADD
-// SEL"). Every word fits its face (CANCEL and COMMIT about 57 device px on the tablet,
-// RECALL 54, CHECK 49, the player's PAUSE 46). THE REPAINT: the arms fork
-// exactly where the glyph's do, so main.cpp's per-tick comparator, holding
-// the painted drawing (RedesignButtonFace::icon), repaints the key on every
-// edge of its word; the painted extent rides the face's stash
-// (RedesignButtonFace::painted, whose union with the new one is the
-// publication's coverage test), so a word that narrows never leaves the old
-// word's ends on the ground.
-inline const char* redesign_button_legend(const AppState& a,
-                                          const GuiAudio& audio,
-                                          RedesignButton b) {
-    switch (b) {
-        case RedesignButton::TransportPlayStop:
-            if (redesign_button_glyph_swapped(a, b)) return "STOP";
-            break;
-        case RedesignButton::Render:
-            if (redesign_button_glyph_swapped(a, b) &&
-                !a.batch_progress.active)
-                return "CANCEL";
-            break;
-        case RedesignButton::Save:
-            if (redesign_button_glyph(a, b) == 2) return "PULL";
-            if (redesign_button_glyph(a, b) == 3) return "CHECK";
-            if (a.history_mode.active) return "COMMIT";
-            break;
-        case RedesignButton::IconZoomFitBest:
-            if (overview_command_target(a, audio).arm ==
-                OverviewCommandTarget::Arm::RestoreView)
-                return "RECALL";
-            break;
-        case RedesignButton::IconMarkerInherit:
-            if (a.iteration_mode_enabled) return "TIE";
-            break;
-        default:
-            break;
-    }
-    return redesign_button_legend(b);
-}
-
 // THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity:
 // "Breeze is committed"; THE ROSTER AS RULED, architect 2026-11-02, R12 /
 // R14 / R15: the draft won on EDIT, HISTORY, SOURCE, TARGET, SESSION and
@@ -18555,15 +18406,14 @@ inline const char* redesign_button_legend(const AppState& a,
 // (the same act, architect 2026-11-03, modal_word_icon), all deliberate) —
 // the enumerator's drawing in the `icons` set (Breeze's or Papirus's,
 // icons.h's head; one enumerator per key whatever the set) centered on
-// each roster key's face (paint_handler.cpp's paint_key_glyph), the key's
-// legend under it (redesign_button_legend, above; back
-// 2026-11-03), the act's name the tooltip's (redesign_button_tooltip,
-// above). THIS TABLE IS EACH KEY'S RESTING GLYPH; THE PAINTERS READ THE
+// each roster key's face (paint_handler.cpp's paint_key_glyph), the act's
+// name the tooltip's (redesign_button_tooltip, above; the printed legend
+// under the key retired 2026-11-18, send Z). THIS TABLE IS EACH KEY'S RESTING GLYPH; THE PAINTERS READ THE
 // STATEFUL OVERLOAD BELOW. A re-pick is a row here (and, for a drawing not
 // yet imported, a row of both importers' tables, tools/icons/
 // import_breeze.py and import_papirus.py, and a rerun); a re-pick of one
 // set's drawing alone is a row of its importer's table.
-// (The rows' comments name a key by its legend, OPEN, SAVE ….)
+// (The rows' comments name a key by its short name, OPEN, SAVE ….)
 inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
     using icons::Icon;
     switch (b) {
@@ -19404,8 +19254,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
 // live trim pass last DREW — trim_bridge_gap (render.h, the one owner the
 // painter's midpoint mark also fits against) over the painted bound columns,
 // clipped by the painter to its own effective width, so the grabbable bridge
-// is the drawn one and the well's frame beside the lane neither paints the
-// bar nor answers true here. Nothing is re-derived on the store's
+// is the drawn one and nothing beside the lane paints the bar or answers
+// true here. Nothing is re-derived on the store's
 // pair.
 //
 // THE ARROW BUTTONS ARE NOT IN IT: trim_bridge_gap insets each end by its
@@ -19916,7 +19766,7 @@ GuiRect marker_cue_face(const AppState& app, int idx);
 // pass drew it (FlagHitRect::text_x, published by the painter: pen origins,
 // not ink). tooltip_box_rect does the rest unchanged over an anchor that is
 // the cue's face (marker_cue_face) with that x: above the face, the gap,
-// the keys' outer columns' clamp (still winning near the well's edges) and
+// the panel's clamp (still winning near the panel's edges) and
 // the window's top. A cue with no painted label segment keeps the first
 // seat, the box's left on the chip's left. The target is untouched — the
 // chain's rect and the hit stay label box ∪ chip (marker_cue_hit). The zero

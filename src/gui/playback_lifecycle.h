@@ -56,7 +56,7 @@ struct GuiRenderPlayer;
 // night) — the render player's (a dead stream mid-play must pause), the A/B
 // audition's (a dead stream mid-act must end the act, the fourth site
 // above), the score viewer's (a dead stream under a playing soundtrack
-// pauses it and cards this sentence) and the logo lane's (refresh_logo_lamps:
+// pauses it and cards this sentence) and the title bar's (refresh_logo_lamps:
 // the clip lamp struck, its tap the reopen, carding this sentence on a
 // refusal) — and the
 // two PLAY-face predicates (space_launch_would_play,

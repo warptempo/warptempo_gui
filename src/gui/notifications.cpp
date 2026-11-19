@@ -24,9 +24,10 @@ int notification_cap_px() {
 
 int notification_card_h_px() {
     // border + pad + cap + pad + border, each its own rounded part (the
-    // composite rule, scaled_px's head): 2 + 18 + 15 + 18 + 2 = 55 device
+    // composite rule, scaled_px's head): 2 + 18 + 17 + 18 + 2 = 57 device
     // rows on the tablet at 200 % (the border one W, 2 device px, the pad 9
-    // W and the Body face 11 W, 22 device px).
+    // W and the Body face 12 W Regular, 24 device px, its cap 16.51 rounded;
+    // send Z — the cards' own look is its stage D).
     return 2 * hairline_px() + 2 * notification_pad_px() +
            notification_cap_px();
 }
@@ -40,7 +41,7 @@ int notification_card_max_w_px(const AppState& a) {
     const int floor_w   = scaled_px(kNotificationMinWidthPx);
     const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
     // THE WINDOW IS A SAFETY BELOW THE CEILING AND NOTHING ABOVE THE FLOOR:
-    // the stack sits inside the keys' outer columns (well_columns, THE EDGE
+    // the stack sits inside the panel's columns (well_columns, THE EDGE
     // RULE; notification_stack_bound), so a window that cannot hold the
     // ceiling gets what it has; a window that cannot hold the FLOOR
     // keeps the floor and lets the card overhang, because this number is also
@@ -52,14 +53,13 @@ int notification_card_max_w_px(const AppState& a) {
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
-    // THE STACK'S MARGINS: THE TRIM BAR'S FIRST TROUGH ROW ABOVE, THE KEYS'
-    // OUTER COLUMN AT THE RIGHT, THE PANEL'S PAD AT THE FOOT. THE RIGHT EDGE IS
-    // THE KEYS' OUTER COLUMN (THE EDGE RULE, as the tooltip's clamp,
-    // tooltip_box_rect; architect 2026-11-02, M11's and M14's record
-    // pictures): the card's right edge on the well's last column, 2279 on
-    // the tablet (well_columns' end, 2280, one past it; the well's columns
-    // its frame's outer ones since 2026-11-17; the panel's pad from the
-    // window's edge until 2026-11-02). The foot is the
+    // THE STACK'S MARGINS: THE TRIM BAR'S FIRST TROUGH ROW ABOVE, THE PANEL'S
+    // LAST COLUMN AT THE RIGHT, THE PANEL'S PAD AT THE FOOT. THE RIGHT EDGE IS
+    // HELD INSIDE THE PANEL (THE EDGE RULE, as the tooltip's clamp,
+    // tooltip_box_rect; the well's columns the panel's since 2026-11-19, send
+    // Z: edge to edge): the card's right edge on the panel's last column,
+    // 2303 on the tablet (the cards' own seat and look are send Z's stage D).
+    // The foot is the
     // panel's own pad, folder_overlay::pad_px (architect 2026-08-30; one W,
     // 2 device px on the tablet, since 2026-11-04 night). THE TOP IS ONE RULE FOR
     // EVERY VOCABULARY, READ OFF THE LIVE LANE TABLE (architect 2026-10-08:
@@ -70,7 +70,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // TROUGH'S FIRST ROW — RULED KEPT (architect 2026-11-03, over the bar's
     // two fills; first ruled 2026-11-02, M14 "d": "the card's top border one
     // line with the trim bar's frame row"; the trough since 2026-11-17; row
-    // 146 on the tablet at key_height 17, the frame's line one W).
+    // 144 on the tablet at key_height 28, the line above it one W).
     // The cards have no bevels, so
     // they sit over the bar's well and not in it (the color picker's
     // bevelled card, 2026-10-07..14, was tucked inside the waveform's well).

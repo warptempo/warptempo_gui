@@ -209,11 +209,11 @@ enum class GuiIconSet { Breeze, Papirus };
 //   key_width=<w>            THE KEY'S FACE WIDTH (architect 2026-11-06,
 //                            session 78, a tuning key like key_height):
 //                            the program's key's face width IN W, 35 W as
-//                            constructed — 70 device px on the tablet at 200 %
+//                            constructed — 72 device px on the tablet at 200 %
 //                            (render.h's icon_case_w_px, the band's,
-//                            row 8's and every controls row's walk
-//                            reading it; the glyph follows key_height
-//                            alone, the legend never widens the face), an
+//                            the bottom icon row's and every controls row's
+//                            walk reading it; the glyph follows key_height
+//                            alone), an
 //                            integer in [10, 50] in canonical spelling
 //                            (parse_key_width below), live at the
 //                            settings editor's OK, the window re-laid-out
@@ -837,15 +837,15 @@ struct DeviceConfig {
     double      noise_attenuation_level = -9.0;
     int         noise_crossfade_s       = 4;
     // THE KEY'S HEIGHT in W (2026-10-29, the head's list; a tuning key):
-    // required; the construction state is 17 (kKeyHeightDefaultW below).
-    int         key_height        = 17;
+    // required; the construction state is 28 (kKeyHeightDefaultW below).
+    int         key_height        = 28;
     // THE KEY'S FACE WIDTH in W (2026-11-06, the head's list; a tuning
-    // key): required; the construction state is 35 (kKeyWidthDefaultW
+    // key): required; the construction state is 36 (kKeyWidthDefaultW
     // below).
-    int         key_width         = 35;
+    int         key_width         = 36;
     // THE RUN GAP in W (2026-11-07, the head's list; a tuning key):
-    // required; the construction state is 22 (kRunGapDefaultW below).
-    int         run_gap           = 22;
+    // required; the construction state is 6 (kRunGapDefaultW below).
+    int         run_gap           = 6;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (2026-10-29, the head's list;
     // two tuning keys): required; the construction state is 24 x 30
     // (kOskKeyWDefaultW, kOskKeyHDefaultW below).
@@ -910,10 +910,10 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
 // stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
 // 2026-08-26 before that). It is a vocabulary, not a fit: the lanes above
-// the waveform — the program's band, its logo lane over the strip pads and
-// the case, the well's trim bar, ruler and marker
-// lane and its frame's lines, one W each — and below it — the
-// well's foot and row 8 — scale with gui_scale (main.cpp's stack record,
+// the waveform — the program's band, its title bar over Arc's toolbar pads
+// and the case, the well's trim bar, ruler and marker lane and its lines,
+// one W each — and below it — the well's foot, the bottom icon row and the
+// status bar — scale with gui_scale (main.cpp's stack record,
 // re-derived 2026-11-04 with the unit); whether they pass the
 // tablet's 1440 rows short of the ceiling turns on the key height, and where
 // they do the waveform is the zero height waveform_area's floor answers (the
@@ -1213,17 +1213,16 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
 // ways. kKeyHeightDefaultW IS CONSTRUCTION STATE ALONE, render.cpp's seat's
 // initializer, which gui_main's startup seeding overwrites before the first
 // layout; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES
-// above, 2026-11-09). Its 17 W, 34 device px, is the template's of
-// 2026-11-04 night (mock v4: the hi-fi's 33 of 2026-11-03's retrofit, which
-// reversed the square key's 60 of 2026-11-02, rounded up so the face is 70
-// x 34 device px at 35 W wide). The settings page opens the LINE EDITOR on it, not a
+// above, 2026-11-09). Its 28 W, 56 device px, is ARC'S ICON BUTTON'S
+// HEIGHT (architect 2026-11-18 / 2026-11-19, send Z: the key 36 x 28 W,
+// border included; DESIGN §0). The settings page opens the LINE EDITOR on it, not a
 // value list (41 values is no short domain, kSettingsValueListKeys' rule).
 // A TUNING KEY: when he rules the number, the key, these functions
 // and its Settings row go, and the value becomes a constexpr behind
 // render.h's icon_case_h_px.
 inline constexpr int kKeyHeightMinW     = 10;
 inline constexpr int kKeyHeightMaxW     = 50;
-inline constexpr int kKeyHeightDefaultW = 17;
+inline constexpr int kKeyHeightDefaultW = 28;
 inline constexpr const char* kKeyHeightGrammarReason =
     "must be an integer in [10, 50] in canonical spelling";
 std::string format_key_height(int px);
@@ -1242,23 +1241,21 @@ inline std::optional<int> parse_key_height(std::string_view v) {
 // (format_key_width, parse_key_width). kKeyWidthDefaultW IS CONSTRUCTION
 // STATE ALONE, render.cpp's seat's initializer, overwritten by gui_main's
 // startup seeding before the first layout; THE FIRST-RUN VALUE IS THE
-// DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 35 W, 70
-// device px on the tablet at 200 %, is the face of 2026-11-04 night, the
-// template's until 2026-11-09. The width alone moves: the glyph follows
-// key_height (paint_key_glyph), the legend never widens the face (a
-// narrower face lets the widest legends overhang onto the ground, accepted
-// while tuning; MAGNIFY below 32 W). Past 38 W on the tablet at 200 % (and
-// run_gap 22, below) the band no longer fits and its overflow rule answers — the left runs
-// clipped short of the right run, the third run's keys gone from its tail,
-// SETUP itself from 44 W (THE FIT at paint_icon_row's width math,
-// paint_handler.cpp). The settings page opens
+// DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 36 W, 72
+// device px on the tablet at 200 %, is ARC'S ICON BUTTON'S WIDTH, border
+// included (architect 2026-11-18, send Z: "about 72 device pixel width").
+// The width alone moves: the glyph follows key_height (paint_key_glyph).
+// A width the band cannot hold brings its overflow rule — the left runs
+// clipped short of the right run, the third run's keys gone from its tail
+// (THE FIT at paint_icon_row's width math, paint_handler.cpp). The settings
+// page opens
 // the LINE EDITOR on it, not a value list (41 values is no short domain,
 // kSettingsValueListKeys' rule). A TUNING KEY: when he rules the number,
 // the key, these functions and its Settings row go, and the value becomes
 // a constexpr behind render.h's icon_case_w_px.
 inline constexpr int kKeyWidthMinW     = 10;
 inline constexpr int kKeyWidthMaxW     = 50;
-inline constexpr int kKeyWidthDefaultW = 35;
+inline constexpr int kKeyWidthDefaultW = 36;
 inline constexpr const char* kKeyWidthGrammarReason =
     "must be an integer in [10, 50] in canonical spelling";
 std::string format_key_width(int w);
@@ -1279,21 +1276,20 @@ inline std::optional<int> parse_key_width(std::string_view v) {
 // twice 22 W. kRunGapDefaultW IS CONSTRUCTION STATE ALONE, render.cpp's
 // seat's initializer, overwritten by gui_main's startup seeding before the
 // first layout; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN
-// VALUES above, 2026-11-09). Its 22 W, 44 device px on the tablet at 200 %,
-// is the constexpr kRunGapW of 2026-11-04 night, the template's until
-// 2026-11-09. One key for every reader (render.h's
-// program_run_gap_px): the band's runs, row 8's groups, the render player's
-// and every controls row's group spaces. On the tablet at 200 % and
-// key_width 35 the band fits whole across the key's whole range (THE FIT at
-// paint_icon_row's width math, paint_handler.cpp: 2200 of the well's 2256
-// at 44 W); a wider key brings the overflow rule back. The settings page opens the LINE EDITOR on it, not a
+// VALUES above, 2026-11-09). Its 6 W, 12 device px on the tablet at 200 %,
+// is ARC'S GAP BETWEEN TOOLBAR GROUPS (send Z, DESIGN §3: the groups 6 W
+// apart, the outermost faces 6 W inside the panel). One key for every
+// reader (render.h's program_run_gap_px): the band's runs, the bottom icon
+// row's groups, the render player's and every controls row's group spaces
+// (THE FIT at paint_icon_row's width math, paint_handler.cpp). The settings
+// page opens the LINE EDITOR on it, not a
 // value list (43 values is no short domain, kSettingsValueListKeys' rule). A
 // TUNING KEY: when he rules the number, the key, these functions and its
 // Settings row go, and the value becomes a constexpr behind render.h's
 // program_run_gap_px.
 inline constexpr int kRunGapMinW     = 2;
 inline constexpr int kRunGapMaxW     = 44;
-inline constexpr int kRunGapDefaultW = 22;
+inline constexpr int kRunGapDefaultW = 6;
 inline constexpr const char* kRunGapGrammarReason =
     "must be an integer in [2, 44] in canonical spelling";
 std::string format_run_gap(int w);

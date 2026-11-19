@@ -34,7 +34,7 @@
 
 // (THE QUAVER'S PAINTER — paint_quaver, the mock's vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is
-// retired with his pick; the logo lane's and the lists' note is Breeze's
+// retired with his pick; the title bar's and the lists' note is Breeze's
 // MusicNote16th since 2026-11-02, icons.h's THE INK BOX.)
 
 // -- THE TIME FIELD ---------------------------------------------------------------

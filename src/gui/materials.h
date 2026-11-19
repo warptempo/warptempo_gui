@@ -20,22 +20,26 @@
 // (kGround, kKeyFace, kTextInk and the rest, 2026-11-01..05) are retired:
 // nothing outside the installed palette names a color.
 //
-// THE GROUND IS ONE FLAT COLOR, `ground` — Default's 242424 (SurfaceArea) —
-// everywhere outside the well's regions, its frame and the keys: the band
-// and its logo lane, row 8 and the well's side margins (the well's lines —
-// the frame round it, the lines under the trough, the ruler and the marker
-// lane, the stereo divider — the frame's tone since 2026-11-17, each one W,
-// render.h's
-// hairline_px), the gaps between keys, the on-screen keyboard's band, the
-// modal family's controls row.
-// NO BAKE, NO GRAIN, NO GRADIENT, NO LINE, NO BEVEL, NO SHADOW: every pixel
-// of the ground is a solid fill through the palette's chokepoint
-// (set_palette_source, render.h), which converts it for the window as it
-// converts every color (display_color), so True Colors holds with no cache
-// of its own. The palette's `face` and the chrome's `ground` role ARE this
-// tone (render.cpp's install_palette, theme_file.h). The modal family's
-// panel margins are this ground too, its box's outer rows and columns
-// included (modal_box.h).
+// TWO GROUNDS (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §2): THE
+// TITLE BAR ALONE wears the title tone `ground` — Default's 242424
+// (SurfaceArea; arc_dark 2F343F, Arc's $header_bg): "the darkest color
+// would only apply to the top line, the title bar" (paint_title_bar) — and
+// EVERYTHING ELSE OUTSIDE THE WELL'S REGIONS AND THE KEYS wears THE BODY
+// TONE `body_face` — Default's 242424 too (a Live theme's SurfaceArea; our
+// own role WindowBackground; arc_dark 383C4A, Arc's $bg_color): both icon
+// rows and their pads, the gaps between keys, the status bar, the erase
+// (render_background), the on-screen keyboard's band, the modal family's
+// panel and controls row. The well's lines — under the top icon row, the
+// trough, the ruler and the marker lane, the stereo divider, the well's
+// foot and the status bar's line — are `well_border`, each one W
+// (render.h's hairline_px). NO BAKE, NO GRAIN, NO GRADIENT, NO BEVEL, NO
+// SHADOW: every pixel of either ground is a solid fill through the
+// palette's chokepoint (set_palette_source, render.h), which converts it for
+// the window as it converts every color (display_color), so True Colors
+// holds with no cache of its own. The palette's `face` IS THE BODY TONE
+// (render.cpp's install_palette), the chrome's `ground` role the title tone
+// (theme_file.h). (The flag editor's field keeps `ground` until send Z's
+// stage D restyles the entries.)
 //
 // THE KEY (paint_key below; every key alike — the band's, row 8's, the
 // controls rows', the word buttons, the scrub's thumb, the on-screen
@@ -77,9 +81,9 @@
 // (the derivation, theme_roles.h's DERIVED block).
 // Every theme reads its own ScaleAwareness, so "the purple" is that theme's
 // role. What is printed on it is the accent's print, `text_on_lit`, and on
-// its inert face its own inert print, `radio_text_on_lit_dim` (the print at
-// 80 % over the radio key's inert face; key_ink below parts the two inert
-// prints by the class). THE PAINTER LEARNS THE CLASS AT ONE SITE PER ROAD:
+// its inert face its own inert print, `radio_text_on_lit_dim` (the print
+// dimmed over the radio key's own inert face; key_ink below parts the two
+// inert prints by the class). THE PAINTER LEARNS THE CLASS AT ONE SITE PER ROAD:
 // paint_key's and key_ink's `KeyLitClass` (below), read for a lit key
 // alone, the roster's painters passing the predicate's answer
 // (roster_lit_class, paint_handler.cpp: paint_roster_case and the glyph's
@@ -103,8 +107,7 @@
 // symbols page's key, the accent face under the `text_on_lit` cap. (THE
 // LEVEL CASE, NOISE, is never checked and never pressed-faced:
 // a slider, its fill its value, the fill a tone of its own, `level_fill`,
-// on the rest face — paint_level_case, paint_handler.cpp.) The legend
-// under a lit key stays the text tone (below).
+// on the rest face — paint_level_case, paint_handler.cpp.)
 // THE PRESS IS DARKER (architect 2026-11-05, the press arc, his pick p2 of
 // tmp/s45 over p1's ControlBackground 1E1E1E, reversing 2026-11-04's "no
 // press look anywhere" — that look was Live's HOVER tones, 6A6A6A / FFC281,
@@ -130,15 +133,14 @@
 // UNCHANGED (his "disable no press is right"): a dead key arms nothing
 // (every press arm refuses a painted-dead face), so no press stands on it.
 // What a key carries keeps its ink on the darker face: the glyph and the
-// cap `text`, or `text_on_lit` when lit (key_ink below); the legend, on the
-// ground, `text`.
+// cap `text`, or `text_on_lit` when lit (key_ink below).
 // THE LISTS' ROWS go the other way, lighter (THE SELECTION PAIR, below).
 // NO TIMING, NO HOLD, NO ANIMATION: the face follows the press bit as
 // painted; the press arms — the slide-off feint, the hold-repeat and the long
 // press — are unchanged. THE OTHER FEEDBACK STAYS: the act
 // itself, a stateful key's glyph showing the act its next press runs, the
 // typed character, the selection pair landing on a row. A DISABLED key
-// wears the rest face, its glyph and its legend in `key_dim_ink`, Default's
+// wears the rest face, its glyph in `key_dim_ink`, Default's
 // 5D5D5D. A LIT-BUT-INERT KEY — checked and disabled: the value drag lamp
 // on a locked tab or under grid iterations, the chosen view pair under grid
 // iterations, any lit key an overlay leaves dead — DIMS ITS FACE AND
@@ -147,13 +149,12 @@
 // 2026-11-19, send Z: "let's do arcs numbers"): the face `lit_dim_fill`,
 // (the accent at 75 % over the body tone) at 60 % over the body tone
 // (Default FFAD56 over 242424 -> C88B4A -> 86623B), and the glyph
-// `text_on_lit_dim`, the print at 80 % over that face (070707 -> 201911;
-// the derivation, theme_roles.h's DERIVED block) — a radio key's face
-// `radio_lit_dim_fill`, the purple by the same rule (B595FC -> 655785),
-// under its own glyph `radio_text_on_lit_dim` (1A1720) — still the lamp's
-// hue, so the
-// state reads true, dimmed as every dead glyph is; its legend `key_dim_ink`
-// as every dead key's; no press stands on a dead key, so the pair has no
+// `text_on_lit_dim`, the print dimmed with the button as GTK's opacity dims
+// it (070707 -> 2A221A; the derivation, theme_roles.h's DERIVED block) — a
+// radio key's face `radio_lit_dim_fill`, the purple by the same rule (B595FC
+// -> 655785), under its own glyph `radio_text_on_lit_dim` (232029) — still
+// the lamp's hue, so the state reads true, dimmed as every dead glyph is;
+// no press stands on a dead key, so the pair has no
 // pressed look. UNDER AN OVERLAY A DEAD LIT KEY STAYS LIT, DIMMED
 // (architect 2026-11-11, session 107: "for consistency, they should keep
 // that look of darkened. But lit."):
@@ -161,16 +162,12 @@
 // every roster key it leaves dead is disabled with its lit bit kept
 // (redesign_button_enabled's overlay arm; redesign_button_selected,
 // app_state.h, whose head owns the rule), so a lit one wears the lit-but-inert look
-// above and an unlit one the rest face, both under the dim glyph and
-// legend — ONE RULE for a dead checked key wherever it is dead; the
-// overlay's opener and the tooltip lamp, live there, keep their live looks,
-// lit in the accent. A MODAL changes no key behind it.
-// UNDER EVERY KEY ITS
-// PRINTED LEGEND (architect 2026-11-03, the retrofit, reversing the legends'
-// retirement of 2026-11-02): on the ground in the strip's bottom pad, never
-// on the face, AND NEVER LIT — a lit key's legend stays `text`, a disabled
-// key's `key_dim_ink`, lit or not (architect 2026-11-11, his "agree"; the
-// rule at paint_handler.cpp's key_legend_seat).
+// above and an unlit one the rest face, both under the dim glyph — ONE
+// RULE for a dead checked key wherever it is dead; the overlay's opener and
+// the tooltip lamp, live there, keep their live looks, lit in the accent. A
+// MODAL changes no key behind it. NOTHING IS PRINTED UNDER A KEY (the
+// legends retired 2026-11-18, send Z: "That's from the hi-fi theme"); the
+// tooltip names the act.
 //
 // THE FACE AND ITS GAP (architect 2026-11-04, the unit: his "1 agree" to
 // the hi-fi's face and "grow the box instead of adding a border"; the hi-fi
@@ -178,40 +175,42 @@
 // the face 70 x 34 and the gap 2, the pitch 72 kept): THE KEY IS ITS
 // PAINTED FACE, render.h's case — the `key_width` tuning key wide (architect
 // 2026-11-06) by the `key_height` tuning key tall (icon_case_w_px /
-// icon_case_h_px), 35 x 17 W at the defaults, 70 x 34 device px on the
-// tablet at 200 % — NO OUTLINE, NO INSET, and TWO KEYS OF
+// icon_case_h_px), 36 x 28 W at the defaults since send Z (Arc's icon
+// button), 72 x 56 device px on the tablet at 200 % — NO OUTLINE, NO INSET
+// (the border and the linked group are send Z's stage C), and TWO KEYS OF
 // A GROUP STAND ONE W OF GROUND APART (render.h's key_gap_px: 2 device px
 // on the tablet, 1 at 100 %), the
 // walk stepping the face and the gap (key_group_pitch_px below), so every
 // face is the same, a group's ends included. THE EDGE RULE IS THE FACES':
-// the band's, row 8's and the controls rows' outermost FACES stand on the
-// well's first and last columns (render.h's well_columns, the well's
-// frame's outer columns, architect 2026-11-17, session 140; the seats'
-// walks, paint_handler.cpp). THE
+// both icon rows' and the controls rows' outermost FACES stand kEdgeInsetW
+// (6 W) inside the panel's first and last columns (render.h's THE EDGE RULE
+// at well_columns; architect 2026-11-19, send Z; the seats' walks,
+// paint_handler.cpp). THE
 // GROUND IS NOT PRESSABLE (architect 2026-11-02, R5: "ground is not a
 // button"): THE PAINTED FACE IS THE HIT BOX (point_on_key below), so a
 // press, a lift and the tooltip answer on the face alone and
-// the ground round it — the gaps, the run gaps, the legends' pad — answers
+// the ground round it — the gaps, the run gaps, the pads — answers
 // nothing; the on-screen keyboard's gaps alike (R11), the same gap
 // (onscreen_keyboard.h's key_gap_px, 2026-11-04).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
-// on every word, digit and drawing the chrome prints — the logo lane, the
-// clocks, the tab name and state line, the lists, the prompts, the
-// editors, the marker labels, the keyboard's caps, the keys' Breeze glyphs
-// (2026-11-02) and their legends (2026-11-03) — and `text_dim`, Default's
-// 757575 (TextDisabled), for the settings page's inert rows and the
-// tooltip's hint line. ON A LIT KEY'S FACE the print — its glyph, the
+// on every word, digit and drawing the chrome prints — the clocks, the tab
+// name, the status bar, the lists, the prompts, the editors, the keyboard's
+// caps, the keys' glyphs (2026-11-02) — and `text_dim`, Default's 757575
+// (TextDisabled), for the settings page's inert rows, the tooltip's hint
+// line and an inert marker label. ON THE ARC PAGE (architect 2026-11-19,
+// send Z) the title bar wears `title_text`, the marker labels
+// `sidebar_text` and the ruler's digits `ruler_text` (theme_roles.h's head). ON A LIT KEY'S FACE the print — its glyph, the
 // on-screen keyboard's lit cap — is `text_on_lit`, Default's 070707
 // (StandbySelectionForeground, the selection's text; architect 2026-11-17,
 // session 140), in place of `text` (architect 2026-11-11, session 106, THE
 // KEY above); on a lit disabled key's dimmed face `text_on_lit_dim`,
-// Default's 201911, a radio key's `radio_text_on_lit_dim`, 1A1720. THE
+// Default's 2A221A, a radio key's `radio_text_on_lit_dim`, 232029. THE
 // CARDS' words and glyph wear their own ink, `card_ink`, Default's 070707
 // (StandbySelectionForeground, the same print) on Live's orange (THE CARDS,
 // below; 2026-11-04 night; the print's tone since 2026-11-17, D4). A
-// DISABLED KEY'S glyph and legend take their own tone, `key_dim_ink`,
+// DISABLED KEY'S glyph takes its own tone, `key_dim_ink`,
 // Default's 5D5D5D (ViewCheckControlDisabledOff over the key face, Live's
 // own number on every theme since 2026-11-07, theme_roles.h's head; architect
 // 2026-11-02, on mock b3: "the disabled icons are too similar to enabled
@@ -223,29 +222,28 @@
 //
 // THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h;
 // M13's text tones 2026-11-02; the text round's lengths 2026-11-03; THE
-// FRAME and THE TROUGH architect 2026-11-17, session 140): FLAT REGIONS
-// INSIDE ONE FRAME, no ring, no bevel, the frame's outer columns the keys'
-// faces' outer columns (render.h's well_columns, THE EDGE RULE). THE
-// FRAME, `well_border`, Default's 2A2A2A (ClipBorder; Arc's
-// $borders_color, Thunar's pane border, D2): one W round the trim bar, the
-// ruler, the marker lane and the canvas, the lines between them and the
-// stereo divider in the same tone (render.h's THE WELL'S FRAME). Inside it,
-// top to bottom — THE TRIM BAR, ARC'S SCROLLBAR (ruling 4): the 12-W
+// TROUGH architect 2026-11-17, session 140; EDGE TO EDGE 2026-11-19, send
+// Z): FLAT REGIONS ACROSS THE PANEL'S WHOLE WIDTH, no ring, no bevel, no
+// frame (render.h's well_columns, THE EDGE RULE). THE LINES, `well_border`,
+// Default's 2A2A2A (ClipBorder; Arc's $borders_color, Thunar's pane border,
+// D2): one W under the top icon row, between the lanes, under the canvas,
+// and the stereo divider in the same tone (render.h's THE WELL'S EDGES).
+// Top to bottom — THE TRIM BAR, ARC'S SCROLLBAR (ruling 4): the 12-W
 // trough `trim_bar_face`, Default's 242424 (ScrollbarInnerTrack over the
 // ground; Live's track is transparent), and on it THE PILL, the span,
 // `trim_span_face`, Default's 696969, or `selected_fill` while a drag
-// moves it (render_trim_flags); the frame's line; THE RULER `ruler_face`,
+// moves it (render_trim_flags); the line; THE RULER `ruler_face`,
 // THE CANVAS'S TONE, Default's 393939 (architect 2026-11-17, session 140,
 // ruling 3: "the ruler lane is light, the marker lane is dark, and then the
-// canvas is lighter"), with the `text` digits and the `ruler_tick` ticks,
-// Default's 919191 (DetailViewRulerMarkings over the ruler); the frame's
-// line; THE MARKER LANE `lane_face`,
+// canvas is lighter"), with the `ruler_text` digits (send Z) and the
+// `ruler_tick` ticks, Default's 919191 (DetailViewRulerMarkings over the
+// ruler); the line; THE MARKER LANE `lane_face`,
 // Default's 2A2A2A (architect 2026-11-03, the retrofit: Live's next real
-// fill above the 242424 ground — Desktop); the frame's line; THE CANVAS
-// (the palette's `waveform_canvas`), its stereo divider the frame's tone.
+// fill above the 242424 ground — Desktop); the line; THE CANVAS (the
+// palette's `waveform_canvas`), its stereo divider the lines' tone.
 // Every Default number is Live's, measured on his Live 12 shots (the
 // ruler's ticks the time ruler's, the lane the clip view's marker lane; the
-// ruler's face the canvas's). Where a theme makes the lane, the trough, the frame or the dim
+// ruler's face the canvas's). Where a theme makes the lane, the trough, the lines or the dim
 // text coincide with the ground, that is Live's own number — ACCEPTED, not
 // a bug, no backstop (architect 2026-11-05).
 // THE TIME FIELDS are flat `key_face` boxes, no ring (2026-11-01 night,
@@ -255,7 +253,7 @@
 // (architect 2026-11-02, M14 "d"), Default's 757575 (TextDisabled, the dim
 // text's own role): the scrub's one-W channel (render.h's scrub block) and
 // the tooltip's one-W border (paint_shift_tooltip; the cards wear
-// `card_face` instead since 2026-11-04 night). It is not THE WELL'S FRAME,
+// `card_face` instead since 2026-11-04 night). It is not the well's lines'
 // `well_border` (THE WELL above), a tone of its own. THE TRIM BAR'S TWO
 // TONES (render_trim_flags): `trim_bar_face`, the trough, is Live's
 // ScrollbarInnerTrack over the ground (architect 2026-11-17, session 140);
@@ -357,11 +355,10 @@ enum class KeyLitClass { Lamp, Radio };
 // not, `text_on_lit`, or, the key disabled, the print of its dimmed face —
 // `text_on_lit_dim` on a lamp-class key's, `radio_text_on_lit_dim` on a
 // radio key's (architect 2026-11-17, session 140, D5: each inert print is
-// the print at 80 % over its own inert face, so the class parts it); on an
+// derived over its own inert face, so the class parts it); on an
 // unlit key `text`, or `key_dim_ink` on a disabled one — the same word on
 // the press face as on the resting one, the class read for a lit disabled
-// key alone. The legend under the key is not this ink's (paint_key_legend,
-// paint_handler.cpp: never lit).
+// key alone.
 inline uint32_t key_ink(KeyLook look, bool enabled, KeyLitClass cls) {
     const GuiThemeTones& t = installed_theme().tones;
     if (key_look_lit(look))
@@ -384,10 +381,9 @@ inline uint32_t key_ink(KeyLook look, bool enabled, KeyLitClass cls) {
 // palette().radio_lit_fill, radio_lit_press_fill or radio_lit_dim_fill on
 // the same terms (KeyLitClass above). The enabled bit and the class part
 // the lit faces alone: an unlit key's face is the same dead or live and in
-// either class, its glyph and legend saying so. Nothing else is painted.
+// either class, its glyph saying so. Nothing else is painted.
 // What a key carries is its caller's — the roster's and the
-// controls rows' Breeze glyph on the face and its legend under it
-// (paint_key_glyph and paint_key_legend, paint_handler.cpp), the on-screen
+// controls rows' glyph on the face (paint_key_glyph, paint_handler.cpp), the on-screen
 // keyboard's caps — the glyph and the cap in key_ink's tone, the same look
 // and the same enabled bit.
 void paint_key(cairo_t* cr, const GuiRect& r, KeyLook look, bool enabled,
