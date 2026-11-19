@@ -5264,18 +5264,17 @@ struct FlagEditorBox {
 // State::view_offset_px survives on this surface for the sub-pixel case alone
 // (a run's width rounded down to a whole column, which would otherwise clip
 // the caret's reserved column at end-of-text); the glyph-by-glyph travel its
-// minimal-travel rule describes belonged to the DIALOG field, whose box was
-// fixed, until that field gave way to the modal family's box and its soft
-// wrap (2026-10-14). Left/Right/Home/End navigate exactly like any one-line
-// field.
+// minimal-travel rule describes is the DIALOG entry's, whose box is fixed
+// (paint_handler.cpp's THE DIALOG WINDOW; architect 2026-11-19, send AA).
+// LEFT / RIGHT navigate exactly like any one-line field.
 //
 // Takes AppState by NON-CONST reference, alone among the renderers here, and
 // for two honest reasons: it advances the editor's view offset (session state
 // that must persist across frames) and it publishes app.flag_editor_box. Both
 // are the painter owning what only the painter can compute. (The dialog
-// editor's painter — paint_modal_dialog, paint_handler.cpp — publishes its
-// wrapped rows the same way; it is a GuiPaintHandler method and already holds
-// an AppState&.)
+// editor's painter — paint_modal_dialog, paint_handler.cpp — advances its
+// own editor's offset and publishes its origin the same way; it is a
+// GuiPaintHandler method and already holds an AppState&.)
 void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio);
 
 // The phase-reset column's cues: the identical cue, the identical class ladder

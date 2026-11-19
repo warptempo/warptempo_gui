@@ -183,9 +183,11 @@ static_assert(kIterHopMax < 10,
 constexpr int kMaxPendingCharsIterHop = 2;
 // THE BPM FORM'S FIELDS (architect 2026-10-29), ONE CAP PER FIELD, the
 // session's `target` naming the field (GuiBpmField, warpmarkers.h — the
-// line's key and its reader there are the grammar's one owner). Each line
-// is `<key>=<value>`, the key the row's own, so each cap is its key, the
-// `=` and its value's widest spelling:
+// field's key and its reader there are the grammar's one owner). THE BUFFER
+// IS THE FIELD'S VALUE ALONE (architect 2026-11-19, send AA: "I agree with
+// your recommendation" — the line editor shows the value under the field's
+// label, Z_06's shape), the key the row's own and never typed, so each cap
+// is its value's widest spelling:
 //   BEATS  4 bytes, a positive integer with no leading zeros, capped at
 //          kBpmBeatsMax — so `9999` is the widest there is.
 //   LOW / HIGH  18 bytes each. Each is pinned by an equality test to the bpm
@@ -200,20 +202,19 @@ constexpr int kMaxPendingCharsIterHop = 2;
 //          bound is attained, at `10.000000000000002` — the double one ulp
 //          above 10, whose rounding interval (half an ulp, 2^-50 wide) holds
 //          no sixteen-digit decimal.
-// So `beats=` + 4 = 10, `low=` + 18 = 22, `high=` + 18 = 23, each attained.
+// So 4, 18 and 18, each attained.
 // PER FIELD AND NOT THE WIDEST OF THE THREE because each session edits one
-// field whose spellings are known: a shared 23 would let a beats line grow
-// thirteen bytes past anything its commit admits, the advertised-typing
-// defect this module's head rules out. A line retyped to ANOTHER field's
-// key is refused at the commit whatever its length (the key is the row's).
+// field whose spellings are known: a shared 18 would let a beats value grow
+// fourteen bytes past anything its commit admits, the advertised-typing
+// defect this module's head rules out.
 static_assert(kBpmBeatsMax < 10000,
               "a beats count no longer fits four digits");
 static_assert(kBpmMin >= 1.0 && kBpmMax < 1000.0,
               "a bpm bound no longer fits three significant integer digits");
 constexpr int kMaxPendingCharsBpmField[3] = {
-    6 + 4,    // beats=9999
-    4 + 18,   // low=10.000000000000002
-    5 + 18,   // high=10.000000000000002
+    4,    // 9999
+    18,   // 10.000000000000002
+    18,   // 10.000000000000002
 };
 // Settings prompt. A POLICY CEILING — free text has no widest spelling to be
 // tight against. Sized for the free-text provenance fields (url, notes),
@@ -223,14 +224,12 @@ constexpr int kMaxPendingCharsBpmField[3] = {
 // commits and persists unchanged, and can be shortened, but the editor will not
 // grow any pending past the cap.
 //
-// THE DIALOG EDITORS' LINE WRAPS AND NEVER SCROLLS (architect 2026-10-14:
-// the modal family's box is the edit control, the whole line soft-wrapped at
-// its width, soft_wrap_rows below); it scrolled horizontally in its one-row
-// field from 2026-08-13 (architect at his live test — a recalled `notes=`
-// value is longer than the field and "the viewport in the text field is
-// always stuck on the left edge of the text") until then. The flag editor
-// keeps `view_offset_px` below, its minimal-travel rule the marker lane's
-// painter's.
+// THE DIALOG EDITORS' ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY
+// (architect 2026-11-19, send AA: "The pen does have a good way to scroll,
+// and those are the left and right arrows of the keyboard. That's exactly
+// why they're there."), so a value as long as this cap travels through the
+// 276 W entry on `view_offset_px` below (paint_handler.cpp's THE DIALOG
+// WINDOW, the editor arm).
 constexpr int kMaxPendingCharsSettings = 1024;
 // THE TRIM PRESET'S NAME (architect 2026-10-28 night). A POLICY CEILING like
 // the settings value's — a name is free text with no widest spelling — sized
@@ -245,8 +244,8 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // (handle_key accepts any character-bearing key and defers grammar to the
 // commit-time validator). The flag editor uses FlagPayload (the plain
 // canonical payload — tempo, scale, labels, never a bracket); the BPM
-// form's line editor uses BpmField (one `key=value` line of the form's
-// three); the settings-prompt editor uses SettingsAssignment
+// form's line editor uses BpmField (the value of one of the form's three
+// fields); the settings-prompt editor uses SettingsAssignment
 // (`key=value`); the trim preset's name editor uses TrimPresetName (free
 // text, the name); and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
@@ -263,7 +262,8 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // IterBound) share the flag editor's State and paint in the marker lane.
 // BpmField (architect 2026-10-29) is THE BPM FORM'S LINE EDITOR, a row's tap
 // on the form (GuiInputHandler::bpm_form_commit): opened prefilled with the
-// row's line, `target` the field (GuiBpmField, warpmarkers.h), its commit
+// row's value (architect 2026-11-19, send AA), `target` the field
+// (GuiBpmField, warpmarkers.h), its commit
 // the field's (GuiFlagEditor::commit_bpm_field), its close returning to the
 // form; it retired the bracket line `<beats>@[<lo>,<hi>]` and the kind that
 // edited it on the flag editor's State, BpmBracket. TrimPresetName (architect
@@ -394,12 +394,16 @@ struct State {
 
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
     // scrolled right through `pending`. Byte 0 paints at (text origin -
-    // view_offset_px), so a positive value hides text off the box's left edge.
+    // view_offset_px), so a positive value hides text off the field's left
+    // edge.
     //
-    // THE MARKER LANE'S PAINTER WRITES IT AND READS IT — the one painter
-    // since 2026-10-14, when the DIALOG EDITORS' line moved into the modal
-    // family's box and took a soft wrap instead (soft_wrap_rows; their fixed
-    // one-row field traveled glyph by glyph from 2026-08-13 until then).
+    // ITS PAINTER WRITES IT AND READS IT, ONE PER EDITOR STATE: the marker
+    // lane's (render_flag_editor_box) for the flag editor, and since
+    // 2026-11-19 (architect, send AA) the dialog window's editor arm
+    // (paint_handler.cpp's THE DIALOG WINDOW) for the dialog line editor,
+    // whose one-line entry scrolls sideways, GtkEntry's adjust_scroll: the
+    // offset clamped to the run's own travel past the entry's inner width,
+    // then moved only when the caret would leave that width, by just enough.
     // THE MARKER-LANE FIELD'S TRAVEL IS SUB-PIXEL SINCE 2026-09-06: its box
     // is its own two pads and its own
     // run — no lane cap, no on-window clamp — so the whole run is always
@@ -410,21 +414,23 @@ struct State {
     // and the VIEWPORT PAN is what brings it into view (render.h's
     // render_flag_editor_box carries the ruling).
     //
-    // THE MINIMAL-TRAVEL RULE, which the painter applies and may not
+    // THE MINIMAL-TRAVEL RULE, which both painters apply and may not
     // reinvent: each frame, scroll only as far as the caret demands and in
-    // whichever direction it left the window, then clamp to the run's own
-    // travel (so the view never shows blank space past the end of the text).
-    // A caret walking right pushes the view right one glyph at a time and
-    // walking back left pulls it back the same way — it never jumps, and it
-    // never moves at all while the caret sits inside the window. The caret's
-    // own column is RESERVED at the right edge so a caret at end-of-text
-    // stands fully inside rather than half past it.
+    // whichever direction it left the window, and keep the view inside the
+    // run's own travel (so the view never shows blank space past the end of
+    // the text). A caret walking right pushes the view right one glyph at a
+    // time and walking back left pulls it back the same way — it never
+    // jumps, and it never moves at all while the caret sits inside the
+    // window. The marker lane reserves the caret's own column inside its
+    // viewport; the dialog entry lets the caret stand on its inner right edge,
+    // its one W in the pad, as GtkEntry draws it.
     //
-    // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: the painter folds the
+    // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: each painter folds the
     // offset into the ORIGIN it publishes (FlagEditorBox::text_origin_x,
-    // "the window x byte 0 paints at"), so editor_stop_at's
-    // nearest-boundary search and every caret seat it serves land correctly
-    // on a scrolled field with no knowledge that it scrolled.
+    // AppState::DialogEditorText::origin_x, "the window x byte 0 paints at"),
+    // so editor_stop_at's nearest-boundary search and every caret seat it
+    // serves land correctly on a scrolled field with no knowledge that it
+    // scrolled.
     //
     // It lives on State rather than beside either geometry because it is
     // SESSION state: it must survive from frame to frame — recomputing it from
@@ -433,22 +439,6 @@ struct State {
     // and are its only reset sites; a change of which editor a dialog hosts is
     // structurally a change of State, so nothing else needs keeping in step.
     double view_offset_px = 0.0;
-
-    // THE CARET'S ROW-END AFFINITY on a dialog editor's HARD-WRAPPED row
-    // (architect 2026-10-14, Windows' multiline edit control's own affinity;
-    // the rule and every reader at dialog_editor_row_last_stop, app_state.h):
-    // a row soft_wrap_rows broke at a codepoint because no space fit ends at
-    // the byte the next row begins at, so that one byte is two caret places —
-    // after the row's last character, or before the next row's first. TRUE
-    // means the former: the caret got there FROM THAT ROW (a press or a drag
-    // past the row's text) and paints at that row's end; false, everywhere
-    // else, paints it on the next row's start. Set by those two seats alone,
-    // after their blink restart; CLEARED BY EVERY OTHER
-    // CARET MOTION AND EVERY EDIT through touch_blink, which each of them
-    // calls, and by enter / deactivate. Meaningless off a hard break's end
-    // (the readers ignore it there), and never set by the flag editor's one
-    // row.
-    bool caret_row_end = false;
 
     // Cursor blink: monotonic timestamp at which the cursor became
     // visible. The renderer tests `(now - blink_epoch) % period < period/2`
@@ -626,14 +616,13 @@ std::string encode_utf8(uint32_t cp);
 bool cursor_visible_now(const State& s);
 
 // THE CARET MOVED OR THE TEXT CHANGED — restart the blink phase (the caret
-// becomes visible NOW and the period runs from here) AND DROP THE ROW-END
-// AFFINITY (State::caret_row_end, 2026-10-14): every caret motion and every
-// edit inside this module calls it, and so do the pointer's caret seats,
-// which then set the affinity again where their own stop holds it.
+// becomes visible NOW and the period runs from here): every caret motion and
+// every edit inside this module calls it, and so do the pointer's caret
+// seats.
 void touch_blink(State& s);
 
-// RESTART THE BLINK PHASE ALONE, the caret unmoved and the affinity kept —
-// for the callers that move nothing: the modal dialog's focus ring walking
+// RESTART THE BLINK PHASE ALONE, the caret unmoved — for the callers that
+// move nothing: the modal dialog's focus ring walking
 // back onto the FIELD (2026-08-13), the field taking the focus back at a
 // press, a finger's caret drag ending where its last frame seated the caret,
 // and an insert the capacity refused. Each restarts the phase so the caret
@@ -660,71 +649,5 @@ void restart_blink(State& s);
 // covers a ligature's interior bytes.
 int byte_index_from_shaped_x(double click_x, double text_origin_x,
                              const std::vector<double>& boundaries);
-
-// THE SOFT WRAP — the one rule that breaks a dialog editor's line into the
-// rows the modal family's box shows (architect 2026-10-14: "looks like a
-// multiline edit but that's ok — long lines can wrap"; nothing scrolls).
-// `boundaries` is the shaped run's per-byte pen offsets
-// (text_shape::byte_offsets_px, pending.size()+1 entries), `width` the room a
-// row has. Returns the rows as byte ranges [begin, end), in order, each row's
-// end the next row's begin and the last row's the text's size — one row, [0,
-// 0), for an empty text. EACH ROW TAKES THE MOST TEXT THAT FITS, BREAKING
-// AFTER ITS LAST SPACE (the space stays on the row it ends, Windows' edit
-// control's word wrap), or — a row with no space that fits — AT THE LAST
-// CODEPOINT BOUNDARY THAT FITS, and always at least one codepoint, so a glyph
-// wider than the room still advances. EACH ROW SAYS WHICH BREAK ENDS IT
-// (`hard`, 2026-10-14): a codepoint break is hard, a space break and the last
-// row are not — the caret's last stop on a row differs between the two
-// (dialog_editor_row_last_stop, app_state.h). Every end is a codepoint
-// boundary by construction (the walk steps only on them), so the caret, the
-// selection and the press, which address the rows by byte, can never split a
-// character. Measured on the ONE run (a row's width is boundaries[end] -
-// boundaries[begin]), so the rows paint and hit on the pen the run was shaped
-// with.
-struct WrapRow {
-    int  begin = 0;
-    int  end   = 0;
-    bool hard  = false;
-};
-inline std::vector<WrapRow> soft_wrap_rows(
-        const std::string& text, const std::vector<double>& boundaries,
-        double width) {
-    std::vector<WrapRow> rows;
-    const int n = static_cast<int>(text.size());
-    if (static_cast<int>(boundaries.size()) < n + 1 || n == 0) {
-        rows.push_back(WrapRow{0, n, false});
-        return rows;
-    }
-    const auto at = [&](int i) {
-        return boundaries[static_cast<std::size_t>(i)];
-    };
-    const auto boundary = [&](int i) {
-        return i >= n || (static_cast<unsigned char>(
-                              text[static_cast<std::size_t>(i)]) & 0xC0) != 0x80;
-    };
-    int begin = 0;
-    while (begin < n) {
-        if (at(n) - at(begin) <= width) {
-            rows.push_back(WrapRow{begin, n, false});
-            return rows;
-        }
-        int fit = begin, space_break = -1;
-        for (int i = begin + 1; i <= n; ++i) {
-            if (!boundary(i)) continue;
-            if (at(i) - at(begin) > width) break;
-            fit = i;
-            if (text[static_cast<std::size_t>(i - 1)] == ' ') space_break = i;
-        }
-        const bool hard = space_break <= begin;
-        int end = hard ? fit : space_break;
-        if (end <= begin) {   // not one codepoint fits: take one anyway
-            end = begin + 1;
-            while (end < n && !boundary(end)) ++end;
-        }
-        rows.push_back(WrapRow{begin, end, hard});
-        begin = end;
-    }
-    return rows;
-}
 
 } // namespace text_editor

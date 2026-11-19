@@ -5885,51 +5885,30 @@ struct AppState {
     FlagEditorBox flag_editor_box;
 
     // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
-    // geometry contract for the dialog line editor in its three kinds (the load and
-    // commit-title editors stood among them until 2026-08-28 and 2026-10-10),
-    // which paint THEIR LINE IN THE MODAL FAMILY'S BOX since 2026-10-14 — the
-    // box is the edit control (architect: the whole `key=value` line from the
-    // box's first row, "looks like a multiline edit but that's ok — long
-    // lines can wrap"); an inset field on the bottom row from 2026-08-12, the
-    // status lane before. The press region is the published field rect,
-    // modal_dialog.field, the box's interior.
+    // geometry contract for the dialog line editor in its three kinds (the
+    // load and commit-title editors stood among them until 2026-08-28 and
+    // 2026-10-10), which paint THEIR TEXT IN ARC'S ENTRY in Thunar's rename
+    // dialog (paint_handler.cpp's THE DIALOG WINDOW). The press region is the
+    // published field rect, modal_dialog.field, the entry's box.
     //
-    // THE LINE IS SOFT-WRAPPED AT THE BOX'S WIDTH (text_editor::
-    // soft_wrap_rows, the one wrap rule) and NOTHING SCROLLS: `rows` are the
-    // visual rows in order, each a byte range [begin, end) of PENDING — a
-    // row's end the next row's begin, the last row's the buffer's size —
-    // with its band (`y`, `h`: the list row's box the row stands on) and
-    // `origin_x`, the window x byte 0 WOULD paint at for that row, so the
-    // row's own bytes paint at origin_x + byte_x[i]. `byte_x` holds
-    // pending.size()+1 pen offsets of the ONE shaped run, relative to its
-    // byte 0, and `hard`, whether the wrap broke the row at a codepoint
-    // because no space fit (text_editor::WrapRow, 2026-10-14). The caret at a
-    // byte stands on the row whose range holds it, the buffer's end on the
-    // last row — and a hard row's end on THAT row under the caret's row-end
-    // affinity (dialog_editor_row_of, text_editor::State::caret_row_end); a
-    // press picks the row under it and the nearest stop on it
-    // (dialog_editor_byte_at) — so the click, the F2.1 caret drag and the
-    // finger's caret drag walk the rows the painter drew.
+    // THE ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY (architect
+    // 2026-11-19, send AA; the rule at paint_dialog_window's editor arm):
+    // `origin_x` is the window x byte 0 paints at, THROUGH THE SCROLL OFFSET
+    // (text_editor::State::view_offset_px), so byte i paints at origin_x +
+    // byte_x[i]; `byte_x` holds pending.size()+1 pen offsets of the ONE shaped
+    // run, relative to its byte 0. A press seats the caret on the nearest of
+    // those stops to its real x (text_editor::byte_index_from_shaped_x, the
+    // one click-to-byte rule) — a hidden byte included, which the next paint
+    // scrolls into view — so the click, the F2.1 caret drag and the finger's
+    // caret drag walk the text the painter drew.
     // Written by paint_modal_dialog: zeroed at the top of every run, filled by
     // whichever editor the dialog actually paints. That makes it a statement
     // about what is ON SCREEN — an editor the dialog's precedence hides (a
     // prompt is up) publishes nothing and takes no clicks, which is the
     // correct answer.
     struct DialogEditorText {
-        struct Row {
-            int    begin    = 0;
-            int    end      = 0;
-            double origin_x = 0.0;
-            // The band's top, a REAL y (the row's line box in the entry:
-            // the first row's under the entry's line-box baseline, exactly;
-            // the pitch between rows the line box, whole), and its whole
-            // height.
-            double y        = 0.0;
-            int    h        = 0;
-            bool   hard     = false;
-        };
-        bool                valid = false;
-        std::vector<Row>    rows;
+        bool                valid    = false;
+        double              origin_x = 0.0;
         std::vector<double> byte_x;
     };
     DialogEditorText dialog_editor_text;
@@ -5948,9 +5927,11 @@ struct AppState {
     // player and the picker, the modal family's whole area under a prompt or
     // a dialog editor (modal_area_rect, modal_box.h, 2026-10-14; the taskbar
     // overlay 2026-10-10 to 2026-10-14) — which is what the hover
-    // invalidation and the damage ride; `field` is the editor's edit control,
-    // the box's INTERIOR (zero for prompts) — the click-to-caret / text-drag
-    // claim region; `buttons` are the answer buttons in painted order.
+    // invalidation and the damage ride; `field` is the editor's entry, its
+    // box border included (zero for prompts) — the click-to-caret /
+    // text-drag claim region and a standing editor's edit damage
+    // (Viewport::invalidate_dialog_editor_box); `buttons` are the answer
+    // buttons in painted order.
     //
     // A BUTTON CARRIES ITS DISPATCH, not a label: for a PROMPT,
     // `response_key` is the PromptAnswer dispatch char the click activates
@@ -10512,113 +10493,6 @@ GuiRect status_bar_area(const AppState& a);
 // overlay: the prompts and the dialog editors are dialogs in xfwm's window
 // since send AA's stage D2, a dialog editor's in the modal family's room,
 // modal_box.h.)
-
-// THE DIALOG EDITOR'S WRAPPED LINE AS PAINTED (DialogEditorText's contract):
-// the row a byte's caret stands on — the row whose range holds it, the
-// buffer's end on the last row; A HARD ROW'S END ON THAT ROW when the caret
-// carries the row-end affinity (`row_end`, text_editor::State::
-// caret_row_end; the rule at dialog_editor_row_last_stop), the next row's
-// start otherwise; -1 with no rows. The caret painter and the Home / End
-// route read it, so the row Home walks to is the row the caret is painted
-// on.
-inline int dialog_editor_row_of(const AppState::DialogEditorText& t, int pos,
-                                bool row_end) {
-    const int n = static_cast<int>(t.rows.size());
-    for (int i = 0; i < n; ++i) {
-        const AppState::DialogEditorText::Row& r =
-            t.rows[static_cast<std::size_t>(i)];
-        if (pos < r.end || (row_end && r.hard && pos == r.end)) return i;
-    }
-    return n - 1;
-}
-
-// THE LAST CARET STOP ON A ROW (architect 2026-10-14; "on screen is as
-// painted"): the buffer's end on the last row; on a row the wrap broke AFTER
-// A SPACE, the codepoint boundary BEFORE its end — the caret after the row's
-// last word, ahead of the space the break stands after — since the end
-// itself is the next row's begin and its caret stands there; on a row the
-// wrap broke AT A CODEPOINT because no space fit (a long path or URL, `hard`,
-// text_editor::soft_wrap_rows), THE ROW'S END ITSELF, so the row's last
-// visible character can be reached and selected from its own row — stepping
-// back there would leave a painted character no press could ever cover. That
-// end is the next row's begin too, so the one byte is two caret places, told
-// apart as Windows' multiline edit control tells them — THE ROW-END AFFINITY
-// (text_editor::State::caret_row_end): a caret that got there FROM THAT ROW
-// (a press or a drag past the row's text) paints at that row's end, and any
-// other road (typing, a press at the next row's start) leaves it on the next
-// row's start. THE READERS, all on this one rule: dialog_editor_byte_at (the
-// press, the F2.1 caret drag and the finger's caret drag), and the painter's
-// caret through dialog_editor_row_of (the selection band is bytes and needs
-// no affinity). A press past a row's text lands here.
-inline int dialog_editor_row_last_stop(const AppState::DialogEditorText& t,
-                                       const std::string& text, int row) {
-    const AppState::DialogEditorText::Row& r =
-        t.rows[static_cast<std::size_t>(row)];
-    if (row == static_cast<int>(t.rows.size()) - 1 || r.end <= r.begin ||
-        r.hard)
-        return r.end;
-    int p = std::min(r.end, static_cast<int>(text.size()));
-    do {
-        --p;
-    } while (p > r.begin &&
-             (static_cast<unsigned char>(text[static_cast<std::size_t>(p)]) &
-              0xC0) == 0x80);
-    return std::max(p, r.begin);
-}
-
-// Does a caret at `pos`, reached from `row`, carry the row-end affinity —
-// is it that row's end on a hard row with a row after it? The one test the
-// End route and the press both set the affinity by.
-inline bool dialog_editor_stop_is_row_end(const AppState::DialogEditorText& t,
-                                          int row, int pos) {
-    const AppState::DialogEditorText::Row& r =
-        t.rows[static_cast<std::size_t>(row)];
-    return r.hard && row + 1 < static_cast<int>(t.rows.size()) &&
-           pos == r.end;
-}
-
-// THE STOP UNDER A PRESS, the pointer's REAL place (x, y) (architect
-// 2026-11-15, the no-grid arc): the row under `y` (the first whose band's
-// real foot lies
-// below it, else the last — a press between two rows takes the lower one),
-// then on that row the NEAREST BOUNDARY to `x` among its caret stops, ties to
-// the lower index — text_editor::byte_index_from_shaped_x's rule read on one
-// row, so a multi-byte character's interior bytes, which carry its start's
-// offset, never win — with the row-end affinity the stop carries
-// (dialog_editor_row_last_stop's rule: true at a hard row's end reached on
-// that row).
-struct DialogEditorStop {
-    int  byte    = 0;
-    bool row_end = false;
-};
-inline DialogEditorStop dialog_editor_byte_at(
-        const AppState::DialogEditorText& t, const std::string& text,
-        double x, double y) {
-    const int n = static_cast<int>(t.rows.size());
-    if (n == 0) return {};
-    int row = n - 1;
-    for (int i = 0; i < n; ++i) {
-        const AppState::DialogEditorText::Row& r =
-            t.rows[static_cast<std::size_t>(i)];
-        if (y < r.y + r.h) { row = i; break; }
-    }
-    const AppState::DialogEditorText::Row& r =
-        t.rows[static_cast<std::size_t>(row)];
-    const int last = std::min({dialog_editor_row_last_stop(t, text, row),
-                               static_cast<int>(text.size()),
-                               static_cast<int>(t.byte_x.size()) - 1});
-    int    best   = std::max(0, std::min(r.begin, last));
-    double best_d = std::numeric_limits<double>::infinity();
-    for (int i = best; i <= last; ++i) {
-        const double d = std::abs(
-            r.origin_x + t.byte_x[static_cast<std::size_t>(i)] - x);
-        if (d < best_d) {
-            best_d = d;
-            best   = i;
-        }
-    }
-    return {best, dialog_editor_stop_is_row_end(t, row, best)};
-}
 
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT LIES IN (architect 2026-11-07,
 // session 90, his "1 yes 2 yes 3 a 4 agree", and session 91 on his glass:

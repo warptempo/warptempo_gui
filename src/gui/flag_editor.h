@@ -133,16 +133,17 @@ struct GuiFlagEditor {
     void commit_iter_bound_edit();
 
     // THE BPM FORM'S FIELD COMMIT (architect 2026-10-29): the dialog line
-    // editor's pending line on a BpmField session (AppState::settings_editor,
+    // editor's buffer on a BpmField session (AppState::settings_editor,
     // `target` the field, GuiBpmField) judged and written onto the BPM
-    // owner's field. The line must begin with THE ROW'S OWN KEY and its `=`
-    // (kBpmFieldKeys); an EMPTY value CLEARS the field (zero, its unset
-    // sentinel); any other value is judged by THE FIELD'S OWN READER
-    // (read_bpm_beats, read_bpm_tempo — warpmarkers.h). A refusal leaves the
-    // editor standing, its line selected whole, one sentence on stderr and
-    // the card — three classes: the key, the beats grammar, the tempo
-    // grammar (the low / high order is the RENDER key's grey, not a field's
-    // refusal). On success the field is written — session-only, no undo, no
+    // owner's field. THE BUFFER IS THE FIELD'S VALUE ALONE, the key the
+    // row's own (kBpmFieldKeys; architect 2026-11-19, send AA, the line
+    // editor's value under the field's label); an EMPTY value CLEARS the
+    // field (zero, its unset sentinel); any other value is judged by THE
+    // FIELD'S OWN READER (read_bpm_beats, read_bpm_tempo — warpmarkers.h). A
+    // refusal leaves the editor standing, its value selected whole, one
+    // sentence on stderr and the card — two classes: the beats grammar, the
+    // tempo grammar (the low / high order is the RENDER key's grey, not a
+    // field's refusal). On success the field is written — session-only, no undo, no
     // dirty, as every bpm value — and the editor closes; its route's close
     // hook returns to the form (handle_settings_editor_key).
     void commit_bpm_field();

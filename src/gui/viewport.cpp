@@ -227,13 +227,23 @@ void Viewport::invalidate_modal_dialog_area() {
     }
 }
 
-// A STANDING DIALOG EDITOR'S EDIT — the room at the keyboard height it
-// stands on (the box's interior, where the editor's window stands centered
-// and never past it) GROWN BY THE WINDOW'S SHADOW'S REACH (modal_box.h's
-// xfwm_shadow_rect, the room as a window): a wrap that grows or shrinks the
-// window moves its frame and its shadow, both inside that rect (the rule
-// and the caller inventory at the declaration, viewport.h).
+// A STANDING DIALOG EDITOR'S EDIT — THE ENTRY'S BOX as the editor's window
+// last published it (ModalDialogGeometry::field, the stash naming this
+// editor's session): the one-line entry holds everything an edit, a scroll
+// step or the caret's blink changes, and the window never moves or grows
+// with the text (architect 2026-11-19, send AA). Before the session's first
+// paint — whose open damaged the whole window — the room at the keyboard
+// height it stands on, grown by the window's shadow's reach (modal_box.h's
+// xfwm_shadow_rect), every pixel the window can lay down. The rule and the
+// caller inventory at the declaration, viewport.h.
 void Viewport::invalidate_dialog_editor_box() {
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    if (dlg.valid && dlg.owner == AppState::ModalDialogOwner::Editor &&
+        dlg.session == app.settings_editor.session && dlg.field.w > 0 &&
+        dlg.field.h > 0) {
+        invalidate_rect(dlg.field);
+        return;
+    }
     invalidate_rect(xfwm_shadow_rect(modal_box_interior_rect(
         app, onscreen_keyboard::modal_keyboard_h_px(app))));
 }

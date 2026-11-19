@@ -1097,25 +1097,18 @@ void GuiFlagEditor::commit_bpm_field() {
         return;
     const int owner = bpm_owner_index(app.warpmarkers.markers());
     const int field = app.settings_editor.target;
-    const std::string& line = app.settings_editor.pending;
+    // THE BUFFER IS THE FIELD'S VALUE, THE KEY THE ROW'S OWN (architect
+    // 2026-11-19, send AA): nothing typed can name another field.
+    const std::string  key   = kBpmFieldKeys[field];
+    const std::string& value = app.settings_editor.pending;
     auto reject = [&](const std::string& reason) {
         text_editor::refuse(app.settings_editor);
         viewport.invalidate_dialog_editor_box();
         const std::string refusal = "BPM edit rejected: " + reason;
-        std::fprintf(stderr, "warptempo_gui: %s: %s\n",
-            refusal.c_str(), line.c_str());
+        std::fprintf(stderr, "warptempo_gui: %s: %s=%s\n",
+            refusal.c_str(), key.c_str(), value.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
     };
-    // THE KEY IS THE ROW'S OWN: a line retyped to another key (`beat=`,
-    // `high=` on the beats row) or with its `=` gone is one class, one
-    // sentence naming the key the row edits.
-    const std::string key  = kBpmFieldKeys[field];
-    const std::string head = key + "=";
-    if (line.compare(0, head.size(), head) != 0) {
-        reject("this line must begin with '" + head + "'");
-        return;
-    }
-    const std::string value = line.substr(head.size());
     GuiWarpMarker& m = app.warpmarkers.markers_mut()[owner];
     switch (static_cast<GuiBpmField>(field)) {
         case GuiBpmField::Beats: {

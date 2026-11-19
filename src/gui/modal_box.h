@@ -197,7 +197,8 @@ inline GuiRect modal_area_rect(const AppState& a, int keyboard_h) {
 // the paint): SHADOW_RADIUS kXfwmShadowRadiusW (12 W, xfwm4's compositor.c),
 // the window's rect grown kXfwmShadowDeltaYW (his shadow_delta_y, −3 W:
 // grown 3 W upward). Here, beside the box, because the damage reads the
-// reach too (Viewport::invalidate_dialog_editor_box: the room grown by it).
+// reach too (Viewport::invalidate_dialog_editor_box: the room grown by it,
+// before an editor's first paint).
 inline constexpr double kXfwmShadowRadiusW = 12.0;
 inline constexpr double kXfwmShadowDeltaYW = -3.0;
 // THE SHADOW'S LENGTHS in device px: r (SHADOW_RADIUS), the kernel's size

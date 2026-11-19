@@ -3431,7 +3431,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
         // Same shape for the settings prompt (a dialog editor); a dialog
-        // editor's caret damages the box's interior alone, where it paints
+        // editor's caret damages the entry's box alone, where it paints
         // (Viewport::invalidate_dialog_editor_box, the edits' one owner).
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =

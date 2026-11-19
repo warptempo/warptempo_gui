@@ -1362,8 +1362,8 @@ struct GuiInputHandler {
     // EDITOR'S FIELD (GuiTouchEditorField, gui_input.h, is the answer's
     // contract)? It reads the ONE field rect the press claim reads
     // (ActiveEditorText::field — the marker lane's published box, or the
-    // dialog editor's edit control, the modal family's box's interior since
-    // 2026-10-14), so the platform learns nothing about text and keeps no
+    // dialog editor's entry, modal_dialog.field), so the platform learns
+    // nothing about text and keeps no
     // memory of taps. Wired at main.cpp's set_touch_nav_hooks call.
     // Non-const because the active editor's resolution is (it yields the
     // editor's own state pointer).
@@ -2677,8 +2677,8 @@ private:
     // sees it. Every OTHER hook is REQUIRED and called unmodified: commit and
     // cancel are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the two dialog surfaces
-    // pass `invalidate_dialog_editor_box` (the box's interior at the live
-    // keyboard height, viewport.h owning the rule; the whole modal area stays
+    // pass `invalidate_dialog_editor_box` (the entry's box as last painted,
+    // viewport.h owning the rule; the whole modal area stays
     // the opens', closes' and geometry changes' damage), the flag editor the
     // top strip. `repaint` is
     // invoked UNCONDITIONALLY on every consumed key, so an empty std::function
@@ -2983,9 +2983,10 @@ private:
     //     bpm_form_commit: THE OPEN ACT on row `index` — a tap, a click or
     //       Enter: the form closes (close_picker, the mode STANDING — the
     //       overlay and the on-screen keyboard never both stand) and THE
-    //       LINE EDITOR opens PREFILLED with the row's line, the caret at its
-    //       end, on the dialog line editor's buffer (text_editor::Kind::
-    //       BpmField, `target` the field). Its commit is
+    //       LINE EDITOR opens PREFILLED with the row's VALUE, the key its
+    //       window's title and label (architect 2026-11-19, send AA), the
+    //       caret at its end, on the dialog line editor's buffer
+    //       (text_editor::Kind::BpmField, `target` the field). Its commit is
     //       GuiFlagEditor::commit_bpm_field; its OK and Cancel return to the
     //       form seated on that row (handle_settings_editor_key's hook).
     //     bpm_form_render: RENDER (the button): with the face

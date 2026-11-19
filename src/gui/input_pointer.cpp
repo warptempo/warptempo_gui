@@ -1060,22 +1060,16 @@ struct ActiveEditorText {
     // The painter's per-byte pen offsets for that editor's own shaped run.
     // Never null on a valid resolution — every editor is shaped since row 7.
     const std::vector<double>* byte_x = nullptr;
-    // true = the DIALOG editor's box (settings, which also hosts the
-    // trim preset's name and the BPM form's field, painting in the
-    // modal family's box since 2026-10-14 — in the bottom row's modal from
-    // 2026-08-13, centered for the one day from 2026-08-12, and the field
-    // was `bottom_strip` while they lived on the status lane); false = the
-    // top-strip flag editor. Selects the claim
-    // region and the repaint owner.
+    // true = the DIALOG editor's entry (settings, which also hosts the
+    // trim preset's name and the BPM form's field, in Thunar's rename
+    // dialog since send AA's stage D2, 2026-11-19); false = the top-strip
+    // flag editor. Selects the repaint owner. Both editors are one line, so
+    // `text_left` (each painter's origin, its scroll offset folded in) is
+    // the whole of where the text stands.
     bool                dialog       = false;
-    // THE DIALOG EDITOR'S WRAPPED ROWS AS PAINTED (DialogEditorText's
-    // contract, 2026-10-14), null for the flag editor: a dialog editor's
-    // press picks the row under it before the boundary on it
-    // (dialog_editor_byte_at), the flag editor's one row reads `text_left`.
-    const AppState::DialogEditorText* wrap = nullptr;
     // THE FIELD'S ONE RECT — where a press seats a caret: the dialog editor's
-    // edit control, the modal family's box's interior (modal_dialog.field,
-    // the painter's published rect; the ground round it is chrome) or the
+    // entry, border included (modal_dialog.field, the painter's published
+    // rect; the client round it is chrome) or the
     // marker lane's whole published box
     // (flag_editor_box.box — the unrolled flag under the payload editor, the
     // cell under a bound editor, pads included: the box is
@@ -1102,7 +1096,7 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
     if (dialog_open) {
         if (!be.valid) return g;
         g.ed = &app.settings_editor;
-        g.wrap         = &be;
+        g.text_left    = be.origin_x;
         g.byte_x       = &be.byte_x;
         g.dialog       = true;
         g.field        = app.modal_dialog.field;
@@ -1133,24 +1127,19 @@ ActiveEditorText active_editor_text(AppState& app, const GuiAudio& audio) {
 
 // The ONE pointer -> caret stop owner (see ActiveEditorText): a
 // nearest-boundary search over the painter's published per-byte pen offsets
-// — on the flag editor's one row by x alone, on a dialog editor's wrapped
-// line on the row under the pointer first, with the stop's row-end affinity
-// at a hard-wrapped row's end (dialog_editor_byte_at and its rule at
-// dialog_editor_row_last_stop, app_state.h, 2026-10-14). Every caret and
+// from the published origin (text_editor::byte_index_from_shaped_x) — the
+// flag editor's one row and the dialog editor's one line alike, each
+// origin carrying its own scroll offset, so a tap in a scrolled entry seats
+// the caret under the pen (architect 2026-11-19, send AA). Every caret and
 // drag-select site funnels through it, and since row 7 there is one family
 // of editors rather than two, so there is nothing left for them to drift
 // apart on.
 // THE POINT IS THE POINTER'S REAL PLACE (architect 2026-11-15, the no-grid
 // arc): the stops stand at the shaped run's exact pen offsets, so the nearest
 // one is nearest the pen, not nearest the left edge of the pixel under it.
-DialogEditorStop editor_stop_at(const ActiveEditorText& g, double mouse_x,
-                                double mouse_y) {
-    if (g.wrap != nullptr)
-        return dialog_editor_byte_at(*g.wrap, g.ed->pending, mouse_x,
-                                     mouse_y);
-    return {text_editor::byte_index_from_shaped_x(mouse_x, g.text_left,
-                                                  *g.byte_x),
-            false};
+int editor_stop_at(const ActiveEditorText& g, double mouse_x) {
+    return text_editor::byte_index_from_shaped_x(mouse_x, g.text_left,
+                                                 *g.byte_x);
 }
 
 // THE ONE POINTER SEAT: every press and every drag motion that puts the caret
@@ -1160,16 +1149,11 @@ DialogEditorStop editor_stop_at(const ActiveEditorText& g, double mouse_x,
 // 2026-11-08, session 95: a tap seats the caret, a drag moves it, the
 // selection is the keys' alone), restarts the blink phase as the keyboard's
 // own motion keys do, so a caret being dragged is lit where it lands rather
-// than possibly caught in the dark half of a period, then sets the stop's
-// row-end affinity (a press past a hard-wrapped row's text keeps the caret
-// painted at that row's end, 2026-10-14).
-void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
-                             double mouse_y) {
-    const DialogEditorStop s = editor_stop_at(g, mouse_x, mouse_y);
+// than possibly caught in the dark half of a period.
+void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x) {
     g.ed->selection_anchor = -1;
-    g.ed->cursor_pos = s.byte;
+    g.ed->cursor_pos = editor_stop_at(g, mouse_x);
     text_editor::touch_blink(*g.ed);
-    g.ed->caret_row_end = s.row_end;
 }
 
 } // namespace
@@ -2814,7 +2798,7 @@ void GuiInputHandler::begin_touch_caret_drag(const GuiPointerPlace& at) {
     // glass's road (return_modal_focus_to_field); the seat below restarts the
     // blink.
     if (g.dialog) return_modal_focus_to_field();
-    set_editor_caret_from_x(g, at.rx, at.ry);
+    set_editor_caret_from_x(g, at.rx);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
@@ -2827,7 +2811,7 @@ void GuiInputHandler::update_touch_caret_drag(const GuiPointerPlace& at) {
     if (!g.valid) return;
     // The I-beam follows the finger and nothing selects — the seat drops the
     // anchor at every frame.
-    set_editor_caret_from_x(g, at.rx, at.ry);
+    set_editor_caret_from_x(g, at.rx);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
@@ -2844,7 +2828,7 @@ void GuiInputHandler::end_touch_caret_drag() {
     // is the modal focus ring's own courtesy — a blink restart, so the
     // resting caret is lit the instant the finger leaves rather than caught
     // in the dark half of a period the drag's last seat started — the blink
-    // alone, so the row-end affinity that seat set stands.
+    // alone, the caret where that seat put it.
     text_editor::restart_blink(*g.ed);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
@@ -5022,10 +5006,10 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // and a drag are the field's whole vocabulary): the seat
                 // collapses the selection, and the
                 // selection is the keys' alone (Shift + LEFT / RIGHT).
-                set_editor_caret_from_x(g, at.rx, at.ry);
+                set_editor_caret_from_x(g, at.rx);
                 app.editor_text_drag = EditorTextDragState{};
                 app.editor_text_drag.active = true;
-                // The dialog editors' edit damage is the box's interior
+                // The dialog editors' edit damage is the entry's box
                 // (invalidate_dialog_editor_box, viewport.h).
                 if (g.dialog) viewport.invalidate_dialog_editor_box();
                 else          viewport.invalidate_top_strip();
@@ -8569,7 +8553,7 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
             // tap's sub-slop motions are this road's only producer; a drag
             // past the slop is the touch translation's caret drag and never
             // arrives here).
-            set_editor_caret_from_x(g, at.rx, at.ry);
+            set_editor_caret_from_x(g, at.rx);
             if (g.dialog) viewport.invalidate_dialog_editor_box();
             else          viewport.invalidate_top_strip();
         }

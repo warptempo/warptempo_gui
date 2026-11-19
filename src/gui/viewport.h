@@ -716,34 +716,38 @@ struct Viewport {
     // for the hint changes no row damage carries (the previous-track window's
     // edge under a playing item, which only the clock's cell damages).
     void invalidate_modal_dialog_area();
-    // A STANDING DIALOG EDITOR'S EDIT (2026-10-14): THE ROOM GROWN BY THE
-    // WINDOW'S SHADOW'S REACH (modal_box.h's xfwm_shadow_rect of the box's
-    // interior at the live keyboard height; send AA's stage D2), never the
-    // family's whole area. WHY: under a box the GL canvas's clip is empty and
-    // every damage rect uploads whole (GuiGlCanvas::present_frame), so the
-    // family's area on every keystroke was ~11.8 MB on the tablet, sustained under
-    // key repeat. WHAT AN EDIT CAN CHANGE, re-derived from the painters: the
-    // line's text, its soft-wrapped rows, the selection and the caret, the
-    // entry's height with its rows and so the editor's window, re-centered in
-    // the room, and its shadow (paint_dialog_window's editor arm: the window
-    // never past the room, so the shadow never past this rect). Nothing
-    // outside it moves with an edit: the window's Cancel and OK never grey
-    // or relabel, their hints with them; a refusal's or a full field's card damages its own
+    // A STANDING DIALOG EDITOR'S EDIT (2026-10-14): THE ENTRY'S BOX as last
+    // published (ModalDialogGeometry::field; architect 2026-11-19, send AA:
+    // the entry one line that scrolls sideways, the window never growing
+    // with the text), the room grown by the window's shadow's reach
+    // (modal_box.h's xfwm_shadow_rect of the box's interior at the live
+    // keyboard height) before the session's first paint; never the family's
+    // whole area. WHY: under a box the GL canvas's clip is empty and every
+    // damage rect uploads whole (GuiGlCanvas::present_frame), so the
+    // family's area on every keystroke was ~11.8 MB on the tablet, sustained
+    // under key repeat. WHAT AN EDIT CAN CHANGE, re-derived from the painters:
+    // the text, its scroll offset, the selection and the caret, all inside
+    // the entry (paint_dialog_window's editor arm: the text cut at the
+    // entry's inner edges, the caret at its padding box). Nothing outside it
+    // moves with an edit: the window's Cancel and OK never grey or relabel,
+    // their hints with them; a refusal's or a full field's card damages its own
     // stack (GuiNotifications::notify); the focus ring's walk, the button
     // press arms and their lifts damage the stash's box themselves
     // (route_modal_dialog_focus_key, return_modal_focus_to_field,
-    // take_modal_dialog_release); the on-screen keyboard's keys and lamps
-    // damage their own band. THE OPEN, THE CLOSE, the keyboard's show and
-    // hide and every geometry change keep their whole damage. ITS CALLERS
-    // (re-greped 2026-10-14): TYPING and the completions —
-    // route_modal_editor_key's `repaint` argument from both dialog editor key
-    // handlers (input_key_dispatch) and the settings editor's three
-    // completers (settings_editor); THE CARET BLINK — main.cpp's per-tick
-    // transitions, one per dialog editor; THE REFUSAL — every refused commit
-    // in settings_editor and the BPM field commit's three (flag_editor), the text
-    // selected whole; THE POINTER'S TEXT DRAG — input_pointer's `g.dialog`
-    // sites (the glass's caret drag, click-to-caret, the drag's motion and
-    // its release).
+    // take_modal_dialog_release) — the entry's focus line among what they
+    // cover; the on-screen keyboard's keys and lamps damage their own band.
+    // THE OPEN, THE CLOSE, the keyboard's show and hide and every geometry
+    // change keep their whole damage. ITS CALLERS
+    // (re-greped 2026-11-19): TYPING, the on-screen keyboard's LEFT / RIGHT
+    // (the scroll's road) and the completions — route_modal_editor_key's
+    // `repaint` argument from the dialog editor key handler's three kinds
+    // (input_key_dispatch) and the settings editor's completers
+    // (settings_editor); THE CARET BLINK — main.cpp's per-tick
+    // transitions; THE REFUSAL — every refused commit in settings_editor,
+    // the trim preset name's (input_key_dispatch) and the BPM field
+    // commit's (flag_editor), the text selected whole; THE POINTER'S TEXT
+    // DRAG — input_pointer's `g.dialog` sites (the glass's caret drag,
+    // click-to-caret, the drag's motion and its release).
     void invalidate_dialog_editor_box();
     // The unified bottom row's CLOCK CELL, and the authoritative inventory of
     // who wants it

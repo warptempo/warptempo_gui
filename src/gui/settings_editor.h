@@ -30,12 +30,29 @@ struct GuiInputHandler;
 // vocabulary, the whole text selected and a card on a refusal) painted AS
 // THUNAR'S RENAME DIALOG in xfwm's window (send AA's stage D2, 2026-11-19;
 // paint_handler.cpp's THE DIALOG WINDOW: the whole line in Arc's focused
-// entry, soft-wrapped at its width and never scrolling, Cancel and OK its
-// window's own buttons, the window titled the row's key with the key and a
-// colon its label — Z_06's words; the label of 2026-10-14, "Setting:", was
-// removed as "pointless that far away"), centered in the room above the
-// on-screen keyboard, the page it was opened from standing under it there
-// (AppState::dialog_backdrop). OK or Enter commits the line, Esc
+// entry, Cancel and OK its window's own buttons, the window titled the row's
+// key with the key and a colon its label — Z_06's words; the label of
+// 2026-10-14, "Setting:", was removed as "pointless that far away"),
+// centered in the room above the on-screen keyboard, the page it was opened
+// from standing under it there (AppState::dialog_backdrop). THE WINDOW IS
+// Z_06's AND NEVER GROWS WITH THE TEXT (architect 2026-11-19, send AA:
+// "large enough that ... the title ... doesn't get ridiculous, but not so
+// large that the majority of the keys, which are tiny, don't look like
+// they're sitting in a big empty space"): 308 W, its entry 276 W, wider only
+// for a title that would not fit its bar. THE ENTRY IS ONE LINE AND A LINE
+// LONGER THAN IT SCROLLS SIDEWAYS, GTK'S WAY (the same ruling, reversing
+// 2026-10-14's "long lines can wrap": "The pen does have a good way to
+// scroll, and those are the left and right arrows of the keyboard. That's
+// exactly why they're there."): the text cut at the entry's inner edges and
+// scrolled just enough to keep the caret in view, the keyboard's LEFT /
+// RIGHT and their hold-repeat the scroll's road, a tap seating the caret
+// through the offset (text_editor::State::view_offset_px). THE LINE IS
+// `key=value`, THE FREE LINE: a row's line retyped to another key —
+// `tab_a_read_only=false`, `scale=`, the view and band keys, the score's
+// range — is the one typed road to the keys the page does not list (the
+// head's items 2 and 3), so the value-alone shape Z_06 shows (the BPM
+// form's field's since 2026-11-19) is not taken here while that road
+// stands. OK or Enter commits the line, Esc
 // or Cancel closes it, and EITHER WAY THE PAGE COMES BACK, seated on the row
 // the editor was opened from (architect 2026-10-28 night: "otherwise it's
 // assumed I am editing one key only" — the editor a sub-page of the page, as

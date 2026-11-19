@@ -142,9 +142,9 @@
 // the prompt's text-plus-labels line became a message + real buttons. The
 // one-run prefix+pending shaping died with it, the pending run shaping alone
 // and the published click-to-caret geometry (AppState::DialogEditorText) the
-// editor's own. Since 2026-10-14 the editor's line stands in the modal
-// family's box with no label and the prompt's question on its first row
-// (modal_box.h); row 8 YIELDS WHOLE to the modal, which is no tenant of it.)
+// editor's own. Since send AA's stage D2 the editor and the prompt are
+// dialogs in xfwm's window (THE DIALOG WINDOW below); row 8 YIELDS WHOLE to
+// the modal, which is no tenant of it.)
 
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
 
@@ -5659,14 +5659,13 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // this one's. (The `h` view's load editor and the Open project editor had
 // arms here until 2026-08-28, when both became the field-less PICKER — a
 // modal owner of its own, painted by the picker branch below, never an
-// editor.) NO DIALOG EDITOR CARRIES A LABEL since 2026-10-14 (architect: the
-// Settings editor's "Setting:" "pointless that far away. just remove it", the
-// BPM editor's "BPM:" "drop"): the box is the edit control and the line is the
-// whole of it.
+// editor.) THE EDITORS' WORDS are the rename dialog's (paint_dialog_window's
+// editor arm): the window's title the row's key or "Save As", the label the
+// key and a colon, none under Save As, whose title says it.
 //
 // IT HANDS BACK A MUTABLE STATE for the painter's sake (the editor's own
-// state is the caret and the selection it paints); the boolean caller below
-// wants only the null test.
+// state is the caret, the selection and the scroll offset it paints); the
+// boolean caller below wants only the null test.
 static text_editor::State* dialog_editor_to_paint(AppState& app) {
     if (text_editor::is_active(app.settings_editor))
         return &app.settings_editor;
@@ -5877,16 +5876,19 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   progress dialog: its sentence, the bar over the entries done, the
 //   count, and Cancel alone, unfocused as a prompt's buttons are; centered
 //   on the panel.
-//   A DIALOG EDITOR — Thunar's rename dialog: the label, Arc's focused
-//   entry holding the whole pending line, soft-wrapped at its width and
-//   never scrolling (text_editor::soft_wrap_rows), Cancel and OK; centered
-//   in the room above the on-screen keyboard, the page it was opened from
-//   under it (AppState::dialog_backdrop). The line is the existing
-//   text_editor machinery — selection, caret, click-to-caret,
-//   byte-identical editing — on the wrapped rows, and a refused Enter
-//   selects the whole text, nothing recolored, its owner's card saying why
-//   (architect 2026-10-03; render.h's palette block, A REFUSED ENTER
-//   RECOLOURS NOTHING).
+//   A DIALOG EDITOR — Thunar's rename dialog: the label (none under Save
+//   As), Arc's focused entry, ONE LINE that SCROLLS SIDEWAYS, GTK's way
+//   (architect 2026-11-19, send AA: "The pen does have a good way to
+//   scroll, and those are the left and right arrows of the keyboard. That's
+//   exactly why they're there."), Cancel and OK; the window Z_06's, never
+//   growing with the text; centered in the room above the on-screen
+//   keyboard, the page it was opened from under it
+//   (AppState::dialog_backdrop). The line is the existing text_editor
+//   machinery — selection, caret, click-to-caret, byte-identical editing —
+//   through the scroll offset (text_editor::State::view_offset_px), and a
+//   refused Enter selects the whole text, nothing recolored, its owner's
+//   card saying why (architect 2026-10-03; render.h's palette block, A
+//   REFUSED ENTER RECOLOURS NOTHING).
 // (Until send AA's stage D2 each of the three stood in the box's one flat
 // pane, its text on the list rows' text seat and its answers flush right on
 // the controls row, architect 2026-10-14; the taskbar dialog laid over the
@@ -5954,8 +5956,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // the first paint); a press edge on a button its face (invalidate_modal_
 // press_face, architect 2026-11-16, the beats); a focus move the dialog's
 // box; a standing dialog editor's edits and caret blink the room grown by
-// the shadow's reach (Viewport::invalidate_dialog_editor_box: the window
-// re-centers as its wrap grows); the progress count the window's extent
+// the entry's box (Viewport::invalidate_dialog_editor_box: the window never
+// moves or grows with the text); the progress count the window's extent
 // (set_batch_progress_index); every closer rides
 // invalidate_modal_dialog_area, which takes the bottom icon row's lane and,
 // while a dialog stands or was last painted, the modal family's whole area
@@ -6423,10 +6425,15 @@ void paint_dialog_word_button(cairo_t* cr, const GuiRect& box,
 //     client's foot; the client the question's advance + kQuestionSideW
 //     (36 W) each side, at least the answers' 85 W each sharing seams.
 //   THE LINE EDITOR (Thunar's rename dialog): the client kRenameClientW x
-//     kRenameClientH (300 x 112 W); the label at pen +14 W, baseline +19 W;
-//     the entry x +14 .. +290 W, its top +27 W, 28 W tall; the buttons
-//     28 W, homogeneous, 4 W apart, flush right 2 W inside the client and
-//     2 W above its foot.
+//     kRenameClientH (300 x 112 W; wider only for a title its bar cannot
+//     hold); the label at pen +14 W, baseline +19 W, its line box +8 ..
+//     +22 W; the entry x +14 .. +290 W (10 W inside the client's right),
+//     its top +27 W, ONE LINE 28 W tall, its text cut at its inner edges
+//     (kEntryPenW, 9 W, in from each side); WITHOUT A LABEL (Save As) the
+//     entry's top the label's line box's, +8 W, and the client 19 W shorter
+//     (the label's row: its 14 W line box and the 5 W under it), 93 W; the
+//     buttons 28 W, homogeneous, 4 W apart, flush right 2 W inside the
+//     client and 2 W above its foot.
 //   THE PROGRESS DIALOG (Thunar's): the client kProgressClientW (450 W);
 //     margins kProgressMarginW (12 W); the sentence's line box at the top
 //     margin; the bar kProgressBarH (6 W) tall kProgressBarGapW (5 W) under
@@ -6654,7 +6661,12 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         //    dialog_backdrop: the row's key, or "Save As"), its label that
         //    title and a colon (Z_06's words: the key's own name, a product
         //    word, the editors carrying no label of their own since
-        //    2026-10-14); THE ENTRY Arc's, FOCUSED — stage C's entry
+        //    2026-10-14), none under Save As (below); THE ENTRY's TEXT the
+        //    buffer — the BPM field's value alone under its key's label
+        //    (architect 2026-11-19, send AA: "I agree with your
+        //    recommendation"), the settings line `key=value` (the free line,
+        //    settings_editor.h's head), the preset's name; THE ENTRY Arc's,
+        //    FOCUSED — stage C's entry
         //    (paint_entry) with an inner one-W line of the accent on its four
         //    sides while the field holds the focus — its text Regular 12 W at
         //    pen +9 W on the line-box baseline (+18 W of its 28), the caret
@@ -6663,46 +6675,69 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         //    buttons flush right 2 W inside the client: Cancel = the editor's
         //    Esc, OK = its Enter commit, through the same key route
         //    (dispatch_modal_dialog_editor_act, button-is-its-chord).
-        //    THE LINE SOFT-WRAPS AT THE ENTRY'S WIDTH AND NEVER SCROLLS (the
-        //    editors' behavior as built, architect 2026-10-14: "long lines can
-        //    wrap"; text_editor::soft_wrap_rows): the entry grows one line box
-        //    (14 W) a further row, the client and the window with it, the
-        //    window re-centered in the room — never past the room, the rows
-        //    beyond cut at the entry's foot (the 1024-byte cap keeps a real
-        //    line inside it). A REFUSED ENTER RECOLOURS NOTHING (architect
-        //    2026-10-03): the whole text selected (text_editor::refuse), the
-        //    owner's card saying why.
+        //    THE ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY (architect
+        //    2026-11-19, send AA, reversing 2026-10-14's "long lines can
+        //    wrap": "The pen does have a good way to scroll, and those are
+        //    the left and right arrows of the keyboard. That's exactly why
+        //    they're there."): always 28 W tall, the text cut at the entry's
+        //    INNER EDGES (its border and 8 W pads, kEntryPenW in from each
+        //    side) and drawn through THE SCROLL OFFSET, the session's
+        //    text_editor::State::view_offset_px — GtkEntry's adjust_scroll:
+        //    the offset clamped to the run's own travel (none for a text
+        //    shorter than the inner width, which stands at the left pen,
+        //    offset 0), then moved only when the caret's x would leave the
+        //    inner width, by just enough, so the caret is always in view (at
+        //    the right edge it stands on the inner edge, its one W in the
+        //    pad, as GTK draws it). The on-screen keyboard's LEFT / RIGHT and
+        //    their hold-repeat walk the caret and so scroll the text; a tap
+        //    seats the caret through the offset (the published origin, below).
+        //    THE WINDOW NEVER GROWS WITH THE TEXT (architect 2026-11-19, send
+        //    AA: "large enough that ... the title ... doesn't get ridiculous,
+        //    but not so large that the majority of the keys, which are tiny,
+        //    don't look like they're sitting in a big empty space" — Z_06):
+        //    the client kRenameClientW, the window 308 W, the entry 276 W,
+        //    WIDER ONLY WHEN THE TITLE'S RUN WOULD NOT FIT THE TITLE BAR — the
+        //    client then the title's advance rounded up to a whole px, so the
+        //    centered title stands over the client's columns and never over
+        //    the frame's side borders, the entry growing with it (its right
+        //    edge kRenameEntryRightW's 10 W inside the client's), never past
+        //    the room. SAVE AS CARRIES NO LABEL (architect 2026-11-19, send
+        //    AA: its title says it): the trim preset name's entry stands where
+        //    the label's line box began, the label's row — its line box and
+        //    the 5 W under it — gone from the client's height.
+        //    A REFUSED ENTER RECOLOURS NOTHING (architect 2026-10-03): the
+        //    whole text selected (text_editor::refuse), the owner's card
+        //    saying why.
         dlg.owner = AppState::ModalDialogOwner::Editor;
         const GuiRect room = modal_box_interior_rect(app, kb_h);
         const GuiLineBoxW lb = gui_font_line_box_w(body);
-        const int line_px   = scaled_px(lb.line());
         const int inset     = scaled_px(kRenameInsetW);
         const int pen_dx    = scaled_px(kEntryPenW);
-        const int entry_w   = scaled_px(kRenameEntryRightW) - inset;
         const int caret_px  = hairline_px();
-        const text_shape::ShapedRun run =
-            text_shape::shape_text_run(body, ed->pending);
-        const std::vector<double> bx_off =
-            text_shape::byte_offsets_px(run, ed->pending.size());
-        const std::vector<text_editor::WrapRow> ranges =
-            text_editor::soft_wrap_rows(
-                ed->pending, bx_off,
-                std::max(1.0, static_cast<double>(entry_w - 2 * pen_dx -
-                                                  caret_px)));
-        const int base_ch = scaled_px(kRenameClientH);
-        const int max_extra =
-            std::max(0, room.h - (scaled_px(kXfwmTitleBarW) + base_ch +
-                                  scaled_px(kXfwmBorderW)));
-        const int extra = std::min(
-            max_extra, std::max(0, static_cast<int>(ranges.size()) - 1) * line_px);
-        const int cw = scaled_px(kRenameClientW);
-        const int ch = base_ch + extra;
-        w = xfwm_window_centered(room, cw, ch);
         const std::string& title = app.dialog_backdrop.title;
+        const double title_adv =
+            title.empty() ? 0.0
+                          : text_shape::memoized_run(gui_font(GuiFace::Bold),
+                                                     title)->width_px;
+        const int cw = std::min(
+            std::max(scaled_px(kRenameClientW),
+                     static_cast<int>(std::ceil(title_adv))),
+            std::max(scaled_px(kRenameClientW),
+                     room.w - 2 * scaled_px(kXfwmBorderW)));
+        const int entry_w =
+            cw - scaled_px(kRenameClientW - kRenameEntryRightW) - inset;
+        const bool has_label =
+            ed->kind != text_editor::Kind::TrimPresetName;
+        const double label_row_w =
+            has_label ? 0.0
+                      : kRenameEntryTopW -
+                            (kRenameLabelBaseW - static_cast<double>(lb.ascent));
+        const int ch = scaled_px(kRenameClientH - label_row_w);
+        w = xfwm_window_centered(room, cw, ch);
         paint_xfwm_shadow(cr, w.win);
         paint_xfwm_frame(cr, w, title);
         // The label, the title and a colon.
-        if (!title.empty()) {
+        if (has_label && !title.empty()) {
             cairo_save(cr);
             cairo_rectangle(cr, w.client.x, w.client.y, w.client.w, w.client.h);
             cairo_clip(cr);
@@ -6715,100 +6750,98 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         }
         // THE ENTRY.
         const GuiRect entry{w.client.x + inset,
-                            w.client.y + scaled_px(kRenameEntryTopW), entry_w,
-                            scaled_px(kDialogButtonH) + extra};
+                            w.client.y + scaled_px(kRenameEntryTopW - label_row_w),
+                            entry_w, scaled_px(kDialogButtonH)};
         const bool field_focused = app.modal_dialog_focus < 0;
         paint_entry(cr, entry, std::nullopt, field_focused);
+        // THE SCROLL OFFSET (the arm's head; GtkEntry's adjust_scroll): the
+        // inner width, the run's travel past it, the session's last offset
+        // clamped to that travel, then the caret brought inside [0, inner]
+        // by just enough. Written back to the session, read by the next
+        // paint, reset by enter / deactivate.
+        const text_shape::ShapedRun run =
+            text_shape::shape_text_run(body, ed->pending);
+        const std::vector<double> bx_off =
+            text_shape::byte_offsets_px(run, ed->pending.size());
+        const int    cursor_pos = std::clamp(
+            ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
+        const double inner_x0 = static_cast<double>(entry.x + pen_dx);
+        const double inner_w  =
+            static_cast<double>(std::max(0, entry.w - 2 * pen_dx));
+        const double travel   = std::max(0.0, run.width_px - inner_w);
+        double off = std::clamp(ed->view_offset_px, 0.0, travel);
+        const double caret_dx =
+            bx_off[static_cast<std::size_t>(cursor_pos)] - off;
+        if (caret_dx < 0.0)          off += caret_dx;
+        else if (caret_dx > inner_w) off += caret_dx - inner_w;
+        ed->view_offset_px = off;
         // PUBLISH the click-to-caret geometry (DialogEditorText's contract):
-        // each row's band — the line box's rows — and its origin, and the
-        // run's pen, so a tap and a caret drag land on the rows painted here.
-        const double base0 =
+        // the window x byte 0 paints at, THROUGH THE OFFSET, and the run's
+        // pen, so a tap and a caret drag land on the text painted here.
+        const double tx = inner_x0 - off;
+        AppState::DialogEditorText& out = app.dialog_editor_text;
+        out.valid    = true;
+        out.origin_x = tx;
+        out.byte_x   = bx_off;
+        const double baseline =
             line_box_baseline(body, static_cast<double>(entry.y),
                               static_cast<int>(kDialogButtonH));
-        const double band0 = base0 - static_cast<double>(scaled_px(lb.ascent));
-        const double tx0   = static_cast<double>(entry.x + pen_dx);
-        AppState::DialogEditorText& out = app.dialog_editor_text;
-        out.valid  = true;
-        out.byte_x = bx_off;
-        out.rows.clear();
-        for (std::size_t r = 0; r < ranges.size(); ++r) {
-            AppState::DialogEditorText::Row row;
-            row.begin    = ranges[r].begin;
-            row.end      = ranges[r].end;
-            row.hard     = ranges[r].hard;
-            row.origin_x = tx0 - bx_off[static_cast<std::size_t>(row.begin)];
-            row.y        = band0 + static_cast<double>(static_cast<int>(r) *
-                                                       line_px);
-            row.h        = line_px;
-            out.rows.push_back(row);
-        }
-        // The text, the selection and the caret, clipped to the entry's
-        // padding box (one border in); each row its own byte range's glyphs.
+        // The line box's rows: the selection's band and the caret's.
+        const double band_y = baseline - static_cast<double>(scaled_px(lb.ascent));
+        const double band_h = static_cast<double>(scaled_px(lb.line()));
+        const auto byte_x = [&](int byte) {
+            return tx + bx_off[static_cast<std::size_t>(byte)];
+        };
+        // The text and the selection, CUT AT THE INNER EDGES.
         const int b = key_border_px();
         cairo_save(cr);
-        cairo_rectangle(cr, entry.x + b, entry.y + b, entry.w - 2 * b,
-                        entry.h - 2 * b);
+        cairo_rectangle(cr, entry.x + pen_dx, entry.y + b,
+                        std::max(0, entry.w - 2 * pen_dx), entry.h - 2 * b);
         cairo_clip(cr);
-        const bool has_sel = text_editor::has_selection(*ed);
-        const int  s0 = text_editor::selection_start(*ed);
-        const int  s1 = text_editor::selection_end(*ed);
-        const int  cursor_pos = std::clamp(
-            ed->cursor_pos, 0, static_cast<int>(ed->pending.size()));
-        const int  caret_row =
-            dialog_editor_row_of(out, cursor_pos, ed->caret_row_end);
-        for (std::size_t r = 0; r < out.rows.size(); ++r) {
-            const AppState::DialogEditorText::Row& row = out.rows[r];
-            const double baseline = base0 + static_cast<double>(
-                                                static_cast<int>(r) * line_px);
-            const double band_y = row.y;
-            const double band_h = static_cast<double>(row.h);
-            const double tx = row.origin_x;
-            const auto byte_x = [&](int byte) {
-                return tx + bx_off[static_cast<std::size_t>(byte)];
-            };
-            const int a = std::max(s0, row.begin);
-            const int e = std::min(s1, row.end);
-            if (has_sel && a < e) {
-                const double hx0 = byte_x(a);
-                const double hx1 = byte_x(e);
-                paint_ink_rect(cr,
-                               GuiRectF{hx0, band_y,
-                                        hx1 > hx0 ? hx1 - hx0 : 1.0, band_h},
-                               p.selected_fill);
-                set_palette_source(cr, p.field_text);
-                text_shape::show_shaped_run_bytes(
-                    cr, run, tx, baseline,
-                    static_cast<std::size_t>(row.begin),
-                    static_cast<std::size_t>(a));
-                text_shape::show_shaped_run_bytes(
-                    cr, run, tx, baseline, static_cast<std::size_t>(e),
-                    static_cast<std::size_t>(row.end));
-                set_palette_source(cr, p.selected_text);
-                text_shape::show_shaped_run_bytes(
-                    cr, run, tx, baseline, static_cast<std::size_t>(a),
-                    static_cast<std::size_t>(e));
-            } else {
-                set_palette_source(cr, p.field_text);
-                text_shape::show_shaped_run_bytes(
-                    cr, run, tx, baseline,
-                    static_cast<std::size_t>(row.begin),
-                    static_cast<std::size_t>(row.end));
-            }
-            // THE CARET IS THE FIELD'S FOCUS (architect 2026-08-13: "the
-            // blinking caret ... continues to blink in the text field even
-            // though it has lost focus"): it paints only while the field has
-            // it, on its byte's row (dialog_editor_row_of), one W wide from
-            // its byte's exact x over the line box's rows, in the field's
-            // text; the selection is buffer state, never gated.
-            if (static_cast<int>(r) == caret_row && field_focused &&
-                text_editor::cursor_visible_now(*ed)) {
-                paint_ink_rect(cr,
-                               GuiRectF{byte_x(cursor_pos), band_y,
-                                        static_cast<double>(caret_px), band_h},
-                               p.field_text);
-            }
+        const int n = static_cast<int>(ed->pending.size());
+        if (text_editor::has_selection(*ed)) {
+            const int a = text_editor::selection_start(*ed);
+            const int e = text_editor::selection_end(*ed);
+            const double hx0 = byte_x(a);
+            const double hx1 = byte_x(e);
+            paint_ink_rect(cr,
+                           GuiRectF{hx0, band_y,
+                                    hx1 > hx0 ? hx1 - hx0 : 1.0, band_h},
+                           p.selected_fill);
+            set_palette_source(cr, p.field_text);
+            text_shape::show_shaped_run_bytes(cr, run, tx, baseline, 0,
+                                              static_cast<std::size_t>(a));
+            text_shape::show_shaped_run_bytes(cr, run, tx, baseline,
+                                              static_cast<std::size_t>(e),
+                                              static_cast<std::size_t>(n));
+            set_palette_source(cr, p.selected_text);
+            text_shape::show_shaped_run_bytes(cr, run, tx, baseline,
+                                              static_cast<std::size_t>(a),
+                                              static_cast<std::size_t>(e));
+        } else {
+            set_palette_source(cr, p.field_text);
+            text_shape::show_shaped_run_bytes(cr, run, tx, baseline, 0,
+                                              static_cast<std::size_t>(n));
         }
         cairo_restore(cr);
+        // THE CARET IS THE FIELD'S FOCUS (architect 2026-08-13: "the
+        // blinking caret ... continues to blink in the text field even
+        // though it has lost focus"): it paints only while the field has it,
+        // one W wide from its byte's exact x over the line box's rows, in the
+        // field's text, cut at the entry's padding box (one border in) — at
+        // the inner right edge it stands in the pad, GtkEntry's seat; the
+        // selection is buffer state, never gated.
+        if (field_focused && text_editor::cursor_visible_now(*ed)) {
+            cairo_save(cr);
+            cairo_rectangle(cr, entry.x + b, entry.y + b, entry.w - 2 * b,
+                            entry.h - 2 * b);
+            cairo_clip(cr);
+            paint_ink_rect(cr,
+                           GuiRectF{byte_x(cursor_pos), band_y,
+                                    static_cast<double>(caret_px), band_h},
+                           p.field_text);
+            cairo_restore(cr);
+        }
         dlg.field = entry;
         // CANCEL AND OK.
         const std::string_view words[2] = {kModalCancelLabel, kModalOkLabel};

@@ -6169,7 +6169,7 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // field is the editor's own.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
 // `autocomplete` it is called unconditionally, with no emptiness test: the two
-// dialog surfaces pass invalidate_dialog_editor_box (the box's interior, all
+// dialog surfaces pass invalidate_dialog_editor_box (the entry's box, all
 // an edit can change — the rule at its declaration, viewport.h), the
 // top-strip flag editor invalidate_top_strip. Commit and cancel own their own
 // invalidations.
@@ -6196,8 +6196,8 @@ bool GuiInputHandler::route_modal_editor_key(
         // keeps its own clock, and the field's caret stops painting while the
         // focus is on a button, so a field re-focused mid-period could
         // otherwise show nothing for up to half a second. The ring's one
-        // caller, with the editor already in hand. The caret did not move, so
-        // its row-end affinity stands (restart_blink, not touch_blink).
+        // caller, with the editor already in hand. The caret did not move
+        // (restart_blink, the blink alone).
         if (app.modal_dialog_focus < 0) text_editor::restart_blink(ed);
         return true;
     }
@@ -7150,10 +7150,13 @@ void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
 // THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
 // press-and-lift) and Enter on the highlight, one body: THE FORM CLOSES
 // (close_picker, the mode standing) AND THE LINE EDITOR OPENS PREFILLED WITH
-// THE ROW'S LINE as painted, the caret at its end — the settings editor's
-// open (GuiSettingsEditor::open): an empty session, then the line through
-// the one incoming filter, silent on capacity (the text is the product's own
-// recall, within its field's cap by the reader's own spelling). The inert
+// THE ROW'S VALUE as painted — its line past the first `=`, the key the
+// window's title and label (architect 2026-11-19, send AA: the value alone
+// under the field's label, Z_06's shape) — the caret at its end, the
+// settings editor's open (GuiSettingsEditor::open): an empty session, then
+// the value through the one incoming filter, silent on capacity (the text is
+// the product's own recall, within its field's cap by the reader's own
+// spelling). The inert
 // group row opens nothing. The editor's modal stop is a no-op, playback
 // stopped at the form's open; it is spelled for the opener's shape
 // (trim_presets_save_as's).
@@ -7166,16 +7169,19 @@ void GuiInputHandler::bpm_form_commit(int index) {
     if (folder_overlay::row_is_inert(app, index)) return;
     const std::string line =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
+    const std::size_t eq = line.find('=');
     // THE EDITOR'S BACKDROP AND TITLE (AppState::dialog_backdrop): the form
     // under the editor's window, and the row's key.
-    open_dialog_backdrop(line.substr(0, line.find('=')));
+    open_dialog_backdrop(line.substr(0, eq));
     close_picker();
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
                        /*target=*/index - 1,
                        /*initial_pending=*/"",
                        text_editor::Kind::BpmField);
-    (void)text_editor::replace_selection(app.settings_editor, line);
+    (void)text_editor::replace_selection(
+        app.settings_editor,
+        eq == std::string::npos ? std::string() : line.substr(eq + 1));
     // A MODAL OPEN damages the whole window (the settings editor's open
     // carries the rule).
     viewport.invalidate_all();
