@@ -21,6 +21,7 @@
 # git history); since 2026-11-11, session 110, it is this file's one baked
 # word.
 # ScrollbarInnerTrack and ClipBorder added by hand from Immaterial.ask (architect 2026-11-17, session 140)
+# WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
 SurfaceArea=1D1F23
 Desktop=22242A
 SurfaceBackground=2F3138
@@ -47,3 +48,6 @@ DetailViewRulerMarkings=A1A3A9
 StandardVuMeter/Maximum=FF0A0A
 ScrollbarInnerTrack=00000000
 ClipBorder=22242A
+WindowBackground=1D1F23
+TitleForeground=CBCBCD
+SidebarForeground=CBCBCD

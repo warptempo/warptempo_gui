@@ -59,7 +59,7 @@
 // UNDER PRESS `lit_press_fill`, Default's C68743 — the accent scaled by the
 // press face's ratio to the resting face (42 / 54 = 0.778 on Default; the
 // derivation, theme_roles.h's head), the same push in from the accent's own
-// starting point; LIT BUT INERT `lit_dim_fill`, Default's C88B4A — a
+// starting point; LIT BUT INERT `lit_dim_fill`, Default's 86623B — a
 // checked key that is disabled (below).
 // THE RADIO KEYS WEAR THE PURPLE (architect 2026-11-11, session 107: "when
 // you double up on the orange or any accent color, it starts looking too
@@ -73,8 +73,8 @@
 // `radio_lit_fill`, Default's B595FC (his "the flat sharp key that you see
 // in the Ableton screenshots"); LIT UNDER PRESS `radio_lit_press_fill`,
 // Default's 8D74C4, the purple by the same press ratio; LIT BUT INERT
-// `radio_lit_dim_fill`, Default's 9179C6, the purple at 75 % over the
-// ground as the accent's (the derivation, theme_roles.h's DERIVED block).
+// `radio_lit_dim_fill`, Default's 655785, the purple by the accent's rule
+// (the derivation, theme_roles.h's DERIVED block).
 // Every theme reads its own ScaleAwareness, so "the purple" is that theme's
 // role. What is printed on it is the accent's print, `text_on_lit`, and on
 // its inert face its own inert print, `radio_text_on_lit_dim` (the print at
@@ -143,13 +143,14 @@
 // on a locked tab or under grid iterations, the chosen view pair under grid
 // iterations, any lit key an overlay leaves dead — DIMS ITS FACE AND
 // ITS GLYPH AS ONE (architect 2026-11-11, session 106: "dim the accent and
-// the glyph so both read as a unit") IN ARC'S INSENSITIVE-ACTIVE (architect
-// 2026-11-17, session 140, D5): the face `lit_dim_fill`, the accent at 75 %
-// over the ground (Default FFAD56 over 242424 -> C88B4A), and the glyph
-// `text_on_lit_dim`, the print at 80 % over that face (070707 -> 2E2114;
+// the glyph so both read as a unit") ON ARC'S OWN NUMBERS (architect
+// 2026-11-19, send Z: "let's do arcs numbers"): the face `lit_dim_fill`,
+// (the accent at 75 % over the body tone) at 60 % over the body tone
+// (Default FFAD56 over 242424 -> C88B4A -> 86623B), and the glyph
+// `text_on_lit_dim`, the print at 80 % over that face (070707 -> 201911;
 // the derivation, theme_roles.h's DERIVED block) — a radio key's face
-// `radio_lit_dim_fill`, the purple by the same rule (B595FC -> 9179C6),
-// under its own glyph `radio_text_on_lit_dim` (231E2D) — still the lamp's
+// `radio_lit_dim_fill`, the purple by the same rule (B595FC -> 655785),
+// under its own glyph `radio_text_on_lit_dim` (1A1720) — still the lamp's
 // hue, so the
 // state reads true, dimmed as every dead glyph is; its legend `key_dim_ink`
 // as every dead key's; no press stands on a dead key, so the pair has no
@@ -206,7 +207,7 @@
 // (StandbySelectionForeground, the selection's text; architect 2026-11-17,
 // session 140), in place of `text` (architect 2026-11-11, session 106, THE
 // KEY above); on a lit disabled key's dimmed face `text_on_lit_dim`,
-// Default's 2E2114, a radio key's `radio_text_on_lit_dim`, 231E2D. THE
+// Default's 201911, a radio key's `radio_text_on_lit_dim`, 1A1720. THE
 // CARDS' words and glyph wear their own ink, `card_ink`, Default's 070707
 // (StandbySelectionForeground, the same print) on Live's orange (THE CARDS,
 // below; 2026-11-04 night; the print's tone since 2026-11-17, D4). A

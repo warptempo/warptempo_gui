@@ -1,5 +1,6 @@
 # Riparian.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
 # ScrollbarInnerTrack and ClipBorder added by hand from Riparian.ask (architect 2026-11-17, session 140)
+# WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
 SurfaceArea=0F2026
 Desktop=16282E
 SurfaceBackground=26383F
@@ -26,3 +27,6 @@ DetailViewRulerMarkings=B0B5A3
 StandardVuMeter/Maximum=FF0A0A
 ScrollbarInnerTrack=00000000
 ClipBorder=16282E
+WindowBackground=0F2026
+TitleForeground=D6CDA8
+SidebarForeground=D6CDA8

@@ -1,6 +1,7 @@
 # SB Elegance_mod.ask -- Ableton Live theme XML, converted by tools/themes/ask_to_theme.py
 # Modified by hand from the pack's SB Elegance: ScrollbarInnerHandle 000000 -> 767676 (architect 2026-11-07..11)
 # ScrollbarInnerTrack and ClipBorder added by hand from SB Elegance.ask (architect 2026-11-17, session 140)
+# WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
 SurfaceArea=343D3D
 Desktop=474747
 SurfaceBackground=333333
@@ -27,3 +28,6 @@ DetailViewRulerMarkings=FFFFFF
 StandardVuMeter/Maximum=FF0A0A
 ScrollbarInnerTrack=000000
 ClipBorder=000000
+WindowBackground=343D3D
+TitleForeground=FFF9EA
+SidebarForeground=FFF9EA

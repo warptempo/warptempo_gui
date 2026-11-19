@@ -14,8 +14,9 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — and the derivation, this file's,
-// turns each into a row of GuiThemeTones at the launch's read.
+// own role names, never a derived tone — PLUS THREE ROLES OF OUR OWN (THE
+// FORMAT, below), and the derivation, this file's, turns each into a row of
+// GuiThemeTones at the launch's read.
 //
 // THE FORMAT (its one owner here). A theme file is `<slug>.theme`, ASCII
 // text (UTF-8 in a comment), a line ending `\n` — a `\r` before it is
@@ -24,7 +25,9 @@
 // anything), or A ROLE LINE `Name=HEX` exactly: no space anywhere, Name one
 // of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
 // flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
-// the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask),
+// the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
+// AND OUR OWN THREE, WindowBackground, TitleForeground and SidebarForeground,
+// kOwnThemeRoles: no Live role names them),
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
 // an 8-digit word's last byte its straight alpha — kept raw, the derivation
 // compositing it (the COMPOSITED block). Every role of the table exactly
@@ -46,8 +49,11 @@
 // (GuiPlatform::bundled_theme_files) — each converted ONCE on the laptop
 // from Live's or the pack's `.ask` (Ableton's theme XML) by
 // tools/themes/ask_to_theme.py, never by hand but for the `_mod` files'
-// recorded edits and the two roles of 2026-11-17 (ScrollbarInnerTrack and
-// ClipBorder, each file's from its own .ask, its header line the record) —
+// recorded edits, the two roles of 2026-11-17 (ScrollbarInnerTrack and
+// ClipBorder, each file's from its own .ask, its header line the record)
+// and our own three of 2026-11-19 (each file's own SurfaceArea and
+// ControlForeground copied, the ROLE-NAMED block's OUR OWN, its header line
+// the record; the converter writes them the same way) —
 // AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
 // it, its header the record of every role (architect 2026-11-17, session
 // 140); NO .ASK FILE IS IN THE REPOSITORY OR THE APK, and the app reads
@@ -197,6 +203,33 @@
 //                                     2026-11-05, his d6 "yes": a fault).
 //                                     A key's lit look REFUSED for it:
 //                                     "clip indicator is not a button"
+//   OUR OWN (no Live role; the Arc page, architect 2026-11-18 / 2026-11-19,
+//   send Z — tmp/sendZ/DESIGN.md's THE TONES). Live's themes paint one
+//   ground and one text tone where Arc parts the title bar from the body
+//   under it and prints the title and the sidebar in tones of their own, so
+//   no Live role can be read for them: these three are ours, named for what
+//   they are. arc_dark's file carries Arc's numbers; EVERY OTHER FILE
+//   CARRIES ITS OWN NEAREST EXISTING VALUE (kOwnThemeRoles' source: the body
+//   tone its SurfaceArea, both texts its ControlForeground), so on a Live
+//   theme they change no look:
+//     body face              242424 = WindowBackground, THE BODY TONE (Arc's
+//                                     $bg_color, arc_dark 383C4A): the ground
+//                                     of everything under the title bar — his
+//                                     "the darkest color would only apply to
+//                                     the top line, the title bar" (2026-11-18).
+//                                     THE GROUND (SurfaceArea) STAYS THE TITLE
+//                                     TONE, THE BRIGHT MIX'S TARGET and the
+//                                     launcher icon's ground; until the send's
+//                                     stage B no painter reads this tone, but
+//                                     the lit-but-inert pairs below stand on it
+//     title text             B5B5B5 = TitleForeground, xfwm's title text on
+//                                     the title bar (arc_dark AFB8C5)
+//     sidebar text           B5B5B5 = SidebarForeground, Arc's
+//                                     $dark_sidebar_fg (arc_dark BAC3CF): the
+//                                     marker labels' ink, the tooltip's and
+//                                     the cards' later (the send's stages B
+//                                     and D)
+//   ROLE-NAMED, continued:
 //     core                   363636 = SurfaceBackground, THE KEY FACE, on
 //                                     every theme (architect 2026-11-07,
 //                                     session 83, his pick i4 of tmp/s83 on
@@ -281,12 +314,38 @@
 //   is present in every shipped file and in Default (the trough's and the
 //   frame's added by hand 2026-11-17, each file's from its own .ask).
 //   DERIVED (the app's own tones, no Live role near them; every mix a + t ·
-//   (b − a) per channel, rounded half to even and clamped). The cue fill
-//   above and every tone below but the inactive cue outline are ONE BODY
+//   (b − a) per channel, rounded half to even and clamped; "X at t over Y"
+//   is mix(Y, X, t)). The cue fill above and every tone below but the
+//   inactive cue outline and the Arc page's three (the ruler's digits, the
+//   disabled key's face and border: no bright tone under them) are ONE BODY
 //   (fill_dependent_tones, theme_roles.cpp) reading the row's own words, so
 //   the install recomputes them off the mixed bright tones (THE BRIGHT MIX,
 //   below) — the inert prints among them, over the mixed inert faces, the
-//   print itself and the ground never mixed:
+//   print itself and the body tone never mixed:
+//     ruler text             9C9C9C = THE TEXT AT 80 % OVER THE RULER FACE,
+//                                     mix(ruler face, text, 0.8): THE RULER'S
+//                                     DIGITS on the Arc page, Arc's column
+//                                     header (Thunar's; arc_dark D3DAE3 over
+//                                     404552 -> B6BCC6; architect 2026-11-18,
+//                                     send Z: "we can go as very truthful,
+//                                     which I think is what we've done here")
+//     key dim face           2E2E2E = THE KEY FACE AT 55 % OVER THE BODY TONE,
+//                                     mix(body, key face, 0.55): A DISABLED
+//                                     KEY'S FACE on the Arc page, Arc's
+//                                     button:disabled background (G3:148,
+//                                     rgba($button_bg, 0.55); arc_dark 444A58
+//                                     over 383C4A -> 3F4452, one level off on
+//                                     two channels from the 3E4451 measured
+//                                     on his desktop — the formula taken, as
+//                                     for the border)
+//     key dim border         272727 = THE WELL'S BORDER AT 55 % OVER THE BODY
+//                                     TONE, mix(body, well border, 0.55): THAT
+//                                     KEY'S BORDER, Arc's button:disabled
+//                                     border (G3:148, rgba($borders_color,
+//                                     0.55); arc_dark 2B2E39 over 383C4A ->
+//                                     313441, the measured 313440 one level
+//                                     off — the formula taken). Its drawing is
+//                                     the key dim ink (COMPOSITED)
 //     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
 //                                     EXACTLY HALF WAY to the head on every
 //                                     theme (architect 2026-11-12, session
@@ -349,26 +408,40 @@
 //                                     than the key face the lit press comes
 //                                     out lighter — Live's numbers, no rule
 //     lit dim fill, text on lit dim
-//                            C88B4A, 2E2114 = THE LIT-BUT-INERT PAIR, ARC'S
-//                                     INSENSITIVE-ACTIVE (architect
-//                                     2026-11-17, session 140, D5: Arc draws
-//                                     a checked insensitive control as its
-//                                     color at 75 % and its print at 80 %):
-//                                     the face THE ACCENT AT 75 % OVER THE
-//                                     GROUND, ground + 0.75 · (cue − ground)
-//                                     (Default: FFAD56 over 242424 ->
-//                                     C88B4A; Arc 5294E2 over 2F343F ->
-//                                     497CB9), the glyph THE PRINT ON A LIT
-//                                     FACE AT 80 % OVER THAT FACE, face + 0.8
-//                                     · (text on lit − face) (Default 070707
-//                                     -> 2E2114; Arc FFFFFF -> DBE5F1), per
-//                                     channel, rounded half to even and
-//                                     clamped. The ground is the theme's
-//                                     own, never mixed; the accent the
-//                                     installed one, so the pair follows THE
-//                                     BRIGHT MIX. One rule on every theme, a
-//                                     light one too (the Live light themes
-//                                     set aside, ruling 7). The face and the
+//                            86623B, 201911 = THE LIT-BUT-INERT PAIR ON ARC'S
+//                                     OWN NUMBERS (architect 2026-11-19, send
+//                                     Z: "let's do arcs numbers"; Arc's
+//                                     button:disabled:checked, G3:152-154: the
+//                                     face rgba($selected_bg_color, 0.75)
+//                                     under opacity 0.6, the print
+//                                     rgba($selected_fg_color, 0.8) — over the
+//                                     body tone a button stands on): the face
+//                                     (THE ACCENT AT 75 % OVER THE BODY TONE)
+//                                     AT 60 % OVER THE BODY TONE, mix(body,
+//                                     mix(body, cue, 0.75), 0.6), the inner
+//                                     word rounded (Default: FFAD56 over
+//                                     242424 -> C88B4A -> 86623B; Arc at 100
+//                                     5294E2 over 383C4A -> 4C7EBC -> 44648E,
+//                                     at the default 75 the mixed 497CB9 ->
+//                                     456C9D -> 40597C), the glyph THE PRINT
+//                                     ON A LIT FACE AT 80 % OVER THAT FACE,
+//                                     mix(face, text on lit, 0.8) (Default
+//                                     070707 -> 201911; Arc FFFFFF -> DAE0E8,
+//                                     at 75 D9DEE5), per channel, rounded half
+//                                     to even and clamped — the print the
+//                                     approved picture's (the mock kit's
+//                                     BTN_LIT_INERT_GLYPH): the 0.6 opacity,
+//                                     read strictly, would dim the label too
+//                                     (Arc at 100 9AA1AF). The body tone is
+//                                     the theme's own, never mixed; the accent
+//                                     the installed one, so the pair follows
+//                                     THE BRIGHT MIX. One rule on every theme,
+//                                     a light one too (the Live light themes
+//                                     set aside, ruling 7 of 2026-11-17).
+//                                     Arc's insensitive-active of 2026-11-17,
+//                                     session 140, D5 (the color at 75 % over
+//                                     the ground, no opacity), stood until
+//                                     this rule. The face and the
 //                                     glyph of A CHECKED-BUT-DISABLED KEY (a
 //                                     lamp on a locked tab or under grid
 //                                     iterations, a lit key under an overlay,
@@ -387,16 +460,20 @@
 //                                     (architect 2026-11-11, session 107),
 //                                     the black key face's ratio 1 as above
 //     radio lit dim fill, radio text on lit dim
-//                            9179C6, 231E2D = THE RADIO KEY'S LIT-BUT-INERT
-//                                     PAIR, the same rule on the purple (D5):
-//                                     the face the radio lit fill at 75 % over
-//                                     the ground (Default: B595FC -> 9179C6;
-//                                     Arc 73D216 -> 62AA20), the glyph the
-//                                     print on a lit face at 80 % over that
-//                                     face (Default 231E2D; Arc E0EED2) — a
-//                                     tone of its own, since the print is over
-//                                     its own face; key_ink parts it by the
-//                                     key's lit class
+//                            655785, 1A1720 = THE RADIO KEY'S LIT-BUT-INERT
+//                                     PAIR, the same rule on the purple
+//                                     (2026-11-19): the face (the radio lit
+//                                     fill at 75 % over the body tone) at 60 %
+//                                     over the body tone (Default: B595FC ->
+//                                     9179C6 -> 655785; Arc at 100 73D216 ->
+//                                     527F33), the glyph the print on a lit
+//                                     face at 80 % over that face (Default
+//                                     1A1720; Arc DCE5D6) — a tone of its own,
+//                                     since the print is over its own face;
+//                                     key_ink parts it by the key's lit class.
+//                                     The radio class's own tones retire in
+//                                     the send's stage C ("we can let go of
+//                                     the green")
 //
 // THE BRIGHT MIX (architect 2026-11-13, session 119, on real tablet captures
 // of Riparian and Gunmetal: "the whole point of it is that it dims ... the
@@ -438,13 +515,16 @@
 // the text, the dim text, the key dim ink — the keys' glyphs and legends,
 // the markers' labels), the print on a lit face, the selection and list
 // press texts, the cards' words, the faces, the lanes (the trim
-// bar's trough and the well's frame among them, 2026-11-17), the waveform's
+// bar's trough and the well's frame among them, 2026-11-17), the Arc page's
+// tones (2026-11-19: the body tone, the title bar's text, the sidebar text,
+// the ruler's digits, the disabled key's face and border), the waveform's
 // tones, the cue outline, the inactive cue and its outline
 // (dark: "those weren't bright to begin with") and the scanner (below). At
 // the default 75 on the reference row: the accent FFAD56 -> C88B4A, the
 // purple B595FC -> 9179C6, the head 03C3D5 -> 0B9BA9 and its line 81E1EA
-// -> 85CDD4 (bright_mixed_tones, the code); at 100 every row is painted at
-// its own numbers.
+// -> 85CDD4 (bright_mixed_tones, the code); on Arc-Dark the accent 5294E2 ->
+// 497CB9, the head D3DAE3 -> AAB0BA; at 100 every row is painted at its own
+// numbers.
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,

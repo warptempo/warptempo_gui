@@ -23,9 +23,9 @@ namespace {
 // THE ROLE TABLE: the roles a theme file holds, each exactly once — EXACTLY
 // THE ROLES A TONE READS (the head's DERIVATION), Live's names, the one
 // nested role flattened to `StandardVuMeter/Maximum` (the head's THE
-// FORMAT). The converter (tools/themes/ask_to_theme.py) reads the names out
-// of this initializer, so it is the one enumeration, and writes a file's
-// lines in its order. Each was present in every stock and Sonic Bloom file
+// FORMAT), and last OUR OWN THREE (kOwnThemeRoles below). The converter
+// (tools/themes/ask_to_theme.py) reads the names out of this initializer,
+// so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
 // when it joined (the press arc's SelectionBackground and
 // SelectionForeground 2026-11-05; StandbySelectionForeground 2026-11-06;
 // TakeLaneTrackNotHighlighted, ViewCheckControlDisabledOff,
@@ -35,7 +35,9 @@ namespace {
 // 2026-11-11; ScrollbarInnerTrack, THE TRIM BAR'S TROUGH, and ClipBorder,
 // THE WELL'S FRAME AND ITS LINES, 2026-11-17, architect 2026-11-17, session
 // 140 — each added by hand to every shipped file from that file's own .ask,
-// a `_mod` file from its original's).
+// a `_mod` file from its original's); WindowBackground, TitleForeground and
+// SidebarForeground, OUR OWN, 2026-11-19 (architect, send Z, the Arc page;
+// kOwnThemeRoles below).
 constexpr std::string_view kThemeRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -48,6 +50,7 @@ constexpr std::string_view kThemeRoles[] = {
     "ScrollbarInnerHandle", "DetailViewRulerMarkings",
     "StandardVuMeter/Maximum",
     "ScrollbarInnerTrack", "ClipBorder",
+    "WindowBackground", "TitleForeground", "SidebarForeground",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
@@ -58,6 +61,32 @@ constexpr std::size_t role_index(std::string_view name) {
         if (kThemeRoles[i] == name) return i;
     return kThemeRoleCount;
 }
+
+// OUR OWN ROLES (the head's THE FORMAT; architect 2026-11-19, send Z): the
+// roles of the table that are no Live role, each with THE LIVE ROLE A FILE
+// WITHOUT AN ARC VALUE COPIES — so a Live theme's line is its own existing
+// value and changes no look. The one enumeration of the pairs: the converter
+// (tools/themes/ask_to_theme.py) reads this initializer too, writing each
+// own role as its source role's word (an .ask holds none of them).
+struct OwnThemeRole {
+    std::string_view role;
+    std::string_view source;
+};
+constexpr OwnThemeRole kOwnThemeRoles[] = {
+    {"WindowBackground",  "SurfaceArea"},
+    {"TitleForeground",   "ControlForeground"},
+    {"SidebarForeground", "ControlForeground"},
+};
+constexpr bool own_roles_in_table() {
+    for (const OwnThemeRole& o : kOwnThemeRoles) {
+        if (role_index(o.role) == kThemeRoleCount) return false;
+        if (role_index(o.source) == kThemeRoleCount) return false;
+        for (const OwnThemeRole& p : kOwnThemeRoles)
+            if (p.role == o.source) return false;
+    }
+    return true;
+}
+static_assert(own_roles_in_table());
 
 // One file's roles: each an uppercase hex word of 6 or 8 digits, in
 // kThemeRoles' order.
@@ -211,15 +240,15 @@ constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
 // BODY for both roads: derive() fills them off the theme's own numbers,
 // bright_mixed_tones off the mixed bright tones, so each formula is written
 // once. Every input is a word of the row — the key face
-// (SurfaceBackground), the press face (Desktop), the ground (SurfaceArea,
-// never mixed), the print on a lit face (StandbySelectionForeground, never
-// mixed), the accent, the purple and the head — each the same bytes
-// derive() reads off the roles, so the doubles and their order are the
-// derivation's own (Python's, bit for bit).
+// (SurfaceBackground), the press face (Desktop), the body tone
+// (WindowBackground, never mixed), the print on a lit face
+// (StandbySelectionForeground, never mixed), the accent, the purple and the
+// head — each the same bytes derive() reads off the roles, so the doubles
+// and their order are the derivation's own (Python's, bit for bit).
 void fill_dependent_tones(GuiThemeTones& t) {
     const Rgb face     = unpacked(t.key_face);
     const Rgb desktop  = unpacked(t.key_press_face);
-    const Rgb ground   = unpacked(t.ground);
+    const Rgb body     = unpacked(t.body_face);
     const Rgb print    = unpacked(t.text_on_lit);
     const Rgb on       = unpacked(t.cue);
     const Rgb radio    = unpacked(t.radio_lit_fill);
@@ -234,13 +263,15 @@ void fill_dependent_tones(GuiThemeTones& t) {
         face_mean == 0.0 ? 1.0 : mean(desktop) / face_mean;
     t.lit_press_fill       = packed(scale(on, press_ratio));
     t.radio_lit_press_fill = packed(scale(radio, press_ratio));
-    // THE LIT-BUT-INERT PAIRS, ARC'S INSENSITIVE-ACTIVE (the head's DERIVED
-    // block; architect 2026-11-17, session 140, D5): the face the lit color
-    // at 75 % over the ground, mix(ground, color, 0.75); the print on it the
-    // print on a lit face at 80 % over that face, mix(face, print, 0.8) —
-    // the accent's pair and the purple's, each its own print.
-    const Rgb lit_dim   = mix(ground, on, 0.75);
-    const Rgb radio_dim = mix(ground, radio, 0.75);
+    // THE LIT-BUT-INERT PAIRS ON ARC'S OWN NUMBERS (the head's DERIVED
+    // block; architect 2026-11-19, send Z: "let's do arcs numbers"): the
+    // face (the lit color at 75 % over the body tone) at 60 % over the body
+    // tone, mix(body, mix(body, color, 0.75), 0.6), the inner word rounded;
+    // the print on it the print on a lit face at 80 % over that face,
+    // mix(face, print, 0.8) — the accent's pair and the purple's, each its
+    // own print.
+    const Rgb lit_dim   = mix(body, mix(body, on, 0.75), 0.6);
+    const Rgb radio_dim = mix(body, mix(body, radio, 0.75), 0.6);
     t.lit_dim_fill          = packed(lit_dim);
     t.text_on_lit_dim       = packed(mix(lit_dim, print, 0.8));
     t.radio_lit_dim_fill    = packed(radio_dim);
@@ -258,6 +289,9 @@ void fill_dependent_tones(GuiThemeTones& t) {
 // its own answer (fill_dependent_tones).
 GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
+    const Rgb body     = opaque(roles["WindowBackground"]);
+    const Rgb title_fg = opaque(roles["TitleForeground"]);
+    const Rgb sidebar_fg = opaque(roles["SidebarForeground"]);
     const Rgb desktop  = opaque(roles["Desktop"]);
     const Rgb face     = opaque(roles["SurfaceBackground"]);
     const Rgb contrast = opaque(roles["ControlContrastFrame"]);
@@ -297,19 +331,33 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgba ground_a  = rgba(roles["SurfaceArea"]);
     const Rgb trough     = over(rgba(roles["ScrollbarInnerTrack"]), ground_a);
     const Rgb border     = over(rgba(roles["ClipBorder"]), ground_a);
+    // The app's own tones over the body tone and the ruler (the head's
+    // DERIVED block; architect 2026-11-19, send Z, the Arc page): THE
+    // RULER'S DIGITS the text at 80 % over the ruler (Arc's column header);
+    // THE DISABLED KEY'S FACE the key face at 55 % over the body tone and
+    // ITS BORDER the well's border at 55 % over it (Arc's button:disabled).
+    const Rgb ruler_fg   = mix(canvas, text, 0.8);
+    const Rgb dim_face   = mix(body, face, 0.55);
+    const Rgb dim_border = mix(body, border, 0.55);
     const Rgb white    = Rgb{255, 255, 255};
     GuiThemeTones t{};
     t.ground              = packed(ground);
+    t.body_face           = packed(body);
     t.text                = packed(text);
+    t.title_text          = packed(title_fg);
+    t.sidebar_text        = packed(sidebar_fg);
     t.text_dim            = packed(dim);
     t.text_on_lit         = packed(standby_text);
     t.key_dim_ink         = packed(dim_ink);
+    t.key_dim_face        = packed(dim_face);
+    t.key_dim_border      = packed(dim_border);
     t.key_face            = packed(face);
     t.key_press_face      = packed(desktop);
     t.radio_lit_fill      = packed(radio);
     t.well_frame          = packed(dim);
     t.ruler_face          = packed(canvas);
     t.ruler_tick          = packed(tick_role);
+    t.ruler_text          = packed(ruler_fg);
     t.lane_face           = packed(desktop);
     t.trim_bar_face       = packed(trough);
     t.trim_span_face      = packed(span_role);

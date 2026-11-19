@@ -32,8 +32,10 @@
 // key's pair and the radio keys' three (2026-11-11), the playhead's line
 // (2026-11-12), the disabled chip's outline (2026-11-12, toward the marker
 // lane's Desktop, 2026-11-13), the enabled chip's fill (the accent, 2026-11-13)
-// and the print on a lit face, the cards' ink, the ruler and the two
-// lit-but-inert pairs (2026-11-17, session 140; all at the foot) — the numbers
+// and the print on a lit face, the cards' ink and the ruler (2026-11-17,
+// session 140), the two lit-but-inert pairs (2026-11-17, on Arc's own
+// numbers since 2026-11-19, send Z) and the three roles of our own and the
+// Arc page's three derived tones (2026-11-19; all at the foot) — the numbers
 // MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
@@ -46,7 +48,7 @@
 // 2026-11-13, session 121, the same block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-four words with its literal (the press arc's four, 2026-11-05, among
+// fifty words with its literal (the press arc's four, 2026-11-05, among
 // them — the key press face, the list press pair and the lit press fill —
 // the lamp arc's clip lamp the same night, the six of 2026-11-11: the level
 // fill, the lit-but-inert key's face and its glyph, and the radio keys'
@@ -54,7 +56,9 @@
 // of 2026-11-12, both retold 2026-11-13; the trough, the well's frame and
 // the radio key's inert print of 2026-11-17, with the print on a lit face,
 // the cards' ink, the ruler and the two inert pairs retold that day,
-// session 140).
+// session 140; the body tone, the title bar's text, the sidebar text, the
+// ruler's digits and the disabled key's face and border of 2026-11-19, send
+// Z, with the two inert pairs retold).
 //
 // THE ROWS ARE THE THEMES' OWN NUMBERS; THE PALETTE INSTALLED IS THE ROW
 // MIXED (architect 2026-11-13, session 119; theme_roles.h's THE BRIGHT
@@ -231,7 +235,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the forty-four words with its literal, so
+// 2026-11-01..05 — every one of the fifty words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
@@ -245,16 +249,25 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // 070707, Default's StandbySelectionForeground (architect 2026-11-17,
 // session 140); THE LIT PRESS FILL C68743, the accent × 42 / 54, the ratio
 // mean(press face 2A2A2A) / mean(key face 363636); and THE LIT-BUT-INERT
-// PAIR, Arc's insensitive-active (architect 2026-11-17, session 140, D5), a
-// checked-but-disabled key's face C88B4A — the accent at 75 % over the
-// ground 242424 — and its glyph 2E2114, the print at 80 % over that face —
-// each per channel, rounded half to even (the DERIVED block). THE RADIO
-// KEYS' FOUR (architect 2026-11-11, session 107: a lit radio key wears the
-// purple): the face B595FC, Default's ScaleAwareness; its press 8D74C4, the
-// purple × 42 / 54; its inert face 9179C6, the purple at 75 % over the
-// ground, under its own glyph 231E2D, the print at 80 % over it (D5; the
-// DERIVED block). THE RULER 393939 is the canvas's tone and THE CARDS' INK
-// 070707 the print's (architect 2026-11-17, session 140, ruling 3 and D4).
+// PAIR on Arc's own numbers (architect 2026-11-19, send Z: "let's do arcs
+// numbers"), a checked-but-disabled key's face 86623B — (the accent at 75 %
+// over the body tone 242424, C88B4A) at 60 % over the body tone — and its
+// glyph 201911, the print at 80 % over that face — each per channel,
+// rounded half to even (the DERIVED block). THE RADIO KEYS' FOUR (architect
+// 2026-11-11, session 107: a lit radio key wears the purple): the face
+// B595FC, Default's ScaleAwareness; its press 8D74C4, the purple × 42 / 54;
+// its inert face 655785, the purple by the same rule (9179C6 at 60 % over
+// the body tone), under its own glyph 1A1720, the print at 80 % over it
+// (the DERIVED block). THE RULER 393939 is the canvas's tone and THE CARDS'
+// INK 070707 the print's (architect 2026-11-17, session 140, ruling 3 and
+// D4). OUR OWN THREE ROLES (architect 2026-11-19, send Z; theme_roles.h's
+// THE FORMAT) are Default's own numbers: THE BODY TONE 242424, its
+// SurfaceArea; THE TITLE BAR'S TEXT and THE SIDEBAR TEXT B5B5B5, its
+// ControlForeground. THE ARC PAGE'S DERIVED THREE (the same day; the
+// DERIVED block): THE RULER'S DIGITS 9C9C9C, the text B5B5B5 at 80 % over
+// the ruler 393939; THE DISABLED KEY'S FACE 2E2E2E, the key face 363636 at
+// 55 % over the body tone 242424; ITS BORDER 272727, the well's border
+// 2A2A2A at 55 % over the body tone.
 // THE PLAYHEAD'S LINE
 // 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
 // to even (architect 2026-11-12, session 113), and THE DISABLED CHIP'S
@@ -278,22 +291,28 @@ inline constexpr GuiThemeTones kDefault = kGuiReferenceThemeTones;
 // THE CHROME (materials.h's head: the ground, the text tones, the key, the
 // well's tones, the selection pair, the panes, the cards, the lamps).
 static_assert(kDefault.ground          == 0x242424);
+static_assert(kDefault.body_face       == 0x242424);
 static_assert(kDefault.text            == 0xB5B5B5);
+static_assert(kDefault.title_text      == 0xB5B5B5);
+static_assert(kDefault.sidebar_text    == 0xB5B5B5);
 static_assert(kDefault.text_dim        == 0x757575);
 static_assert(kDefault.text_on_lit     == 0x070707);
 static_assert(kDefault.key_dim_ink     == 0x5D5D5D);
-static_assert(kDefault.text_on_lit_dim == 0x2E2114);
+static_assert(kDefault.key_dim_face    == 0x2E2E2E);
+static_assert(kDefault.key_dim_border  == 0x272727);
+static_assert(kDefault.text_on_lit_dim == 0x201911);
 static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.key_press_face  == 0x2A2A2A);
 static_assert(kDefault.lit_press_fill  == 0xC68743);
-static_assert(kDefault.lit_dim_fill    == 0xC88B4A);
+static_assert(kDefault.lit_dim_fill    == 0x86623B);
 static_assert(kDefault.radio_lit_fill  == 0xB595FC);
 static_assert(kDefault.radio_lit_press_fill == 0x8D74C4);
-static_assert(kDefault.radio_lit_dim_fill   == 0x9179C6);
-static_assert(kDefault.radio_text_on_lit_dim == 0x231E2D);
+static_assert(kDefault.radio_lit_dim_fill   == 0x655785);
+static_assert(kDefault.radio_text_on_lit_dim == 0x1A1720);
 static_assert(kDefault.well_frame      == 0x757575);
 static_assert(kDefault.ruler_face      == 0x393939);
 static_assert(kDefault.ruler_tick      == 0x919191);
+static_assert(kDefault.ruler_text      == 0x9C9C9C);
 static_assert(kDefault.lane_face       == 0x2A2A2A);
 static_assert(kDefault.trim_bar_face   == 0x242424);
 static_assert(kDefault.trim_span_face  == 0x696969);

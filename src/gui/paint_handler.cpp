@@ -341,8 +341,8 @@ namespace {
 // THE PURPLE, `radio_lit_fill`, Default's B595FC, darkened to
 // `radio_lit_press_fill`, Default's 8D74C4 (session 107). A DISABLED button
 // wears the rest face, its glyph and legend dimmed by the caller; A DEAD
-// CHECKED BUTTON THE DIMMED ACCENT, `lit_dim_fill`, Default's C88B4A (a
-// radio key's dimmed purple, `radio_lit_dim_fill`, Default's 9179C6), its
+// CHECKED BUTTON THE DIMMED ACCENT, `lit_dim_fill`, Default's 86623B (a
+// radio key's dimmed purple, `radio_lit_dim_fill`, Default's 655785), its
 // glyph dimmed with it (materials.h's key_ink) — under an overlay too, the
 // roster publishing a dead key's own lit bit there (2026-11-11, session
 // 107). NO HOT FACE. `face` is
@@ -666,8 +666,9 @@ std::string key_legend_word(std::string_view word) {
 // key_look's answer: checked), on the accent or a radio key's purple and on
 // their darkened press faces alike, or on a lit key that is disabled, its
 // face dimmed with it, the inert print of its lit class `cls` —
-// `text_on_lit_dim` (Default's 2E2114), a radio key's
-// `radio_text_on_lit_dim` (231E2D; architect 2026-11-17, session 140, D5),
+// `text_on_lit_dim` (Default's 201911), a radio key's
+// `radio_text_on_lit_dim` (1A1720; architect 2026-11-17, session 140, D5;
+// Arc's own numbers 2026-11-19, send Z),
 // the roster passing roster_lit_class, every other surface Lamp; else
 // `text` (Default's B5B5B5) on a
 // resting or pressed face, or `key_dim_ink` (Default's 5D5D5D) when the

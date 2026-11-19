@@ -442,16 +442,23 @@ struct GuiPalette {
     GuiColor card_ground;     // COLOR_INFOBK (the cards' face)
     GuiColor card_text;       // COLOR_INFOTEXT (the cards' words and glyph)
     GuiColor card_frame;      // the cards' ring, in the fill (COLOR_WINDOWFRAME)
-    // THE FLAT LOOK'S TWENTY-TWO (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the three press tones the
     // press arc's, the same day; the clip lamp the lamp arc's, the same
     // night; the level fill and the lit key's press and inert faces
     // 2026-11-11, session 106; the radio keys' three the same day, session
-    // 107).
+    // 107; the trough and the well's frame 2026-11-17; THE ARC PAGE'S SIX
+    // 2026-11-19, send Z, theme_roles.h's head, no painter reading them
+    // before the send's stages B and C).
+    GuiColor body_face;       // THE BODY TONE, the ground under the title bar on the Arc page (WindowBackground)
     GuiColor text;            // every word, digit and drawing the chrome prints
+    GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
+    GuiColor sidebar_text;    // the marker labels' ink on the Arc page, later the tooltip's and the cards' (SidebarForeground)
     GuiColor text_dim;        // the inert rows, the tooltip's hint line
     GuiColor key_dim_ink;     // a disabled key's glyph and legend, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
+    GuiColor key_dim_face;    // a disabled key's face on the Arc page (the key face at 55 % over the body tone)
+    GuiColor key_dim_border;  // a disabled key's border on the Arc page (well_border at 55 % over the body tone)
     GuiColor key_face;        // an unchecked key at rest; the time fields, the two lamps at rest
     GuiColor key_press_face;  // an unchecked key's face under a standing press
     GuiColor lit_press_fill;  // a checked key's face under a standing press, the accent darkened (its face at rest is `cue`, below)
@@ -462,6 +469,7 @@ struct GuiPalette {
     GuiColor well_frame;      // the scrub's channel, the tooltip's border
     GuiColor ruler_face;      // the ruler
     GuiColor ruler_tick;      // the ruler's ticks
+    GuiColor ruler_text;      // the ruler's digits on the Arc page (the text at 80 % over the ruler)
     GuiColor lane_face;       // the marker lane
     GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
     GuiColor trim_span_face;  // the trim bar's pill at rest, the span

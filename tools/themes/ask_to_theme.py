@@ -33,6 +33,12 @@ THE READ is exactly the reader the app used while it read .ask files itself
     (the app's derivation composites it).
 A role missing is an error: the run exits non-zero naming the file and the
 role, and writes nothing for that file.
+OUR OWN ROLES (architect 2026-11-19, send Z; theme_roles.h's THE FORMAT) are
+no Live role, so an .ask holds none of them: each is written as the word of
+its SOURCE ROLE, the pairs read out of kOwnThemeRoles in the same C++ file
+(WindowBackground the file's SurfaceArea, TitleForeground and
+SidebarForeground its ControlForeground), after the --set replacements, and
+a --set on an own role itself wins.
 
 OPTIONS, for the files the app ships modified (a `_mod` theme), so that every
 role line is still this tool's output:
@@ -76,6 +82,16 @@ def role_table():
         die('the kThemeRoles initializer in %s is empty or repeats a name'
             % ROLE_TABLE_SRC)
     return names
+
+
+def own_roles():
+    """kOwnThemeRoles' (role, source) pairs, out of the C++ initializer."""
+    with open(ROLE_TABLE_SRC, encoding='utf-8') as f:
+        text = f.read()
+    m = re.search(r'kOwnThemeRoles\[\]\s*=\s*\{(.*?)\n\};', text, re.S)
+    if not m:
+        die('no kOwnThemeRoles initializer in %s' % ROLE_TABLE_SRC)
+    return re.findall(r'\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}', m.group(1))
 
 
 def slug_of_stem(stem):
@@ -133,7 +149,8 @@ def scan_roles(text):
 
 
 def read_ask(path, roles):
-    """The file's words by role name (the docstring's THE READ)."""
+    """The file's words by role name (the docstring's THE READ); `roles`
+    Live's alone, our own left out."""
     with open(path, 'rb') as f:
         text = f.read().decode('latin-1')
     flat = [r for r in roles if r != NESTED_KEY]
@@ -191,6 +208,13 @@ def main(argv):
     if slug_opt is not None and len(files) != 1:
         die('--slug takes one FILE.ask')
     roles = role_table()
+    own = own_roles()
+    own_names = [r for r, _ in own]
+    if not own or any(r not in roles or src not in roles or src in own_names
+                      for r, src in own):
+        die('the kOwnThemeRoles initializer in %s does not match kThemeRoles'
+            % ROLE_TABLE_SRC)
+    live = [r for r in roles if r not in own_names]
     overrides = {}
     for s in sets:
         m = re.fullmatch(r'([^=]+)=([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})', s)
@@ -204,8 +228,11 @@ def main(argv):
         slug = slug_opt if slug_opt is not None else slug_of_stem(stem)
         if not slug or slug_of_stem(slug) != slug:
             die('%s: the slug %r is not a slug' % (path, slug))
-        words = read_ask(path, roles)
+        words = read_ask(path, live)
         words.update(overrides)
+        for r, src in own:
+            if r not in overrides:
+                words[r] = words[src]
         lines = ['# %s -- Ableton Live theme XML, converted by '
                  'tools/themes/ask_to_theme.py' % os.path.basename(path)]
         lines += ['# %s' % n if n else '#' for n in notes]

@@ -43,7 +43,9 @@
 #   ScaleAwareness              73D216  $success_color: the radio keys' lit face, Arc's one color distinct from the blue
 #   RangeEditField              5294E2  $selected_bg_color: the NOISE fill, Arc's scale highlight (architect 2026-11-17, D3)
 #   TakeLaneTrackNotHighlighted 2B2E3959 $borders_color (darken($bg_color, 6%)), Arc's separator, at 35 % over the canvas -> 393D49
-#   ViewCheckControlDisabledOff 666A74  $wm_icon_unfocused_bg, the inactive titlebar glyph: the disabled key's glyph
+#   ViewCheckControlDisabledOff 7F8591  an insensitive button's drawing, measured on his Arc-Dark desktop (shot B3b,
+#                                       2026-11-18): the disabled key's glyph (architect 2026-11-19, send Z; 666A74,
+#                                       $wm_icon_unfocused_bg, the inactive titlebar glyph, before it)
 #   ScrollbarInnerHandle        767B87  Arc's scrollbar slider, mix($fg_color, $bg_color, 40%) (the trim span's pill)
 #   ScrollbarInnerTrack         3E434F  Arc's scrollbar trough, $_scrollbar_bg_color = darken($base_color, 1%)
 #                                       (the trim bar's lane; a NEW required role, session 140's plan)
@@ -51,6 +53,11 @@
 #   StandardVuMeter/Maximum     CC575D  $wm_button_close_bg, THE CLOSE RED (the clip lamp)
 #   ClipBorder                  2B2E39  $borders_color: Thunar's pane border, the well's frame and its lines (a NEW
 #                                       required role, architect 2026-11-17, D2)
+# OUR OWN ROLES (not Live's; src/gui/theme_roles.h's THE FORMAT), architect 2026-11-19, send Z, the Arc page:
+#   WindowBackground            383C4A  $bg_color: THE BODY TONE, the ground of everything under the title bar
+#                                       (SurfaceArea, $header_bg, stays the title bar's)
+#   TitleForeground             AFB8C5  xfwm4's title text on the title bar
+#   SidebarForeground           BAC3CF  $dark_sidebar_fg: the marker labels' ink (the tooltip's and the cards' later)
 SurfaceArea=2F343F
 Desktop=353945
 SurfaceBackground=444A58
@@ -71,9 +78,12 @@ DetailGridTiles=404552
 ScaleAwareness=73D216
 RangeEditField=5294E2
 TakeLaneTrackNotHighlighted=2B2E3959
-ViewCheckControlDisabledOff=666A74
+ViewCheckControlDisabledOff=7F8591
 ScrollbarInnerHandle=767B87
 ScrollbarInnerTrack=3E434F
 DetailViewRulerMarkings=D3DAE366
 StandardVuMeter/Maximum=CC575D
 ClipBorder=2B2E39
+WindowBackground=383C4A
+TitleForeground=AFB8C5
+SidebarForeground=BAC3CF

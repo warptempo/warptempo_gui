@@ -18,6 +18,7 @@
 #     superseded); its line the derived half toward white, EFF0E7, before
 #     THE BRIGHT MIX (src/gui/theme_roles.h), which mixes the head first.
 # ScrollbarInnerTrack and ClipBorder added by hand from SB Gunmetal.ask (architect 2026-11-17, session 140)
+# WindowBackground, TitleForeground and SidebarForeground, our own roles (not Live's), added by hand: WindowBackground this file's SurfaceArea, TitleForeground and SidebarForeground its ControlForeground, so nothing here changes look (architect 2026-11-19, send Z)
 SurfaceArea=1F2128
 Desktop=24262D
 SurfaceBackground=2E313A
@@ -44,3 +45,6 @@ DetailViewRulerMarkings=808699
 StandardVuMeter/Maximum=FF0A0A
 ScrollbarInnerTrack=00000000
 ClipBorder=24262D
+WindowBackground=1F2128
+TitleForeground=B3B4BD
+SidebarForeground=B3B4BD
