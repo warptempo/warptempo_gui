@@ -153,11 +153,6 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     // Space at every entry acts on content.
     ov.scroll_px     = 0.0;
     ov.press         = AppState::FolderOverlayPress{};
-    // (A REBUILT LISTING RENAMES EVERY ROW, which is why this body also
-    // cleared the double-click candidate while the rows had one: its target
-    // was a row INDEX into the listing being replaced. The clear went with
-    // DoubleClickSurface::FolderRow on 2026-08-29, when a click became the
-    // open act and the second press lost its meaning.)
     ov.highlight_row = ov.rows.empty() ? -1 : 0;
     bool seated = false;
     if (!rp.item.empty()) {
@@ -833,7 +828,7 @@ void GuiRenderPlayer::play_button_act() {
     //
     // THE BUG THAT RULE ANSWERED CANNOT COME BACK, which is what makes the
     // narrowing safe: it was a band left BEHIND the transport (a Next advanced
-    // the item and the highlight stayed on the row he had double-clicked, so
+    // the item and the highlight stayed on the row he had opened, so
     // the live button played that row instead of pausing what sounded), and THE
     // BAND FOLLOWS THE ITEM since 2026-08-28 — at every item change the
     // transport makes on its own — so a highlight that is somewhere else is

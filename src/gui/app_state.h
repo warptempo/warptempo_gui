@@ -261,9 +261,8 @@ constexpr double kNavZoomPxPerLevel = 218.0;
 // up to a whole W 2026-11-05; a double, never rounded at the read — below)
 // — ~44 mm on that panel, back on the rig's ~43 mm order of hand travel
 // instead of half it. Durations never scale; lengths do — the same split the
-// press road's four pixel thresholds take (drag_moved_threshold_px,
-// grab_moved_threshold_px, double_click_slack_px,
-// GuiInputCore::set_touch_slop_px).
+// press road's three pixel thresholds take (drag_moved_threshold_px,
+// grab_moved_threshold_px, GuiInputCore::set_touch_slop_px).
 //
 // THE PINCH NEEDS NO SUCH TERM AND MUST NOT GET ONE: its level is log2 of the
 // FINGER-GAP RATIO (input_pointer.cpp's touch nav frame), and a ratio of two
@@ -655,8 +654,8 @@ struct ValueDragState {
 // HOW FAR THE HAND TRAVELS PER STEP — one authored 100%-scale length, ONE
 // number, and a retune is this line (architect 2026-09-10). It is a LENGTH and
 // so it SCALES: the drag reads it through scaled_px, exactly as every other
-// authored press-road distance does (the drag gate, the double-click slack,
-// the touch slop), because a hand's 9 W at 200 % (18 device px) is not the
+// authored press-road distance does (the drag gate, the grab gate, the touch
+// slop), because a hand's 9 W at 200 % (18 device px) is not the
 // same gesture as at 100 % (9). Durations never scale; this is not one. The same
 // travel buys a cent, a bound cent and a hop alike — the
 // step is one step whatever the cell's domain is, which is what makes the
@@ -971,7 +970,7 @@ struct RegionDragState {
 // under the pointer, the selection collapsed at every seat (architect
 // 2026-11-08, session 95: a drag in a field moves the caret, NOTHING
 // SELECTS — the selection is the keyboard's Shift + LEFT / RIGHT alone; the
-// drag-to-select sweep and the double-click's drag by words retired). Only
+// drag-to-select sweep retired). Only
 // one editor is active at a time, so the active editor (and thus its text
 // geometry) is discoverable from the per-editor is_active checks; a single
 // armed record is enough. Set on a press that lands on the active editor's
@@ -995,38 +994,33 @@ struct EditorTextDragState {
 // the pressed cell decides two things. THE ADDRESSED CELL: every marker press
 // writes AppState::addressed_cell from the cell it landed on, inside
 // run_marker_click_act on all three click shapes and behind the selection
-// mutator that reset it, so the vertical arrows and Enter follow the press. THE DOUBLE-CLICK'S EDITOR: each cell opens its own —
-// the payload editor on the flag box (warp only, its own gates), the bound
-// editor on a bound cell (both columns, both views). It is resolved from the
-// painter's own published boundaries (FlagHitRect::iter_lower_boundary_x /
-// iter_upper_boundary_x, hit_test_flag_cell) and never re-derived, and the seed
-// is stamped at the FIRST press so the pair of clicks agrees about what it is
-// opening even if the box has since been repainted at a different width.
+// mutator that reset it, so the vertical arrows and EDIT (Enter) follow the
+// press: EDIT opens the addressed cell's own editor — the payload editor on
+// the flag box (warp only, its own gates), the bound editor on a bound cell
+// (both columns, both views). THE VALUE DRAG'S SUBJECT: the pending below
+// carries the cell to the crossing. It is resolved from the painter's own
+// published boundaries (FlagHitRect::iter_lower_boundary_x /
+// iter_upper_boundary_x, hit_test_flag_cell) and never re-derived.
 
 // THE MARKER FLAG'S PENDING PRESS — armed by the PLAIN flag-box press ALONE,
 // AFTER the click has already acted (architect 2026-08-17: CONTENT ACTS THE
 // MOMENT ITS IDENTITY IS CERTAIN — a flag press can only mean one thing, so
-// the click act runs AT THE PRESS, and this record holds only the two things
-// that genuinely belong to a later edge: the reposition DRAG the plain press
-// may become, and the double-click SEED that only a motionless release may
-// write. The whole model is at run_marker_click_act, input_pointer.cpp).
+// the click act runs AT THE PRESS, and this record holds only the one thing
+// that genuinely belongs to a later edge: the reposition DRAG the plain press
+// may become. The whole model is at run_marker_click_act, input_pointer.cpp).
 //
 // THE PRESS ACTS AND ARMS. run_marker_click_act runs at the press (stop, the
-// three-way selection fork, the land, and the plain arm's
-// double-click consume-open); the PLAIN shape then arms this record. SHIFT and
-// CTRL arm nothing — they have no drag to become and their click has already
-// committed — and a RECOGNIZED double-click's second press arms nothing
-// either, its open run or refused (a double-click is never a drag — the rule
-// at DoubleClickSurface). A MOTIONLESS RELEASE
-// seeds the next Marker double-click candidate and nothing else (the seed is a
-// release act by family rule — only the release knows the press stayed still).
+// selection fork, the land); the PLAIN shape then arms this record. CTRL arms
+// nothing — it has no drag to become and its click has already committed.
+// A MOTIONLESS RELEASE only disarms it (NO DOUBLE TAP, beside
+// TrimBarPressSeed: a second tap is another first tap).
 // A CROSSING of grab_moved_threshold_px() (Chebyshev from the press; THE GRAB
 // GATE, twice the generic drag gate, 2026-09-29 — the flag being a thing the
 // press grabs) begins the reposition drag, or the value drag where
 // value_drag_posture holds (the lamp lit), or nothing where
 // horizontal_flag_drag_refused holds — the click's acts already stand from the press, so the
 // crossing runs no act. A lost button, the force-end finalizer and the touch
-// layer's ABNORMAL end (a touch hard end) disarm and seed nothing —
+// layer's ABNORMAL end (a touch hard end) disarm —
 // none of them is a clean click sequence, and the click itself is not theirs
 // to take back: it committed at the press, and undo is the mitigation.
 //
@@ -1035,11 +1029,8 @@ struct EditorTextDragState {
 // for the drag alone; the act-at-lift sweep of that day then deferred the
 // whole click to the lift for all three modifier shapes ("all actions should
 // be on mouse-up / finger-up"); and the architect's first real drive of that
-// sweep reversed it here on 2026-08-17 — the flag double-click into the editor
-// was "a tad slow compared to the Enter key", and the deferral's only defense
-// (a double-click's second press becoming a drag) is a nonexistent use case:
-// "if I'm double clicking specifically to do the double click action, I would
-// never double click into a drag". The refined model: lift-deferral is
+// sweep reversed it here on 2026-08-17 — the deferred flag click was "a tad
+// slow compared to the Enter key". The refined model: lift-deferral is
 // justified ONLY by genuine press ambiguity — a press that routinely starts a
 // drag, the navigation surfaces' deferred click — and a flag press is not one.
 // (Older still: the GROUP-drag deferral of 2026-07-23, which withheld a click
@@ -1056,8 +1047,8 @@ struct EditorTextDragState {
 // read-only tab and an off-home column still select, still land the playhead
 // and still open no editor (read-only protects the AUTHORED MUSICAL CONTENT —
 // the marker stores and the engine settings — and a selection is navigation),
-// so the plain arm itself is unconditional: even a press whose drag will refuse
-// must arm, because the motionless release still owes the SEED. THE VALUE
+// so the plain arm itself is unconditional: the drag's gates are asked where
+// the drag would begin, not at the press. THE VALUE
 // DRAG's posture (value_drag_posture, the lamp's answer) forks first into
 // the vertical gesture; with the lamp dark the view's refusal
 // (horizontal_flag_drag_refused) claims T+W whole — the home-view binding's
@@ -1072,14 +1063,11 @@ struct PendingMarkerPress {
     bool active         = false;
     int  marker         = -1; // marker index the press hit (active view's list)
     double press_x      = 0.0;  // the press's REAL place (window px): the gate +
-    double press_y      = 0.0;  //   drag anchor + the release-side seed's position
+    double press_y      = 0.0;  //   drag anchor
     // WHICH CELL OF THE RUN THE PRESS LANDED ON, resolved once at the press
     // from the painter's published boundaries (the addressed cell is written
-    // from the same answer there) and carried to the double-click seed at the
-    // motionless release — the same reason the POSITION is carried: the seed
-    // describes the press, and only the release knows the press was a click.
-    // TWO READERS SINCE 2026-09-10: that seed, and THE VALUE DRAG, whose
-    // subject IS the cell — the base tempo on a payload, a bound on a bound
+    // from the same answer there). ONE READER (2026-09-10): THE VALUE DRAG,
+    // whose subject IS the cell — the base tempo on a payload, a bound on a bound
     // cell — so the threshold crossing hands this field to value_drag_target
     // and to ValueDragOps::begin. The horizontal MARKER drag still reads it
     // nowhere: that gesture is one act on one marker whatever cell started it.
@@ -1091,8 +1079,7 @@ struct PendingMarkerPress {
 // step alone. The delete list and the do-not-re-propose note live at the head of
 // marker_drag.h. So the reposition drag above is the ONLY pointer marker
 // gesture that MOVES anything, and W+target has no pointer authoring gesture
-// that MOVES anything — its pointer vocabulary is the payload double-click,
-// an editor open.)
+// that MOVES anything.)
 
 // Pending trim cap/bridge drag, armed by a PLAIN (unmodified) left press in the
 // top-strip TRIM BAR lane (an endcap rect, or the bar's inter-cap bridge span)
@@ -1155,13 +1142,9 @@ enum class PendingClickKind {
 // IDENTITY IS CERTAIN — the pointer's lift-deferral is justified ONLY by
 // genuine press ambiguity, a press that routinely starts a drag, and the
 // bound-set press IS the endcap drag's arm, so it is exactly that. The
-// act-at-lift sweep's other acts of 2026-08-15 — the double-clicks' second
-// presses and the `h` view's three diff-flag clicks — went back to acting AT
-// THE PRESS with that ruling: a
-// double-click's second press acts immediately on every double-click surface,
-// "if I'm double clicking specifically to do the double click action, I would
-// never double click into a drag", and a diff-flag press has no drag to become
-// at all).
+// act-at-lift sweep's other acts of 2026-08-15 — the `h` view's three
+// diff-flag clicks among them — went back to acting AT THE PRESS with that
+// ruling: a diff-flag press has no drag to become at all).
 //
 // THE SHAPE IS THE PRODUCT'S: the press ARMS a record carrying what the act
 // will need (its press POINT); a
@@ -1334,7 +1317,7 @@ struct TrimDragState {
 // carries none since 2026-11-08).
 // Navigation-class: allowed in read-only. Ends: the clean release (the click
 // act, or nothing for a moved press), a lost button (an unmoved press is NOT
-// a clean click — no act, no seed), the force-end finalizer (the same: a
+// a clean click — no act), the force-end finalizer (the same: a
 // pending commits nothing), and file load. No cancel path exists.
 struct ScrollDragState {
     bool   active   = false;
@@ -1348,17 +1331,11 @@ struct ScrollDragState {
     // Armed inside the `h` history view: the click act is the MODE's land
     // (clear the mode focus + selection, no store-selection touch).
     bool   history  = false;
-    // The press landed on the MARKER lane's empty stretch: a motionless
-    // release seeds the EmptyLane double-click candidate (the marker-create
-    // double-click's first half) beside its click act. The waveform and ruler
-    // seed nothing — the lane is the one double-click surface here.
-    bool   seed_empty_lane = false;
     // The press landed on the WAVEFORM'S LOWER HALF (2026-08-13): a motionless
     // release runs the AUDITION SCRUB at the press's place instead of the
     // placement. Read ONCE, at the press, because the press point is what the
-    // user aimed at — the same reason the click act runs at press_x. Mutually
-    // exclusive with the two flags above by geometry, and false in the `h`
-    // view, which has no scrub half.
+    // user aimed at — the same reason the click act runs at press_x. False
+    // in the `h` view, which has no scrub half, and on the placement lanes.
     bool   scrub_release = false;
     // THE HEAD DRAG — THE PLACEMENT LANES' ONE DRAG (architect 2026-10-09
     // ~17:40, Cool Edit's cursor grabbed by its head): the plain press landed
@@ -1575,126 +1552,20 @@ struct TouchNavZoomState {
 // click pays AT MOST one stop-quiescence fence (a stopped session's launch
 // pays none), so the per-column fence cadence is structurally gone). The
 // gesture drives the SCANNER only, never
-// the cursor: selection, trim, cursor, follow, and double-click seeding are
-// all untouched, the pure audition gesture. NOT the retired plain-drag scrub
+// the cursor: selection, trim, cursor and follow are all untouched, the pure audition gesture. NOT the retired plain-drag scrub
 // (61126db) — that one MOVED the cursor playhead per column.)
 
 // (THE CAPTION'S THREE BUTTONS, GuiCaptionButton — Minimise, Maximise /
 // Restore and Close on the app's own title bar, 2026-10-05 — went
 // 2026-10-24 with the caption.)
 
-// The surface a double-click candidate belongs to. The surface tag is what keeps
-// the two double-click surfaces from cross-firing: a candidate seeded on one
-// surface can only be consumed by a press on the SAME surface (a marker click
-// then an empty-lane click within the window can never consume). None = no
-// candidate.
-// (EditorText, the editor field's word select and its drag by words, stood
-// 2026-09-05 to 2026-11-08: the architect retired the field's double tap,
-// session 95 — a tap and a drag are the field's whole vocabulary. THE TRIM
-// BAR'S framing double-click retired 2026-11-18 for its long press,
-// TrimBarPressSeed: "That's a mouse thing, and we shouldn't use that for the
-// pen.")
-enum class DoubleClickSurface {
-    None, Marker, EmptyLane
-};
-
-// Double-click detection (the platform delivers no double-click event, so it
-// is hand-rolled from two plain clicks). A click on a double-click-bearing surface
-// records this candidate AT A MOTIONLESS RELEASE — one seed timing for both
-// surfaces since 2026-08-15, when the marker click moved to the
-// lift and its press-time seed (the last of them) went with it (the app's
-// CAPTION, 2026-10-05 to 2026-10-24, seeded at its press); the NEXT press on the
-// SAME surface,
-// if it lands within kDoubleClickMs and double_click_slack_px() of the recorded
-// position AND (for Marker) targets the same marker, is consumed as that
-// surface's double-click action instead of the single-click action. A drag that
-// MOVED records nothing and clears any candidate.
-//
-// A DOUBLE-CLICK IS NEVER A DRAG (architect 2026-09-22) — THE RULE'S ONE HOME;
-// every consume site carries a one-line pointer here. The press that completes
-// a double-click performs its surface's act and ARMS NOTHING: no pending of
-// any kind (marker press, trim drag, nav press, click act) and no gesture, so
-// its release is inert and nothing freezes the displayed basis. A recognized
-// second press whose act REFUSES (a locked tab, the P column's payload, the
-// create's home-view gate) arms nothing either — it is still the second press
-// of a double-click. THE INVENTORY, re-grepped 2026-11-18 (the TrimBar
-// surface retired) — every consume of a candidate, both in
-// input_pointer.cpp and both reached through on_button_press, which the touch
-// translation drives with the same deliveries, so glass keeps the rule with
-// no touch-side code:
-//   (1) Marker (run_marker_click_act) — returns ahead of the
-//       PendingMarkerPress arm, the editor opened or refused (the refused
-//       consume fell through to that arm until 2026-09-22);
-//   (2) EmptyLane (on_button_press's empty marker-lane arm) — creates and
-//       returns ahead of arm_placement_press, as it always did.
-// THE SECOND PRESS ACTS AT THE PRESS on both (2026-08-17: a recognized second
-// press acts immediately on every double-click surface — "a deliberate
-// double-click never becomes a drag").
-// Surfaces:
-//   Marker     -> opens the marker's flag editor (target = marker index; both
-//                 axes' slack compared). The marker's ONE pointer surface is
-//                 its FLAG BOX (the painter's published rect — the stem
-//                 surface died 2026-08-12 with the stems-inert ruling, and the
-//                 marker-text lane's run in row 5). THE CONSUME ACTS AT THE
-//                 PRESS (2026-08-17 — the editor opens Enter-fast again; the
-//                 lift deferral was "a tad slow compared to the Enter key"),
-//                 its three gates read live at that press, and the second
-//                 press arms no drag and seeds nothing, open or refused (the
-//                 rule above). The
-//                 SEED stays a release act: the motionless lift writes the next
-//                 candidate at the PRESS coordinates so the pairing stays
-//                 press-to-press. A press that becomes a real marker drag seeds
-//                 nothing, the moved-drag rule, and needs no clear of its own:
-//                 the press's own top-of-frame clear already emptied the field
-//                 and nothing has re-seeded it under the held button.
-//   EmptyLane  -> creates a marker at the clicked position on an EMPTY
-//                 marker-lane spot, then SELECTS it and LANDS the playhead on
-//                 it (architect 2026-07-23; select+land re-ratified 2026-08-12
-//                 with the eighth glass ruling): the AUGMENTED drop, exactly
-//                 what bare `s` performs (warp copy-previous / phase reset N/2
-//                 lead-in — the drop itself single-selects and re-seats the
-//                 playhead, so one body serves key and click), home-view and
-//                 read-only gated silently — AT THE SECOND PRESS (2026-08-17,
-//                 with the whole double-click family; the one-day lift deferral
-//                 is deleted): the second press spends itself on the create and
-//                 arms no pending, so it can never become a pan, and motion
-//                 after it is dead — the create is undoable, and undo is its
-//                 recovery. PLAIN presses only — a ctrl press on the lane is
-//                 a consumed nothing, and seeds nothing. Seeded at the
-//                 MOTIONLESS RELEASE of the lane's plain press (position-keyed,
-//                 target unused, both axes' slack compared) beside that
-//                 release's deferred click act — a press that crossed into the
-//                 PAN seeds nothing (only the release knows it stayed a click).
-// (THE FOLDER OVERLAY'S ROWS HAD A FIFTH SURFACE, FolderRow, for one day:
-// the row's open act was its double-click from 2026-08-28 until 2026-08-29,
-// when the architect ruled that A CLICK ACTIVATES in both of the panel's
-// lists — Plasma's single-click, which he runs, and GNOME's touch, which
-// agrees. The row's motionless lift now highlights AND opens, so the second
-// press has no second meaning to carry and the surface went with it, taking
-// its seed, its press-time consume and the listing rebuild's clear of this
-// candidate: no target here names a row of a table the app rewrites any more.)
-// Cleared on file load, the moment an action fires, and — the KEYBOARD half
-// of the lifetime — at the TOP of every on_key command: any keyboard command
-// between two clicks breaks EVERY candidate at that chokepoint, so a seed
-// formed in one context can never consume in another after an intervening
-// keypress (Esc included). The
-// pointer half is the on_button_press top-of-frame clear, the moved-drag clears,
-// and the force-end finalizer's clear (a force-end is not a clean click
-// sequence). The file load's clear is a MUTATOR'S rather than a chokepoint's,
-// for the whole candidate. Session-only.
-struct DoubleClickCandidate {
-    DoubleClickSurface surface = DoubleClickSurface::None;
-    int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    double  press_x   = 0.0;    // seed x, REAL: both surfaces seed at a
-    double  press_y   = 0.0;    //   motionless release, Marker with its PRESS
-                                //   coordinates
-    int     target    = -1;     // marker index for Marker; unused otherwise
-    // WHICH CELL THE SEEDING PRESS LANDED ON (Marker only; unused otherwise).
-    // The consume forks on THE SEED and not on the second press's own position,
-    // so a pair of clicks straddling a seam opens the editor the FIRST one
-    // named — the same "the seed decides" rule the target field already carries.
-    MarkerCell cell = MarkerCell::Payload;
-};
+// NO DOUBLE TAP EXISTS IN THE PRODUCT (architect 2026-11-18, send X / send
+// Y: of the trim bar's double-click, "That's a mouse thing, and we shouldn't
+// use that for the pen."; of retiring the other two, "i agree"): every tap is
+// a tap, whatever came before it, and no surface reads the gap between two
+// presses. The editor is EDIT's, on the focus a marker tap seats (tap, then
+// EDIT); a marker is made by DROP, at the playhead a lane tap seats (tap,
+// then DROP); the trim bar frames by its long press, below.
 
 // THE TRIM BAR'S LONG PRESS FRAMES THE TRIM (architect 2026-11-18: "Trim bar
 // long press. Yes"; of the double-click it replaces: "That's a mouse thing,
@@ -1706,9 +1577,8 @@ struct DoubleClickCandidate {
 // WHERE IT STARTS: a PLAIN press anywhere on the trim bar's lane — the pill's
 // ends, its body, or the bare trough beside it — the whole band
 // (trim_bar_press_area: the lane's rows on the waveform area's columns; the
-// margin's ground and the well's frame beside it arm nothing), the reach the
-// retired double-click had: the gesture frames rather than grabs, so the pill
-// is no boundary for it. A press on the pill arms its pending drag beside
+// margin's ground and the well's frame beside it arm nothing): the gesture
+// frames rather than grabs, so the pill is no boundary for it. A press on the pill arms its pending drag beside
 // this record (route_trim_bar_press); one beside the pill arms this alone, and
 // can end only as a long press or as the consumed nothing a still trim-bar
 // click has always been. In a locked tab and in the `h` view too, framing
@@ -1911,11 +1781,8 @@ enum class RedesignButton {
     // (THE EDIT FLAG BUTTON — IconMarkerEditFlag, bare Return on a button,
     // wearing text-field — stood in the bottom row's verb group from
     // 2026-08-27 and after Render in this row for the evening of 2026-09-29,
-    // when the architect DELETED it: tapping a flag and then moving the pen to
-    // a button is counterintuitive when a double tap on the flag does it, and
-    // the double-click is safe since the first click arms and waits and the
-    // grab gate doubled. The flag editor's roads are the Return key and the
-    // double-click on the flag, both unchanged.)
+    // when the architect DELETED it; it came back as row 8's EDIT,
+    // 2026-10-09, IconOpenTextEditor.)
     // (THE SHOW TRIM REGION BUTTON led the zoom group here from 2026-08-16
     // until the architect deleted it whole on 2026-09-22 with its bare `[`
     // chord: the tablet's pen reaches the trim bar, so the waveform overlay
@@ -2745,10 +2612,11 @@ enum class RedesignButton {
     // canonical-line editor by default and a bound cell's editor where one is
     // addressed. WHY IT EXISTS (his reason, 2026-10-09): THE GLASS HAS NO
     // ENTER KEY off the on-screen keyboard, which stands only while an editor
-    // does, so with no editor open the tablet's one road to Return was the
-    // double tap on the flag. (The Edit Flag button, the same chord on a
-    // button, stood 2026-08-27 to 2026-09-29 and was deleted for the double
-    // tap; this is its return under its act's own name.) ITS FACE GREYS WHERE
+    // does. Since 2026-11-18 it is the glass's ONE road to an editor on a
+    // marker: tap the marker, then EDIT (NO DOUBLE TAP, app_state.h beside
+    // TrimBarPressSeed). (The Edit Flag button, the same chord on a button,
+    // stood 2026-08-27 to 2026-09-29; this is its return under its act's own
+    // name.) ITS FACE GREYS WHERE
     // RETURN WOULD NOT OPEN AN EDITOR — the lock, the iteration lock off a
     // bound axis, flag_editor_open_actionable and a standing text editor,
     // where Return is that editor's commit (its arm in redesign_button_enabled
@@ -2944,14 +2812,6 @@ enum class RedesignButton {
     // (WALK BOTH TABS, the group's third button on Ctrl+Shift+Tab, stood here
     // from 2026-08-15 to 2026-09-14, when the architect DELETED it under the
     // shift-admission rule: the march is Switch Tab's hold.)
-    //
-    // A DOUBLE-CLICK-MEANS-CTRL+SHIFT RULE WAS CONSIDERED AND DECLINED, and
-    // the reason is mechanical rather than a preference: EVERY double-click
-    // surface in this product acts on its FIRST click too, so a double-click
-    // on the walk would step one marker AND THEN walk both tabs, landing the
-    // user somewhere he did not ask to be. Making the first click not fire
-    // would mean delaying EVERY single click by the double-click window, which
-    // is exactly what the act-at-lift work exists to avoid.
     //
     // The `h` view's DERIVED partition needs no hand entry for it: its bare
     // chord is the mode's own vocabulary in there (history_mode_owns_key), so
@@ -3294,71 +3154,6 @@ inline constexpr bool redesign_button_opens_icon_run(RedesignButton b) {
 // (kSettingsEditorKeys, settings_editor.h); True Colors is the device key
 // `true_colors` (device_config.h). The rows' record is git history.)
 
-// Double-click window and positional slack (architect-tunable). Two motionless
-// plain clicks in the same strip row inside this time and pixel distance are a
-// double-click.
-//
-// THE WINDOW IS A DURATION AND THE SLACK IS A LENGTH, and only the length
-// rides gui_scale (architect 2026-08-27). A finger's roll between two taps is
-// a physical distance — about 0.8 mm on the tablet's 249 PPI panel at the raw
-// 8 px, against 1.7 mm on the retired road rig's 1024x600 panel, which is why a relaxed
-// double tap arrived as two single clicks there. The AUTHORED value stays the
-// 100 % one; the RESOLVED value is double_click_slack_px() below, and every
-// compare site reads that accessor and never the constant. The window, like
-// every other duration in the product, is untouched by the scale.
-//
-// THE WINDOW IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 600 ms,
-// the architect's own labwc <repeatDelay> on the laptop, its source, matched
-// by convention (architect
-// 2026-08-27, on the glass: "I'm definitely sure about the interval"; 575
-// until 2026-09-29, when the beat and the compositor moved to 600 together) —
-// and it STAYS ON THE BEAT while the holds read kHoldDelayMs (architect
-// 2026-09-29): a window measures the gap between two presses, a cadence, not
-// a hand resting on a thing until it changes meaning, which is what the hold
-// delay times. It was
-// its own 500 until that evening. A RELAXED DOUBLE TAP IS SLOWER THAN A
-// MOUSE'S DOUBLE CLICK: the finger leaves the panel between the two taps and
-// has to come back, and 500 was cutting the second one off — the same gesture
-// the scaled slack fixed on the distance axis the same day, missing on the
-// time axis instead. Tying it to the beat rather than picking a second number
-// keeps the product's cadences on ONE beat. It is NOT a hold, which is why
-// the beat's own declaration lists it apart from the hold delay.
-//
-// kTapCoalesceMs (the undo-coalescing window, undo.h) measures a DIFFERENT
-// thing — how long a standing undo subject keeps accepting rapid taps of the
-// same authoring key — and it READS THE SAME BEAT since 2026-08-28, on the
-// same argument this window took a day earlier: one cadence for the hand,
-// not a number per surface. The beat's declaration lists the two of them
-// apart from the holds, neither being one, and both stay on the constant.
-constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
-// 9 W (the 6 Windows px of 2026-10-02 times 1.5 at the rebase to 200 %,
-// architect 2026-11-05: 18 device px on the tablet as before).
-constexpr int     kDoubleClickSlackPx = 9;
-
-// The slack in DEVICE pixels at the live gui_scale — the compare sites' one
-// reader (input_pointer.cpp, all of them `<=` against a Chebyshev distance
-// from the recorded press).
-//
-// IT EQUALS drag_moved_threshold_px() AT EVERY SCALE because the two authored
-// constants are equal and both resolve through the one scaled_px conversion —
-// the same strength the pre-scale pair had, and what makes "never became a
-// drag" and "never left the slack" one answer on the SWEEP AND PAN surfaces.
-// ON THE ONE GRAB SURFACE THAT SEEDS THEY ARE TWO ANSWERS since 2026-09-29:
-// a flag becomes a drag at grab_moved_threshold_px(), twice this, so a
-// press there can leave the slack at 9 W and still be a click at
-// its release. That is fine because the seed is the motionless release's
-// alone and a release between the two distances IS a click, not a drag: the
-// flag's seed is written by any release whose pending never crossed (at the
-// PRESS position, the second press measured against the slack from it).
-// (The trim bar, the other grab surface, seeds no double-click since
-// 2026-11-18: its long press reads the grab gate, TrimBarPressSeed.)
-// Floor 1: a zero slack would
-// demand a pixel-exact second press and starve double-click detection
-// outright.
-inline int double_click_slack_px() {
-    return scaled_px(kDoubleClickSlackPx, 1);
-}
-
 // THE CHROME ROSTER'S SHIFT LONG-PRESS BEAT (architect 2026-08-13) — how long a
 // press must be HELD on a shift-admitting button (the membership is
 // redesign_button_shift_admits alone, never a count) before its lift
@@ -3459,14 +3254,14 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // 2026-07-24: region felt too hair-trigger at the old 3, and the separate
 // kMarkerDragMovedThresholdPx = 8 was folded into this one constant). Two
 // rationales, now one story:
-//  - CLICK JITTER / DOUBLE-CLICK STARVATION (the number's provenance is the
+//  - CLICK JITTER (the number's provenance is the
 //    laptop's captured mouse drag, whose relative stream delivered every
 //    sub-pixel sensor tick; on glass the pen's tap and the finger's roll are
 //    the same wobble): without this gate that jitter would mark every click as
-//    moved and starve double-click detection, and a click would become a
+//    moved, and a click would become a
 //    micro-region instead of plain playhead placement.
 //  - MARKER GRAB SLOP (the marker flag): a flag must be easy to click
-//    (select, or double-click to edit) without nudging it, and pixel-exact
+//    (select) without nudging it, and pixel-exact
 //    fine-tuning lives on the bare Left/Right nudge rather than the drag — the
 //    Ableton convention. 8px gave that slop until 2026-09-29, when the flag
 //    and the trim bar took the doubled grab gate below and this number kept
@@ -3485,9 +3280,8 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // 2026-08-27). The grab slop above is a PHYSICAL distance — the millimetres a
 // fingertip or a hand rolls before it means to drag — so it rides gui_scale
 // like every other length in the tree: 8 raw px is 1.7 mm on the retired road
-// rig's 1024x600 panel and 0.8 mm on the tablet's 249 PPI one, and a fingertip's
-// roll crossed the smaller one during a relaxed double tap (the flag drag that
-// ate the second tap). The RESOLVED value is drag_moved_threshold_px() below;
+// rig's 1024x600 panel and 0.8 mm on the tablet's 249 PPI one, and a
+// fingertip's ordinary roll crossed the smaller one. The RESOLVED value is drag_moved_threshold_px() below;
 // every gate reads that accessor and never this constant, and at gui_scale 100
 // it is this number exactly. 9 W SINCE THE REBASE TO 200 % (architect
 // 2026-11-05): the 6 Windows px of 2026-10-02 (the laptop pixel's 8
@@ -3549,11 +3343,6 @@ inline double real_travel_px(double x0, double y0, double x1, double y1) {
 // its travel reaches this gate raw — the core's slop crossing never delivers
 // a grab press, and the twin-gate invariant (input_core.h's
 // set_touch_slop_px) binds the slop to the DRAG gate alone.
-// THE DOUBLE-CLICK SLACK STAYS THE DRAG GATE'S (the note at
-// double_click_slack_px above), so on a grab surface a press can leave the
-// slack before it becomes a drag; that is harmless because a seed is the
-// motionless release's alone — a release between the two distances is a
-// click, never a drag, whichever the seed then does with it.
 // TWICE THE ROUNDED DRAG GATE, NOT THE ROUNDED DOUBLE (architect 2026-10-02,
 // scaled_px's composite rule): the grab gate is built from its rounded part,
 // 2 × drag_moved_threshold_px() — 36 device px on the tablet at 200 % (2 ×
@@ -4743,8 +4532,7 @@ struct AppState {
     //     standing, a moved playhead does not. THE TWO LANDS CLEAR ONLY WHEN
     //     THEY MOVE THE CURSOR (architect 2026-09-26): a land onto the sample
     //     the playhead already holds keeps the bit, so an editor opened on
-    //     the marker under the playhead (Enter, the flag double-click, a
-    //     bound cell, `m`) keeps the hold, and so do a marker click, a Tab
+    //     the marker under the playhead (Enter, a bound cell, `m`) keeps the hold, and so do a marker click, a Tab
     //     step or a collapse landing on that marker; move_playhead_to clears
     //     at every call (the drop's seat, seat_playhead_on_drop, then arming
     //     through its walk or re-arming by the third exemption). THE
@@ -5301,8 +5089,8 @@ struct AppState {
     //
     // SCOPE: THE PAYLOAD BOX OF A FLAG HIT, AND NOTHING ELSE.
     // run_marker_click_act is the one act owner and it runs on a resolved
-    // marker hit, so the empty marker lane — its plain click, its double-click
-    // create — never sees this bit at all; and since 2026-09-19 the fold's own
+    // marker hit, so the empty marker lane's plain click never sees this bit
+    // at all; and since 2026-09-19 the fold's own
     // term asks WHICH BOX, so a press on a marker's LOWER or UPPER iteration
     // cell is a plain press however this lamp stands (the term, and why the
     // cells are outside the mode, are at run_marker_click_act).
@@ -5749,8 +5537,7 @@ struct AppState {
 
     // The marker flag's PENDING PRESS, armed by the plain press AFTER its
     // click has acted (2026-08-17; the contract is at the type's declaration):
-    // it holds only the reposition drag the press may become and the seed its
-    // motionless release owes. Cleared on the threshold crossing, on button
+    // it holds only the reposition drag the press may become. Cleared on the threshold crossing, on button
     // release / lost button, by the force-end finalizer, and on file load.
     PendingMarkerPress pending_marker_press;
 
@@ -5775,12 +5562,6 @@ struct AppState {
     // release / lost button, by the force-end finalizer (both COMMIT its live
     // bounds), and on file load.
     TrimDragState trim_drag;
-
-    // Double-click candidate, shared by the flag and empty-lane surfaces (the
-    // surface tag prevents cross-firing). Seeded by a motionless
-    // press-release on both (the per-surface rule is at DoubleClickSurface);
-    // cleared on file load and when the double-click action fires.
-    DoubleClickCandidate double_click;
 
     // The trim bar's framing long press's record (see TrimBarPressSeed).
     // Written by every plain trim-bar press, consumed by the next left release.
@@ -9133,9 +8914,7 @@ struct AppState {
     //                 AND the list's keyboard focus, ONE field. A CLICK MOVES
     //                 IT AND THEN OPENS THE ROW (architect 2026-08-29: a click
     //                 activates, Plasma's single-click and GNOME's touch
-    //                 agreeing; the 2026-08-28 "a single click highlights;
-    //                 opening is the double-click or Enter" is superseded and
-    //                 the double-click surface is gone), Up/Down walk it
+    //                 agreeing), Up/Down walk it
     //                 without opening anything, every player listing
     //                 rebuild seats it on the transport's item's row if that
     //                 row is in the new listing, else on row 0; -1 only for an
@@ -10855,8 +10634,7 @@ inline int64_t snap_authored_frame(double frame) {
 // zoom/pan drag, a region-select drag, a REGION EDIT drag (the standing span's
 // own move / bound gestures, 2026-08-15), an editor
 // text drag, the MARKER FLAG'S PENDING PRESS (its click acted at the press —
-// 2026-08-17 — but the drag it may become and the seed its release owes both
-// need the world held still), THE ONE DEFERRED PENDING CLICK ACT
+// 2026-08-17 — but the drag it may become needs the world held still), THE ONE DEFERRED PENDING CLICK ACT
 // (PendingClickAct — the trim bar's bound sets, the one surviving lift act
 // of 2026-08-17; it holds a whole unrun click, which is why it must be in
 // flight here), the pending trim drag
@@ -10993,8 +10771,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // column opened to both views and needed no exception after),
 // Ctrl+N (toggle_inherits), Delete (delete_selected_marker — again the warp
 // arm alone; Ctrl+Shift+D and Shift+Delete, 2026-10-29, ride the Ctrl+D and
-// Delete bodies and so the same membership) and THE FLAG EDITOR'S PAYLOAD SURFACE through both of its open
-// routes, bare Return and the flag double-click (bracket authoring
+// Delete bodies and so the same membership) and THE FLAG EDITOR'S PAYLOAD SURFACE through its open
+// road, bare Return (EDIT on glass) (bracket authoring
 // had been source-only only because the editor was; the bracket's own grammar
 // left this surface on 2026-09-05 for the bound cells' editor).
 // THE ITERATION BRACKET IS NO EXCEPTION'S MEMBER AND OWES NONE, ON EITHER
@@ -11017,8 +10795,8 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // stated once at the head of warpmarkers_ops.cpp and the re-warp inventory
 // they join is owned by Viewport::kick_waveform_sync's declaration.
 // WHAT IS OMITTED, and it is the positional family entire — all of it the
-// WARP column's block since the P side opened: the marker DROP (bare `s` and
-// the empty-lane double-click), the flag DRAG, the bare Left/Right position
+// WARP column's block since the P side opened: the marker DROP (bare `s`),
+// the flag DRAG, the bare Left/Right position
 // nudge, and the `m` BPM open — which is omitted for a reason of its own,
 // rewriting tempo through a derivation over a SPAN rather than editing one
 // marker's value. Those four still refuse in T+W — three of them through
@@ -11029,16 +10807,15 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // (2026-08-30): the keyboard routes say "Markers are placed/moved in source
 // view" on a card and `m`'s own is "BPM iterations work in source view"
 // (the menu row's own name for it since the 2026-08-31 rebrand), while
-// the two POINTER routes (the empty-lane double-click drop and the flag
-// drag) stay SILENT, gesture-class, the unmoved marker being the answer.
+// the POINTER route (the flag drag) stays SILENT, gesture-class, the
+// unmoved marker being the answer.
 // THE FOUR P-COLUMN CARDS RETIRED with the opening ("Phase resets are
 // placed / moved / edited / deleted in target view"): their acts run now.
-// SEVEN CALL SITES, re-grepped 2026-09-13 (every one answers TRUE in
+// SIX CALL SITES, re-grepped 2026-09-13 (every one answers TRUE in
 // every P-column state through this body's own P arm, S+P and T+P alike):
 // the keyboard drop (input_handler.cpp), the `m` bpm open
 // (bpm_sweep_plan, warpmarkers_ops.cpp — its own warp-column test sits ahead,
-// so `m` is W-only regardless), the empty-lane double-click drop
-// (input_pointer.cpp), the BARE LEFT/RIGHT NUDGE'S DISPATCH (input_handler.cpp
+// so `m` is W-only regardless), the BARE LEFT/RIGHT NUDGE'S DISPATCH (input_handler.cpp
 // — the marker-lane branch, whose card "Markers are moved in source view" is
 // this rule's own sentence; it read this owner directly until 2026-08-30, then
 // the composed horizontal_arrow_step_actionable, and DIRECTLY AGAIN since
@@ -11073,8 +10850,7 @@ inline bool any_pointer_gesture_active(const AppState& app) {
 // Left/Right TEMPO-IMAGE STEP — were DELETED wholesale (the delete list is at the
 // head of marker_drag.h), so bare Left/Right in W+target with a selection is now
 // a consumed refusal and W+target has no pointer authoring gesture that MOVES
-// anything — its pointer vocabulary is the payload double-click, an editor
-// open.
+// anything.
 // (The 2026-07-24 "third exception" — a both-views
 // warp POSITION nudge — was re-ruled away the same day: there is no warp
 // position authoring in target view at all, and exception (5) does not
@@ -12671,8 +12447,8 @@ void remap_marker_indices_after_reorder(AppState& app,
 
 // CLOCK_MONOTONIC milliseconds (steady_clock is CLOCK_MONOTONIC on this
 // platform). The ONE shared wall-clock reader for the application layer's
-// millisecond time bases — the press-driven double-click detection (strip-row /
-// marker, input_pointer.cpp), the tooltip's clock (tick_tooltip,
+// millisecond time bases — the press-driven holds (the trim bar's long press,
+// the chrome's press stamps, input_pointer.cpp), the tooltip's clock (tick_tooltip,
 // input_pointer.cpp) and the A/B
 // audition's rests (GuiAbAudition::fire_if_due) — the same CLOCK_MONOTONIC the
 // platform's own deadline (the key repeat; no touch window carries one since
@@ -13982,7 +13758,7 @@ bool hold_derived_on_arrival(const AppState& a, const GuiAudio& audio);
 //   * THE AT-PLAYHEAD MARKER DROP, IN BOTH ITS FORMS (architect 2026-11-11,
 //     "single drop should also, for symmetry" — the group drop's rule on
 //     the drop over one selected marker or none): the plain drop in either
-//     column (bare `s`, the Drop key, the empty-lane double-click) and the
+//     column (bare `s`, the Drop key) and the
 //     hold's single form (Shift+S from the warp column). The write sits IN
 //     THE TWO CREATE BODIES, past their last refusal and ahead of the insert
 //     (GuiWarpMarkersOps::drop_marker, warpmarkers_ops.cpp;
@@ -19514,7 +19290,7 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // the box it closes. Boxes OVERLAP freely (later over earlier in store
 // order, the whole occlusion model), and the walk runs BACKWARDS so the topmost
 // = last-painted box wins — WYSIWYG for every consumer (selection clicks, the
-// drag grab, the double-click editor). THE POINT IS THE POINTER'S REAL PLACE
+// drag grab). THE POINT IS THE POINTER'S REAL PLACE
 // (architect 2026-11-15, the no-grid arc), tested half-open against rects
 // that stand on their marks' exact x. Selection does not lift a box: it is a
 // colour swap now, so there is no second pass. Works in both 'W' and 'P'
@@ -19536,8 +19312,8 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // published boundaries compared against mouse_x, nothing more. ITS ONE
 // CONSUMER (re-derived 2026-10-30): THE
 // MARKER PRESS (run_marker_click_act) writes the addressed cell from the
-// answer, stamps it onto the double-click seed so each cell can open its own
-// editor, and asks it for the sticky ctrl's own box test (the MarkerCell
+// answer (the cell EDIT opens), carries it on the pending press as the value
+// drag's subject, and asks it for the sticky ctrl's own box test (the MarkerCell
 // block at PendingMarkerPress states the whole rule). It answers Payload for a point
 // that hits no flag at all, which is the harmless answer: a caller with no
 // hit has nothing to fork. Same backward walk, same topmost-wins arbitration
@@ -19675,8 +19451,7 @@ bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
 // strictly as painted), on the viewport twin item_viewport_basis below, so
 // the whole basis a gesture converts on is the painted one. THE CLICK FAMILY
 // JOINED THAT SAME DAY: the column-based playhead placements (the nav click,
-// the sweep's playhead half, the scrub click, the empty-lane double-click
-// create) were this contract's recorded LIVE-BASIS exception and now convert
+// the sweep's playhead half, the scrub click) were this contract's recorded LIVE-BASIS exception and now convert
 // through item_viewport_basis instead, the same painted twin. THE RECORDED
 // LIVE-BASIS FAMILY IS NARROWER NOW: the post-commit land/follow placements
 // alone — land_playhead_on_marker, land_playhead_on_domain_frame and the
@@ -19831,8 +19606,7 @@ inline bool displayed_basis_frozen(const AppState& app) {
 // it (architect
 // 2026-09-24, "reality to the face" reads the same for a click as for a
 // drag): its one conversion, playhead_frame_at_click_x — the nav click,
-// the scrub click, the sweep's PLAYHEAD half and the empty-lane double-click
-// create. The navigation that writes the viewport itself stays live.
+// the scrub click and the sweep's PLAYHEAD half. The navigation that writes the viewport itself stays live.
 // (Five former consumers left the list for a PAINTER'S STASH, the stronger
 // form of the same guarantee: the marker-text lane's run resolver,
 // marker_hit_at and lane_text_left_x in row 5, when hit_test_flag and the

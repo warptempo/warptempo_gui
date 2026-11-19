@@ -376,7 +376,7 @@ struct GuiHistoryCommitDelta {
     // LIES — [lo, hi] over all six entry vectors, in SOURCE frames, false when
     // no entry carried a frame at all. Its only readers were the history view's
     // two GUI consumers, the trim bar's in-view diff-span DISPLAY and that
-    // bar's double-click framing, and both went on 2026-08-18 when the
+    // bar's framing gesture, and both went on 2026-08-18 when the
     // architect ruled the bar shows the tab's REAL trim window inside the view
     // like everywhere else — frame_viewed_commit_diff_span with them. It stood
     // one day as a reader-less seed and is now gone with the display it served:

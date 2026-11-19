@@ -606,8 +606,7 @@ inline double displayed_x_at(double displayed, double vp_start, double spp,
 // and the nearest whole frame to it otherwise.
 // ITS READERS, the one list: the click family's owner
 // (playhead_frame_at_click_x — the tap's playhead, the scrub click, the
-// ruler head's drag, the empty-lane double-click's seat, and through the
-// playhead every drop), the trim's conversions (trim_mouse_x_to_active_frame
+// ruler head's drag, and through the playhead every drop), the trim's conversions (trim_mouse_x_to_active_frame
 // and its source sibling, the endcap and bridge drags' motion) and
 // authored_frame_at_x_on_basis (the trim's bound landing,
 // trim_bound_frame_at_x: the bound-set click and the TRIM sweep). The marker
@@ -680,7 +679,7 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
 // item basis IS
 // the live viewport by its own contract, so nothing here forks on warmth.
 // The click-placement family (the nav click, the scrub click, the
-// ruler head's drag, the empty-lane double-click create) lands
+// ruler head's drag) lands
 // active-domain playhead frames through playhead_frame_at_click_x
 // (input_pointer.cpp), on the same item basis since 2026-09-24 (architect,
 // strictly as painted — the drops at the playhead author at the playhead's

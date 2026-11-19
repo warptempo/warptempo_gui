@@ -144,8 +144,8 @@ static_assert(kTempoMaxCents < 1000,
 static_assert(kIterDeltaMaxCents < 1000,
               "a deviation term's integer part no longer fits one digit");
 constexpr int kMaxPendingChars = 108;
-// The ITERATION BOUND editor (a double-click or Enter on one of the two bound
-// cells a flag grows in iteration mode). ITS GRAMMAR IS FIXED-WIDTH: a sign,
+// The ITERATION BOUND editor (Enter — EDIT on glass — on one of the two bound
+// cells a flag grows in iteration mode, the addressed cell). ITS GRAMMAR IS FIXED-WIDTH: a sign,
 // one integer digit, the point, two decimals (format_signed_delta_cents,
 // warpmarkers.h — the sign is the cells' whole syntax). The integer digit is
 // single because the walls the commit and the arrows' step share — the tempo

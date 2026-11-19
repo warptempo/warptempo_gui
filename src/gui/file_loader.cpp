@@ -441,7 +441,6 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     app.pending_click = PendingClickAct{};
     app.trim_drag = TrimDragState{};
     app.scroll_drag = ScrollDragState{};
-    app.double_click = DoubleClickCandidate{};
     app.trim_bar_press = TrimBarPressSeed{};
     // The STICKY CTRL is not cleared here (architect 2026-09-10). It is a
     // session TOOL POSTURE now, in the session lamps' family (AppState::follow

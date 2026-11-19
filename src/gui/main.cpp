@@ -2106,8 +2106,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // at GuiPlatform::set_touch_nav_hooks; the GUI bodies at
     // begin_touch_region's declaration). THE EDITOR-FIELD QUERY AND THE
     // CARET TRIO are the third divergence's (2026-09-05): the platform asks
-    // whether the down lies in the open editor's field — and whether a
-    // double-click seed stands there — and a DRAG from that field drives
+    // whether the down lies in the open editor's field, and a DRAG from that
+    // field drives
     // the editor's caret through the trio, the region trio's exact shape,
     // while a rest there decides nothing (the field's window carries no
     // expiry, so its lift is a tap; the GUI bodies at

@@ -76,8 +76,7 @@
 // caret keys; A PASS KEY (`pass` typed whole — Toggle Inherit is veiled
 // under the editor); A STICKY SHIFT, a latch (a press lights it, a second
 // puts it out; lit, the letters type capital and LEFT / RIGHT extend the
-// selection — THE SELECTION'S ONE ROAD, the field's double tap retired the
-// same day); and GLYPHS, the `icons` set's, on the function keys that act on the text
+// selection — THE SELECTION'S ONE ROAD); and GLYPHS, the `icons` set's, on the function keys that act on the text
 // (Tab, Bksp, Enter, Copy, Paste, LEFT, RIGHT, the pass key; cap_word).
 // WHAT IT DELIBERATELY HAS NOT GOT: no language switching (one layout), no
 // hide act (it leaves with the editor that raised it), no long-press
@@ -792,8 +791,8 @@ inline int surface_height_px(const AppState& a) {
 // stands only under the render player or a picker, neither of which is a
 // text editor; each opener refuses under every editor and each router
 // consumes every editor opener; each veil consumes every pointer press that
-// could raise one (the flag editor's double-click; the roster is dead under
-// both); and the touch region begin refuses under
+// could raise one (the roster, EDIT among it, is dead under both); and the
+// touch region begin refuses under
 // both.
 // So the second term is false whenever the overlay stands, and this
 // predicate cannot answer true over the band without a producer this record

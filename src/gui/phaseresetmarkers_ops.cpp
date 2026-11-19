@@ -77,8 +77,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     // warpmarkers_ops.cpp): the Add to Selection lamp goes out here, on the
     // accepted path alone — past this body's two silent returns and its one
     // caller's carded refusal (drop_phase_reset_lead_in_at_playhead: the
-    // painted edge) — so the P column's bare `s`, the
-    // empty-lane double-click and the hold's single form (Shift+S over one
+    // painted edge) — so the P column's bare `s` and the hold's single form (Shift+S over one
     // selected marker or none, GuiInputHandler::drop_phase_reset_crossing)
     // each meet it exactly once and a refused drop leaves the lamp lit. The
     // group drop below is spent at its dispatch, past its own refusal. The
@@ -104,8 +103,7 @@ void GuiPhaseResetMarkersOps::drop_phase_reset_at_position(double time_frame) {
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     // Match drop_marker: re-affirm the playhead on the new phase reset. The one
-    // create path is the drop below (bare `s`, the empty-lane double-click
-    // and Shift+S all take it), which authors kN/2 output samples BEFORE the
+    // create path is the drop below (bare `s` and Shift+S both take it), which authors kN/2 output samples BEFORE the
     // playhead in either audio view — this seat lands the playhead back on
     // the seeded reset. This is a drop
     // consequence (the
@@ -345,9 +343,8 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // above). Only the DROP takes it: a drag in S+P applies no offset
 // (a varying offset would be expensive and not smooth) and S+P paints no
 // lead-in overlay ("the purpose of the overlay is fine-tuning", the overlay
-// band's own gate, paint_handler.cpp). The routes are three, in either audio
-// view: bare `s` and the empty-lane double-click, both P-column routes, and
-// SHIFT+S, which switches the column to P in the standing audio view first
+// band's own gate, paint_handler.cpp). The routes are two, in either audio
+// view: bare `s`, the P-column route, and SHIFT+S, which switches the column to P in the standing audio view first
 // (GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp).
 // (From 2026-08-30 to 2026-09-21 S+P's drop took no lead-in, the reset
 // seated exactly at the source cursor; from then until 2026-10-12 S+P was no
@@ -360,7 +357,7 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // NO PLACE IS TAKEN (architect 2026-11-17: "let's do anything-goes for
 // phase"): the reset drops wherever the lead-in lands, on a frame another
 // reset holds or in its seed window included, on every road into the drop —
-// bare `s`, the empty-lane double-click and Shift+S's single form.
+// bare `s` and Shift+S's single form.
 //
 // THE PAINTED EDGE REFUSES WITH A CARD (architect 2026-09-26, strictly as
 // painted; the warp drop's twin): a lead-in frame in the song's last

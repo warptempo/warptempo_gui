@@ -161,11 +161,8 @@
 // row press ARMS —
 // the same press may become the band's scroll drag, so the row's identity is
 // not certain at the press — and A MOTIONLESS LIFT HIGHLIGHTS THE ROW AND
-// THEN OPENS IT. A CLICK ACTIVATES (architect 2026-08-29, over the
-// 2026-08-28 "a single click highlights; opening is the double-click or
-// Enter"): Plasma's single-click, which he runs, and GNOME's touch agree, and
-// the double-click surface went with the ruling — the second press has no
-// second meaning left to carry. The arm's whole state is
+// THEN OPENS IT. A CLICK ACTIVATES (architect 2026-08-29): Plasma's
+// single-click, which he runs, and GNOME's touch agree. The arm's whole state is
 // AppState::FolderOverlayPress; a shift or ctrl press on a row is a consumed
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
 // highlights under every owner — the picker has no field beside the band):

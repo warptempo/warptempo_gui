@@ -99,8 +99,8 @@ struct GuiFlagEditor {
     void paste_payload_onto_selection(const std::string& clipboard_text);
 
     // THE ITERATION BOUND EDITOR'S ONE ENTRY (the seventh text_editor Kind,
-    // architect 2026-09-05: "each should be like a mini flag with its own
-    // double-click"). `column` is 'P' for the phase-reset store and anything
+    // architect 2026-09-05: each bound cell is a mini flag with its own
+    // editor, EDIT opening it on the addressed cell). `column` is 'P' for the phase-reset store and anything
     // else for the warp store, and it is the ACTIVE markers view at every call
     // site, the bound editor being BOTH COLUMNS' since 2026-09-09. `side` is Lower or Upper, the cell the editor
     // opens over, and the open takes the cell's own eligibility (that column's

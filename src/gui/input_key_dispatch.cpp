@@ -129,9 +129,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // dropped here until then. THE FACE FOLLOWS: the Settings button left
 // redesign_button_enabled's read-only arm and iteration_lock_greys with it.
 // The deeper owner refusals — do_undo / do_redo's per-entry target-tab check
-// (undo.cpp), and the pointer AUTHORING refusals (input_pointer.cpp: the marker
-// drag arm, the flag editor's double-click open, the empty-lane marker drop) —
-// stay as the cross-tab and pointer paths' own refusals, no longer the
+// (undo.cpp), and the pointer AUTHORING refusal (input_pointer.cpp: the marker
+// drag arm) — stay as the cross-tab and pointer paths' own refusals, no longer the
 // primary surface for these chords.
 // THE POINTER TRIM REFUSALS ARE GONE WITH THIS RULING rather than merely
 // bypassed: the plain trim-bar press's band gate (input_pointer.cpp),
