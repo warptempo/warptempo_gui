@@ -63,25 +63,24 @@
 //
 // THE LIST — the value list's order, under THREE GROUPS, the headings exact
 // (gui_theme.h's kGuiThemeGroup*):
-//   SYSTEM        `default` FIRST — SB GUNMETAL_MOD (architect 2026-11-12,
-//                 session 114: "Gunmetal as the default, yes" — "with fresh
-//                 eyes, gunmetal is far and away more relaxing"; Live's
-//                 Default Dark Cool Medium from 2026-11-11, session 110, D4):
-//                 a copy of `sb_gunmetal_mod`'s row under the slug
-//                 `default`, the opening theme — then BY SLUG every file of
-//                 `themes/system/` (Live's stock themes, `immaterial_mod`,
-//                 D5: alphabetical, so right after `immaterial`, and
-//                 `sb_gunmetal_mod`, a SYSTEM file as the default's source,
-//                 so after `riparian`) AND THE COMPILED
-//                 REFERENCE ROW as `default_dark_neutral_medium`
+//   SYSTEM        `default` FIRST — ARC-DARK (architect 2026-11-18, send
+//                 Y: "arc_dark and 75 will be my default" — "let the remote
+//                 session make that the default"): a copy of `arc_dark`'s
+//                 row under the slug `default`, the opening theme and the
+//                 fallback below — then BY SLUG every file of
+//                 `themes/system/` (Live's stock themes; `arc_dark`, the
+//                 default's source, so after `angst_robot`; `immaterial_mod`,
+//                 D5: alphabetical, so right after `immaterial`; and
+//                 `sb_gunmetal_mod`, a SYSTEM file since it was the
+//                 default's source, 2026-11-12, so after `riparian`) AND THE
+//                 COMPILED REFERENCE ROW as `default_dark_neutral_medium`
 //                 (kGuiReferenceThemeTones, gui_theme.h: Live's Default Dark
-//                 Neutral Medium, compiled, no file shipping it). Gunmetal
+//                 Neutral Medium, compiled, no file shipping it). Arc-Dark
 //                 is listed twice, as `default` and under its own slug.
 //   EXTRA         every file of `themes/extra/` by slug: the Sonic Bloom
 //                 pack as he curated it (2026-11-07) less Gunmetal, the five
 //                 `_mod` files his hand edits, each recorded in its header
-//                 comment, and `arc_dark` (Arc-Dark, written by hand,
-//                 2026-11-17, session 140).
+//                 comment — the pack alone.
 //   USER-DEFINED  his own files beside the config, by slug (then by file
 //                 name). A user file whose slug a shipped row bears
 //                 (`default`, `default_dark_neutral_medium` and every SYSTEM
@@ -93,9 +92,9 @@
 // validation doctrine's class (1) as icons::load_set's: a shipped file left
 // out by the rules above, a shipped file not named by its own slug, two
 // shipped files of one slug, a shipped file slugging to `default` or
-// `default_dark_neutral_medium`, or no `sb_gunmetal_mod` among
-// SYSTEM's files makes the load answer the error, and gui_main prints one
-// line and opens no window.
+// `default_dark_neutral_medium`, or no `arc_dark` (the default's source,
+// kGuiDefaultThemeSourceSlug) among SYSTEM's files makes the load answer
+// the error, and gui_main prints one line and opens no window.
 //
 // A CONFIG NAMING A SLUG NO ROW BEARS (a user file removed) OPENS IN
 // `default` with one stderr line, the config's line untouched until he picks
@@ -416,8 +415,8 @@
 // (ground − tone) per channel, rounded half to even and clamped like every
 // mix here, k THE `bright_mix` DEVICE KEY (device_config.h: whole percent
 // in [0, 100], 100 the theme's own numbers, 0 every bright tone the ground
-// itself; ITS DEFAULT 100 since 2026-11-17, architect session 140: "let's
-// go with 100 for everything" — the key stays, a ruled number keeping its
+// itself; ITS DEFAULT 75 since 2026-11-18, architect, send Y: "arc_dark
+// and 75 will be my default" — the key stays, a ruled number keeping its
 // key). ONE NUMBER FOR EVERY THEME, the light ones included, where the
 // mix lifts the tones toward a light ground (his "we can deal with that
 // when the time comes by just adjusting" the key; no per-theme value: "I
@@ -442,10 +441,10 @@
 // bar's trough and the well's frame among them, 2026-11-17), the waveform's
 // tones, the cue outline, the inactive cue and its outline
 // (dark: "those weren't bright to begin with") and the scanner (below). At
-// 75 on the reference row: the accent FFAD56 -> C88B4A, the purple B595FC
-// -> 9179C6, the head 03C3D5 -> 0B9BA9 and its line 81E1EA -> 85CDD4
-// (bright_mixed_tones, the code); at the default 100 every row is painted
-// at its own numbers.
+// the default 75 on the reference row: the accent FFAD56 -> C88B4A, the
+// purple B595FC -> 9179C6, the head 03C3D5 -> 0B9BA9 and its line 81E1EA
+// -> 85CDD4 (bright_mixed_tones, the code); at 100 every row is painted at
+// its own numbers.
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,
@@ -498,7 +497,7 @@ const std::vector<GuiTheme>& gui_themes();
 // can name one), the launch opens in `default` (the head).
 const GuiTheme* find_gui_theme(std::string_view slug);
 
-// The `default` row, SB Gunmetal_mod's copy (the list's first; the
+// The `default` row, Arc-Dark's copy (the list's first; the
 // load must have answered no error).
 const GuiTheme& default_gui_theme();
 

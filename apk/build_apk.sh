@@ -231,8 +231,8 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # BACKGROUND that canvas FLAT IN THE `default` THEME'S GROUND (Live's
 # SurfaceArea; architect 2026-11-02: the icon wears the window's own ground
 # — THE `default` THEME'S, whatever `theme` the tablet runs: the icon is one
-# picture, the themes are the window's, 2026-11-05; since 2026-11-12,
-# session 114, SB Gunmetal_mod's, 1F2128: "Gunmetal as the default, yes";
+# picture, the themes are the window's, 2026-11-05; since 2026-11-18,
+# send Y, Arc-Dark's, 2F343F: "arc_dark and 75 will be my default";
 # LAUNCHER_GROUND below, read from the theme file),
 # one color over the whole
 # square, which the launcher's mask cuts to its shape. Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
@@ -245,12 +245,21 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
 # THE ICON'S TWO COLORS ARE READ, NEVER SPELLED HERE: the `default` theme's
-# file, themes/system/sb_gunmetal_mod.theme (SB Gunmetal_mod;
-# src/gui/theme_roles.h's THE FORMAT and THE LIST), is their one owner — the
-# ground its SurfaceArea (the window's `ground`), the note's ink its
-# ControlForeground (the logo lane's `text`). A line missing, or not 6 hex
-# digits, stops the script here.
-LAUNCHER_THEME="$THEME_DIR/system/sb_gunmetal_mod.theme"
+# source file, themes/system/<slug>.theme (src/gui/theme_roles.h's THE
+# FORMAT and THE LIST; Arc-Dark's arc_dark.theme since 2026-11-18, send Y),
+# is their one owner — the ground its SurfaceArea (the window's `ground`),
+# the note's ink its ControlForeground (the logo lane's `text`). THE SLUG IS
+# READ TOO, out of its one owner, kGuiDefaultThemeSourceSlug's one line in
+# src/gui/gui_theme.h, so the icon follows the default by itself. The line
+# not matching once, a slug outside the slug rule's letters, the file
+# missing, or a role line missing or not 6 hex digits, stops the script
+# here.
+GUI_THEME_H="$APPDIR/../src/gui/gui_theme.h"
+LAUNCHER_SLUG=$(sed -n 's/^inline constexpr std::string_view kGuiDefaultThemeSourceSlug = "\([a-z0-9_]*\)";$/\1/p' "$GUI_THEME_H")
+[[ "$LAUNCHER_SLUG" =~ ^[a-z0-9_]+$ ]] \
+    || wt_die "no one kGuiDefaultThemeSourceSlug = \"<slug>\"; line in $GUI_THEME_H (the launcher icon's theme)"
+LAUNCHER_THEME="$THEME_DIR/system/$LAUNCHER_SLUG.theme"
+[ -f "$LAUNCHER_THEME" ] || wt_die "missing $LAUNCHER_THEME (the default theme's source, the launcher icon's colors)"
 launcher_role() {                     # $1 = role name -> "#RRGGBB"
     local word
     word=$(sed -n "s/^$1=\([0-9A-Fa-f]*\)\r\{0,1\}\$/\1/p" "$LAUNCHER_THEME" | head -n 1)

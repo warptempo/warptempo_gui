@@ -4266,9 +4266,9 @@ int gui_main() {
     // config's `bright_mix` (install_palette, render.h; theme_roles.h's THE
     // BRIGHT MIX). A
     // SLUG NO ROW BEARS (the reader judged the shape alone: a user file
-    // removed) OPENS IN `default`, SB Gunmetal_mod's copy (architect
-    // 2026-11-11, session 110, D6; Gunmetal the default since 2026-11-12,
-    // session 114), with one stderr line, the config's line
+    // removed) OPENS IN `default`, Arc-Dark's copy (architect
+    // 2026-11-11, session 110, D6; Arc-Dark the default since 2026-11-18,
+    // send Y), with one stderr line, the config's line
     // left as written — the struct keeps the string, so the next persist
     // writes it back unchanged — until he picks another (architect
     // 2026-11-06, the noise's absent-folder shape). The other road is the

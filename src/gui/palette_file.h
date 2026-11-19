@@ -18,7 +18,7 @@
 // APP'S OWN THEME FILES, Live's raw role values in our keyed format, shipped
 // in the APK (SYSTEM, EXTRA) or dropped beside the device config
 // (USER-DEFINED), each through the one derivation (theme_roles.h's head),
-// `default` SB Gunmetal_mod's copy. No per-color key, no Settings
+// `default` Arc-Dark's copy (2026-11-18). No per-color key, no Settings
 // row for a color.
 // Cool Edit Pro 2.1 keeps THE CANVAS GRAMMAR — the view
 // bar, the ruler, the marker lane, the grid and center lines, the cues, the
@@ -63,8 +63,8 @@
 // chrome's the radio keys', the lit key's press and inert faces, the
 // selection and list press fills, the cards, the clip lamp and the level
 // fill — mixed toward its ground at the `bright_mix` key. Every "Default N"
-// below is the reference row's own number, the record; at the key's default
-// 100 (architect 2026-11-17, session 140) the screen shows exactly it, at 75
+// below is the reference row's own number, the record; at 100 the screen
+// shows exactly it, at the key's default 75 (architect 2026-11-18, send Y)
 // the accent C88B4A where it says FFAD56.
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the

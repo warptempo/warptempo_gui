@@ -58,8 +58,9 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            SLUG of one row of the themes' list
 //                            (theme_roles.h, built at launch from theme
 //                            files since 2026-11-11: SYSTEM — `default`,
-//                            SB Gunmetal_mod's copy, first, then Live's
-//                            stock themes, immaterial_mod, sb_gunmetal_mod
+//                            Arc-Dark's copy (architect 2026-11-18, send
+//                            Y), first, then Live's stock themes,
+//                            arc_dark, immaterial_mod, sb_gunmetal_mod
 //                            and the compiled default_dark_neutral_medium —
 //                            EXTRA, the APK's other Sonic Bloom files,
 //                            and USER-DEFINED, the `themes/*.theme` files
@@ -325,9 +326,9 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            number, its key, grammar and row going then;
 //                            the first-run value the defaults file's
 //   bright_mix=<pct>         THE BRIGHT TONES' MIX (architect 2026-11-13,
-//                            session 119; its default 100 since
-//                            2026-11-17, session 140: "let's go with 100
-//                            for everything"; theme_roles.h's THE BRIGHT
+//                            session 119; its default 75 since
+//                            2026-11-18, send Y: "arc_dark and 75 will be
+//                            my default"; theme_roles.h's THE BRIGHT
 //                            MIX): the whole PERCENT of itself each
 //                            bright tone of the installed theme keeps as it
 //                            is mixed toward the theme's ground — the
@@ -864,8 +865,9 @@ struct DeviceConfig {
     // list; a tuning key): required; the construction state is 10.
     int         sweep_highlight   = 10;
     // THE BRIGHT TONES' MIX in whole percent (2026-11-13, the head's list; a
-    // tuning key): required; the construction state is 100 (2026-11-17).
-    int         bright_mix        = 100;
+    // tuning key): required; the construction state is 75 (2026-11-18,
+    // send Y: the default's own number).
+    int         bright_mix        = 75;
     // THE PLATE'S FADE START in hundredths of a device px (2026-11-14, the
     // head's list; a tuning key): required; the construction state is
     // 1 px (kWaveformFadeDefaultHundredths below).
@@ -1464,8 +1466,8 @@ inline std::optional<int> parse_sweep_highlight(std::string_view v) {
 // keeps as the install mixes it toward the theme's ground: tone + (1 − p /
 // 100) · (ground − tone) per channel (bright_mixed_tones, theme_roles.h's
 // THE BRIGHT MIX). THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE
-// FIRST-RUN VALUES above; 100, every theme at its own numbers — architect
-// 2026-11-17, session 140: "let's go with 100 for everything"). The
+// FIRST-RUN VALUES above; 75 — architect 2026-11-18, send Y: "arc_dark and
+// 75 will be my default"). The
 // range: 100 paints every theme's own numbers; 0 paints every bright tone
 // the ground itself. The settings page opens the LINE EDITOR on it, not a
 // value list (101 values is no short domain, kSettingsValueListKeys' rule).

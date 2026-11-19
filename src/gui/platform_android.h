@@ -142,8 +142,8 @@ public:
     // THE ERROR ARM'S PRODUCER IS IO (an asset that will not open), carried
     // to the launch's hard fail; an absent asset directory lists empty
     // (read_asset_dir). An empty `system` fails the load as the build defect
-    // it is (sb_gunmetal_mod is missing); an empty `extra` loads
-    // silently with no EXTRA rows. The packaging gate is build_apk.sh's
+    // it is (arc_dark, the default's source, is missing); an empty `extra`
+    // loads silently with no EXTRA rows. The packaging gate is build_apk.sh's
     // asset step, which refuses either group empty.
     struct BundledThemeFiles {
         std::map<std::string, std::string> system;

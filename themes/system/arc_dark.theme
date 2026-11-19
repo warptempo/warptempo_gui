@@ -1,5 +1,9 @@
-# Arc Dark -- A SHIPPED EXTRA THEME (since 2026-11-17, session 140's arc; its look a scratch test of
-# 2026-11-13, session 123, parked until then), WRITTEN BY HAND from the arc-theme sources, not converted
+# Arc Dark -- A SHIPPED SYSTEM THEME AND THE `default` THEME'S SOURCE since 2026-11-18 (architect, send
+# Y: "arc_dark and 75 will be my default", "let the remote session make that the default"; the
+# `default` row a copy of this file's, src/gui/theme_roles.h's THE LIST; the launcher icon's ground and
+# ink this file's SurfaceArea and ControlForeground, apk/build_apk.sh). Shipped since 2026-11-17,
+# session 140's arc (its look a scratch test of 2026-11-13, session 123, parked until then), WRITTEN BY
+# HAND from the arc-theme sources, not converted
 # from an .ask: THE ROLE VALUES ALONE, read from arc-theme's sass and xfwm4 assets (no file of arc-theme
 # ships; THIRD_PARTY.md credits it). Source: jnsh/arc-theme (the fork Arch packages), commit
 # 94ac8c7d67d68de0cc688bbd4c3105b9815b446e (2025-10-18), GPL-3.0, variant 'dark', transparency off:
@@ -12,7 +16,8 @@
 # or a close; the limiter lamp and the cards stay Arc's warning orange). The playhead's head is Arc's
 # fg D3DAE3, the icon glyph color; the markers' chips the accent, Arc's selection blue 5294E2
 # (architect 2026-11-17, session 140: "the marker should take selection blue ... the playhead can be the
-# glyph color"), shown at Arc's own numbers by bright_mix 100. THE CANVAS ON ARC'S CONTENT BASE 404552,
+# glyph color"), Arc's own numbers at bright_mix 100 (the default 75 mixes them toward the ground,
+# src/gui/theme_roles.h's THE BRIGHT MIX). THE CANVAS ON ARC'S CONTENT BASE 404552,
 # Thunar's list (architect 2026-11-17: "Thunar's is the official"; the ruler wears the canvas's tone, a
 # derivation rule, not this file).
 # One line per role:
