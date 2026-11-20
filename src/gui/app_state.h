@@ -8506,7 +8506,10 @@ struct AppState {
     //             and nothing paints it: the card wears no hover face (its
     //             X wore the icon button's until the X retired, 2026-10-01).
     //   `painted` / `painted_rect` THE LAST PAINT'S PUBLICATION: each
-    //             painted card's rect as drawn, CLIPPED TO THE
+    //             card's rect as the layout gives it, which is what
+    //             stands (drawn by the run whose clip meets it, standing
+    //             from the run that last drew it otherwise;
+    //             paint_notifications' head), CLIPPED TO THE
     //             ROOM, and their union. The
     //             press router and the hover walk read THESE,
     //             never a re-derivation (published geometry may only SELECT;

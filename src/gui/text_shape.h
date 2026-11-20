@@ -123,7 +123,7 @@ ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8,
 using SharedRun = std::shared_ptr<const ShapedRun>;
 
 // THE LABEL RUNS' SHAPING MEMO (2026-10-13, a cost cut that paints the same
-// pixels), ONE BOUNDED MAP FOR THREE USES: THE CUE LABELS on the Label face
+// pixels), ONE BOUNDED MAP FOR EVERY USE BELOW: THE CUE LABELS on the Label face
 // (render.cpp: the cue passes and the cell measurer, measure_iter_cells — the
 // tablet's profile of a pinch put 3.5 % of all CPU on shaping the visible
 // labels at every flag-cache rebuild) and THE RULER'S TIMESTAMPS on the Small

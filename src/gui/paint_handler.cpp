@@ -8847,7 +8847,14 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //         publications the frame itself rewrites (a cue's face in the flag
 //         stash on_redraw promotes, a dialog button in the modal stash
 //         paint_modal_dialog republishes), so no pre-paint reading places
-//         it; the first paint run puts the bit out — one frame.
+//         it; the first paint run that REACHES the box's layout puts the
+//         bit out (paint_shift_tooltip, after the measure form's return).
+//         A body that returns earlier — a Marker or History owner whose
+//         words are empty, a Dialog owner whose stash is invalid or whose
+//         owner or session no longer matches or whose button has no words,
+//         a roster owner with no line 1, a face with no rect — leaves it
+//         up, and this term then holds both checks until the walk hides
+//         the box: the conservative answer.
 //       - A RECORD STILL EMPTY (an owner whose body paints no box) HOLDS
 //         BOTH: a box that has not painted has no place to test.
 //       - A MARKER OR HISTORY OWNER HOLDS THE UPPER ROWS' CHECK WHATEVER ITS
@@ -8867,8 +8874,9 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //         so it holds the upper rows' check.
 //       - A BOTTOM-ROW ROSTER KEY (face rows 1324..1379): its box stands on
 //         the gap over the face, rows 1254..1321 (two lines 1226..1321), its
-//         extent 1212..1339 — the whole canvas column between it and the
-//         spared upper rows, so it never holds that check; its shadow's
+//         extent 1240..1339 (two lines 1212..1339) — the whole canvas
+//         column between it and the spared upper rows, so it never holds
+//         that check; its shadow's
 //         bottom rows (1322..1339) lie over the bottom icon row, so it holds
 //         the clock cell's check where its record meets the cell — always
 //         for the clock field's own box (Play's second rect,
@@ -9815,13 +9823,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // what lies under them, send BB; the tooltip under a top-row key's face and above
     // every other owner's) and overlap whatever is
     // under them. They are NOT exposure-gated the way the rows are: each
-    // writes the rect it painted (or a zero rect) on every run, and a run that
+    // writes the rect that stands (or a zero rect) on every run, and a run that
     // skipped would strand a stale rect for the hit tests and the damage to
     // read. Hidden, each costs one boolean. THE NOTIFICATION CARDS (2026-08-29)
-    // publish what they drew on every run and paint BELOW the tooltip and
-    // ABOVE the modal (2026-10-14, the modal's block above): a hint the
-    // pointer just raised belongs on top of a message, and a message on top
-    // of the box it answers. (The Settings dropdown painted between the cards
+    // publish the rect their layout gives on every run, which is what stands
+    // (drawn by a run whose clip meets the card, standing from the run that
+    // last drew it otherwise; paint_notifications' head), and paint BELOW
+    // the tooltip and ABOVE the modal (2026-10-14, the modal's block above):
+    // a hint the pointer just raised belongs on top of a message, and a
+    // message on top of the box it answers. (The Settings dropdown painted between the cards
     // and the tooltip until it retired, 2026-10-21.)
     //
     // THE OPEN FLAG EDITOR'S BOX PAINTS HERE, ahead of those two and after every
