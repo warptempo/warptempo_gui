@@ -3944,10 +3944,13 @@ private:
     // before the window exists (main.cpp).
     void apply_waveform_fade_px(int hundredths);
 
-    // THE RELAYOUT TAIL, the five live layout acts' shared last steps
-    // (apply_gui_scale, apply_key_height, apply_osk_key_size; 2026-10-29;
-    // apply_key_width, 2026-11-06; apply_run_gap, 2026-11-07):
-    // the full-window
+    // THE RELAYOUT TAIL, the shared last steps of its SIX CALLERS: the five
+    // live layout acts (apply_gui_scale, apply_key_height,
+    // apply_osk_key_size; 2026-10-29; apply_key_width, 2026-11-06;
+    // apply_run_gap, 2026-11-07) and THE KEYBOARD'S LAYOUT EDGE
+    // (reconcile_keyboard_layout, below, send BB), the one caller that also
+    // owes the plate's synchronous rebuild after it (Viewport::
+    // kick_waveform_sync; its step 4): the full-window
     // invalidate and the resize-path geometry-and-cache rebuild
     // (GuiPaintHandler::on_resize). Run after the new length is pushed to
     // the renderer, which every step reads.

@@ -7259,6 +7259,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // progress dialog over the MAIN PAGE there is no overlay's page behind:
     // the bottom icon row is the main page's own (paint_bottom_strip) and
     // this body paints the window alone.
+    // THE CONTRACT THE ROW UNDER A QUESTION RESTS ON: no comparator holds
+    // it. The tick's four per-row face comparators (main.cpp: the player's,
+    // the score viewer's, the trim presets list's, the BPM form's) run only
+    // while modal_dialog.owner is that overlay's, and under a question
+    // paint_dialog_window writes the owner (Prompt) last, after this row's
+    // walk — so the row painted there is kept true by the state's own
+    // writers' damage alone. Nothing on it moves under a question: every
+    // question over an overlay rises with nothing playing (the player's and
+    // the score viewer's raises pause a live transport; the picker's lists
+    // are opened through stop_playback_for_modal_open and route_picker_key
+    // starts no play); the highlight, the trim and the locks
+    // (authoring_locked) are frozen under the veil, no press or key reaching
+    // past the prompt gate; and the score viewer's soundtrack landing damages
+    // the modal area itself (GuiScoreViewer::tick's damage, modal_area_rect,
+    // the row included).
     const bool    windowed = prompt_up || progress_up || ed != nullptr;
     const bool    row_player   = app.render_player.active;
     const bool    row_picker   = !row_player && app.picker.active;
@@ -9491,7 +9506,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     modal's window and shadow (paint_modal_dialog, send AA's stage
     //     D2) — the three floater families, each inside its hull (the pull-downs one more until
     //     2026-10-21); the keyboard alone (paint_keyboard_slot) stands below
-    //     the area's foot, which waveform_paint_area cuts at its top line;
+    //     the app's own rows, the area ending above it (the lane table is
+    //     laid on the height above the keyboard, main.cpp's app_foot_y), so
+    //     waveform_paint_area takes no cut for it;
     //     the modal family's box — the folder overlay's
     //     (paint_keyboard_slot), a dialog editor's room and the score
     //     viewer's (paint_modal_dialog), with the keyboard under a dialog

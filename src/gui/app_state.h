@@ -6309,10 +6309,11 @@ struct AppState {
         return 0;
     }
     // THE SESSION THAT OWNS INPUT RIGHT NOW, 0 when no modal stands. The
-    // prompt outranks every editor, which is the painter's own precedence (a
-    // WM close can raise the unsaved-work prompt over a standing editor), so
-    // this and paint_modal_dialog cannot disagree about whose geometry the
-    // stash holds.
+    // prompt outranks every editor, which is the painter's own precedence
+    // (the close road takes every editor down before the unsaved-work
+    // question rises, GuiPrompt::request_close, so the two do not stand
+    // together; the rank is spelled anyway), so this and paint_modal_dialog
+    // cannot disagree about whose geometry the stash holds.
     // THE RENDER PLAYER AND THE PICKER ARE THE LOWER RANKS (2026-08-28):
     // under the prompt, beside the editors — no two of the three can stand
     // together, so the order among them is free, and the two mode bits are

@@ -7727,7 +7727,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // longer a special case and there is nothing left for a mode term to say.
     // It is also the plain press's waveform band at the walk's foot below
     // (2026-10-10, the live router's own reading): where the waveform is
-    // painted, so the keyboard's rows over the canvas take no press.
+    // painted, so rows the modal family's box covers take no press.
     const bool on_nav_surface = point_on_nav_surface(app, x, y);
 
     // THE MULTI-SELECTION'S MODIFIED CLICK (architect 2026-08-05), the one
