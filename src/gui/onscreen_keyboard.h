@@ -721,9 +721,12 @@ inline int key_rows_h_px() {
 // BB: "give the osk its rightful place as the bottom-most element outside
 // everything else"): one past the status bar's last row, the window's foot
 // as the lane table lays it (modal_box.h's window_foot_y). While the
-// keyboard stands the bottom icon row holds nothing (it yields its keys)
-// and the status bar under it is covered with it, so the keyboard stands
-// on the window's foot over both (the placement block below).
+// keyboard stands it covers the bottom icon row, which yields its keys,
+// and the status bar under it, whose process line (status_bar_text keeps
+// it under every editor and drops only the selection count) is therefore
+// out of sight while the keyboard stands and back when it goes: the
+// keyboard stands on the window's foot over both (the placement block
+// below).
 inline int foot_y(const AppState& a) { return window_foot_y(a); }
 // THE KEYBOARD'S TOP LINE (the design's Z_06: the keyboard parted from
 // what stands above by Thunar's pane line): ONE W of `well_border`
@@ -800,10 +803,12 @@ inline bool stands(const AppState& a) {
 // everything else ... do we need to keep these empty rows when a modal or
 // overlay stands? if not we should remove them and give the osk its
 // rightful place as the bottom-most element outside everything else"):
-// while it stands those two lanes hold nothing — the row yields its keys
+// while it stands it covers both lanes — the row yields its keys
 // (paint_bottom_strip; a dialog editor's answers are its window's own
-// buttons and the keyboard's Enter / Esc) and the status bar drops its
-// selection count under an editor — so the keyboard covers both (foot_y).
+// buttons and the keyboard's Enter / Esc), and the status bar, which drops
+// its selection count under an editor and keeps its process line
+// (status_bar_text), shows neither: the process line is out of sight while
+// the keyboard stands and back when it goes (foot_y).
 // ONE LINE OF ITS OWN OVER IT (top_line_px, `well_border`: Thunar's pane
 // line parting the keyboard from what stands above; architect 2026-11-19,
 // send Z, his approval of tmp/sendZ/VIEW/Z_06), THE BOTTOM ICON ROW'S TWO

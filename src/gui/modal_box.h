@@ -33,8 +33,10 @@
 //      render.h's icon_case_w_px / icon_case_h_px), the outer pad 7 W
 //      (strip_h_px) — on the body tone, its outermost BOXES 6 W INSIDE THE
 //      PANEL (render.h's kEdgeInsetW; materials.h's THE KEY); EMPTY BODY TONE
-//      under a question, a dialog editor and the progress modal (send AA's
-//      stage D2, 2026-11-19: their answers are the dialog's own buttons);
+//      under a question and the progress modal (send AA's stage D2,
+//      2026-11-19: their answers are the dialog's own buttons), and under a
+//      dialog editor COVERED BY THE ON-SCREEN KEYBOARD (below), its answers
+//      the window's buttons and the keyboard's Enter / Esc;
 //   3. under both, THE STATUS BAR on the window's foot (render.h's status
 //      bar block: it keeps its process line under every modal and drops its
 //      selection count), covered only by the on-screen keyboard (below).
@@ -63,7 +65,8 @@
 // BB: "give the osk its rightful place as the bottom-most element outside
 // everything else"; onscreen_keyboard::surface_rect): its top line and its
 // band on the window's last row (window_foot_y), over the bottom icon row
-// and the status bar, which hold nothing while it stands; THE BOX STANDS
+// (which yields its keys) and the status bar (its process line out of sight
+// while the keyboard stands, onscreen_keyboard.h's foot_y); THE BOX STANDS
 // ABOVE IT AS THE ROOM — its last rows
 // the keyboard's top line, its view the room the editor's window is
 // centered in, the page the editor was opened from painted there as it was

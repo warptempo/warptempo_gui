@@ -2423,9 +2423,11 @@ WellColumns well_columns(const AppState& a);
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
 // Every overlay — the render player, the project picker's contents, the
 // score viewer — stands its controls on these rows, THE MODAL FAMILY'S
-// CONTROLS ROW (modal_box.h); under a question, a dialog editor and the
-// progress modal the rows stand empty, their answers the dialog window's
-// own (send AA's stage D2, 2026-11-19).
+// CONTROLS ROW (modal_box.h); under a question and the progress modal the
+// rows stand empty, their answers the dialog window's own (send AA's stage
+// D2, 2026-11-19); under a dialog editor (and the flag editor) the on-screen
+// keyboard covers them, the row yielding its keys (onscreen_keyboard.h's
+// placement block).
 inline int bottom_row_h_px() {
     return strip_h_px();
 }

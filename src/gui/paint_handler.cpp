@@ -3024,8 +3024,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 // W (GuiFace::Body) in `text`, its PEN kStatusBarPenW from the panel's left
 // edge, ON THE LINE-BOX BASELINE (+15 W of the 22), clipped to the bar (a
 // line too long for the panel is cut at its right edge). Painted on every
-// frame its lane is exposed on, under every overlay and modal (nothing
-// stands over the lane). ITS AS-PAINTED RECORD (AppState::status_bar_painted)
+// frame its lane is exposed on, under every overlay and modal; while the
+// on-screen keyboard stands it stands over the lane, painted over this in the
+// same pass (paint_keyboard_slot), so the line is out of sight until the
+// keyboard goes (onscreen_keyboard.h's placement block). ITS AS-PAINTED RECORD (AppState::status_bar_painted)
 // is written when the clip covers the whole lane, so a partial repaint under
 // a changed string leaves the record old and the tick's comparator damages
 // the lane again (refresh_status_bar, main.cpp).
@@ -5696,8 +5698,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // ground erases whatever render_background laid down, so the strip does
     // not depend on that erase happening to hold the same value. The modals
     // paint their controls on this ground and lay none of their own
-    // (paint_modal_dialog); under a question, a dialog editor and the
-    // progress modal the lane stands empty on it (send AA's stage D2).
+    // (paint_modal_dialog); under a question and the progress modal the
+    // lane stands empty on it (send AA's stage D2), and under a dialog
+    // editor or the flag editor the on-screen keyboard covers it, painted
+    // over this ground in the same pass (paint_keyboard_slot).
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -7263,8 +7267,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // lists are the folder overlay's painter's. A QUESTION, A DIALOG EDITOR
     // AND THE PROGRESS MODAL (`windowed`) ARE DIALOGS IN XFWM'S WINDOW
     // (paint_dialog_window, THE DIALOG WINDOW above), their answers the
-    // window's own buttons, the controls row EMPTY body tone under them (the
-    // row's yield, modal_owns_bottom_row). THE BOX this body paints
+    // window's own buttons, the controls row under them yielded
+    // (modal_owns_bottom_row): EMPTY body tone under a question and the
+    // progress modal, COVERED BY THE ON-SCREEN KEYBOARD under a dialog
+    // editor (paint_keyboard_slot). THE BOX this body paints
     // (paint_modal_box): A DIALOG EDITOR'S ROOM — the view above the
     // on-screen keyboard (`kb_h`, onscreen_keyboard::modal_keyboard_h_px),
     // the page the editor was opened from painted in it as it was left (the

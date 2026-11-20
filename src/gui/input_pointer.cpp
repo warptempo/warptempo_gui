@@ -3723,10 +3723,11 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     const int y = at.y;
     if (!onscreen_keyboard::stands(app)) return false;
     const GuiRect surf = onscreen_keyboard::surface_rect(app);
-    // THE CLAIM IS THE BAND (onscreen_keyboard::claim_rect; with the taskbar
-    // overlay's line above it, 2026-10-10 to 2026-10-14): the waveform, the
-    // bottom icon row and the status bar under the surface answer nothing. CONSUMED FROM HERE, whatever it
-    // lands on — the surface is opaque to the pointer.
+    // THE CLAIM IS THE WHOLE SURFACE (onscreen_keyboard::claim_rect): its
+    // top line, the band's pads, the ground beside the block and the grid;
+    // the waveform, the bottom icon row and the status bar under it answer
+    // nothing. CONSUMED FROM HERE, whatever it lands on — the surface is
+    // opaque to the pointer.
     if (!rect_contains(onscreen_keyboard::claim_rect(app), x, y)) return false;
 
     // THE SESSION-CHANGE OWNER RUNS FIRST, ahead of the hit test and ahead of

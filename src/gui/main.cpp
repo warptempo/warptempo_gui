@@ -1526,8 +1526,44 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // damages the window entire. THE MODAL STATE READS THE SAME ZERO (2026-08-13):
 // the row's painter zeroes the cell while it yields to a prompt or a dialog
 // editor, so a clock-moving route during a modal widens to the lane instead of
-// damaging a cell that is not being painted.
+// damaging a cell that is not being painted — the lane whole where it shows,
+// its columns left of the keyboard's grid where the keyboard covers it
+// (below).
+//
+// WHILE THE ON-SCREEN KEYBOARD STANDS (onscreen_keyboard::stands) the row has
+// yielded too, but the keyboard covers the lane (it stands on the window's
+// foot over the bottom icon row and the status bar, send BB), so the lane
+// whole would repaint two of its key rows — their grid stamps, faces and
+// caps — on every clock-moving frame for no new pixel: under the flag
+// editor, where play runs (the flag editor is exempt from the modal-open
+// stop), that is every scanner frame. THE RECT IS THEN THE LANE'S ROWS OVER
+// THE COLUMNS LEFT OF THE KEYBOARD'S GRID — from the lane's x up to the
+// pixel holding the grid's left outer line (the line's left edge, one gap
+// left of the block's seat: for_each_grid_row's x0, block_x_px less
+// key_gap_px), that pixel excluded. No key and no grid line crosses those
+// columns, so their repaint is the keyboard's body fill alone, and the rect
+// stays on screen, so the roads that count on this damage to present (the
+// display keep-alive, the A/B audition's rests) still present. The clock
+// cell is NOT published under the keyboard: it is also a Play hit rect (the
+// audition probe in the press router reads it), and nothing under the
+// keyboard answers a press. AN EXTREME TUNING whose grid's left line stands
+// at or left of the lane's x keeps the lane whole. On the tablet (2304 px,
+// osk_key_w 24, his tuning and the default): the block x 903, its left line
+// 901..902, so the rect x 0..900 (901 wide) over the lane's rows
+// 1308..1393. settle_owed_lane_damage reads this owner, so it follows.
 GuiRect clock_invalidate_rect(const AppState& a) {
+    if (onscreen_keyboard::stands(a)) {
+        const GuiRect lane = bottom_row_area(a);
+        const GuiRect band = onscreen_keyboard::band_rect(a);
+        if (band.w <= 0 || band.h <= 0) return lane;
+        const double grid_left =
+            onscreen_keyboard::block_x_px(band) -
+            static_cast<double>(onscreen_keyboard::key_gap_px());
+        const int x1 = static_cast<int>(std::floor(grid_left));
+        if (x1 <= lane.x) return lane;
+        return GuiRect{lane.x, lane.y, std::min(x1, lane.x + lane.w) - lane.x,
+                       lane.h};
+    }
     const GuiRect cell = a.clock_cell_rect;
     if (cell.w <= 0 || cell.h <= 0) return bottom_row_area(a);
     return cell;
@@ -2616,7 +2652,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // a modal, an overlay (the open's hold answers no: it withholds every
         // paint). THE RECT IS THE CLOCK'S OWN OWNER'S (clock_invalidate_rect):
         // the published cell, or the whole lane while the row has yielded to
-        // a modal (the cell then reads zero); either way a rect on screen, so
+        // a modal (the cell then reads zero), or the lane's columns left of
+        // the keyboard's grid while the keyboard covers it; always a rect on
+        // screen, so
         // the present follows from the damage alone, whatever the forks below
         // paint there.
         if (playback_lifecycle.display_keep_alive_wanted(monotonic_ms()) &&

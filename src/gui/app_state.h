@@ -12903,7 +12903,9 @@ std::pair<long long, long long> compute_trim_samples(
 //   IT WIDENS TO THE WHOLE LANE WHILE A MODAL STANDS, by construction rather
 //   than by a test of its own: the row yields whole to the modal, so its
 //   painter publishes no clock cell, and a zero cell is already this owner's
-//   honest widening.
+//   honest widening. WHILE THE ON-SCREEN KEYBOARD COVERS THE LANE it answers
+//   the lane's columns left of the keyboard's grid instead (the rule and its
+//   reason at the definition, main.cpp).
 //
 // THE ROW'S OTHER TENANTS NEED NO RECT FUNCTION. The transport buttons on
 // the left and the arrow cluster flush at the right are the button tenants:
