@@ -6172,10 +6172,12 @@ struct AppState {
     // THE HIGHLIGHTED preset, its name kept, after its question — and with no
     // preset to save into it is Save As ("with no presets yet, both create a
     // new preset") — SAVE AS names a new one, Save standing left of Save As;
-    // the Close word kModalCloseLabel's rule (the list asks nothing, an act
-    // returns to it, only the opener and Close leave; the list has no scrub,
-    // so it keeps its leave button, architect 2026-11-11, session 107). No
-    // Apply: a row's tap is the act. The acts are the input handler's
+    // the Close word kModalCloseLabel's rule (the list asks nothing, a
+    // button's act returns to it, the opener and Close leave it applying
+    // nothing; the list has no scrub, so it keeps its leave button,
+    // architect 2026-11-11, session 107). No Apply: a row's tap is the act,
+    // and it closes the list (trim_presets_apply; architect 2026-11-19, send
+    // CC). The acts are the input handler's
     // (trim_presets_save, trim_presets_save_as, trim_presets_delete,
     // close_picker); the faces trim_presets_button_enabled's.
     enum class TrimPresetsButtonAct {
@@ -8356,7 +8358,8 @@ struct AppState {
     // to the page, as its Cancel returns — a sub-page of the page);
     // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
     // and bare `t`; the piece's named trim windows, a row's tap applying its
-    // pair to the active tab's trim with the list standing, the player's
+    // pair to the active tab's trim and closing the list (architect
+    // 2026-11-19, send CC), the player's
     // controls row — the highlight pair, Save, Save As, Delete, Close);
     // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
     // the sweep's ladder; one inert group row and the three `key=value`
@@ -8975,8 +8978,9 @@ struct AppState {
     //                 value list commits the row's value to the listed key,
     //                 then returns to the page (value_list_commit), and
     //                 under the trim presets list applies the row's preset
-    //                 to the active tab's trim, the list standing
-    //                 (trim_presets_apply), and under the BPM form opens
+    //                 to the active tab's trim, frames it and closes the
+    //                 list (trim_presets_apply; the close architect
+    //                 2026-11-19, send CC), and under the BPM form opens
     //                 the line editor prefilled with the row's value
     //                 (whose OK and Cancel reopen the form on that row,
     //                 bpm_form_commit); the lift's
@@ -9676,7 +9680,8 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // CANCEL belong to the EDITORS, where a typed line is pending; their OK is
 // paint_handler.cpp's kModalOkLabel). CLOSE leaves a surface that asked
 // nothing — the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER,
-// THE TRIM PRESETS LIST (its acts return to it) and THE SCORE VIEWER.
+// THE TRIM PRESETS LIST (its buttons' acts return to it; a row's tap, the
+// apply, closes it, architect 2026-11-19, send CC) and THE SCORE VIEWER.
 // AN OVERLAY WITH A SCRUB LEAVES BY ITS LIT OPENER ALONE; EVERY OTHER
 // OVERLAY KEEPS ITS LEAVE BUTTON (architect 2026-11-11, session 107: "overlays
 // that have a scrub shouldn't get a close ... the scrub overlays have a lot
@@ -10194,7 +10199,8 @@ bool render_player_button_enabled(const AppState& a,
 // answer); SAVE with no highlight (an empty list, where it creates, Save
 // As's act) and with a highlight whose pair is not the active tab's trim,
 // GREYING only where the highlighted pair already is the tab's trim (the
-// no-op a tap leaves behind; his glass on 852a28d9, 2026-10-28 night); SAVE
+// no-op the open's seat stands on when a preset names the window on screen;
+// his glass on 852a28d9, 2026-10-28 night); SAVE
 // AS always, while the list stands; DELETE with a highlight; CLOSE always.
 // Defined beside the list's acts (input_key_dispatch.cpp); Save's and
 // Delete's bodies ask it too, for their roads that are not the painted face
@@ -10204,8 +10210,10 @@ bool render_player_button_enabled(const AppState& a,
 // per-tick comparator, the press, the ring and the dispatch reading the
 // published bit. Its edges are the highlight's and the trim's, both moved by
 // the list's own acts, which damage the row (picker_set_highlight and
-// picker_move_highlight under the list, trim_presets_apply, the re-lists'
-// whole-window damage).
+// picker_move_highlight under the list, the Reset Trim arm under it
+// (route_picker_key), the re-lists' whole-window damage); a row's tap
+// (trim_presets_apply) closes the list, the row with it (architect
+// 2026-11-19, send CC).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act);
 // THE SAME ANSWER OVER A GIVEN PAGE (send BB, 2026-11-19): `page` the list

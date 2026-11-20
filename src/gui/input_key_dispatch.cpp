@@ -6840,14 +6840,16 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 
 // THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
 // press-and-lift, whose first half already highlighted it) and Enter on the
-// highlight, one body: THE ROW'S PAIR BECOMES THE ACTIVE TAB'S LIVE TRIM and
-// THE LIST STAYS STANDING, the highlight on the row. Both bounds are written
-// and the trim family's one commit tail runs ONCE (commit_trim_mutation),
-// then the setter's deselect, the trim setters' shape. NO PLAYBACK
-// STOP OF ITS OWN: the list's open took the modal stop and nothing plays
-// under it. THE PAIR THE TAB ALREADY HOLDS is the store's own no-op, nothing
-// written, the tap still highlighting. The pair is in its walls by the read's
-// own rule (a pair past the source's last frame reads the file malformed),
+// highlight, one body: THE ROW'S PAIR BECOMES THE ACTIVE TAB'S LIVE TRIM, THE
+// PRESET IS FRAMED, AND THE LIST CLOSES (architect 2026-11-19, send CC: "On
+// selecting a trim preset, the overlay should close."; the walk, DOWN / UP,
+// still moves the highlight without applying). Both bounds are written and
+// the trim family's one commit tail runs ONCE (commit_trim_mutation), then
+// the setter's deselect, the trim setters' shape. NO PLAYBACK STOP OF ITS
+// OWN: the list's open took the modal stop and nothing plays under it, and
+// the close resumes nothing. THE PAIR THE TAB ALREADY HOLDS is the store's
+// own no-op, nothing written. The pair is in its walls by the read's own
+// rule (a pair past the source's last frame reads the file malformed),
 // strictly begin < end, so the tail's crossed reset never fires here.
 // THE APPLY ALSO FRAMES THE PRESET (architect 2026-10-28 night, his glass on
 // 852a28d9: "selecting a preset should also double click its trim bar and
@@ -6860,21 +6862,25 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 // with the edge margin, the full window the whole song, idempotent where the
 // camera already rests there. A WRITTEN PAIR PUTS TRIM OUT in any case,
 // through the shared tail (commit_trim_mutation, the same ruling). The
-// framing runs on the no-op arm too: the act is "select this preset", and
-// framing is part of it.
-// The framing lands UNDER THE STANDING BOX — the trim bar is the view bar's
-// lane and the waveform under it, both covered while the list stands
-// (folder_overlay.h's head) — and shows at the list's close, whose damage is
-// the whole window. The row's faces move with the apply (Save greys on the
-// applied row), so the controls row is damaged with the highlight's own
-// damage.
+// framing and the close run on the no-op arm too: the act is "select this
+// preset", and framing and leaving the list are part of it.
+// THE ORDER: the write and its commit tail, the framing, THEN THE CLOSE. The
+// framing is a camera act that reads and writes the viewport alone, blind to
+// the box; the close comes last because its damage is the whole window
+// (close_picker), so the trim bar, the waveform and the framing, all under
+// the box until then, show at once in the frame the list leaves. THE CLOSE IS
+// THE PRESETS KEY'S OWN (route_picker_key's bare `t` arm): close_picker, the
+// one close body — nothing else is owed. The row's press arm is already gone
+// (finish_folder_overlay_release clears it before the act), the lit PRESETS
+// key goes dark by the face comparator under the whole-window damage, and the
+// next open seats on the preset whose pair is the tab's trim
+// (open_trim_presets' own seat), so no highlight is written here.
 void GuiInputHandler::trim_presets_apply(int index) {
     if (!app.picker.active) return;
     AppState::FolderOverlay& ov = app.folder_overlay;
     if (ov.owner != AppState::FolderOverlay::Owner::TrimPresets) return;
     const int n = static_cast<int>(ov.trim_presets.size());
     if (index < 0 || index >= n) return;
-    picker_set_highlight(index);
     const GuiTrimPreset p = ov.trim_presets[static_cast<std::size_t>(index)];
     if (app.trim.begin_frame != p.begin || app.trim.end_frame != p.end) {
         app.trim.begin_frame = p.begin;
@@ -6883,7 +6889,7 @@ void GuiInputHandler::trim_presets_apply(int index) {
         selection.clear_selection();
     }
     run_span_framing_command();
-    viewport.invalidate_modal_dialog_area();
+    close_picker();
 }
 
 // SAVE AS: the list closes and the name editor opens EMPTY (the
@@ -7467,7 +7473,8 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // STANDING, its rows and highlight untouched. The list stays truthful:
     // its rows are names alone, and the one face that reads the live trim,
     // the controls row's Save (trim_presets_button_enabled: the highlighted
-    // pair against the tab's trim), is damaged here as the apply damages it.
+    // pair against the tab's trim), is damaged here (the controls row's
+    // area).
     // The reset lands under the standing box, the trim bar and the waveform
     // covered while the list stands (folder_overlay.h's head), and shows at
     // the list's close, whose damage is the whole window.

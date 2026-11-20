@@ -26,7 +26,8 @@
 // (architect 2026-10-28 night), the piece's named trim windows
 // (trim_presets_file.h), each row the preset's name alone
 // (build_trim_presets_rows), a row's tap applying
-// its pair to the active tab's trim and framing it with the list standing,
+// its pair to the active tab's trim, framing it and closing the list
+// (architect 2026-11-19, send CC),
 // its controls row the render player's shape — the highlight pair, Save,
 // Save As, Delete and Close, one cluster flush right (his word: "we would be
 // breaking symmetry if we did it differently"); and THE BPM FORM (architect
@@ -181,8 +182,10 @@
 // page (value_list_commit, 2026-10-25, four keys more 2026-10-28 night, a
 // sixth 2026-10-31; the
 // return 2026-10-28 night); under the TRIM PRESETS LIST it applies the row's
-// preset to the active tab's trim, the list standing (trim_presets_apply,
-// 2026-10-28 night); under the BPM FORM it opens the line editor prefilled
+// preset to the active tab's trim, frames it and closes the list
+// (trim_presets_apply, 2026-10-28 night; the close architect 2026-11-19,
+// send CC: "On selecting a trim preset, the overlay should close."); under
+// the BPM FORM it opens the line editor prefilled
 // on the row's line, the form closing until the editor's return
 // (bpm_form_commit, 2026-10-29). AN
 // INERT ROW HAS NO OPEN and no

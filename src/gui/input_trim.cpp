@@ -99,7 +99,8 @@
 //   * THE TRIM PRESETS LIST's APPLY (architect 2026-10-28 night,
 //     GuiInputHandler::trim_presets_apply, input_key_dispatch.cpp): both
 //     bounds from the preset at once, then the preset FRAMED
-//     (run_span_framing_command, a camera move alone);
+//     (run_span_framing_command, a camera move alone) and the list closed
+//     (architect 2026-11-19, send CC);
 //   * the CROSSED / COINCIDENT RESETS (auto_clear_crossed_trim), a write to
 //     the full window;
 //   * Shift+T, PRESETS' hold, the maximizer (handle_trim_clear_both).

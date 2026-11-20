@@ -2894,10 +2894,12 @@ private:
     //   the preset's name alone (2026-10-28 night, his glass on 54e62064). It writes the trim —
     //   band, legal on a locked tab and under grid iterations (bare `t` on
     //   the read-only allowlist, which the iteration gate inherits) — and its
-    //   own file, never the piece; the `h` view refuses `t`. THE PLAYER'S
-    //   SHAPE (his word: "we would be breaking symmetry if we did it
-    //   differently"): a row's tap and Enter APPLY with the list standing,
-    //   the highlight pair walks without applying, and the controls row is
+    //   own file, never the piece; the `h` view refuses `t`. A row's tap and
+    //   Enter APPLY AND CLOSE THE LIST (architect 2026-11-19, send CC: "On
+    //   selecting a trim preset, the overlay should close."), the highlight
+    //   pair walks without applying, and THE PLAYER'S SHAPE holds for the
+    //   controls row (his word: "we would be breaking symmetry if we did it
+    //   differently"), which is
     //   ONE CLUSTER FLUSH RIGHT, the pair, then Save, Save As, Delete and
     //   Close (AppState::TrimPresetsButtonAct; the faces
     //   trim_presets_button_enabled).
@@ -2912,18 +2914,20 @@ private:
     //       rebuilt whole, the highlight seated on `highlight` (clamped into
     //       the listing) — the open's and every act's re-list.
     //     trim_presets_apply: THE OPEN ACT on row `index` — a tap, a click
-    //       or Enter: the row highlighted, then its pair written as BOTH
-    //       bounds of the active tab's LIVE trim and the trim family's one
-    //       commit tail run once (commit_trim_mutation — the crossed/equal
-    //       reset, the waveform's damage, the preview trigger; the playhead
-    //       untouched) with the setter's deselect, THE LIST
-    //       STANDING (as the player stands when a wav plays). The pair the
-    //       tab already holds is the store's own no-op, the tap still
-    //       highlighting. THEN THE PRESET IS FRAMED (2026-10-28 night, his
-    //       glass on 852a28d9), on the no-op arm too: the trim bar's
-    //       long press's and Shift+0's one framer,
-    //       run_span_framing_command, landing under the standing box. A
-    //       member of the trim-write membership at input_trim.cpp's head.
+    //       or Enter: its pair written as BOTH bounds of the active tab's
+    //       LIVE trim and the trim family's one commit tail run once
+    //       (commit_trim_mutation — the crossed/equal reset, the waveform's
+    //       damage, the preview trigger, TRIM put out; the playhead
+    //       untouched) with the setter's deselect. The pair the tab already
+    //       holds is the store's own no-op. THEN THE PRESET IS FRAMED
+    //       (2026-10-28 night, his glass on 852a28d9), on the no-op arm too:
+    //       the trim bar's long press's and Shift+0's one framer,
+    //       run_span_framing_command. THEN THE LIST CLOSES (architect
+    //       2026-11-19, send CC: "On selecting a trim preset, the overlay
+    //       should close."), on the no-op arm too, by the PRESETS key's own
+    //       close, close_picker, whose whole-window damage shows the trim and
+    //       the framing at once. A member of the trim-write membership at
+    //       input_trim.cpp's head.
     //     trim_presets_save_as: SAVE AS, and SAVE's press on an empty list
     //       — the list closes (close_picker: the
     //       overlay and the on-screen keyboard never both stand) and THE NAME
@@ -3019,7 +3023,9 @@ private:
     //       platform's close road (GuiPrompt::request_close, at its head
     //       beside the player's close, on the exit road alone), the page's
     //       row open ahead of its editor, the trim presets list's Close,
-    //       `t` (the PRESETS key's lift) and Save As ahead of its name editor,
+    //       `t` (the PRESETS key's lift), a row's apply after its framing
+    //       (trim_presets_apply, architect 2026-11-19, send CC) and Save As
+    //       ahead of its name editor,
     //       the BPM form's close_bpm_form, its row open ahead of its line
     //       editor and its RENDER ahead of the sweep, and the
     //       same-project no-op all pass through it (a reopen ends the

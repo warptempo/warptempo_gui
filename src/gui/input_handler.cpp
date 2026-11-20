@@ -1745,8 +1745,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // BARE `t` OPENS THE TRIM PRESETS LIST (architect 2026-10-28 night), the
     // TRIM key's plain press dispatching the same chord: the piece's named
     // trim windows in the folder overlay, a row's tap applying one to the
-    // active tab's trim with the list standing (open_trim_presets, the
-    // contract at the declaration). THE KEY REACHES THE OPENER ON A LOCKED
+    // active tab's trim and closing the list (architect 2026-11-19, send CC;
+    // open_trim_presets, the contract at the declaration). THE KEY REACHES THE OPENER ON A LOCKED
     // TAB AND UNDER GRID ITERATIONS (read_only_key_blocked's
     // is_trim_presets, which the iteration gate inherits): trim is band. The
     // `h` view's allowlist refuses it. SHIFT+T is the reset (its arm above,

@@ -3968,7 +3968,8 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // list (2026-10-25, four keys more 2026-10-28 night) the row's value is
 // committed to the listed key and the settings page returns, seated on that
 // key's row; under the trim presets list (2026-10-28 night) the row's preset
-// becomes the active tab's trim, the list standing; under the BPM form
+// becomes the active tab's trim, framed, and the list closes (architect
+// 2026-11-19, send CC); under the BPM form
 // (2026-10-29) the form closes and the line editor opens prefilled on the
 // row's line (its OK and Cancel reopening the form on that row) — one body
 // per content, which the click and Enter both reach.
@@ -6071,7 +6072,8 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // releases one test. The act may take the whole surface down under this
     // frame — a wav's play rebinds the engine, a project row's open requests
     // the reopen (its question standing over the picker, or the session
-    // ending at once on a clean tab) — which is why the arm is cleared at the
+    // ending at once on a clean tab), a trim preset's apply closes the list
+    // (trim_presets_apply, 2026-11-19) — which is why the arm is cleared at the
     // head of that body and this arm returns immediately after it.
     if (finish_folder_overlay_release(at)) return;
     // THE OVERLAYS' VEILS ADMIT TWO KINDS OF CHROME ARM, the one predicate
