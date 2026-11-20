@@ -93,9 +93,11 @@
 // is right"): a dead key arms nothing (every press arm refuses a
 // painted-dead face). THE PRESS FOLLOWS THE PRESS ARM'S OWN "on"
 // (point_on_key below: the feint's inside bit, the key returning to rest
-// while the pointer is off it and pressing again when it slides back); NO
-// TIMING, NO HOLD, NO ANIMATION; the press arms — the slide-off feint, the
-// hold-repeat and the long press — are unchanged; THE OTHER FEEDBACK STAYS:
+// while the pointer is off it and pressing again when it slides back); THE
+// PRESS LANDS AND LIFTS AT ONCE — no timing, no hold, no fade into or out of
+// the accent (the one animation is the hover's, THE HOVER below); the press
+// arms — the slide-off feint, the hold-repeat and the long press — are
+// unchanged; THE OTHER FEEDBACK STAYS:
 // the act itself, a stateful key's drawing showing the act its next press
 // runs. A LIST ROW UNDER A PRESS wears the selection pair, the highlight's
 // own look (THE SELECTION PAIR, below), a list row being no key. UNDER AN OVERLAY A DEAD LIT KEY STAYS
@@ -112,6 +114,41 @@
 // (roster_face_page_owner, app_state.h; send BB, 2026-11-19). NOTHING
 // IS PRINTED UNDER A KEY (the legends retired 2026-11-18, send Z: "That's
 // from the hi-fi theme"); the tooltip names the act.
+// THE HOVER IS ARC'S (architect 2026-11-18, send Y: "I think we could
+// consider resurrecting the hover ... this is a low contrast theme, which
+// should support hovers. And actually, that'll help me, especially if the
+// icons size gets smaller"; "lets go arc truthful re: hoevers"; 2026-11-20,
+// send CC: "If they're from Canonical, from Arc, I'll just accept them ...
+// So I'm not going to mess with the fade" — reopening 2026-10-02's "ok to
+// drop it"): UNDER THE HOVERING PEN A RESTING KEY'S FACE IS `key_hover_face`
+// (Arc's button:hover background, arc_dark 505666 on the 444A58 face, gtk3
+// CSS line 136; our own role ButtonHoverBackground, a Live theme's key face
+// itself, so no hover shows there), THE BORDER, THE DRAWING AND THE WORD
+// UNCHANGED — on a key of both icon rows and of the controls rows, a word
+// button, a dialog's answer, an on-screen keyboard key, and the scrub's
+// knob's fill inside its unchanged rim (Arc's scale slider:hover). IN A
+// LINKED GROUP THE SEAM COLUMN ON EACH SIDE OF THE HOVERING KEY WEARS THE
+// BORDER TONE `well_border` between the border's rows (measured on his
+// desktop, a linked pair and a message dialog's answers: the seam shows the
+// face at rest and the border tone while either neighbor hovers; Arc's
+// `.linked > button:hover` inset line on itself and on its next sibling),
+// the group's ring untouched; a seam a LIT neighbor takes stays the accent
+// (a lit key is unchanged, its neighbors' hover included); the on-screen
+// keyboard's grid wears its lines always, so only the face moves there.
+// ONLY A RESTING KEY HOVERS: a lit key is unchanged (Arc's checked + hover
+// is the checked face), a disabled key and a key dead under a veil wear
+// nothing, a pressed key is the accent at once. THE FACE FADES, ARC'S
+// TRANSITION (`button { transition: all 200ms cubic-bezier(0.25, 0.46,
+// 0.45, 0.94) }`, the scale's slider the same): rest to hover and hover to
+// rest over 200 ms on that curve, the face and its seams together, each
+// painted tone THE MIX OF ITS TWO ENDS AS PAINTED — rest + (hover − rest) ·
+// mix per channel between the two colors' own words (StampTone,
+// cool_edit_paint.h), the seam's between the face it wears at rest and the
+// border tone, by the larger mix of its two sides. THE MIX IS A STORED
+// VALUE, never a clock read here: WHICH FACE HOVERS, ITS FADE'S CLOCK AND
+// ITS DAMAGE HAVE ONE OWNER, AppState::HoverFaces (app_state.h), whose head
+// holds the gate — a face hovers only where a press there would act — and
+// the frames' rule; every painter below takes the mix as a number.
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and a
@@ -140,7 +177,8 @@
 // key on its left, so a press, a lift and the tooltip answer on the box
 // alone and the ground round it — the run gaps, the pads — answers nothing;
 // the on-screen keyboard's band ground round its grid alike, its grid's
-// lines its keys' (onscreen_keyboard::key_at).
+// lines its keys' (onscreen_keyboard::key_at). THE HOVER'S HIT IS THE
+// PRESS'S (AppState::HoverFaces).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
@@ -358,18 +396,29 @@ inline int linked_key_seam_px(int i) {
 // over the ring; (3) A LIT MEMBER'S LEFT SEAM, `cue`, its first border's
 // columns between the border's top and bottom rows, whole cells over the
 // left key's face — so the border stays its tone round a lit key and a lit
-// key takes both its seams whatever its neighbors. EVERY PIXEL A MEMBER'S
-// STATE MOVES LIES INSIDE ITS OWN BOX, its corners included (a seam column
+// key takes both its seams whatever its neighbors; (4) THE HOVER (the
+// head's THE HOVER; send CC, 2026-11-20): `hover[i]` member i's stored mix
+// in [0, 1] (an empty span is no hover; read for a RESTING member alone) —
+// its face in (2) the key face mixed toward `key_hover_face` by it, and
+// EACH SEAM BESIDE A HOVERING MEMBER, whole cells between the border's
+// rows, the face it wears at rest (the left member's) mixed toward
+// `well_border` by THE LARGER MIX OF ITS TWO SIDES — so through a slide
+// from one key to its neighbor, one fading out as the other fades in, the
+// seam between them stays the border tone by whichever side shows more —
+// but a seam a lit member takes, which stays the accent. EVERY PIXEL A
+// MEMBER'S STATE OR HOVER MOVES LIES INSIDE ITS OWN BOX, its corners
+// included (a seam column
 // is inside both boxes it joins): a member's damage is its box, and a
 // repaint under any clip paints every member from its own state as
-// published. THE ROAD: one
+// published and its own stored mix. THE ROAD: one
 // CoverageStampPass (cool_edit_paint.h), every shape a rounded rect with real
 // edges stamped straight into the target in the order above — NOTHING
 // ELSE IS DRAWN between begin() and end() (the drawings go on after, the
 // caller's paint_key_glyph), so the stamp and cairo never interleave. The
 // glyphs are the caller's.
 void paint_linked_group(cairo_t* cr, int x, int y,
-                        std::span<const KeyState> states);
+                        std::span<const KeyState> states,
+                        std::span<const double> hover = {});
 
 // ONE WORD BUTTON on `box` (Arc's text button; architect 2026-11-18, his
 // ruling "the word alone, no glyph", Delete a plain button; the kit's
@@ -379,9 +428,12 @@ void paint_linked_group(cairo_t* cr, int x, int y,
 // — each at exact coverage, so an outer corner mixes the ground and the ring
 // alone and an inner corner pixel all three: at rest `key_face` in
 // `well_border`; lit (pressed) the accent `cue` in `well_border`; disabled
-// `key_dim_face` in `key_dim_border`. The word is the caller's
+// `key_dim_face` in `key_dim_border`; AT REST UNDER THE HOVERING PEN the
+// face mixed toward `key_hover_face` by `hover`, the button's stored mix
+// (the head's THE HOVER), the ring unchanged. The word is the caller's
 // (word_button_ink). One stamp pass, nothing drawn inside it.
-void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state);
+void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state,
+                       double hover = 0.0);
 
 // ARC'S ENTRY on `box` (architect 2026-11-19, send Z; DESIGN §3, the kit's
 // body_entry; G3 `entry`) — NOISE's case and a dialog editor's field (the

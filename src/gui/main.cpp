@@ -2248,7 +2248,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (GuiPlatform::pen_lift_keeps_zoom_anchor), not a hook.
     gui.set_pen_zoom_anchor_release_hook(
         [&]() { input_handler.release_pen_zoom_anchor(); });
-    // THE PEN'S LIFT ARMS THE HOT-FACE LATCH, which holds every hover-lit
+    // THE PEN'S LIFT ARMS THE HOT-FACE LATCH, which holds every hover
     // face until the pen moves (architect 2026-10-07, every face since
     // 2026-10-09; the rule at GuiInputHandler::pen_hot_latch_, the producer at
     // GuiPlatform::set_pen_lift_hook, platform_android.h).
@@ -2483,13 +2483,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
     // modal dialog's armed button, the popup's two
     // item faces plus its press claim, the render player's row press and
-    // scrub drag, the notification cards' hover and the two toolbars' HOT
-    // button state (AppState::roster_hot and player_hot — which stores none
-    // since the cases became the program's, 2026-10-09: Cool Edit's toolbar
-    // has no hover face under any chrome, program_spec.h's case_hot_face;
-    // the clear stays as the state's one leave edge). No dialog button, band
-    // row or scrub handle wears a hover face (architect 2026-10-02), so none
-    // of them owes this edge a clear. The platform-side
+    // scrub drag, the notification cards' hover and THE HOVER FACE'S LEAVE
+    // (AppState::HoverFaces: the face the pen hovered FADES OUT from this
+    // edge, as Arc's does when the pointer leaves the widget — a key's, a
+    // word button's, an on-screen keyboard key's, the scrub's knob's — and
+    // the pen latch clears; architect 2026-11-18 / 2026-11-20, send CC,
+    // reopening 2026-10-02's no hover face). The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h).
     // THE FIRES ARE THE PEN'S HOVER ENDING and a touch pointer
@@ -2571,16 +2570,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // hover paused has its clock re-armed here (a card a press still holds
         // keeps its bank until the press's own clear, above).
         input_handler.clear_notification_hover();
-        // AND THE HOT TOOLBAR BUTTONS' STATE, the roster's and the render
-        // player's: a pointer that has left — or a finger that has lifted, or
-        // a pen whose hover has ended — is on no button. (Neither is ever lit
-        // since 2026-10-09 — the program's cases have no hover face — so the
-        // clear paints nothing; it keeps the state's leave edge.)
-        input_handler.set_roster_hot(-1);
-        input_handler.set_player_hot(-1);
+        // AND THE HOVER FACE (AppState::HoverFaces): a pointer that has left
+        // — or a finger that has lifted, or a pen whose hover has ended — is
+        // on no face, so the walk answers none (its gate reads the in-window
+        // bit dropped above) and THE HOVERED FACE FADES OUT over Arc's
+        // 200 ms from the value it had reached, every fire alike. THE
+        // HOVER_EXIT BEFORE A TIP DOWN is one of them (input_core.h's THE
+        // POINTER LEAVE'S THREE FIRES): its fade-out runs a millisecond,
+        // under one painted level, before the DOWN's press arm drops the
+        // fade and paints the accent (GuiInputHandler::drop_hover_face) —
+        // nothing darkens for a frame and nothing restarts.
+        input_handler.walk_hover_face();
         // AND THE PEN'S HOT-FACE LATCH (GuiInputHandler::pen_hot_latch_, the
-        // hold on every hover-lit face): every leave clears it, the next
-        // down's among them.
+        // hold on every hover face after a lift): every leave clears it, the
+        // next down's among them.
         input_handler.clear_pen_hot_latch();
     });
 
@@ -3036,6 +3039,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // per-frame damage: each edge damages once, inside the owner
         // (GuiInputHandler::tick_tooltip, whose body carries the damage rule).
         input_handler.tick_tooltip();
+        // THE HOVER FACES' CLOCK, the same shape (architect 2026-11-18 /
+        // 2026-11-20, send CC; AppState::HoverFaces, the one owner of Arc's
+        // hover): the walk, the faces no press would act on any more landed
+        // at once, and each fade stepped to now — a step that moves a face's
+        // stored mix damages that face's own painted extent and nothing
+        // else, so a frame is invited on every beat for the 200 ms a fade
+        // runs; with no fade running, a hover resting landed among them,
+        // nothing is damaged (GuiInputHandler::tick_hover_faces).
+        input_handler.tick_hover_faces();
 
         {
             // THE TWO STRIPS, EACH ITS OWN VERDICT: a key's home strip is
@@ -3452,8 +3464,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         onscreen_keyboard::reconcile_slot_standing(app, viewport);
 
         // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
-        // (recompute_redesign_button_hover; and the hot toolbar button) from
-        // the
+        // (recompute_redesign_button_hover) from the
         // pointer's last position against the painter's rects — and those
         // rects move without any pointer event: a live gui_scale commit
         // relays out every rect under a pointer that never moved, and a
@@ -3461,7 +3472,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // owner wrong until the next motion.
         //
         // The fix is to run the ONE walk here as well: a handful of rect
-        // compares, damaging only when the hot button changes.
+        // compares, damaging only where an armed press's face crosses its
+        // key. (The hover face's walk runs on every tick by its own clock,
+        // tick_hover_faces above, ungated: a contact answers none there.)
         // It runs AFTER the comparator so it reads the freshest published
         // stash.
         //
@@ -3898,6 +3911,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // be in this frame.
         input_handler.reconcile_keyboard_layout();
         onscreen_keyboard::reconcile_slot_standing(app, viewport);
+        // AND NO FRAME PAINTS A HOVER ON A FACE NO PRESS WOULD ACT ON, for
+        // the same reason (send CC, 2026-11-20; AppState::HoverFaces' WHAT
+        // DOES NOT FADE): a key or a release of this pass can raise a
+        // question, open an overlay or close the keyboard under a face the
+        // pen hovers or is fading on, and that frame paints before any tick,
+        // so the faces that died land here, each damaging its own extent
+        // (GuiInputHandler::settle_hover_faces; the clock's other half, the
+        // fade's step, stays the tick's — a frame is one stored value).
+        input_handler.settle_hover_faces();
 
         if (app.loading || audio.total_frames() <= 0) return;
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the

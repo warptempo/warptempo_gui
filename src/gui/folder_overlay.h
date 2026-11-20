@@ -156,7 +156,9 @@
 // — the transport, the scrub, the buttons — stands on the body tone. A
 // resting row paints no fill at all, and the highlighted row — and the row
 // under a press, the same look (Thunar is single-click) — is a flat fill in
-// the theme's selection pair across the view's whole width. No hover face,
+// the theme's selection pair across the view's whole width. No hover face
+// on a row (a list row is none of Arc's hover's faces, send CC, 2026-11-20:
+// the inventory at GuiInputHandler::pen_hot_latch_),
 // NO ALTERNATING ROWS, no scrollbar. (Live's browser list on the pane,
 // 2026-11-01 night, M6 A, and its lighter press row of 2026-11-05 retired
 // with send AA's stage D2.)

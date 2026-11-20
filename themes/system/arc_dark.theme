@@ -65,6 +65,13 @@
 # OUR OWN ONE MORE, send AA's stage D3, 2026-11-19 (Arc's scale, the scrub; GTK's scale slider):
 #   ScaleSliderBorder           262933  Arc's scale slider's border, the knob's 1 px rim (measured on his Arc-Dark
 #                                       desktop, the scale shot C4g): the scrub's knob at rest
+# OUR OWN TWO MORE, send CC, 2026-11-20 (ARC'S HOVER: architect 2026-11-18, send Y, "lets go arc truthful re: hoevers";
+# src/gui/theme_roles.h's OUR OWN, ARC'S HOVER):
+#   ButtonHoverBackground       505666  Arc's button:hover background (gtk3 CSS; measured on his Arc-Dark desktop, the
+#                                       word button B2b and the linked pair C2d): a key's, a word button's and an
+#                                       on-screen keyboard key's face and the scrub's knob's fill under the hovering pen
+#   ScrollbarSliderHover        676B78  Thunar's scrollbar slider under the pointer (measured on his Arc-Dark desktop):
+#                                       the trim bar's pill under the hovering pen
 # OUR OWN FILLS, CARRYING THEIR ALPHA (the 8-digit word's last byte reaches the painter, the box painted at it over
 # whatever lies under; src/gui/theme_roles.h's CARRIED block), send AA's stage D1, 2026-11-19 (DESIGN §6 / §9, his
 # "good to build" on tmp/sendZ/VIEW/Z_07); .95 is the byte F2 (242.25 rounded, .949):
@@ -104,3 +111,5 @@ CardStandingBackground=F04A50F2
 TitleHighlight=353B48
 ScaleTrough=2D303B
 ScaleSliderBorder=262933
+ButtonHoverBackground=505666
+ScrollbarSliderHover=676B78

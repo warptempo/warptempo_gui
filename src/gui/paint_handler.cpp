@@ -350,20 +350,31 @@ void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
 // selected bits as painted), painted as ONE LINKED GROUP — each member's
 // state key_state's answer off its stashed bits and the live press
 // (redesign_button_pressed_face, gated on the painted enabled bit: a key can
-// go dead under a held press) — then each member's drawing on its box
-// (paint_key_glyph) in its state's ink (key_ink). The band's runs and the
+// go dead under a held press) — AND ITS HOVER, each member's stored mix
+// (AppState::HoverFaces::mix_of, the hover's one owner: the number the
+// clock's last step stored, read while any fade stands; the group paints it
+// for a resting member alone, materials.h's THE HOVER) — then each member's
+// drawing on its box (paint_key_glyph) in its state's ink (key_ink: the
+// drawing does not move with the hover). The band's runs and the
 // bottom icon row's groups both paint through it.
 void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
                         int x, int y, std::span<const RedesignButton> ids) {
     std::vector<KeyState> states;
     states.reserve(ids.size());
+    std::vector<double> hover;
+    const bool fading = !app.hover_faces.fades.empty();
+    if (fading) hover.reserve(ids.size());
     for (const RedesignButton id : ids) {
         const AppState::RedesignButtonFace& f =
             app.redesign_buttons[redesign_button_index(id)];
         const bool pressed = f.enabled && redesign_button_pressed_face(app, id);
         states.push_back(key_state(f.selected, pressed, f.enabled));
+        if (fading)
+            hover.push_back(app.hover_faces.mix_of(
+                {AppState::HoverFaces::Surface::Roster,
+                 redesign_button_index(id)}));
     }
-    paint_linked_group(cr, x, y, states);
+    paint_linked_group(cr, x, y, states, hover);
     for (std::size_t i = 0; i < ids.size(); ++i)
         paint_key_glyph(cr, linked_key_box(x, y, static_cast<int>(i)),
                         redesign_button_icon(app, audio, ids[i]),
@@ -1808,10 +1819,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // key_state): at rest, LIT — the accent — under a standing press or when
     // CHECKED, the live fact its chord flips (redesign_button_selected), one
     // look (Arc's `:active` and `:checked`; the radio keys' purple retired
-    // 2026-11-19, send Z), and no hot face; THE LEVEL CASE its own painter
+    // 2026-11-19, send Z), and AT REST UNDER THE HOVERING PEN Arc's hover
+    // face (send CC, 2026-11-20; paint_roster_group's hover span, the rule
+    // AppState::HoverFaces's); THE LEVEL CASE its own painter
     // (paint_level_case: Arc's entry, the level its progress line, never lit,
-    // never pressed). The pointer walk finds the tooltip's button
-    // (recompute_redesign_button_hover).
+    // never pressed, never hovered). The pointer walk finds the tooltip's
+    // button (recompute_redesign_button_hover).
     // THE DISABLED FACE IS THE TWO MODES' AND THE TOOLBAR MIGRANTS':
     // the row's own members never grey for a REFUSAL —
     // presses always dispatch and the CHORDS' OWN refusals answer (loading
@@ -5893,7 +5906,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // word buttons in the client (paint_dialog_window). The word buttons'
 // tooltip is the word.
 // THE KEYBOARD'S FOCUS IS NOT PAINTED (the button walk's NO FOCUS FRAME,
-// architect 2026-10-23). No hover face. (Windows' push buttons, 2026-10-02 to
+// architect 2026-10-23). AT REST UNDER THE HOVERING PEN EACH WEARS ARC'S
+// HOVER FACE (send CC, 2026-11-20; the button walk's hover mix, the rule
+// AppState::HoverFaces's). (Windows' push buttons, 2026-10-02 to
 // 2026-10-22, are git history.)
 //
 // AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
@@ -6310,6 +6325,17 @@ void paint_xfwm_frame(cairo_t* cr, const XfwmWindow& w, std::string_view title) 
 // edge), on the line-box baseline (+20 W of the 32). THE HIT BOX of answer i
 // its own columns [left_i, seam_i) — the last to the row's right edge — on
 // the box's rows, so the answers tile and the row's border is clickable.
+// THE HOVER (materials.h's THE HOVER; send CC, 2026-11-20; measured on his
+// desktop's message dialogs: the seam shows the face at rest and the border
+// tone while either neighbor hovers): `hover[i]` answer i's stored mix — a
+// resting answer's own columns BETWEEN ITS SEAMS (its outer corners where
+// it ends the row) the key face mixed toward `key_hover_face`, and each
+// seam column beside a hovering answer the key face mixed toward
+// `well_border` by the larger mix of its two sides; a pressed answer's
+// accent, stamped last, covers its own columns, its left seam among them.
+// A seam column is the answer's on its right (its first column), so an
+// answer's hover moves the column right after its box too
+// (ModalDialogButton::seam_after, the hover's damage).
 constexpr double kActionRowW = 32.0;
 struct ActionRowLayout {
     std::vector<int> left;    // each answer's first column
@@ -6333,7 +6359,8 @@ ActionRowLayout action_row_layout(int x0, int x1, int n) {
 }
 void paint_action_row(cairo_t* cr, const GuiRect& box,
                       std::span<const std::string> words,
-                      std::span<const KeyState> states) {
+                      std::span<const KeyState> states,
+                      std::span<const double> hover) {
     const int n = static_cast<int>(words.size());
     if (n <= 0 || box.w <= 0 || box.h <= 0) return;
     paint_word_button(cr, box, KeyState::Rest);
@@ -6342,9 +6369,37 @@ void paint_action_row(cairo_t* cr, const GuiRect& box,
     const double r = static_cast<double>(key_inner_corner_px());
     const double x0 = static_cast<double>(box.x), x1 = x0 + box.w;
     const double y0 = static_cast<double>(box.y), y1 = y0 + box.h;
+    const auto hover_of = [&](int i) {
+        const std::size_t k = static_cast<std::size_t>(i);
+        return k < hover.size() && states[k] == KeyState::Rest
+                   ? std::clamp(hover[k], 0.0, 1.0)
+                   : 0.0;
+    };
     {
+        const GuiPalette& p = palette();
         CoverageStampPass pass;
         pass.begin(cr);
+        // THE HOVERING ANSWERS' FACES, each between its seams, then THE
+        // SEAMS beside them (the head's THE HOVER), then the pressed
+        // answers' accent over both.
+        for (int i = 0; i < n; ++i) {
+            const double m = hover_of(i);
+            if (!(m > 0.0)) continue;
+            const double cx0 = i == 0 ? x0 + b
+                                      : static_cast<double>(l.left[static_cast<std::size_t>(i)]) + b;
+            const double cx1 = i == n - 1 ? x1 - b
+                                          : static_cast<double>(l.right[static_cast<std::size_t>(i)]);
+            pass.rounded_rect_cut(x0 + b, y0 + b, x1 - b, y1 - b, r, r, cx0,
+                                  y0 + b, cx1, y1 - b,
+                                  StampTone(p.key_face, p.key_hover_face, m));
+        }
+        for (int i = 1; i < n; ++i) {
+            const double m = std::max(hover_of(i - 1), hover_of(i));
+            if (!(m > 0.0)) continue;
+            const double sx = static_cast<double>(l.left[static_cast<std::size_t>(i)]);
+            pass.rect(sx, y0 + b, sx + b, y1 - b,
+                      StampTone(p.key_face, p.well_border, m));
+        }
         for (int i = 0; i < n; ++i) {
             if (states[static_cast<std::size_t>(i)] != KeyState::Lit) continue;
             const double cx0 = i == 0 ? x0 + b
@@ -6370,11 +6425,13 @@ void paint_action_row(cairo_t* cr, const GuiRect& box,
 
 // ONE WORD BUTTON IN A DIALOG (the kit's word_button): Arc's text button on
 // `box`, its word Regular 12 W centered on the line-box baseline (+18 W of
-// the 28), its state's ink.
+// the 28), its state's ink; at rest its face by `hover`, its stored hover
+// mix (paint_word_button).
 void paint_dialog_word_button(cairo_t* cr, const GuiRect& box,
-                              std::string_view word, KeyState state) {
+                              std::string_view word, KeyState state,
+                              double hover) {
     if (box.w <= 0 || box.h <= 0) return;
-    paint_word_button(cr, box, state);
+    paint_word_button(cr, box, state, hover);
     const GuiFont font = gui_font(GuiFace::Body);
     const text_shape::SharedRun run = text_shape::memoized_run(font, word);
     cairo_save(cr);
@@ -6481,12 +6538,16 @@ void paint_progress_bar(cairo_t* cr, double x0, double x1, double y, double h,
 // the question (prompt_up), the progress modal (progress_up) or the dialog
 // editor `ed` — laid out, painted and published into app.modal_dialog
 // (its owner, its buttons, its field; `box` the window's painted extent,
-// xfwm_shadow_rect: what the hover, the focus and a press damage) and, for
+// xfwm_shadow_rect: what a focus move and a closer damage; a press and a
+// hover their button's own face) and, for
 // the editor, app.dialog_editor_text. THE BUTTONS' STATES ARE ARC'S (the
 // row walk's rule in paint_modal_dialog): LIT for a live press on one —
 // armed with the pointer inside it, or armed from the on-screen keyboard's
-// Enter / Space — no hover look, NO FOCUS LOOK on a button (architect
-// 2026-10-23); every dialog button is live while its dialog stands.
+// Enter / Space — AT REST UNDER THE HOVERING PEN ARC'S HOVER FACE by the
+// button's stored mix (AppState::HoverFaces::mix_of, asked of this dialog's
+// own owner and session; materials.h's THE HOVER), NO FOCUS LOOK on a
+// button (architect 2026-10-23); every dialog button is live while its
+// dialog stands.
 void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
                          bool prompt_up, bool progress_up) {
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
@@ -6500,6 +6561,7 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         char        response_key = 0;
         bool        editor_ok    = false;
         GuiRect     rect{0, 0, 0, 0};
+        int         seam_after   = 0;
     };
     std::vector<WindowButton> buttons;
     const auto state_of = [&](std::size_t i) {
@@ -6507,6 +6569,14 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         const bool pressed = (armed && app.modal_dialog_press_inside) ||
                              static_cast<int>(i) == app.modal_dialog_key_pressed;
         return key_state(false, pressed, true);
+    };
+    // A BUTTON'S STORED HOVER MIX, asked once its branch has written the
+    // stash's owner (each branch's first act): this dialog's own face, by
+    // its owner and the live session (AppState::HoverFaces).
+    const auto hover_of = [&](std::size_t i) {
+        return app.hover_faces.mix_of(
+            {AppState::HoverFaces::Surface::Dialog, static_cast<int>(i),
+             dlg.owner, app.modal_dialog_live_session()});
     };
     const GuiPalette& p = palette();
     const GuiFont body  = gui_font(GuiFace::Body);
@@ -6560,6 +6630,7 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         const ActionRowLayout l = action_row_layout(row.x, row.x + row.w, n);
         std::vector<std::string> words;
         std::vector<KeyState> states;
+        std::vector<double> hovers;
         for (int i = 0; i < n; ++i) {
             const PromptAnswer& a = app.prompt.answers[static_cast<std::size_t>(i)];
             WindowButton b;
@@ -6569,11 +6640,15 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
                              l.right[static_cast<std::size_t>(i)] -
                                  l.left[static_cast<std::size_t>(i)],
                              row.h};
+            // The seam column after an answer is the next answer's first
+            // (paint_action_row's THE HOVER).
+            b.seam_after = i < n - 1 ? key_border_px() : 0;
             words.push_back(b.word);
             states.push_back(state_of(static_cast<std::size_t>(i)));
+            hovers.push_back(hover_of(static_cast<std::size_t>(i)));
             buttons.push_back(std::move(b));
         }
-        paint_action_row(cr, row, words, states);
+        paint_action_row(cr, row, words, states, hovers);
     } else if (progress_up) {
         // -- THE PROGRESS MODAL: THUNAR'S PROGRESS DIALOG (the design's §G at
         //    12 W text): the sentence Bold 14.4 W, the bar over the entries
@@ -6632,7 +6707,8 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         b.word = std::string(word);
         b.rect = boxes.front();
         buttons.push_back(std::move(b));
-        paint_dialog_word_button(cr, buttons.back().rect, word, state_of(0));
+        paint_dialog_word_button(cr, buttons.back().rect, word, state_of(0),
+                                 hover_of(0));
     } else {
         // -- THE LINE EDITOR: THUNAR'S RENAME DIALOG (the design's §E;
         //    build_overlays_z.py's editor; Z_06), CENTERED IN THE VIEW (the
@@ -6834,7 +6910,8 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
             btn.editor_ok = i == 1;
             btn.rect      = boxes[i];
             buttons.push_back(std::move(btn));
-            paint_dialog_word_button(cr, boxes[i], words[i], state_of(i));
+            paint_dialog_word_button(cr, boxes[i], words[i], state_of(i),
+                                     hover_of(i));
         }
     }
 
@@ -6847,6 +6924,7 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         AppState::ModalDialogButton out;
         out.rect         = b.rect;
         out.seam         = 0;
+        out.seam_after   = b.seam_after;
         out.response_key = b.response_key;
         out.editor_ok    = b.editor_ok;
         out.enabled      = true;
@@ -7141,12 +7219,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         AppState::TrimPresetsButtonAct trim_act;
         AppState::BpmFormButtonAct     bpm_act;
         bool                           enabled;
+        bool                           lit;
     };
     std::vector<PrevFace> prev_enabled;
     prev_enabled.reserve(dlg.buttons.size());
     for (const AppState::ModalDialogButton& pb : dlg.buttons)
         prev_enabled.push_back(PrevFace{pb.player_act, pb.score_act,
-                                        pb.trim_act, pb.bpm_act, pb.enabled});
+                                        pb.trim_act, pb.bpm_act, pb.enabled,
+                                        pb.lit});
     // THE OUTGOING THUMB CENTER AND TRACK, AS PAINTED, for the same reason:
     // a frame whose clip misses the track carries them (the scrub, below).
     const double  prev_thumb_x = dlg.scrub_thumb_x;
@@ -7755,7 +7835,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // render.h's scrub block). `thumb_pressed`: the owner's drag holds the
     // knob (its ScrubDrag armed on_thumb), the whole disc the accent from
     // the grab to the lift (paint_scale; a press on the trough carries the
-    // knob at rest).
+    // knob at rest). AT REST UNDER THE HOVERING PEN its fill Arc's hover
+    // face by the knob's stored mix (AppState::HoverFaces::mix_of, asked of
+    // this row's own owner and session; render.h's scrub block) — none
+    // under a dialog, where the row is paint-only.
     const auto paint_scrub_item = [&](int scrub_x0, int scrub_w,
                                       bool thumb_pressed,
                                       const auto& thumb_x_of) {
@@ -7767,7 +7850,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             // is published (its mapping reads dlg.scrub): the player's at
             // its branch, the score viewer's at its own.
             const double hx = thumb_x_of();
-            paint_scale(cr, item, hx, thumb_pressed);
+            const double knob_hover =
+                (windowed || thumb_pressed)
+                    ? 0.0
+                    : app.hover_faces.mix_of(
+                          {AppState::HoverFaces::Surface::Knob, 0, dlg.owner,
+                           live_session});
+            paint_scale(cr, item, hx, thumb_pressed, knob_hover);
             // THE CENTER IS PUBLISHED AS PAINTED (the field's rule,
             // AppState::ModalDialogGeometry::scrub_thumb_x), with no item
             // too: a clip that covers what the knob's move from the last
@@ -8128,12 +8217,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // 2026-10-23: "when I open up the settings and I press cancel, it gets
     // that square drawn around it. Let's get rid of that"): the focused
     // button — Enter's target (AppState::modal_dialog_focus) — wears
-    // nothing; the lit look under a standing press is the only sign. NO
-    // HOVER LOOK: the pointer walk (update_modal_dialog_hover) drives the
-    // tooltip alone. UNDER A DIALOG (`windowed`) NO BUTTON OF THE ROW IS
-    // PRESSED: the press indices name the window's buttons, and the row is
-    // dead under the dialog's veil (the head's block).
+    // nothing; the lit look under a standing press is the only sign. AT
+    // REST UNDER THE HOVERING PEN ARC'S HOVER FACE (send CC, 2026-11-20;
+    // materials.h's THE HOVER): each button's stored mix, asked of this
+    // row's own owner and session (AppState::HoverFaces::mix_of — the
+    // hover's walk, gate, fade and damage are that owner's; the pointer walk
+    // here, update_modal_dialog_hover, drives the tooltip and the press's
+    // inside bit). UNDER A DIALOG (`windowed`) NO BUTTON OF THE ROW IS
+    // PRESSED OR HOVERED: the press indices and the stash name the window's
+    // buttons, and the row is dead under the dialog's veil (the head's
+    // block).
     std::vector<KeyState> states(plan.size(), KeyState::Rest);
+    std::vector<double>   hovers(plan.size(), 0.0);
     for (size_t i = 0; i < plan.size(); ++i) {
         const bool enabled = plan[i].enabled;
         const bool armed   = enabled && !windowed &&
@@ -8142,6 +8237,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             ((armed && app.modal_dialog_press_inside) ||
              static_cast<int>(i) == app.modal_dialog_key_pressed);
         states[i] = key_state(plan[i].lit, pressed, enabled);
+        if (!windowed && states[i] == KeyState::Rest)
+            hovers[i] = app.hover_faces.mix_of(
+                {AppState::HoverFaces::Surface::Dialog, static_cast<int>(i),
+                 dlg.owner, live_session});
     }
     // THE GLYPH KEYS ARE ARC'S LINKED BUTTONS AND THE WORD BUTTONS ARC'S
     // TEXT BUTTONS (send Z, 2026-11-19; materials.h): a run of glyph keys
@@ -8178,7 +8277,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         if (!plan[i].glyph) {
             const GuiRect box{plan[i].x, btn_y, plan[i].w, btn_h};
             if (clip_meets(cr, box)) {
-                paint_word_button(cr, box, states[i]);
+                paint_word_button(cr, box, states[i], hovers[i]);
                 const GuiFont wfont = gui_font(GuiFace::Body);
                 const text_shape::SharedRun run =
                     text_shape::memoized_run(wfont, plan[i].word);
@@ -8209,7 +8308,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             paint_linked_group(
                 cr, plan[i].x, btn_y,
                 std::span<const KeyState>(states.data() + i,
-                                          static_cast<size_t>(n)));
+                                          static_cast<size_t>(n)),
+                std::span<const double>(hovers.data() + i,
+                                        static_cast<size_t>(n)));
             for (size_t k = i; k < j; ++k)
                 if (const std::optional<icons::Icon> icon = glyph_of(k))
                     paint_key_glyph(
@@ -8241,6 +8342,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         out.trim_act     = plan[i].trim_act;
         out.bpm_act      = plan[i].bpm_act;
         out.enabled      = plan[i].enabled;
+        // The lit bit, as painted like the enabled bit below (the hover's
+        // gate reads it: a lit key is unchanged under the hovering pen).
+        out.lit          = plan[i].lit;
         // THE PLAYER'S ENABLED BIT IS PUBLISHED AS PAINTED (architect
         // 2026-09-24, strictly as-painted): the claim reads this bit and the
         // per-tick comparator (main.cpp) holds it against the live predicate,
@@ -8271,6 +8375,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
                                prev_enabled[i].trim_act == out.trim_act &&
                                prev_enabled[i].bpm_act == out.bpm_act;
             out.enabled = carry && prev_enabled[i].enabled;
+            if (carry) out.lit = prev_enabled[i].lit;
         }
         // THE HINT: a word button's is THE ACT'S NAME ALONE, its word
         // (architect 2026-10-10; no key behind it, the buttons being the
@@ -8342,8 +8447,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
 // lamps — AND A KEY UNDER PRESS (held BY SLOT, so the page key's own page
 // change keeps the face under the finger, same_slot) wear THE ACCENT `cue`
 // under the lit print `text_on_lit` (FFFFFF); no key here is ever disabled.
-// NO HOVER FACE AND NO TOOLTIP: this surface exists on a platform with no
-// pointer, so a hover has no producer and a hint has nowhere to hang.
+// UNDER THE HOVERING PEN A RESTING KEY'S FACE IS ARC'S HOVER FACE (architect
+// 2026-11-20, send CC, on the keyboard's keys: "Four, yes."; materials.h's
+// THE HOVER): `key_face` mixed toward `key_hover_face` by the key's stored
+// mix (AppState::HoverFaces::mix_of, the hover's one owner), the face alone
+// — the grid wears its lines always — the cap unchanged; a lit key is
+// unchanged. NO TOOLTIP: a hint has nowhere to hang here.
 //
 // A CAP IS A GLYPH, A WORD OR A CHARACTER (architect 2026-11-08, sessions
 // 95 / 96, reversing "no glyphs" of 2026-08-27 / 2026-10-29): the function
@@ -8415,7 +8524,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
     // zone whole — one tone, so the union is the shape.
     const auto corner_rect = [](CoverageStampPass& pass, double x0, double y0,
                                 double x1, double y1, double rad,
-                                const Corners& c, GuiColor tone) {
+                                const Corners& c, StampTone tone) {
         if (!c.tl && !c.tr && !c.bl && !c.br) {
             pass.rect(x0, y0, x1, y1, tone);
             return;
@@ -8470,8 +8579,19 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                 const Corners& rc = convex[static_cast<std::size_t>(row)];
                 const Corners kc{rc.tl && col == 0, rc.tr && col == count - 1,
                                  rc.bl && col == 0, rc.br && col == count - 1};
+                // A resting key's face toward the hover face by its stored
+                // mix (the head).
+                const StampTone face =
+                    key_lit(index, k)
+                        ? StampTone(p.cue)
+                        : StampTone(p.key_face, p.key_hover_face,
+                                    std::clamp(
+                                        app.hover_faces.mix_of(
+                                            {AppState::HoverFaces::Surface::Keyboard,
+                                             static_cast<int>(index)}),
+                                        0.0, 1.0));
                 corner_rect(pass, rr.x, rr.y, rr.x + rr.w, rr.y + rr.h, r_in,
-                            kc, key_lit(index, k) ? p.cue : p.key_face);
+                            kc, face);
             });
         pass.end();
     }

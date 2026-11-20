@@ -73,6 +73,41 @@ uint32_t CoverageStampPass::word_of(GuiColor color) {
     return slot.word;
 }
 
+// A TONE'S WORD (StampTone's rule, cool_edit_paint.h): a plain color's own
+// word; a mix the two colors' words mixed per channel, rounded half to even
+// (nearbyint under the default rounding mode, the derivation's rounding,
+// theme_roles.h), the ends the words themselves.
+uint32_t CoverageStampPass::word_of(const StampTone& tone) {
+    const uint32_t a = word_of(tone.from);
+    if (!(tone.mix > 0.0)) return a;
+    const uint32_t b = word_of(tone.to);
+    if (tone.mix >= 1.0) return b;
+    uint32_t out = 0xff000000u;
+    for (int shift = 0; shift < 24; shift += 8) {
+        const double ca = static_cast<double>((a >> shift) & 0xFFu);
+        const double cb = static_cast<double>((b >> shift) & 0xFFu);
+        const double v  = std::nearbyint(ca + tone.mix * (cb - ca));
+        out |= static_cast<uint32_t>(std::clamp(v, 0.0, 255.0)) << shift;
+    }
+    return out;
+}
+
+// THE CAIRO ROAD'S SOURCE for a tone: a plain color through the palette's
+// chokepoint as ever; a mix its word's own bytes, already the window's (a
+// byte n set as n / 255 is the byte cairo's fill stores, cue_fill_pixel's
+// arithmetic).
+void CoverageStampPass::set_tone_source(const StampTone& tone) {
+    if (!(tone.mix > 0.0)) {
+        set_palette_source(cr_, tone.from);
+        return;
+    }
+    const uint32_t w = word_of(tone);
+    cairo_set_source_rgb(cr_,
+                         static_cast<double>((w >> 16) & 0xFFu) / 255.0,
+                         static_cast<double>((w >> 8) & 0xFFu) / 255.0,
+                         static_cast<double>(w & 0xFFu) / 255.0);
+}
+
 void CoverageStampPass::grow_dirty(const GuiRect& box) {
     if (!dirty_any_) {
         dirty_     = box;
@@ -87,7 +122,7 @@ void CoverageStampPass::grow_dirty(const GuiRect& box) {
 }
 
 void CoverageStampPass::rect(double x0, double y0, double x1, double y1,
-                             GuiColor color) {
+                             StampTone color) {
     if (x1 <= x0 || y1 <= y0) return;
     if (!direct_) {
         // CAIRO'S ROAD: the same rect as a path, at cairo's default
@@ -96,7 +131,7 @@ void CoverageStampPass::rect(double x0, double y0, double x1, double y1,
         cairo_set_antialias(cr_, CAIRO_ANTIALIAS_DEFAULT);
         cairo_new_path(cr_);
         cairo_rectangle(cr_, x0, y0, x1 - x0, y1 - y0);
-        set_palette_source(cr_, color);
+        set_tone_source(color);
         cairo_fill(cr_);
         cairo_restore(cr_);
         return;
@@ -152,7 +187,7 @@ void CoverageStampPass::rect(double x0, double y0, double x1, double y1,
 
 void CoverageStampPass::rounded_rect(double x0, double y0, double x1,
                                      double y1, double rl, double rr,
-                                     GuiColor color) {
+                                     StampTone color) {
     if (x1 <= x0 || y1 <= y0) return;
     if (!direct_) {
         // CAIRO'S ROAD: the same shape as a path — the straight edges and
@@ -174,7 +209,7 @@ void CoverageStampPass::rounded_rect(double x0, double y0, double x1,
         if (rl > 0.0)
             cairo_arc(cr_, x0 + rl, y0 + rl, rl, 2.0 * half_pi, 3.0 * half_pi);
         cairo_close_path(cr_);
-        set_palette_source(cr_, color);
+        set_tone_source(color);
         cairo_fill(cr_);
         cairo_restore(cr_);
         return;
@@ -330,7 +365,7 @@ void CoverageStampPass::rounded_ring(double x0, double y0, double x1,
 void CoverageStampPass::rounded_rect_cut(double x0, double y0, double x1,
                                          double y1, double rl, double rr,
                                          double cx0, double cy0, double cx1,
-                                         double cy1, GuiColor color) {
+                                         double cy1, StampTone color) {
     const double qx0 = std::max(x0, cx0), qx1 = std::min(x1, cx1);
     const double qy0 = std::max(y0, cy0), qy1 = std::min(y1, cy1);
     if (qx1 <= qx0 || qy1 <= qy0) return;
@@ -343,7 +378,7 @@ void CoverageStampPass::rounded_rect_cut(double x0, double y0, double x1,
         cairo_clip(cr_);
         cairo_new_path(cr_);
         rounded_rect_path(cr_, x0, y0, x1, y1, rl, rr);
-        set_palette_source(cr_, color);
+        set_tone_source(color);
         cairo_fill(cr_);
         cairo_restore(cr_);
         return;

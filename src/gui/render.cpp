@@ -404,9 +404,11 @@ void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
 // 2026-11-18 / 19, send Z's design, built in send AA): one coverage-stamp
 // pass at exact coverage — the trough's pill in `scale_trough`; the played
 // part, the same pill cut at the knob's center, in the accent; the knob's
-// disc — at rest `key_face` inside a one-W `scale_slider_border` rim, held
-// the whole disc the accent.
-void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held) {
+// disc — at rest `key_face` inside a one-W `scale_slider_border` rim, the
+// fill mixed toward `key_hover_face` by `hover` as painted (the stamp's
+// tone), held the whole disc the accent.
+void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held,
+                 double hover) {
     if (item.w <= 0 || item.h <= 0) return;
     const GuiPalette& p = palette();
     const GuiRectF tr   = scale_trough_box(item);
@@ -428,7 +430,9 @@ void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held) {
     } else {
         const double in_r = std::max(0.0, kn_r - b);
         pass.rounded_rect(kn.x + b, kn.y + b, kn.x + kn.w - b, kn.y + kn.h - b,
-                          in_r, in_r, p.key_face);
+                          in_r, in_r,
+                          StampTone(p.key_face, p.key_hover_face,
+                                    std::clamp(hover, 0.0, 1.0)));
         pass.rounded_ring(kn.x, kn.y, kn.x + kn.w, kn.y + kn.h, kn_r, b,
                           p.scale_slider_border);
     }
@@ -2700,7 +2704,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // tone derived from them recomputed) and copied for the word readers
     // (installed_theme), its slug and group the list row's; then THE
     // PROGRAM'S TWELVE off the palette's role table (palette_file.h), THE
-    // CHROME'S THIRTY-THREE off the chrome's (theme_file.h), each member the mixed
+    // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the mixed
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.

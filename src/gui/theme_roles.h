@@ -14,7 +14,7 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — PLUS NINE ROLES OF OUR OWN (THE
+// own role names, never a derived tone — PLUS ELEVEN ROLES OF OUR OWN (THE
 // FORMAT, below), and the derivation, this file's, turns each into a row of
 // GuiThemeTones at the launch's read.
 //
@@ -26,11 +26,12 @@
 // of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
 // flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
 // the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
-// AND OUR OWN NINE, WindowBackground, TitleForeground and SidebarForeground,
-// the three fills TooltipBackground, CardBackground and
+// AND OUR OWN ELEVEN, WindowBackground, TitleForeground and
+// SidebarForeground, the three fills TooltipBackground, CardBackground and
 // CardStandingBackground, TitleHighlight and ScaleTrough (send AA's
-// stage D2) and ScaleSliderBorder (send AA's stage D3), kOwnThemeRoles: no
-// Live role names them),
+// stage D2), ScaleSliderBorder (send AA's stage D3) and the two hover tones
+// ButtonHoverBackground and ScrollbarSliderHover (send CC), kOwnThemeRoles:
+// no Live role names them),
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
 // an 8-digit word's last byte its straight alpha — kept raw, the derivation
 // compositing it (the COMPOSITED block) or, for the three fills, CARRYING
@@ -60,7 +61,9 @@
 // SurfaceBackground and Alert for the three fills, the CARRIED block; and
 // our own two of send AA's stage D2, each file's own SurfaceArea and
 // ScrollbarInnerTrack copied, and of stage D3, its own ClipBorder, the
-// ROLE-NAMED block's OUR OWN; each header line the record; the converter
+// ROLE-NAMED block's OUR OWN; and our own two of send CC, 2026-11-20, each
+// file's own SurfaceBackground and ScrollbarInnerHandle copied, ARC'S HOVER
+// below; each header line the record; the converter
 // writes them the same way) —
 // AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
 // it, its header the record of every role (architect 2026-11-17, session
@@ -255,6 +258,35 @@
 //                                     the scrub's knob's rim at rest; a Live
 //                                     theme's ClipBorder, so its well's
 //                                     lines' tone
+//   AND TWO MORE FOR ARC'S HOVER (architect 2026-11-18, send Y: "lets go arc
+//   truthful re: hoevers"; 2026-11-20, send CC: "If they're from Canonical,
+//   from Arc, I'll just accept them"; the hover's rule and its one owner
+//   AppState::HoverFaces, app_state.h), each file but Arc's the word of the
+//   role the tone moves from, so NO HOVER SHOWS ON A LIVE THEME — and where
+//   the key's hover tone is the key face itself no face hovers at all
+//   (GuiInputHandler::walk_hover_face's theme term):
+//     key hover face         363636 = ButtonHoverBackground, read flat as the
+//                                     key face's role is (arc_dark 505666,
+//                                     Arc's button:hover, gtk3 CSS line 136,
+//                                     measured on his desktop): A KEY'S, A
+//                                     WORD BUTTON'S AND AN ON-SCREEN KEYBOARD
+//                                     KEY'S FACE AND THE SCRUB'S KNOB'S FILL
+//                                     UNDER THE HOVERING PEN, the far end of
+//                                     the hover's mix (materials.h's THE
+//                                     HOVER); a Live theme's SurfaceBackground
+//     trim span hover face   696969 = ScrollbarSliderHover over Desktop, as
+//                                     the pill's own role is composited
+//                                     (arc_dark 676B78, Thunar's scrollbar
+//                                     slider under the pointer, measured on
+//                                     his desktop): THE TRIM BAR'S PILL UNDER
+//                                     THE HOVERING PEN; a Live theme's
+//                                     ScrollbarInnerHandle. NO PAINTER READS
+//                                     IT YET: the pill's hover look is send
+//                                     CC's next package's, on this tone and
+//                                     the hover gate
+//                                     (GuiInputHandler::hover_admitted)
+//   NEITHER IS A BRIGHT TONE: a surface's own face, never mixed toward the
+//   ground (THE BRIGHT MIX below).
 //   and the window's FRAME EDGE, no role of its own: = ControlContrastFrame
 //   (111111; arc_dark 21252B, xfwm's frame edge), the cue outline's role.
 //   CARRIED (our own three fills, send AA's stage D1, architect 2026-11-19 —
@@ -505,7 +537,8 @@
 // mixed head. NEVER MIXED: the text tones ("never the glyph color itself":
 // the text, the dim text, the key dim ink, the title, sidebar and ruler
 // texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection's text, the cards' words, the tooltip's and the normal card's fills
-// (surfaces, not highlights), the faces, the lanes (the trim
+// (surfaces, not highlights), the faces — a key's hover face and the pill's
+// among them (send CC) — the lanes (the trim
 // bar's trough and the well's lines among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,
 // the ruler's digits, the disabled key's face and border), the waveform's

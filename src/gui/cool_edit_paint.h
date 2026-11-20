@@ -128,7 +128,8 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // render.h's THE DIRECT ROAD.
 // THE SHAPES: a rect with real edges — the selection stem's head segment
 // (GuiPaintHandler::paint_marker_stem_heads), the ruler's ticks
-// (paint_ruler_row) and a lit linked key's left seam (paint_linked_group);
+// (paint_ruler_row), a lit linked key's left seam and a hovering key's two
+// seams (paint_linked_group, the second in a mixed tone, StampTone below);
 // THE ROUNDED RECT, the trim bar's pill
 // (render_trim_flags; architect 2026-11-17, session 140) and Arc's keys'
 // borders, faces and accents (materials.h's paint_linked_group, send Z,
@@ -136,20 +137,40 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // THE ROUNDED RECT CUT, NOISE's progress line (paint_entry); the
 // down-pointing 45° triangle; and THE CHIP, one of them (THE CUE'S CHIP
 // above: the lane's cues, paint_cues, and the ruler's head).
+
+// A STAMP'S TONE: an authored color — or THE MIX OF TWO AUTHORED COLORS AS
+// PAINTED (architect 2026-11-18 / 2026-11-20, send CC, Arc's hover fade:
+// materials.h's THE HOVER): `mix` of `to` over `from`, taken per channel
+// BETWEEN THE TWO COLORS' OWN WORDS — the bytes the stamp stores and blends
+// in, each color converted for the window first (cue_fill_pixel) — rounded
+// half to even, so at 0 the tone is `from`'s word to the byte and at 1
+// `to`'s, on a window that converts its colors as on one that does not (a
+// mix of the authored colors would be converted after it and land a level
+// off between the ends). A plain color converts to its tone by itself, so
+// every caller that hands a GuiColor is unchanged.
+struct StampTone {
+    GuiColor from{};
+    GuiColor to{};
+    double   mix = 0.0;
+    StampTone(GuiColor color) : from(color), to(color) {}
+    StampTone(GuiColor a, GuiColor b, double t) : from(a), to(b), mix(t) {}
+};
+
 class CoverageStampPass {
 public:
     void begin(cairo_t* cr);
     // THE RECT [x0, x1] x [y0, y1], real edges in the context's user space,
-    // in `color` (an authored color; the word cue_fill_pixel makes of it):
-    // nothing where x1 <= x0 or y1 <= y0.
-    void rect(double x0, double y0, double x1, double y1, GuiColor color);
+    // in `tone` (an authored color, the word cue_fill_pixel makes of it, or
+    // two colors' as-painted mix, StampTone): nothing where x1 <= x0 or
+    // y1 <= y0.
+    void rect(double x0, double y0, double x1, double y1, StampTone tone);
     // THE ROUNDED RECT [x0, x1] x [y0, y1], real edges, its left corners
     // quarter disks of radius `rl` and its right ones of `rr` (0 a square
     // corner; each at most half the rect's width and height —
-    // coverage_of_rounded_rect's shape, coverage_stamp.h), in `color`:
+    // coverage_of_rounded_rect's shape, coverage_stamp.h), in `tone`:
     // nothing where x1 <= x0 or y1 <= y0.
     void rounded_rect(double x0, double y0, double x1, double y1, double rl,
-                      double rr, GuiColor color);
+                      double rr, StampTone tone);
     // THE ROUNDED RING (send Z, 2026-11-19: a GTK box's border, the word
     // buttons' and the entries'): the rounded rect [x0, x1] x [y0, y1] of
     // radius `r` on all four corners LESS its padding box — `bw` inside it
@@ -161,10 +182,10 @@ public:
     // progress, the entry's inner box cut at the level's real end and to its
     // foot's rows): rounded_rect's shape, left corners `rl`, right `rr`,
     // inside [cx0, cx1] x [cy0, cy1], each pixel the shape's area inside the
-    // cut rect over the cell (area_of_rounded_rect_in_rect), in `color`.
+    // cut rect over the cell (area_of_rounded_rect_in_rect), in `tone`.
     void rounded_rect_cut(double x0, double y0, double x1, double y1,
                           double rl, double rr, double cx0, double cy0,
-                          double cx1, double cy1, GuiColor color);
+                          double cx1, double cy1, StampTone tone);
     // THE DOWN-POINTING 45° TRIANGLE of apex (ax, ay) and height `h` in the
     // context's user space (coverage_of_triangle's shape, coverage_stamp.h),
     // in `color`: nothing where h <= 0.
@@ -185,6 +206,12 @@ private:
                     Cov&& cov, Skip&& skip);
     // The color's word (cue_fill_pixel), from the pass's kept colors.
     uint32_t word_of(GuiColor color);
+    // A tone's word (StampTone's rule): its color's, or the two words'
+    // per-channel mix.
+    uint32_t word_of(const StampTone& tone);
+    // The cairo road's source for a tone: the color through
+    // set_palette_source, or the mixed word's own bytes.
+    void set_tone_source(const StampTone& tone);
     cairo_t*          cr_        = nullptr;
     DirectPixelTarget target_{};
     bool              direct_    = false;

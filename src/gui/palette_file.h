@@ -44,7 +44,9 @@
 // theme_roles.h's DERIVED block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-five words with its literal (the dialogs' three of send AA's stage
+// forty-seven words with its literal (the two hover tones of send CC,
+// 2026-11-20, a key's 363636 and the pill's 696969, each Default's own
+// number for the role it copies; the dialogs' three of send AA's stage
 // D2, 2026-11-19: the window's frame edge 111111, ControlContrastFrame; its
 // title bar's highlight row and the progress bar's trough 242424,
 // SurfaceArea and ScrollbarInnerTrack over the ground, a Live theme's own
@@ -220,7 +222,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the forty-five words with its literal, so
+// 2026-11-01..05 — every one of the forty-seven words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
@@ -277,6 +279,7 @@ static_assert(kDefault.key_dim_face    == 0x2E2E2E);
 static_assert(kDefault.key_dim_border  == 0x272727);
 static_assert(kDefault.text_on_lit_dim == 0x2A221A);
 static_assert(kDefault.key_face        == 0x363636);
+static_assert(kDefault.key_hover_face  == 0x363636);
 static_assert(kDefault.lit_dim_fill    == 0x86623B);
 static_assert(kDefault.ruler_face      == 0x393939);
 static_assert(kDefault.ruler_tick      == 0x919191);
@@ -284,6 +287,7 @@ static_assert(kDefault.ruler_text      == 0x9C9C9C);
 static_assert(kDefault.lane_face       == 0x2A2A2A);
 static_assert(kDefault.trim_bar_face   == 0x242424);
 static_assert(kDefault.trim_span_face  == 0x696969);
+static_assert(kDefault.trim_span_hover_face == 0x696969);
 static_assert(kDefault.well_border     == 0x2A2A2A);
 static_assert(kDefault.selection_fill  == 0x637E86);
 static_assert(kDefault.selection_text  == 0x070707);

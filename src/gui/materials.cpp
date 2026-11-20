@@ -7,9 +7,18 @@
 // The rules are at the declarations (materials.h).
 
 void paint_linked_group(cairo_t* cr, int x, int y,
-                        std::span<const KeyState> states) {
+                        std::span<const KeyState> states,
+                        std::span<const double> hover) {
     const int n = static_cast<int>(states.size());
     if (n <= 0) return;
+    // A member's hover mix (the declaration's THE HOVER): a resting
+    // member's alone, 0 with no span handed.
+    const auto hover_of = [&](int i) {
+        const std::size_t k = static_cast<std::size_t>(i);
+        return k < hover.size() && states[k] == KeyState::Rest
+                   ? std::clamp(hover[k], 0.0, 1.0)
+                   : 0.0;
+    };
     const GuiPalette& p = palette();
     const double b  = static_cast<double>(key_border_px());
     const double R  = static_cast<double>(key_corner_px());
@@ -45,17 +54,22 @@ void paint_linked_group(cairo_t* cr, int x, int y,
     // (2) THE FACES: each member from one border inside its box to one
     //     border inside the next box (its right seam its own), the last to
     //     one border inside its own right edge, in its state's face — a lit
-    //     member's the accent.
+    //     member's the accent, a resting member's the key face mixed toward
+    //     the hover face by its hover.
+    const auto rest_face = [&](KeyState s) {
+        return s == KeyState::Lit      ? p.cue
+             : s == KeyState::Disabled ? p.key_dim_face
+             : s == KeyState::LitInert ? p.lit_dim_fill
+                                       : p.key_face;
+    };
     for (int i = 0; i < n; ++i) {
         const KeyState s = states[static_cast<std::size_t>(i)];
-        const GuiColor face = s == KeyState::Lit      ? p.cue
-                            : s == KeyState::Disabled ? p.key_dim_face
-                            : s == KeyState::LitInert ? p.lit_dim_fill
-                                                      : p.key_face;
         const double fx0 = box_x(i) + b;
         const double fx1 = i == n - 1 ? box_x(i) + w - b : box_x(i + 1) + b;
         pass.rounded_rect(fx0, y0 + b, fx1, y1 - b, i == 0 ? r : 0.0,
-                          i == n - 1 ? r : 0.0, face);
+                          i == n - 1 ? r : 0.0,
+                          StampTone(rest_face(s), p.key_hover_face,
+                                    hover_of(i)));
     }
     // (3) A LIT MEMBER'S LEFT SEAM in the accent, between the border's rows:
     //     whole cells over the left key's face.
@@ -63,16 +77,37 @@ void paint_linked_group(cairo_t* cr, int x, int y,
         if (states[static_cast<std::size_t>(i)] != KeyState::Lit) continue;
         pass.rect(box_x(i), y0 + b, box_x(i) + b, y1 - b, p.cue);
     }
+    // (4) A HOVERING MEMBER'S TWO SEAMS in the border tone by the hover's
+    //     mix, the larger of its two sides': the seam between members i − 1
+    //     and i, whole cells between the border's rows, from the face it
+    //     wears at rest (the left member's) toward `well_border` — but a
+    //     seam a lit member takes, which stays the accent.
+    for (int i = 1; i < n; ++i) {
+        const double m = std::max(hover_of(i - 1), hover_of(i));
+        if (!(m > 0.0)) continue;
+        const KeyState left = states[static_cast<std::size_t>(i - 1)];
+        if (left == KeyState::Lit ||
+            states[static_cast<std::size_t>(i)] == KeyState::Lit)
+            continue;
+        pass.rect(box_x(i), y0 + b, box_x(i) + b, y1 - b,
+                  StampTone(rest_face(left), p.well_border, m));
+    }
     pass.end();
 }
 
-void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state) {
+void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state,
+                       double hover) {
     if (box.w <= 0 || box.h <= 0) return;
     const GuiPalette& p = palette();
-    const GuiColor face = state == KeyState::Lit      ? p.cue
+    const GuiColor rest = state == KeyState::Lit      ? p.cue
                         : state == KeyState::Disabled ? p.key_dim_face
                         : state == KeyState::LitInert ? p.lit_dim_fill
                                                       : p.key_face;
+    // A resting button's face toward the hover face by its hover (the
+    // declaration's THE HOVER).
+    const StampTone face(rest, p.key_hover_face,
+                         state == KeyState::Rest ? std::clamp(hover, 0.0, 1.0)
+                                                 : 0.0);
     const GuiColor ring =
         state == KeyState::Disabled ? p.key_dim_border : p.well_border;
     const double b  = static_cast<double>(key_border_px());

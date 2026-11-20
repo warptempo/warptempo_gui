@@ -2846,11 +2846,10 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 }
 
 // THE DIALOG BUTTONS' POINTER WALK, run on every motion under a standing
-// dialog. It answers two readers — THE RENDER PLAYER'S HOT BUTTON
-// (AppState::player_hot,
-// architect 2026-10-06; never lit since the player's cases became the
-// program's, 2026-10-09: Cool Edit's case has no hover face); and this
-// surface's tooltip wait (the tail).
+// dialog. It answers two readers — the armed button's inside bit and this
+// surface's tooltip wait (the tail). THE BUTTONS' HOVER FACE IS NOT THIS
+// WALK'S (send CC, 2026-11-20): every surface's hover face has one walk,
+// walk_hover_face, under its own gate (AppState::HoverFaces).
 //
 // AN ARMED BUTTON — THE FEINT (architect 2026-08-13): "if the user feints —
 // clicks a button and then drags away before the mouse goes up — then that
@@ -2874,19 +2873,6 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
         app.modal_dialog_press_inside  = inside;
         invalidate_modal_press_face(armed);
     }
-    // THE PLAYER'S HOT BUTTON: the hit on the player's row while the
-    // program's case has a hot face (program_spec.h's case_hot_face — none
-    // since 2026-10-09, Cool Edit's) and no dialog press is armed (comctl32
-    // shows no hot item under capture), else none —
-    // AND NONE WHILE THE PEN'S HOT-FACE LATCH HOLDS (pen_hot_latch_holds,
-    // the rule at pen_hot_latch_, 2026-10-09): the roster's own answer, the
-    // tapped button at rest until the pen moves off its anchor.
-    set_player_hot(kProgramSpec.case_hot_face && app.modal_dialog.valid &&
-                           app.modal_dialog.owner ==
-                               AppState::ModalDialogOwner::Player &&
-                           armed < 0 && !pen_hot_latch_holds()
-                       ? hit
-                       : -1);
     // AND IT OWNS THIS SURFACE'S TOOLTIP WAIT (2026-08-13, when the modal
     // buttons took hints): the same writer
     // and the same tick the roster's walk uses, keyed on the Dialog half of
@@ -2939,15 +2925,6 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     note_tooltip_hover({AppState::RedesignTooltip::Surface::Dialog, tip,
                         app.modal_dialog.owner, app.modal_dialog.session},
                        tip_column);
-}
-
-void GuiInputHandler::set_player_hot(int index) {
-    const uint64_t session = index >= 0 ? app.modal_dialog.session : 0;
-    if (index == app.player_hot && session == app.player_hot_session) return;
-    app.player_hot         = index;
-    app.player_hot_session = session;
-    if (app.modal_dialog.valid)
-        viewport.invalidate_rect(app.modal_dialog.box);
 }
 
 // THE ARM'S HARD END — the pointer-leave hook (main.cpp), beside the roster's
@@ -3033,6 +3010,10 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
     const AppState::ModalDialogButton& hb =
         app.modal_dialog.buttons[static_cast<size_t>(hit)];
     if (!hb.enabled) return true;
+    // THE PRESS CLAIMS THE FACE FROM THE HOVER, at once whatever its fade's
+    // value (AppState::HoverFaces' WHAT DOES NOT FADE).
+    drop_hover_face({AppState::HoverFaces::Surface::Dialog, hit,
+                     app.modal_dialog.owner, app.modal_dialog.session});
     // THE ARM, and its press face's damage (2026-11-05): a press is inside
     // what it hit, by construction — the feint's bit starts true.
     if (app.modal_dialog_pressed != hit || !app.modal_dialog_press_inside) {
@@ -3755,6 +3736,10 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     const int hit =
         onscreen_keyboard::key_at(app, page, at.rx, at.ry, def);
     if (hit < 0) return true;   // the band's ground off the grid: consumed
+    // THE PRESS CLAIMS THE KEY'S FACE FROM THE HOVER, at once whatever its
+    // fade's value (AppState::HoverFaces' WHAT DOES NOT FADE); both arms
+    // below damage the key (a lamp key the whole surface).
+    drop_hover_face({AppState::HoverFaces::Surface::Keyboard, hit});
 
     using Role = onscreen_keyboard::Role;
 
@@ -4387,8 +4372,14 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     // SCRUB'S REST WHILE THE TRANSPORT IS IDLE (architect 2026-08-29,
     // Audacious's own slider — dead while stopped), IDLE being no item bound
     // (the invariant at AppState::RenderPlayer::transport).
-    if (app.render_player.frames <= 0 || app.render_player.item.empty())
-        return true;
+    if (!player_scrub_takes_press()) return true;
+    // THE PRESS TAKES THE SCALE, AND THE KNOB FROM THE HOVER, at once
+    // whatever its fade's value — on the knob (the accent) or on the trough
+    // (the knob carried at rest): a pen in contact hovers nothing
+    // (AppState::HoverFaces' WHAT DOES NOT FADE); the arm below damages the
+    // item.
+    drop_hover_face({AppState::HoverFaces::Surface::Knob, 0,
+                     app.modal_dialog.owner, app.modal_dialog.session});
     // THE THUMB IS RESOLVED WHERE IT IS PAINTED (ON SCREEN IS AS PAINTED,
     // the displayed-not-live rule displayed_or_live_target_map states,
     // app_state.h): the painter's published center, its exact place, never
@@ -4567,7 +4558,14 @@ bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
     if (!rect_contains(track, x, y)) return false;
     // Consumed from here: a ctrl press does nothing on the track.
     if (mods.ctrl) return true;
-    if (!app.score) return true;
+    // No score, or a range of one page under no soundtrack (no other page to
+    // show: the scrub dead), takes no press (score_scrub_takes_press, the
+    // refusals' one owner, the knob's hover reading it too).
+    if (!score_scrub_takes_press()) return true;
+    // The press takes the scale, and the knob from the hover (the render
+    // player's claim's rule).
+    drop_hover_face({AppState::HoverFaces::Surface::Knob, 0,
+                     app.modal_dialog.owner, app.modal_dialog.session});
     // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED), its published exact
     // center: on its disc the press takes it where it stands, the grab
     // offset kept against that painted center (the render player's claim);
@@ -4578,8 +4576,6 @@ bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
         render_player_scrub_handle_hit(track, thumb_x, at.rx, at.ry);
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     const bool media = score_viewer_has_soundtrack(app);
-    // A range of one page has no other page to show (the scrub dead).
-    if (!media && score_viewer_range(app).count() <= 1) return true;
     drag          = AppState::ScoreViewer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
@@ -4718,6 +4714,12 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // hovering on a column waits the delay as an arrival.
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
+    // AND NO FACE HOVERS UNDER A CONTACT (AppState::HoverFaces): the held
+    // bit just recorded answers none, so a face the pen still hovered fades
+    // out from here (the pen's HOVER_EXIT, a millisecond before its DOWN,
+    // already began that); the arm this press takes below then drops its
+    // own face's fade whole (drop_hover_face).
+    walk_hover_face();
 
     // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
     // end_audition_for_press's declaration): a press ends a standing act
@@ -6427,46 +6429,28 @@ void GuiInputHandler::finalize_active_drags() {
 // member that does not stand, and a zero rect contains no point). It answers
 // two readers from the remembered position — the TOOLTIP's wait (the
 // button whose column holds a hovering pointer, handed to note_tooltip_hover
-// at the tail) and THE HOT TOOLBAR BUTTON
-// (AppState::roster_hot; set_roster_hot pays its damage) — which stores none
-// since the cases became the program's (2026-10-09: Cool Edit's toolbar has
-// no hover face under any chrome, program_spec.h's case_hot_face). The
+// at the tail) and AN ARMED ROSTER PRESS'S INSIDE BIT (the press face's
+// gate). The
 // rects are the painter's stashes, so the button a hint names is the
 // painted button, its column read off the painted face
-// (tooltip_column_rect, render.h).
-// THE HOT FACE'S ONE SETTER (AppState::roster_hot): a change damages the
-// old button's published rect and the new one's — the face is painted inside
-// the case and nowhere else, and a stale stash's rect was already damaged by
-// the relayout that moved it.
-void GuiInputHandler::set_roster_hot(int index) {
-    if (index == app.roster_hot) return;
-    const auto damage = [&](int i) {
-        if (i < 0) return;
-        viewport.invalidate_rect(
-            app.redesign_buttons[static_cast<size_t>(i)].rect);
-    };
-    damage(app.roster_hot);
-    damage(index);
-    app.roster_hot = index;
-}
-
+// (tooltip_column_rect, render.h). (THE KEYS' HOVER FACE has its own walk,
+// walk_hover_face below — every surface's, under the press's own gate:
+// AppState::HoverFaces, send CC, 2026-11-20.)
 void GuiInputHandler::arm_pen_hot_latch() {
     // Armed and unanchored (the rule at pen_hot_latch_): the hook fires after
-    // the lift's own delivery, whose restore motion walked every hover face
-    // unlatched, so the two toolbars' latched answer — none, the face painted
-    // under the tap's capture, and since 2026-10-09 the program's cases' only
-    // answer (no hover face under any chrome, so the rest face by
-    // construction) — is installed here before the frame paints: the roster
-    // by its own re-walk (whose hot write stores -1), the player's hot button
-    // directly (its walk,
-    // update_modal_dialog_hover, also owns the dialog's tooltip wait, which
-    // the arm has no business re-noting). The lit rows need nothing: the
-    // restore motion left them on the row the contact last lit, and their
-    // walks hold it from here.
+    // the lift's own delivery, whose restore motion walked the hover
+    // unlatched — it may have named the key under the pen the hovered face,
+    // a fade no step has advanced — so the latched answer, NONE, is
+    // installed here before any frame paints: the hover's re-walk
+    // (walk_hover_face, whose gate reads the latch) ends that fade without
+    // a trace (set_hover_face), and the key the pen tapped reads at rest or
+    // lit at once ("withholding the color change until the pen moves away
+    // makes it too slow"). The roster's tooltip walk runs again beside it,
+    // as it always did at the arm.
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
                                  .x = 0.0, .y = 0.0};
     recompute_redesign_button_hover();
-    set_player_hot(-1);
+    walk_hover_face();
 }
 
 void GuiInputHandler::clear_pen_hot_latch() {
@@ -6522,7 +6506,6 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         app.batch_progress.active;
     int     hovered_tip = -1;
     GuiRect tip_column{0, 0, 0, 0};
-    int     hot         = -1;
     for (int i = 0; i < kRedesignButtonCount; ++i) {
         const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
         const RedesignButton id = static_cast<RedesignButton>(i);
@@ -6534,18 +6517,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // ENABLED TERM (architect 2026-08-07): a disabled button still explains
         // itself, kdenlive's own behaviour. (The hover zone's open-dropdown
         // term went with the popup, 2026-10-21.)
-        // The face's `contains`: Play's second rect, row 8's clock, raises
-        // the key's own tooltip (2026-10-27).
-        const bool under_pointer = !modal_veil && !under_card &&
-                                   f.contains(app.last_mouse_place());
-        // THE HOT CANDIDATE (stored by no write while the program's case has
-        // no hot face, below): the toolbar button under the pointer on the
-        // same gates — and NO keyboard-modal term:
-        // that refusal is the tooltip's dwell, while a button the flag editor
-        // leaves pressable lights as it presses. The rects are disjoint, so
-        // the first is the only one, and the tooltip's break below cannot
-        // pass it by.
-        if (under_pointer && hot < 0) hot = i;
+        // Play's second rect, row 8's clock, raises the key's own tooltip
+        // (2026-10-27; the field's arm below).
         // THE TOOLTIP'S TARGET IS THE KEY'S COLUMN (architect 2026-11-07,
         // session 87; tooltip_column_rect, render.h): the key's box less the
         // seam its left neighbor owns — the hit box itself since send Z's
@@ -6581,22 +6554,6 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             break;
         }
     }
-    // THE HOT FACE'S ONE WRITE (AppState::roster_hot): the candidate while
-    // the program's case has a hot face and no chrome press is armed —
-    // comctl32 shows no hot item while a toolbar holds the capture — and
-    // none otherwise. COOL EDIT'S CASE HAS NONE (program_spec.h's
-    // case_hot_face, false since 2026-10-09), so this stores none.
-    // AND NONE WHILE THE PEN'S HOT-FACE LATCH HOLDS (pen_hot_latch_holds,
-    // the rule at pen_hot_latch_, architect 2026-10-07; every hover-lit face
-    // since 2026-10-09): after a pen lift the tapped button reads at rest —
-    // the face painted under the tap's capture — until the pen moves off its
-    // anchor.
-    set_roster_hot(kProgramSpec.case_hot_face &&
-                           app.chrome_press.kind ==
-                               AppState::ChromePress::Kind::None &&
-                           !pen_hot_latch_holds()
-                       ? hot
-                       : -1);
     // THE ARMED ROSTER PRESS'S INSIDE BIT (AppState::ChromePress::inside,
     // the press face's gate, redesign_button_pressed_face; back 2026-11-05
     // with the press look), maintained here because this walk is the one
@@ -6785,6 +6742,375 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                        tip_column);
 }
 
+// -- ARC'S HOVER: THE BODIES OF ITS ONE OWNER (architect 2026-11-18 /
+//    2026-11-20, send CC). The rule — which faces hover, the gate, Arc's
+//    fade, what does not fade and the frames' cost — is at
+//    AppState::HoverFaces (app_state.h), the look at materials.h's THE
+//    HOVER, the contracts at the declarations (input_handler.h). What is
+//    here is each body's own clause. ----------------------------------------
+
+// THE POINTER'S HALF OF THE GATE (the declaration). The held bit is the
+// tooltip's own record of the logical button as the last pointer event
+// delivered it (AppState::RedesignTooltip::button_held: every press, release
+// and motion writes it, a lost button's unheld motion among them).
+bool GuiInputHandler::hover_admitted() const {
+    return app.pointer_in_window && !app.redesign_tooltip.button_held &&
+           !pen_hot_latch_holds();
+}
+
+bool GuiInputHandler::hover_admitted_on_main_page() const {
+    if (!hover_admitted()) return false;
+    // THE MODALS' VEIL and THE OVERLAYS (the press router's own ranks,
+    // on_button_press): under either, nothing of the well answers a press.
+    if (app.prompt.active || keyboard_modal_editor_active() ||
+        app.batch_progress.active)
+        return false;
+    if (app.render_player.active || app.picker.active ||
+        app.score_viewer.active)
+        return false;
+    return notification_card_at(app, app.last_mouse_x, app.last_mouse_y) == 0;
+}
+
+// THE TWO SCRUBS' "a press here arms the drag" — each claim's own refusals
+// past its geometry, ONE OWNER EACH, read by the claim and by the knob's
+// hover (a knob no press would take wears no hover face): the render
+// player's with an item bound (the silent no-item refusal, architect
+// 2026-08-31, claim_player_scrub_press), the score viewer's with a score
+// and either its soundtrack or a range of more than one page
+// (claim_score_scrub_press).
+bool GuiInputHandler::player_scrub_takes_press() const {
+    return app.render_player.frames > 0 && !app.render_player.item.empty();
+}
+bool GuiInputHandler::score_scrub_takes_press() const {
+    if (!app.score) return false;
+    return score_viewer_has_soundtrack(app) ||
+           score_viewer_range(app).count() > 1;
+}
+
+// THE FACE'S HALF OF THE GATE — "would a press on this face act now?", ONE
+// ARM PER SURFACE, each on the stash AS PAINTED (the press claims read the
+// painted bits, so the hover does: a key painted live hovers, and the frame
+// that repaints it dead reads no mix for it). It asks nothing of the
+// pointer's place: the walk asks it of the face its hit found, and the clock
+// of every fading face, the pen on it or gone.
+//   ROSTER — the modals veil the whole roster (the press router's ranks: a
+//     question, any editor, the progress dialog); under an overlay the press
+//     reaches the top icon row's band alone (the three veils' claim); then
+//     the painted bits: enabled (under an overlay only the keys it leaves
+//     live are painted enabled, redesign_button_enabled's overlay arm) and
+//     NOT SELECTED — a lit key is unchanged.
+//   DIALOG — the published stash, while it names the live surface
+//     (modal_dialog_stash_current) and is this face's own (owner and
+//     session), a question's once it has painted (the press's painted gate):
+//     the button painted enabled and not lit (Repeat One).
+//   KEYBOARD — the keyboard standing on the page the key's index names, the
+//     key not a lit lamp (Shift while latched, the page key on the symbols
+//     page: the painter's two); no key there is ever disabled.
+//   KNOB — the stash as for a button, the scrub's item and its knob
+//     published, no drag armed, and the owner's claim taking a press.
+bool GuiInputHandler::hover_face_live(
+        const AppState::HoverFaces::Face& face) const {
+    using Surface = AppState::HoverFaces::Surface;
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    const auto stash_is_faces = [&] {
+        return modal_dialog_stash_current() &&
+               (!app.prompt.active || app.prompt.painted) &&
+               face.dialog_owner == dlg.owner &&
+               face.dialog_session == dlg.session;
+    };
+    switch (face.surface) {
+        case Surface::None:
+            return false;
+        case Surface::Roster: {
+            if (face.index < 0 || face.index >= kRedesignButtonCount)
+                return false;
+            if (app.prompt.active || keyboard_modal_editor_active() ||
+                app.batch_progress.active)
+                return false;
+            const AppState::RedesignButtonFace& f =
+                app.redesign_buttons[static_cast<size_t>(face.index)];
+            if (f.rect.w <= 0 || f.rect.h <= 0) return false;
+            if ((app.render_player.active || app.picker.active ||
+                 app.score_viewer.active) &&
+                !rects_intersect(f.rect, top_icon_row_area(app)))
+                return false;
+            return f.enabled && !f.selected;
+        }
+        case Surface::Dialog: {
+            if (!stash_is_faces()) return false;
+            if (face.index < 0 ||
+                face.index >= static_cast<int>(dlg.buttons.size()))
+                return false;
+            const AppState::ModalDialogButton& b =
+                dlg.buttons[static_cast<size_t>(face.index)];
+            return b.enabled && !b.lit;
+        }
+        case Surface::Keyboard: {
+            if (!onscreen_keyboard::stands(app)) return false;
+            const AppState::OnscreenKeyboard& kb = app.onscreen_keyboard;
+            if (face.index < static_cast<int>(onscreen_keyboard::kStableCodeBase) ||
+                onscreen_keyboard::page_of_key_index(face.index) != kb.page)
+                return false;
+            bool found = false;
+            bool lit   = false;
+            onscreen_keyboard::for_each_key(
+                app, kb.page,
+                [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
+                    const GuiRectF&) {
+                    if (static_cast<int>(index) != face.index) return;
+                    using Role = onscreen_keyboard::Role;
+                    found = true;
+                    lit = (k.role == Role::Shift && kb.shift_latched) ||
+                          (k.role == Role::SymbolMode &&
+                           kb.page == onscreen_keyboard::Page::Symbols);
+                });
+            return found && !lit;
+        }
+        case Surface::Knob: {
+            if (!stash_is_faces()) return false;
+            if (dlg.scrub.w <= 0 || dlg.scrub.h <= 0 ||
+                dlg.scrub_thumb_x < 0.0)
+                return false;
+            if (dlg.owner == AppState::ModalDialogOwner::Player)
+                return app.render_player.active &&
+                       !app.render_player.scrub.armed &&
+                       player_scrub_takes_press();
+            if (dlg.owner == AppState::ModalDialogOwner::Score)
+                return app.score_viewer.active && score_viewer != nullptr &&
+                       !app.score_viewer.scrub.armed &&
+                       score_scrub_takes_press();
+            return false;
+        }
+    }
+    return false;
+}
+
+// THE FACE THE PEN IS ON — THE PRESS'S OWN HIT, in the press router's own
+// order (on_button_press): A CARD is opaque to the pointer above every veil,
+// so none under one; THE ON-SCREEN KEYBOARD's surface is claimed whole, its
+// key the grid's (onscreen_keyboard::key_at: a shared line the key's left of
+// / above it); THE DIALOG STASH's buttons (modal_dialog_button_hit: the
+// painted box less its seam), then THE SCRUB'S KNOB, its disc where it is
+// painted (the published center, render_player_scrub_handle_hit); then THE
+// ROSTER, the chord table's keys, each its painted box less its seam
+// (point_on_key — THE KEY'S BOX ALONE: Play's second rect, the bottom left's
+// timestamp, presses Play but is a time label, and lights nothing). The
+// surfaces are disjoint; the face found answers only where it is live
+// (hover_face_live).
+AppState::HoverFaces::Face GuiInputHandler::hover_face_under_pointer() const {
+    using Face    = AppState::HoverFaces::Face;
+    using Surface = AppState::HoverFaces::Surface;
+    const GuiPointerPlace at = app.last_mouse_place();
+    if (notification_card_at(app, at.x, at.y) != 0) return Face{};
+    Face found{};
+    if (onscreen_keyboard::stands(app) &&
+        rect_contains(onscreen_keyboard::claim_rect(app), at.x, at.y)) {
+        onscreen_keyboard::KeyDef def{};
+        const int hit = onscreen_keyboard::key_at(
+            app, app.onscreen_keyboard.page, at.rx, at.ry, def);
+        if (hit >= 0) found = Face{Surface::Keyboard, hit};
+    } else {
+        const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+        if (modal_dialog_stash_current()) {
+            const int hit = modal_dialog_button_hit(at.x, at.y);
+            if (hit >= 0) {
+                found = Face{Surface::Dialog, hit, dlg.owner, dlg.session};
+            } else if (dlg.scrub.w > 0 && dlg.scrub.h > 0 &&
+                       dlg.scrub_thumb_x >= 0.0 &&
+                       render_player_scrub_handle_hit(
+                           dlg.scrub, dlg.scrub_thumb_x, at.rx, at.ry)) {
+                found = Face{Surface::Knob, 0, dlg.owner, dlg.session};
+            }
+        }
+        if (found.none()) {
+            for (const ToolbarChord& tc : kToolbarChords) {
+                const int i = redesign_button_index(tc.id);
+                const AppState::RedesignButtonFace& f =
+                    app.redesign_buttons[static_cast<size_t>(i)];
+                if (!point_on_key(f.rect, f.seam, at.x, at.y)) continue;
+                found = Face{Surface::Roster, i};
+                break;
+            }
+        }
+    }
+    return !found.none() && hover_face_live(found) ? found : Face{};
+}
+
+// A FACE'S OWN PAINTED EXTENT — the hover's damage (AppState::HoverFaces'
+// THE FRAMES), the press faces' damage owners' shapes: a roster key's
+// painted extent (invalidate_roster_press_face's rect: its box, both seam
+// columns inside it), a dialog button's box as published and the seam
+// column after it where it is an action row's answer
+// (ModalDialogButton::seam_after: that column is the next answer's, and it
+// moves with this one's hover), a keyboard key's face (its hull, key_rect:
+// the grid's lines do not move), the knob's disc at its published center
+// (its hull, cut to the item). EMPTY where the face's stash is no longer its
+// own — whatever replaced that surface repainted it.
+GuiRect GuiInputHandler::hover_face_extent(
+        const AppState::HoverFaces::Face& face) const {
+    using Surface = AppState::HoverFaces::Surface;
+    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    const bool stash_is_faces = dlg.valid && face.dialog_owner == dlg.owner &&
+                                face.dialog_session == dlg.session;
+    switch (face.surface) {
+        case Surface::None:
+            break;
+        case Surface::Roster: {
+            if (face.index < 0 || face.index >= kRedesignButtonCount) break;
+            const AppState::RedesignButtonFace& f =
+                app.redesign_buttons[static_cast<size_t>(face.index)];
+            return f.painted.w > 0 && f.painted.h > 0 ? f.painted : f.rect;
+        }
+        case Surface::Dialog: {
+            if (!stash_is_faces || face.index < 0 ||
+                face.index >= static_cast<int>(dlg.buttons.size()))
+                break;
+            const AppState::ModalDialogButton& b =
+                dlg.buttons[static_cast<size_t>(face.index)];
+            return GuiRect{b.rect.x, b.rect.y, b.rect.w + b.seam_after,
+                           b.rect.h};
+        }
+        case Surface::Keyboard:
+            if (!onscreen_keyboard::stands(app) ||
+                face.index < static_cast<int>(onscreen_keyboard::kStableCodeBase))
+                break;
+            return onscreen_keyboard::key_rect(
+                app, onscreen_keyboard::page_of_key_index(face.index),
+                face.index);
+        case Surface::Knob:
+            if (!stash_is_faces || dlg.scrub_thumb_x < 0.0) break;
+            return scale_knob_move_rect(dlg.scrub, dlg.scrub_thumb_x,
+                                        dlg.scrub_thumb_x);
+    }
+    return GuiRect{0, 0, 0, 0};
+}
+
+// THE ONE SETTER of the hovered face (AppState::HoverFaces::hovered). A
+// change turns two fades and damages nothing — the clock's next step does
+// (tick_hover_faces), so every damage is one step's:
+//   * THE FACE THE PEN HAS LEFT goes toward rest FROM THE VALUE ITS FADE HAS
+//     REACHED, the stored mix — the value on screen — over the whole 200 ms
+//     (the head's reading of GTK: a new transition from the current value,
+//     never a shortened one). A FADE-IN NO STEP HAS ADVANCED (its stored mix
+//     still 0: nothing of it was painted) leaves the list at once, without
+//     a trace — the pen lift's restore motion names the key under the pen,
+//     and the latch's arm, in the same delivery, takes it back.
+//   * THE FACE THE PEN IS NOW ON goes toward the hover face the same way:
+//     from its stored mix where it was still fading out, from rest
+//     otherwise.
+void GuiInputHandler::set_hover_face(const AppState::HoverFaces::Face& face) {
+    AppState::HoverFaces& h = app.hover_faces;
+    if (face == h.hovered) return;
+    const int64_t now = monotonic_ms();
+    if (!h.hovered.none()) {
+        for (size_t i = 0; i < h.fades.size(); ++i) {
+            AppState::HoverFaces::Fade& f = h.fades[i];
+            if (!(f.face == h.hovered)) continue;
+            if (f.mix == 0.0) {
+                h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
+            } else {
+                f.from     = f.mix;
+                f.to       = 0.0;
+                f.start_ms = now;
+            }
+            break;
+        }
+    }
+    h.hovered = face;
+    if (face.none()) return;
+    for (AppState::HoverFaces::Fade& f : h.fades) {
+        if (!(f.face == face)) continue;
+        f.from     = f.mix;
+        f.to       = 1.0;
+        f.start_ms = now;
+        return;
+    }
+    h.fades.push_back(AppState::HoverFaces::Fade{
+        .face = face, .from = 0.0, .to = 1.0, .start_ms = now, .mix = 0.0});
+}
+
+// THE WALK (the declaration): none unless the installed theme HAS a hover
+// face — its ButtonHoverBackground another tone than its key face; on every
+// Live theme the two are one word (theme_roles.h's OUR OWN, ARC'S HOVER), so
+// no face hovers there, the seams included, and nothing fades or is damaged
+// — and the pointer's gate admits one; else the live face under the pen.
+void GuiInputHandler::walk_hover_face() {
+    const GuiThemeTones& tones = installed_theme().tones;
+    const bool theme_hovers = tones.key_hover_face != tones.key_face;
+    set_hover_face(theme_hovers && hover_admitted()
+                       ? hover_face_under_pointer()
+                       : AppState::HoverFaces::Face{});
+}
+
+// THE DEAD FACES LAND AT ONCE (the declaration): each fade whose face no
+// press would act on leaves the list, its extent damaged where a mix showed
+// (a face painted at rest under a veil would keep the tone it was caught
+// in); the hovered slot goes with its fade, so the next walk re-answers.
+void GuiInputHandler::settle_hover_faces() {
+    AppState::HoverFaces& h = app.hover_faces;
+    for (size_t i = 0; i < h.fades.size();) {
+        const AppState::HoverFaces::Fade& f = h.fades[i];
+        if (hover_face_live(f.face)) {
+            ++i;
+            continue;
+        }
+        if (f.mix > 0.0) viewport.invalidate_rect(hover_face_extent(f.face));
+        if (f.face == h.hovered) h.hovered = AppState::HoverFaces::Face{};
+        h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
+    }
+}
+
+// THE CLOCK (the declaration; AppState::HoverFaces' THE FRAMES). The walk
+// first — the stashes move under a resting pen (a relayout, a knob the
+// transport carries, a key repainted dead or lit) — then the dead faces,
+// then each fade's value at now: A STEP THAT MOVES THE STORED MIX DAMAGES
+// THE FACE'S OWN EXTENT, so a frame is invited on every beat while the fade
+// runs and the painters of that frame read the one value this step stored;
+// the step that lands is the last damage. A fade landed at the hover face
+// stays in the list at 1, moving nothing and damaging nothing, for as long
+// as the pen rests there; one landed at rest leaves it. With no fade
+// standing the body is the walk's few compares.
+void GuiInputHandler::tick_hover_faces() {
+    walk_hover_face();
+    settle_hover_faces();
+    AppState::HoverFaces& h = app.hover_faces;
+    if (h.fades.empty()) return;
+    const int64_t now = monotonic_ms();
+    for (size_t i = 0; i < h.fades.size();) {
+        AppState::HoverFaces::Fade& f = h.fades[i];
+        const double v = AppState::HoverFaces::value_at(f, now);
+        if (v != f.mix) {
+            f.mix = v;
+            viewport.invalidate_rect(hover_face_extent(f.face));
+        }
+        if (f.to == 0.0 && now - f.start_ms >= AppState::HoverFaces::kFadeMs) {
+            h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
+            continue;
+        }
+        ++i;
+    }
+}
+
+// THE PRESS'S CLAIM (the declaration): `face`'s fade leaves the list whole
+// and the hovered slot with it — the face is the accent from this press on,
+// and at rest (or lit) at its lift, with nothing left to run. WHERE A MIX
+// SHOWED, THE HOVER'S OWN EXTENT IS DAMAGED: the arm damages the face it
+// presses, and the hover's extent is that face or a seam column more (an
+// action row's answer's right seam, the next answer's first column, which
+// the accent does not cover and which returns to the face tone with the
+// press) — a rect that holds the arm's, so the two are one repaint.
+void GuiInputHandler::drop_hover_face(const AppState::HoverFaces::Face& face) {
+    AppState::HoverFaces& h = app.hover_faces;
+    if (h.hovered == face) h.hovered = AppState::HoverFaces::Face{};
+    for (size_t i = 0; i < h.fades.size(); ++i) {
+        if (!(h.fades[i].face == face)) continue;
+        if (h.fades[i].mix > 0.0)
+            viewport.invalidate_rect(hover_face_extent(face));
+        h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
+        return;
+    }
+}
+
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect
 // 2026-08-13; the rule's authoritative statement and the state's contract
 // are at AppState::ChromePress) for every redesigned button whose action IS a chord —
@@ -6892,6 +7218,10 @@ bool GuiInputHandler::arm_redesign_press(const GuiPointerPlace& at) {
             .press_ms      = now,
             .painted_glyph = face.glyph};   // N2's diagnostic (the field)
         invalidate_roster_press_face(app.chrome_press.index);
+        // THE PRESS CLAIMS THE FACE FROM THE HOVER, at once whatever its
+        // fade's value (AppState::HoverFaces' WHAT DOES NOT FADE).
+        drop_hover_face({AppState::HoverFaces::Surface::Roster,
+                         app.chrome_press.index});
         // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
@@ -8001,7 +8331,8 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit) {
 // end and the pointer leaving the box's column (note_tooltip_hover). IT
 // DAMAGES THE BOX'S OWN RECT AS LAST PAINTED AND NOTHING ELSE (architect
 // 2026-11-16, the beats: the box's rect, shown and taken down): the box is
-// the one thing that changes — no key wears a hover face, the rows under it
+// the one thing that changes — a key's hover face is not tied to the hint
+// and pays its own damage (AppState::HoverFaces), the rows under the box
 // read nothing of it — and its pixels are exactly the published rect
 // (AppState::RedesignTooltip::rect, the painter's as-painted record: the
 // box's hull grown by Arc's shadow's reach — tooltip_painted_extent, send
@@ -8418,9 +8749,9 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     app.pointer_in_window = true;
     // THE PEN'S HOT-FACE LATCH ANCHORS AT THE FIRST HOVER REPORT AND CLEARS
     // ON MOTION OFF THAT ANCHOR (pen_hot_latch_, the rule at its
-    // declaration), here above every branch so the hover walks this motion
-    // runs already answer at the pen — the hot button or the lit row under
-    // it lights, damaged as usual. The latch arms after the lift's
+    // declaration), here above every branch so the hover's walk this motion
+    // runs (walk_hover_face, below) already answers at the pen — the face
+    // under it begins its fade in. The latch arms after the lift's
     // own delivery, so the first motion met here unanchored is the pen's
     // first hover report: it sets the anchor and clears nothing.
     if (pen_hot_latch_.armed && !pen_hot_latch_.anchored) {
@@ -8450,6 +8781,14 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     // layer's abnormal end) cannot leave the wait refused
     // (AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
+    // THE HOVER FACE'S WALK, at the same placement (every branch below
+    // returns): the face the pen is on now, under its gate — none under a
+    // held button, so a contact's every motion, a gesture dragged over a
+    // key among them, hovers nothing; none while the pen latch holds, read
+    // after the latch's own anchoring and clear above, so the motion that
+    // rearms it lights what is under the pen (walk_hover_face;
+    // AppState::HoverFaces).
+    walk_hover_face();
     // THE NOTIFICATION CARDS' HOVER (2026-08-29), above every branch: the cards
     // are hit above every veil, so their hover must be answered under every
     // modal too, and every branch below returns.

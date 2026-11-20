@@ -239,9 +239,13 @@ struct TrimRange {
 // or lit under press, a glyph and the on-screen keyboard's lit cap alike,
 // and `text_on_lit_dim` over a lit-but-inert key's (architect 2026-11-11,
 // session 106).
-// STILL OPAQUE, NO HOVER FACE ON ANY BUTTON: the keys have none and the
-// chrome's buttons never had one; the lists' lit rows are a selection, not
-// a button face. THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 W outer corners,
+// STILL OPAQUE. A BUTTON'S HOVER FACE IS ARC'S (architect 2026-11-18 /
+// 2026-11-20, send CC, reopening 2026-10-02's no hover face): `key_hover_face`
+// over a resting key, word button, on-screen keyboard key and the scrub's
+// knob under the hovering pen, mixed in and out over Arc's 200 ms
+// (materials.h's THE HOVER; AppState::HoverFaces, its one owner); the
+// lists' lit rows are a selection, not a button face, and do not hover.
+// THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 W outer corners,
 // send Z, 2026-11-19: Arc's button and entry, A BUTTON IS ARC'S BUTTON
 // below), their edges at exact coverage, as every mark placed by time is
 // (THE COVERAGE STAMP, cool_edit_paint.h), and THE WAVEFORM PLATE'S EDGE is
@@ -455,7 +459,7 @@ struct GuiPalette {
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_text;      // COLOR_WINDOWTEXT
     GuiColor card_text;       // COLOR_INFOTEXT (a standing card's words and glyph; a normal card's are sidebar_text)
-    // THE FLAT LOOK'S TWENTY-SEVEN (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the clip lamp the lamp
     // arc's, the same night; the lit key's inert face 2026-11-11, session
@@ -464,7 +468,7 @@ struct GuiPalette {
     // sidebar and ruler texts, the disabled key's face and border; THE
     // POPUPS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
     // and the limiter lamp; THE DIALOGS' THREE, stage D2; THE SCALE'S RIM,
-    // stage D3).
+    // stage D3; THE TWO HOVER TONES, send CC, 2026-11-20).
     GuiColor body_face;       // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
@@ -474,6 +478,7 @@ struct GuiPalette {
     GuiColor key_dim_face;    // a disabled key's face (the key face at 55 % over the body tone; paint_linked_group, paint_word_button)
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
     GuiColor key_face;        // a key's face at rest; the two lamps at rest; the scrub's knob (paint_scale)
+    GuiColor key_hover_face;  // that face under the hovering pen, the far end of the hover's mix (materials.h's THE HOVER: the keys, the word buttons, the on-screen keyboard's keys, the scrub's knob)
     GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
     GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h) and the flag editor's (render_flag_editor_box)
     GuiColor ruler_tick;      // the ruler's ticks
@@ -481,6 +486,7 @@ struct GuiPalette {
     GuiColor lane_face;       // the marker lane
     GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
     GuiColor trim_span_face;  // the trim bar's pill at rest, the span
+    GuiColor trim_span_hover_face; // the pill under the hovering pen (ScrollbarSliderHover); read by no painter until the trim bar's hover lands (send CC's next package)
     GuiColor well_border;     // THE WELL'S LINES, the stereo divider and the status bar's line (paint_well_frame_rows, render_waveform_divider, paint_status_bar); the keys', word buttons' and entries' rings
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor frame_edge;      // the dialog window's frame edge (xfwm's)
@@ -1918,8 +1924,15 @@ inline int program_run_gap_px() {
 //     theme's ClipBorder, its well_border); HELD — the owner's ScrubDrag
 //     armed ON THE KNOB (RenderPlayer::ScrubDrag::on_thumb, the score
 //     viewer's the same; a press on the trough beside it carries the knob
-//     at rest) — THE WHOLE DISC THE ACCENT, no rim (Arc's slider:active).
-//     No glyph, no lit state, no hover. AT ITS POSITION'S EXACT PLACE (the
+//     at rest) — THE WHOLE DISC THE ACCENT, no rim (Arc's slider:active);
+//     UNDER THE HOVERING PEN, at rest, ITS FILL `key_hover_face` inside the
+//     unchanged rim (Arc's scale slider:hover, 505666, measured on his
+//     desktop; architect 2026-11-18 / 2026-11-20, send CC), faded in and
+//     out over Arc's 200 ms as a key's is — the hover's rule, its gate and
+//     its frames AppState::HoverFaces's (app_state.h), the mix handed to
+//     paint_scale as a number, the knob's hit the press's own
+//     (scale_knob_hit, on the disc as painted), its damage the disc's hull
+//     at the published center. No glyph, no lit state. AT ITS POSITION'S EXACT PLACE (the
 //     no-grid rule, hull above): its center the real x of its frame or page
 //     (the owners' mappings, render_player_scrub_x_of, score_scrub_x_of /
 //     _of_frame), painted at exact coverage through the coverage stamp's
@@ -2598,8 +2611,11 @@ inline GuiRect scale_knob_move_rect(const GuiRect& item, double from_x,
     return GuiRect{x0, item.y, x1 - x0, item.h};
 }
 // THE SCALE PAINTED on `item` (render.cpp): the trough, the played part to
-// the knob's center `knob_x`, the knob at rest or `held`.
-void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held);
+// the knob's center `knob_x`, the knob at rest or `held`; at rest its fill
+// mixed toward `key_hover_face` by `hover`, the knob's stored hover mix in
+// [0, 1] (the scrub's block above; AppState::HoverFaces).
+void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held,
+                 double hover = 0.0);
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas has none (row 6's canvas
 // paragraph), the rows and columns of ground stand outside the area.
 // THE WAVEFORM'S LINE WIDTH — ONE W, THE LINE RULE'S (architect 2026-11-04,
@@ -3128,16 +3144,13 @@ inline int level_travel_px() {
     return scaled_px(kLevelTravelW, 1);
 }
 
-// (THE HOVER FADE IS RETIRED — architect 2026-10-02: "hover is awkward with
-// pen and sometimes flickers, ok to drop it"; Windows 95 painted no hover
-// face. Breeze's hover animation stood here from 2026-09-27 — the HoverFade
-// edge-and-level model, its tick, kHoverFadeMs / kHoverFadeSteps and the
-// menu pill's kMenuPillHoldMs hold — and it drove paint alone, so it went
-// whole with the hover faces it softened, and the stored hover bits that only
-// those faces read went after them (the roster's, the dialog buttons' and
-// the folder overlay band's). The pointer walks stay for what still reads
-// them: the tooltips (the menu row's hover switch went with the row,
-// 2026-10-21). The record is in git history.)
+// (BREEZE'S HOVER FADE of 2026-09-27 — the HoverFade edge-and-level model,
+// its tick, kHoverFadeMs / kHoverFadeSteps and the menu pill's
+// kMenuPillHoldMs hold — retired 2026-10-02, "hover is awkward with pen and
+// sometimes flickers, ok to drop it", and is git history. THE HOVER AND ITS
+// FADE ARE ARC'S since send CC, 2026-11-20, on the low-contrast Arc page and
+// behind the pen latch that answers the flicker: materials.h's THE HOVER,
+// AppState::HoverFaces.)
 
 // (THE DROPDOWN'S METRICS — Windows 95's popup menu at the Windows pixel,
 // architect 2026-10-02: the plain raised two-line frame, one W of margin, the

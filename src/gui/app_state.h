@@ -5634,8 +5634,10 @@ struct AppState {
     // correct pre-display state: an empty rect contains no point, so neither a
     // tooltip nor a press can fire before the button has been shown.
     //
-    // NO HOVER IS STORED HERE (architect 2026-10-02: no button wears a hover
-    // face). The pointer walk (recompute_redesign_button_hover) reads `rect`
+    // NO HOVER IS STORED HERE: a key's hover face (Arc's, send CC,
+    // 2026-11-20) is AppState::HoverFaces's, whose walk reads `rect`, `seam`
+    // and the two painted bits below. The tooltip's pointer walk
+    // (recompute_redesign_button_hover) reads `rect`
     // and Play's second rect, row 8's clock (`field`, `contains`), for the
     // tooltip's owner; a press writes the armed chrome press
     // (AppState::ChromePress), whose inside bit the key's press face reads
@@ -6203,6 +6205,14 @@ struct AppState {
         // key on its left in a linked group (linked_key_seam_px,
         // materials.h) — 0 on a group's first key and on a word button.
         int         seam = 0;
+        // THE SEAM AFTER (send CC, 2026-11-20): the columns right after the
+        // box that move with THIS button's hover though they are the next
+        // button's — an action row's answer's right seam, the next answer's
+        // first columns (paint_action_row) — so the hover's damage holds
+        // them (GuiInputHandler::hover_face_extent). 0 on every other
+        // button: a linked key's box holds both its seams, a word button
+        // has none.
+        int         seam_after = 0;
         // The hit test's one question (point_on_key's linked form).
         bool hit(int x, int y) const { return point_on_key(rect, seam, x, y); }
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
@@ -6230,6 +6240,13 @@ struct AppState {
         // picker contents' and an editor's buttons are always live while
         // their dialog stands.
         bool        enabled      = true;
+        // THE LIT BIT AS PAINTED (send CC, 2026-11-20): the row's one
+        // checked key, the render player's Repeat One, published as its
+        // face was painted (the enabled bit's carry under a clip that
+        // missed the key; false on every other button). Its one reader is
+        // the hover's gate: a lit key is unchanged under the hovering pen
+        // (AppState::HoverFaces; GuiInputHandler::hover_face_live).
+        bool        lit          = false;
         std::string tooltip;            // the word alone; never empty
         // THE MODIFIER LINE, empty on every button that admits no modified
         // press — the roster tooltip's `line2` over this surface (2026-08-28).
@@ -7091,43 +7108,178 @@ struct AppState {
     };
     ChromePress chrome_press;
 
-    // THE HOT TOOLBAR BUTTON — ALWAYS -1 TODAY: the program's cases have NO
-    // HOVER FACE under any chrome (architect 2026-10-09, the program is Cool
-    // Edit, whose toolbar has none; program_spec.h's case_hot_face), so the
-    // walk stores none and no painter reads it. The slot stays for the walk's
-    // gates and the pen latch (GuiInputHandler::pen_hot_latch_): were a hot
-    // face ruled back, it would be the roster index of the icon-row or row-8
-    // button whose published rect holds the pointer (or the hovering S Pen),
-    // -1 for none — comctl32's hot item, the face's input and nothing else
-    // (architect 2026-10-06, Explorer's flat toolbar): the one writer is the roster's
-    // pointer walk (recompute_redesign_button_hover), which damages the old
-    // and the new button's rect when it changes, and the pointer-leave hook
-    // clears it on every fire (a pointer that has left is on no button; a
-    // finger's lift is that leave) — on the pen's hover end too, whose rule
-    // kept every hover-lit face (THE POINTER LEAVE'S THREE FIRES,
-    // input_core.h): the slot holds -1 there by construction, so the clear
-    // changes nothing (a hot face ruled back would want that keep back, the
-    // retired pull-down's pointer_leave_keeps_lit_rows, and a way for the hook
-    // to tell the pen's hover end, which carries no reason since 2026-11-07). It is held at -1 WHILE ANY CHROME PRESS IS ARMED —
-    // comctl32's capture: a toolbar holding the mouse shows no hot item
-    // (TOOLBAR_TranslateState's bHot & !bCaptured) — under the walk's own
-    // gates (no veil, no card over it, the hover zone).
-    int roster_hot = -1;
-    // THE RENDER PLAYER'S HOT BUTTON — ALWAYS -1 TODAY, as roster_hot: the
-    // player's cases are the program's, with no hover face under any chrome
-    // (2026-10-09; architect 2026-10-06 for the slot, ReactOS's Media
-    // Player's flat toolbar). Its shape: the index into
-    // modal_dialog.buttons of the player button under the pointer (or the
-    // hovering S Pen), -1 for none, and the dialog session it was read from,
-    // so a stale index never lights another surface's button. The one writer
-    // is the dialog's pointer walk (update_modal_dialog_hover, through
-    // set_player_hot), held at -1 while a dialog press is armed (comctl32's
-    // capture, as roster_hot) and while the pen's hot-face latch holds (the
-    // rule at GuiInputHandler::pen_hot_latch_); the pointer-leave hook (on
-    // every reason, as roster_hot's) and the latch's arm (arm_pen_hot_latch)
-    // clear it.
-    int      player_hot         = -1;
-    uint64_t player_hot_session = 0;
+    // THE HOVER FACES — ARC'S HOVER: WHICH FACE THE PEN HOVERS, ITS FADE'S
+    // CLOCK AND ITS DAMAGE, ONE OWNER FOR EVERY SURFACE (architect
+    // 2026-11-18, send Y: "I think we could consider resurrecting the hover.
+    // Look at the testing that was done before. I think that still holds up.
+    // In the past, we turned it off because of too much contrast, but this
+    // is a low contrast theme, which should support hovers. And actually,
+    // that'll help me, especially if the icons size gets smaller"; "lets go
+    // arc truthful re: hoevers. the old measure ments shuold count mostly
+    // for how far the pen is form the screen whne the hover is considered
+    // 'on' and how far whne it iis considerd realsed"; 2026-11-20, send CC:
+    // "If they're from Canonical, from Arc, I'll just accept them. That rule
+    // has worked very well. ... So I'm not going to mess with the fade";
+    // the on-screen keyboard's keys: "Four, yes." — reopening 2026-10-02's
+    // "hover is awkward with pen and sometimes flickers, ok to drop it").
+    // THIS STRUCT IS THE STATE; its bodies are GuiInputHandler's
+    // (input_pointer.cpp): THE WALK (walk_hover_face: which face the pen is
+    // on, under the gate), THE ONE SETTER (set_hover_face), THE CLOCK
+    // (tick_hover_faces, on the run loop's tick beside the tooltip's, and
+    // its first half alone ahead of every frame, settle_hover_faces) and
+    // THE PRESS'S CLAIM (drop_hover_face). THE LOOK
+    // is materials.h's THE HOVER; THE FACES THAT HOVER are enumerated once,
+    // at the pen latch's inventory (GuiInputHandler::pen_hot_latch_).
+    //
+    // ONE POINTER, ONE HOVERED FACE: `hovered` is the face the pen is on, or
+    // none — across the roster's keys (both icon rows), the dialog stash's
+    // buttons (every controls row's keys and word buttons, a dialog
+    // window's answers and buttons), the on-screen keyboard's keys and the
+    // scrub's knob, each named by its surface and its index there (a dialog
+    // button's and the knob's with the stash's owner and session, so a face
+    // never outlives the surface it was read from; a keyboard key's index
+    // names its page).
+    // THE GATE — A FACE HOVERS ONLY WHERE A PRESS THERE WOULD ACT (ON SCREEN
+    // IS AS PAINTED), two halves, each one predicate:
+    //   * THE POINTER'S (GuiInputHandler::hover_admitted, the gate every
+    //     hover look asks): the pen hovering in the plane (the platform's
+    //     pen_report_in_plane: a report above it is a leave; A FINGER NEVER
+    //     HOVERS — its every motion is a contact's), no contact down
+    //     anywhere (a pen or finger in contact is a press or a gesture: a
+    //     gesture begun elsewhere and dragged over a key lights nothing), and
+    //     the pen latch not holding (after a pen lift no face hovers until
+    //     the pen has moved the rearm distance or left and come back);
+    //   * THE FACE'S (hover_face_live, one arm per surface, on the stashes
+    //     as painted): a key the press claim would arm — painted enabled,
+    //     NOT LIT (Arc: checked + hover is the checked face, so a lit key is
+    //     unchanged and makes no entry here), not dead under a veil (under a
+    //     modal only that dialog's own buttons and the keyboard; under an
+    //     overlay the keys it leaves live, which are the ones painted
+    //     enabled, and the overlay's own) — found by the press's own hit
+    //     (point_on_key and the seam, the keyboard's key_at, the knob's
+    //     disc as painted), under no card. AND THE THEME'S: where the
+    //     installed theme's hover face is its key face (every Live theme,
+    //     the own roles' rule) no face hovers at all, so nothing fades and
+    //     nothing is damaged there.
+    // THE FADE IS ARC'S TRANSITION AS IT IS (`button { transition: all
+    // 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94) }`, gtk3 CSS line 126; the
+    // scale's slider the same 200 ms, line 1144): `fades` holds every face
+    // whose mix is not zero or is moving — the hovered one going to 1 and
+    // those the pen has left going to 0 — each a transition from `from` to
+    // `to` begun at `start_ms`, kFadeMs long on that curve (ease). A
+    // REVERSAL MID-FADE STARTS FROM THE VALUE THE FADE HAS REACHED AND RUNS
+    // THE WHOLE 200 ms on the same curve (set_hover_face) — OUR READING OF
+    // GTK 3, which starts a new CSS transition from the current value and
+    // does not shorten a reversed one — so a hover that ends mid-fade lands
+    // with no jump and no stuck mix. `mix` IS THE VALUE THE PAINTERS READ
+    // (mix_of), STORED BY THE CLOCK'S LAST STEP, never a clock read in a
+    // painter: one frame is one value whatever its clip.
+    // WHAT DOES NOT FADE (the planner's rulings for send CC, each reported
+    // to the architect as a decision): A PRESS LANDS AND LIFTS AT ONCE — the
+    // press arm that takes a face drops its fade whole (drop_hover_face: the
+    // accent at once whatever the fade's value, and the key's resting or lit
+    // face at once at the lift, held there by the pen latch; a slide-off
+    // under contact returns to rest at once) — and A FACE THAT STOPS BEING
+    // ONE A PRESS WOULD ACT ON (it goes lit or disabled, an overlay or a
+    // modal opens over it, the keyboard closes or changes its page, its
+    // dialog goes) LANDS AT ONCE on what its state gives: the clock drops it
+    // (tick_hover_faces' first half, run ahead of every frame too,
+    // settle_hover_faces), and its painter reads no mix for a face that is
+    // not at rest. EVERY LEAVE FADES OUT, as Arc's does when the pointer
+    // leaves the widget: the pen rising out of the plane, a HOVER_EXIT,
+    // focus loss (the pointer-leave hook, main.cpp, through the walk). THE
+    // HOVER_EXIT THE PLATFORM SENDS A MILLISECOND BEFORE EVERY TIP DOWN
+    // (input_core.h's THE POINTER LEAVE'S THREE FIRES) starts that same
+    // fade-out — a millisecond of it is under one painted level — and the
+    // DOWN's press arm then drops the fade, so the face goes from its hover
+    // to the accent with nothing restarted and no dip a frame could show
+    // past that one step.
+    // THE FRAMES — NOTHING IS DAMAGED AT REST: while a face fades, every
+    // step of the clock that moves its stored mix damages THAT FACE'S OWN
+    // PAINTED EXTENT (hover_face_extent: a roster key's painted box, a
+    // dialog button's box, a keyboard key's face, the knob's disc — a
+    // linked key's box holds both its seam columns, materials.h's
+    // paint_linked_group), which invites a frame on every beat
+    // (platform_android.cpp's kFrameBeat) until the fade lands; the landing
+    // step is the last damage, and a landed hover — the pen resting on the
+    // key — costs nothing. No strip, no row, no window. A fade-in no step
+    // has yet advanced ends without a trace (set_hover_face), so the pen
+    // lift's restore motion and the latch's arm right after it paint
+    // nothing. THE TOOLTIP IS NOT TIED TO IT: the face shows on the pen's
+    // arrival, TIPS lit or dark, no wait; the two share the key's box as
+    // their target and nothing else (AppState::RedesignTooltip).
+    struct HoverFaces {
+        enum class Surface : uint8_t { None, Roster, Dialog, Keyboard, Knob };
+        // ONE FACE: its surface and its index there — Roster the roster
+        // index (RedesignButton), Dialog the index into modal_dialog.buttons
+        // with the stash's owner and session, Keyboard the key's index
+        // (onscreen_keyboard::key_index, which names its page), Knob index 0
+        // with the stash's owner and session. Compared whole.
+        struct Face {
+            Surface          surface        = Surface::None;
+            int              index          = -1;
+            ModalDialogOwner dialog_owner   = ModalDialogOwner::None;
+            uint64_t         dialog_session = 0;
+            bool operator==(const Face&) const = default;
+            bool none() const { return surface == Surface::None; }
+        };
+        // ONE FACE'S FADE (the head's THE FADE): the transition from `from`
+        // to `to` (1 while the pen is on the face, 0 once it has left)
+        // begun at `start_ms`, and `mix`, the value the clock last stored —
+        // what the painters read and what is on screen once the damage that
+        // step declared has painted.
+        struct Fade {
+            Face    face;
+            double  from     = 0.0;
+            double  to       = 0.0;
+            int64_t start_ms = 0;
+            double  mix      = 0.0;
+        };
+        // ARC'S DURATION AND CURVE (gtk3 CSS line 126): 200 ms on
+        // cubic-bezier(0.25, 0.46, 0.45, 0.94), CSS's timing function — the
+        // curve through (0, 0), (0.25, 0.46), (0.45, 0.94), (1, 1), the
+        // progress its y at the parameter where its x is the elapsed
+        // fraction (x is monotone, so the parameter is found by bisection,
+        // to under one part in 10^12).
+        static constexpr int64_t kFadeMs = 200;
+        static double ease(double t) {
+            if (!(t > 0.0)) return 0.0;
+            if (t >= 1.0) return 1.0;
+            const auto curve = [](double p1, double p2, double s) {
+                const double u = 1.0 - s;
+                return 3.0 * u * u * s * p1 + 3.0 * u * s * s * p2 + s * s * s;
+            };
+            double lo = 0.0, hi = 1.0;
+            for (int i = 0; i < 40; ++i) {
+                const double mid = 0.5 * (lo + hi);
+                if (curve(0.25, 0.45, mid) < t) lo = mid;
+                else                            hi = mid;
+            }
+            return curve(0.46, 0.94, 0.5 * (lo + hi));
+        }
+        // THE FADE'S VALUE AT `now_ms`: from + (to − from) · ease(elapsed /
+        // kFadeMs), `to` itself from the landing on.
+        static double value_at(const Fade& f, int64_t now_ms) {
+            const double t = static_cast<double>(now_ms - f.start_ms) /
+                             static_cast<double>(kFadeMs);
+            if (t >= 1.0) return f.to;
+            return f.from + (f.to - f.from) * ease(t);
+        }
+        // The face the pen is on (none: no face hovers).
+        Face              hovered;
+        // Every face whose mix is not zero or is moving.
+        std::vector<Fade> fades;
+        // THE PAINTERS' ONE READ: `face`'s stored mix in [0, 1], 0 for a
+        // face with no fade. A painter asks it for a face AT REST alone and
+        // hands the number on (paint_linked_group, paint_word_button,
+        // paint_action_row, the keyboard's faces, paint_scale).
+        double mix_of(const Face& face) const {
+            for (const Fade& f : fades)
+                if (f.face == face) return f.mix;
+            return 0.0;
+        }
+    };
+    HoverFaces hover_faces;
 
     // THE HOVER TOOLTIP — THE WHOLE OF ITS STATE, AND THE MODEL'S ONE STATEMENT.
     // THE MODEL IS ALWAYS-SHOW (architect 2026-11-07, session 87, replacing
@@ -10456,7 +10608,8 @@ inline double render_player_scrub_x_of(const AppState& a, int64_t frame) {
 // THE KNOB'S GRAB TEST — the painted knob's disc, and its
 // ONE reader is the press router, which asks it whether a press TAKES the
 // knob where it stands or makes it JUMP to the press (the rest of the
-// item, architect 2026-10-02); the knob (paint_scale) wears no hover face.
+// item, architect 2026-10-02) — and the knob's hover asks it too (the
+// press's own hit, at the published center: AppState::HoverFaces).
 // `handle_x` is the knob's painted center — the position's own exact
 // place, or the drag's carried center while a drag stands.
 // THE TEST IS THE PAINTED DISC (on screen is as painted; render.h's

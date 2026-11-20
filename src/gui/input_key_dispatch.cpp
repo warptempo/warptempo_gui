@@ -6043,6 +6043,13 @@ bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
             app.modal_dialog_key_pressed     = at;
             app.modal_dialog_key_pressed_key = key;
             invalidate_modal_press_face(at);
+            // THE KEYBOARD'S ARM CLAIMS THE FACE FROM THE HOVER as the
+            // pointer's does (a fade still running out on this button ends
+            // here: the accent at once, nothing left after the lift —
+            // AppState::HoverFaces' WHAT DOES NOT FADE).
+            drop_hover_face({AppState::HoverFaces::Surface::Dialog, at,
+                             app.modal_dialog.owner,
+                             app.modal_dialog.session});
         }
         return true;
     } else {

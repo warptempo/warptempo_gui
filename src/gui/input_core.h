@@ -86,12 +86,16 @@
 //     HOVER END DARKENED NOTHING (architect 2026-10-10, his S Pen
 //     touching down on the open Settings menu's row: "the word Pick Colors
 //     blinks" — the exit's leave put the lit row out for the frame before the
-//     DOWN's own walk re-lit it): every hover-lit face keeps what was painted
+//     DOWN's own walk re-lit it): every hover-lit face kept what was painted
 //     (pointer_leave_keeps_lit_rows, retired with the popup), the pen latch's own principle
-//     (GuiInputHandler::pen_hot_latch_), and the next pointer event re-derives
-//     the faces as ever — a DOWN on the same row changes nothing, a hover
-//     re-entry elsewhere moves the row by its walk, a pen withdrawn for good
-//     leaves the row lit as Windows leaves it under a resting pointer.
+//     (GuiInputHandler::pen_hot_latch_), and the next pointer event re-derived
+//     the faces as ever. ARC'S HOVER FACES (send CC, 2026-11-20) ANSWER
+//     THE SAME GAP WITHOUT A KEEP: every leave starts the hovered face's
+//     200 ms fade-out, a millisecond of which is under one painted level,
+//     and the DOWN's press arm then drops the fade and paints the accent
+//     (AppState::HoverFaces; GuiInputHandler::drop_hover_face) — no dip a
+//     frame could show, nothing restarted, and the hook still needs no
+//     reason.
 //     TRACED ON HIS GLASS 2026-10-10 (three taps on the open Settings menu's
 //     Pick Colors row, three on the Font row's drop-down): the stylus
 //     HOVER_EXIT and its DOWN arrive in SEPARATE deliveries within one
@@ -279,8 +283,8 @@ public:
     // The lift's own translation end then reads the pointer as focused and
     // takes the focus fork's restore arm — the release, then an ordinary
     // MOTION at this position instead of the leave
-    // (deliver_touch_translation_end) — so the hot face under the pen
-    // survives the lift; an end that delivers nothing (a nav gesture, the
+    // (deliver_touch_translation_end) — so the pointer stays on what the
+    // pen tapped through the lift; an end that delivers nothing (a nav gesture, the
     // region, the caret) leaves the pointer resting here for the backend's
     // next hover report, a motion.
     void pointer_focus_at(double x, double y);

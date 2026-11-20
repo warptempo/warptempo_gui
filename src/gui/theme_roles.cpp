@@ -23,7 +23,7 @@ namespace {
 // THE ROLE TABLE: the roles a theme file holds, each exactly once — EXACTLY
 // THE ROLES A TONE READS (the head's DERIVATION), Live's names, the one
 // nested role flattened to `StandardVuMeter/Maximum` (the head's THE
-// FORMAT), and last OUR OWN NINE (kOwnThemeRoles below). The converter
+// FORMAT), and last OUR OWN ELEVEN (kOwnThemeRoles below). The converter
 // (tools/themes/ask_to_theme.py) reads the names out of this initializer,
 // so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
 // when it joined (StandbySelectionForeground 2026-11-06;
@@ -41,8 +41,11 @@ namespace {
 // TitleHighlight and ScaleTrough, OUR OWN TWO MORE, the same day (send AA's
 // stage D2: xfwm's title bar's highlight row, the dialogs' frame, and Arc's
 // progress / scale trough), and ScaleSliderBorder, the same day (send AA's
-// stage D3: the rim of Arc's scale's knob, the scrub). A role no tone
-// reads is in no file.
+// stage D3: the rim of Arc's scale's knob, the scrub), and
+// ButtonHoverBackground and ScrollbarSliderHover, OUR OWN TWO FOR ARC'S HOVER
+// (architect 2026-11-18 / 2026-11-20, send CC: a key's face under the
+// hovering pen and the trim bar's pill under it). A role no tone reads is in
+// no file.
 constexpr std::string_view kThemeRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -56,6 +59,7 @@ constexpr std::string_view kThemeRoles[] = {
     "WindowBackground", "TitleForeground", "SidebarForeground",
     "TooltipBackground", "CardBackground", "CardStandingBackground",
     "TitleHighlight", "ScaleTrough", "ScaleSliderBorder",
+    "ButtonHoverBackground", "ScrollbarSliderHover",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
@@ -72,7 +76,10 @@ constexpr std::size_t role_index(std::string_view name) {
 // WITHOUT AN ARC VALUE COPIES — so a Live theme's line is its own existing
 // value and changes no look (the three fills of send AA's stage D1 copy the
 // tone each replaces: the tooltip's SurfaceBackground, the pane it wore, and the
-// cards' Alert, today's card face — opaque, as every source word is). The
+// cards' Alert, today's card face — opaque, as every source word is; the
+// two hover tones of send CC copy the tone each moves from, the key face's
+// SurfaceBackground and the pill's ScrollbarInnerHandle, so no hover shows
+// on a Live theme). The
 // one enumeration of the pairs: the converter
 // (tools/themes/ask_to_theme.py) reads this initializer too, writing each
 // own role as its source role's word (an .ask holds none of them).
@@ -90,6 +97,8 @@ constexpr OwnThemeRole kOwnThemeRoles[] = {
     {"TitleHighlight",    "SurfaceArea"},
     {"ScaleTrough",       "ScrollbarInnerTrack"},
     {"ScaleSliderBorder", "ClipBorder"},
+    {"ButtonHoverBackground", "SurfaceBackground"},
+    {"ScrollbarSliderHover",  "ScrollbarInnerHandle"},
 };
 constexpr bool own_roles_in_table() {
     for (const OwnThemeRole& o : kOwnThemeRoles) {
@@ -317,6 +326,12 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb dim_ink    = over(rgba(roles["ViewCheckControlDisabledOff"]), face_a);
     const Rgb span_role  = over(rgba(roles["ScrollbarInnerHandle"]),
                                 rgba(roles["Desktop"]));
+    // THE PILL UNDER THE HOVERING PEN (send CC, 2026-11-20; the head's OUR
+    // OWN, ARC'S HOVER): our own ScrollbarSliderHover over the surface the
+    // pill's own role is composited over, Desktop — a Live theme's
+    // ScrollbarInnerHandle word, so the pill's own tone there.
+    const Rgb span_hover = over(rgba(roles["ScrollbarSliderHover"]),
+                                rgba(roles["Desktop"]));
     // The ruler's ticks over the ruler they stand on, the canvas (architect
     // 2026-11-17, session 140, ruling 3: the ruler wears the canvas's tone).
     const Rgb tick_role  = over(rgba(roles["DetailViewRulerMarkings"]), canvas_a);
@@ -347,12 +362,18 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.key_dim_face        = packed(dim_face);
     t.key_dim_border      = packed(dim_border);
     t.key_face            = packed(face);
+    // A KEY'S FACE UNDER THE HOVERING PEN (send CC, 2026-11-20; the head's
+    // OUR OWN, ARC'S HOVER): our own ButtonHoverBackground, read flat as the
+    // key face's own role is (arc_dark 505666, Arc's button:hover; a Live
+    // theme's SurfaceBackground, the key face itself: no hover shows there).
+    t.key_hover_face      = packed(opaque(roles["ButtonHoverBackground"]));
     t.ruler_face          = packed(canvas);
     t.ruler_tick          = packed(tick_role);
     t.ruler_text          = packed(ruler_fg);
     t.lane_face           = packed(desktop);
     t.trim_bar_face       = packed(trough);
     t.trim_span_face      = packed(span_role);
+    t.trim_span_hover_face = packed(span_hover);
     t.well_border         = packed(border);
     t.selection_fill      = packed(standby);
     t.selection_text      = packed(standby_text);

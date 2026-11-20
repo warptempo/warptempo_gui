@@ -2654,11 +2654,10 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // moment (pen_hovering_), so the lift's translation end takes the
             // core's focus fork — the release, then a MOTION at the lift
             // instead of the leave (deliver_touch_translation_end) — and the
-            // hot face under the pen survives; the HOVER_ENTER the platform
-            // sends after the up is then a MOTION here, not an enter. The
-            // leave was the blink: comctl32's hot face over a checked button
-            // drops the pattern, so a leave between the lift and the
-            // re-entry painted the checker for a frame or more. THE HOVER
+            // pointer stays on the key it tapped; the HOVER_ENTER the platform
+            // sends after the up is then a MOTION here, not an enter. A
+            // leave there was a blink: a face that read the pointer changed
+            // between the lift and the re-entry for a frame or more. THE HOVER
             // STILL ENDS where it always did — a HOVER_EXIT, a report above
             // the plane, a first down, focus loss — through end_pen_hover's
             // leave (the exit the platform sends just before every tip DOWN
@@ -2673,10 +2672,11 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // leaves the pointer resting at the lift until the pen's next
             // report or the next contact, the way Windows' mouse rests where
             // it clicked.
-            // AND EVERY HOVER-LIT FACE HOLDS UNTIL MOTION after such a lift
-            // (architect 2026-10-07, the roster's hot face; every face
-            // 2026-10-09): the UP arm arms the GUI's latch (set_pen_lift_hook;
-            // the rule at GuiInputHandler::pen_hot_latch_).
+            // AND NO FACE HOVERS UNTIL MOTION after such a lift (architect
+            // 2026-10-07, the roster's hot face; every hover face
+            // 2026-10-09, Arc's since send CC, 2026-11-20): the UP arm arms
+            // the GUI's latch (set_pen_lift_hook; the rule at
+            // GuiInputHandler::pen_hot_latch_).
             //
             // A HOVER ABOVE THE GUI'S PLANE IS NOT A POINTER (architect
             // 2026-09-27: every pen hover effect acts only within the plane,
@@ -2985,9 +2985,11 @@ void GuiPlatform::end_pen_hover() {
 // fast lift's arrives inside the plane); the release's one-sync deferral
 // (pen_hover_release_pending_, architect 2026-10-31), not these thresholds,
 // now carries that rule.
-// (The pen's one other distance, the hot face's re-arm after a lift, is a
-// chrome length in Windows px and so lives at the GUI's latch, which owns the
-// scale: kPenHotRearmPx, input_handler.h.)
+// (The pen's one other distance, the hover face's re-arm after a lift, is a
+// chrome length in W and so lives at the GUI's latch, which owns the
+// scale: kPenHotRearmPx, input_handler.h. THESE TWO THRESHOLDS ARE ARC'S
+// HOVER'S "ON" AND "RELEASED" HEIGHTS too, architect 2026-11-18, send Y:
+// a hover face shows only for a pen in the plane, AppState::HoverFaces.)
 constexpr float kPenPlaneEnter = 85.0f;
 constexpr float kPenPlaneExit  = 100.0f;
 

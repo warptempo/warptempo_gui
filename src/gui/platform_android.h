@@ -419,8 +419,9 @@ public:
     // RETAINED seat, so a fire that meets a live gesture's seat is inert.
     void set_pen_zoom_anchor_release_hook(std::function<void()> cb);
 
-    // THE PEN'S LIFT HOOK (architect 2026-10-07, after a pen lift the hot face
-    // waits for motion; every hover-lit face since 2026-10-09): fired (null-safe), carrying nothing, at the pen's
+    // THE PEN'S LIFT HOOK (architect 2026-10-07, after a pen lift no hover
+    // face shows until the pen moves; every hover face, Arc's since send CC,
+    // 2026-11-20): fired (null-safe), carrying nothing, at the pen's
     // lift off an EMPTY glass — the one lift the pointer survives
     // (pointer_focus_at; the rule at on_motion_event's hover arm) — AFTER
     // EVERYTHING the lift delivers (the release, the restore motion at the

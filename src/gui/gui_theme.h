@@ -37,6 +37,7 @@ struct GuiThemeTones {
     uint32_t key_dim_border;      // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone, the same block)
     uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face ((text_on_lit at 80 % over the accent at 75 % over the body tone) at 60 % over the body tone, theme_roles.h's DERIVED block); a word alone, read by key_ink
     uint32_t key_face;            // a key's and a word button's face at rest, the scrub's knob's fill (SurfaceBackground)
+    uint32_t key_hover_face;      // that face under the hovering pen, the hover mix's far end: a key's, a word button's, an on-screen keyboard key's, the scrub's knob's fill (ButtonHoverBackground, our own role; arc_dark 505666, Arc's button:hover; a Live theme's SurfaceBackground, the key face itself: no hover)
     uint32_t lit_dim_fill;        // a checked-but-disabled key's face: (the accent at 75 % over the body tone) at 60 % over the body tone, Arc's numbers
     uint32_t ruler_face;          // the ruler, Arc's entry's fill and the flag editor's (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the ruler face, the canvas)
@@ -44,6 +45,7 @@ struct GuiThemeTones {
     uint32_t lane_face;           // the marker lane (Desktop)
     uint32_t trim_bar_face;       // the trim bar's trough, the 12-W lane under the pill (ScrollbarInnerTrack over the ground)
     uint32_t trim_span_face;      // the trim bar's pill at rest, the span (ScrollbarInnerHandle over Desktop)
+    uint32_t trim_span_hover_face; // the pill under the hovering pen (ScrollbarSliderHover, our own role, over Desktop; arc_dark 676B78, Thunar's slider under the pointer; a Live theme's ScrollbarInnerHandle); no painter reads it yet (send CC's trim bar package)
     uint32_t well_border;         // THE WELL'S LINES: its one-W lines across the panel (under the top icon row, the trough, the ruler, the marker lane, the well's foot), the stereo divider and the status bar's line (ClipBorder over the ground)
     uint32_t selection_fill;      // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
     uint32_t selection_text;      // the selection pair's text; `selected_text` (StandbySelectionForeground, the bar's own partner)
@@ -144,7 +146,10 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // AND THE THREE CARRIED FILLS, each opaque at the tone it replaced (send
 // AA's stage D1, 2026-11-19): the tooltip's 363636 (SurfaceBackground), a
 // normal card's and a standing card's E76942 (Alert), the limiter lamp
-// keeping Alert's E76942 as its own tone.
+// keeping Alert's E76942 as its own tone AND THE TWO HOVER TONES, each the
+// tone it moves from (send CC, 2026-11-20): a key's hover face 363636
+// (SurfaceBackground) and the pill's 696969 (ScrollbarInnerHandle), so the
+// reference row shows no hover.
 // THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
 // 119): like every row of the list it holds the theme's own numbers,
 // and the install mixes its bright tones at the `bright_mix` key as it mixes
@@ -165,6 +170,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x272727, // key_dim_border
     0x2A221A, // text_on_lit_dim
     0x363636, // key_face
+    0x363636, // key_hover_face
     0x86623B, // lit_dim_fill
     0x393939, // ruler_face
     0x919191, // ruler_tick
@@ -172,6 +178,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x2A2A2A, // lane_face
     0x242424, // trim_bar_face
     0x696969, // trim_span_face
+    0x696969, // trim_span_hover_face
     0x2A2A2A, // well_border
     0x637E86, // selection_fill
     0x070707, // selection_text

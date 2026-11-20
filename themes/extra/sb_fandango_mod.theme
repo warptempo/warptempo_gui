@@ -5,6 +5,7 @@
 # TooltipBackground, CardBackground and CardStandingBackground, our own fills (not Live's), added by hand: TooltipBackground this file's SurfaceBackground, CardBackground and CardStandingBackground its Alert, opaque, so nothing here changes look (send AA's stage D1, 2026-11-19)
 # TitleHighlight and ScaleTrough, our own roles (not Live's), added by hand: TitleHighlight this file's SurfaceArea, ScaleTrough its ScrollbarInnerTrack, so nothing here changes look (send AA's stage D2, 2026-11-19)
 # ScaleSliderBorder, our own role (not Live's), added by hand: this file's ClipBorder, so nothing here changes look (send AA's stage D3, 2026-11-19)
+# ButtonHoverBackground and ScrollbarSliderHover, our own roles (not Live's), added by hand: ButtonHoverBackground this file's SurfaceBackground, ScrollbarSliderHover its ScrollbarInnerHandle, so no hover shows here (send CC, 2026-11-20)
 SurfaceArea=191513
 Desktop=2F2925
 SurfaceBackground=3A332E
@@ -36,3 +37,5 @@ CardStandingBackground=FF8026
 TitleHighlight=191513
 ScaleTrough=00000000
 ScaleSliderBorder=2F2925
+ButtonHoverBackground=3A332E
+ScrollbarSliderHover=72685E
