@@ -5626,7 +5626,7 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 // top-strip FLAG editor is deliberately absent: it is positional, a modal
 // since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
 // and it never takes this row: the row yields under the on-screen keyboard
-// it raises, and stands empty (paint_bottom_strip).
+// it raises, which covers it (paint_bottom_strip).
 // EVERY ONE OF THEM STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
 // since 2026-10-14 (modal_box.h; a prompt and a dialog editor stood in the
 // taskbar dialog laid over the row from 2026-10-10 until that day), so with
@@ -5736,13 +5736,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // this row is measured from a button stash at all, the status chain having
     // taken its right anchor to the tab row with it.
     // AND THE ROW YIELDS WHILE THE ON-SCREEN KEYBOARD STANDS (2026-10-10, ON
-    // SCREEN IS AS PAINTED): the keyboard's band stands at the view's foot,
-    // directly above the row (onscreen_keyboard.h), covering none of it; the
-    // row is EMPTY IN THE BODY TONE BECAUSE IT YIELDS here, as under the
-    // line editor (P2's overlays §E: an editor's answers are the keyboard's
-    // Enter and Esc) — the flag editor's case too, the one editor that
-    // raises the keyboard with no dialog — and a button nothing shows must
-    // not hover, wear a tooltip or answer a press (the zero rects).
+    // SCREEN IS AS PAINTED): the keyboard stands on the window's foot OVER
+    // THIS ROW and the status bar under it (architect 2026-11-19, send BB;
+    // onscreen_keyboard.h's placement block) — an editor's answers are the
+    // keyboard's Enter and Esc, the flag editor's case too, the one editor
+    // that raises the keyboard with no dialog — so the row holds nothing:
+    // the ground below is laid and covered by the keyboard in the same pass
+    // (the slot paints after this, on every frame, opaque), and a button
+    // nothing shows must not hover, wear a tooltip or answer a press (the
+    // zero rects).
     if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app)) {
         // The right block's groups stand down together: the SKIPS, the
         // MARKER VERBS, the STEP-AND-WALK GROUP, the NUDGE-AND-PLAY GROUP
@@ -8227,7 +8229,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
 // his K2 ruling; send Z, his approval of tmp/sendZ/VIEW/Z_06; send AA's
 // stage D2, 2026-11-19; the design's §E, the mock kit's keyboard the
 // reference): the surface's TOP LINE `well_border` (Thunar's pane line
-// parting the view's foot from the room above) over THE BAND on the body
+// parting the keyboard from what stands above) over THE BAND on the body
 // tone `body_face`; in it THE GRID — every key row's outer rect
 // (onscreen_keyboard::for_each_grid_row: its keys and the one-W line round
 // them, neighbors sharing the line between them) in `well_border` (Arc's
@@ -9475,7 +9477,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
         //      since 2026-08-28, one tenant at a time), whose opaque ground
-        //      covers the waveform area's lower part (the keyboard) or
+        //      covers the waveform area's lower part, the well's foot, the
+        //      bottom icon row and the status bar (the keyboard, on the
+        //      window's foot since send BB, 2026-11-19 — so of step 3 the
+        //      bottom row's and the status bar's pixels under it never
+        //      show) or
         //      EVERYTHING FROM THE VIEW BAR'S TOP ROW TO ROW 8'S TOP (the
         //      overlay, the modal family's box since 2026-10-14, modal_box.h
         //      — so of steps 3 through 11 only the icon row's lane, the
@@ -9570,7 +9576,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // overlay since 2026-08-28 — one band, one tenant at a time), between the
     // waveform passes above and the three floating surfaces below — which is
     // exactly where it sits in the picture. It OVERLAYS the waveform with its
-    // own opaque ground — the area's lower part under the keyboard, and the
+    // own opaque ground — the area's lower part, the bottom icon row and the
+    // status bar under the keyboard (send BB, 2026-11-19), and the
     // MODAL FAMILY'S PANEL under the overlay since 2026-10-14 (the view bar's
     // top row down to the controls row, modal_box.h) — so it must follow
     // every pass that paints there

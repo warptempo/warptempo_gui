@@ -1385,9 +1385,10 @@ private:
     void paint_modal_dialog(cairo_t* cr, const GuiRect& exposed);
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — its
-    // band across the program lanes at the view's foot, its block of keys
+    // band across the program lanes on the window's foot, its block of keys
     // seated in it (onscreen_keyboard.h's placement block), over the
-    // waveform area's lower part. It paints AFTER every waveform pass and
+    // waveform area's lower part, the bottom icon row and the status bar
+    // (send BB, 2026-11-19). It paints AFTER every waveform pass and
     // BEFORE the modal and the floating surfaces, which is where it sits in
     // the picture: the flag editor is above it in the marker lane, a dialog
     // editor's window in the room above it, and the waveform
@@ -1410,7 +1411,7 @@ private:
     // (The slot's as-painted bit is the dispatch's below, since 2026-08-28.)
     void paint_onscreen_keyboard(cairo_t* cr, const GuiRect& exposed);
 
-    // THE KEYBOARD SLOT (2026-08-28): the ONE band above the bottom row that
+    // THE KEYBOARD SLOT (2026-08-28): the ONE band that
     // the on-screen keyboard and the FOLDER OVERLAY (folder_overlay.h) share
     // — the overlay replaces the keyboard there, so at most one tenant
     // stands. This dispatch is the slot's one paint entry and THE ONE WRITER

@@ -4485,7 +4485,7 @@ private:
     //
     // THE PRESS CLAIMS THE WHOLE RECT and answers true for every press inside
     // it, key or not: a press on the grid's lines is a key's
-    // (onscreen_keyboard::key_at), and the top line, the edge pad and the
+    // (onscreen_keyboard::key_at), and the top line, the two pads and the
     // ground beside the seated block all CONSUME: a finger that
     // misses a key must not fall through to the
     // waveform's pan underneath. A key's

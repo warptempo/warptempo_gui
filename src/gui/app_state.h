@@ -10557,9 +10557,8 @@ GuiRect tooltip_damage_band(const AppState& a);
 // row down to the bottom row's top, 2026-08-28 to 2026-10-14 — IS GONE: the
 // folder overlay stands in the modal family's box since 2026-10-14
 // (modal_box.h, its one owner), and the on-screen keyboard's band stands on
-// the program frame's bottom row inside the frame since the same day
-// (onscreen_keyboard.h's placement block; a taskbar overlay on the window's
-// foot from 2026-10-10). The two still never both stand — the overlay's owners are
+// the window's foot over the bottom icon row and the status bar
+// (onscreen_keyboard.h's placement block, send BB, 2026-11-19). The two still never both stand — the overlay's owners are
 // not editors, the record at onscreen_keyboard::stands — and still share the
 // slot's one show-and-hide damage rect, onscreen_keyboard::slot_damage_rect.)
 

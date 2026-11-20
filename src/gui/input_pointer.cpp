@@ -3723,8 +3723,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     if (!onscreen_keyboard::stands(app)) return false;
     const GuiRect surf = onscreen_keyboard::surface_rect(app);
     // THE CLAIM IS THE BAND (onscreen_keyboard::claim_rect; with the taskbar
-    // overlay's line above it, 2026-10-10 to 2026-10-14): row 8 and the
-    // waveform under the band answer nothing. CONSUMED FROM HERE, whatever it
+    // overlay's line above it, 2026-10-10 to 2026-10-14): the waveform, the
+    // bottom icon row and the status bar under the surface answer nothing. CONSUMED FROM HERE, whatever it
     // lands on — the surface is opaque to the pointer.
     if (!rect_contains(onscreen_keyboard::claim_rect(app), x, y)) return false;
 

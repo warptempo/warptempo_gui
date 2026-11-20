@@ -159,7 +159,11 @@ void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1) {
 
 // THE PROCESS LINE'S DAMAGE — the status bar's lane whole (send Z,
 // 2026-11-19). The caller inventory and why the writers declare it beside
-// the tick's comparator are at the declaration, viewport.h.
+// the tick's comparator are at the declaration, viewport.h. UNDER THE
+// ON-SCREEN KEYBOARD (on the window's foot since send BB) the same rect:
+// the bar repaints and the keyboard slot, painted after it in the same pass
+// and clip, lays its own pixels back over it (onscreen_keyboard.h's
+// placement block), so a line change paints nothing over the keyboard.
 void Viewport::invalidate_status_bar_area() {
     const GuiRect t = status_bar_area(app);
     if (t.w > 0 && t.h > 0) gui.invalidate_region(t.x, t.y, t.w, t.h);
@@ -192,7 +196,7 @@ void Viewport::invalidate_tab_name_area() {
 // the state but not yet from the screen), the damage is the lane UNITED
 // WITH THE MODAL FAMILY'S WHOLE AREA without the keyboard (modal_area_rect
 // at keyboard height 0 — the line under the top icon row to the bottom
-// icon row's foot, which contains the room and the keyboard) AND THE
+// icon row's foot, which contains the room) AND THE
 // WINDOW'S PAINTED EXTENT as last published (the window and its shadow's
 // reach, ModalDialogGeometry::box), so a close erases the window and its
 // shadow and brings the lanes, the canvas and the bottom icon row back. A dialog editor's close takes the keyboard with

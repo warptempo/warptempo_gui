@@ -175,10 +175,11 @@ namespace {
 // walk, the nudge and play with Play / Stop last, each a plain run of cases
 // — and THE WELL'S FOOT (well_foot_h_px(), a hairline) directly under the
 // waveform; the flexible gap 2 above them. NO TENANT MOVES A LANE: the
-// modal family's box and controls row (modal_box.h) and the on-screen
-// keyboard's band (onscreen_keyboard.h's placement block) stand over the
-// lanes above the status bar, and every lane here keeps its rows under
-// them. ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect 2026-10-21:
+// modal family's box and controls row (modal_box.h) stand over the lanes
+// above the status bar and the on-screen keyboard's band
+// (onscreen_keyboard.h's placement block) over the canvas's foot and all
+// three, standing on the window's last row (send BB, 2026-11-19), and
+// every lane here keeps its rows under them. ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect 2026-10-21:
 // strip_row_rect).
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
@@ -364,7 +365,8 @@ int top_lane_height(int lane) {
 // well's lines). THE ORDER IS FIXED: no tenant of the row moves a lane — the
 // modal family's box and controls row stand over these rows (modal_box.h)
 // and the on-screen keyboard's band over them (onscreen_keyboard.h's
-// placement block), both standing above the status bar. GAP 2 sits ABOVE the
+// placement block), the box above the status bar, the keyboard over it on
+// the window's last row (send BB, 2026-11-19). GAP 2 sits ABOVE the
 // three, in bottom_strip_h's total
 // rather than in a lane's inset, so lane 0 is flush with the window edge
 // like the top strip's own lane 0 (and gap 2 being 0, lane 2's top is the
@@ -727,7 +729,7 @@ GuiRect well_foot_area(const AppState& a) {
 // and under the well's foot (lane 2, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal
 // family's controls row on its rows and the on-screen keyboard's band
-// standing above it are never lanes: modal_box.h, onscreen_keyboard.h's
+// standing over it are never lanes: modal_box.h, onscreen_keyboard.h's
 // placement block).
 // Gap 2 stands above lane 1 inside bottom_strip_h and is zero since the
 // waveform became the whole leftover.
@@ -744,8 +746,9 @@ GuiRect bottom_row_area(const AppState& a) {
 // bar block): BOTTOM LANE 0, on the window's foot under the bottom icon
 // row, the window's whole width — its first hairline the line over the bar,
 // the rest the bar. Every overlay and modal stands above it (the controls
-// row and the on-screen keyboard's band read bottom_row_area), so the bar
-// stays painted under them.
+// row reads bottom_row_area), so the bar stays painted under them; the
+// on-screen keyboard alone covers it, standing on the window's foot
+// (onscreen_keyboard.h's placement block, send BB, 2026-11-19).
 GuiRect status_bar_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, kBottomStatusLane);
 }

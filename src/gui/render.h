@@ -1236,9 +1236,9 @@ int  run_gap_w();
 // KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
 // like a phone … chiclets, taller than wide"): the live box IN W
 // (scaled_px's axis), read by onscreen_keyboard.h's geometry and nothing
-// else (osk_key_h moving the band's height and so its height floor's pads,
-// onscreen_keyboard::edge_pad_px, 2026-11-08, and the pads' own floor, a
-// quarter of osk_key_h, edge_pad_floor_px, 2026-11-13). The key_height
+// else (osk_key_h moving the band's height and so the surface's top, the
+// band's pads the bottom icon row's own, onscreen_keyboard::pad_top_px /
+// pad_foot_px, 2026-11-19). The key_height
 // seat's shape exactly — file-scope state in render.cpp,
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
@@ -1715,9 +1715,10 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // from the trim lane's first row to the well's foot and the controls row on
 // the bottom icon row's rows; a question, a dialog editor and the progress
 // modal are dialogs in xfwm's window over what stands (paint_handler.cpp's
-// THE DIALOG WINDOW); the on-screen keyboard stands at the view's foot
-// across the lanes (onscreen_keyboard.h's placement block), a dialog
-// editor's window in the room above it.
+// THE DIALOG WINDOW); the on-screen keyboard stands on the window's foot
+// across the lanes, over the bottom icon row and the status bar
+// (onscreen_keyboard.h's placement block, send BB), a dialog editor's
+// window in the room above it.
 
 // THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 0,
 // at the surface's top since 2026-10-24 (architect 2026-10-09: the program is Cool
@@ -1762,8 +1763,9 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // .. 125, the pad 126 .. 141), on the body tone, no line between the title
 // bar and the row (a tone change only), the trim lane's first row the line
 // under it. (The band's pads off the on-screen keyboard's key height had
-// no reader left here; the keyboard's own band pad stays its own,
-// onscreen_keyboard.h's edge_pad_floor_px.) Its runs are paint_icon_row's
+// no reader left here; the keyboard's band reads the bottom icon row's two
+// pads since 2026-11-19, send BB, onscreen_keyboard.h's pad_top_px /
+// pad_foot_px.) Its runs are paint_icon_row's
 // walk (icon_row_seats: each run one linked group, the run gap of ground
 // between two groups, program_run_gap_px). The hit target is the painted
 // box (point_on_key, materials.h); the ground round the groups, between
@@ -1809,7 +1811,9 @@ inline int key_gap_px() {
 // row's) and kToolbarPadInnerW, 8 W, on its side toward the well (below the
 // top row's, above the bottom row's) — a DELIBERATE ASYMMETRY, Arc's own,
 // mirrored between the two rows. Through scaled_px, floored at one device
-// px: 14 and 16 device px on the tablet at 200 %. His reason for room under
+// px: 14 and 16 device px on the tablet at 200 %. THE ON-SCREEN KEYBOARD,
+// standing over the bottom icon row, wears that row's two round its grid
+// (onscreen_keyboard.h's pad_top_px / pad_foot_px, send BB). His reason for room under
 // the bottom row: "my hand isn't naturally at the very edge of the screen"
 // — the status bar stands under it (status_bar_lane_h_px).
 inline constexpr double kToolbarPadOuterW = 7.0;
@@ -2442,8 +2446,11 @@ inline int bottom_row_h_px() {
 // (line_box_baseline). Its content and
 // its damage: paint_status_bar and status_bar_text (paint_handler.cpp).
 // INERT CHROME: no hit, no tooltip, no gesture. It stands under every
-// overlay and modal (the on-screen keyboard's band and the controls row
-// above it, both reading bottom_row_area).
+// overlay and modal (the controls row above it reading bottom_row_area),
+// and THE ON-SCREEN KEYBOARD COVERS IT while an editor stands (send BB,
+// 2026-11-19: the keyboard on the window's foot, onscreen_keyboard.h's
+// placement block; its painter still runs under it, the keyboard laid
+// over it in the same pass).
 inline constexpr double kStatusBarPadW = 4.0;
 inline constexpr double kStatusBarPenW = 14.0;
 // THE BOTTOM ICON ROW'S LEFT RUN'S PEN (architect 2026-11-19, send AA,
@@ -3495,28 +3502,6 @@ inline CanvasRowSpan canvas_hline_span(const GuiRect& area, double yc,
     return CanvasRowSpan{
         std::max(yc - half, static_cast<double>(area.y)),
         std::min(yc + half, static_cast<double>(area.y + area.h))};
-}
-
-// THE LOWER CHANNEL'S CENTER LINE'S FIRST ROW, window y — THE FIRST ROW THE
-// LINE TOUCHES (architect 2026-11-14, send J): the line render_center_lines
-// paints for channel 1, centered on its band's exact zero through the one
-// row rule above, its span's floor — or -1 where the band has no rows (the
-// line is not painted). The canvas ALWAYS HAS THE TWO WELLS (2026-10-16):
-// both center lines paint with or without a source, mono or stereo
-// (build_canvas_list's two branches), so the line stands whenever the
-// canvas has rows. ITS ONE READER is the on-screen keyboard's height floor
-// (onscreen_keyboard::edge_pad_px, architect 2026-11-08), which so stands
-// at or above the line's first row. On the tablet at 200 % the canvas 238
-// .. 1305 at key_height 28 (send AA; the bands 533 rows, odd) puts the zero
-// at 1039.5 and the line on [1038.5, 1040.5) — half of row 1038, row 1039
-// whole, half of row 1040 — its first row 1038.
-inline int lower_center_line_top_row(const GuiRect& area) {
-    const WaveformChannelBand band =
-        waveform_channel_band(area.h, waveform_divider_px(), 1);
-    if (area.h <= 0 || band.h <= 0) return -1;
-    return static_cast<int>(std::floor(
-        canvas_hline_span(area, static_cast<double>(area.y) + band.zero())
-            .y0));
 }
 
 // THE TWO WELLS' ROWS, window y, [y0, y1): the upper well's from the
