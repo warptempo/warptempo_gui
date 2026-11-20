@@ -246,19 +246,61 @@
 // stage D1): ONE STANDING CARD while any warp marker of the open piece is
 // STRUCK BY COINCIDENCE — a member of a coincident run, the parser's
 // verdict (warp_coincident_members, read through warp_red_flag_set_cached's
-// `collapsed`, warp_frame_map_view.h; disabled rows counted) — its words
-// "N warp markers coincide", N the members' count (a run has two or more,
-// so N >= 2 and the plural always holds). The label-reference strikes
-// (`red`'s other members) are no coincidence and raise nothing. ITS ONE
-// DERIVATION is GuiNotifications::sync_struck_card, on the run loop's tick
-// (main.cpp, beside the cards' clock), from the warp store as it stands:
+// `collapsed`, warp_frame_map_view.h; disabled rows counted). The
+// label-reference strikes (`red`'s other members) are no coincidence and
+// raise nothing.
+// THE STRUCK CARD SAYS WHERE (architect 2026-11-19, send CC: "The red
+// coincide card should say where the coincident markers are"; put back as
+// "'… coincide at <time>', up to three places, then 'and N more'": "Number
+// six. Agree."). ITS WORDS, one clause, no key named, no period (the cards'
+// style):
+//     "2 warp markers coincide at 00:12.345"
+//     "4 warp markers coincide at 00:12.345 and 01:23.456"
+//     "6 warp markers coincide at 00:12.345, 01:23.456 and 02:05.000"
+//     "10 warp markers coincide at 00:12.345, 01:23.456, 02:05.000 and 2 more"
+//   * THE COUNT: the members' count (a run has two or more, so it is 2 or
+//     more and the plural always holds);
+//   * THE PLACES: ONE A COINCIDENT RUN, the run's FIRST member's frame, in
+//     the music's order (warp_red_flag_set_cached's coincident_run_firsts,
+//     grouped in the verdict's own pass by the classifier's own pair test,
+//     so a run here is the parser's run); the first three named, ", "
+//     between them and " and " before the last; past three, " and K more",
+//     K the runs not named;
+//   * EACH PLACE AS THE VIEW ON SCREEN READS IT, BARE
+//     (format_active_domain_time, phase_reset_propagate.h — the one body the
+//     propagate family's labeled register is built on): in source view the
+//     source time, in target view the frame's image under the live target
+//     map; MM:SS.mmm at the nearest millisecond. No " source time" / " target
+//     time" tail: the card follows the view, and the ruler beside it says
+//     which. Two runs' first members stand at least one millisecond_frames
+//     apart in source frames — 44 frames at 44.1 kHz, 0.998 ms, 48 at 48
+//     kHz, exactly one — so two places CAN spell alike at the millisecond:
+//     two first members that close can round into one millisecond (the
+//     bin's width at 44.1 kHz, a tie rounded to even at 48), and in target
+//     view a fast tempo can pack two runs' images into one. Each is what the
+//     view's time reads there at that precision, and it stands.
+// ITS ONE DERIVATION is GuiNotifications::sync_struck_card, on the run
+// loop's tick (main.cpp, beside the cards' clock), from the warp store as it
+// stands, ON ONE KEY — everything the words read: the warp store's
+// generation (the members, the runs, their frames); the audio view
+// (active_audio_view: which domain the places read in); in target view the
+// tempo scale (engine_settings.scale, read as it stands whatever act wrote
+// it — with the store, the live target map's inputs,
+// target_view_warp_frame_map_cached); and the loaded audio's rate and
+// length (the coincidence's millisecond and the map's envelope). NOT THE
+// TAB (both tabs share the store, the scale and the view) and NOT THE TRIM
+// (the target view's map is the whole song's, trim being render-time). A
+// tick whose key has not moved answers with six compares:
 //   * RAISED the moment the count leaves zero after AN EDIT — any change of
 //     the authored warp markers (their `.warpmarkers` bytes,
 //     format_warpmarkers_text: a drop, a drag, a nudge, a paste, an undo or
 //     redo, a load in place or a revert) — AND AT THE PROJECT'S OPEN, the
 //     loaded piece's first look counting as one;
-//   * RE-WORDED IN PLACE while it stands, its count following the store
-//     (the same card, its id and its seat kept; never a second card);
+//   * RE-WORDED IN PLACE while it stands, its count and its places following
+//     the store, and its places the view's reading of them (an S/T flip, a
+//     scale change in target view) — the same card, its id and its seat
+//     kept; never a second card. A VIEW FLIP OR A MAP CHANGE IS NO EDIT: it
+//     re-words a standing card and never brings back a tapped-away one;
 //   * CLEARED BY ITSELF the moment no warp marker coincides — the one
 //     critical card a state takes down (it says what is true now, so a
 //     state that stopped being true leaves no message about the past);
@@ -486,6 +528,8 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+
+class GuiAudio;
 
 // -- SENTENCES MORE THAN ONE TRANSLATION UNIT RAISES -------------------------
 //
@@ -880,14 +924,30 @@ int notification_card_max_w_px(const AppState& a);
 // key, the struck clip lamp's square or any chrome under it answers nothing
 // while it stands there, and no key under it starts a tooltip
 // (recompute_redesign_button_hover's under_card).
-// WORKED ON THE TABLET (2304 x 1440 at 200 %, key_height 28): THE STRUCK
-// CARD "2 warp markers coincide" — its sentence's advance 260.1 device px
-// (Liberation Sans Regular at 24 px; send AA's card, 102 px of chrome, was
-// 363 wide) under 116 px of chrome (28 + 32 + 28 + 28) — is 377 wide, x
-// 1895 .. 2271 and rows 32 .. 119 (88): its glyph's box x 1923 .. 1954, rows
-// 60 .. 91; its pen x 1983, its line box rows 62 .. 89, the baseline on row
-// 84; over the title bar's rows 32 .. 55 and the top icon row's 56 .. 119
-// (the keys' faces 70 .. 125 covered to row 119). A SECOND ONE-LINE CARD
+// WORKED ON THE TABLET (2304 x 1440 at 200 %, key_height 28; the advances
+// MEASURED off fonts/LiberationSans-Regular.ttf at 24 px the product's way —
+// unhinted hmtx advances and the GPOS `kern` pairs, each to 1/64 px, which
+// gives send BB's "2 warp markers coincide" its recorded 260.1 — the boxes
+// DERIVED from them by the painter's arithmetic): THE STRUCK CARD of one
+// run, "2 warp markers coincide at 00:12.345" — its sentence's advance 400.2
+// device px under 116 px of chrome (28 + 32 + 28 + 28) — is ceil(516.2) =
+// 517 wide, x 1755 .. 2271 and rows 32 .. 119 (88): its glyph's box x
+// 1783 .. 1814, rows 60 .. 91; its pen x 1843, its line box rows 62 .. 89,
+// the baseline on row 84; over the title bar's rows 32 .. 55 and the top
+// icon row's 56 .. 119 (the keys' faces 70 .. 125 covered to row 119). Every
+// digit has one advance (13.34 px; the colon, the point and the comma 6.67),
+// so a place spells 106.75 px whatever it reads, less 1.78 px for each "11"
+// in it (the one kerned pair among its characters): the card's width moves
+// only with the number of places named and the digits of the two counts,
+// never with a place's own value beyond that pair. THE LONGEST FORM, three
+// places and the rest, "10 warp markers coincide at 00:12.345, 01:23.456,
+// 02:05.000 and 2 more", advances 781.8 px: 898 wide (449 W), x 1374 ..
+// 2271, against the ceiling's 1396 (698 W) — a sentence's room of 1280 px,
+// which no count a piece can hold reaches (each further digit of a count
+// 13.34 px), so THE STRUCK CARD NEVER WRAPS; its wrap, its seat (16 W off
+// the window's top and right) and its padding the cards' own, untouched.
+// (Two places, "4 … at 00:12.345 and 01:23.456", 560.3 px: 677 wide;
+// three, "6 … and 02:05.000", 680.4 px: 797 wide.) A SECOND ONE-LINE CARD
 // under it stands 12 rows lower, rows 132 .. 219 (glyph 160 .. 191,
 // baseline 184), over the icon row's foot pad, the trim lane (142 .. 169),
 // the ruler (170 .. 207) and the marker lane's first rows (210 .. 219); a
@@ -1021,15 +1081,19 @@ struct GuiNotifications {
     void fire_if_due();
 
     // THE STRUCK CARD'S ONE DERIVATION (the head's THE STRUCK CARD; architect
-    // 2026-11-19), on the run loop's tick once a piece is loaded: when the
-    // warp store's generation has moved since the last look, the struck
-    // count (warp_red_flag_set_cached's `collapsed`) and whether the
+    // 2026-11-19, sends Z and CC), on the run loop's tick once a piece is
+    // loaded: when THE WORDS' KEY has moved since the last look (the head's
+    // list: the warp store's generation, the audio view, in target view the
+    // tempo scale, and the loaded audio's rate and length), the struck count
+    // and the runs' places (warp_red_flag_set_cached's `collapsed` and
+    // `coincident_run_firsts`, each place spelled by
+    // format_active_domain_time) and, when the store moved, whether the
     // authored markers changed (their file bytes against the last look's,
     // the piece's first look counting as a change) — then the card raised,
-    // re-worded in place or cleared as the head says. `sample_rate` and
-    // `total_frames` the loaded audio's (the strike's cache key). A tick
-    // whose store has not moved asks nothing more than one compare.
-    void sync_struck_card(int sample_rate, long total_frames);
+    // re-worded in place or cleared as the head says. `audio` the loaded
+    // piece (the strike's cache key and the places' domain). A tick whose
+    // key has not moved asks nothing more than six compares.
+    void sync_struck_card(const GuiAudio& audio);
 
     // The hover walk, from the motion handler and the tick: which card the
     // pointer rests on. Entering a visible normal card banks its remaining

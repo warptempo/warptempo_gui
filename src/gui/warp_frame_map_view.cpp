@@ -95,6 +95,7 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
 
     c.red.clear();
     c.collapsed.clear();
+    c.coincident_run_firsts.clear();
     // Slice once — marker_effective and marker_effectively_disabled are
     // parser-domain and read no GUI-only fields. This resolves the COMMITTED
     // store, so a marker drag (which writes app.drag.moveable_times, not the
@@ -111,12 +112,18 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     // stage 2 consults the same classifier, so the render's verdict and this
     // strike cannot drift. Every member strikes; the same verdict is kept
     // apart in `collapsed` for the act and face readers (the field's own
-    // contract, warp_frame_map_view.h).
+    // contract, warp_frame_map_view.h). THE RUNS' FIRST MEMBERS ride the same
+    // walk (the field's contract): a member opens a run unless the
+    // classifier's own pair test joins it to the row before.
     const std::vector<char> members = warp_coincident_members(mv, sample_rate);
     for (int k = 0; k < n; ++k) {
         if (members[static_cast<size_t>(k)]) {
             c.red.insert(k);
             c.collapsed.insert(k);
+            const size_t i = static_cast<size_t>(k);
+            if (k == 0 || !warp_frames_coincide(mv[i - 1].time_frame,
+                                                mv[i].time_frame, sample_rate))
+                c.coincident_run_firsts.push_back(k);
         }
     }
 

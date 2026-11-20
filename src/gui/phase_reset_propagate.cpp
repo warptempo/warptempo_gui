@@ -159,27 +159,33 @@ double phase_reset_frame_for_anchor(
 
 }  // namespace
 
-// The propagate family's stop-message timestamp; the contract is at the
+// The bare spelling of a place in the view on screen; the contract is at the
 // declaration in phase_reset_propagate.h.
-std::string format_domain_timestamp(double source_frame,
-                                    const AppState& app,
-                                    const GuiAudio& audio) {
+std::string format_active_domain_time(double source_frame,
+                                      const AppState& app,
+                                      const GuiAudio& audio) {
     const int sr = audio.sample_rate();
     const long total = static_cast<long>(audio.total_frames());
     const bool in_target = (app.active_audio_view == 'T');
     const double sr_d = static_cast<double>(sr);
 
-    if (sr <= 0 || total <= 0 || !in_target) {
-        return format_timestamp(sr > 0 ? source_frame / sr_d : 0.0) +
-               (in_target ? " target time" : " source time");
-    }
+    if (sr <= 0 || total <= 0 || !in_target)
+        return format_timestamp(sr > 0 ? source_frame / sr_d : 0.0);
 
     const int64_t src_frame =
         static_cast<int64_t>(std::nearbyint(source_frame));
     const int64_t dom_frame =
         source_frame_to_active_domain(app, audio, src_frame);
-    const double dom_seconds = static_cast<double>(dom_frame) / sr_d;
-    return format_timestamp(dom_seconds) + " target time";
+    return format_timestamp(static_cast<double>(dom_frame) / sr_d);
+}
+
+// The propagate family's stop-message timestamp: the bare spelling above and
+// its domain's label; the contract is at the declaration.
+std::string format_domain_timestamp(double source_frame,
+                                    const AppState& app,
+                                    const GuiAudio& audio) {
+    return format_active_domain_time(source_frame, app, audio) +
+           (app.active_audio_view == 'T' ? " target time" : " source time");
 }
 
 // -- THE STRUCK RUNG'S RANGES (architect 2026-11-17; the rule, both ranges'

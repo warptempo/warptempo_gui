@@ -13,17 +13,31 @@
 struct GuiTargetRender;
 struct GuiActiveViews;
 
-// THE PROPAGATE FAMILY'S STOP-MESSAGE TIMESTAMP. Formats a stop message's timestamp
-// in whichever audio domain the user is currently in. The input is a
+// A PLACE AS THE VIEW ON SCREEN READS IT, BARE — THE ONE BODY that takes a
+// source frame to the active audio domain and spells it. The input is a
 // SOURCE-frame value (warp markers, clipboard blocks and dest blocks all live
-// in whole source frames, widened into this double parameter); the timestamp is
-// the display rendering, format_timestamp(frame / sr). In source view:
-// identity, labeled " source time". In target view: forward-translate to the
-// active domain via source_frame_to_active_domain, labeled " target time". A
-// degenerate (empty / failed-build) target-view map translates as identity, so
-// the timestamp reads through unchanged but stays labeled " target time",
-// consistent with the identity fallback the rest of the target-view paint uses
-// on an empty map.
+// in whole source frames, widened into this double parameter); the spelling
+// is the display rendering, format_timestamp(frame / sr): MM:SS.mmm, the
+// nearest millisecond, capped at 59:59.999 (time_format.h). In source view:
+// identity, the source time. In target view: the frame rounded to the whole
+// source frame and forward-translated to the active domain via
+// source_frame_to_active_domain (the memoized live target map), the target
+// time. A degenerate (empty / failed-build) target-view map translates as
+// identity, consistent with the identity fallback the rest of the
+// target-view paint uses on an empty map; with no rate it reads 00:00.000,
+// with no frames the source time. TWO READERS, each through this one
+// body so the two cannot drift: the propagate family's register below (this
+// plus its domain's label) and the struck card's places, which carry the
+// bare time (GuiNotifications::sync_struck_card; architect 2026-11-19, send
+// CC: the card follows the view on screen, so the ruler beside it says
+// which domain, and a label after each of three places would bury them).
+std::string format_active_domain_time(double source_frame, const AppState& app,
+                                      const GuiAudio& audio);
+
+// THE PROPAGATE FAMILY'S STOP-MESSAGE TIMESTAMP: format_active_domain_time
+// above, labeled with the domain the user is in — " source time" in source
+// view, " target time" in target view (a degenerate target map included: the
+// time reads through unchanged but stays labeled " target time").
 //
 // ONE SPELLING IS THE POINT: both phase-reset pastes (paste_apply and
 // paste_state_apply) report a lockstep divergence in the same register

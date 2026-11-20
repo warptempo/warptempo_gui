@@ -1,7 +1,9 @@
 #include "notifications.h"
 
+#include "audio.h"            // GuiAudio, the struck card's piece
 #include "folder_overlay.h"   // pad_px, the panel's air (one accessor read)
 #include "paint_handler.h"    // the lane table
+#include "phase_reset_propagate.h"  // format_active_domain_time, the places
 #include "warp_frame_map_view.h"   // warp_red_flag_set_cached, the strike
 #include "warpmarkers.h"      // format_warpmarkers_text, the authored bytes
 
@@ -373,19 +375,35 @@ void GuiNotifications::rebank(uint64_t id, int64_t now) {
     }
 }
 
-void GuiNotifications::sync_struck_card(int sample_rate, long total_frames) {
+void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
     // THE ONE DERIVATION (notifications.h's THE STRUCK CARD, architect
-    // 2026-11-19). THE STORE'S GENERATION IS THE TRIGGER: every write to the
-    // warp markers bumps it (marker_store.h), so a tick whose generation has
-    // not moved owes nothing — and a card standing then already says the
-    // count this store holds, which only a write could change. (The card's
-    // own dismissal moves no generation: tapped away, it stays away until
-    // the store moves.)
+    // 2026-11-19, sends Z and CC). THE WORDS' KEY IS THE TRIGGER — everything
+    // the count and the places read (the head's list): the warp store's
+    // generation, which every write to the warp markers bumps
+    // (marker_store.h); the audio view; in target view the tempo scale (the
+    // live target map's one input beside the store; zero in source view,
+    // where the map is not read); the loaded audio's rate and length. A tick
+    // whose key has not moved owes nothing — a card standing then already
+    // says what this key reads, which only a move of the key could change.
+    // (The card's own dismissal moves nothing in the key: tapped away, it
+    // stays away until the store moves.)
     AppState::Notifications& st = app.notifications;
-    const long long gen = app.warpmarkers.generation();
-    if (gen == st.struck_seen_gen) return;
+    const int       sample_rate  = audio.sample_rate();
+    const long      total_frames = static_cast<long>(audio.total_frames());
+    const long long gen          = app.warpmarkers.generation();
+    const char      view         = app.active_audio_view;
+    const double    scale = view == 'T' ? app.engine_settings.scale : 0.0;
+    const bool store_moved = gen != st.struck_seen_gen;
+    if (!store_moved && view == st.struck_seen_view &&
+        scale == st.struck_seen_scale && sample_rate == st.struck_seen_rate &&
+        total_frames == st.struck_seen_total)
+        return;
     const bool first_look = st.struck_seen_gen < 0;
-    st.struck_seen_gen = gen;
+    st.struck_seen_gen   = gen;
+    st.struck_seen_view  = view;
+    st.struck_seen_scale = scale;
+    st.struck_seen_rate  = sample_rate;
+    st.struck_seen_total = total_frames;
     // AN EDIT IS A CHANGE OF THE AUTHORED MARKERS — their `.warpmarkers`
     // bytes, exactly what a save would write (format_warpmarkers_text) —
     // not every bump of the generation: the store's mutable accessors bump
@@ -393,12 +411,19 @@ void GuiNotifications::sync_struck_card(int sample_rate, long total_frames) {
     // iteration bracket rides the marker unsaved, so a bump that leaves the
     // file's bytes as they were is no edit and does not bring a tapped-away
     // card back. The piece's first look (the project's open) counts as one.
-    std::string text = format_warpmarkers_text(app.warpmarkers.markers());
-    const bool edited = first_look || text != st.struck_seen_text;
-    st.struck_seen_text = std::move(text);
-    const int count = static_cast<int>(
-        warp_red_flag_set_cached(app, sample_rate, total_frames)
-            .collapsed.size());
+    // A KEY THAT MOVED WITH THE STORE STANDING — a view flip, a scale change
+    // in target view, a new rate or length — IS NO EDIT (architect
+    // 2026-11-19, send CC): it re-words a standing card and brings back no
+    // tapped-away one, so the bytes are asked only when the store moved.
+    bool edited = first_look;
+    if (store_moved) {
+        std::string text = format_warpmarkers_text(app.warpmarkers.markers());
+        edited = edited || text != st.struck_seen_text;
+        st.struck_seen_text = std::move(text);
+    }
+    const WarpRedFlagCache& strike =
+        warp_red_flag_set_cached(app, sample_rate, total_frames);
+    const int count = static_cast<int>(strike.collapsed.size());
     AppState::Notification* card =
         st.struck_card_id != 0 ? find(st.struck_card_id) : nullptr;
     // CLEARED BY ITSELF: no warp marker coincides, so the state the card
@@ -415,16 +440,39 @@ void GuiNotifications::sync_struck_card(int sample_rate, long total_frames) {
         st.struck_card_id = 0;
         return;
     }
-    // THE WORDS (the head's, agreed 2026-11-19): a coincident run holds two
-    // or more members, so the count is 2 or more and the plural holds.
-    std::string words = std::to_string(count) + " warp markers coincide";
+    // THE WORDS (the head's; the count agreed 2026-11-19, send Z, the places
+    // 2026-11-19, send CC: "The red coincide card should say where the
+    // coincident markers are"): a coincident run holds two or more members,
+    // so the count is 2 or more and the plural holds; then ONE PLACE A RUN,
+    // its first member's frame (coincident_run_firsts, the verdict's own
+    // grouping, in the music's order), the first three named — ", " between
+    // them, " and " before the last — and past three " and K more", K the
+    // runs not named; each place as the view on screen reads it, bare
+    // (format_active_domain_time, the propagate register's own body).
+    constexpr size_t kNamedPlaces = 3;
+    const std::vector<int>& runs = strike.coincident_run_firsts;
+    const std::vector<GuiWarpMarker>& markers = app.warpmarkers.markers();
+    const size_t named = std::min(runs.size(), kNamedPlaces);
+    std::string words = std::to_string(count) + " warp markers coincide at ";
+    for (size_t i = 0; i < named; ++i) {
+        if (i > 0)
+            words += (i + 1 == named && runs.size() <= kNamedPlaces) ? " and "
+                                                                     : ", ";
+        words += format_active_domain_time(
+            static_cast<double>(
+                markers[static_cast<size_t>(runs[i])].time_frame),
+            app, audio);
+    }
+    if (runs.size() > kNamedPlaces)
+        words += " and " + std::to_string(runs.size() - kNamedPlaces) + " more";
     if (card != nullptr) {
         // RE-WORDED IN PLACE: the same card, its seat in the stack kept. ITS
-        // OWN PAINTED RECT IS DAMAGED (new words on an unmoved rect — "2"
-        // and "3" shape to one width, the digits' tabular advance — are a
-        // change the stack's rect compare cannot see), and the stack's owner
-        // damages what a new width moved ("9" to "10": each card its
-        // content's width since 2026-11-19, send AA).
+        // OWN PAINTED RECT IS DAMAGED (new words on an unmoved rect — a count
+        // or a place of one width for another, every digit sharing one
+        // advance — are a change the stack's rect compare cannot see), and
+        // the stack's owner damages what a new width moved (a place named or
+        // dropped, a count gaining a digit, an "11" kerned in a place: each
+        // card its content's width since 2026-11-19, send AA).
         if (card->text != words) {
             card->text = std::move(words);
             for (const AppState::NotificationPainted& p : st.painted)

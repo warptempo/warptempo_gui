@@ -2651,17 +2651,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         notifications.fire_if_due();
 
         // THE STRUCK CARD, ON EVERY TICK ONCE A PIECE IS LOADED (architect
-        // 2026-11-19, send Z; notifications.h's THE STRUCK CARD, its one
-        // derivation GuiNotifications::sync_struck_card): state worn as a
-        // card, derived here from the warp store as it stands rather than at
-        // each of the edits that move it — a drop, a drag, a nudge, a paste,
-        // an undo or redo, a load in place, a revert and the project's open
-        // all reach it through the store's generation, which a tick that
-        // finds unmoved answers with one compare. Before the load (the
-        // open's held frame) there is no piece and no strike to ask about.
+        // 2026-11-19, sends Z and CC; notifications.h's THE STRUCK CARD, its
+        // one derivation GuiNotifications::sync_struck_card): state worn as a
+        // card, its count and its places derived here from the warp store and
+        // the view as they stand rather than at each of the acts that move
+        // them — a drop, a drag, a nudge, a paste, an undo or redo, a load in
+        // place, a revert and the project's open through the store's
+        // generation, an S/T flip through the view, a scale commit in target
+        // view through the scale: the words' key, which a tick that finds
+        // unmoved answers with six compares, no format and no map walk.
+        // Before the load (the open's held frame) there is no piece and no
+        // strike to ask about.
         if (audio.total_frames() > 0 && !app.loading)
-            notifications.sync_struck_card(audio.sample_rate(),
-                                           audio.total_frames());
+            notifications.sync_struck_card(audio);
 
         // THE TITLE BAR'S RIGHT GROUP, ON EVERY TICK for the same reason: the
         // wall clock and the battery move whatever the project is doing

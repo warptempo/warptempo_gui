@@ -158,6 +158,20 @@ struct WarpRedFlagCache {
     // sweep's owner refusal. Filled in the same pass that fills `red`, under
     // the same key; no second computation anywhere.
     std::set<int> collapsed;
+    // THE COINCIDENT RUNS, ONE ENTRY A RUN: the store index of each run's
+    // FIRST member, ascending, so in the music's order (the store is
+    // time-sorted). Filled in the same pass as `collapsed`, from the same
+    // verdict: a member STARTS a run unless it coincides with the row before
+    // it (warp_frames_coincide on that adjacent pair, the very test the
+    // classifier marks both rows of a pair by, warp_coincident_members), so
+    // a run here is exactly the classifier's maximal chain of coinciding
+    // adjacent rows — two runs back to back (the last of one 1 ms or more
+    // from the first of the next) stay two — and the entries' runs together
+    // hold `collapsed` and nothing else. ITS ONE READER is the struck card's
+    // places (GuiNotifications::sync_struck_card, architect 2026-11-19, send
+    // CC: "The red coincide card should say where the coincident markers
+    // are").
+    std::vector<int> coincident_run_firsts;
 };
 
 // Returns the warp red-flag cache entry for the app's live warp store,

@@ -8576,16 +8576,24 @@ struct AppState {
         // parameter copied down a dozen call chains would.
         bool                             held_repeat_dispatch = false;
         // THE STRUCK CARD'S STATE (notifications.h's THE STRUCK CARD; its one
-        // writer GuiNotifications::sync_struck_card, architect 2026-11-19):
-        // the card's id while it was last raised (0 none; a card no longer
-        // in the stack was tapped away or cleared), the warp store
-        // generation the derivation last looked at (-1 before the piece's
-        // first look) and the authored markers' `.warpmarkers` bytes at that
-        // look (format_warpmarkers_text), what tells an edit from a store
+        // writer GuiNotifications::sync_struck_card, architect 2026-11-19,
+        // sends Z and CC): the card's id while it was last raised (0 none; a
+        // card no longer in the stack was tapped away or cleared); THE
+        // WORDS' KEY at the derivation's last look — the warp store
+        // generation (-1 before the piece's first look), the audio view
+        // ('\0' before it), the tempo scale in target view (0 in source
+        // view, where the places read no map) and the loaded audio's rate
+        // and length — a tick re-deriving only when one of the five moved;
+        // and the authored markers' `.warpmarkers` bytes at the store's last
+        // move (format_warpmarkers_text), what tells an edit from a store
         // bump that changed no authored field. Per AppState, so per project:
         // a project's open is a fresh look.
-        uint64_t                         struck_card_id  = 0;
-        long long                        struck_seen_gen = -1;
+        uint64_t                         struck_card_id    = 0;
+        long long                        struck_seen_gen   = -1;
+        char                             struck_seen_view  = '\0';
+        double                           struck_seen_scale = 0.0;
+        int                              struck_seen_rate  = 0;
+        long                             struck_seen_total = 0;
         std::string                      struck_seen_text;
     };
     Notifications notifications;
