@@ -3558,7 +3558,7 @@ namespace {
 
 // THE WRAP, and the ONE place a card's text is broken into lines (architect
 // 2026-08-30). GREEDY WORD WRAP AT ASCII SPACES ON MEASURED ADVANCES: each
-// candidate line is re-shaped as ONE run through the shaping chokepoint and
+// candidate line is shaped as ONE run through the shaping chokepoint and
 // its own width_px is what decides, so THE RUN THAT IS MEASURED IS THE RUN
 // THAT IS PAINTED — the painter paints exactly the runs this returns and
 // re-shapes nothing. A line closes before the first word that overflows the
@@ -3578,14 +3578,17 @@ namespace {
 // The break's space is CONSUMED, and so is any run of leading spaces on a
 // line; every other byte is carried verbatim out of the sentence, which is
 // why the lines are substrings and never a rejoin (a rejoin would author
-// text the sentence never had). Shaping runs at paint on every frame, as the
-// folder overlay's rows already do: cards are at most a handful and their
-// sentences are short, so nothing here is memoized.
-std::vector<text_shape::ShapedRun> notification_text_lines(
+// text the sentence never had). EVERY RUN THROUGH THE LABEL RUNS' MEMO
+// (text_shape::memoized_run; send BB, 2026-11-19 — the same pixels, the
+// memo's hit the very run a fresh shape returns): the layout runs under
+// every on_redraw call while a card stands (paint_notifications: its
+// publication is the layout's), so a standing card's sentence and its wrap
+// candidates are shaped once and found again at every later run.
+std::vector<text_shape::SharedRun> notification_text_lines(
         const GuiFont& font, const std::string& text,
-        const text_shape::ShapedRun& whole, double room_px) {
-    std::vector<text_shape::ShapedRun> lines;
-    if (room_px <= 0.0 || whole.width_px <= room_px) {
+        const text_shape::SharedRun& whole, double room_px) {
+    std::vector<text_shape::SharedRun> lines;
+    if (room_px <= 0.0 || whole->width_px <= room_px) {
         lines.push_back(whole);
         return lines;
     }
@@ -3596,29 +3599,26 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
         while (pos < n && all[pos] == ' ') ++pos;
         if (pos >= n) break;
         if (lines.size() + 1 >= static_cast<size_t>(kNotificationMaxLines)) {
-            lines.push_back(
-                text_shape::shape_text_run(font, all.substr(pos)));
+            lines.push_back(text_shape::memoized_run(font, all.substr(pos)));
             return lines;
         }
         size_t end = n;
-        text_shape::ShapedRun line;
-        bool fitted = false;
+        text_shape::SharedRun line;
         for (size_t probe = pos;;) {
             const size_t sp = all.find(' ', probe);
             const size_t cand_end = (sp == std::string_view::npos) ? n : sp;
-            text_shape::ShapedRun cand = text_shape::shape_text_run(
+            text_shape::SharedRun cand = text_shape::memoized_run(
                 font, all.substr(pos, cand_end - pos));
-            if (cand.width_px > room_px) break;
-            line   = std::move(cand);
-            end    = cand_end;
-            fitted = true;
+            if (cand->width_px > room_px) break;
+            line = std::move(cand);
+            end  = cand_end;
             if (cand_end >= n) break;
             probe = cand_end + 1;
         }
-        if (!fitted) {
+        if (!line) {
             const size_t sp = all.find(' ', pos);
             end  = (sp == std::string_view::npos) ? n : sp;
-            line = text_shape::shape_text_run(font, all.substr(pos, end - pos));
+            line = text_shape::memoized_run(font, all.substr(pos, end - pos));
         }
         lines.push_back(std::move(line));
         pos = end;
@@ -3674,10 +3674,13 @@ std::vector<text_shape::ShapedRun> notification_text_lines(
 // (notification_card_h_px). The stack's `y` then advances by each card's OWN
 // height and the gap.
 //
-// IT PUBLISHES WHAT IT DREW: each card's rect, and their union,
-// into AppState::Notifications (the owner-tag doctrine at
-// ModalDialogGeometry — published geometry may only SELECT; the press claim,
-// and the hover walk read this and then ask the live stack).
+// IT PUBLISHES WHAT IT LAYS OUT, WHICH IS WHAT STANDS: each card's rect,
+// and their union, into AppState::Notifications on every run — the card
+// drawn by this run where the run's clip meets it, and standing from the
+// run that last drew it everywhere else, every change of the stack
+// damaging the cards it changed (below). The owner-tag doctrine is at
+// ModalDialogGeometry: published geometry may only SELECT; the press claim
+// and the hover walk read this and then ask the live stack.
 // THE CARDS ARE CLIPPED TO THE ROOM and PUBLISHED CLIPPED TO IT: a stack tall
 // enough to reach the bottom row is the contrived case nothing caters for,
 // and clipping is what keeps it from painting over that row or claiming a
@@ -3762,7 +3765,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         GuiRect                              card{0, 0, 0, 0};
         double                               text_x    = 0.0;
         double                               text_room = 0.0;
-        std::vector<text_shape::ShapedRun>   lines;
+        std::vector<text_shape::SharedRun>   lines;
     };
     std::vector<LaidCard> laid;
     laid.reserve(st.cards.size());
@@ -3789,13 +3792,13 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // redo" wrapped while the WIDER "…to undo" did not). Ceiling makes
         // text_room ≥ the shaped width by construction, so the wrap's own
         // fits-whole test is exact.
-        const text_shape::ShapedRun whole =
-            text_shape::shape_text_run(font, n.text);
+        const text_shape::SharedRun whole =
+            text_shape::memoized_run(font, n.text);
         // THE BOX IS WHOLE PIXELS (a floating surface's, render.h's hull):
         // the ceiling of its real content width, so the text's room is the
         // shaped width or more.
         const int wanted =
-            static_cast<int>(std::ceil(chrome_w + whole.width_px));
+            static_cast<int>(std::ceil(chrome_w + whole->width_px));
         // No floor (architect 2026-11-19, send AA, notifications.h): the
         // content's width, under the ceiling, which is also the room this
         // paints into, so no card is wider than its clip.
@@ -3807,9 +3810,9 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // max keeps the last bit of the two sums from breaking a line).
         const double text_room =
             w >= wanted
-                ? std::max(static_cast<double>(w) - chrome_w, whole.width_px)
+                ? std::max(static_cast<double>(w) - chrome_w, whole->width_px)
                 : static_cast<double>(w) - chrome_w;
-        std::vector<text_shape::ShapedRun> lines =
+        std::vector<text_shape::SharedRun> lines =
             notification_text_lines(font, n.text, whole, text_room);
         // THE CARD'S HEIGHT, its content the taller of the glyph's box and
         // its lines (notification_card_h_px): a wrapped card grows downward
@@ -3839,7 +3842,20 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const GuiRect& card = c.card;
         const double text_x    = c.text_x;
         const double text_room = c.text_room;
-        const std::vector<text_shape::ShapedRun>& lines = c.lines;
+        const std::vector<text_shape::SharedRun>& lines = c.lines;
+        // THE PUBLICATION IS THE LAYOUT'S, written for every laid card on
+        // every run whatever the clip (the hit, the stack's damage owner and
+        // the floaters' hulls read it).
+        const GuiRect shown = in_room(card);
+        st.painted.push_back(AppState::NotificationPainted{n.id, shown});
+        st.painted_rect = st.painted.size() == 1
+                              ? shown : union_rect(st.painted_rect, shown);
+        // A CARD THE RUN'S CLIP MISSES IS NOT PAINTED (send BB, 2026-11-19;
+        // clip_meets): every pixel of it — the box, the glyph in its box on
+        // the padding, the lines in the text's room, all inside `card` —
+        // would be clipped out, so skipping the calls writes the same bytes
+        // (a standing card under a FOLLOW frame's lanes-only rects).
+        if (!clip_meets(cr, card)) continue;
         // THE CLASS'S LOOK (notifications.h's THE LOOK): a standing card
         // Arc's destructive red under the print on a lit face, a normal card
         // notifyd's grey under the sidebar text; the fill at its carried
@@ -3886,16 +3902,11 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                 ascent);
             for (size_t li = 0; li < lines.size(); ++li) {
                 text_shape::show_shaped_run_within(
-                    cr, lines[li], text_x,
+                    cr, *lines[li], text_x,
                     base + static_cast<double>(li) * line_px,
                     &room_span, 1);
             }
         }
-
-        const GuiRect shown = in_room(card);
-        st.painted.push_back(AppState::NotificationPainted{n.id, shown});
-        st.painted_rect = st.painted.size() == 1
-                              ? shown : union_rect(st.painted_rect, shown);
     }
     cairo_restore(cr);
 }
@@ -6030,7 +6041,7 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 //     (the presummed tables at 12 / 25, full strength alpha 121 / 255 =
 //     .4745), the shadow's origin (−3 r / 2, −3 r / 2 + delta_y) off the
 //     window's; black OVER whatever lies under it, chrome on the CPU and the
-//     canvas on the GPU (the dialog family's hull, dialog_floater_extent), NOT
+//     canvas on the GPU (the dialog family's hull, widen_floater_hulls), NOT
 //     UNDER THE WINDOW (compositor.c's borderClip − borderSize); the mask
 //     built once per window size and kept (xfwm_shadow_mask_cache). Its
 //     reach: 17 W left, right and below and 20 W above at a visible alpha
@@ -6455,76 +6466,6 @@ void paint_progress_bar(cairo_t* cr, double x0, double x1, double y, double h,
     pass.end();
 }
 
-// A QUESTION'S WINDOW AND ITS LAYOUT (paint_dialog_window's question arm,
-// the rule there): the question's run in the Large face, the answers'
-// count, the baseline's and the action row's lengths, and the window round
-// the client, CENTERED ON THE WINDOW — a function of the prompt's state
-// alone, so the floaters' hulls measure it too (dialog_floater_extent).
-struct QuestionLayout {
-    text_shape::ShapedRun run;
-    int n = 0, base_dy = 0, row_h = 0;
-    XfwmWindow w;
-};
-QuestionLayout question_layout(const AppState& app) {
-    QuestionLayout q;
-    const GuiFont large = gui_font(GuiFace::Large);
-    const GuiLineBoxW lb = gui_font_line_box_w(large);
-    q.run = text_shape::shape_text_run(large, app.prompt.text);
-    q.n = static_cast<int>(app.prompt.answers.size());
-    int cw = std::max(2 * scaled_px(kQuestionSideW) +
-                          static_cast<int>(std::ceil(q.run.width_px)),
-                      q.n * scaled_px(kWordButtonMinW) -
-                          std::max(0, q.n - 1) * key_border_px());
-    cw = std::min(cw, std::max(1, app.width - 2 * scaled_px(kXfwmBorderW)));
-    q.base_dy = scaled_px(kQuestionTopW + lb.ascent);
-    q.row_h   = scaled_px(kActionRowW);
-    const int ch = q.base_dy + scaled_px(lb.descent + kQuestionToRowW) + q.row_h;
-    q.w = xfwm_window_centered(GuiRect{0, 0, app.width, app.height}, cw, ch);
-    return q;
-}
-
-// THE PROGRESS MODAL'S WINDOW AND ITS LAYOUT (paint_dialog_window's
-// progress arm, the rule there): the client's margin, the sentence's
-// baseline, the bar's rows and the count's baseline, and the window,
-// CENTERED ON THE WINDOW — fixed lengths, so the floaters' hulls measure it
-// too (dialog_floater_extent).
-struct ProgressLayout {
-    int m = 0, s_base = 0, bar_y = 0, bar_h = 0, c_top = 0, c_base = 0,
-        btn_y = 0;
-    XfwmWindow w;
-};
-ProgressLayout progress_layout(const AppState& app) {
-    ProgressLayout l;
-    const GuiLineBoxW lb = gui_font_line_box_w(gui_font(GuiFace::Large));
-    const GuiLineBoxW cb = gui_font_line_box_w(gui_font(GuiFace::Caption));
-    l.m      = scaled_px(kProgressMarginW);
-    l.s_base = scaled_px(kProgressMarginW + lb.ascent);
-    l.bar_y  = scaled_px(kProgressMarginW + lb.line() + kProgressBarGapW);
-    l.bar_h  = scaled_px(kProgressBarH);
-    l.c_top  = l.bar_y + l.bar_h + scaled_px(kProgressCountGapW);
-    l.c_base = l.c_top + scaled_px(cb.ascent);
-    l.btn_y  = l.c_top + scaled_px(cb.line()) + scaled_px(kProgressButtonGapW);
-    const int cw = scaled_px(kProgressClientW);
-    const int ch = l.btn_y + scaled_px(kDialogButtonH) +
-                   scaled_px(kDialogButtonInsetW);
-    l.w = xfwm_window_centered(GuiRect{0, 0, app.width, app.height}, cw, ch);
-    return l;
-}
-
-// THE DIALOG FAMILY'S HULL (the floaters' hulls, canvas_sink.h's
-// GuiCanvasDrawList::floaters): while a question or the progress modal
-// stands — the two windows that float over the main page, paint_modal_dialog's
-// ranking, the question first — the window grown by its shadow's reach
-// (xfwm_shadow_rect, every pixel it lays down), measured from their state;
-// empty otherwise (a dialog editor's window stands in the box's room, which
-// empties the canvas paint area).
-GuiRect dialog_floater_extent(const AppState& app) {
-    if (app.prompt.active) return xfwm_shadow_rect(question_layout(app).w.win);
-    if (app.batch_progress.active)
-        return xfwm_shadow_rect(progress_layout(app).w.win);
-    return GuiRect{0, 0, 0, 0};
-}
-
 // THE DIALOG IN ITS WINDOW (THE DIALOG WINDOW above): one of the three —
 // the question (prompt_up), the progress modal (progress_up) or the dialog
 // editor `ed` — laid out, painted and published into app.modal_dialog
@@ -6538,6 +6479,7 @@ GuiRect dialog_floater_extent(const AppState& app) {
 void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
                          bool prompt_up, bool progress_up, int kb_h) {
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    const GuiRect panel{0, 0, app.width, app.height};
     struct WindowButton {
         std::string word;
         char        response_key = 0;
@@ -6572,12 +6514,20 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         //    here carries the window's pixels.
         app.prompt.painted = true;
         dlg.owner = AppState::ModalDialogOwner::Prompt;
-        const QuestionLayout q = question_layout(app);
-        const text_shape::ShapedRun& run = q.run;
-        const int n       = q.n;
-        const int base_dy = q.base_dy;
-        const int row_h   = q.row_h;
-        w = q.w;
+        const GuiFont large = gui_font(GuiFace::Large);
+        const GuiLineBoxW lb = gui_font_line_box_w(large);
+        const text_shape::ShapedRun run =
+            text_shape::shape_text_run(large, app.prompt.text);
+        const int n = static_cast<int>(app.prompt.answers.size());
+        int cw = std::max(2 * scaled_px(kQuestionSideW) +
+                              static_cast<int>(std::ceil(run.width_px)),
+                          n * scaled_px(kWordButtonMinW) -
+                              std::max(0, n - 1) * key_border_px());
+        cw = std::min(cw, std::max(1, app.width - 2 * scaled_px(kXfwmBorderW)));
+        const int base_dy = scaled_px(kQuestionTopW + lb.ascent);
+        const int row_h   = scaled_px(kActionRowW);
+        const int ch = base_dy + scaled_px(lb.descent + kQuestionToRowW) + row_h;
+        w = xfwm_window_centered(panel, cw, ch);
         paint_xfwm_shadow(cr, w.win);
         paint_xfwm_frame(cr, w, "Warptempo");
         cairo_save(cr);
@@ -6625,13 +6575,20 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         dlg.owner = AppState::ModalDialogOwner::Progress;
         const GuiFont large   = gui_font(GuiFace::Large);
         const GuiFont caption = gui_font(GuiFace::Caption);
-        const ProgressLayout pl = progress_layout(app);
-        const int m      = pl.m;
-        const int s_base = pl.s_base;
-        const int bar_y  = pl.bar_y;
-        const int bar_h  = pl.bar_h;
-        const int c_base = pl.c_base;
-        w = pl.w;
+        const GuiLineBoxW lb  = gui_font_line_box_w(large);
+        const GuiLineBoxW cb  = gui_font_line_box_w(caption);
+        const int m      = scaled_px(kProgressMarginW);
+        const int s_base = scaled_px(kProgressMarginW + lb.ascent);
+        const int bar_y  = scaled_px(kProgressMarginW + lb.line() + kProgressBarGapW);
+        const int bar_h  = scaled_px(kProgressBarH);
+        const int c_top  = bar_y + bar_h + scaled_px(kProgressCountGapW);
+        const int c_base = c_top + scaled_px(cb.ascent);
+        const int btn_y  = c_top + scaled_px(cb.line()) +
+                           scaled_px(kProgressButtonGapW);
+        const int cw = scaled_px(kProgressClientW);
+        const int ch = btn_y + scaled_px(kDialogButtonH) +
+                       scaled_px(kDialogButtonInsetW);
+        w = xfwm_window_centered(panel, cw, ch);
         paint_xfwm_shadow(cr, w.win);
         paint_xfwm_frame(cr, w, "Warptempo");
         const AppState::BatchProgress& bp = app.batch_progress;
@@ -8833,19 +8790,24 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // (modal_box.h, 2026-10-14), and all yield the clock's row,
 // GuiClockFingerprint::yields; the flag surface's blit over the top strip is
 // transparent above the marker lane.)
-// THE TERM WAS ANY FLOATER, 2026-10-13 TO SEND BB: before 2026-10-13 a
-// viewport step damaged the window from row 0 to the canvas's foot, so a
-// floater crossing the band's foot was repainted whole with it; the check,
-// which may leave the rows above that foot alone, declared the old rect
-// whole while one stood, because "a floater's own publications ride a clip
-// that covers it" (94d92f3b) — the tooltip publishes its rect and words as
-// painted only under a clip that covers its extent.
-// PER FAMILY SINCE SEND BB (architect 2026-11-19: "ok to implement the fix
-// you suggested for the power draw by card"; a struck card stands for
-// minutes over exactly these rows): a family leaves the term where no
-// viewport step — a pan, a zoom, FOLLOW's scroll, every route that owes the
-// rows (damage_window_top_rows) — can change its pixels over those rows or
-// its publications:
+// THE TERM (2026-10-13, per family and per owner since send BB, architect
+// 2026-11-19: "ok to implement the fix you suggested for the power draw by
+// card"; a struck card stands for minutes over exactly these rows, and the
+// pen rests on PLAY / STOP through a FOLLOW play with TIPS lit): a floater
+// whose pixels or publications a viewport step can change in the rows the
+// check spares makes the check declare THE RECT THE ROUTES DECLARE — the
+// window's top through the owed foot (damage_window_top_rows) — whole, so
+// the floater is repainted there with the rows under it. THE REASON
+// (94d92f3b): "a floater's own publications ride a clip that covers it" —
+// the tooltip, the one floater it binds, publishes its rect and words as
+// painted only under a clip that covers its extent (paint_shift_tooltip's
+// PUBLISHED AS PAINTED), and a lanes-only rect cuts a box that crosses the
+// lanes' top. THE ROWS THE CHECK SPARES are the window's top through the
+// viewport lanes' top (viewport_lanes_top_y; rows 0..141 on the tablet) —
+// the route already damaged the rest of its rect — and the clock cell
+// (clock_invalidate_rect). A family leaves the term where no viewport step —
+// a pan, a zoom, FOLLOW's scroll, every route that owes the rows — can
+// change its pixels over those rows or its publications:
 //   * THE CARDS LEAVE IT. A card's pixels are a function of the stack (its
 //     words, class and order), the window, the scale, the palette and the
 //     face (the fingerprint's globals, each a whole repaint), and of the
@@ -8870,17 +8832,71 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //     bar, set_batch_progress_index damaging the window) and of the pixels
 //     under its shadow; no viewport step writes either; AppState::
 //     modal_dialog is rewritten whole on every run.
-//   * THE TOOLTIP STAYS: its box follows its owner's face, and a Marker or
-//     History owner's face is a cue a viewport step moves (marker_cue_face,
-//     history_cue_face), so the step changes its pixels wherever the box
-//     hangs; and its publication rides a covering clip (paint_shift_tooltip's
-//     PUBLISHED AS PAINTED: a clip that misses part of the extent unites the
-//     old and new boxes in the record and keeps the old words), while a
-//     roster owner's box hangs under a top-row key across the band's foot,
-//     cut by every lanes-only rect. While it stands the check declares the
-//     rect the routes declared before 2026-10-13, whole.
-static bool tooltip_overlays_owed_rows(const AppState& app) {
-    return app.redesign_tooltip.visible;
+//   * THE TOOLTIP, while visible, holds a check exactly where its box can
+//     stand in that check's spared rows. ITS RECORD (AppState::
+//     RedesignTooltip::rect) holds every pixel the box has standing — the
+//     painted extent, the shadow's reach included (tooltip_painted_extent:
+//     14 rows above the box, 18 below and 16 each side on the tablet), and a
+//     box left behind where a clip missed it — so where the record misses
+//     the spared rows no pixel of the tooltip stands there, and the check
+//     owes it nothing there unless the step can carry the box in. Owner by
+//     owner (the tablet's rows at key_height 28, the box 68 rows on one line
+//     and 96 on two, the gap 2):
+//       - A PENDING SHOW (show_pending) HOLDS BOTH CHECKS: nothing of the
+//         box is painted yet, and where it lands is read at paint time off
+//         publications the frame itself rewrites (a cue's face in the flag
+//         stash on_redraw promotes, a dialog button in the modal stash
+//         paint_modal_dialog republishes), so no pre-paint reading places
+//         it; the first paint run puts the bit out — one frame.
+//       - A RECORD STILL EMPTY (an owner whose body paints no box) HOLDS
+//         BOTH: a box that has not painted has no place to test.
+//       - A MARKER OR HISTORY OWNER HOLDS THE UPPER ROWS' CHECK WHATEVER ITS
+//         RECORD: its box follows a cue a viewport step moves
+//         (marker_cue_face, history_cue_face), so the step changes its
+//         pixels wherever it hangs, and the flag rebuild's damage counts on
+//         this check to reach the window's top for it (maybe_rebuild_flag_
+//         cache's whole rect); a labeled cue's face starts on the marker
+//         lane's first row (210), its box on rows 140..207 and its extent
+//         from row 126, inside the spared rows, while a chip-only face's
+//         starts lower — and whether a label paints moves with the step (a
+//         later label's box covers it). Its box never nears the clock cell:
+//         it hangs above the marker lane, the canvas between.
+//       - A TOP-ROW ROSTER KEY (face rows 70..125): its box hangs from the
+//         gap under the face, rows 128..195 (two lines 128..223), its extent
+//         from row 114 — its record always meets the spared rows (114..141),
+//         so it holds the upper rows' check.
+//       - A BOTTOM-ROW ROSTER KEY (face rows 1324..1379): its box stands on
+//         the gap over the face, rows 1254..1321 (two lines 1226..1321), its
+//         extent 1212..1339 — the whole canvas column between it and the
+//         spared upper rows, so it never holds that check; its shadow's
+//         bottom rows (1322..1339) lie over the bottom icon row, so it holds
+//         the clock cell's check where its record meets the cell — always
+//         for the clock field's own box (Play's second rect,
+//         shown_on_field), which stands over the cell.
+//       - A DIALOG OWNER (a question's or the progress modal's window, a
+//         dialog editor's window in the room above the keyboard, the render
+//         player's, the score viewer's and the folder overlay's controls on
+//         the bottom row): its seat is the modal stash's button, which no
+//         viewport step moves (paint_modal_dialog republishes it from the
+//         dialog's own state), so its record says where it can stand.
+//     A ROSTER OR DIALOG BOX MOVES only with its face — a relayout, a row's
+//     walk, a dialog's own layout, each with damage of its own — and changes
+//     its words through its words comparator (main.cpp: the old record and
+//     the band every seat of the new box lies in); a box that crosses
+//     neither spared region was never covered whole by the check's rect, so
+//     the term bought it no publication.
+enum class OwedRows { Upper, ClockCell };
+static bool tooltip_overlays_owed_rows(const AppState& app, OwedRows which,
+                                       const GuiRect& spared) {
+    const AppState::RedesignTooltip& t = app.redesign_tooltip;
+    if (!t.visible) return false;
+    if (t.show_pending) return true;
+    if (t.rect.w <= 0 || t.rect.h <= 0) return true;
+    if (which == OwedRows::Upper &&
+        (t.owner.surface == AppState::RedesignTooltip::Surface::Marker ||
+         t.owner.surface == AppState::RedesignTooltip::Surface::History))
+        return true;
+    return rects_intersect(t.rect, spared);
 }
 
 namespace {
@@ -8892,50 +8908,34 @@ GuiRect hull_union(const GuiRect& a, const GuiRect& b) {
 }
 } // namespace
 
-// THE FLOATERS' HULLS FROM LIVE STATE (send BB, 2026-11-19; the list's field
-// and its readers at canvas_sink.h's GuiCanvasDrawList::floaters), written
-// at the frame's first rect BEFORE ANY PASS PAINTS, from state the input
-// wrote and never a rect a paint published (architect 2026-10-14: a
-// publication lags a frame — on the frame a floater appears it would read
-// empty, and its pixels over the canvas would be cut out of the upload):
-// each family measured as its painter will lay it out —
-//   * THE CARDS: the stack's rects as paint_notifications lays them out
-//     (notification_stack_laid_out, the measure form the stack's damage
-//     owner asks), united;
-//   * THE TOOLTIP, while visible: its box grown by its shadow's reach
-//     (tooltip_box_for_show, the show's measure form);
-//   * A QUESTION'S OR THE PROGRESS MODAL'S window grown by xfwm's shadow's
-//     reach (dialog_floater_extent).
-void GuiPaintHandler::measure_floater_hulls(GuiFloaterHulls& out) {
-    out = GuiFloaterHulls{};
-    if (!app.notifications.cards.empty()) {
-        notification_stack_laid_out(floater_cards_measured_);
-        GuiRect u{0, 0, 0, 0};
-        for (const AppState::NotificationPainted& c : floater_cards_measured_)
-            u = hull_union(u, c.rect);
-        out[static_cast<std::size_t>(GuiFloaterFamily::Cards)] = u;
-    }
-    if (app.redesign_tooltip.visible)
-        out[static_cast<std::size_t>(GuiFloaterFamily::Tooltip)] =
-            tooltip_box_for_show();
-    out[static_cast<std::size_t>(GuiFloaterFamily::Dialog)] =
-        dialog_floater_extent(app);
-}
-
-// THEN WIDENED BY WHAT THE FRAME'S OWN FLOATERS PUBLISHED, after each run's
-// floating surfaces paint (on_redraw's tail): every pixel a family may have
-// standing in the backbuffer — the cards as this run laid them out
-// (AppState::Notifications::painted_rect), the tooltip's record
-// (AppState::RedesignTooltip::rect: the box as painted, united with the old
-// one where a clip missed it, and kept after a hide until a clip covering it
-// has repainted it — paint_shift_tooltip's head), a question's or the
-// progress modal's published surface (AppState::ModalDialogGeometry::box).
-// A measure can miss where its floater lands when it reads a publication the
-// frame itself rewrites before the floater paints — a dialog-owned
-// tooltip's button is the modal stash paint_modal_dialog republishes this
-// frame — and this is what catches it. The frame's own publications do not
-// lag the readers of the hull: the later rects' clears and the present read
-// it after the paint.
+// THE FLOATERS' HULLS ARE THE FRAME'S OWN PUBLICATIONS (send BB, 2026-11-19;
+// the list's field and its readers at canvas_sink.h's GuiCanvasDrawList::
+// floaters): EMPTY AT THE FRAME'S FIRST RECT (on_redraw's canvas block) and
+// WIDENED AFTER EACH on_redraw RUN, once its floating surfaces have painted
+// (on_redraw's tail), by what each family published that run — every pixel
+// it may have standing in the backbuffer:
+//   * THE CARDS: the stack as this run laid it out, clipped to the room
+//     (AppState::Notifications::painted_rect, written whole on every run
+//     whatever the clip, paint_notifications);
+//   * THE TOOLTIP: its record (AppState::RedesignTooltip::rect: the painted
+//     extent, the shadow's reach included; united with the old box where a
+//     clip missed it, and kept after a hide until a clip covering it has
+//     repainted it — paint_shift_tooltip's head);
+//   * A QUESTION'S OR THE PROGRESS MODAL'S window and xfwm's shadow
+//     (AppState::ModalDialogGeometry::box, xfwm_shadow_rect, rewritten on
+//     every run).
+// A publication lags a frame for a reader that runs BEFORE the paint that
+// writes it (architect 2026-10-14: on the frame a floater appears such a
+// reader sees nothing, and the floater's pixels over the canvas would be cut
+// out of the upload); every reader of these hulls runs AFTER it — a later
+// rect's narrowed clear, the GL canvas's upload and blend at the present, the
+// next frame's fold into the known-clear record (canvas_clear_hulls) — so
+// the lag does not reach them. THE FIRST RUN'S CLEAR NEEDS NO HULL OF THIS
+// FRAME: outside the last painted frame's final hulls the area is known
+// clear, so a floater arriving there paints over zeros, and a standing or
+// moved floater's old pixels lie inside those hulls and are cleared before it
+// repaints; a pixel an earlier run of this frame painted is in the hull that
+// run's widening wrote, which every later run's clear reads.
 void GuiPaintHandler::widen_floater_hulls(GuiFloaterHulls& h) {
     GuiRect& cards = h[static_cast<std::size_t>(GuiFloaterFamily::Cards)];
     cards = hull_union(cards, app.notifications.painted_rect);
@@ -9066,10 +9066,11 @@ void GuiPaintHandler::note_upper_rows_painted(const GuiRect& exposed) {
 // scanner's advance, Follow's scroll), and with nothing able to run between it
 // and the paint. Each target that still owes is checked against what IT
 // shows; any target whose record is invalid or differs from the live
-// fingerprint, or the tooltip standing (tooltip_overlays_owed_rows: the one
-// floating surface a viewport step can change over the rows), declares the
-// rect the routes declared before 2026-10-13 — the window top through the
-// largest owed foot, the lanes below already damaged by the routes — and
+// fingerprint, or the tooltip standing where it holds the check
+// (tooltip_overlays_owed_rows: the one floating surface a viewport step can
+// change over the spared rows, owner by owner), declares the rect the routes
+// declare — the window top through the largest owed foot, the lanes below
+// already damaged by the routes — and
 // with it in every target's pending damage the debts are paid. A target
 // that matches keeps nothing to repaint: its rows already show exactly what
 // the repaint would put there. A frame whose present fails keeps its damage,
@@ -9081,15 +9082,16 @@ void GuiPaintHandler::settle_owed_lane_damage() {
     static_assert(GuiPlatform::kPaintTargetCount <= kGuiPaintTargetSlots,
                   "one as-painted record per paint target");
     constexpr int n = GuiPlatform::kPaintTargetCount;
-    // THE TOOLTIP ALONE OWES THE ROWS THEIR WHOLE REPAINT (the per-family
-    // proof at tooltip_overlays_owed_rows).
-    const bool overlaid = tooltip_overlays_owed_rows(app);
-
+    // THE TOOLTIP ALONE OWES THE ROWS THEIR WHOLE REPAINT, each check where
+    // its box can stand in that check's spared rows (the per-family and
+    // per-owner proof at tooltip_overlays_owed_rows).
     int owed_y1 = 0;
     for (int t = 0; t < n; ++t)
         owed_y1 = std::max(owed_y1, app.upper_rows_painted[t].owed_y1);
     if (owed_y1 > 0) {
-        bool stale = overlaid;
+        const int top = std::min(viewport_lanes_top_y(app), app.height);
+        bool stale = tooltip_overlays_owed_rows(
+            app, OwedRows::Upper, GuiRect{0, 0, app.width, std::max(0, top)});
         if (!stale) {
             const GuiUpperRowsFingerprint live = upper_rows_fingerprint();
             for (int t = 0; t < n && !stale; ++t) {
@@ -9108,7 +9110,9 @@ void GuiPaintHandler::settle_owed_lane_damage() {
     for (int t = 0; t < n; ++t) clock_owed |= app.clock_painted[t].owed;
     if (clock_owed) {
         const GuiRect cell = app.clock_cell_rect;
-        bool stale = overlaid || cell.w <= 0 || cell.h <= 0;
+        bool stale = cell.w <= 0 || cell.h <= 0 ||
+                     tooltip_overlays_owed_rows(app, OwedRows::ClockCell,
+                                                clock_invalidate_rect(app));
         if (!stale) {
             const GuiClockFingerprint live = clock_fingerprint();
             for (int t = 0; t < n && !stale; ++t) {
@@ -9307,10 +9311,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // by the first damage rect that meets that area, WHOLE (never cut to the
     // rect) from the state every pass reads, the later rects of the frame
     // skipping it (the flags reset at the pre-paint hook,
-    // begin_canvas_frame). The list's clip and floaters' hulls are written on
-    // the frame's first rect whatever it meets (the hulls widened after each
-    // run's floaters paint), so the platform's scissor and upload rule follow a paint area that shrank or emptied under no
-    // canvas damage (the keyboard rising, the modal family's box standing).
+    // begin_canvas_frame). The list's clip is written, and its floaters'
+    // hulls emptied, on the frame's first rect whatever it meets (the hulls
+    // then written after each run's floaters paint, widen_floater_hulls),
+    // so the platform's scissor and upload rule follow a paint area that
+    // shrank or emptied under no canvas damage (the keyboard rising, the
+    // modal family's box standing).
     // THE SAME FIRST RECT PUBLISHES THE GPU PAGE'S REQUEST (architect
     // 2026-10-27, "1 a"; GuiCanvasPage, canvas_sink.h) and, while the score
     // viewer's page stands, makes THE BOX'S INTERIOR the clip: the canvas
@@ -9348,10 +9354,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
                 canvas_clear_hulls = frame.floaters;
             }
             canvas_clear_open = true;
-            // THE FLOATERS' HULLS, measured from live state before any pass
-            // paints (measure_floater_hulls), widened after each run
-            // (widen_floater_hulls, this body's tail).
-            measure_floater_hulls(frame.floaters);
+            // THE FLOATERS' HULLS, empty until this frame's runs publish
+            // (widen_floater_hulls, this body's tail; the rule there).
+            frame.floaters = GuiFloaterHulls{};
             gui.set_canvas_frame(&frame);
             canvas_clear_narrow = canvas_clear_known && canvas_paint_whole &&
                                   canvas_paint == canvas_clear_area;

@@ -890,10 +890,11 @@ int notification_card_max_w_px(const AppState& a);
 // baseline 184), over the icon row's foot pad, the trim lane (142 .. 169),
 // the ruler (170 .. 207) and the marker lane's first rows (210 .. 219); a
 // third, rows 232 .. 319, is the first to reach the canvas (from row 252).
-// (The seat stood 16 W under
-// the top icon row's line, read off the lane table, for send AA's stage D1;
-// flush with the glass on the trim trough's first row from 2026-10-08,
-// "relative to the elements", until then.)
+// THE SEAT READS THE WINDOW'S EDGES, NO LANE (architect 2026-11-19, send
+// BB: notifyd seats a card off the screen's corner "without regard for what
+// it obstructs"): the top and the right are notifyd's SPACE in from the
+// window's first row and last column, so no lane's height or relayout moves
+// the stack; the foot alone reads a lane, the bottom icon row's.
 //
 // IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
 // was "three cards of one line each", which a wrapped card outgrows, and no

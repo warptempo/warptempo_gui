@@ -69,7 +69,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // window's last column — rows from 32 and columns to 2271 on the tablet
     // — over the title bar and the top icon row, whatever stands there. The
     // foot is the panel's own pad, folder_overlay::pad_px (architect
-    // 2026-08-30; one W) above the bottom icon row's lane, as before. The
+    // 2026-08-30; one W) above the bottom icon row's lane. The
     // card's INTERNAL padding is a different concept — notifyd's, the box's
     // own (notifications.h).
     //

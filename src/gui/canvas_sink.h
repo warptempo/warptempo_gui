@@ -308,15 +308,18 @@ inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
 // stack, the tooltip, a question's or the progress modal's window — in
 // surface px, empty where the family paints nothing, every pixel the family
 // may have standing in the backbuffer inside it (a hull, generous, never a
-// mask; written by on_redraw's canvas block, paint_handler.cpp's
-// floater_hulls: the measure at the frame's first rect, widened after each
-// run by what the floaters published that run). THE FAMILIES ARE KEPT
-// APART, so a tooltip at the foot and a card at the top cost two small
-// rects, never the page between them. Read by the GL canvas alone: inside
-// the clip a damage rect's part goes up only where it meets a hull of this
-// walk or of the last, and the texture is blended only inside this walk's
-// hulls (GuiGlCanvas::present_frame); and by the canvas paint area's
-// known-clear record (on_redraw's CLEAR).
+// mask). WRITTEN BY THE PAINT HANDLER: emptied at the frame's first rect
+// (on_redraw's canvas block) and widened after each on_redraw run by what
+// the floaters published that run (GuiPaintHandler::widen_floater_hulls,
+// the rule). THE FAMILIES ARE KEPT APART, so a tooltip at the foot and a
+// card at the top cost two small rects, never the page between them. TWO
+// READERS, each after the paint that wrote them: the GL canvas — inside the
+// clip a damage rect's part goes up only where it meets a hull of this walk
+// or of the last, and the texture is blended only inside this walk's hulls
+// (GuiGlCanvas::present_frame) — and the paint handler's own canvas clear —
+// a later rect of the frame clears where it meets these hulls, and the next
+// frame folds them into the known-clear record (canvas_clear_hulls,
+// on_redraw's CLEAR).
 enum class GuiFloaterFamily : int { Cards = 0, Tooltip = 1, Dialog = 2 };
 inline constexpr int kGuiFloaterFamilies = 3;
 using GuiFloaterHulls = std::array<GuiRect, kGuiFloaterFamilies>;

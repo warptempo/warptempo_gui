@@ -937,11 +937,11 @@ struct GuiPaintHandler {
     void settle_owed_lane_damage();
 
     // THE GL CANVAS'S FRAME BOUNDARY (2026-10-13, canvas_sink.h): clears the
-    // two per-frame bits on_redraw's canvas block keeps — the list's clip and
-    // floaters' hulls written, the list built — so the next frame's first damage
-    // rect writes them again and its first rect meeting the canvas's paint
-    // area builds the list. Called from the pre-paint hook (main.cpp), the
-    // one seat that opens every painted frame.
+    // two per-frame bits on_redraw's canvas block keeps — the list's clip
+    // written and its floaters' hulls emptied, the list built — so the next
+    // frame's first damage rect does both again and its first rect meeting
+    // the canvas's paint area builds the list. Called from the pre-paint
+    // hook (main.cpp), the one seat that opens every painted frame.
     void begin_canvas_frame();
     // THE FRAMES BEGUN (architect 2026-11-16, the beats): one more at every
     // begin_canvas_frame — the pre-paint hook, which runs once for each
@@ -1012,8 +1012,8 @@ private:
     bool waveform_rebuild_owed = false;
 
     // THE GL CANVAS'S PER-FRAME BITS (begin_canvas_frame above, on_redraw's
-    // canvas block): the frame's list clip and floaters' hulls written, and
-    // the frame's list built.
+    // canvas block): the frame's list clip written and its floaters' hulls
+    // emptied, and the frame's list built.
     bool canvas_frame_seen = false;
     bool canvas_list_built = false;
     // THE CANVAS PAINT AREA'S KNOWN-CLEAR RECORD (2026-10-14; OUTSIDE THE
@@ -1035,15 +1035,10 @@ private:
     bool            canvas_clear_narrow  = false;
     bool            canvas_clear_covered = false;
     // THE FLOATERS' HULLS (canvas_sink.h's GuiCanvasDrawList::floaters):
-    // measured from live state at the frame's first rect, before any pass
-    // paints, and widened after each run's floaters paint by what they
-    // published — the definitions' block (paint_handler.cpp, beside
-    // tooltip_overlays_owed_rows) holds the rule. `floater_cards_measured_`
-    // the cards' measure's buffer, kept so a standing card's frames do not
-    // allocate it.
-    void measure_floater_hulls(GuiFloaterHulls& out);
+    // empty at the frame's first rect, and written after each run's floaters
+    // paint by what they published that run — the definition
+    // (paint_handler.cpp, beside tooltip_overlays_owed_rows) holds the rule.
     void widen_floater_hulls(GuiFloaterHulls& h);
-    std::vector<AppState::NotificationPainted> floater_cards_measured_;
     // The frame's draw list from the canvas passes, through the sink, in
     // on_redraw's paint order (the definition, paint_handler.cpp).
     void build_canvas_list(GuiCanvasDrawList& frame, bool plate_branch);
