@@ -853,9 +853,10 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                   batch_.next_index + 1, total,
                   batch_.label.c_str());
     // (ON SCREEN THE BATCH IS THE PROGRESS MODAL'S since 2026-10-14 — its
-    // sentence above, row 8 yielding to the modal whole — so this line is
-    // written and taken down as before but stands behind the modal for the
-    // batch's whole run; the mechanics below are unchanged.)
+    // sentence above, its window over the main page — so this line is
+    // written and taken down as before, the status bar's process line under
+    // the modal for the batch's whole run; the mechanics below are
+    // unchanged.)
     // A SWEEP'S LINE IS STATE, WRITTEN STRAIGHT INTO THE SLOT (architect
     // 2026-09-11, on the tablet's panel then pinned at 90 Hz, where the line
     // BLINKED once per cell). The single render's park/promote machinery is

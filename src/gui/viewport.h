@@ -720,9 +720,9 @@ struct Viewport {
     // published (ModalDialogGeometry::field; architect 2026-11-19, send AA:
     // the entry one line that scrolls sideways, the window never growing
     // with the text), the room grown by the window's shadow's reach
-    // (modal_box.h's xfwm_shadow_rect of the box's interior at the live
-    // keyboard height) before the session's first paint; never the family's
-    // whole area. WHY: under a box the GL canvas's clip is empty and every
+    // (modal_box.h's xfwm_shadow_rect of the box's interior, the lane
+    // table's above the on-screen keyboard, send BB) before the session's
+    // first paint; never the family's whole area. WHY: under a box the GL canvas's clip is empty and every
     // damage rect uploads whole (GuiGlCanvas::present_frame), so the
     // family's area on every keystroke was ~11.8 MB on the tablet, sustained
     // under key repeat. WHAT AN EDIT CAN CHANGE, re-derived from the painters:

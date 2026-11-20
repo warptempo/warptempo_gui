@@ -316,7 +316,7 @@ inline int content_height_px(const AppState& a) {
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so its stack is the unlifted one, keyboard height 0.
 inline GuiRect surface_rect(const AppState& a) {
-    return modal_panel_rect(a, /*keyboard_h=*/0);
+    return modal_panel_rect(a);
 }
 
 // The rows' band: THE BOX'S INTERIOR, THE VIEW (modal_box_interior_rect) —
@@ -335,7 +335,7 @@ inline GuiRect surface_rect(const AppState& a) {
 // car's MediaSession artist line keeps its own folder name, the playing
 // item's, GuiRenderPlayer's.)
 inline GuiRect content_rect(const AppState& a) {
-    return modal_box_interior_rect(a, /*keyboard_h=*/0);
+    return modal_box_interior_rect(a);
 }
 
 // -- The scroll state --------------------------------------------------------
@@ -376,8 +376,8 @@ inline void clamp_scroll(AppState& a) {
 // hull (render.h). It may lie partly or wholly outside the band; the painter
 // clips and the hit test asks the band first. THE VIEW'S FORM (below) walks
 // the standing overlay in its own band; the dialog editor's backdrop walks
-// the page it was opened from in the room above the keyboard
-// (paint_handler.cpp's paint_list_view).
+// the page it was opened from in the box's view, the room its window is
+// centered in (paint_handler.cpp's paint_list_view).
 template <class Fn>
 inline void for_each_row(const AppState::FolderOverlay& ov,
                          const GuiRect& band, double scroll, Fn&& fn) {
@@ -516,11 +516,17 @@ inline bool scroll_row_centered(AppState& a, int index) {
 // (finish_folder_overlay_release). Its press still arms, the same press
 // being the band's scroll drag; the painter keeps it unlit
 // (paint_folder_overlay). False outside the listing.
-inline bool row_is_inert(const AppState& a, int index) {
-    const int n = static_cast<int>(a.folder_overlay.rows.size());
+// ON A GIVEN PAGE (send BB, 2026-11-19): the same answer over `ov`, the
+// standing overlay's or a dialog editor's backdrop (AppState::
+// dialog_backdrop), whose controls row paint_modal_dialog paints from the
+// page the editor was opened from.
+inline bool row_is_inert(const AppState::FolderOverlay& ov, int index) {
+    const int n = static_cast<int>(ov.rows.size());
     if (index < 0 || index >= n) return false;
-    return row_kind_is_inert(
-        a.folder_overlay.rows[static_cast<size_t>(index)].kind);
+    return row_kind_is_inert(ov.rows[static_cast<size_t>(index)].kind);
+}
+inline bool row_is_inert(const AppState& a, int index) {
+    return row_is_inert(a.folder_overlay, index);
 }
 
 // Seat the highlight on `index`, clamped into the listing (-1 for an empty
@@ -557,9 +563,11 @@ inline bool set_highlight(AppState& a, int index) {
 // where a seatless band begins. (Two walk walls and a hint bit read it, and
 // the router's bare Up arm with them, for the one day on which the tablet's
 // skips walked the band too.)
+inline int walk_origin_row(const AppState::FolderOverlay& ov) {
+    return ov.highlight_row < 0 ? 0 : ov.highlight_row;
+}
 inline int walk_origin_row(const AppState& a) {
-    return a.folder_overlay.highlight_row < 0 ? 0
-                                              : a.folder_overlay.highlight_row;
+    return walk_origin_row(a.folder_overlay);
 }
 
 // THE ROW A WALK OF `delta` ROWS LANDS ON, or -1 for an empty listing (the
@@ -574,16 +582,21 @@ inline int walk_origin_row(const AppState& a) {
 // A content with no inert row lands where the clamp lands, unchanged. A
 // listing of inert rows alone has no producer and answers -1, as an empty
 // one does.
-inline int move_highlight_target(const AppState& a, int delta) {
-    const int n = static_cast<int>(a.folder_overlay.rows.size());
+// (The page form answers over `ov`, row_is_inert's page form's reason.)
+inline int move_highlight_target(const AppState::FolderOverlay& ov,
+                                 int delta) {
+    const int n = static_cast<int>(ov.rows.size());
     if (n <= 0) return -1;
-    const int landing = std::clamp(walk_origin_row(a) + delta, 0, n - 1);
+    const int landing = std::clamp(walk_origin_row(ov) + delta, 0, n - 1);
     const int step    = delta < 0 ? -1 : +1;
     for (int to = landing; to >= 0 && to < n; to += step)
-        if (!row_is_inert(a, to)) return to;
+        if (!row_is_inert(ov, to)) return to;
     for (int to = landing - step; to >= 0 && to < n; to -= step)
-        if (!row_is_inert(a, to)) return to;
+        if (!row_is_inert(ov, to)) return to;
     return -1;
+}
+inline int move_highlight_target(const AppState& a, int delta) {
+    return move_highlight_target(a.folder_overlay, delta);
 }
 
 // Move the highlight by `delta` rows, clamped; an empty listing has nothing
@@ -606,9 +619,14 @@ inline bool move_highlight(AppState& a, int delta) {
 // first key row) is no step. The band's scroll-into-view
 // alone (a highlight already on the wall row but partly out of view) is not
 // asked: that is a repaint of the band, not a step of the highlight.
+// (The page form answers over `ov`, row_is_inert's page form's reason.)
+inline bool move_highlight_actionable(const AppState::FolderOverlay& ov,
+                                      int delta) {
+    const int to = move_highlight_target(ov, delta);
+    return to >= 0 && to != ov.highlight_row;
+}
 inline bool move_highlight_actionable(const AppState& a, int delta) {
-    const int to = move_highlight_target(a, delta);
-    return to >= 0 && to != a.folder_overlay.highlight_row;
+    return move_highlight_actionable(a.folder_overlay, delta);
 }
 
 } // namespace folder_overlay

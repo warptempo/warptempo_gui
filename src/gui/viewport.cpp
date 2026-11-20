@@ -2,7 +2,7 @@
 
 #include "audio.h"
 #include "notifications.h"   // notification_stack_bound (the stack's damage rect)
-#include "onscreen_keyboard.h"   // the keyboard's band; modal_box.h through it (the modal's damage)
+#include "onscreen_keyboard.h"   // modal_box.h through it (the modal's damage)
 #include "playback.h"
 #include "render.h"
 #include "text_editor.h"
@@ -159,11 +159,10 @@ void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1) {
 
 // THE PROCESS LINE'S DAMAGE — the status bar's lane whole (send Z,
 // 2026-11-19). The caller inventory and why the writers declare it beside
-// the tick's comparator are at the declaration, viewport.h. UNDER THE
-// ON-SCREEN KEYBOARD (on the window's foot since send BB) the same rect:
-// the bar repaints and the keyboard slot, painted after it in the same pass
-// and clip, lays its own pixels back over it (onscreen_keyboard.h's
-// placement block), so a line change paints nothing over the keyboard.
+// the tick's comparator are at the declaration, viewport.h. The lane is the
+// lane table's, so UNDER THE ON-SCREEN KEYBOARD it is the bar relaid on the
+// keyboard's top line (send BB, main.cpp's app_foot_y), in view, and the
+// same rect repaints it there.
 void Viewport::invalidate_status_bar_area() {
     const GuiRect t = status_bar_area(app);
     if (t.w > 0 && t.h > 0) gui.invalidate_region(t.x, t.y, t.w, t.h);
@@ -190,18 +189,19 @@ void Viewport::invalidate_tab_name_area() {
 // window. Caller inventory at the declaration.
 // A PROMPT, A DIALOG EDITOR OR THE PROGRESS MODAL IS A DIALOG IN XFWM'S
 // WINDOW (send AA's stage D2, 2026-11-19; paint_handler.cpp's THE DIALOG
-// WINDOW), a dialog editor's standing in the box's room above the keyboard
-// — so while one stands, OR WHILE THE LAST PAINT DREW ONE (the stash's
-// owner, which a closer reads before any paint: its surface is gone from
-// the state but not yet from the screen), the damage is the lane UNITED
-// WITH THE MODAL FAMILY'S WHOLE AREA without the keyboard (modal_area_rect
-// at keyboard height 0 — the line under the top icon row to the bottom
-// icon row's foot, which contains the room) AND THE
+// WINDOW), a dialog editor's standing in the box's view — so while one
+// stands, OR WHILE THE LAST PAINT DREW ONE (the stash's owner, which a
+// closer reads before any paint: its surface is gone from the state but not
+// yet from the screen), the damage is the lane UNITED WITH THE MODAL
+// FAMILY'S WHOLE AREA (modal_area_rect — the line under the top icon row to
+// the bottom icon row's foot, which contains the room) AND THE
 // WINDOW'S PAINTED EXTENT as last published (the window and its shadow's
 // reach, ModalDialogGeometry::box), so a close erases the window and its
-// shadow and brings the lanes, the canvas and the bottom icon row back. A dialog editor's close takes the keyboard with
-// it, and the slot's hide edge damages that band (onscreen_keyboard::
-// slot_damage_rect, reconcile_slot_standing's). Under the render player and
+// shadow and brings the lanes, the canvas and the bottom icon row back. A
+// dialog editor's close takes the keyboard with it, and the keyboard's
+// layout edge relays the app out and damages the whole window
+// (GuiInputHandler::reconcile_keyboard_layout, send BB). Under the render
+// player and
 // the picker the controls row is the lane's own rows, and their
 // list's damage is the folder overlay's. (The taskbar dialog, 2026-10-10 to
 // 2026-10-14, took the lane united with its overlay to the window's foot.)
@@ -214,7 +214,7 @@ void Viewport::invalidate_modal_dialog_area() {
         painted == AppState::ModalDialogOwner::Editor ||
         painted == AppState::ModalDialogOwner::Progress ||
         painted == AppState::ModalDialogOwner::Score)
-        invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
+        invalidate_rect(modal_area_rect(app));
     if (app.modal_dialog.valid &&
         (painted == AppState::ModalDialogOwner::Prompt ||
          painted == AppState::ModalDialogOwner::Editor ||
@@ -236,9 +236,11 @@ void Viewport::invalidate_modal_dialog_area() {
 // editor's session): the one-line entry holds everything an edit, a scroll
 // step or the caret's blink changes, and the window never moves or grows
 // with the text (architect 2026-11-19, send AA). Before the session's first
-// paint — whose open damaged the whole window — the room at the keyboard
-// height it stands on, grown by the window's shadow's reach (modal_box.h's
-// xfwm_shadow_rect), every pixel the window can lay down. The rule and the
+// paint — whose open damaged the whole window — the box's view, the room the
+// window is centered in (the lane table's, ending over the bottom icon row
+// relaid above the on-screen keyboard, send BB), grown by the window's
+// shadow's reach (modal_box.h's xfwm_shadow_rect), every pixel the window
+// can lay down. The rule and the
 // caller inventory at the declaration, viewport.h.
 void Viewport::invalidate_dialog_editor_box() {
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
@@ -248,8 +250,7 @@ void Viewport::invalidate_dialog_editor_box() {
         invalidate_rect(dlg.field);
         return;
     }
-    invalidate_rect(xfwm_shadow_rect(modal_box_interior_rect(
-        app, onscreen_keyboard::modal_keyboard_h_px(app))));
+    invalidate_rect(xfwm_shadow_rect(modal_box_interior_rect(app)));
 }
 
 // THE NOTIFICATION STACK'S DAMAGE — the one bound of the cards that

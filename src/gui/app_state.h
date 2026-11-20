@@ -4237,9 +4237,9 @@ struct GuiUpperRowsFingerprint {
     bool operator==(const GuiUpperRowsFingerprint&) const = default;
 };
 // Row 8's clock cell (paint_bottom_row_buttons_and_clock): the cell as
-// published, the timestamp it shows, and whether the row yields (to a modal
-// or under the on-screen keyboard), the cell's ground and field being the
-// globals'.
+// published, the timestamp it shows, and whether the row yields (to an
+// overlay's row, paint_handler.cpp's modal_owns_bottom_row), the cell's
+// ground and field being the globals'.
 struct GuiClockFingerprint {
     GuiChromeGlobalsFingerprint globals;
     GuiRect     cell{0, 0, 0, 0};
@@ -6428,6 +6428,17 @@ struct AppState {
     // — and then paints whichever tenant stands, so neither painter can claim
     // pixels the frame did not write.
     bool keyboard_slot_painted_standing = false;
+
+    // THE LAYOUT'S KEYBOARD BIT, AS LAID OUT (architect 2026-11-19, send BB):
+    // did the on-screen keyboard stand when the window was last relaid out
+    // for it? The lanes themselves are DERIVED from the live answer
+    // (main.cpp's app_foot_y, onscreen_keyboard::stands), so this bit lays
+    // nothing out: it is the layout edge's memory, compared against the live
+    // answer to know that the app moved above or back over the keyboard's
+    // rows and that the relayout is owed. ONE WRITER, the edge
+    // (GuiInputHandler::reconcile_keyboard_layout), which writes it as it
+    // pays the relayout.
+    bool keyboard_laid_out_standing = false;
 
     // THE ARMED DIALOG BUTTON — the CLICK FACE and, unlike the roster's, THE
     // ACT'S OWN RECORD: these buttons act AT THE RELEASE (architect 2026-08-13,
@@ -9140,9 +9151,16 @@ struct AppState {
     // PAGE AS IT STOOD (`page`: its rows, its highlight and its scroll, the
     // press dropped) and THE TITLE the editor's window wears (`title`: the
     // row's key — the line's text before its `=` — or "Save As", the button's
-    // word). paint_modal_dialog paints `page` in the room above the keyboard
-    // and its window's title and label off `title` while a dialog editor
-    // stands, and reads neither otherwise; the next opener overwrites both.
+    // word). paint_modal_dialog paints `page` in the box's view, ITS
+    // CONTROLS ROW ON THE BOTTOM ICON ROW (architect 2026-11-19, send BB:
+    // the row of the page behind, painted as with no dialog over it — the
+    // trim presets list's enabled bits off this page and the live trim,
+    // trim_presets_button_enabled's page form; the BPM form's off the live
+    // markers; the settings page's Close) and its window's title and label
+    // off `title` while a dialog editor stands, and reads neither otherwise;
+    // the next opener overwrites both. Nothing writes the page, the trim or
+    // the markers under the editor's veil, so the row shows the bits the list
+    // showed at the open.
     // Paint alone: nothing presses the backdrop (the editor's veil), and the
     // page the editor's OK or Cancel returns to is rebuilt as before
     // (GuiInputHandler::return_to_settings_page, open_bpm_form, the trim
@@ -10146,6 +10164,16 @@ bool render_player_button_enabled(const AppState& a,
 // whole-window damage).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act);
+// THE SAME ANSWER OVER A GIVEN PAGE (send BB, 2026-11-19): `page` the list
+// the row stands for — the standing folder overlay (the form above), or a
+// dialog editor's backdrop (AppState::dialog_backdrop), whose controls row
+// paint_modal_dialog paints under Save As from the page as it stood at the
+// editor's open. The trim it compares is the live one; the page and the
+// trim are both frozen while the editor stands (nothing writes either under
+// the editor's veil), so the bits are the ones the list showed.
+bool trim_presets_button_enabled(const AppState& a,
+                                 const AppState::FolderOverlay& page,
+                                 AppState::TrimPresetsButtonAct act);
 
 // THE BPM FORM'S CONTROLS ROW FACES (architect 2026-10-29), THE TRUTHFUL
 // GREY's owner for that row: RENDER LIVE EXACTLY WHEN ITS PRESS COULD RENDER
@@ -10466,8 +10494,9 @@ GuiRect marker_lane_press_area(const AppState& a);
 // over the status bar, Arc's inner pad, the case and the outer pad (the
 // simple layout, 2026-10-22; Cool Edit's dock bar over its content band and
 // the border under it 2026-10-09 to then), whatever stands over it (the
-// modal family's box and controls row, modal_box.h, and the on-screen
-// keyboard's band, onscreen_keyboard.h's placement block). (It was row 7's
+// modal family's box and controls row, modal_box.h), relaid with the status
+// bar above the on-screen keyboard while it stands (main.cpp's app_foot_y,
+// send BB). (It was row 7's
 // single status lane from 2026-08-01, one of two lanes while the transport
 // row stood, 2026-08-11..12, the strip's whole surface at the unification,
 // the strip's one lane resting on the WINDOW'S FOOT from commit B, one of
@@ -10478,8 +10507,20 @@ GuiRect marker_lane_press_area(const AppState& a);
 // the bar's (status_bar_area below; notifications.h's head).
 GuiRect bottom_row_area(const AppState& a);
 // THE STATUS BAR'S LANE (main.cpp; render.h's status bar block): the line
-// and the bar under the bottom icon row, the window's whole width.
+// and the bar under the bottom icon row, the window's whole width, its foot
+// THE APP'S FOOT (app_foot_y below).
 GuiRect status_bar_area(const AppState& a);
+// THE WINDOW'S FOOT AND THE APP'S FOOT (architect 2026-11-19, send BB; the
+// rule at their definitions, main.cpp): the window's foot is the clamped
+// window height, where the on-screen keyboard stands
+// (onscreen_keyboard::foot_y); the app's foot is the height every lane is
+// laid on — the window's foot less the keyboard's surface while it stands —
+// the status bar's last row one above it. A reader that means "the app's
+// last row" asks app_foot_y; the window's own extent (the GL surface,
+// whole-window damage, a dialog centered on the panel, the keyboard's foot)
+// is the window's.
+int window_foot_y(const AppState& a);
+int app_foot_y(const AppState& a);
 
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
@@ -10560,8 +10601,9 @@ GuiRect tooltip_damage_band(const AppState& a);
 // row down to the bottom row's top, 2026-08-28 to 2026-10-14 — IS GONE: the
 // folder overlay stands in the modal family's box since 2026-10-14
 // (modal_box.h, its one owner), and the on-screen keyboard's band stands on
-// the window's foot over the bottom icon row and the status bar
-// (onscreen_keyboard.h's placement block, send BB, 2026-11-19). The two still never both stand — the overlay's owners are
+// the window's last rows under the app, which is relaid above it
+// (onscreen_keyboard.h's placement block, send BB, 2026-11-19). The two
+// still never both stand — the overlay's owners are
 // not editors, the record at onscreen_keyboard::stands — and still share the
 // slot's one show-and-hide damage rect, onscreen_keyboard::slot_damage_rect.)
 
@@ -12903,12 +12945,13 @@ std::pair<long long, long long> compute_trim_samples(
 //   Viewport::invalidate_clock_area, whose declaration carries the caller
 //   inventory (viewport.h).
 //
-//   IT WIDENS TO THE WHOLE LANE WHILE A MODAL STANDS, by construction rather
-//   than by a test of its own: the row yields whole to the modal, so its
-//   painter publishes no clock cell, and a zero cell is already this owner's
-//   honest widening. WHILE THE ON-SCREEN KEYBOARD COVERS THE LANE it answers
-//   the lane's columns left of the keyboard's grid instead (the rule and its
-//   reason at the definition, main.cpp).
+//   IT WIDENS TO THE WHOLE LANE WHILE AN OVERLAY'S ROW HOLDS IT, by
+//   construction rather than by a test of its own: the row yields whole to
+//   the overlay's controls row (an overlay standing, or a dialog editor over
+//   its backdrop), so its painter publishes no clock cell, and a zero cell is
+//   already this owner's honest widening. Under a question, the progress
+//   dialog or the flag editor over the main page the cell is published (send
+//   BB, the rule at the definition, main.cpp).
 //
 // THE ROW'S OTHER TENANTS NEED NO RECT FUNCTION. The transport buttons on
 // the left and the arrow cluster flush at the right are the button tenants:
@@ -12916,7 +12959,8 @@ std::pair<long long, long long> compute_trim_samples(
 // comparator), exactly as the top rows' buttons do. The ACTIVE TAB'S NAME
 // beside the clock takes the LANE whole through
 // Viewport::invalidate_tab_name_area, its extent published nowhere; the
-// MODAL takes the LANE whole through Viewport::invalidate_modal_dialog_area.
+// OVERLAY'S ROW takes the LANE whole through
+// Viewport::invalidate_modal_dialog_area.
 // Both spell bottom_row_area directly. The process line is not on this row:
 // it stands in the status bar under it (status_bar_area below,
 // Viewport::invalidate_status_bar_area).

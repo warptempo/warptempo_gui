@@ -7067,16 +7067,21 @@ bool GuiInputHandler::persist_trim_presets(
 // THE LIST'S ROW FACES (the contract is at the declaration, app_state.h).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act) {
+    return trim_presets_button_enabled(a, a.folder_overlay, act);
+}
+
+bool trim_presets_button_enabled(const AppState& a,
+                                 const AppState::FolderOverlay& ov,
+                                 AppState::TrimPresetsButtonAct act) {
     using Act = AppState::TrimPresetsButtonAct;
-    const AppState::FolderOverlay& ov = a.folder_overlay;
     const int h = ov.highlight_row;
     const bool seated =
         h >= 0 && h < static_cast<int>(ov.trim_presets.size());
     switch (act) {
         case Act::HighlightDown:
-            return folder_overlay::move_highlight_actionable(a, +1);
+            return folder_overlay::move_highlight_actionable(ov, +1);
         case Act::HighlightUp:
-            return folder_overlay::move_highlight_actionable(a, -1);
+            return folder_overlay::move_highlight_actionable(ov, -1);
         case Act::SaveAs:
         case Act::Close:
             return true;

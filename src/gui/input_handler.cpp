@@ -3604,6 +3604,17 @@ void GuiInputHandler::relayout_window() {
     paint_handler.on_resize(app.width, app.height);
 }
 
+void GuiInputHandler::reconcile_keyboard_layout() {
+    // The contract, the order and the two callers are at the declaration
+    // (input_handler.h).
+    const bool live = onscreen_keyboard::stands(app);
+    if (live == app.keyboard_laid_out_standing) return;
+    app.keyboard_laid_out_standing = live;
+    relayout_window();
+    if (!no_audio_to_dispatch_on(app, audio.total_frames()))
+        viewport.kick_waveform_sync();
+}
+
 void GuiInputHandler::apply_true_colors(bool on) {
     // The apply shape is at install_true_colors' declaration (render.h).
     const WaveformPlateInks before = waveform_plate_inks();

@@ -104,8 +104,8 @@
 // one-run prefix+pending shaping died with it, the pending run shaping alone
 // and the published click-to-caret geometry (AppState::DialogEditorText) the
 // editor's own. Since send AA's stage D2 the editor and the prompt are
-// dialogs in xfwm's window (THE DIALOG WINDOW below); row 8 YIELDS WHOLE to
-// the modal, which is no tenant of it.)
+// dialogs in xfwm's window (THE DIALOG WINDOW below), over the page behind,
+// whose row stands on row 8's rows (modal_owns_bottom_row).)
 
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
 
@@ -2578,11 +2578,9 @@ static BottomRowSeats bottom_row_seats(const AppState& app,
 // bottom icon row's case seat, their OUTERMOST FACES 6 W INSIDE THE PANEL
 // (THE EDGE RULE, send Z) —
 // row 8's own seats (bottom_row_seats, the one owner) on the
-// controls row's rows (`keyboard_h` unread there since send AA's stage D2:
-// the row never lifts, modal_box.h).
-static BottomRowSeats modal_controls_seats(const AppState& app,
-                                           int keyboard_h) {
-    return bottom_row_seats(app, modal_controls_row_rect(app, keyboard_h));
+// controls row's rows (modal_controls_row_rect, the lane table's, modal_box.h).
+static BottomRowSeats modal_controls_seats(const AppState& app) {
+    return bottom_row_seats(app, modal_controls_row_rect(app));
 }
 
 // ROW 8'S RIGHT BLOCK (2026-10-21: lifted out of
@@ -2798,7 +2796,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // hidden whole takes its gap with it — and the stand-in (architect
     // 2026-10-11, kTransportHistoryStandIns): Older / Newer in the nudge
     // pair's seats; every other button on this row publishes a real rect on
-    // every frame, except under a modal that owns the row
+    // every frame, except while an overlay's row holds the row
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
@@ -2888,8 +2886,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // every pass, whatever the clip, as the keys' rects are; CUT AT THE
         // RIGHT BLOCK'S LEFT EDGE, the block winning in z where a narrow
         // window lays it over the run (the z rule above), so no point
-        // answers twice. Play hidden (the `h` view) or the row yielded (a
-        // modal) publishes the key's empty rect after this, which empties
+        // answers twice. Play hidden (the `h` view) or the row yielded (an
+        // overlay's row) publishes the key's empty rect after this, which empties
         // the field with it (publish_button_face's empty overload). NOTHING
         // IS PAINTED ON THE TIMESTAMP FOR THE PRESS: the press arms the PLAY
         // key (lit while the pointer stays on either rect), and the digits
@@ -2949,10 +2947,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // narrow window lays the block over this ground (the z rule,
         // 2026-10-14). THE TIMESTAMP CARRIES NO DIRTY MARK (architect
         // 2026-10-05): SAVE'S GREY IS THE MARK (plain_save_actionable,
-        // app_state.h). THE ROW YIELDS WHOLE TO A MODAL, so the run is
-        // hidden while a prompt, a dialog editor, the render player or the
-        // picker stands (modal_owns_bottom_row); the status bar under the
-        // row stays (paint_status_bar).
+        // app_state.h). THE ROW YIELDS WHOLE TO AN OVERLAY'S ROW, so the run
+        // is hidden while the render player, the picker or the score viewer
+        // stands or a dialog editor stands over its backdrop
+        // (modal_owns_bottom_row), and shown under a question, the progress
+        // dialog or the flag editor over the main page (send BB); the status
+        // bar under the row stays (paint_status_bar).
         // WITH NO PIECE THERE IS NO TIMESTAMP AND NO NAME (architect
         // 2026-10-27, the open's hold's one frame, platform.h's head: no tab
         // of no piece is named; no_audio_to_dispatch_on), so no pipe.
@@ -3024,10 +3024,11 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 // W (GuiFace::Body) in `text`, its PEN kStatusBarPenW from the panel's left
 // edge, ON THE LINE-BOX BASELINE (+15 W of the 22), clipped to the bar (a
 // line too long for the panel is cut at its right edge). Painted on every
-// frame its lane is exposed on, under every overlay and modal; while the
-// on-screen keyboard stands it stands over the lane, painted over this in the
-// same pass (paint_keyboard_slot), so the line is out of sight until the
-// keyboard goes (onscreen_keyboard.h's placement block). ITS AS-PAINTED RECORD (AppState::status_bar_painted)
+// frame its lane is exposed on, under every overlay and modal, IN VIEW UNDER
+// EVERY EDITOR: while the on-screen keyboard stands the lane is relaid on the
+// keyboard's top line (architect 2026-11-19, send BB; main.cpp's
+// app_foot_y, onscreen_keyboard.h's placement block). ITS AS-PAINTED RECORD
+// (AppState::status_bar_painted)
 // is written when the clip covers the whole lane, so a partial repaint under
 // a changed string leaves the record old and the tick's comparator damages
 // the lane again (refresh_status_bar, main.cpp).
@@ -5207,7 +5208,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
 // row — THROUGH THE ONE-W LINE under the lane (the lane's foot line, one of
-// the well's lines) TO THE CANVAS'S LAST ROW (200 %: rows 235 .. 1305, on the
+// the well's lines) TO THE CANVAS'S LAST ROW (200 %: rows 235 .. 1305, 235
+// .. 911 under the on-screen keyboard at his tuning, send BB; on the
 // line's real span of columns: at a whole place the column left of the
 // marker's and the marker's own), so no gap stands between the apex and
 // the stem (his "small gap": the rows under the lane, 236 .. 237 today,
@@ -5588,27 +5590,29 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
 //
-// EVERY MODAL TAKES THE BOTTOM ICON ROW (modal_box.h, the one owner of the
-// family's shape): an overlay's controls row stands on the row's rows under
-// the family's box, and a question, a dialog editor and the progress modal
-// stand as dialog windows in the room above it (THE DIALOG WINDOW below),
-// the row empty under them. NOTHING ABOUT THE RENDERER MOVED for it — one
-// window, one surface, one frame, one painter — so this is emphatically not
-// the scrapped second-toplevel model (closed_questions.md carries that
-// do-not-re-propose). WHILE ANY MODAL STANDS THE ROW YIELDS WHOLE: all
-// TWENTY-ONE buttons — the COPY / PASTE duo's two, the skips' two, the VERB
-// GROUP'S EIGHT, the step-and-walk group's four and the nudge-and-play
-// group's five — and the left run (the timestamp, the pipe and the tab's
-// name) stand down, nothing negotiates for space, and an overlay's controls
-// take the content band they left (paint_modal_dialog; the box is
-// paint_modal_box's, laid by paint_folder_overlay under the render player
-// and the picker and by paint_modal_dialog for the room and the score
-// viewer's page).
+// THE BOTTOM ICON ROW IS THE PAGE BEHIND'S (modal_box.h, the one owner of the
+// family's shape; architect 2026-11-19, send BB; the rule at
+// modal_owns_bottom_row below): an overlay's controls row stands on the
+// row's rows under the family's box while an overlay's page is the page
+// behind, and a question, a dialog editor and the progress modal stand as
+// dialog windows over it (THE DIALOG WINDOW below). NOTHING ABOUT THE
+// RENDERER MOVED for it — one window, one surface, one frame, one painter —
+// so this is emphatically not the scrapped second-toplevel model
+// (closed_questions.md carries that do-not-re-propose). WHILE AN OVERLAY'S
+// PAGE IS BEHIND THE ROW YIELDS WHOLE: all TWENTY-ONE buttons — the COPY /
+// PASTE duo's two, the skips' two, the VERB GROUP'S EIGHT, the
+// step-and-walk group's four and the nudge-and-play group's five — and the
+// left run (the timestamp, the pipe and the tab's name) stand down, nothing
+// negotiates for space, and the overlay's controls take the content band
+// they left (paint_modal_dialog; the box is paint_modal_box's, laid by
+// paint_folder_overlay under the render player and the picker and by
+// paint_modal_dialog for the room and the score viewer's page).
 //
 // The two helpers below are that fork, shared by the row's painter (which
 // wants the boolean, just under here) and by paint_modal_dialog (which wants
 // the editor itself, at the tail of this file) — one answer, so the row
-// cannot yield to a dialog the modal painter would then decline to paint.
+// cannot yield to an overlay's row the modal painter would then decline to
+// paint.
 
 // The dialog editor the modal would paint, or nullptr. The editors'
 // precedence order. Only one dialog editor can be open at a time — every
@@ -5630,24 +5634,31 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
     return nullptr;
 }
 
-// "A modal owns the bottom row" — the prompt, the RENDER PLAYER (the third
-// owner since 2026-08-28: its transport row takes the lane whole), the PICKER
-// (the fourth, the same day: its one-word row, Cancel or Close by content,
-// kModalCancelLabel's rule — under the trim presets list since 2026-10-28
-// night the player's shape, the highlight pair and four words ending in
-// Close, under the BPM form since 2026-10-29 RENDER and Cancel), THE PROGRESS MODAL (the fifth, 2026-10-14: a
-// batch's Cancel alone, AppState::BatchProgress) or any dialog editor. The
-// top-strip FLAG editor is deliberately absent: it is positional, a modal
-// since 2026-10-25 (its veil swallows the row's presses) but not a dialog,
-// and it never takes this row: the row yields under the on-screen keyboard
-// it raises, which covers it (paint_bottom_strip).
-// EVERY ONE OF THEM STANDS IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
-// since 2026-10-14 (modal_box.h; a prompt and a dialog editor stood in the
-// taskbar dialog laid over the row from 2026-10-10 until that day), so with
-// no keyboard standing the row's rows ARE the family's controls row.
+// "THE ROW BELONGS TO AN OVERLAY" — THE BOTTOM ICON ROW IS THE PAGE BEHIND'S
+// (architect 2026-11-19, send BB: "actually windows like score and player
+// need the bottom row, and so thy might as well keep the status bar, which
+// sets the precedent that overlays keep them"; his "i take your recommends
+// for all": one rule for both icon rows). The row belongs to an overlay
+// EXACTLY WHEN AN OVERLAY'S PAGE IS THE PAGE BEHIND: an overlay STANDING —
+// the RENDER PLAYER (its transport row), the PICKER in its five contents
+// (the project picker's and the value list's Cancel, the settings page's
+// Close, the trim presets list's cluster, the BPM form's RENDER and Cancel)
+// or THE SCORE VIEWER (its keys, scrub and page cell or clock), with or
+// without a question or the progress dialog over it — or A DIALOG EDITOR'S
+// BACKDROP (the settings line, Save As and the BPM field each stand over the
+// page they were opened from, AppState::dialog_backdrop). Then
+// paint_modal_dialog paints that page's controls row on the row's rows, live
+// with no dialog over it and paint-only under one. A QUESTION AND THE
+// PROGRESS DIALOG OWN NOTHING OF IT, nor does the flag editor: over the main
+// page the row is the main page's own keys and timestamp
+// (paint_bottom_row_buttons_and_clock), painted as the top icon row is under
+// the same modal — not dimmed, GTK greying no window under its dialog — and
+// dead to presses by the same veil (input_pointer.cpp's modal gates: the
+// prompt's, the progress modal's and the editors' keyboard_modal_editor_active
+// veil consume every press on either row; the hover walk refuses both rows
+// under them), playback running on under the flag editor and PLAY's glyph
+// with it.
 static bool modal_owns_bottom_row(AppState& app) {
-    if (app.prompt.active) return true;
-    if (app.batch_progress.active) return true;
     if (app.render_player.active) return true;
     if (app.picker.active) return true;
     // THE SCORE VIEWER (the sixth, 2026-10-26): its PREV / NEXT, scrub, page
@@ -5677,11 +5688,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // from here onto the grounded band (the cluster's tables and the clock's
     // metrics live beside that body).
     // THE ROW HAS A MODAL STATE since 2026-08-13, in which those tenants
-    // stand down and the modal family's controls row takes the row
-    // (2026-10-14; the ruling and the fork are at modal_owns_bottom_row,
-    // just above; the modal's own layout is paint_modal_dialog's) — and with
-    // the chain gone there is nothing left on the lane to negotiate with,
-    // which is what makes that yield clean.
+    // stand down and the modal family's controls row takes the row — while
+    // an overlay's page is the page behind (2026-10-14; send BB 2026-11-19;
+    // the ruling and the fork are at modal_owns_bottom_row, just above; the
+    // modal's own layout is paint_modal_dialog's) — and with the chain gone
+    // there is nothing left on the lane to negotiate with, which is what
+    // makes that yield clean. UNDER A QUESTION, THE PROGRESS DIALOG OR THE
+    // FLAG EDITOR OVER THE MAIN PAGE the row is the main page's, painted
+    // whole below and dead by the modal's veil.
     //
     // WHAT IS NOT HERE, and why it is not missing: an S/T · W/P view readout
     // and a "(read-only)" token. The icon row's view pairs show the view as
@@ -5703,16 +5717,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 
     // THE LANE'S GROUND, ON EVERY FRAME WHATEVER STANDS OVER IT: THE BODY
     // TONE (the palette's `face`, the theme's `body_face`; send Z,
-    // 2026-11-19), the lane the window's width over the status bar. The row's tenants are the
-    // program's (row 8, and the modal family's controls row — every modal's,
-    // modal_box.h, 2026-10-14), so this lane never changes for them. The
-    // ground erases whatever render_background laid down, so the strip does
-    // not depend on that erase happening to hold the same value. The modals
-    // paint their controls on this ground and lay none of their own
-    // (paint_modal_dialog); under a question and the progress modal the
-    // lane stands empty on it (send AA's stage D2), and under a dialog
-    // editor or the flag editor the on-screen keyboard covers it, painted
-    // over this ground in the same pass (paint_keyboard_slot).
+    // 2026-11-19), the lane the window's width over the status bar — relaid
+    // above the on-screen keyboard while it stands (send BB, main.cpp's
+    // app_foot_y). The row's tenants are the
+    // program's (row 8, and the modal family's controls row — every
+    // overlay's, modal_box.h, 2026-10-14), so this lane never changes for
+    // them. The ground erases whatever render_background laid down, so the
+    // strip does not depend on that erase happening to hold the same value.
+    // The overlays paint their controls on this ground and lay none of
+    // their own (paint_modal_dialog).
     {
         cairo_save(cr);
         cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -5720,53 +5733,45 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
         cairo_restore(cr);
     }
 
-    // THE ROW YIELDS TO THE MODAL (2026-08-13; the fork and the ruling are at
-    // modal_owns_bottom_row just above). The ground above is the ROW'S
-    // whatever it carries — the modal's CONTROLS ROW paints on the row's own
-    // ground, laying none of its own (its box stands above the row, over the
-    // canvas column, modal_box.h, 2026-10-14; from 2026-08-13 until then the
-    // modal had no box and this lane was its whole surface) — and every other
-    // tenant stands down here: paint_modal_dialog owns the row from this
-    // frame until the modal's closer.
+    // THE ROW YIELDS TO THE OVERLAY'S ROW (2026-08-13; the fork and the
+    // ruling are at modal_owns_bottom_row just above). The ground above is
+    // the ROW'S whatever it carries — the overlay's CONTROLS ROW paints on
+    // the row's own ground, laying none of its own (its box stands above the
+    // row, over the canvas column, modal_box.h, 2026-10-14; from 2026-08-13
+    // until then the modal had no box and this lane was its whole surface) —
+    // and every other tenant stands down here: paint_modal_dialog owns the
+    // row from this frame until the overlay's closer (or the dialog
+    // editor's, over its backdrop).
     //
     // THE ROW'S BUTTONS PUBLISH ZERO RECTS rather than stranding the last
     // frame's (the roster's own model — a zero/invalid stash contains no
     // point), so nothing can hit an unpainted button and no consumer of those
     // rects can read a phantom bound. Their THREE FACE BITS ARE
     // still published: those are read by main.cpp's staleness comparator
-    // alone, and a stash frozen for the modal's whole life would drift the
-    // moment the open changed one — a modal open STOPS PLAYBACK, which flips
-    // the transport button's GLYPH (the same edge flipped that button's
-    // ENABLED bit while the row was honest, and the play/stop pair's LAMP
-    // while it was a radio; the state has moved axis twice and the example
-    // holds on each) — leaving the comparator to
-    // invalidate this row on every tick with nothing to repaint but the modal.
+    // alone, and a stash frozen for the overlay's whole life would drift the
+    // moment the open changed one — an overlay's open STOPS PLAYBACK, which
+    // flips the transport button's GLYPH (the same edge flipped that
+    // button's ENABLED bit while the row was honest, and the play/stop
+    // pair's LAMP while it was a radio; the state has moved axis twice and
+    // the example holds on each) — leaving the comparator to
+    // invalidate this row on every tick with nothing to repaint but the
+    // overlay's row.
     //
     // THE CLOCK'S CELL ZEROES WITH THEM, which is what makes the row's one
     // rect owner degrade HONESTLY: a zero cell answers the WHOLE LANE at
-    // clock_invalidate_rect (main.cpp), which covers the modal's controls row
-    // standing on it (the modal's whole surface from 2026-08-13 until its box
-    // of 2026-10-14; the box takes the modal family's area,
+    // clock_invalidate_rect (main.cpp), which covers the overlay's controls
+    // row standing on it (the modal's whole surface from 2026-08-13 until its
+    // box of 2026-10-14; the box takes the modal family's area,
     // invalidate_modal_dialog_area).
     // NOTHING READS THESE ZEROES as a bound — since 2026-08-13 nothing on
     // this row is measured from a button stash at all, the status chain having
     // taken its right anchor to the tab row with it.
-    // AND THE ROW YIELDS WHILE THE ON-SCREEN KEYBOARD STANDS (2026-10-10, ON
-    // SCREEN IS AS PAINTED): the keyboard stands on the window's foot OVER
-    // THIS ROW and the status bar under it (architect 2026-11-19, send BB;
-    // onscreen_keyboard.h's placement block) — an editor's answers are the
-    // keyboard's Enter and Esc, the flag editor's case too, the one editor
-    // that raises the keyboard with no dialog — so the row holds nothing:
-    // the ground below is laid and covered by the keyboard in the same pass
-    // (the slot paints after this, on every frame, opaque), and a button
-    // nothing shows must not hover, wear a tooltip or answer a press (the
-    // zero rects).
-    if (modal_owns_bottom_row(app) || onscreen_keyboard::stands(app)) {
+    if (modal_owns_bottom_row(app)) {
         // The right block's groups stand down together: the SKIPS, the
         // MARKER VERBS, the STEP-AND-WALK GROUP, the NUDGE-AND-PLAY GROUP
         // with Play, and the `h` view's Older / Newer in the nudge pair's
         // seats. Each is a tenant of this lane like every other member, and
-        // the modal takes the lane whole: the block's one table of groups
+        // the overlay's row takes the lane whole: the block's one table of groups
         // (kRow8Groups) and the stand-ins, every button on the row.
         for (const std::span<const TransportRowDef> group : kRow8Groups) {
             for (const TransportRowDef& def : group) {
@@ -5816,8 +5821,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // body paints into the one frame (THE DIALOG WINDOW above), so this is NOT
 // the scrapped second-toplevel model (that attempt was reverted byte-exact
 // and is recorded do-not-re-propose in closed_questions.md). The bottom row
-// yields whole while a modal stands — modal_owns_bottom_row, above, is the
-// shared fork.
+// yields whole while an overlay's page is the page behind —
+// modal_owns_bottom_row, above, is the shared fork.
 //
 // THE OVERLAYS STAND IN THE MODAL FAMILY'S BOX AND ON ITS CONTROLS ROW
 // (architect 2026-10-14, modal_box.h, the one owner of the shape): their
@@ -5844,9 +5849,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   (architect 2026-11-19, send AA: "The pen does have a good way to
 //   scroll, and those are the left and right arrows of the keyboard. That's
 //   exactly why they're there."), Cancel and OK; the window Z_06's, never
-//   growing with the text; centered in the room above the on-screen
-//   keyboard, the page it was opened from under it
-//   (AppState::dialog_backdrop). The line is the existing text_editor
+//   growing with the text; centered in the box's view, which ends over the
+//   bottom icon row relaid above the on-screen keyboard (send BB), the page
+//   it was opened from under it (AppState::dialog_backdrop) and that page's
+//   controls row on the bottom icon row, dead. The line is the existing text_editor
 //   machinery — selection, caret, click-to-caret, byte-identical editing —
 //   through the scroll offset (text_editor::State::view_offset_px), and a
 //   refused Enter selects the whole text, nothing recolored, its owner's
@@ -6477,8 +6483,12 @@ void paint_progress_bar(cairo_t* cr, double x0, double x1, double y, double h,
 // Enter / Space — no hover look, NO FOCUS LOOK on a button (architect
 // 2026-10-23); every dialog button is live while its dialog stands.
 void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
-                         bool prompt_up, bool progress_up, int kb_h) {
+                         bool prompt_up, bool progress_up) {
     AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+    // THE PANEL a question and the progress dialog are centered on: the
+    // window's own extent — neither ever stands with the on-screen keyboard
+    // (GuiPrompt::request_close takes every editor down first, modal_box.h's
+    // head), so the window and the app are one height under them.
     const GuiRect panel{0, 0, app.width, app.height};
     struct WindowButton {
         std::string word;
@@ -6620,9 +6630,10 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         paint_dialog_word_button(cr, buttons.back().rect, word, state_of(0));
     } else {
         // -- THE LINE EDITOR: THUNAR'S RENAME DIALOG (the design's §E;
-        //    build_overlays_z.py's editor; Z_06), CENTERED IN THE ROOM ABOVE
-        //    THE KEYBOARD (the box's interior at the keyboard's height,
-        //    modal_box.h). Its title the backdrop's (AppState::
+        //    build_overlays_z.py's editor; Z_06), CENTERED IN THE VIEW (the
+        //    box's interior, ending on the line over the bottom icon row the
+        //    lane table relays above the keyboard, modal_box.h; send BB). Its
+        //    title the backdrop's (AppState::
         //    dialog_backdrop: the row's key, or "Save As"), its label that
         //    title and a colon (Z_06's words: the key's own name, a product
         //    word, the editors carrying no label of their own since
@@ -6675,7 +6686,7 @@ void paint_dialog_window(cairo_t* cr, AppState& app, text_editor::State* ed,
         //    whole text selected (text_editor::refuse), the owner's card
         //    saying why.
         dlg.owner = AppState::ModalDialogOwner::Editor;
-        const GuiRect room = modal_box_interior_rect(app, kb_h);
+        const GuiRect room = modal_box_interior_rect(app);
         const GuiLineBoxW lb = gui_font_line_box_w(body);
         const int inset     = scaled_px(kRenameInsetW);
         const int pen_dx    = scaled_px(kEntryPenW);
@@ -7080,7 +7091,6 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
 // painter below, its other caller; `hole` the GL canvas's page hole and
 // `pane` the interior's tone, the definition's head).
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            int keyboard_h,
                             const GuiRect& hole, GuiColor pane);
 
 namespace {
@@ -7147,12 +7157,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
-    // WHICH DIALOG: the prompt outranks every editor (the one coexistence the
-    // retired status chain also resolved prompt-first — a WM close can raise the
-    // unsaved-work prompt over a standing editor, and the prompt is then what
-    // owns the keyboard); the editor fork is the shared one the row's yield
-    // reads too (dialog_editor_to_paint, above), so the row cannot stand its
-    // tenants down for a dialog this body then declines to paint.
+    // WHICH DIALOG: the prompt outranks every editor (the order the retired
+    // status chain also kept; the close road takes every editor down before
+    // the unsaved-work question rises, GuiPrompt::request_close, so the two
+    // do not stand together); the editor fork is the shared one the row's
+    // yield reads too (dialog_editor_to_paint, above), so the row cannot
+    // stand its tenants down for a backdrop's row this body then declines to
+    // paint.
     const bool prompt_up = app.prompt.active;
     // THE PROGRESS MODAL, the fifth owner (2026-10-14, AppState::
     // BatchProgress): directly under the prompt and above the three lower
@@ -7178,16 +7189,6 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     const bool score_up = !prompt_up && !progress_up && !player_up &&
                           !picker_up && app.score_viewer.active &&
                           app.score.has_value();
-    // THE TRIM PRESETS LIST (2026-10-28 night): a picker content whose
-    // controls row is the player's shape, not the picker's one word.
-    const bool trim_up = picker_up &&
-                         app.folder_overlay.owner ==
-                             AppState::FolderOverlay::Owner::TrimPresets;
-    // THE BPM FORM (2026-10-29): a picker content whose controls row is two
-    // word keys in the trim list's cluster, RENDER and CANCEL.
-    const bool bpm_up = picker_up &&
-                        app.folder_overlay.owner ==
-                            AppState::FolderOverlay::Owner::BpmForm;
     text_editor::State* ed =
         (prompt_up || progress_up || player_up || picker_up || score_up)
             ? nullptr : dialog_editor_to_paint(app);
@@ -7224,23 +7225,67 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // lists are the folder overlay's painter's. A QUESTION, A DIALOG EDITOR
     // AND THE PROGRESS MODAL (`windowed`) ARE DIALOGS IN XFWM'S WINDOW
     // (paint_dialog_window, THE DIALOG WINDOW above), their answers the
-    // window's own buttons, the controls row under them yielded
-    // (modal_owns_bottom_row): EMPTY body tone under a question and the
-    // progress modal, COVERED BY THE ON-SCREEN KEYBOARD under a dialog
-    // editor (paint_keyboard_slot). THE BOX this body paints
-    // (paint_modal_box): A DIALOG EDITOR'S ROOM — the view above the
-    // on-screen keyboard (`kb_h`, onscreen_keyboard::modal_keyboard_h_px),
-    // the page the editor was opened from painted in it as it was left (the
-    // backdrop, AppState::dialog_backdrop) — and THE SCORE VIEWER'S (since
-    // 2026-10-26), its page the interior, under any rank (a question over
-    // the viewer stands on its pane). (The box's one flat pane under a
-    // prompt's question, an editor's line and the progress sentence,
-    // 2026-10-14 to send AA's stage D2, and THE TASKBAR DIALOG, 2026-10-10 to
-    // 2026-10-14, are retired.)
+    // window's own buttons. THE BOX this body paints (paint_modal_box): A
+    // DIALOG EDITOR'S ROOM — the view, which ends on the line over the
+    // bottom icon row the lane table relays above the on-screen keyboard
+    // (modal_box.h's head, send BB), the page the editor was opened from
+    // painted in it as it was left (the backdrop, AppState::dialog_backdrop)
+    // — and THE SCORE VIEWER'S (since 2026-10-26), its page the interior,
+    // under any rank (a question over the viewer stands on its pane). (The
+    // box's one flat pane under a prompt's question, an editor's line and the
+    // progress sentence, 2026-10-14 to send AA's stage D2, and THE TASKBAR
+    // DIALOG, 2026-10-10 to 2026-10-14, are retired.)
+    //
+    // THE CONTROLS ROW IS THE PAGE BEHIND'S (architect 2026-11-19, send BB:
+    // "windows like score and player need the bottom row, and so thy might
+    // as well keep the status bar, which sets the precedent that overlays
+    // keep them"; his "i take your recommends for all"; the rule's one owner
+    // modal_owns_bottom_row): THIS BODY PAINTS IT WHILE AN OVERLAY'S PAGE IS
+    // THE PAGE BEHIND — the overlay standing (`row_player`, `row_list` over
+    // the live folder overlay, `row_score`), with or without a question or
+    // the progress dialog over it, or A DIALOG EDITOR'S BACKDROP
+    // (`row_backdrop`, the page copied at the editor's open: Close under the
+    // settings line, the trim presets list's row under Save As, the BPM
+    // form's under the BPM field) — each row as that overlay paints it with
+    // no dialog over it. UNDER A DIALOG (`windowed`) THE ROW IS PAINT-ONLY:
+    // AppState::modal_dialog.buttons stays the WINDOW'S OWN live answers,
+    // the one stash whose session the dialog's claim compares, so the row's
+    // buttons publish no rect there — no press, no hover, no tooltip reaches
+    // them, which is exactly the top icon row's answer under the same modal
+    // (its rects stand, its presses the veil's, its hover and tooltip
+    // refused, input_pointer.cpp's modal gates); their faces carry no press
+    // look (the press indices name the window's buttons) and their enabled
+    // bits are the live predicates' (the row's walk). Under a question or the
+    // progress dialog over the MAIN PAGE there is no overlay's page behind:
+    // the bottom icon row is the main page's own (paint_bottom_strip) and
+    // this body paints the window alone.
     const bool    windowed = prompt_up || progress_up || ed != nullptr;
-    const int     kb_h    = onscreen_keyboard::modal_keyboard_h_px(app);
+    const bool    row_player   = app.render_player.active;
+    const bool    row_picker   = !row_player && app.picker.active;
+    const bool    row_score    = !row_player && !row_picker &&
+                                 app.score_viewer.active &&
+                                 app.score.has_value();
+    const bool    row_backdrop = !row_player && !row_picker && !row_score &&
+                                 dialog_editor_to_paint(app) != nullptr;
+    // THE LIST'S PAGE THE ROW READS: the standing folder overlay, or the
+    // dialog editor's backdrop — the page as it stood at the editor's open,
+    // frozen while the editor stands (AppState::DialogBackdrop).
+    const bool    row_list     = row_picker || row_backdrop;
+    const AppState::FolderOverlay& row_page =
+        row_backdrop ? app.dialog_backdrop.page : app.folder_overlay;
+    // THE TRIM PRESETS LIST (2026-10-28 night): a list whose controls row
+    // is the player's shape, not the picker's one word.
+    const bool    row_trim = row_list &&
+                             row_page.owner ==
+                                 AppState::FolderOverlay::Owner::TrimPresets;
+    // THE BPM FORM (2026-10-29): a list whose controls row is two word keys
+    // in the trim list's cluster, RENDER and CANCEL.
+    const bool    row_bpm  = row_list &&
+                             row_page.owner ==
+                                 AppState::FolderOverlay::Owner::BpmForm;
+    const bool    row_any  = row_player || row_list || row_score;
     const GuiRect lane    = bottom_row_area(app);
-    const GuiRect content = modal_controls_row_rect(app, kb_h);
+    const GuiRect content = modal_controls_row_rect(app);
     if (lane.w <= 0 || lane.h <= 0 || content.h <= 0) {
         // A degenerate row publishes nothing, the cold answer the pointer path
         // already reads correctly (a zero stash contains no point) — and it
@@ -7267,7 +7312,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // THE VIEW'S TONE `ruler_face`, the score viewer's `score_pane_face`
     // its one exception (modal_box.h's head, M9 A2).
     if (room || score_box)
-        paint_modal_box(cr, app, kb_h, page_hole,
+        paint_modal_box(cr, app, page_hole,
                         score_box ? palette().score_pane_face
                                   : palette().ruler_face);
     // THE DIALOG EDITOR'S BACKDROP (send AA's stage D2, the approved Z_06:
@@ -7277,32 +7322,28 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // by the least move (folder_overlay::scroll_showing_row, nothing
     // written), dead under the modal's veil — no press lights a row.
     if (room) {
-        const GuiRect view = modal_box_interior_rect(app, kb_h);
+        const GuiRect view = modal_box_interior_rect(app);
         const AppState::FolderOverlay& page = app.dialog_backdrop.page;
         paint_list_view(cr, exposed, page, view,
                         folder_overlay::scroll_showing_row(
                             page, view, page.scroll_px, page.highlight_row),
                         /*live=*/false);
     }
-    if (windowed) {
-        paint_dialog_window(cr, app, ed, prompt_up, progress_up, kb_h);
+    // THE DIALOG'S WINDOW, painted after the row under it (the row's walk
+    // below) so it floats over everything this body lays; its answers are
+    // the stash's (paint_dialog_window), the session stamped with them.
+    const auto paint_window_and_finish = [&]() {
+        paint_dialog_window(cr, app, ed, prompt_up, progress_up);
         dlg.session = live_session;
         dlg.valid   = true;
         cairo_restore(cr);
+    };
+    if (windowed && !row_any) {
+        paint_window_and_finish();
         return;
     }
 
-    // The deleted toolbar row's button box, owned by the dialog since the
-    // 2026-08-12 relayout (the spec's push_button_box_px — the record at the
-    // kModal* block; modal_word_buttons the one layout) — on every
-    // owner's row but THE PLAYER'S, whose buttons are row 8's case, the
-    // program's, at row 8's seat (architect 2026-10-05). EVERY OWNER'S SEATS
-    // ARE THE FAMILY'S CONTROLS ROW'S (modal_controls_seats, architect
-    // 2026-10-14: the outermost faces flush with the pane's outer columns,
-    // the well's, their cells on the box's;
-    // the prompts and the editors took row 8's pads until that afternoon).
-    // `btn_y` and `btn_h` are the one band the walk and the scrub read.
-    const BottomRowSeats seats = modal_controls_seats(app, kb_h);
+    const BottomRowSeats seats = modal_controls_seats(app);
     // EVERY OWNER'S BUTTON IS THE KEY since 2026-10-23 (the word buttons
     // the keys, modal_word_buttons), so one band for all.
     const int btn_h = seats.case_h;
@@ -7369,7 +7410,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         int         x            = 0;
     };
     std::vector<DialogButtonPlan> plan;
-    if (player_up) {
+    if (row_player) {
         // THE PLAYER'S ROW, in painted order (architect 2026-08-28; THE
         // TRANSPORT TO THE RIGHT AND EVERYTHING ELSE TO THE LEFT, architect
         // 2026-11-10, each cluster keeping its own order): the REPEAT ONE
@@ -7511,7 +7552,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         // is one toggle with no pause state.
         glyph_button(AppState::PlayerButtonAct::PlayPause);
         glyph_button(AppState::PlayerButtonAct::NextTrack);
-    } else if (score_up) {
+    } else if (row_score) {
         // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order, ON
         // ITS TWO FACES (score_viewer.h's head, 2026-10-26 night), THE
         // TRANSPORT TO THE RIGHT AND EVERYTHING ELSE TO THE LEFT as the
@@ -7550,7 +7591,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             key(Act::PrevPage);
             key(Act::NextPage);
         }
-    } else if (trim_up) {
+    } else if (row_trim) {
         // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28 night, THE
         // PLAYER'S SHAPE), in painted order, one cluster flush right
         // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
@@ -7566,7 +7607,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             DialogButtonPlan b;
             b.trim_act = act;
             b.glyph    = true;
-            b.enabled  = trim_presets_button_enabled(app, act);
+            b.enabled  = trim_presets_button_enabled(app, row_page, act);
             b.tooltip  = render_player_button_hint(trim_presets_pair_twin(act),
                                                    RenderPlayerHintState{});
             plan.push_back(std::move(b));
@@ -7575,14 +7616,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             DialogButtonPlan b;
             b.trim_act = act;
             b.word     = std::string(w);
-            b.enabled  = trim_presets_button_enabled(app, act);
+            b.enabled  = trim_presets_button_enabled(app, row_page, act);
             plan.push_back(std::move(b));
         };
         word(Act::Save, "Save");
         word(Act::SaveAs, "Save As");
         word(Act::Delete, "Delete");
         word(Act::Close, kModalCloseLabel);
-    } else if (bpm_up) {
+    } else if (row_bpm) {
         // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the
         // trim list's cluster flush right (key_cluster_row_layout): RENDER,
         // which greys until the three fields are set and low <= high, and
@@ -7615,8 +7656,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         // AA's stage D2, paint_dialog_window.)
         DialogButtonPlan last;
         last.word = std::string(
-            picker_up && app.folder_overlay.owner ==
-                             AppState::FolderOverlay::Owner::SettingsPage
+            row_list && row_page.owner ==
+                            AppState::FolderOverlay::Owner::SettingsPage
                 ? kModalCloseLabel
                 : kModalCancelLabel);
         plan.push_back(std::move(last));
@@ -7626,9 +7667,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // its own branch below); every other owner's row ONE CLUSTER OF WORD
     // BUTTONS, laid out whole — widths, the flush-right start and each x —
     // by modal_word_buttons, the one layout the painter and the press read.
-    if (player_up || score_up) {
+    if (row_player || row_score) {
         for (DialogButtonPlan& b : plan) b.w = seats.case_w;
-    } else if (trim_up || bpm_up) {
+    } else if (row_trim || row_bpm) {
         // THE TRIM PRESETS LIST'S ROW AND THE BPM FORM'S, laid out whole
         // here (no item in either for a branch below to place): the pair a
         // linked group, a run gap, the words Arc's text buttons, one cluster
@@ -7734,7 +7775,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
                     : hx;
     };
 
-    if (player_up) {
+    if (row_player) {
         // -- THE RENDER PLAYER'S ROW (architect 2026-08-28 — the relaid
         //    row; THE TRANSPORT KEYS TO THE RIGHT, EVERYTHING ELSE TO THE
         //    LEFT, architect 2026-11-10, the scrub and the timestamps
@@ -7885,7 +7926,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
                                 clock_right - clock_x0 + 2, content.h};
         }
-    } else if (score_up) {
+    } else if (row_score) {
         dlg.owner = AppState::ModalDialogOwner::Score;
         const bool media = score_viewer_has_soundtrack(app);
 
@@ -8014,7 +8055,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
                 cairo_restore(cr);
             }
         }
-    } else if (picker_up) {
+    } else if (row_list) {
         // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
         //    2026-08-29): **Cancel**, or **Close** under the settings page
         //    (kModalCancelLabel's rule, 2026-10-28 night), and NOTHING ELSE —
@@ -8067,13 +8108,15 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // button — Enter's target (AppState::modal_dialog_focus) — wears
     // nothing; the lit look under a standing press is the only sign. NO
     // HOVER LOOK: the pointer walk (update_modal_dialog_hover) drives the
-    // tooltip alone.
+    // tooltip alone. UNDER A DIALOG (`windowed`) NO BUTTON OF THE ROW IS
+    // PRESSED: the press indices name the window's buttons, and the row is
+    // dead under the dialog's veil (the head's block).
     std::vector<KeyState> states(plan.size(), KeyState::Rest);
     for (size_t i = 0; i < plan.size(); ++i) {
         const bool enabled = plan[i].enabled;
-        const bool armed   = enabled &&
+        const bool armed   = enabled && !windowed &&
                              static_cast<int>(i) == app.modal_dialog_pressed;
-        const bool pressed = enabled &&
+        const bool pressed = enabled && !windowed &&
             ((armed && app.modal_dialog_press_inside) ||
              static_cast<int>(i) == app.modal_dialog_key_pressed);
         states[i] = key_state(plan[i].lit, pressed, enabled);
@@ -8155,6 +8198,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         i = j;
     }
 
+    // UNDER A DIALOG THE ROW PUBLISHES NOTHING (the head's block): the
+    // stash is the window's, which paint_dialog_window fills after this.
+    if (windowed) {
+        paint_window_and_finish();
+        return;
+    }
     for (size_t i = 0; i < plan.size(); ++i) {
         // THE PUBLISHED BOX: the key's box, border included ("the border is
         // clickable"), the hit box less its seam, the press damage and the
@@ -8191,7 +8240,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
         // whose clip missed a key must still not publish a bit it did not
         // paint. THE BPM FORM'S ROW TAKES IT TOO (2026-10-29), its RENDER
         // face moving with the fields. THE COVERAGE IS THE KEY'S BOX.
-        if ((player_up || score_up || trim_up || bpm_up) &&
+        if ((row_player || row_score || row_trim || row_bpm) &&
             !clip_covers_drawable(cr, app, key)) {
             const bool carry = !face_state_reset &&
                                i < prev_enabled.size() &&
@@ -8227,7 +8276,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // the geometry becomes readable: it is the id of the surface these rects
     // belong to, and every input site that reads them compares it against the
     // live one (modal_dialog_stash_current, input_pointer.cpp).
-    dlg.box     = score_up ? modal_area_rect(app, /*keyboard_h=*/0) : content;
+    dlg.box     = row_score ? modal_area_rect(app) : content;
     dlg.session = live_session;
     dlg.valid   = true;
     cairo_restore(cr);
@@ -8465,8 +8514,11 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // is its five key rows (onscreen_keyboard::kRowCount),
     // so "the band" is a question with two answers and the bit describes
     // the pixels THIS frame may have written. With NEITHER standing the band
-    // to cover is the slot's tallest — the hide's own damage, which is what
-    // has to erase the departed tenant.
+    // to cover is the slot's damage rect (slot_damage_rect, the modal
+    // family's area) — the overlay's hide's own damage, which is what has to
+    // erase it; the keyboard's hide is the layout edge's whole window
+    // (GuiInputHandler::reconcile_keyboard_layout, send BB), which covers
+    // every band.
     const bool keyboard = onscreen_keyboard::stands(app);
     const bool overlay  = folder_overlay::stands(app);
     const GuiRect surf  = overlay  ? folder_overlay::surface_rect(app)
@@ -8509,8 +8561,8 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 // -- THE MODAL FAMILY'S BOX (architect 2026-10-14) -------------------------
 //
 // The shape and every rect are modal_box.h's: THE BOX'S TWO OUTER ROWS —
-// the line under the top icon row and the line over the bottom icon row (or,
-// with the on-screen keyboard standing, the keyboard's top line) — in the
+// the line under the top icon row and the line over the bottom icon row
+// (relaid above the on-screen keyboard while it stands, send BB) — in the
 // well's line tone `well_border` (Arc's $borders_color, Thunar's pane
 // border; send AA's stage D2), and the interior ONE FLAT FILL in `pane`:
 // THE VIEW's tone (`ruler_face`, Arc's $base_color) for the lists and the
@@ -8518,7 +8570,7 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 // exception (the caller's answer, modal_box.h's head), no frame, no ring, no
 // shadow. The controls row under the box stands on the bottom icon row's
 // own rows, whose ground paint_bottom_strip lays (the row standing down
-// under the modal, modal_owns_bottom_row). Publishes nothing.
+// to the overlay's row, modal_owns_bottom_row). Publishes nothing.
 // THE GPU PAGE'S HOLE (architect 2026-10-27, "1 a"; canvas_sink.h's
 // TRANSPARENCY INVARIANT): `hole`, the box's interior while the score
 // viewer's page stands under the GL canvas (the frame's clip; empty
@@ -8528,11 +8580,10 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 // order, step 12). So every CPU pixel inside the hole is 0 until a floater
 // paints over it, and the GPU's field and page show there.
 static void paint_modal_box(cairo_t* cr, const AppState& app,
-                            int keyboard_h, const GuiRect& hole,
-                            GuiColor pane) {
-    const GuiRect panel = modal_panel_rect(app, keyboard_h);
+                            const GuiRect& hole, GuiColor pane) {
+    const GuiRect panel = modal_panel_rect(app);
     if (panel.w <= 0 || panel.h <= 0) return;
-    const GuiRect interior = modal_box_interior_rect(app, keyboard_h);
+    const GuiRect interior = modal_box_interior_rect(app);
     const GuiPalette& p = palette();
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
@@ -8725,8 +8776,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // row_at'S CONTAINMENT IS THE SAME RECT (folder_overlay.h's
     // content_rect, the box's interior), so paint and hit agree about every
     // pixel at any scroll offset.
-    paint_modal_box(cr, app, /*keyboard_h=*/0, GuiRect{0, 0, 0, 0},
-                    palette().ruler_face);
+    paint_modal_box(cr, app, GuiRect{0, 0, 0, 0}, palette().ruler_face);
     paint_list_view(cr, exposed, app.folder_overlay,
                     folder_overlay::content_rect(app),
                     app.folder_overlay.scroll_px, /*live=*/true);
@@ -8784,12 +8834,13 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // top icon row, notifyd's seat since send BB, notification_stack_bound),
 // the tooltip (under a top-row key's face, above every other owner's,
 // tooltip_box_rect) and a question's or the progress modal's window and
-// xfwm's shadow (centered on the window, send AA's stage D2). (The keyboard
-// slot stands on the window's foot and the folder overlay and the modal
-// family's box at the view bar's top row, directly under the band
-// (modal_box.h, 2026-10-14), and all yield the clock's row,
-// GuiClockFingerprint::yields; the flag surface's blit over the top strip is
-// transparent above the marker lane.)
+// xfwm's shadow (centered on the window, send AA's stage D2). (The on-screen
+// keyboard stands under the app on the window's last rows, the app relaid
+// above it (send BB), and the folder overlay and the modal family's box at
+// the view bar's top row, directly under the band (modal_box.h,
+// 2026-10-14), an overlay's row taking the clock's row
+// (GuiClockFingerprint::yields); the flag surface's blit over the top strip
+// is transparent above the marker lane.)
 // THE TERM (2026-10-13, per family and per owner since send BB, architect
 // 2026-11-19: "ok to implement the fix you suggested for the power draw by
 // card"; a struck card stands for minutes over exactly these rows, and the
@@ -8882,7 +8933,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //         for the clock field's own box (Play's second rect,
 //         shown_on_field), which stands over the cell.
 //       - A DIALOG OWNER (a question's or the progress modal's window, a
-//         dialog editor's window in the room above the keyboard, the render
+//         dialog editor's window in the box's view, the render
 //         player's, the score viewer's and the folder overlay's controls on
 //         the bottom row): its seat is the modal stash's button, which no
 //         viewport step moves (paint_modal_dialog republishes it from the
@@ -9023,16 +9074,19 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
 // the row's body tone under the timestamp (the palette and the geometry,
 // the globals), the cell as published (AppState::clock_cell_rect) and the
 // run (clock_time_text: the scanner or the cursor, the sample rate) in the
-// text tone; and whether the row yields, when the cell is
-// not the clock's at all (modal_owns_bottom_row, or the on-screen keyboard
-// standing).
+// text tone; and whether the row yields, when the cell is not the clock's at
+// all (modal_owns_bottom_row: an overlay's page behind). THE WINDOW'S
+// GEOMETRY IN THE GLOBALS IS THE WINDOW'S, not the app's: a relayout for the
+// on-screen keyboard (send BB) moves the cell, and the published cell is a
+// field here, while the edge itself damages the whole window
+// (GuiInputHandler::reconcile_keyboard_layout).
 GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
     GuiClockFingerprint fp;
     fp.globals = GuiChromeGlobalsFingerprint{
         app.width, app.height, gui_scale_percent(), palette_generation()};
     fp.cell      = app.clock_cell_rect;
     fp.time_text = clock_time_text(app, audio);
-    fp.yields    = modal_owns_bottom_row(app) || onscreen_keyboard::stands(app);
+    fp.yields    = modal_owns_bottom_row(app);
     return fp;
 }
 
@@ -9311,8 +9365,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     // THE CANVAS IS THE GPU'S (2026-10-13; canvas_sink.h's head owns the
     // rule; the one road since 2026-10-30): the canvas's paint area — the
-    // waveform area less the keyboard's slice, or nothing under the modal
-    // family's box (onscreen_keyboard::waveform_paint_area), `canvas_paint`
+    // waveform area, shorter above the on-screen keyboard (send BB), or
+    // nothing under the modal family's box
+    // (onscreen_keyboard::waveform_paint_area), `canvas_paint`
     // — is left to the GPU: the chrome ground and the column's face skip it,
     // one CLEAR empties it, no canvas pass paints on the CPU, and the
     // frame's draw list is built instead — ONCE PER FRAME,
@@ -9323,8 +9378,10 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // hulls emptied, on the frame's first rect whatever it meets (the hulls
     // then written after each run's floaters paint, widen_floater_hulls),
     // so the platform's scissor and upload rule follow a paint area that
-    // shrank or emptied under no canvas damage (the keyboard rising, the
-    // modal family's box standing).
+    // shrank or emptied under no canvas damage (the modal family's box
+    // standing; the keyboard's coming and going moves it too, under the
+    // layout edge's whole-window damage, GuiInputHandler::
+    // reconcile_keyboard_layout).
     // THE SAME FIRST RECT PUBLISHES THE GPU PAGE'S REQUEST (architect
     // 2026-10-27, "1 a"; GuiCanvasPage, canvas_sink.h) and, while the score
     // viewer's page stands, makes THE BOX'S INTERIOR the clip: the canvas
@@ -9347,7 +9404,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             // clears (canvas_sink.h's THE HOLE IS ONE RECT).
             score_viewer_publish_gpu_page(app, frame.page);
             const GuiRect page_hole =
-                frame.page.stands ? modal_box_interior_rect(app, 0)
+                frame.page.stands ? modal_box_interior_rect(app)
                                   : GuiRect{0, 0, 0, 0};
             assert(!(canvas_paint_whole && frame.page.stands));
             frame.clip = canvas_paint_whole ? canvas_paint : page_hole;
@@ -9570,7 +9627,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
             paint_bottom_strip(cr);
         }
         // THE STATUS BAR (send Z, 2026-11-19): audio-independent chrome on
-        // the window's foot, painted wherever its lane is exposed
+        // the app's foot, painted wherever its lane is exposed
         // (paint_status_bar).
         if (rects_intersect(exposed, status_bar_area(app))) {
             paint_status_bar(cr);
@@ -9587,13 +9644,15 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         const GuiRect top_strip  = top_strip_area(app);
         const GuiRect exposed{x, y, w, h};
 
-        // WHERE THE WAVEFORM'S PIXELS MAY LAND — `area` minus the on-screen
-        // keyboard's opaque band, through that rule's one owner
-        // (onscreen_keyboard::waveform_paint_area). `area` itself is unchanged
-        // and stays what every pass below MAPS with; this rect is what they are
-        // GATED on, and the clip below is what keeps a pass that straddles the
-        // band's top edge from rasterizing the half nobody sees. Equal to
-        // `area` while nothing stands over the waveform.
+        // WHERE THE WAVEFORM'S PIXELS MAY LAND — `area` minus the modal
+        // family's box, through that rule's one owner
+        // (onscreen_keyboard::waveform_paint_area; the on-screen keyboard
+        // takes no cut, the lanes ending on its top line, send BB). `area`
+        // itself is unchanged and stays what every pass below MAPS with;
+        // this rect is what they are GATED on, and the clip below is what
+        // keeps a pass that straddles the box's edge from rasterizing the
+        // part nobody sees. Equal to `area` while nothing stands over the
+        // waveform.
         const GuiRect wave_paint = onscreen_keyboard::waveform_paint_area(app);
         const bool    band_cuts  = wave_paint.h < area.h;
         if (band_cuts) {
@@ -9682,12 +9741,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      over everything steps 2 through 11 put in the waveform area.
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
         //      the on-screen keyboard since 2026-08-27 or the folder overlay
-        //      since 2026-08-28, one tenant at a time), whose opaque ground
-        //      covers the waveform area's lower part, the well's foot, the
-        //      bottom icon row and the status bar (the keyboard, on the
-        //      window's foot since send BB, 2026-11-19 — so of step 3 the
-        //      bottom row's and the status bar's pixels under it never
-        //      show) or
+        //      since 2026-08-28, one tenant at a time) — the keyboard on the
+        //      window's last rows under the app, covering nothing of it
+        //      (the lanes relaid above it, send BB, 2026-11-19), or
         //      EVERYTHING FROM THE VIEW BAR'S TOP ROW TO ROW 8'S TOP (the
         //      overlay, the modal family's box since 2026-10-14, modal_box.h
         //      — so of steps 3 through 11 only the icon row's lane, the
@@ -9696,9 +9752,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      every pass above.
         //      Which is why the WAVEFORM passes do
         //      not paint there at all: the list's clip is the waveform's
-        //      PAINTED rect while either tenant stands
-        //      (onscreen_keyboard::waveform_paint_area, read just above this
-        //      block), which the overlay's band reduces to a ZERO-HEIGHT rect
+        //      PAINTED rect (onscreen_keyboard::waveform_paint_area, read
+        //      just above this block), which the overlay's band reduces to a
+        //      ZERO-HEIGHT rect
         //      — it starts above the waveform's own top. THE LANES ARE NOT
         //      SPARED THAT WAY and deliberately so: rows 1..7 paint their
         //      exposure as they always have and the panel then covers them,
@@ -9713,10 +9769,11 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      box over everything from the line under the top icon row
         //      down, which the waveform's painted rect leaves out, the score
         //      viewer's interior CLEARED there, the GPU's page hole,
-        //      2026-10-27; every overlay's controls row; and, since send AA's
-        //      stage D2, a question's, a dialog editor's or the progress
-        //      modal's xfwm window and its shadow, over the main page or
-        //      the standing overlay), then
+        //      2026-10-27; the controls row of the overlay's page behind —
+        //      live with no dialog over it, paint-only under one (send BB,
+        //      2026-11-19); and, since send AA's stage D2, a question's, a
+        //      dialog editor's or the progress modal's xfwm window and its
+        //      shadow, over the main page or the standing overlay), then
         //      the flag editor's box, then THE
         //      NOTIFICATION CARDS (paint_notifications, 2026-08-29 — the
         //      top-right stack, above every lane, the keyboard slot and the
@@ -9781,12 +9838,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // THE KEYBOARD SLOT (the on-screen keyboard since 2026-08-27, the folder
     // overlay since 2026-08-28 — one band, one tenant at a time), between the
     // waveform passes above and the three floating surfaces below — which is
-    // exactly where it sits in the picture. It OVERLAYS the waveform with its
-    // own opaque ground — the area's lower part, the bottom icon row and the
-    // status bar under the keyboard (send BB, 2026-11-19), and the
-    // MODAL FAMILY'S PANEL under the overlay since 2026-10-14 (the view bar's
-    // top row down to the controls row, modal_box.h) — so it must follow
-    // every pass that paints there
+    // exactly where it sits in the picture. The overlay OVERLAYS the waveform
+    // with its own opaque ground — the MODAL FAMILY'S PANEL since 2026-10-14
+    // (the view bar's top row down to the controls row, modal_box.h) — and
+    // the keyboard stands on the window's last rows under the app, which is
+    // relaid above it (send BB, 2026-11-19), so the slot must follow every
+    // pass that paints there
     // (the top button rows, the plate, the
     // trim, the ruler, the flags, the stems, the scanner, the anchor) and
     // precede the modal and the flag editor's box, which float

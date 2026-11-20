@@ -90,7 +90,7 @@ void score_viewer_publish_gpu_page(const AppState& app, GuiCanvasPage& out) {
     out.want.clear();
     if (!app.score) return;
     // THE STORE AT THE INTERIOR'S BOX, or nothing (the declaration).
-    const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
+    const GuiRect box = modal_box_interior_rect(app);
     if (box.w <= 0 || box.h <= 0 || box.w != sv.gray_box_w ||
         box.h != sv.gray_box_h)
         return;
@@ -630,7 +630,7 @@ void GuiScoreViewer::note_gray_complete() {
 void GuiScoreViewer::feed_decoder() {
     AppState::ScoreViewer& sv = app.score_viewer;
     if (!sv.active || !app.score) return;
-    const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
+    const GuiRect box = modal_box_interior_rect(app);
     if (box.w <= 0 || box.h <= 0) return;
     // THE BOX PRINTED (architect 2026-10-26): the fit box every page job
     // carries, ONE stderr line per geometry (the tablet's logcat
@@ -709,7 +709,7 @@ void GuiScoreViewer::feed_decoder() {
 }
 
 void GuiScoreViewer::damage() {
-    viewport.invalidate_rect(modal_area_rect(app, /*keyboard_h=*/0));
+    viewport.invalidate_rect(modal_area_rect(app));
 }
 
 void GuiScoreViewer::damage_interior() {
@@ -717,11 +717,11 @@ void GuiScoreViewer::damage_interior() {
         request_frame();
         return;
     }
-    viewport.invalidate_rect(modal_box_interior_rect(app, /*keyboard_h=*/0));
+    viewport.invalidate_rect(modal_box_interior_rect(app));
 }
 
 void GuiScoreViewer::request_frame() {
-    const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
+    const GuiRect box = modal_box_interior_rect(app);
     if (box.w <= 0 || box.h <= 0) return;
     viewport.invalidate_rect(GuiRect{box.x, box.y, 1, 1});
 }
@@ -733,7 +733,7 @@ void GuiScoreViewer::take_gpu_page_report() {
     // for this session; a report from before the open is another session's.
     if (gp.drawn_session == sv.session) sv.painted_page = gp.drawn_page;
     if (!score_viewer_page_stands(app)) return;
-    const GuiRect box = modal_box_interior_rect(app, /*keyboard_h=*/0);
+    const GuiRect box = modal_box_interior_rect(app);
     if (box.w != sv.gray_box_w || box.h != sv.gray_box_h) return;
     // Only an entry with bytes can be uploaded: a failed one has none, and a
     // released one is held (settle_gray_on_gpu).
@@ -747,5 +747,5 @@ void GuiScoreViewer::take_gpu_page_report() {
 }
 
 void GuiScoreViewer::damage_row() {
-    viewport.invalidate_rect(modal_controls_row_rect(app, /*keyboard_h=*/0));
+    viewport.invalidate_rect(modal_controls_row_rect(app));
 }

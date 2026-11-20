@@ -1380,10 +1380,12 @@ private:
     void paint_sweep_highlight(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): the overlays' controls on the modal family's
-    // controls row (modal_box.h, 2026-10-14), and a question, a dialog
-    // editor and the progress modal in xfwm's window floating over what
-    // stands (send AA's stage D2) — the bottom icon row's own painter yields
-    // the lane to it. `exposed` the damage rect the frame paints (the
+    // controls row (modal_box.h, 2026-10-14) — the page behind's, live or,
+    // under a dialog, paint-only (send BB, 2026-11-19) — and a question, a
+    // dialog editor and the progress modal in xfwm's window floating over
+    // what stands (send AA's stage D2); the bottom icon row's own painter
+    // yields the lane to it while an overlay's page is behind
+    // (modal_owns_bottom_row). `exposed` the damage rect the frame paints (the
     // dialog editor's backdrop culls its rows by it). Painted from on_redraw
     // right after the keyboard slot,
     // unconditionally: it publishes AppState::modal_dialog and
@@ -1393,14 +1395,12 @@ private:
     void paint_modal_dialog(cairo_t* cr, const GuiRect& exposed);
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — its
-    // band across the program lanes on the window's foot, its block of keys
-    // seated in it (onscreen_keyboard.h's placement block), over the
-    // waveform area's lower part, the bottom icon row and the status bar
-    // (send BB, 2026-11-19). It paints AFTER every waveform pass and
-    // BEFORE the modal and the floating surfaces, which is where it sits in
-    // the picture: the flag editor is above it in the marker lane, a dialog
-    // editor's window in the room above it, and the waveform
-    // under it is simply not painted where this paints.
+    // band across the program lanes on the window's last rows, its block of
+    // keys seated in it, the app relaid out above it (onscreen_keyboard.h's
+    // placement block; send BB, 2026-11-19): nothing of the app lies under
+    // it. It paints AFTER every waveform pass and BEFORE the modal and the
+    // floating surfaces: the flag editor in the marker lane and a dialog
+    // editor's window in the box's view stand above its top line.
     //
     // GATED WHOLE ON onscreen_keyboard::stands (onscreen_keyboard.h — the
     // layout table, the geometry and the two lamps all live there): this body
@@ -1412,7 +1412,7 @@ private:
     // narrow per-frame damage must not pay for them — the caret blink damages
     // the editor's box every half second, and the flag editor is the one
     // keyboard-modal surface that does not stop playback, so the scanner's own
-    // clock-cell damage can run at tick cadence underneath it.
+    // damage and the clock cell's run at the frame's cadence above it.
     //
     // It publishes no geometry: the press router derives its rects from the
     // same walker this does, so there is no stash for a skipped run to strand.

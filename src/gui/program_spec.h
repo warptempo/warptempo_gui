@@ -46,7 +46,8 @@
 // area, its grid and its center lines, its two channels' wells with the
 // stereo divider between them — and the well's foot; then THE BOTTOM ICON
 // ROW, 8 W, the case, 7 W; then THE STATUS BAR, its line and 22 W, on the
-// window's foot. The keys' outermost faces stand 6 W inside the panel
+// app's foot — the window's, or the on-screen keyboard's top line while it
+// stands (send BB, main.cpp's app_foot_y). The keys' outermost faces stand 6 W inside the panel
 // (render.h's kEdgeInsetW and THE EDGE RULE at well_columns). (The band's
 // head and foot lines and its panes, the tab strip under it, the column's
 // air, the column's foot, the dock bar, row 8's bars and the border under

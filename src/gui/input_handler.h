@@ -1196,8 +1196,10 @@ struct GuiInputHandler {
     // until 2026-09-22, when the overlay's endcap and bridge drags were
     // deleted with its resting form — the tablet's pen reaches the trim bar.)
     // THE BODY IS THE
-    // CARVE-OUT'S ONE INVENTORY: the notification cards, the
-    // on-screen keyboard's band and the folder overlay's band. (The OPEN
+    // CARVE-OUT'S ONE INVENTORY: the notification cards, the folder
+    // overlay's band and the score viewer's panel (the on-screen keyboard
+    // needs none since send BB, 2026-11-19: the waveform, the zone, ends on
+    // its top line). (The OPEN
     // MARKER-LANE EDITOR'S BOX had a clause from 2026-09-05 until the marker
     // lane left the zone on 2026-09-25; it paints in that lane, so it is off
     // the zone by the owner and the platform's editor-field query (below)
@@ -1458,8 +1460,8 @@ struct GuiInputHandler {
     // Newer, inside it Left and Right; THE `h` VIEW'S HIDE
     // (architect 2026-10-07, history_mode_hides_button, input_pointer.cpp)
     // — inside the view every member of either row whose chord the view
-    // refuses in every session; row 8 whole under a modal that owns the
-    // bottom row (modal_owns_bottom_row, paint_bottom_strip); and a window
+    // refuses in every session; row 8 whole while an overlay's row holds
+    // the bottom row (modal_owns_bottom_row, paint_bottom_strip); and a window
     // too narrow for the icon row, where a member the view pairs' overflow
     // covers whole publishes the empty rect and one it covers in part only
     // its painted columns (paint_icon_row). (The bottom row's cluster swap,
@@ -3881,9 +3883,9 @@ private:
     // tuning keys, architect 2026-10-29; render.h's seat): push the box to
     // the renderer (set_osk_key_size_w) and run the RELAYOUT TAIL
     // (relayout_window below) — the box moves the keyboard's band, and with
-    // it the modal stack standing on the band and the waveform's painted
-    // rect, so the commit re-lays the window out at once, the key_height
-    // act's shape. The settings editor's `osk_key_w=` and `osk_key_h=`
+    // it, while the keyboard stands, the app's foot every lane is laid on
+    // (main.cpp's app_foot_y, send BB), so the commit re-lays the window out
+    // at once, the key_height act's shape. The settings editor's `osk_key_w=` and `osk_key_h=`
     // commits are the sole callers, each passing the live pair; each gates
     // the no-op, assigns the live config and persists it
     // (apply_device_setting); the launch seeds the box before the window
@@ -3950,6 +3952,66 @@ private:
     // (GuiPaintHandler::on_resize). Run after the new length is pushed to
     // the renderer, which every step reads.
     void relayout_window();
+
+    // PUBLIC for its two callers in main.cpp (below).
+public:
+    // THE KEYBOARD'S LAYOUT EDGE (architect 2026-11-19, send BB: "if this
+    // was a gtk app (what it's modeled on) the osk would not exist, or would
+    // be added below the bottom icon row and status bar"; his "i take your
+    // recommends for all"): THE APP IS LAID OUT ON THE HEIGHT ABOVE THE
+    // ON-SCREEN KEYBOARD (main.cpp's app_foot_y, derived from
+    // onscreen_keyboard::stands), so the keyboard's coming and going MOVES THE
+    // LANES — the status bar, the bottom icon row and the well's foot step up
+    // onto the keyboard's top line and back down to the window's foot, and
+    // the canvas shrinks or grows by the surface's height — and this edge
+    // pays that relayout. THE COMPARATOR: the live answer
+    // (onscreen_keyboard::stands) against the layout's as-laid-out bit
+    // (AppState::keyboard_laid_out_standing, this body its one writer); a
+    // no-op while they agree. EACH EDGE, IN ORDER, the show and the hide
+    // alike:
+    //   1. the bit takes the live answer;
+    //   2. THE WHOLE WINDOW IS DAMAGED (relayout_window's
+    //      Viewport::invalidate_all): every row from the trim lane's first
+    //      down moved or changed height, and the keyboard's own surface
+    //      arrives or leaves, so nothing narrower holds the change;
+    //   3. THE RESIZE PATH runs (relayout_window's GuiPaintHandler::
+    //      on_resize, at the unchanged window size): THE CANVAS'S
+    //      KNOWN-CLEAR RECORD IS FORGOTTEN, so the next frame clears the whole
+    //      canvas before it composes, and the viewport is re-validated
+    //      (clamp_viewport_start, ViewportLattice::Keep) — which MOVES
+    //      NOTHING here: the width did not change, and the zoom ceiling, the
+    //      walls and the snap all read the waveform area's width alone
+    //      (waveform_area's x and w do not depend on the height), so the
+    //      start, the level and the lattice stand;
+    //   4. THE PLATE'S SYNCHRONOUS REBUILD IS OWED (Viewport::
+    //      kick_waveform_sync, whenever a piece is loaded —
+    //      no_audio_to_dispatch_on, the resize path's own guard): the pre-paint
+    //      hook's flush renders it at the new height from the live waveform
+    //      area before the frame paints (GuiPaintHandler::
+    //      force_synchronous_waveform_rebuild: the worker drained, its
+    //      supersede dropped, the plate, its fingerprint — whose area height
+    //      is a field — and the flag cache rebuilt in one), and the worker's
+    //      enqueue stands down while a rebuild is owed. So NO FRAME SHOWS THE
+    //      OLD PLATE in the new area — stretched, cut or offset — on either
+    //      edge: the edge's damage and the rebuild's flush land in the same
+    //      pre-paint, before the first frame of the new layout paints, both
+    //      channels at the new height. The cost, ONE SYNCHRONOUS PLATE RENDER
+    //      AT AN EDITOR'S OPEN AND AT ITS CLOSE, is accepted (his "truth over
+    //      frame rate").
+    // TWO CALLERS, the slot comparator's two (onscreen_keyboard::
+    // reconcile_slot_standing's record): THE PRE-PAINT HOOK (main.cpp), ahead
+    // of the slot comparator and the owed rebuild's flush — an editor opened
+    // or closed by this pass's press or key is painted in this pass, before
+    // any tick, so the frame that first paints the new layout carries the
+    // edge's damage and the new plate — and THE TICK, for a standing change
+    // no frame was scheduled for (its kick schedules one). NOT THE PRESS
+    // ROUTER'S HEAD: the lanes are derived, so every rect a press reads live
+    // is the new layout's from the open on, and every rect it reads as
+    // painted (the roster's stash, the dialog's) is the last frame's by the
+    // as-painted rule, which no relayout republishes — a call there would
+    // change no answer.
+    void reconcile_keyboard_layout();
+private:
 
     // TRUE COLORS' ONE LIVE ACT (architect 2026-10-08 ~05:35; the ruling at
     // display_transform.h's head; a device key since 2026-10-21): the
@@ -4487,8 +4549,8 @@ private:
     // it, key or not: a press on the grid's lines is a key's
     // (onscreen_keyboard::key_at), and the top line, the two pads and the
     // ground beside the seated block all CONSUME: a finger that
-    // misses a key must not fall through to the
-    // waveform's pan underneath. A key's
+    // misses a key falls through to nothing (nothing of the app lies under
+    // the surface since send BB, the lanes relaid above it). A key's
     // act runs AT THE PRESS through GuiPlatform::synthesize_key, so the whole
     // ordinary key path — the keyboard-modal gate, route_modal_editor_key, the
     // editor's own vocabulary, the undo coalescing, the core's repeat arming —

@@ -31,8 +31,10 @@ struct GuiInputHandler;
 // Arc's focused entry, Cancel and OK its window's own buttons, the window
 // titled the row's key with the key and a colon its label — Z_06's words;
 // the label of 2026-10-14, "Setting:", was removed as "pointless that far
-// away"), centered in the room above the on-screen keyboard, the page it was
-// opened from standing under it there (AppState::dialog_backdrop). THE
+// away"), centered in the box's view above the bottom icon row the lane
+// table relays over the on-screen keyboard (send BB), the page it was opened
+// from standing under it there (AppState::dialog_backdrop) and that page's
+// controls row on the bottom icon row, dead. THE
 // WINDOW IS Z_06's AND NEVER GROWS WITH THE TEXT (architect 2026-11-19, send
 // AA: "large enough that ... the title ... doesn't get ridiculous, but not
 // so large that the majority of the keys, which are tiny, don't look like

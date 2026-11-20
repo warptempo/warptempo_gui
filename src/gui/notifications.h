@@ -870,9 +870,11 @@ int notification_card_max_w_px(const AppState& a);
 // with a tap. consider having ours do that, simply using the xfce
 // notification margin"; notifyd's SPACE 16 off the screen's top and right,
 // the block above) — DOWN TO THE PANEL'S PAD OF AIR (folder_overlay::pad_px,
-// one W) ABOVE THE BOTTOM ROW'S LANE. On the tablet: rows 32 .. 1305 (the
-// bottom icon row's first row 1308 less the 2-row pad), the right edge on x
-// 2271. NOTHING ELSE MOVES FOR IT: the title bar and the top icon row paint
+// one W) ABOVE THE BOTTOM ROW'S LANE — the lane table's, so it follows the
+// bottom icon row up above the on-screen keyboard while that stands (send
+// BB, main.cpp's app_foot_y). On the tablet: rows 32 .. 1305 (the bottom
+// icon row's first row 1308 less the 2-row pad; 32 .. 911 under the keyboard
+// at his tuning, the row on 914), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title bar and the top icon row paint
 // whole under a card, its .95 fill over them; a press on a card is the
 // card's (claim_notification_press ranks above every claim and veil), so a
 // key, the struck clip lamp's square or any chrome under it answers nothing
