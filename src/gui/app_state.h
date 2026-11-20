@@ -17148,10 +17148,9 @@ inline bool redesign_button_enabled(const AppState& a,
 //
 // MOMENTARY BY DESIGN, and therefore false here: Copy, Paste,
 // Load-in-place —
-// each is an action that completes, with no state to stay lit for — and BPM,
-// whose editor is a transient modal SESSION rather than a resting mode (it
-// cannot rest open, and `m` never reaches dispatch while it is up), so lighting
-// it would advertise a mode this product does not have.
+// each is an action that completes, with no state to stay lit for. (BPM is
+// not among them: it sits lit while its form stands since 2026-10-29, one of
+// THE DOORS below.)
 // THE VIEW PAIR'S ONE SPELLING (2026-09-17): "<audio>+<column>" — `S+W`,
 // `T+P` — the artist line the car transport publishes for the active views
 // (GuiCarTransport::derive, car_transport.cpp). One composer, so a respelling is
