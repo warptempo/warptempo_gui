@@ -2364,8 +2364,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // BETWEEN ITS TWO OWNERS (architect 2026-09-17): with the render player
     // standing every command is the PLAYER'S — its folder, its item, its
     // Repeat One — and with it closed every command is the PROJECT
-    // TRANSPORT'S, the car's play looping the trim and its skips undoing and
-    // redoing (GuiCarTransport::on_media_command). The player's own
+    // TRANSPORT'S, the car's play looping the trim and its skips seeking a
+    // live play or undoing and redoing at rest
+    // (GuiCarTransport::on_media_command). The player's own
     // `!rp.active` belt stays inside its body: this fork is the partition,
     // that guard is the player's own statement about the state it needs.
     //
@@ -2380,9 +2381,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // on the project road a launch the one launch body ran
     // (GuiPlaybackLifecycle::n2_launch_count moved), on the render player's
     // its transport going Live from not Live — and nothing otherwise, so his
-    // glass use never prints it. Its two callers: the hook below (every
-    // command) and the tick's car pending play (car_transport.tick, whose
-    // run_pending_play is the one launch a tick of that cluster makes).
+    // glass use never prints it. Its one caller is the hook below (every
+    // command): the car cluster's tick launches nothing.
     using N2PlayerTransport = AppState::RenderPlayer::Transport;
     auto n2_media_play_line = [&](const char* kind, bool player_road,
                                   uint64_t launches_before,
@@ -3547,14 +3547,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // player closed it derives the console's three lines from the tab,
         // the views and the trim and pushes only what changed — the roster's
         // own per-tick comparator pattern, for the reason stated there.
-        {
-            // N2's diagnostic (n2_media_play_line, at the media hook): the
-            // car's pending play fired by this tick (Previous / Next's wait).
-            const uint64_t n2_launches = playback_lifecycle.n2_launch_count;
-            car_transport.tick();
-            n2_media_play_line("Previous/Next (pending)", false, n2_launches,
-                               false);
-        }
+        car_transport.tick();
 
         // THE RENDER PLAYER'S TICK (2026-08-28), forked at the head: while
         // the mode stands the engine plays the player's item, not the
@@ -3672,8 +3665,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // narrow column pair to damage and a wrap costs one full waveform
             // repaint per lap. consume_loop_wrap is a count difference and
             // THIS IS ITS ONE CONSUMER, so the note below — which bumps the
-            // publisher's epoch, re-starting the console's clock at the lap —
-            // must ride the same branch.
+            // publisher's jump epoch, re-starting the console's clock at the
+            // lap — must ride the same branch. (The console's seek over the
+            // loop is a jump too, and declares its own damage and bumps the
+            // same epoch at its press: GuiPlaybackLifecycle::
+            // seek_live_session_by, GuiCarTransport::car_skip. It is no wrap:
+            // the count does not move.)
             if (playback.consume_loop_wrap()) {
                 playback.resync_predictor();
                 viewport.invalidate_waveform_area();
@@ -4028,10 +4025,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // the line's column), against the waveform area's width the line is
         // clipped to — so the play stops at the first frame whose line would
         // no longer show, the scanner then up to one frame's advance past the
-        // edge. OFF SCREEN TO THE RIGHT ALONE: these plays never run the
-        // scanner backward, so off screen to the LEFT can only be a camera
-        // the user moved past it (a pan during the play), and that play runs
-        // on into the window and stops at its edge like any other. THE
+        // edge. OFF SCREEN TO THE RIGHT ALONE: these plays run the scanner
+        // backward only at the console's seek, so off screen to the LEFT is a
+        // camera the user moved past it (a pan during the play) or a seek
+        // back past the window's left edge (GuiPlaybackLifecycle::
+        // seek_live_session_by, 2026-11-20), and that play runs on into the
+        // window and stops at its edge like any other. (A seek forward past
+        // the edge is refused at the seek, its own end being this edge.) THE
         // CURSOR IS NOT WRITTEN: the stop body moves no cursor (its contract,
         // playback_lifecycle.cpp), so the playhead rests where it stood before
         // the play, every stop edge's rule — after a Space play the point the

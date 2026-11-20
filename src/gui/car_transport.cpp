@@ -49,13 +49,6 @@ bool GuiCarTransport::admits() const {
 }
 
 void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
-    // ANY TRANSPORT ACT FROM THE CONSOLE CANCELS A PENDING CAR PLAY (his
-    // word; the contract and the other clears at the latch's declaration).
-    // It sits AHEAD of the switch so every arm is covered by one line —
-    // including the arms that return early and the ones that do nothing at
-    // all — and the two skips re-arm in their own tails below if their new
-    // step is refused for readiness again.
-    pending_play_ = PendingCarPlay{};
     using Kind = GuiMediaCommand::Kind;
     switch (cmd.kind) {
         case Kind::Play:
@@ -81,10 +74,10 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
             car_toggle();
             return;
         case Kind::Previous:
-            car_previous();
+            car_skip(/*forward=*/false);
             return;
         case Kind::Next:
-            car_next();
+            car_skip(/*forward=*/true);
             return;
         case Kind::Stop:
             // PAUSE IS STOP, so Stop is the same act: the one stop body,
@@ -136,77 +129,32 @@ void GuiCarTransport::car_toggle() {
     playback_lifecycle.car_toggle_playback();
 }
 
-// THE SKIPS: the chord whole, and then the sound of what it stepped to
-// (architect 2026-09-18; the ruling, his complaint and the two rules are at
-// the head of car_transport.h). THE STEP'S OWN ANSWER IS THE WHOLE GATE — a
-// press that restored nothing plays nothing and leaves a running loop
-// running, every refusal ending where it ended before with its own card.
-void GuiCarTransport::car_previous() {
+// PREVIOUS AND NEXT, THE TWO MODES (architect 2026-11-19 / 20, send CC; the
+// ruling, his words, the predicate's argument and the audition's at the head
+// of car_transport.h). Past admits(), the fork is transport_session_live:
+//   LIVE — a standing A/B audition consumes the press in silence; otherwise
+//     the press meets Space's own head gates (a pointer drag cards as Space
+//     does) and then THE SEEK, kCarSeekSeconds of the bound buffer at the
+//     source rate, whose walls and silent refusals are the lifecycle's
+//     (GuiPlaybackLifecycle::seek_live_session_by). A seek that moved bumps
+//     the jump epoch, so the next tick re-pushes the console's clock at the
+//     new place. NO HISTORY STEP ON THIS ARM, whatever the seek answered.
+//   AT REST — undo / redo whole (run_undo_redo_without_key: Ctrl+Z's and
+//     Ctrl+Shift+Z's head gates, refusals and cards), and NOTHING PLAYS: the
+//     step is the whole press.
+void GuiCarTransport::car_skip(bool forward) {
     if (!admits()) return;
-    if (!input_handler.run_undo_redo_without_key(/*redo=*/false)) return;
-    car_play_after_step();
-}
-
-void GuiCarTransport::car_next() {
-    if (!admits()) return;
-    if (!input_handler.run_undo_redo_without_key(/*redo=*/true)) return;
-    car_play_after_step();
-}
-
-// THE PLAY TAIL (contract at the declaration): the car's play, or the wait
-// that stands in for it. Space's own target-view readiness gate is asked here
-// in exactly the shape car_toggle asks it — but where the toggle REFUSES on
-// it, the tail WAITS: the restore has just triggered the preview and in
-// target view it is often already ready, while a state authored in source
-// view has never been rendered and needs the worker to come back (rule 2 at
-// the head of this file's header). Nothing is carded either way: the refusal
-// is the silent one-dimensional class row 8 answers with `Updating...`.
-void GuiCarTransport::car_play_after_step() {
-    if (app.active_audio_view == 'T' && !target_render.preview_ready()) {
-        pending_play_.armed      = true;
-        pending_play_.audio_view = app.active_audio_view;
-        pending_play_.tab        = app.active_tab_view;
-        pending_play_.state_id   = car_transport_title_line(app.history);
-        pending_play_.gui_press_count = app.gui_transport_press_count;
+    if (transport_session_live(app)) {
+        if (audition_sequence_standing(app)) return;
+        if (input_handler.car_play_refused_by_key_gates()) return;
+        const int64_t rate = audio.sample_rate();
+        if (rate <= 0) return;
+        const int64_t step = kCarSeekSeconds * rate;
+        if (playback_lifecycle.seek_live_session_by(forward ? step : -step))
+            ++jump_epoch_;
         return;
     }
-    playback_lifecycle.car_play_playback();
-}
-
-// THE PENDING CAR PLAY'S TICK BODY — every clear is enumerated at the latch's
-// declaration and every one of them is a state read right here, no timer and
-// no window anywhere. (The player's own clear is tick's early arm, above the
-// call to this.)
-void GuiCarTransport::run_pending_play() {
-    if (!pending_play_.armed) return;
-    if (!admits()) {
-        pending_play_ = PendingCarPlay{};
-        return;
-    }
-    if (app.active_audio_view != pending_play_.audio_view ||
-        app.active_tab_view   != pending_play_.tab ||
-        car_transport_title_line(app.history) != pending_play_.state_id ||
-        app.gui_transport_press_count != pending_play_.gui_press_count) {
-        // A later step, a view switch, a tab switch or a save superseded the
-        // wait: the state it was for is not the state on screen. Or a GUI
-        // transport press landed, played or refused, and that press is the
-        // answer to what sounds now (the rule at the latch's declaration).
-        pending_play_ = PendingCarPlay{};
-        return;
-    }
-    if (playback.is_playing()) {
-        // He started something himself at the glass; the console's wait
-        // does not get to talk over it.
-        pending_play_ = PendingCarPlay{};
-        return;
-    }
-    // STILL SETTLING: keep waiting, silently. The preview's own line is on
-    // row 8 while it runs.
-    if (target_render.is_updating()) return;
-    // SETTLED, one way or the other: the wait is over whatever came back.
-    const bool ready = target_render.preview_ready();
-    pending_play_ = PendingCarPlay{};
-    if (ready) playback_lifecycle.car_play_playback();
+    input_handler.run_undo_redo_without_key(/*redo=*/forward);
 }
 
 // THE DERIVED STATE (the three lines and the clock at the head comment).
@@ -280,27 +228,14 @@ GuiMediaState GuiCarTransport::derive() const {
 void GuiCarTransport::tick() {
     if (app.render_player.active) {
         // The player owns the wire while it stands; the falling edge below
-        // takes it back. A PENDING CAR PLAY DIES HERE: the head unit has
-        // another owner now, and a wait armed before the player opened is not
-        // this cluster's to fire behind it.
-        pending_play_ = PendingCarPlay{};
+        // takes it back.
         handed_to_player_ = true;
         return;
     }
-    // A PENDING CAR PLAY DIES UNDER THE SCORE VIEWER TOO (2026-10-26 night):
-    // the viewer may hold the engine on its soundtrack, and a project launch
-    // fired behind it would play the project's window on that buffer. The
-    // console keeps this cluster's lines meanwhile (admits() refuses its
-    // commands; the derived state is the project's at rest).
-    if (score_viewer_stands(app)) pending_play_ = PendingCarPlay{};
-    // THE LATCH RUNS AHEAD OF THE COMPARATOR, so a play it fires is already
-    // in the state this tick derives and pushes: the console's clock and
-    // length go live on the same tick the sound starts, with no extra push.
-    run_pending_play();
     const GuiMediaState st = derive();
     const bool changed =
         !last_pushed_.valid || handed_to_player_ ||
-        wrap_epoch_ != last_pushed_.wrap_epoch ||
+        jump_epoch_ != last_pushed_.jump_epoch ||
         st.session_active != last_pushed_.state.session_active ||
         st.playing        != last_pushed_.state.playing ||
         st.title          != last_pushed_.state.title ||
@@ -311,10 +246,10 @@ void GuiCarTransport::tick() {
     gui.publish_media_state(st);
     last_pushed_.valid      = true;
     last_pushed_.state      = st;
-    last_pushed_.wrap_epoch = wrap_epoch_;
+    last_pushed_.jump_epoch = jump_epoch_;
     handed_to_player_       = false;
 }
 
 void GuiCarTransport::note_loop_wrap() {
-    ++wrap_epoch_;
+    ++jump_epoch_;
 }

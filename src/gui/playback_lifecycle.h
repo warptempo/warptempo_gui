@@ -38,7 +38,7 @@ struct GuiRenderPlayer;
 // with them: it returns, and the stop body it takes leaves the act Idle, so no
 // launch of the act's follows it.
 // BESIDE THOSE FOUR (re-grepped 2026-11-05 night): the car's Play
-// (car_play_playback, the toggle's play prologue), the score viewer's tick
+// (car_toggle_playback's play arm, its prologue), the score viewer's tick
 // (a dead device mid-soundtrack pauses, the render player's rule) and the
 // struck clip lamp's lift (GuiInputHandler::finish_clip_lamp_press_release,
 // architect 2026-11-05 night: a press that reopens and plays nothing, and
@@ -140,16 +140,19 @@ struct GuiPlaybackLifecycle {
     // structural rule: the body branches by no act). Written by the three
     // entries into the one launch body: SET by launch_playback_from (the
     // view-end entry Space and the scrub ride) to whether its launch
-    // succeeded; CLEARED by car_play_playback and launch_bounded_audition
+    // succeeded; CLEARED by car_toggle_playback's play arm and launch_bounded_audition
     // ahead of their launches. THE TWO EXEMPT: the CAR'S LOOP of the trim
     // starts off screen by design (its begin a fixed point screens upstream
     // of the passage under work) and loops forever, so a stop at the edge
     // would end the console's play the first time it reached it; the A/B
     // AUDITION's four bounded plays are each framed by their own `c` and
     // already end at their span. (The render player and the score viewer play
-    // their own buffers and never reach the launch body.) ONE READER: the
-    // stop in main.cpp's pre_paint_advance. Meaningful only while a project
-    // play runs; its value at rest is never read.
+    // their own buffers and never reach the launch body.) TWO READERS: the
+    // stop in main.cpp's pre_paint_advance, and the console's seek
+    // (seek_live_session_by: under a lit RESTRICT a restrictable play's
+    // forward landing past the window's right edge is its silent no-op).
+    // Meaningful only while a project play runs; its value at rest is never
+    // read.
     bool restrictable_play = false;
     // THE DISPLAY KEEP-ALIVE'S TWO STAMPS (architect 2026-11-13, session 118;
     // the facts and the ruling at kDisplayKeepAliveFastStopMs above), both
@@ -158,7 +161,7 @@ struct GuiPlaybackLifecycle {
     // user entries into the launch body on a launch that ran —
     // launch_playback_from (bare Space's play edge, whoever produced the
     // chord — the PLAY key's lift, the on-screen keyboard — and the scrub)
-    // and car_play_playback (the car's play) — set to -1 by the A/B
+    // and car_toggle_playback's play arm (the car's play) — set to -1 by the A/B
     // audition's launch (the act's plays never arm), and CONSUMED (-1) by
     // the one stop body's project arm, which is the one seat every stop of a
     // project play crosses: there a stop landing within
@@ -423,19 +426,12 @@ struct GuiPlaybackLifecycle {
 
     // THE CAR'S SPACE (architect 2026-09-17): the head unit's play/pause with
     // the render player CLOSED, reached from GuiCarTransport::car_toggle and
-    // nowhere else. It is THE FORK AND THE PLAY BODY BELOW, split 2026-09-18
-    // when the console's skips gained a play tail of their own (Previous and
-    // Next undo and redo AND THEN PLAY, car_transport.h): THAT TAIL WANTS THE
-    // PLAY ALONE, never the fork. Hearing the state it just stepped to IS the
-    // act, so the sound is owed unconditionally; the fork would make it
-    // conditional on a transport bit the tail has no business re-deriving —
-    // the restore it just ran is what silenced the transport (the restore
-    // body's own stop), and any arm of that fork but the play is the feature
-    // failing to make a sound. STOP ARM: exactly toggle_playback's — the same transport-
-    // live term (a live project play OR a standing A/B audition, a rest of the
-    // act stopping as a play does) through the one stop body, and PAUSE IS THE
-    // GUI'S STOP: no pause semantics, no resume point — the console's pause
-    // runs stop_playback_if_playing as Space's stop does, because the car's
+    // nowhere else — THE FORK, THEN THE PLAY. STOP ARM: exactly
+    // toggle_playback's — the same transport-live term (a live project play
+    // OR a standing A/B audition, a rest of the act stopping as a play does)
+    // through the one stop body, and PAUSE IS THE GUI'S STOP: no pause
+    // semantics, no resume point — the console's pause runs
+    // stop_playback_if_playing as Space's stop does, because the car's
     // transport is to be as close to the GUI's as the car allows and, with
     // the trim narrowed to what he is working on, he goes back to the
     // beginning anyway. PLAY ARM: the window is the ACTIVE DOMAIN'S TRIM,
@@ -444,13 +440,13 @@ struct GuiPlaybackLifecycle {
     // domain) — and THE PLAY LOOPS IT FOREVER, in every view (his one
     // difference from the GUI's transport), STARTING AT THE TRIM'S BEGIN
     // ALWAYS (architect 2026-09-17): the resting playhead is no term of it,
-    // and a restart is the button itself — pause, then play. NO LEAD-IN OFFSET: the phase-reset overlay's N/2 is
-    // Space's authoring aid, and the car's play takes none. The gates are
-    // toggle_playback's own — the device reopen (carding a failed one) —
-    // ahead of the user-launch clear (owner (2) at GuiAuditionSequence: this
-    // is the second road into the launch body that is not the act's), and the
-    // launch through launch_playback_window with the trim's begin as the loop
-    // target.
+    // and a restart is the button itself — pause, then play. NO LEAD-IN
+    // OFFSET: the phase-reset overlay's N/2 is Space's authoring aid, and the
+    // car's play takes none. The gates are toggle_playback's own — the device
+    // reopen (carding a failed one) — ahead of the user-launch clear (owner
+    // (2) at GuiAuditionSequence: this is the second road into the launch
+    // body that is not the act's), and the launch through
+    // launch_playback_window with the trim's begin as the loop target.
     // THE CAMERA STAYS WHERE IT IS UNLESS FOLLOW IS LIT (architect
     // 2026-09-18): this is the ONE launch that may start OFF SCREEN — the
     // trim's begin is a fixed point and the passage he is working on is
@@ -465,32 +461,59 @@ struct GuiPlaybackLifecycle {
     // and damages, and writes no camera — main.cpp's tick).
     // A trim under two frames refuses in the body's own playable gate,
     // silently (the benign one-dimensional class: the playhead and the grey
-    // say it). The target view's preview-readiness gate is THE CALLER'S on
-    // both roads in, as it is on_key's for Space — car_toggle asks it as
-    // Space's edge does, and the skips' tail asks it and WAITS on it (the
-    // pending car play, car_transport.h).
+    // say it). The target view's preview-readiness gate is THE CALLER'S, as
+    // it is on_key's for Space — car_toggle asks it as Space's edge does.
     //
     // THE LOOP IS A PROPERTY OF THIS LAUNCH, NOT A LAMP: any GUI act that
-    // stops (Space, Home / End, a marker touch, a modal open, the S/T flip)
-    // or relaunches (a scrub) ends it, and every GUI launch plays once
-    // as it always has. The head unit's Previous / Next are Undo / Redo whole
-    // (GuiCarTransport), so a restore stops the loop exactly as Ctrl+Z does
-    // (the restore body's own stop) — and since 2026-09-18 a restore that RAN
-    // relaunches it here, from the trim's begin again, while a refused step
-    // leaves a running loop running.
+    // stops (Space, Home / End, a marker touch, a modal open, the S/T flip,
+    // a GUI undo or redo — the restore body's own stop) or relaunches (a
+    // scrub) ends it, and every GUI launch plays once as it always has. The
+    // head unit's Previous / Next SEEK a live loop three seconds back or
+    // forward (seek_live_session_by below, architect 2026-11-20) and undo /
+    // redo only at rest (GuiCarTransport), so the console's own buttons never
+    // restore over the loop: they move its cursor and leave it looping.
     void car_toggle_playback();
-    // THE CAR'S PLAY, WITHOUT THE FORK (architect 2026-09-18): the toggle
-    // above past its stop arm, the whole of it — the device reopen and its
-    // card, the trim window and its two clamps, the always-from-the-begin
-    // start, the user-launch clear, the looping launch with the camera term
-    // the follow lamp chooses. TWO CALLERS, both the
-    // console's: car_toggle_playback's play arm, and the skips' play tail
-    // (GuiCarTransport::car_play_after_step — directly, and again from the
-    // pending play the tick fires), which wants the play and not the fork for
-    // the reason stated above. It asks no transport bit of its own: a live
-    // session is the CALLER'S to end, the toggle's stop arm on one road and
-    // the restore's own stop body on the other.
-    void car_play_playback();
+    // THE CONSOLE'S SEEK OVER A LIVE SESSION (architect 2026-11-20, send CC:
+    // "when audio is playing, the rewind and fast forward buttons ... should
+    // ... just go back 3 seconds and forward 3 seconds"; "it wraps around on
+    // the end, but not at the beginning"): move the playing session's read
+    // position by `delta_frames` of the bound buffer — negative back,
+    // positive forward — and answer whether it moved. ONE CALLER,
+    // GuiCarTransport::car_skip's live arm, which has dropped the A/B
+    // audition and asked the play's key gates first.
+    // THE ROAD IS A NEW PUBLISH OVER THE LIVE SESSION — the render player's
+    // live seek's road (GuiRenderPlayer::seek_to): the same window, the same
+    // loop target, a new start (live_window_ below, the launch's record), so
+    // the stream keeps running, no stop and no fence, and the next callback
+    // seats the new start (the definition owns the splice's argument).
+    // THE WALLS (his words above):
+    //   * A LOOP (the car's): FORWARD PAST THE WINDOW'S END WRAPS as the loop
+    //     does, the overshoot carried past the loop target (end − 1 s + 3 s
+    //     lands 2 s after the begin); BACK STOPS AT THE LOOP TARGET, the
+    //     trim's begin (no backward wrap).
+    //   * ONCE THROUGH (Space's play, the scrub's): BACK STOPS AT THE
+    //     SESSION'S LOWER WALL — the trim's begin when the session started
+    //     inside the trim, else the session's own start (a source-view play
+    //     launched outside the trim never seeks onto ground it did not start
+    //     from); FORWARD PAST THE WINDOW'S END IS A SILENT NO-OP — the play
+    //     runs on to its own end and the session keeps its once-through
+    //     window (the planner's choice, 2026-11-20, to be put to him: an end
+    //     there would turn the next press into a Redo under a repeated
+    //     press, "I don't like to feel hurried"). UNDER A LIT RESTRICT a
+    //     restrictable play's own end is the painted window's right edge (the
+    //     pre-paint stop, main.cpp), so a forward landing past it is the same
+    //     silent no-op; a back landing left of the window runs on into it, as
+    //     a play does after a pan carried the camera past it.
+    // A seek that cannot move — nothing playing (the natural end in flight
+    // before the tick tears the scanner down), already at the back wall, a
+    // degenerate or crossed trim, an unknown rate — is SILENT and writes
+    // nothing. NOTHING AUTHORED IS WRITTEN: the resting playhead stays where
+    // it was, no undo entry, no restrict or follow lamp touched. THE CAMERA
+    // is the pre-paint advance's: with FOLLOW lit and not suspended the next
+    // frame's follow scroll takes the new place by Viewport::follow_scanner's
+    // rule (a place off screen to the left paged in, one right of the center
+    // centered, one left of it left to run); with FOLLOW dark nothing moves.
+    bool seek_live_session_by(int64_t delta_frames);
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.
     // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the
@@ -640,4 +663,22 @@ private:
     // player's fork.
     bool launch_playback_window(int64_t start, int64_t end, int64_t loop_begin,
                                 LaunchCamera camera);
+
+    // THE LIVE SESSION'S WINDOW AS LAUNCHED (architect 2026-11-20, the
+    // console's seek): the domain start, exclusive end and loop target
+    // (kPlaybackNoLoop for a once-through window) the one launch body handed
+    // the engine, WRITTEN BY THAT BODY ALONE, in its success tail, and READ
+    // BY seek_live_session_by ALONE, which republishes the same end and loop
+    // target from a new start and never writes the record — so `start` stays
+    // the launch's own, the once-through session's lower wall where it began
+    // outside the trim. The engine keeps no main-thread record of the loop
+    // target (its mirror carries the floor and the end alone, playback_common.h),
+    // and this cluster made the launch, so the record is the launch's. Meaningful
+    // only while a project play runs; its value at rest is never read.
+    struct LiveWindow {
+        int64_t start      = 0;
+        int64_t end        = 0;
+        int64_t loop_begin = kPlaybackNoLoop;
+    };
+    LiveWindow live_window_;
 };

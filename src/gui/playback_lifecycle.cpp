@@ -470,25 +470,13 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
 // 2026-09-17). The stop arm is toggle_playback's own fork verbatim — the
 // sub-tick disagreement between the scanner bit and the audio thread's flag
 // recorded there is this arm's too — and PAUSE IS STOP: the one stop body,
-// nothing remembered. Past the fork the act is the play body below, which the
-// skips' tail also reaches on its own (the two entries' division of labour is
-// at the declarations).
+// nothing remembered. Past the fork, the car's play.
 void GuiPlaybackLifecycle::car_toggle_playback() {
     if (playback.is_playing() ||
         app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle) {
         stop_playback_if_playing();
         return;
     }
-    car_play_playback();
-}
-
-// THE CAR'S PLAY, THE TOGGLE'S OWN PLAY ARM AND NOTHING ADDED (architect
-// 2026-09-18; contract at the declaration): the console's second entry, the
-// one the head unit's Previous and Next reach after a restore that actually
-// ran (GuiCarTransport::car_play_after_step). It asks no transport bit — the
-// caller that wants the fork calls the toggle above, and the caller that
-// wants the play calls this.
-void GuiPlaybackLifecycle::car_play_playback() {
     // The play arm's prologue is toggle_playback's: the device reopened at
     // the press (carding a failed reopen; the launch body's belt then finds
     // the stream this one opened, a no-op). The pre-sum end gate of
@@ -512,17 +500,15 @@ void GuiPlaybackLifecycle::car_play_playback() {
     if (end > playback.domain_end())     end   = playback.domain_end();
     // THE START IS THE TRIM'S BEGIN, ALWAYS (architect 2026-09-17): the
     // resting playhead is no term of the car's play — the console's three
-    // buttons place no playhead (Previous and Next are undo and redo), so a
-    // restart is the play button itself: pause, then play, from the top. NO
-    // LEAD-IN OFFSET (the declaration).
+    // buttons place no playhead (Previous and Next seek the live play and
+    // undo / redo at rest), so a restart is the play button itself: pause,
+    // then play, from the top. NO LEAD-IN OFFSET (the declaration).
     // THE USER-LAUNCH CLEAR, owner (2) at GuiAuditionSequence: this entry is
     // the second road into the launch body that is not the act's, and it
     // clears ahead of the delegation, refused or not, exactly as
-    // launch_playback_from does. (A standing act is already ended on both
-    // roads in — the toggle's stop arm ends it, a rest being transport-live,
-    // and the skips' restore runs the one stop body before it returns — so
-    // this reaches the sub-tick window alone, as the view-end entry's clear
-    // does.)
+    // launch_playback_from does. (A standing act is already ended — the
+    // fork above ends it, a rest being transport-live — so this reaches the
+    // sub-tick window alone, as the view-end entry's clear does.)
     clear_audition_sequence(app);
     // THE CAR'S LOOP IS NEVER RESTRICTED (restrictable_play's exemptions):
     // it starts off screen by design and loops forever.
@@ -544,6 +530,139 @@ void GuiPlaybackLifecycle::car_play_playback() {
                                app.follow ? LaunchCamera::Follow
                                           : LaunchCamera::Leave))
         user_play_launched_ms = monotonic_ms();
+}
+
+// IS A FRAME PAST THE PAINTED WINDOW'S RIGHT EDGE — RESTRICT'S STOP asked of
+// a seek's landing (architect 2026-10-29 for the stop, 2026-11-20 for the
+// seek): the column displayed_column_at's one rounding gives the frame, at
+// or past the waveform's width, on the ITEM basis (on screen is as painted:
+// item_viewport_basis, launch_frame_on_painted_window's basis above, the
+// mirror of what the last frame painted). The pre-paint stop asks the same
+// column of the scanner's drawn place on the plate basis it paints through;
+// a landing is a frame the scanner has not reached yet, so the item basis,
+// as the start gate's, answers it. A waveform with no columns has no edge.
+static bool frame_past_painted_window_right(const AppState& a,
+                                            const GuiAudio& audio,
+                                            int64_t frame) {
+    const ItemViewportBasis b = item_viewport_basis(a, audio);
+    if (b.spp <= 0.0 || b.area_w <= 0) return false;
+    return displayed_column_at(static_cast<double>(frame), b.vp_start, b.spp,
+                               b.lattice_origin) >= b.area_w;
+}
+
+// THE CONSOLE'S SEEK (contract, the walls and his words at the declaration;
+// architect 2026-11-20).
+//
+// THE SPLICE. The seek is ONE NEW PUBLISH over the session that is sounding
+// — play() or play_loop() with the launch's own end and loop target and the
+// new start, the render player's live seek's road (GuiRenderPlayer::seek_to)
+// — and that is what keeps it clean, by the engine's code: the stream is
+// never stopped or restarted (launch_window makes no device call on a
+// running stream, playback_aaudio.cpp), stop()'s fence is not taken, and no
+// silence is written between the two runs — a fill in flight finishes its
+// block of the old run under the old window, and the very next callback's
+// gate acquires the new generation and seats its packet at the target
+// (playback_render_block's seat), so the output steps from the old read
+// position to the new one between two adjacent output frames (save where
+// the old once-through run met its own end inside that last block, whose
+// tail is then the natural end's silence, as at any end). THE SEAM IS
+// THE RAW CUT the loop's own wrap takes (the render body's "clicks accepted"
+// ruling) — no fade or ramp, the declick machinery having been considered
+// and rejected by ruling (the launch body's playable gate's record).
+//
+// THE RACES WITH THE AUDIO THREAD, by the command packet's ordering: the
+// publish writes a new generation, so a fill in flight at the publish keeps
+// its own window to the end of its block. Its LOOP WRAP there is a real wrap
+// of what sounded: the count moves, the tick consumes it — its resync finds
+// the old generation's stamp and leaves the publish's anchor standing, or
+// the new generation's and anchors on it — and its damage and console push
+// cost one repaint and one push more. Its NATURAL END there abandons its
+// terminal (the word changed under it) and the new run seats; a natural end
+// whose terminal landed AFTER this body's is_playing() read and BEFORE the
+// publish is overwritten by the publish's new playing word, so the session
+// plays on from the target — what the press asked of a play that was still
+// sounding when it was pressed. A natural end BEFORE the read answers
+// nothing playing and the seek is silent; the tick tears the scanner down.
+bool GuiPlaybackLifecycle::seek_live_session_by(int64_t delta_frames) {
+    if (delta_frames == 0) return false;
+    // A STANDING A/B AUDITION IS NO SEEK'S (the caller drops it; a belt),
+    // and nothing playing — the natural end in flight, a dead stream — has
+    // no cursor to move.
+    if (audition_sequence_standing(app)) return false;
+    if (!app.playhead_scanner_active || !playback.is_playing()) return false;
+    const LiveWindow w = live_window_;
+    // A DEGENERATE OR CROSSED TRIM IS SILENT (Viewport::trim_range clamps
+    // each side and does not order them): the walls below read it.
+    const auto [trim_begin, trim_end] = viewport.trim_range();
+    if (trim_end - trim_begin <= 0) return false;
+    // THE ONE POSITION LINE (GuiPlayback::cursor, the predictor at `now`):
+    // where the play stands, the place the console's clock and the scanner
+    // read.
+    const int64_t cur = playback.cursor();
+    int64_t target = 0;
+    if (w.loop_begin != kPlaybackNoLoop) {
+        // THE LOOP. Forward past the end wraps by the loop's own arithmetic,
+        // the overshoot carried past the target (the render body subtracts
+        // the window's length until the read lies inside it — the remainder
+        // here, so a window shorter than the step wraps as often as the
+        // loop would); back stops at the target. The window holds at least
+        // two frames (the publish's belt refused any shorter loop).
+        const int64_t span = w.end - w.loop_begin;
+        if (span < 2) return false;
+        if (delta_frames > 0) {
+            target = cur + delta_frames;
+            if (target >= w.end)
+                target = w.loop_begin + (target - w.loop_begin) % span;
+        } else {
+            target = std::max(cur + delta_frames, w.loop_begin);
+        }
+    } else {
+        // ONCE THROUGH. Back to the lower wall: the trim's begin for a
+        // session that began inside the trim, else the session's own start.
+        const bool began_in_trim = w.start >= trim_begin && w.start < trim_end;
+        const int64_t wall = began_in_trim ? trim_begin : w.start;
+        if (delta_frames > 0) {
+            target = cur + delta_frames;
+            // PAST THE WINDOW'S END — fewer than two frames left, the launch
+            // body's remainder rule — THE PLAY RUNS ON TO ITS OWN END.
+            if (target >= w.end - 1) return false;
+            // AND PAST RESTRICT'S EDGE, a restrictable play's own end.
+            if (app.restrict && restrictable_play &&
+                frame_past_painted_window_right(app, audio, target))
+                return false;
+        } else {
+            target = std::max(cur + delta_frames, wall);
+        }
+    }
+    // The bound buffer's own domain, a belt (both walls lie inside it).
+    target = std::max(target, playback.domain_begin());
+    if (target == cur) return false;
+    // THE SCANNER'S OLD PLACE, erased where the last paint drew it, AHEAD OF
+    // THE SEED (the launch body's own shape, Viewport::
+    // invalidate_standing_scanner on the plate basis).
+    viewport.invalidate_standing_scanner();
+    // THE LIMITER LAMP'S SPAN IS VOIDED (AppState::limiter_lamp_prev_frame):
+    // the play stands across the jump, so the tick would test the frames it
+    // skipped as heard — the render player's live seek's line.
+    app.limiter_lamp_prev_frame = -1;
+    if (w.loop_begin == kPlaybackNoLoop) {
+        playback.play(target, w.end);
+    } else {
+        playback.play_loop(target, w.end, w.loop_begin);
+    }
+    // THE SCANNER JUMPS WITH THE CURSOR: the publish anchored the predictor
+    // at (target, the publish instant) — the jump's re-anchor (playback.h's
+    // design note) — and the seed below is the launch body's, so the next
+    // paint draws the line at the target, and the pre-paint advance moves it
+    // on from there (its old place the seeded one). Its new place and the
+    // clock cell are declared here, as the launch's success tail does; a
+    // FOLLOW scroll the next pre-paint takes carries its own whole-area
+    // damage.
+    app.playhead_scanner_sample  = target;
+    app.playhead_scanner_precise = static_cast<double>(target);
+    viewport.invalidate_standing_scanner();
+    viewport.invalidate_clock_area();
+    return true;
 }
 
 // THE BOUNDED AUDITION (contract at the declaration): play `span` frames from
@@ -786,6 +905,9 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // camera moved; an offscreen place is an empty rect and declares nothing.
     viewport.invalidate_standing_scanner();
     viewport.invalidate_clock_area();
+    // THE LIVE SESSION'S WINDOW, the console's seek's record (live_window_'s
+    // contract at the declaration).
+    live_window_ = LiveWindow{start, end, loop_begin};
     if (loop_begin == kPlaybackNoLoop) {
         playback.play(start, end);
     } else {

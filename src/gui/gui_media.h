@@ -19,7 +19,8 @@
 // render_player.h — the vocabulary described in the rest of this paragraph),
 // and with it closed every command is the PROJECT TRANSPORT'S
 // (GuiCarTransport::on_media_command, car_transport.h — play/pause looping the
-// trim from its begin, Previous and Next undo and redo). THE CAR'S VOCABULARY IS
+// trim from its begin, Previous and Next seeking a live play three seconds
+// back and forward and undoing and redoing at rest). THE CAR'S VOCABULARY IS
 // THE CAR'S AND NOT THE TABLET'S KEYS: the wheel and the console carry rewind,
 // play/pause and fast-forward, the outer two arriving as Previous and Next, so
 // the one button is a TOGGLE between the item and silence and the outer two
@@ -184,8 +185,9 @@ struct GuiMediaState {
     // while the project's transport is live, and 0 at rest, and it is
     // RE-PUSHED AT EVERY LOOP WRAP (GuiCarTransport::note_loop_wrap), so the
     // console's clock re-starts at the trim's start on each lap and, with the
-    // trim's length above it, its bar refills through each one: the one
-    // freedom the dummy display has, truthful while a loop plays and a
-    // running dummy at rest.
+    // trim's length above it, its bar refills through each one, AND AT EVERY
+    // SEEK THAT MOVED (architect 2026-11-20, GuiCarTransport::car_skip), so
+    // the clock stands at the new place: the one freedom the dummy display
+    // has, truthful while a loop plays and a running dummy at rest.
     int64_t     position_ms    = 0;
 };

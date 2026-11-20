@@ -152,9 +152,7 @@ struct GuiTargetRender {
     // the callers that must tell "still settling" from "settled with
     // nothing" — the scrub's silent target-view refusal
     // (input_pointer.cpp), this class's own status and re-establishment
-    // paths, since 2026-09-18, THE PENDING CAR PLAY
-    // (GuiCarTransport::run_pending_play, which keeps WAITING while this is
-    // true and decides on preview_ready() the moment it goes false), and since
+    // paths, and since
     // 2026-10-18 THE A/B AUDITION'S DUE REST (GuiAbAudition::fire_if_due,
     // which waits on it the same way after the act's switch re-dispatched
     // the preview, then launches through the preview gate once).
@@ -166,16 +164,11 @@ struct GuiTargetRender {
     // audio to play right now": no update in flight or pending (the bound
     // buffer is stale by definition while one is) AND a populated target
     // buffer (no successful preview render yet in this session means the bind
-    // would play stale source-domain samples). FIVE READERS as re-greped
-    // 2026-09-18: Space's play
+    // would play stale source-domain samples). FOUR READERS as re-grepped
+    // 2026-11-20: Space's play
     // edge (input_handler.cpp, where Space-to-stop is honored first), THE
     // CAR'S OWN PLAY (GuiCarTransport::car_toggle, which asks this in exactly
-    // Space's shape and for exactly Space's reason, ahead of the launch), THE
-    // CAR'S SKIP TAIL (GuiCarTransport::car_play_after_step and the pending
-    // play its tick fires — a reader that WAITS on this rather than refusing
-    // on it, is_updating() being how it tells settling from settled; the A/B
-    // audition's due rest is the other since 2026-10-18,
-    // GuiAbAudition::fire_if_due), the A/B
+    // Space's shape and for exactly Space's reason, ahead of the launch), the A/B
     // audition's press-time gate (GuiAbAudition, which asks it for the ACTIVE
     // tab before its first switch — since 2026-10-18 the other tab has no
     // preview yet, its switch dispatching one — and again at every launch)

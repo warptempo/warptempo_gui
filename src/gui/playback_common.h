@@ -154,14 +154,17 @@ struct GuiPlaybackState {
     // read this.
     int64_t      domain_offset = 0;
 
-    // THE PUBLISHED WINDOW, THE MAIN THREAD'S MIRROR: the session's start and
-    // exclusive end as play() published them, buffer-local, written by the
-    // publish (and zeroed by bind / rebind) and read by the predictor alone —
-    // `start_sample` is its FLOOR and `end_sample` its CLAMP. The floor is a
-    // belt: the launch anchor is the publish instant, so `now` is never before
-    // it and the extrapolation never runs backward, but the line can then
-    // never be drawn below the frame the session was launched on whatever a
-    // clock reads.
+    // THE PUBLISHED WINDOW, THE MAIN THREAD'S MIRROR: the session's floor and
+    // exclusive end as play() or play_loop() published them, buffer-local,
+    // written by the publish (and zeroed by bind / rebind) and read by the
+    // predictor alone — `start_sample` is its FLOOR and `end_sample` its
+    // CLAMP. THE FLOOR IS THE LOWEST FRAME THE SESSION'S READ CAN STAND ON:
+    // a once-through window's start, a looping window's LOOP TARGET (a loop
+    // published from a start inside it — the console's seek, architect
+    // 2026-11-20 — wraps below that start; playback_publish_play). The floor
+    // is a belt: the launch anchor is the publish instant, so `now` is never
+    // before it and the extrapolation never runs backward, but the line can
+    // then never be drawn below the session's floor whatever a clock reads.
     // Main thread only, both, like the anchor. THE AUDIO THREAD READS NEITHER
     // (2026-09-01, the third review's packet): the window it renders against
     // is the one it consumed from the command packet below and keeps as its

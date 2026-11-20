@@ -32,8 +32,9 @@
 // live in input_handler.h so this TU and flag_editor.cpp can reach them.
 
 // THE DRAG REFUSAL'S ONE SENTENCE (architect 2026-08-30), and its producers
-// are THE CAR'S TWO ROADS ALONE (re-derived 2026-10-30): the undo / redo road
-// run_undo_redo_without_key and the play's gate car_play_refused_by_key_gates,
+// are THE CAR'S TWO ROADS ALONE (re-derived 2026-11-20): the undo / redo road
+// run_undo_redo_without_key and the transport gate car_play_refused_by_key_gates
+// (the play's and, since 2026-11-20, the live seek's),
 // each refusing a head unit's press that lands while a pointer gesture holds
 // the glass (keyboard_owned_by_pointer_gesture). A KEY never meets a gesture —
 // the touch window has one owner and both key producers are touches of their
@@ -609,8 +610,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // READ-ONLY list drops greys on that same lock (redesign_button_
         // enabled's read-only arm, the mirror at read_only_key_blocked's
         // head), so the roster never meets the read-only sentence here. Two
-        // producers still do: THE CAR'S Previous / Next on a locked tab, which
-        // build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and take
+        // producers still do: THE CAR'S Previous / Next at rest on a locked
+        // tab, which build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and take
         // the read-only card naming Undo or Redo, and the ITERATION sentence's
         // lit buttons whose long-press twin the iteration list refuses: the
         // Ctrl+Shift+Tab march, which it subtracts (Switch Tab), and since
@@ -887,10 +888,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // Return is NOT a playback key; it opens the flag editor, handled
     // further below.
     if (is_play_pause_key(key, mods)) {
-        // A GUI TRANSPORT PRESS, counted AHEAD OF THE REFUSAL below so a
-        // refused play supersedes a pending car play too (the rule at
-        // GuiCarTransport::PendingCarPlay, car_transport.h; the count's
-        // writers at AppState::gui_transport_press_count).
+        // A GUI TRANSPORT PRESS, counted AHEAD OF THE REFUSAL below (the
+        // count's writers and its one reader at
+        // AppState::gui_transport_press_count).
         ++app.gui_transport_press_count;
         app.n2_last_space_ms = monotonic_ms();   // N2's diagnostic (the field)
         // Target-view playback gating: refuse Space-to-play while a
@@ -998,7 +998,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (redesign_button_shift_admits).
     if (is_ab_audition_key(key, mods)) {
         // A GUI TRANSPORT PRESS, counted ahead of start()'s refusals (the
-        // rule at GuiCarTransport::PendingCarPlay, car_transport.h).
+        // count's writers and its one reader at
+        // AppState::gui_transport_press_count).
         ++app.gui_transport_press_count;
         app.n2_last_space_ms = monotonic_ms();   // N2's diagnostic (the field)
         ab_audition.start();
@@ -1995,11 +1996,7 @@ bool GuiInputHandler::authoring_lock_refuses_chord(GuiKey key,
 // caller has already passed every head gate; `synthesized_repeat` is the
 // key's own repeat bit. The Undo / Redo roster buttons reach it through their
 // chord on on_key, so the gates above hold for them unchanged.
-//
-// RETURNS WHETHER A RESTORE RAN (the contract and the car's reason at the
-// declaration): false at each of the two refusal arms below, otherwise the
-// ops' own answer. on_key's arm drops it on the floor.
-bool GuiInputHandler::run_undo_redo_command(bool redo,
+void GuiInputHandler::run_undo_redo_command(bool redo,
                                             bool synthesized_repeat) {
     // THE ITERATION LOCK REFUSES FIRST (architect 2026-09-10: "They just
     // don't go in the undo stack at all; they're considered transient by
@@ -2021,7 +2018,7 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
         notifications.notify(AppState::NotificationClass::Normal,
                              redo ? kIterationLockRedoCard
                                   : kIterationLockUndoCard);
-        return false;
+        return;
     }
     // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30). The
     // authoritative test is history_step_actionable (app_state.h), the
@@ -2048,7 +2045,7 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
         // HeldRepeatDispatchScope. The held BUTTON never reaches this
         // line: its face greys on the same predicate and its burst rests
         // there (tick_chrome_press_repeat).
-        if (stack.empty() && synthesized_repeat) return false;
+        if (stack.empty() && synthesized_repeat) return;
         notifications.notify(
             AppState::NotificationClass::Normal,
             stack.empty()
@@ -2056,13 +2053,16 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
                         : "There is nothing to undo")
                 : "That step belongs to the other tab, which is "
                   "read-only");
-        return false;
+        return;
     }
-    return redo ? undo.do_redo() : undo.do_undo();
+    if (redo) undo.do_redo();
+    else      undo.do_undo();
 }
 
 // THE CAR'S UNDO / REDO (architect 2026-09-17: the head unit's Previous and
-// Next with the render player closed are Ctrl+Z and Ctrl+Shift+Z WHOLE). A
+// Next with the render player closed are Ctrl+Z and Ctrl+Shift+Z WHOLE — at
+// rest since 2026-11-19, send CC, a live session's being a seek; the fork is
+// GuiCarTransport::car_skip's). A
 // deliberate press of the chord that never passes through on_key, so it asks
 // the HEAD GATES on_key asks ahead of the arm, in on_key's order and through
 // the same verdicts and sentences — and one gate on_key has no need of,
@@ -2082,14 +2082,11 @@ bool GuiInputHandler::run_undo_redo_command(bool redo,
 // which stands until the load has installed the audio, so no car press
 // reaches here without a piece.
 //
-// IT ANSWERS THE CAR'S OWN QUESTION (architect 2026-09-18): true iff a
-// restore actually ran — false at each head gate below, otherwise the
-// command's answer, which is false at each of its two refusal arms and at
-// the ops' belt. THE SKIP PLAYS ONLY WHAT IT ACTUALLY STEPPED TO, so a
-// refused press ends here with today's card and nothing else, a running loop
-// left running (nothing new was stepped to, so there is nothing new to hear;
-// the tail is GuiCarTransport::car_previous / car_next).
-bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
+// THE STEP IS THE WHOLE PRESS (architect 2026-11-19 night: "when using undo
+// redo, the user should have to hit play again"): a refused press ends here
+// with today's card, a restored one with the restore, and nothing plays
+// after either.
+void GuiInputHandler::run_undo_redo_without_key(bool redo) {
     const GuiKey key = GuiKeys::Z;
     GuiInputState mods{};
     mods.ctrl  = true;
@@ -2102,39 +2099,41 @@ bool GuiInputHandler::run_undo_redo_without_key(bool redo) {
     // AN EDITOR SWALLOWS THE CHORD IN SILENCE (2026-10-25; the one predicate
     // for a keyboard-taking modal), its text drag with it — a text drag
     // exists only under an editor.
-    if (keyboard_modal_editor_active()) return false;
+    if (keyboard_modal_editor_active()) return;
     if (keyboard_owned_by_pointer_gesture()) {
         card_bound(kKeysDuringDrag);
-        return false;
+        return;
     }
     // THE READ-ONLY CARD NAMES THE ACT by the roster's own word for it, the
     // Undo / Redo key's tooltip (redesign_button_tooltip's line 1).
     const char* act =
         redesign_button_tooltip(redo ? RedesignButton::Redo
                                      : RedesignButton::Undo).line1;
-    if (authoring_lock_refuses_chord(key, mods, act)) return false;
-    return run_undo_redo_command(redo, /*synthesized_repeat=*/false);
+    if (authoring_lock_refuses_chord(key, mods, act)) return;
+    run_undo_redo_command(redo, /*synthesized_repeat=*/false);
 }
 
-// THE CAR'S PLAY MEETS SPACE'S OWN GATES (architect 2026-09-17: "look at how
-// undo/redo and play work in the GUI under an open flag editor or a drag, and
-// follow that rule" — EACH CAR BUTTON IS ITS KEY). Bare Space's head gates in
-// on_key's order, with the gesture gate the skips' road above adds, through
+// THE CAR'S PLAY AND ITS LIVE SEEK MEET SPACE'S OWN GATES (architect
+// 2026-09-17: "look at how undo/redo and play work in the GUI under an open
+// flag editor or a drag, and follow that rule" — EACH CAR BUTTON IS ITS KEY;
+// the seek since 2026-11-20, a transport act). Bare Space's head gates in
+// on_key's order, with the gesture gate the undo / redo road above adds, through
 // the same verdicts and the same sentences, answered for the caller: TRUE
 // means the press died here,
 // having already said whatever the key says. The routers ranked above these
 // gates and the `h` view's are the caller's to drop
 // (GuiCarTransport::admits).
 //
-// ON_KEY'S NO-PIECE GATE IS NOT ASKED, as at the skips' road above: no car
-// press reaches here without a piece.
+// ON_KEY'S NO-PIECE GATE IS NOT ASKED, as at the undo / redo road above: no
+// car press reaches here without a piece.
 //
-// IT IS THE GATES AND NOT THE KEY WHOLE, the one place the car's three
-// buttons differ in shape: Previous and Next run Ctrl+Z's own command body,
-// while the play's ACT is the car's alone — a loop of the trim from its begin,
-// GuiPlaybackLifecycle::car_toggle_playback — so the cluster keeps the act
-// (and Space's target-view readiness gate, which ranks below these) and takes
-// only the gates from here.
+// IT IS THE GATES AND NOT THE KEY WHOLE: Previous and Next at rest run
+// Ctrl+Z's own command body, while the play's ACT is the car's alone — a loop
+// of the trim from its begin, GuiPlaybackLifecycle::car_toggle_playback — and
+// so is the live seek's (GuiPlaybackLifecycle::seek_live_session_by), so the
+// cluster keeps the acts (and Space's target-view readiness gate, which ranks
+// below these and which the seek, over a session already sounding, never
+// asks) and takes only the gates from here.
 //
 // THE EDITOR ARM RAISES NO CARD: a bound chord under any modal is silent
 // (2026-10-25), and Space is a PRINTABLE key the field takes as a typed

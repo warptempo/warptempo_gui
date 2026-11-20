@@ -72,11 +72,14 @@ struct GuiNoiseVoice;   // noise.h
 // Viewport::follow_scanner, are pan frames and resync nothing) and the
 // follow toggle's lit edge — AND, SINCE 2026-09-17, THE LOOP WRAP. (The C key's recenter, center_viewport_on_playhead, shares
 // the discrete move's resync but meets no live session: `c` stops playback
-// before it centres.)
+// before it centres.) THE CONSOLE'S SEEK (architect 2026-11-20,
+// GuiPlaybackLifecycle::seek_live_session_by) is a jump of the read position
+// too, and it takes no resync: it is a NEW PUBLISH over the live session,
+// whose launch anchor (the target, the publish instant) is the re-anchor.
 // Every GUI launch still runs [start, end) once and stops at the natural end
 // (architect 2026-07-30, all audition looping removed), so on those sessions
-// the read position only ever advances and the predictor has no backward
-// jump to miss. THE ONE LOOPING SESSION IS THE CAR'S — play_loop below, the
+// the read position only ever advances between publishes and the predictor
+// has no backward jump to miss. THE ONE LOOPING SESSION IS THE CAR'S — play_loop below, the
 // head unit's play of the trim with the render player closed (architect
 // 2026-09-17) — and its wrap IS a backward jump: the render body moves the
 // read position back by the window's length on the audio thread, and the
@@ -115,16 +118,17 @@ struct GuiNoiseVoice;   // noise.h
 //
 // THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
 // (architect 2026-09-02; a periodic cadence was proposed that day and does
-// NOT land). Every resync is an EVENT — FOURTEEN
-// call sites at this writing (re-counted 2026-09-17), in classes: the zooms
+// NOT land). Every resync is an EVENT — NINE
+// call sites at this writing (re-counted 2026-11-20), in classes: the zooms
 // (apply_zoom_change, apply_strip_drag_zoom's final frame,
-// apply_zoom_to_start), the centring jump, follow's page-in and the on-edge of the follow
-// toggle, the map-change re-land (reseat_playhead_to), the resize whose
-// level moved, the pointer ends (the nav drag's release and force-end, the
-// touch hard end), and — the one class whose event is the AUDIO THREAD'S
-// rather than the user's — THE LOOP WRAP (main.cpp's tick, on
-// consume_loop_wrap; 2026-09-17). Grep `resync_predictor` and re-count;
-// never inherit this number.
+// apply_zoom_to_start), the discrete viewport move's shared tail
+// (finish_discrete_viewport_move: the centring jump, follow's page-in), the
+// on-edge of the follow toggle, the playhead re-land (reseat_playhead), the
+// resize, the touch navigation's end (end_touch_nav), and — the one class
+// whose event is the AUDIO THREAD'S rather than the user's — THE LOOP WRAP
+// (main.cpp's tick, on consume_loop_wrap; 2026-09-17). The console's seek is
+// a jump with no resync call (its re-anchor is its publish's launch anchor,
+// above). Grep `resync_predictor` and re-count; never inherit this number.
 // EVERY RESYNC ANCHORS ON THE AUDIO THREAD'S CYCLE STAMP — (the read cursor,
 // the instant that cursor's frame enters the output port) — and not on the
 // main thread's `now`, which sat anywhere inside the period before that fill
@@ -291,9 +295,14 @@ public:
     // phase carries across the seam). All three are DOMAIN coordinates.
     // REFUSED, with nothing written, where the loop would hold fewer than two
     // frames or `start_sample` lies outside [loop_begin, end_sample) — the
-    // caller forms the window right (GuiPlaybackLifecycle::car_toggle_playback
-    // is the one caller) and the publish is the belt. The wrap is a RESYNC
-    // EVENT to the main thread, through consume_loop_wrap below.
+    // caller forms the window right and the publish is the belt. TWO
+    // CALLERS, both GuiPlaybackLifecycle's: the car's play of the trim
+    // (car_toggle_playback, from the loop's begin) and THE CONSOLE'S SEEK
+    // over a live loop (seek_live_session_by, architect 2026-11-20: the same
+    // window and target, a new start inside them — so the sought loop is the
+    // loop still, and the predictor's floor is the loop target, not the
+    // start). The wrap is a RESYNC EVENT to the main thread, through
+    // consume_loop_wrap below; a seek is not a wrap and moves no count.
     void play_loop(int64_t start_sample, int64_t end_sample,
                    int64_t loop_begin);
 
@@ -443,7 +452,7 @@ public:
     // GuiAbAudition::start's preflight and the launch body's belt
     // (playback_lifecycle.cpp, ab_audition.cpp) — which card
     // kPlaybackDeviceUnavailableCard only when this answers FALSE; by the
-    // car's Play (car_play_playback, which cards alike, and the two media
+    // car's Play (car_toggle_playback's play arm, which cards alike, and the two media
     // Play arms, GuiCarTransport::on_media_command and the render player's,
     // which ignore the answer); and BY THE STRUCK CLIP LAMP'S LIFT
     // (GuiInputHandler::finish_clip_lamp_press_release, architect 2026-11-05

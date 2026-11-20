@@ -4085,10 +4085,10 @@ inline constexpr int kAuditionSwitchGapMs = 650;
 //         camera keys, which left the act standing until that day, end it
 //         like every other press. CALLERS, not a fifth owner.
 //     (2) THE USER LAUNCH ENTRIES — GuiPlaybackLifecycle::launch_playback_from,
-//         the view-end entry, and since 2026-09-17 car_play_playback, the
+//         the view-end entry, and since 2026-09-17 car_toggle_playback, the
 //         head unit's play with the render player closed (the clear sits in
-//         the play body, which car_toggle_playback's play arm delegates to;
-//         its stop arm takes owner (1)) — each ahead of its delegation to
+//         its play arm; its stop arm takes owner (1)) — each ahead of its
+//         delegation to
 //         the one launch body, refused or not
 //         (2026-09-01; the launch body's own head from 2026-08-26 until then):
 //         every launch of the user's own transport begins a fresh session, so
@@ -4598,7 +4598,7 @@ struct AppState {
     // playback live, follow_suspended below dark, the A/B audition not
     // standing and no pointer or touch aim held), the two user launches
     // asking LaunchCamera::Follow off it (launch_playback_from,
-    // car_play_playback) and the lamp's lit edge (toggle_follow). The A/B
+    // car_toggle_playback) and the lamp's lit edge (toggle_follow). The A/B
     // audition and the render player ignore it — the scroll asks the
     // audition's phase and returns under the player.
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_follow, the chokepoint bare
@@ -4904,14 +4904,11 @@ struct AppState {
     // bare Space's arm and Shift+Space's arm in on_key (input_handler.cpp;
     // the Play button's lift and its long press arrive there as those
     // chords) and the waveform scrub's one act, scrub_act_at
-    // (input_pointer.cpp). Its one reader is the car's PENDING PLAY
-    // (GuiCarTransport::PendingCarPlay, car_transport.h, where the rule is
-    // stated): a wait armed from the console is stale the moment a GUI
-    // transport press lands, whether that press played, stopped or was
-    // refused — a refused press is still his answer to "what sounds now",
-    // and the answer is not the car's loop. The render player's launches do
-    // not bump it: the player takes the wire and that clear is the tick's
-    // own. The car's own bodies never bump it.
+    // (input_pointer.cpp). The render player's launches and the car's own
+    // bodies never bump it. ITS ONE READER is N2's media-play stderr line
+    // (main.cpp's media hook, the diagnostic's record at
+    // GuiPlaybackLifecycle::n2_launch_count), which prints it as
+    // `gui_presses` beside a console play, so the field goes with that line.
     uint64_t gui_transport_press_count = 0;
     // N2, THE STOP THAT PLAYS (architect 2026-11-17, his words at
     // ChromePress::painted_glyph): a diagnostic for N2, to be removed once N2
@@ -12043,7 +12040,11 @@ inline bool audition_sequence_standing(const AppState& a) {
 // 2026-08-30 PLAY'S and the LEFT / RIGHT pair's enabled arms plus the SKIPS'
 // actionability owner playhead_end_jump_actionable, which their face and the
 // jump acts' refusals read (a live session keeps all five buttons lit: a
-// press then stops, or stops and steps, never nothing). The play/stop
+// press then stops, or stops and steps, never nothing). AND THE CAR'S THREE
+// (re-grepped 2026-11-20, GuiCarTransport): derive's one gate for the
+// console's play bit and clock, the focus-loss arm, and car_skip's fork of
+// Previous / Next into the live seek and the resting undo / redo (architect
+// 2026-11-19, send CC). The play/stop
 // FORK bare Space takes reads the same phase term with playback.is_playing()
 // as its other term — the audio callback's own flag, on a different clock
 // from the tick-cleared scanner bit — and the sub-tick disagreement that

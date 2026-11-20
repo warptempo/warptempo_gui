@@ -4106,41 +4106,35 @@ private:
     // TWO CALLERS: the Ctrl+Z arm, and run_undo_redo_without_key below.
     //
     // THE CAR'S ROAD ONTO IT (architect 2026-09-17 — the head unit's Previous
-    // and Next with the render player closed are Ctrl+Z and Ctrl+Shift+Z
-    // WHOLE, GuiCarTransport::on_media_command): a deliberate press that asks
-    // on_key's head gates first through the same verdicts and sentences
-    // on_key asks (a drag owning the keyboard, a
+    // and Next with the render player closed and no transport session live
+    // are Ctrl+Z and Ctrl+Shift+Z WHOLE, GuiCarTransport::car_skip's rest
+    // arm; architect 2026-11-19, send CC: a live session's are a seek): a
+    // deliberate press that asks on_key's head gates first through the same
+    // verdicts and sentences on_key asks (a drag owning the keyboard, a
     // keyboard-modal editor swallowing the chord, the authoring lock — a
     // read-only tab cards the act by name), the routers and the `h` view's gate
     // ranked above them being the caller's to drop, and on_key's no-piece
     // gate having no car press to answer (the open's hold drops the car's
     // commands until the load). The gates' statement and order are at the
-    // definition.
-    //
-    // BOTH ANSWER WHETHER A RESTORE RAN (architect 2026-09-18): false at every
-    // refusal arm of their own — the command's two (the iteration lock and
-    // history_step_actionable's pair) and the
-    // key-less road's head gates — otherwise the ops' own answer
-    // (Undo::do_undo / do_redo, which return false on their belt). THE ANSWER
-    // IS THE CAR'S: with the render player closed the head unit's Previous and
-    // Next step the history AND THEN PLAY, and a step that restored nothing
-    // plays nothing (car_transport.h). on_key's own arm ignores the result —
-    // the keyboard has nothing to do with it and no [[nodiscard]] is wanted.
+    // definition. NEITHER ANSWERS: the step is the whole press on both roads
+    // (the console's step plays nothing, architect 2026-11-19 night).
 public:
-    bool run_undo_redo_command(bool redo, bool synthesized_repeat);
-    bool run_undo_redo_without_key(bool redo);
+    void run_undo_redo_command(bool redo, bool synthesized_repeat);
+    void run_undo_redo_without_key(bool redo);
 
-    // THE CAR'S PLAY ROAD (architect 2026-09-17 — each car button is its key,
-    // so the head unit's play meets what bare SPACE meets): BARE SPACE'S HEAD
-    // GATES, asked in on_key's order through the same verdicts and sentences,
-    // true when the press died at one (having carded whatever the key cards).
-    // It is the GATES ALONE and not the key whole — the play's ACT is the
-    // car's own loop of the trim, and Space's target-view readiness gate ranks
-    // below these — so the cluster keeps both and takes the gates from here.
-    // ONE CALLER, GuiCarTransport::car_toggle, which has dropped the routers
-    // and the `h` view first. The statement and what it deliberately does
-    // not ask (the editor swallow's card, the authoring lock, on_key's
-    // no-piece gate) are at the definition.
+    // THE CAR'S TRANSPORT ROAD (architect 2026-09-17 — each car button is
+    // its key, so the head unit's play meets what bare SPACE meets; since
+    // 2026-11-20 its live seek too, a transport act of the console's): BARE
+    // SPACE'S HEAD GATES, asked in on_key's order through the same verdicts
+    // and sentences, true when the press died at one (having carded whatever
+    // the key cards). It is the GATES ALONE and not the key whole — the
+    // play's ACT is the car's own loop of the trim and the seek's the car's
+    // own seek, and Space's target-view readiness gate ranks below these —
+    // so the cluster keeps the acts and takes the gates from here. TWO
+    // CALLERS, GuiCarTransport::car_toggle and car_skip's live arm, which
+    // have dropped the routers and the `h` view first. The statement and
+    // what it deliberately does not ask (the editor swallow's card, the
+    // authoring lock, on_key's no-piece gate) are at the definition.
     bool car_play_refused_by_key_gates();
 private:
 

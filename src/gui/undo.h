@@ -263,17 +263,14 @@ struct Undo {
                                        const std::vector<GuiWarpMarker>& before);
     void apply_post_restore_rules_phase_reset(const UndoEntry& entry,
                                             const std::vector<GuiPhaseResetMarker>& before);
-    // EACH RETURNS WHETHER THE RESTORE ACTUALLY RAN — false exactly where the
+    // EACH POPS AND APPLIES THE TOP ENTRY, or does nothing where the
     // authoritative belt below refuses (history_entry_actionable: an empty
-    // source stack, or a top entry whose target tab is read-only), true when
-    // the entry was popped and applied. The answer is THE CAR'S (architect
-    // 2026-09-18): with the render player closed the head unit's Previous and
-    // Next are these two acts and then a play, and a step that restored
-    // nothing has nothing new to be heard (car_transport.h). The keyboard's
-    // arm ignores it — Ctrl+Z's card is raised a layer up, by the command
-    // body that can name which term refused.
-    bool do_undo();
-    bool do_redo();
+    // source stack, or a top entry whose target tab is read-only), silently —
+    // Ctrl+Z's card is raised a layer up, by the command body that can name
+    // which term refused (GuiInputHandler::run_undo_redo_command, their one
+    // caller).
+    void do_undo();
+    void do_redo();
 
     // Whether the current eligible gesture press of `kind` coalesces into the
     // burst's existing undo entry — TRUE on either arm of the hybrid (a

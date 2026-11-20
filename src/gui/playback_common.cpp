@@ -560,8 +560,16 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
     // and after a wrap it is the RESYNC — taken by the tick that consumes
     // the wrap, anchoring on the cycle stamp whose cursor has wrapped — that
     // puts the line back at the loop's start plus the drift (playback.h's
-    // design note; the wrap is a resync event).
-    state.start_sample.store(start_sample, std::memory_order_relaxed);
+    // design note; the wrap is a resync event). THE FLOOR IS THE LOWEST
+    // FRAME THE SESSION'S READ CAN STAND ON (the field's comment): the start
+    // of a once-through window, THE LOOP TARGET of a looping one — a loop
+    // published from a start inside it (the console's seek, architect
+    // 2026-11-20, GuiPlaybackLifecycle::seek_live_session_by) wraps below
+    // that start, and a floor at the start would hold the line there after
+    // every wrap until the read passed it again.
+    state.start_sample.store(loop_begin != kPlaybackNoLoop ? loop_begin
+                                                           : start_sample,
+                             std::memory_order_relaxed);
     state.end_sample.store(end_sample, std::memory_order_relaxed);
     state.cursor.store(start_sample, std::memory_order_relaxed);
 
