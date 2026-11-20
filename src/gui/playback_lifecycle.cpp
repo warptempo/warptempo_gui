@@ -575,8 +575,10 @@ static bool frame_past_painted_window_right(const AppState& a,
 // its own window to the end of its block. Its LOOP WRAP there is a real wrap
 // of what sounded: the count moves, the tick consumes it — its resync finds
 // the old generation's stamp and leaves the publish's anchor standing, or
-// the new generation's and anchors on it — and its damage and console push
-// cost one repaint and one push more. Its NATURAL END there abandons its
+// the new generation's and anchors on it, the floor left at the target
+// (playback_resync_predictor lowers it only on a stamp of the new session
+// standing below its start) — and its damage and console push cost one
+// repaint and one push more. Its NATURAL END there abandons its
 // terminal (the word changed under it) and the new run seats; a natural end
 // whose terminal landed AFTER this body's is_playing() read and BEFORE the
 // publish is overwritten by the publish's new playing word, so the session

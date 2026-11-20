@@ -2031,10 +2031,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                   paint_handler);
     // THE HEAD UNIT'S SECOND OWNER (2026-09-17), per project like the player:
     // the cluster that drives the project's own transport while the render
-    // player is closed. After the input handler, whose undo / redo act body it
-    // composes for the console's Previous and Next (the contract at
-    // car_transport.h; the hook below is the one partition between the two
-    // owners).
+    // player is closed. After the input handler, from which it takes the
+    // undo / redo act body for the console's Previous and Next AT REST, the
+    // play's key gates (Space's, car_play_refused_by_key_gates) for its Play
+    // and for the seek those two buttons make over a live session (architect
+    // 2026-11-20), and the editor modal predicate for its admission (the
+    // contract at car_transport.h; the hook below is the one partition
+    // between the two owners).
     GuiCarTransport car_transport(app, audio, gui, playback,
                                   playback_lifecycle, viewport, target_render,
                                   input_handler);

@@ -111,8 +111,11 @@ void store_anchor(GuiPlaybackState& state, const Anchor& a) {
 // THE EXTRAPOLATION, shared by the two readers: the anchor's position advanced
 // by wall-clock time at the SOURCE rate (the cursor is in source frames and
 // wall-clock advances it at that rate whatever rate the device runs), then
-// floored at the session's start (the line never draws below the frame the
-// session was launched on) and clamped at the window's and the buffer's ends.
+// floored at the session's floor (the publish's start until a resync anchors
+// on the session's wrapped stamp, the loop target from then on — the field's
+// comment,
+// playback_common.h — so the line never draws below the frame the session's
+// read has reached) and clamped at the window's and the buffer's ends.
 // Returned as the pre-truncation double; cursor() floors it.
 double predict_position(const GuiPlaybackState& state, int64_t a_sample,
                         int64_t a_ns, int64_t now_ns) {
@@ -387,6 +390,7 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
     store_anchor(state, Anchor{0, 0});
     state.start_sample.store(0, std::memory_order_relaxed);
     state.end_sample.store(0, std::memory_order_relaxed);
+    state.published_loop_begin = kPlaybackNoLoop;
     // The whole session word, generation included, the command packet with it
     // (no packet stands until a publish writes one) AND THE CYCLE STAMP: no
     // callback runs here (the backend binds before it opens its device), which
@@ -555,22 +559,20 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
 
     // THE MAIN THREAD'S MIRROR of the window (the fields' comment) and the
     // integer `cursor`, set here so the main thread sees a consistent
-    // snapshot immediately (before the next buffer runs). THE MIRROR CARRIES
-    // NO LOOP TARGET: the predictor clamps at `end_sample` as on any window,
-    // and after a wrap it is the RESYNC — taken by the tick that consumes
-    // the wrap, anchoring on the cycle stamp whose cursor has wrapped — that
-    // puts the line back at the loop's start plus the drift (playback.h's
-    // design note; the wrap is a resync event). THE FLOOR IS THE LOWEST
-    // FRAME THE SESSION'S READ CAN STAND ON (the field's comment): the start
-    // of a once-through window, THE LOOP TARGET of a looping one — a loop
-    // published from a start inside it (the console's seek, architect
-    // 2026-11-20, GuiPlaybackLifecycle::seek_live_session_by) wraps below
-    // that start, and a floor at the start would hold the line there after
-    // every wrap until the read passed it again.
-    state.start_sample.store(loop_begin != kPlaybackNoLoop ? loop_begin
-                                                           : start_sample,
-                             std::memory_order_relaxed);
+    // snapshot immediately (before the next buffer runs). The predictor
+    // clamps at `end_sample` as on any window, and after a wrap it is the
+    // RESYNC — taken by the tick that consumes the wrap, anchoring on the
+    // cycle stamp whose cursor has wrapped — that puts the line back at the
+    // loop's start plus the drift (playback.h's design note; the wrap is a
+    // resync event). THE FLOOR IS THE PUBLISH'S OWN START ON EVERY WINDOW
+    // (the field's comment, 2026-11-20), so the first frame after a launch
+    // or the console's seek never draws left of its landing; the loop target
+    // rides beside it in its own main-thread mirror, and the resync
+    // (playback_resync_predictor) lowers the floor to it before it anchors
+    // on a stamp of the session's read wrapped below the start.
+    state.start_sample.store(start_sample, std::memory_order_relaxed);
     state.end_sample.store(end_sample, std::memory_order_relaxed);
+    state.published_loop_begin = loop_begin;
     state.cursor.store(start_sample, std::memory_order_relaxed);
 
     // THE LAUNCH ANCHOR IS THE PUBLISH INSTANT (architect 2026-09-03, the
@@ -600,10 +602,32 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
 // FIRST FILL HAS NOT RUN IS LEFT ALONE: the stamp is still the previous
 // session's (its generation says so), and the publish's launch anchor is
 // exactly right. One stamp read, one word load.
+//
+// AND THE RESYNC LOWERS THE FLOOR (2026-11-20), THE ONE SEAT, because it is
+// the one body that stores an anchor from a cycle stamp: on a looping
+// session (`published_loop_begin` set) whose stamp is this session's and
+// stands BELOW THE STANDING FLOOR (the publish's start), the floor becomes
+// the loop target BEFORE the anchor is stored — so no anchor of the
+// session's own stamp ever stands below the floor, whichever resync takes
+// it: the wrap consumer's (main.cpp's tick, consume then resync) or any
+// later one (a pan's, a zoom's, a re-land's). THE TEST IS EXACT: a session's
+// read stands below its published start only after its own wrap, so a wrap
+// a fill counted under the PREVIOUS generation (the count carries none, and
+// a publish never touches it) lowers nothing — the stamp is the old
+// session's, or the new one's above its start — and neither does the new
+// session's first stamp taken before any wrap, whose port instant can
+// follow the next frame's vsync, so a frame extrapolating backward from it
+// stays floored at the landing. Idempotent: once lowered, no stamp of the
+// session stands below it. A car's launch from the loop's begin (start ==
+// target) and every once-through window never lower anything.
 void playback_resync_predictor(GuiPlaybackState& state) {
     const CycleStamp s = read_stamp(state);
     if (!stamp_is_sessions(s, state.session.load(std::memory_order_acquire)))
         return;
+    if (state.published_loop_begin != kPlaybackNoLoop &&
+        s.cursor < state.start_sample.load(std::memory_order_relaxed))
+        state.start_sample.store(state.published_loop_begin,
+                                 std::memory_order_relaxed);
     store_anchor(state, stamp_anchor(s));
 }
 
@@ -662,8 +686,10 @@ struct Observation {
 // the real interval between two pre-paint samplings, whatever ran ahead of
 // each in its loop pass). IT IS THE SAME RAW LINE AT ANOTHER INSTANT: the
 // extrapolation is linear in the time it is given, earlier than the anchor
-// as well as later, floored at the session's start and clamped at the ends
-// as ever (predict_position) — the
+// as well as later, floored at the session's floor (the publish's start until
+// a resync anchors on the session's wrapped stamp, the loop target after) and
+// clamped at
+// the ends as ever (predict_position) — the
 // raw line, ahead of the ear by the device's output latency and the launch's
 // pickup phase, which is the ruling (the record above playback_publish_play);
 // a frame's time is a few ms before the `now` its paint runs at, so the
@@ -759,7 +785,7 @@ GuiPlaybackPosition playback_position_at(GuiPlaybackState& state,
     // POSITION: the integer by playback_cursor's own floor (the rounding
     // rule's declared exception there) and the pre-truncation double, so
     // the two agree exactly at the clamped window end and are
-    // floor()-consistent elsewhere (the floor at `start` and the two end
+    // floor()-consistent elsewhere (the floor `start_sample` and the two end
     // clamps are integers, so floor commutes with each). The domain offset
     // is added once to each, cursor()'s domain.
     const Observation o = observe(state, at_ns);
@@ -817,6 +843,7 @@ void playback_rebind_buffer(GuiPlaybackState& state,
     state.cursor.store(0, std::memory_order_relaxed);
     state.start_sample.store(0, std::memory_order_relaxed);
     state.end_sample.store(0, std::memory_order_relaxed);
+    state.published_loop_begin = kPlaybackNoLoop;
     // No packet stands for the new buffer (the next publish writes one) and
     // the audio-thread-private window is reset with it — admitted here, as
     // the fractional cursor's reset always was, because the fence the caller

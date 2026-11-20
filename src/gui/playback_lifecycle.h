@@ -495,15 +495,17 @@ struct GuiPlaybackLifecycle {
     //     SESSION'S LOWER WALL — the trim's begin when the session started
     //     inside the trim, else the session's own start (a source-view play
     //     launched outside the trim never seeks onto ground it did not start
-    //     from); FORWARD PAST THE WINDOW'S END IS A SILENT NO-OP — the play
+    //     from; that fallback the planner's choice, 2026-11-20, to be put to
+    //     him); FORWARD PAST THE WINDOW'S END IS A SILENT NO-OP — the play
     //     runs on to its own end and the session keeps its once-through
     //     window (the planner's choice, 2026-11-20, to be put to him: an end
     //     there would turn the next press into a Redo under a repeated
     //     press, "I don't like to feel hurried"). UNDER A LIT RESTRICT a
     //     restrictable play's own end is the painted window's right edge (the
     //     pre-paint stop, main.cpp), so a forward landing past it is the same
-    //     silent no-op; a back landing left of the window runs on into it, as
-    //     a play does after a pan carried the camera past it.
+    //     silent no-op (the planner's choice, 2026-11-20, to be put to him);
+    //     a back landing left of the window runs on into it, as a play does
+    //     after a pan carried the camera past it.
     // A seek that cannot move — nothing playing (the natural end in flight
     // before the tick tears the scanner down), already at the back wall, a
     // degenerate or crossed trim, an unknown rate — is SILENT and writes
@@ -671,9 +673,13 @@ private:
     // BY seek_live_session_by ALONE, which republishes the same end and loop
     // target from a new start and never writes the record — so `start` stays
     // the launch's own, the once-through session's lower wall where it began
-    // outside the trim. The engine keeps no main-thread record of the loop
-    // target (its mirror carries the floor and the end alone, playback_common.h),
-    // and this cluster made the launch, so the record is the launch's. Meaningful
+    // outside the trim. The engine's main-thread mirror (playback_common.h)
+    // is buffer-local and the predictor's: its floor is the LAST publish's
+    // start until a resync on the wrapped read lowers it to the loop target,
+    // and its loop target is read by that resync alone, so neither is the
+    // launch's own
+    // domain window; this cluster made the launch, so the record is the
+    // launch's. Meaningful
     // only while a project play runs; its value at rest is never read.
     struct LiveWindow {
         int64_t start      = 0;

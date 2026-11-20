@@ -508,13 +508,18 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // (2026-11-19): the act hands the marker lane no new focus — the
     // membership and the focus stand as they were — and the site that hands
     // the lane a new focus is the site that owes it a land (the rule at
-    // land_playhead_on_marker, input_pointer.cpp). The playhead already
-    // stands on the focus: every route that seats a focus lands on it, and
-    // every route that moves the playhead with a selection standing clears
-    // the selection or lands on the focus (that rule's two halves), so a
-    // selection — a singleton included — never rests with the playhead off
-    // its focus, and a land here would move nothing. In target view the
-    // focus's IMAGE moves with the map, and the tail below follows it.
+    // land_playhead_on_marker, input_pointer.cpp). The playhead ordinarily
+    // stands on the focus: the routes that seat a focus land on it, and the
+    // live page's playhead moves clear the selection. THE ONE ROAD THAT
+    // PARTS THEM is the `h` view's own playhead moves — its waveform tap,
+    // its Home / End, its LEFT / RIGHT — which clear the view's focus alone
+    // and leave a live selection standing under the view, its exit landing
+    // nothing (close_history_mode); after such a visit this verb, like
+    // DISABLE, leaves the playhead where it stands in source view (the
+    // planner's choice, 2026-11-20, to be put to him: the land kept here, or
+    // the `h` view's exit re-landing the focus, are the alternatives). In
+    // target view the focus's IMAGE moves with the map, and the tail below
+    // re-lands it.
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
     // Resolve via marker_effective (slice once, from the PRE-PRESS store —

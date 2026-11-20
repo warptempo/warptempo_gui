@@ -300,9 +300,10 @@ public:
     // (car_toggle_playback, from the loop's begin) and THE CONSOLE'S SEEK
     // over a live loop (seek_live_session_by, architect 2026-11-20: the same
     // window and target, a new start inside them — so the sought loop is the
-    // loop still, and the predictor's floor is the loop target, not the
-    // start). The wrap is a RESYNC EVENT to the main thread, through
-    // consume_loop_wrap below; a seek is not a wrap and moves no count.
+    // loop still; the predictor's floor is that start until a resync anchors
+    // on the session's wrapped stamp, the loop target from then on). The wrap is a
+    // RESYNC EVENT to the main thread, through consume_loop_wrap below; a
+    // seek is not a wrap and moves no count.
     void play_loop(int64_t start_sample, int64_t end_sample,
                    int64_t loop_begin);
 
@@ -344,6 +345,9 @@ public:
     // not playing — the next play() will overwrite the anchor — and a no-op on
     // a session whose first fill has not run (the stamp still carries the
     // previous session's generation, and the launch anchor is already right).
+    // On a loop whose stamp stands below the predictor's floor (the
+    // session's read wrapped below its published start) it first lowers the
+    // floor to the loop target (playback_resync_predictor, 2026-11-20).
     void resync_predictor();
 
     // Snapshot accessors. Safe from the main thread. During a graph
@@ -508,7 +512,10 @@ public:
     // spacing of their two vsyncs exactly. AN `at_ns` BEFORE THE ANCHOR
     // (the first frame of a launch made in the same loop pass, a resync's
     // stamp taken after the vsync) extrapolates backward on the same line
-    // and is floored at the session's start, as any position is.
+    // and is floored at the session's floor, as any position is: the
+    // publish's own start until a resync anchors on the session's wrapped
+    // stamp, the loop target from then on (GuiPlaybackState::start_sample's
+    // comment).
     GuiPlaybackPosition position_at(int64_t at_ns) const;
 
     // The bound buffer's domain extent, for call-site range policy:

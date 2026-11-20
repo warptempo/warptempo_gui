@@ -575,7 +575,7 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::End,    false, false, false},                             // End (+Shift: Shift+End)
     // THE SINGLE-MARKER VERBS (2026-08-12), the right block's first group
     // since the architect moved them down here on 2026-08-18: drop, delete,
-    // disable toggle and inherit/collapse (FLATTEN stood among them for the
+    // disable toggle and the inherit toggle (FLATTEN stood among them for the
     // hours of 2026-09-19 and its row is in the icon row's iteration group
     // now) — authoring chords that OWN THEIR REFUSALS AND CARDS (read-only,
     // the home view, an empty selection, the warp drop's occupied place,
@@ -3958,7 +3958,8 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
     }
 }
 
-// THE OPEN ACT (the row click's own second half and Enter on the highlight).
+// THE OPEN ACT (the row tap's own second half, the one road to it: no Enter
+// reaches a folder-overlay row, no on-screen keyboard standing under a list).
 // Under the player a folder enters and a wav plays; under the project picker
 // the row's project is reopened; under the settings page (2026-10-28) the
 // page closes and the settings editor opens on the row's key, its entry the
@@ -3972,7 +3973,8 @@ void GuiInputHandler::folder_overlay_highlight_row(int index) {
 // 2026-11-19, send CC); under the BPM form
 // (2026-10-29) the form closes and the line editor opens prefilled on the
 // row's line (its OK and Cancel reopening the form on that row) — one body
-// per content, which the click and Enter both reach.
+// per content, which the row's tap reaches (finish_folder_overlay_release,
+// the one caller).
 void GuiInputHandler::folder_overlay_open_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:

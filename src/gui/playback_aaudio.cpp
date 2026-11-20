@@ -753,13 +753,17 @@ void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
         return;
     }
 
-    // THE SESSION'S UNDERRUN FLOOR, stamped at the launch's own tail because
-    // THIS is where the session begins: the stream has been running and
+    // THE SESSION'S UNDERRUN FLOOR, stamped at the publish's own tail because
+    // a launch's session begins here: the stream has been running and
     // callbacking silence since the last stop, and the underruns of that idle
     // interval are not the audio about to be heard (report_xrun_count, above,
-    // is the one reader). The stream stands here — start_stream answered true
-    // — and a negative return is not a count, so the floor takes zero and the
-    // report's own compare drops the pair.
+    // is the one reader). EVERY PUBLISH RE-STAMPS IT, a republish over a live
+    // session included — the console's seek (GuiPlaybackLifecycle::
+    // seek_live_session_by, architect 2026-11-20) and the render player's
+    // live reseek — so the stop's underrun line counts from the LAST publish,
+    // not from the play's launch. The stream stands here — start_stream
+    // answered true — and a negative return is not a count, so the floor
+    // takes zero and the report's own compare drops the pair.
     const int32_t at_launch = AAudioStream_getXRunCount(impl_->stream);
     impl_->xrun_at_launch = at_launch > 0 ? at_launch : 0;
 }

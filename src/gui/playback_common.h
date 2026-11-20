@@ -158,13 +158,23 @@ struct GuiPlaybackState {
     // exclusive end as play() or play_loop() published them, buffer-local,
     // written by the publish (and zeroed by bind / rebind) and read by the
     // predictor alone — `start_sample` is its FLOOR and `end_sample` its
-    // CLAMP. THE FLOOR IS THE LOWEST FRAME THE SESSION'S READ CAN STAND ON:
-    // a once-through window's start, a looping window's LOOP TARGET (a loop
-    // published from a start inside it — the console's seek, architect
-    // 2026-11-20 — wraps below that start; playback_publish_play). The floor
-    // is a belt: the launch anchor is the publish instant, so `now` is never
-    // before it and the extrapolation never runs backward, but the line can
-    // then never be drawn below the session's floor whatever a clock reads.
+    // CLAMP. THE FLOOR IS THE LOWEST FRAME THE SESSION'S READ HAS STOOD ON
+    // (2026-11-20): THE PUBLISH'S OWN START, on every window, until the first
+    // resync that anchors on a stamp of the session standing below it — the
+    // session's own wrap — then a looping window's LOOP TARGET
+    // (`published_loop_begin` below, lowered by playback_resync_predictor
+    // before it stores that anchor, so no anchor of the session's own stamp
+    // ever stands below the floor).
+    // A loop published from a start inside it (the console's seek, architect
+    // 2026-11-20, GuiPlaybackLifecycle::seek_live_session_by) wraps below that
+    // start, so a floor left at the start would hold the line there after
+    // every wrap; a floor at the loop target from the publish would let the
+    // first frame after the seek draw left of its landing. WHAT THE FLOOR
+    // HOLDS: an evaluation time before the anchor — the scanner's frame time
+    // (position_at) is its vsync's, which can precede the publish instant
+    // (the first frame of a launch made in the same loop pass) or a resync's
+    // stamp port instant — extrapolates backward on the same line, and the
+    // floor keeps it at or above the frame the session's read has reached.
     // Main thread only, both, like the anchor. THE AUDIO THREAD READS NEITHER
     // (2026-09-01, the third review's packet): the window it renders against
     // is the one it consumed from the command packet below and keeps as its
@@ -177,6 +187,15 @@ struct GuiPlaybackState {
     // needs no ordering argued.
     std::atomic<int64_t> start_sample{0};
     std::atomic<int64_t> end_sample{0};
+    // THE LOOP TARGET'S MAIN-THREAD MIRROR (2026-11-20): the published
+    // window's wrap target, buffer-local, or kPlaybackNoLoop for a
+    // once-through window — written by the publish, reset by bind / rebind,
+    // read by the resync alone (playback_resync_predictor), which lowers the
+    // floor above to it on the first stamp of the session standing below the
+    // publish's start. Main thread only, a plain word:
+    // the audio thread's own copy is `active_loop_begin` below, seated from
+    // the packet.
+    int64_t published_loop_begin = kPlaybackNoLoop;
 
     // Mutable playback state. `cursor` is the READ position: written once per
     // fill by the render body as the first source frame of the NEXT fill (one
@@ -410,7 +429,9 @@ struct GuiPlaybackState {
     // the wrap means to the main thread is a RESYNC EVENT (playback.h's
     // design note): the predictor sits clamped at the mirror's end until the
     // tick that consumes the wrap re-anchors it on the cycle stamp, whose
-    // cursor has already wrapped.
+    // cursor has already wrapped — that resync first lowering the floor to
+    // the loop target at the session's first wrap (playback_resync_predictor,
+    // 2026-11-20).
     std::atomic<int64_t>  loop_wraps{0};
     int64_t               loop_wraps_seen = 0;   // main thread only
 
@@ -510,7 +531,9 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // play()'s and play_loop()'s portable half: translate the domain bounds to
 // buffer-local, clamp, publish the command packet (the window and its loop
 // target) under a fresh generation of the session word, and anchor the
-// predictor at (start, the publish instant). `loop_begin` is a DOMAIN
+// predictor at (start, the publish instant), the start its floor on every
+// window (the loop target kept beside it for the resync to lower the floor
+// to). `loop_begin` is a DOMAIN
 // coordinate like the other two, or kPlaybackNoLoop for a once-through
 // window; a looping publish REFUSES when the loop would hold fewer than two
 // frames (`loop_begin >= end - 1` after the clamps) or when `start` lies
@@ -526,6 +549,9 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
 // the render body wrapped at least once since the last call? Main thread only.
 bool   playback_consume_loop_wrap(GuiPlaybackState& state);
 
+// THE RESYNC: the anchor taken from this session's cycle stamp, the floor
+// first lowered to the loop target where that stamp stands below it (the
+// body's comment). Main thread only.
 void   playback_resync_predictor(GuiPlaybackState& state);
 bool   playback_is_playing(const GuiPlaybackState& state);
 

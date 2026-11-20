@@ -270,9 +270,11 @@
 //     (format_active_domain_time, phase_reset_propagate.h — the one body the
 //     propagate family's labeled register is built on): in source view the
 //     source time, in target view the frame's image under the live target
-//     map; MM:SS.mmm at the nearest millisecond. No " source time" / " target
-//     time" tail: the card follows the view, and the ruler beside it says
-//     which. Two runs' first members stand at least one millisecond_frames
+//     map; MM:SS.mmm at the nearest millisecond, the register's own spelling
+//     (format_timestamp). No " source time" / " target time" tail: the card
+//     follows the view, and the ruler beside it says which (the bare place
+//     and its spelling the planner's choice, 2026-11-20, to be put to him).
+//     Two runs' first members stand at least one millisecond_frames
 //     apart in source frames — 44 frames at 44.1 kHz, 0.998 ms, 48 at 48
 //     kHz, exactly one — so two places CAN spell alike at the millisecond:
 //     two first members that close can round into one millisecond (the

@@ -6838,9 +6838,10 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
     folder_overlay::set_highlight(app, highlight);
 }
 
-// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
-// press-and-lift, whose first half already highlighted it) and Enter on the
-// highlight, one body: THE ROW'S PAIR BECOMES THE ACTIVE TAB'S LIVE TRIM, THE
+// THE OPEN ACT on row `index` — the row's tap (the overlay's own
+// press-and-lift, whose first half already highlighted it), the one road to
+// it (no Enter reaches a folder-overlay row: no on-screen keyboard stands
+// under the list): THE ROW'S PAIR BECOMES THE ACTIVE TAB'S LIVE TRIM, THE
 // PRESET IS FRAMED, AND THE LIST CLOSES (architect 2026-11-19, send CC: "On
 // selecting a trim preset, the overlay should close."; the walk, DOWN / UP,
 // still moves the highlight without applying). Both bounds are written and

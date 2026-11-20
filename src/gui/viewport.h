@@ -868,9 +868,10 @@ struct Viewport {
     // one place twice) and its pre-paint scanner advance (old, then new),
     // both narrow BY NECESSITY at the frame's cadence and both inside a
     // scope that reaches paint_handler; and invalidate_standing_scanner (the
-    // one place twice), the launch's and the stop's, reaching the plate
-    // basis through plate_scanner_x_. IT SERVES THE SCANNER'S OWN EDGES
-    // ALONE — the per-frame advance, the launch's seed, the stop's teardown:
+    // one place twice), the launch's, the stop's and the console's seek's,
+    // reaching the plate basis through plate_scanner_x_. IT SERVES THE
+    // SCANNER'S OWN EDGES ALONE — the per-frame advance, the launch's seed,
+    // the stop's teardown, the seek's jump (its old place, then its new):
     // a move of the scanner's place by a move of the viewport or of the
     // plate's basis carries that mover's own full-area damage. A playhead
     // write is no caller of this: the cursor has a head, and its narrow
@@ -882,11 +883,13 @@ struct Viewport {
     // last paint drew it at (the seed's place right after a launch's seed) —
     // and, with the hook unwired, the whole waveform area (the tow's and the
     // ruler head's drag's fallback shape). PRECONDITION: the scanner is
-    // active; the caller checks (scanner_exact_x's contract). TWO CALLERS,
-    // GuiPlaybackLifecycle's two discrete scanner edges: the stop body's
-    // teardown (the place before the bit clears) and the launch body's
-    // success tail (a scanner still standing before the seed, then the
-    // seeded place after the camera).
+    // active; the caller checks (scanner_exact_x's contract). THREE
+    // CALLERS (re-counted by grep 2026-11-20), GuiPlaybackLifecycle's three
+    // discrete scanner edges: the stop body's teardown (the place before the
+    // bit clears), the launch body's success tail (a scanner still standing
+    // before the seed, then the seeded place after the camera) and THE
+    // CONSOLE'S SEEK, seek_live_session_by (architect 2026-11-20: the place
+    // the last paint drew before the publish, then the seeded target).
     void invalidate_standing_scanner();
     // (There is no stem-column invalidator in this struct, and since row 5 no
     // selection-driven stem damage either. invalidate_stem_column computed the

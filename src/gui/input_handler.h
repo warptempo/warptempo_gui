@@ -2894,8 +2894,8 @@ private:
     //   the preset's name alone (2026-10-28 night, his glass on 54e62064). It writes the trim —
     //   band, legal on a locked tab and under grid iterations (bare `t` on
     //   the read-only allowlist, which the iteration gate inherits) — and its
-    //   own file, never the piece; the `h` view refuses `t`. A row's tap and
-    //   Enter APPLY AND CLOSE THE LIST (architect 2026-11-19, send CC: "On
+    //   own file, never the piece; the `h` view refuses `t`. A row's tap
+    //   APPLIES AND CLOSES THE LIST (architect 2026-11-19, send CC: "On
     //   selecting a trim preset, the overlay should close."), the highlight
     //   pair walks without applying, and THE PLAYER'S SHAPE holds for the
     //   controls row (his word: "we would be breaking symmetry if we did it
@@ -2913,8 +2913,9 @@ private:
     //     build_trim_presets_rows: the rows from the overlay's presets,
     //       rebuilt whole, the highlight seated on `highlight` (clamped into
     //       the listing) — the open's and every act's re-list.
-    //     trim_presets_apply: THE OPEN ACT on row `index` — a tap, a click
-    //       or Enter: its pair written as BOTH bounds of the active tab's
+    //     trim_presets_apply: THE OPEN ACT on row `index` — the row's tap
+    //       (its press-and-lift), the one road to it: its pair written as
+    //       BOTH bounds of the active tab's
     //       LIVE trim and the trim family's one commit tail run once
     //       (commit_trim_mutation — the crossed/equal reset, the waveform's
     //       damage, the preview trigger, TRIM put out; the playhead

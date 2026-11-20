@@ -6696,7 +6696,7 @@ struct AppState {
     // TWO LAMPS, the one owner of every number and reason): WHAT EACH LAMP
     // SHOWS — STATE THE TICK WROTE, never a paint derivation
     // (refresh_logo_lamps, main.cpp, the ONE WRITER of the bits, the stamps
-    // and the seen count, the span's cursor aside, which two resets also
+    // and the seen count, the span's cursor aside, which three resets also
     // void (limiter_lamp_prev_frame, below): on every tick, ahead of the
     // tick's early returns, as the legend's refresh is) — each lamp LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD
     // (the `lamp_hold_ms` tuning key, architect 2026-11-05 night, session
@@ -6741,9 +6741,12 @@ struct AppState {
     //                          body (stop_playback_if_playing, which a
     //                          stop-then-launch in one act such as the main
     //                          view's scrub click passes with no tick
-    //                          between) and the render player's live reseek
+    //                          between), the render player's live reseek
     //                          (GuiRenderPlayer::seek_to, a jump with no
-    //                          stop), so a jump is never a span (architect
+    //                          stop) and THE CONSOLE'S SEEK
+    //                          (GuiPlaybackLifecycle::seek_live_session_by,
+    //                          architect 2026-11-20, a jump with no stop),
+    //                          so a jump is never a span (architect
     //                          2026-11-06, session 73).
     //   clip_lamp_struck       THE DEAD-STREAM STRIKE (architect 2026-11-05
     //                          night, session 49; render.h's THE TWO LAMPS'
@@ -12671,22 +12674,24 @@ bool zoom_to_start_would_move(const AppState& a, const GuiAudio& audio,
 //  - NARROW ON PLATE, for the sites that run at a frame's or a motion's
 //    cadence, where a full repaint makes every frame a whole one, and for
 //    the scanner's own discrete edges, each reaching a GuiPaintHandler's
-//    plate places directly or through a Viewport hook. SIX SITES
-//    (re-derived by grep 2026-11-16, send Q, over the three narrow entries'
+//    plate places directly or through a Viewport hook. SEVEN SITES
+//    (re-derived by grep 2026-11-20 over the three narrow entries'
 //    callers): the two per-frame SCANNER sites in main.cpp — the tick
 //    heartbeat and the pre-paint advance (the fading line's per-tick step of
 //    2026-11-04 went with the fade that night: the resting line is one
-//    static tone and owes the tick nothing); THE SCANNER'S TWO DISCRETE
+//    static tone and owes the tick nothing); THE SCANNER'S THREE DISCRETE
 //    EDGES (architect 2026-11-16, send Q: "number 3, narrowing agree"), THE
-//    STOP TEARDOWN (stop_playback_if_playing) and THE LAUNCH
+//    STOP TEARDOWN (stop_playback_if_playing), THE LAUNCH
 //    (launch_playback_window, the one launch body every launch ends in — the
-//    view-end entry, the bounded audition and the car's play alike), through
+//    view-end entry, the bounded audition and the car's play alike) and THE
+//    CONSOLE'S SEEK (seek_live_session_by, architect 2026-11-20: a new
+//    publish over the live session, its old place then its new), through
 //    Viewport::invalidate_standing_scanner; and THE TWO CURSOR WRITES THAT
 //    RIDE A GESTURE'S EVERY MOTION (architect 2026-11-16, the beats): THE
 //    MARKER DRAG'S TOW (Viewport::tow_playhead_to) and THE RULER HEAD'S DRAG
 //    (Viewport::drag_playhead_to, the movement owner's act with the reseat's
 //    no-scroll branch narrowed). The per-frame scanner sites pass
-//    plate_viewport_basis() through the explicit-basis overloads and the two
+//    plate_viewport_basis() through the explicit-basis overloads and the three
 //    edges reach the same expression through a hook wired beside the paint
 //    handler (Viewport::plate_scanner_x_), and THEIR RECT IS THE SCANNER'S
 //    OWN (architect 2026-11-16, the beats; scanner_invalidate_rect, main.cpp,

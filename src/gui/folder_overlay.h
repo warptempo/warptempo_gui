@@ -181,19 +181,21 @@
 // it commits the row's value to the listed key and returns to the settings
 // page (value_list_commit, 2026-10-25, four keys more 2026-10-28 night, a
 // sixth 2026-10-31; the
-// return 2026-10-28 night); under the TRIM PRESETS LIST it applies the row's
-// preset to the active tab's trim, frames it and closes the list
-// (trim_presets_apply, 2026-10-28 night; the close architect 2026-11-19,
-// send CC: "On selecting a trim preset, the overlay should close."); under
+// return 2026-10-28 night); under the TRIM PRESETS LIST the row's tap
+// applies the row's preset to the active tab's trim, frames it and closes
+// the list (trim_presets_apply, 2026-10-28 night; the close architect
+// 2026-11-19, send CC: "On selecting a trim preset, the overlay should
+// close."); under
 // the BPM FORM it opens the line editor prefilled
 // on the row's line, the form closing until the editor's return
 // (bpm_form_commit, 2026-10-29). AN
 // INERT ROW HAS NO OPEN and no
 // highlight: its motionless lift is a consumed nothing
-// (finish_folder_overlay_release asks row_is_inert). Enter on the highlight is
-// the keyboard's own click and reaches the same fork, which is at
-// the press router and the key routers, never here — the panel knows rows,
-// not projects.
+// (finish_folder_overlay_release asks row_is_inert). THE ROW'S TAP (its
+// press-and-lift) IS THE ONE ROAD TO THE OPEN ACT: no Enter reaches a row,
+// no on-screen keyboard standing under a list. The fork is at the press
+// router (GuiInputHandler::folder_overlay_open_row, its one caller the
+// row's release), never here — the panel knows rows, not projects.
 
 // THIS HEADER DELIBERATELY DOES NOT INCLUDE onscreen_keyboard.h, and the
 // dependency runs the other way (that header includes this one, for the
