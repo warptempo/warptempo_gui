@@ -239,9 +239,17 @@
 //
 // THE TRIM BAR'S TWO TONES (render_trim_flags): `trim_bar_face`, the trough, is Live's
 // ScrollbarInnerTrack over the ground (architect 2026-11-17, session 140);
-// `trim_span_face`, the pill, is Live's ScrollbarInnerHandle over Desktop,
-// the ruler's ticks Live's DetailViewRulerMarkings over the ruler face, on
-// every theme (architect 2026-11-07, session 82; theme_roles.h's head).
+// `trim_span_face`, the pill at rest, is Live's ScrollbarInnerHandle over
+// Desktop, the ruler's ticks Live's DetailViewRulerMarkings over the ruler
+// face, on every theme (architect 2026-11-07, session 82; theme_roles.h's
+// head). ITS STATES' TONES (architect 2026-11-20, send CC; the one table at
+// render.h's trim_bar_tones): the part under the hovering pen — the pill's
+// body or an end's cap — `trim_span_hover_face` (our ScrollbarSliderHover
+// over Desktop, Thunar's slider under the pointer), the part the bar's own
+// press holds and a TRIM sweep's pill `selected_fill` (Arc's slider:active),
+// and every cap neither hovered nor held `text` (his "the default text";
+// the caps, Kdenlive's and ours, have no tone of Arc's). No fade: they
+// change at once.
 //
 // THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
 // selection): a flat bar in `selection_fill`, Default's 637E86

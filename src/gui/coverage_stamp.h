@@ -131,8 +131,11 @@ inline double coverage_of_triangle(int px, int py, double ax, double ay,
 // coverage): the rect [x0, x1] x [y0, y1] with
 // real edges whose LEFT two corners are quarter disks of radius `rl` and
 // whose RIGHT two are quarter disks of radius `rr` — a radius of 0 a square
-// corner, each radius at most half the rect's width and half its height (the
-// caller's clamp), so no two corners' cut-outs meet. THE ANSWER IS THE EXACT
+// corner, each radius at most half the rect's height and the two together
+// at most its width (the caller's clamp: the pill's two equal radii at most
+// half its width; the trim bar's cap, send CC 2026-11-20, one side's radius
+// up to the whole width and the other side square), so no two corners'
+// cut-outs meet. THE ANSWER IS THE EXACT
 // AREA of the pixel (px, py) inside it, in [0, 1]: the rect's coverage
 // (coverage_of_rect) less, at every rounded corner whose square the pixel
 // meets, the part of the pixel in the corner's square and outside its

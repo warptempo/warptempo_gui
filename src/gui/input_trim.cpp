@@ -784,9 +784,10 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
     // 2026-07-30), and the deselect then rests (nothing restores it — pointer
     // gestures have no cancel). A press that never moves commits no bound change
     // and is a consumed nothing.
-    // (No damage for the pill's drag look here: it has stood since the
-    // PRESS, arm_pending_trim_drag's, and the crossing changes nothing about
-    // it; commit_trim_drag damages its end.)
+    // (No damage for the bar's held look here: it has stood since the
+    // PRESS, arm_pending_trim_drag's — the part held, its cap or the body,
+    // trim_bar_look — and the crossing changes nothing about it;
+    // commit_trim_drag damages its end.)
 }
 
 void GuiInputHandler::update_trim_drag(double mouse_x) {
@@ -1111,34 +1112,42 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // the panel's whole width (waveform_area x 0, edge to edge), so the
     // glass ends at the strip's right edge and the end's towed place reaches
     // the frame there only from a grab left of the end's own place (g < 0).
-    // An end zone ends one px right of its bound (trim_endcap_rect), so a
-    // grab anywhere in it but its last px carries g < 0 and the pen reaches
-    // that frame on the glass's last px or before; a begin zone starts on
-    // its bound, so g >= 0 and the pen reaches frame 0 inside the strip (in
-    // a mapped domain g is measured off the bound's unrounded image, which
-    // stands within half a displayed frame, 1/40 px at most, of the painted
-    // place the zone stands on, so each figure moves by that much).
-    // A NARROW WINDOW'S END ZONE stands edge to edge right of the begin's
-    // (trim_endcap_rect's rule), its right edge up to two zones' width (40
-    // device px on the tablet) right of the begin's place, so it stands
-    // partly or wholly right of the end's own place — a grab there carries
-    // g > 0 and cannot tow the end to the strip edge's frame — and near the
-    // strip's right edge the lane cuts it to its visible stretch; once the
-    // begin stands within one zone of that edge the zone is wholly past it
-    // and the end has no zone at all (render_trim_flags publishes none). THE
-    // RULE'S
-    // CONSEQUENCE, accepted: in Source view at the whole-song zoom of a
-    // 1,801,603-frame piece (q = 782), a window [1,790,000, 1,801,602]
-    // stands at x 2289.00 .. 2303.84 (the end's grab place held on 2303),
-    // its end zone 2309.00 .. 2329.00, off the glass whole, and a press on
-    // the pill lands in the begin's zone; such an end is reached by zooming
-    // in until the window is two zones wide, when its zone stands on the
-    // end's own place again, or by the begin's stroke first, widening the
-    // window from the left. THE
+    // EACH ZONE REACHES 2 W PAST ITS BOUND AND 12 W INTO THE SPAN
+    // (trim_endcap_rect; render.h's THE TRIM BAR'S CAPS AND GRABS, architect
+    // 2026-11-20, send CC: 4 and 24 device px on the tablet), and g is the
+    // press less the bound's PLACE — a begin's place is its bound, an end's
+    // place its column's left edge and its bound that column's right edge,
+    // one px on. AN END's zone is [place + 1 − 24, place + 1 + 4), so g runs
+    // from −23 to under 5 px: a grab left of the end's own column (g < 0)
+    // reaches the strip edge's frame with the pen on the glass's last px or
+    // before; a grab on that column (0 <= g < 1) or in the zone's outside
+    // reach (1 <= g < 5) leaves the end g short of it at the glass's edge,
+    // the pen lifting and grabbing again further in — the outside reach's
+    // one cost, accepted with it (ruled 2026-11-20). A BEGIN's zone is
+    // [place − 4, place + 24), g from −4 to under 24 px: a grab in its inside
+    // reach (g >= 0) reaches the frame at x = 0 with the pen inside the
+    // strip; one in its outside reach (−4 <= g < 0) leaves the begin |g|
+    // short of it at the glass's left edge, the mirror. NEITHER GRAB JUMPS
+    // THE BOUND, whatever g's sign, in either view: the mapped arm's towed
+    // place at zero travel is the bound's own image (g measured off the
+    // bound's unrounded image, within half a displayed frame, 1/40 px at
+    // most, of the painted place the zone stands on, so each figure above
+    // moves by that much), and the unmapped arm moves the bound by the
+    // pen's displacement from the press, not to it.
+    // A NARROW WINDOW'S ZONES SPLIT AT THE MIDPOINT BETWEEN ITS BOUNDS
+    // (trim_endcap_rect's rule, 2026-11-20), so each end keeps a zone on its
+    // own place whatever the window's width, its outside reach included,
+    // and near the strip's right edge the lane cuts the end's to its visible
+    // stretch: in Source view at the whole-song zoom of a 1,801,603-frame
+    // piece (q = 782), a window [1,790,000, 1,801,602] stands at
+    // x 2289.00 .. 2303.84 (the end's grab place held on 2303, its bound
+    // 2304), the begin's zone 2285.00 .. 2296.50 and the end's 2296.50 ..
+    // 2304.00 on the glass (2308.00 before the lane's cut). THE
     // GRAB CAN BEGIN ON A BOUND JUST OFF SCREEN (architect 2026-10-05): a
-    // button sliding off an edge is grabbed by its visible columns
+    // zone sliding off an edge is grabbed by its visible columns
     // (hit_test_trim_endcap tests what the painter published), its bound up
-    // to a button's width past that edge — so the clamp's edge on that side
+    // to the zone's inside reach, 12 W, past that edge — so the clamp's
+    // edge on that side
     // widens to the bound's own resting frame, the drag never pushing it
     // farther off than it began and never pulling it in by a jump at the
     // first motion. The bounds are active-domain while
@@ -1263,8 +1272,9 @@ void GuiInputHandler::commit_trim_drag() {
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }
-    // The pill returns to its rest look (arm_pending_trim_drag's damage, the
-    // other edge; trim_span_dragging, app_state.h).
+    // The bar returns to its rest look, the held part's tone and the caps
+    // gone (arm_pending_trim_drag's damage, the other edge; trim_bar_look,
+    // app_state.h).
     viewport.invalidate_rect(top_trim_row_area(app));
     app.trim_drag = TrimDragState{};
 }
@@ -1563,9 +1573,11 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
 // internal returns this function once carried had already been deleted in
 // 2026-08-02 as unreachable; nothing replaced them, and nothing should.
 // The two arms:
-//   CAP HIT: a press on a painted arrow button, the button's own rect and no
-//     tolerance (hit_test_trim_endcap, itself y-gated to the trim bar lane),
-//     arms that bound's single drag.
+//   CAP HIT: a press in an end's zone — its drawn cap and 4 W of air either
+//     side, from 2 W outside the bound to 12 W inside it (render.h's THE
+//     TRIM BAR'S CAPS AND GRABS, architect 2026-11-20, send CC), the zone as
+//     published and no tolerance (hit_test_trim_endcap, itself y-gated to the
+//     trim bar lane) — arms that bound's single drag.
 //   BRIDGE: else, a press on the bar's inter-cap span (point_in_trim_bridge_span,
 //     app_state.h — the shared owner, which reads the painted lane's y-gate and
 //     the painted bridge interval, already clipped to the painter's
@@ -1631,9 +1643,11 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     app.pending_trim_drag.both     = both;
     app.pending_trim_drag.press_x  = press_x;
     app.pending_trim_drag.press_y  = press_y;
-    // THE PILL TAKES ITS DRAG LOOK AT THE PRESS (architect 2026-11-17,
-    // session 140, ruling 4: Arc's slider:active, `selected_fill`;
-    // trim_span_dragging, app_state.h): every arm — an end's grab or the
+    // THE BAR TAKES ITS HELD LOOK AT THE PRESS (architect 2026-11-17,
+    // session 140, ruling 4: Arc's slider:active, `selected_fill`; since
+    // 2026-11-20, send CC, on the part held — the body, or that end's cap
+    // with both caps showing: trim_bar_look, app_state.h, and render.h's
+    // trim_bar_tones): every arm — an end's grab or the
     // body — damages the lane now, and the look stands through the crossing
     // into the drag until the gesture's end damages it again —
     // commit_trim_drag for a drag, disarm_pending_trim_drag for a press that
@@ -1649,9 +1663,10 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
 
 // THE PENDING'S END WITHOUT A CROSSING — the lift, the lost button (the touch
 // layer's hard end included) and the force-end finalizer, each of which
-// commits nothing: disarm, and return the pill to its rest look (the other
-// edge of arm_pending_trim_drag's damage). The crossing does not come here:
-// it hands the arm to begin_trim_drag, and the drag look stands.
+// commits nothing: disarm, and return the bar to its rest look, the held
+// part's tone and the caps gone (the other edge of arm_pending_trim_drag's
+// damage). The crossing does not come here: it hands the arm to
+// begin_trim_drag, and the held look stands.
 void GuiInputHandler::disarm_pending_trim_drag() {
     if (app.pending_trim_drag.active)
         viewport.invalidate_rect(top_trim_row_area(app));

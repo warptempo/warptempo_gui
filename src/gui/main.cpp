@@ -88,7 +88,8 @@ namespace {
 // No pointer grab tolerance survives (the marker stems' grab constant died
 // with their pointer surface, 2026-08-12, and the trim endcaps' when the caps
 // became their painted arrow buttons, 2026-10-03 — the view bar's end zones
-// since 2026-10-09, view_bar_grab_w_px in render.h), so nothing of that
+// since 2026-10-09, each its drawn cap and the air round it since
+// 2026-11-20, render.h's THE TRIM BAR'S CAPS AND GRABS), so nothing of that
 // family is file-local here.
 
 // Samples-per-pixel is a continuous function of the zoom level (a real-valued
@@ -2579,7 +2580,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // POINTER LEAVE'S THREE FIRES): its fade-out runs a millisecond,
         // under one painted level, before the DOWN's press arm drops the
         // fade and paints the accent (GuiInputHandler::drop_hover_face) —
-        // nothing darkens for a frame and nothing restarts.
+        // nothing darkens for a frame and nothing restarts. THE TRIM BAR'S
+        // HOVERED PART goes with it, at once and with its caps (the walk
+        // rides this one, walk_trim_bar_hover; its frozen answer too, the
+        // pointer being out), one lane damage where a part stood.
         input_handler.walk_hover_face();
         // AND THE PEN'S HOT-FACE LATCH (GuiInputHandler::pen_hot_latch_, the
         // hold on every hover face after a lift): every leave clears it, the

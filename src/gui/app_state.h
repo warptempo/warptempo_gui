@@ -7129,7 +7129,11 @@ struct AppState {
     // its first half alone ahead of every frame, settle_hover_faces) and
     // THE PRESS'S CLAIM (drop_hover_face). THE LOOK
     // is materials.h's THE HOVER; THE FACES THAT HOVER are enumerated once,
-    // at the pen latch's inventory (GuiInputHandler::pen_hot_latch_).
+    // at the pen latch's inventory (GuiInputHandler::pen_hot_latch_). THE
+    // TRIM BAR HOVERS TOO BUT IS NONE OF THESE FACES: it does not fade, so
+    // its state is one value of its own beside this struct
+    // (AppState::TrimBarHover, below), walked inside this walk and under
+    // this gate's main-page form.
     //
     // ONE POINTER, ONE HOVERED FACE: `hovered` is the face the pen is on, or
     // none — across the roster's keys (both icon rows), the dialog stash's
@@ -7280,6 +7284,48 @@ struct AppState {
         }
     };
     HoverFaces hover_faces;
+
+    // THE TRIM BAR'S HOVER — THE PART OF THE BAR THE HOVERING PEN IS OVER
+    // (architect 2026-11-19 / 2026-11-20, send CC: "The end caps would appear
+    // when hovering the body ... when you're hovering the end caps, the body
+    // loses the hover"; the look and the one table at render.h's
+    // trim_bar_tones). NOT ONE OF HoverFaces' FACES: the bar does not fade
+    // (Arc's `scrollbar slider` carries no transition), so it needs no
+    // clock, no mix and no list — its state is this one value, beside the
+    // faces' and under the same gate. Its bodies are GuiInputHandler's
+    // (input_pointer.cpp): THE WALK, walk_trim_bar_hover — run inside
+    // walk_hover_face, so it has the faces' four callers (on_motion's head,
+    // the tick, the pen latch's arm, the pointer-leave hook) — and its
+    // settle beside settle_hover_faces, ahead of every frame.
+    //   `part` the part under the pen as the press reads it (an end's grab
+    //     zone or the bridge, TrimBarHit), under the gate
+    //     hover_admitted_on_main_page — the pen in the plane, no contact, the
+    //     pen latch not holding, no modal, no overlay, no card there, audio
+    //     loaded and no load running, no live drag — the faces' theme term
+    //     (none on a Live theme) and the bar's own terms, only where a press
+    //     there would arm a grab (trim_bar_takes_grab): the stash published,
+    //     not in the `h` view, whose bar takes only the framing long press,
+    //     not with the barrel held, whose press there is the bound-set click.
+    //     EVERY CHANGE DAMAGES THE TRIM LANE, once (set_trim_bar_hover;
+    //     trim_bar_look's head).
+    //   `lifted` THE PART THE BAR'S OWN GRAB HELD AT ITS LIFT, cleared by
+    //     every release at its head and written by the release that ends a
+    //     grab (on_button_release's trim arms; not the long press's lift,
+    //     which reframes the view and returns above them), read once by the
+    //     pen latch's arm (arm_pen_hot_latch), which installs it as `part`
+    //     where the frozen answer's terms hold (trim_bar_frozen_part_kept)
+    //     and clears it, and cleared by every pointer leave
+    //     (clear_pen_hot_latch): WHILE THE LATCH HOLDS THE BAR'S ANSWER IS
+    //     FROZEN — after the bar's own drag or tap lifts, the part that was
+    //     held reads as hovered until the pen rearms or leaves, so the caps
+    //     do not blink at the lift; after any other lift nothing on the bar
+    //     lights until the rearm (input_handler.h's pen latch inventory). A
+    //     finger's lift never arms the latch, and its leave clears `lifted`.
+    struct TrimBarHover {
+        TrimBarPart part   = TrimBarPart::None;
+        TrimBarPart lifted = TrimBarPart::None;
+    };
+    TrimBarHover trim_bar_hover;
 
     // THE HOVER TOOLTIP — THE WHOLE OF ITS STATE, AND THE MODEL'S ONE STATEMENT.
     // THE MODEL IS ALWAYS-SHOW (architect 2026-11-07, session 87, replacing
@@ -19810,24 +19856,51 @@ SweepHighlightChange sweep_highlight_change(
     const AppState& app, const SweepHighlightColumns& before,
     const SweepHighlightColumns& after);
 
-// A DRAG IS MOVING THE TRIM SPAN — the trim bar's pill wears
-// `selected_fill` (render_trim_flags; architect 2026-11-17, session 140,
-// ruling 4: Arc's slider:active, "ruled: both"): THE TRIM BAR'S OWN DRAGS,
-// either end's grab or the body, from the press that arms them
-// (pending_trim_drag, its crossing handing over to trim_drag) to the lift,
-// and A TRIM SWEEP from its first accepted write (region_drag.wrote_trim,
-// the TRIM former alone) to the lift. Read off those records, no flag of
-// its own. EVERY EDGE OF IT DAMAGES THE TRIM LANE (top_trim_row_area): the
-// arm and the pending's disarm (arm_pending_trim_drag /
+// THE TRIM BAR'S LOOK — what its painter reads (render_trim_flags; the one
+// table at render.h's trim_bar_tones; architect 2026-11-19 / 2026-11-20,
+// send CC): `held` the part the bar's own press holds — the pair's body
+// for the bridge's arm, else the end it took (pending_trim_drag before the
+// crossing, trim_drag after it, `both` / `is_begin` the same in either),
+// from the press that arms it to the lift, a pen or a finger alike —
+// `swept` A TRIM SWEEP from its first accepted write (region_drag.wrote_trim,
+// the TRIM former alone) to the lift — the two roads that move the span,
+// which wear Arc's slider:active (architect 2026-11-17, session 140, ruling
+// 4, "ruled: both") — and `hovered` the part under the hovering pen
+// (AppState::TrimBarHover). The barrel's bound-set press is a click until
+// its crossing, which arms the pending, so a barrel click lights nothing.
+// Read off those records, no flag of its own. EVERY EDGE OF IT DAMAGES THE
+// TRIM LANE (top_trim_row_area), ONE LANE DAMAGE AN EDGE: the held edges —
+// the arm and the pending's disarm (arm_pending_trim_drag /
 // disarm_pending_trim_drag), the drag's commit (commit_trim_drag), the
-// crossing's refused begin, the sweep's first accepted write (its every
-// write damages the lane) and its commit (commit_region_sweep). The
-// barrel's bound-set press is a click until its crossing, which arms the
-// pending, so a barrel click lights nothing.
-inline bool trim_span_dragging(const AppState& app) {
-    return app.pending_trim_drag.active || app.trim_drag.active ||
-           (app.region_drag.active && !app.region_drag.select &&
-            app.region_drag.wrote_trim);
+// crossing's refused begin — the sweep's first accepted write (its every
+// write damages the lane) and its commit (commit_region_sweep), and THE
+// HOVER'S EDGES, every change of the hovered part (set_trim_bar_hover: the
+// pen's arrival over the bar, its move between the body and an end, its
+// leave, the plane's exit, the latch's arm installing the lifted part and
+// the latch's clear re-walking); nothing at rest, nothing while the pen
+// rests in one part. THE COST OF ONE: the lane's rect, 28 device rows
+// across the panel on the tablet, redrawn by on_redraw under that clip —
+// render_background's erase, paint_trim (the lane's ground and lines, the
+// trough, the pill and the caps, and the hit stash republished, the clip
+// covering the lane), the other top-strip passes finding nothing of theirs
+// inside it — and that rect uploaded to the chrome texture; the GPU draws
+// every frame whole either way (THE WHOLE DRAW, gl_canvas.cpp).
+inline TrimBarLook trim_bar_look(const AppState& app) {
+    TrimBarLook look;
+    const bool pending = app.pending_trim_drag.active;
+    if (pending || app.trim_drag.active) {
+        const bool both = pending ? app.pending_trim_drag.both
+                                  : app.trim_drag.both;
+        const bool is_begin = pending ? app.pending_trim_drag.is_begin
+                                      : app.trim_drag.is_begin;
+        look.held = both       ? TrimBarPart::Body
+                    : is_begin ? TrimBarPart::Begin
+                               : TrimBarPart::End;
+    }
+    look.swept = app.region_drag.active && !app.region_drag.select &&
+                 app.region_drag.wrote_trim;
+    look.hovered = app.trim_bar_hover.part;
+    return look;
 }
 
 // Promoted from a lambda in main(). Eligible iff the warp marker at `idx` has

@@ -45,7 +45,7 @@ struct GuiThemeTones {
     uint32_t lane_face;           // the marker lane (Desktop)
     uint32_t trim_bar_face;       // the trim bar's trough, the 12-W lane under the pill (ScrollbarInnerTrack over the ground)
     uint32_t trim_span_face;      // the trim bar's pill at rest, the span (ScrollbarInnerHandle over Desktop)
-    uint32_t trim_span_hover_face; // the pill under the hovering pen (ScrollbarSliderHover, our own role, over Desktop; arc_dark 676B78, Thunar's slider under the pointer; a Live theme's ScrollbarInnerHandle); no painter reads it yet (send CC's trim bar package)
+    uint32_t trim_span_hover_face; // the pill under the hovering pen (ScrollbarSliderHover, our own role, over Desktop; arc_dark 676B78, Thunar's slider under the pointer; a Live theme's ScrollbarInnerHandle): the trim bar's hovered part, the pill's body or an end's cap (render.h's trim_bar_tones, send CC 2026-11-20)
     uint32_t well_border;         // THE WELL'S LINES: its one-W lines across the panel (under the top icon row, the trough, the ruler, the marker lane, the well's foot), the stereo divider and the status bar's line (ClipBorder over the ground)
     uint32_t selection_fill;      // the selection pair's bar: the lists' lit row, the editors' selected substring; `selected_fill` (StandbySelectionBackground)
     uint32_t selection_text;      // the selection pair's text; `selected_text` (StandbySelectionForeground, the bar's own partner)

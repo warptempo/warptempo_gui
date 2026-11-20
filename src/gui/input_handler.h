@@ -1498,20 +1498,60 @@ struct GuiInputHandler {
     // hover_admitted_on_main_page).
     bool hover_admitted() const;
     // THE SAME GATE FOR A TARGET OF THE MAIN PAGE'S WELL at the pointer's
-    // place (the trim bar's pill, send CC's next package, is its first
-    // asker): hover_admitted, AND NO VEIL OVER THE WELL — no modal (a
-    // question, a dialog editor, the progress dialog, a lane editor:
-    // nothing behind one is pressable) and no overlay (its box covers the
-    // lanes) — AND NO CARD OVER THE PLACE (a card is opaque to the
-    // pointer). The asker adds its own hit and its own look; it needs no
-    // second gate.
+    // place (the trim bar, walk_trim_bar_hover below, its one asker):
+    // hover_admitted AND main_page_takes_press_at_pointer — the main page's
+    // own refusals of a press at that place, the ones the press router
+    // (on_button_press) meets before any well target's claim. The asker adds
+    // the terms that are its target's alone (the bar's: its stash, the `h`
+    // view's claim, the barrel), its own hit and its own look.
     bool hover_admitted_on_main_page() const;
+    // THE MAIN PAGE'S REFUSALS OF A PRESS AT THE POINTER'S PLACE, each one
+    // the press router (on_button_press) meets before any well target's
+    // claim (C6 of package 6's review, 2026-11-20): A VEIL — a modal (a question, a
+    // dialog editor, the progress dialog, a lane editor: nothing behind one
+    // is pressable) or an overlay (its box covers the lanes); A CARD over
+    // the place (a card is opaque to the pointer); NO AUDIO, or a load
+    // running (the router's `app.loading || audio.total_frames() <= 0`);
+    // A LIVE DRAG (the marker drag, the trim drag, a region gesture — the
+    // router's "a second press during a drag is ignored"). The gate's
+    // second half, and by itself what the trim bar's frozen answer under the
+    // pen latch re-asks (walk_trim_bar_hover): the latch freezes the
+    // pointer's place, never these.
+    bool main_page_takes_press_at_pointer() const;
+    // THE TRIM BAR'S HOVER (AppState::TrimBarHover, the rule; the look at
+    // render.h's trim_bar_tones; architect 2026-11-20, send CC). THE WALK —
+    // under the theme's term (the faces' own, walk_hover_face: a theme whose
+    // keys show no hover shows none on the bar either, the held states'
+    // caps unchanged) and trim_bar_takes_grab, the part under the pen under
+    // hover_admitted_on_main_page; WHILE THE PEN LATCH HOLDS, the part
+    // already standing (the lifted part the latch's arm installed, or none)
+    // while trim_bar_frozen_part_kept answers — run inside walk_hover_face,
+    // so on every motion, tick, latch arm and leave. THE SETTLE — a standing
+    // part no press there would grab any more (a veil, the `h` view, a cold
+    // stash, a drag gone live) goes at once, ahead of every frame
+    // (settle_hover_faces runs it). THE ONE SETTER, which damages the trim
+    // lane on a change. "WOULD A PRESS HERE ARM A GRAB?" past the main
+    // page's refusals: the stash published, NOT THE `h` VIEW (its router
+    // takes only the framing long press on the bar), and NOT THE BARREL
+    // (pointer_barrel_held_: a barrel press on the bar is the bound-set
+    // click, another act than the grab the hover promises). The frozen
+    // answer's terms: the pen in the plane with no contact, the main page
+    // taking a press there, the theme's term and the bar's own — the
+    // pointer's half less the latch. The part under the pointer by the
+    // press's own two hits (hit_test_trim_endcap, point_in_trim_bridge_span).
+    void walk_trim_bar_hover();
+    void settle_trim_bar_hover();
+    void set_trim_bar_hover(TrimBarPart part);
+    bool trim_bar_takes_grab() const;
+    bool trim_bar_frozen_part_kept() const;
+    TrimBarPart trim_bar_part_under_pointer() const;
     // THE WALK: the face the pen is on now, under both halves of the gate
     // and the theme's term, handed to the one setter. Run on every pointer
     // motion (on_motion's head, above every branch: a held button answers
     // none), on every tick (the stashes move with no pointer event), at the
     // pen latch's arm and at every pointer leave (main.cpp's hook: none, so
-    // the face fades out).
+    // the face fades out). The trim bar's walk rides it, after the faces',
+    // on the same theme term (walk_trim_bar_hover).
     void walk_hover_face();
     // THE CLOCK, on the run loop's tick (main.cpp, beside tick_tooltip):
     // the walk, then settle_hover_faces, then every fade stepped to now —
@@ -3226,7 +3266,8 @@ private:
     // as I lift it blinks bright, then goes back to being dark, sunken").
     // While this latch stands — THE ONE PREDICATE, pen_hot_latch_holds(),
     // read by the hover's one gate (hover_admitted) — EVERY FACE ANSWERS NO
-    // HOVER: the key the pen tapped reads its resting or lit face AT ONCE,
+    // HOVER (the trim bar's frozen answer the one exception, the inventory
+    // below): the key the pen tapped reads its resting or lit face AT ONCE,
     // the new state right after the tap (architect 2026-10-07: "withholding
     // the color change until the pen moves away makes it too slow"), and
     // nothing else lights, until the pen has moved the rearm distance from
@@ -3247,8 +3288,29 @@ private:
     //     the progress dialog's Cancel);
     //   * THE ON-SCREEN KEYBOARD'S KEYS;
     //   * THE SCRUB'S KNOB, the render player's and the score viewer's.
-    //   THE TRIM BAR'S PILL hovers too, by its own walk and look on the same
-    //   gate (hover_admitted_on_main_page), with no fade.
+    //   THE TRIM BAR hovers too, NOT ONE OF THESE FADING FACES: its own
+    //   walk and its own one-value state (walk_trim_bar_hover, run inside
+    //   walk_hover_face; AppState::TrimBarHover; architect 2026-11-20, send
+    //   CC), on the main page's form of the same gate
+    //   (hover_admitted_on_main_page) plus the bar's own terms (its stash,
+    //   not the `h` view, not the barrel) and the faces' theme term, AT
+    //   ONCE, WITH NO FADE (Arc's scrollbar slider has no transition): the
+    //   part under the pen — an end's grab zone or the body between them —
+    //   and both caps change (render.h's trim_bar_tones: the hovered body
+    //   `trim_span_hover_face` under two caps in the text tone, a hovered
+    //   end's cap that tone and the other cap the text tone). UNDER THIS
+    //   LATCH ITS ANSWER IS FROZEN rather than none — the one exception to
+    //   "every face answers no hover": the arm installs the part the bar's
+    //   own press held at this lift (AppState::TrimBarHover's `lifted`,
+    //   written by the lift's release) — an end: that cap the hover tone,
+    //   the other cap the text tone; the body: the body the hover tone, both
+    //   caps the text tone — or none after any other lift, the bar's long
+    //   press (whose lift reframes the view) among them, and the walk keeps
+    //   that answer, never re-reading the pen's place, while
+    //   trim_bar_frozen_part_kept holds (the pen in the plane with no
+    //   contact, no veil or card there, audio and no live drag, the theme
+    //   and the bar's own terms), until the pen rearms or leaves; so the
+    //   caps do not blink at the lift.
     //   NOTHING ELSE LIGHTS BY HOVER: a list row has no hover face
     //   (folder_overlay.h), nor an entry (NOISE's and its level line, a
     //   dialog editor's field), the title bar's two lamps, a cue or a chip
@@ -3319,8 +3381,18 @@ private:
     };
     PenHotLatch pen_hot_latch_;
     // THE ONE PREDICATE (the rule above; its reader the hover's gate,
-    // hover_admitted): the pen has lifted and not yet rearmed.
+    // hover_admitted, and the trim bar's walk, whose answer it freezes):
+    // the pen has lifted and not yet rearmed.
     bool pen_hot_latch_holds() const { return pen_hot_latch_.armed; }
+    // THE BARREL AS THE LAST POINTER MOTION DELIVERED IT (the core's ctrl
+    // bit, GuiInputCore::set_ctrl: the S Pen's side button, sampled before
+    // the hover report that carried it): written at on_motion's head beside
+    // the tooltip's held bit, read by the trim bar's hover
+    // (trim_bar_takes_grab) and so on every tick too. With the barrel held a
+    // press on the bar is the bound-set click, not the grab, so the bar
+    // shows no hover and no caps (architect 2026-11-20, send CC). The keys'
+    // walk does not read it (package 6's open question, his to rule).
+    bool pointer_barrel_held_ = false;
     // THE RE-ARM DISTANCE, 18 W (architect 2026-10-08, retuned on measured
     // data from 3; the W since 2026-11-05): 36 device px on the tablet at
     // 200 %, 18 at 100 %, converted through scaled_px at the compare and
@@ -3676,7 +3748,7 @@ private:
     void arm_pending_trim_drag(bool is_begin, bool both, double press_x,
                                double press_y);
     // The pending's end without a crossing (lift, lost button, force-end):
-    // disarm, the pill's drag look ending (input_trim.cpp).
+    // disarm, the bar's held look ending (input_trim.cpp).
     void disarm_pending_trim_drag();
     void begin_trim_drag(TrimHit which, double mouse_x, bool both = false);
     void update_trim_drag(double mouse_x);   // motion: writes the live store

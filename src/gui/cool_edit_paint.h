@@ -166,8 +166,9 @@ public:
     void rect(double x0, double y0, double x1, double y1, StampTone tone);
     // THE ROUNDED RECT [x0, x1] x [y0, y1], real edges, its left corners
     // quarter disks of radius `rl` and its right ones of `rr` (0 a square
-    // corner; each at most half the rect's width and height —
-    // coverage_of_rounded_rect's shape, coverage_stamp.h), in `tone`:
+    // corner; each at most half the rect's height, the two together at most
+    // its width — coverage_of_rounded_rect's shape, coverage_stamp.h), in
+    // `tone`:
     // nothing where x1 <= x0 or y1 <= y0.
     void rounded_rect(double x0, double y0, double x1, double y1, double rl,
                       double rr, StampTone tone);

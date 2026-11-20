@@ -52,9 +52,8 @@
 // stage D1: the tooltip's,
 // the normal card's and the standing card's carried fills and the limiter
 // lamp; AND THE TWO HOVER TONES of send CC, 2026-11-20, `key_hover_face`
-// and `trim_span_hover_face` — the second carried for the trim bar's
-// hover, send CC's next package, and read by no painter until it lands,
-// THE ONE STANDING EXCEPTION to the rule below), members since the theme
+// and `trim_span_hover_face` — the second the trim bar's hovered part,
+// render_trim_flags through trim_bar_tones), members since the theme
 // arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the

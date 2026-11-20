@@ -5812,8 +5812,8 @@ void GuiInputHandler::commit_region_sweep() {
     // (sweep_highlight_rect) while the record still answers it.
     viewport.invalidate_rect(sweep_highlight_rect(app, audio));
     const bool wrote = app.region_drag.wrote_trim;
-    // THE PILL'S DRAG LOOK ENDS WITH A SWEEP THAT WROTE (trim_span_dragging,
-    // app_state.h; architect 2026-11-17, session 140): its edge damages the
+    // THE PILL'S SWEPT LOOK ENDS WITH A SWEEP THAT WROTE (trim_bar_look's
+    // `swept`, app_state.h; architect 2026-11-17, session 140): its edge damages the
     // trim lane here, whatever the commit tail below damages.
     if (wrote && !app.region_drag.select)
         viewport.invalidate_rect(top_trim_row_area(app));
@@ -6020,6 +6020,12 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // arrival and waits the delay (AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
+    // THE TRIM BAR'S LIFTED PART STARTS OVER WITH EVERY RELEASE, above every
+    // return (AppState::TrimBarHover's `lifted`): only the bar's own grab
+    // arms below write it, so the pen latch's arm after any other lift —
+    // the bar's long press, which returns above them, among them — installs
+    // none.
+    app.trim_bar_hover.lifted = TrimBarPart::None;
     // THE NOTIFICATION CARD'S LIFT (architect 2026-10-01), FIRST — the press
     // claim's mirror at the press claim's rank: the card's claim outranks
     // every veil, so its lift must outrank their releases too. Guarded on the Card arm alone, which
@@ -6202,7 +6208,7 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // record's own stamp, as every hold in the product is (kHoldDelayMs,
     // gui_input.h): no timer, no announcement. THE PILL'S PENDING DRAG IS
     // DISARMED FIRST, so no pending stands to hold the staged viewport's
-    // promote under the new framing (the pill's drag look going with it),
+    // promote under the new framing (the bar's held look going with it),
     // and the release is spent: nothing below it was armed by this press. A
     // quick lift falls through to the pending's disarm below, the consumed
     // nothing a still trim-bar click has always been. The record is consumed
@@ -6259,6 +6265,14 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // (No tempo-drag arms here: the target-view tempo drag and its pending are
     // DELETED, architect 2026-07-29 — the tempo surface is the bare Up/Down cent
     // step alone. See marker_drag.h.)
+    // THE BAR'S OWN GRAB ENDS AT THIS LIFT (the two arms below): the part
+    // it held is recorded for the pen latch's frozen answer, which reads it
+    // as hovered until the pen rearms or leaves (AppState::TrimBarHover's
+    // `lifted`; architect 2026-11-20, send CC — a finger's lift arms no
+    // latch, and its leave drops the record). Read before the arms end the
+    // records it is read off.
+    if (app.trim_drag.active || app.pending_trim_drag.active)
+        app.trim_bar_hover.lifted = trim_bar_look(app).held;
     if (app.trim_drag.active) {
         commit_trim_drag();
         return;
@@ -6447,14 +6461,31 @@ void GuiInputHandler::arm_pen_hot_latch() {
     // lit at once ("withholding the color change until the pen moves away
     // makes it too slow"). The roster's tooltip walk runs again beside it,
     // as it always did at the arm.
+    // THE TRIM BAR'S FROZEN ANSWER (AppState::TrimBarHover; architect
+    // 2026-11-20, send CC: no blink of the caps at the lift): the part the
+    // bar's own grab held at this lift — `lifted`, written by that release
+    // — is installed as the hovered part where the frozen answer's terms
+    // admit one (trim_bar_frozen_part_kept), else none, none after any other
+    // lift; the walk below keeps it under the latch while those terms hold.
+    // The restore motion's unlatched walk answered the part under the pen a
+    // moment ago, the same part where the pen lifted on it (the zone rides
+    // its bound); no frame has painted since, so the two writes are one
+    // repaint of the lane at most.
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
                                  .x = 0.0, .y = 0.0};
+    set_trim_bar_hover(trim_bar_frozen_part_kept() ? app.trim_bar_hover.lifted
+                                                   : TrimBarPart::None);
+    app.trim_bar_hover.lifted = TrimBarPart::None;
     recompute_redesign_button_hover();
     walk_hover_face();
 }
 
 void GuiInputHandler::clear_pen_hot_latch() {
     pen_hot_latch_.armed = false;
+    // The bar's lifted part belongs to the lift the latch would hold: every
+    // leave — a finger's lift among them, which arms no latch — drops it
+    // (AppState::TrimBarHover).
+    app.trim_bar_hover.lifted = TrimBarPart::None;
 }
 
 void GuiInputHandler::recompute_redesign_button_hover() {
@@ -6759,7 +6790,10 @@ bool GuiInputHandler::hover_admitted() const {
 }
 
 bool GuiInputHandler::hover_admitted_on_main_page() const {
-    if (!hover_admitted()) return false;
+    return hover_admitted() && main_page_takes_press_at_pointer();
+}
+
+bool GuiInputHandler::main_page_takes_press_at_pointer() const {
     // THE MODALS' VEIL and THE OVERLAYS (the press router's own ranks,
     // on_button_press): under either, nothing of the well answers a press.
     if (app.prompt.active || keyboard_modal_editor_active() ||
@@ -6768,7 +6802,14 @@ bool GuiInputHandler::hover_admitted_on_main_page() const {
     if (app.render_player.active || app.picker.active ||
         app.score_viewer.active)
         return false;
-    return notification_card_at(app, app.last_mouse_x, app.last_mouse_y) == 0;
+    if (notification_card_at(app, app.last_mouse_x, app.last_mouse_y) != 0)
+        return false;
+    // THE ROUTER'S TWO REFUSALS ABOVE EVERY WELL TARGET'S CLAIM (C6 of send
+    // CC's package 6 review, settled 2026-11-20): no audio or a load running,
+    // and a live drag — "a second press during a drag is ignored".
+    if (app.loading || audio.total_frames() <= 0) return false;
+    return !app.drag.active && !app.trim_drag.active &&
+           !app.region_drag.active;
 }
 
 // THE TWO SCRUBS' "a press here arms the drag" — each claim's own refusals
@@ -7029,17 +7070,114 @@ void GuiInputHandler::set_hover_face(const AppState::HoverFaces::Face& face) {
         .face = face, .from = 0.0, .to = 1.0, .start_ms = now, .mix = 0.0});
 }
 
-// THE WALK (the declaration): none unless the installed theme HAS a hover
-// face — its ButtonHoverBackground another tone than its key face; on every
-// Live theme the two are one word (theme_roles.h's OUR OWN, ARC'S HOVER), so
-// no face hovers there, the seams included, and nothing fades or is damaged
-// — and the pointer's gate admits one; else the live face under the pen.
-void GuiInputHandler::walk_hover_face() {
+namespace {
+// THE THEME'S TERM, the faces' walk's and the trim bar's alike: the installed
+// theme HAS a hover face — its ButtonHoverBackground another tone than its
+// key face; on every Live theme the two are one word (theme_roles.h's OUR
+// OWN, ARC'S HOVER), and its ScrollbarSliderHover is the pill's own word too.
+bool installed_theme_hovers() {
     const GuiThemeTones& tones = installed_theme().tones;
-    const bool theme_hovers = tones.key_hover_face != tones.key_face;
-    set_hover_face(theme_hovers && hover_admitted()
+    return tones.key_hover_face != tones.key_face;
+}
+} // namespace
+
+// THE WALK (the declaration): none unless the theme's term holds — on a
+// Live theme no face hovers, the seams included, and nothing fades or is
+// damaged — and the pointer's gate admits one; else the live face under the
+// pen.
+void GuiInputHandler::walk_hover_face() {
+    set_hover_face(installed_theme_hovers() && hover_admitted()
                        ? hover_face_under_pointer()
                        : AppState::HoverFaces::Face{});
+    // THE TRIM BAR'S WALK RIDES THIS ONE (AppState::TrimBarHover), so it has
+    // this walk's every caller, and it reads the same theme term: on a Live
+    // theme the bar shows no hover and no hover caps either (its held
+    // states' caps are the press's, not the hover's, and show on every
+    // theme).
+    walk_trim_bar_hover();
+}
+
+// -- THE TRIM BAR'S HOVER (AppState::TrimBarHover, the rule; the look and
+//    the one table at render.h's trim_bar_tones; architect 2026-11-19 /
+//    2026-11-20, send CC) ----------------------------------------------------
+
+// "WOULD A PRESS ON THE BAR ARM A GRAB NOW?" past the main page's refusals
+// (main_page_takes_press_at_pointer, which the walk asks through the gate):
+// the stash published (a cold bar has nothing to grab: route_trim_bar_press
+// reads it), NOT THE `h` VIEW (its router takes only the framing long press
+// on the bar, handle_history_mode_press: the zones and the bridge are
+// painted geometry with no grab there), and NOT THE BARREL (a barrel press
+// on the bar is the bound-set click, set_trim_bound_at_click, another act
+// than the grab the caps promise).
+bool GuiInputHandler::trim_bar_takes_grab() const {
+    return app.trim_bar_hit.published && !app.history_mode.active &&
+           !pointer_barrel_held_;
+}
+
+// THE FROZEN ANSWER'S TERMS (the declaration): the pointer's half of the
+// gate less the latch — the pen in the plane, no contact down — the main
+// page taking a press at the pointer, the theme's term and the bar's own.
+bool GuiInputHandler::trim_bar_frozen_part_kept() const {
+    return app.pointer_in_window && !app.redesign_tooltip.button_held &&
+           main_page_takes_press_at_pointer() && installed_theme_hovers() &&
+           trim_bar_takes_grab();
+}
+
+// THE PART UNDER THE POINTER BY THE PRESS'S OWN TWO HITS, in the router's
+// order (route_trim_bar_press): an end's zone first, then the bridge — the
+// same stash the press reads, so the part that lights is the part a press
+// there takes, strictly as painted.
+TrimBarPart GuiInputHandler::trim_bar_part_under_pointer() const {
+    const GuiPointerPlace at = app.last_mouse_place();
+    switch (hit_test_trim_endcap(app, at.rx, at.ry)) {
+        case TrimHit::Begin: return TrimBarPart::Begin;
+        case TrimHit::End:   return TrimBarPart::End;
+        case TrimHit::None:  break;
+    }
+    return point_in_trim_bridge_span(app, at.rx, at.ry) ? TrimBarPart::Body
+                                                        : TrimBarPart::None;
+}
+
+// THE ONE SETTER: a change damages the trim lane, once (trim_bar_look's
+// head: every edge of the bar's state is one lane damage); the same part
+// again damages nothing, so a pen resting in one part costs nothing.
+void GuiInputHandler::set_trim_bar_hover(TrimBarPart part) {
+    if (app.trim_bar_hover.part == part) return;
+    app.trim_bar_hover.part = part;
+    viewport.invalidate_rect(top_trim_row_area(app));
+}
+
+// THE WALK (the declaration). UNLATCHED, the part under the pen where the
+// main page's gate (hover_admitted_on_main_page), the theme's term and the
+// bar's own (trim_bar_takes_grab) admit one, else none. WHILE THE PEN LATCH
+// HOLDS, THE ANSWER IS FROZEN: the part standing — the part the bar's own
+// grab held, which the latch's arm installed (arm_pen_hot_latch), or none
+// after any other lift — is kept while trim_bar_frozen_part_kept holds (the
+// latch freezes the pointer's place, never the other terms) and goes
+// otherwise, never re-read off the pen's place; the walk after the rearm,
+// or the leave that clears the latch, answers the truth.
+void GuiInputHandler::walk_trim_bar_hover() {
+    if (pen_hot_latch_holds()) {
+        if (!trim_bar_frozen_part_kept())
+            set_trim_bar_hover(TrimBarPart::None);
+        return;
+    }
+    set_trim_bar_hover(hover_admitted_on_main_page() &&
+                               installed_theme_hovers() &&
+                               trim_bar_takes_grab()
+                           ? trim_bar_part_under_pointer()
+                           : TrimBarPart::None);
+}
+
+// THE SETTLE (the declaration): a standing part over a bar no press would
+// grab any more — a veil raised, a card over the place, the `h` view
+// entered, the stash gone cold, a load begun, a drag gone live — goes at
+// once, ahead of the frame that would paint it (the faces'
+// settle_hover_faces runs this, from the pre-paint hook and the tick).
+void GuiInputHandler::settle_trim_bar_hover() {
+    if (app.trim_bar_hover.part != TrimBarPart::None &&
+        !(main_page_takes_press_at_pointer() && trim_bar_takes_grab()))
+        set_trim_bar_hover(TrimBarPart::None);
 }
 
 // THE DEAD FACES LAND AT ONCE (the declaration): each fade whose face no
@@ -7058,6 +7196,8 @@ void GuiInputHandler::settle_hover_faces() {
         if (f.face == h.hovered) h.hovered = AppState::HoverFaces::Face{};
         h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
     }
+    // And the trim bar's hovered part, on the same rule (no fade to drop).
+    settle_trim_bar_hover();
 }
 
 // THE CLOCK (the declaration; AppState::HoverFaces' THE FRAMES). The walk
@@ -8781,6 +8921,9 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     // layer's abnormal end) cannot leave the wait refused
     // (AppState::RedesignTooltip).
     app.redesign_tooltip.button_held = mods.primary_button_held;
+    // THE BARREL'S BIT, at the same placement for the trim bar's hover
+    // (pointer_barrel_held_, the rule at its declaration).
+    pointer_barrel_held_ = mods.ctrl;
     // THE HOVER FACE'S WALK, at the same placement (every branch below
     // returns): the face the pen is on now, under its gate — none under a
     // held button, so a contact's every motion, a gesture dragged over a
@@ -9135,8 +9278,8 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
             // A REFUSED BEGIN IS A GESTURE END TOO (no pair / no audio): the
             // pending was cleared a line above and nothing took its place, so
             // the trim cue it was holding goes with it at the loop's tail, the
-            // same route every other end takes — and the pill's drag look with
-            // it, its edge damaged (trim_span_dragging, app_state.h).
+            // same route every other end takes — and the bar's held look with
+            // it, its edge damaged (trim_bar_look, app_state.h).
             viewport.invalidate_rect(top_trim_row_area(app));
             return;
         }

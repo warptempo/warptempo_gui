@@ -5134,14 +5134,16 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // NO WAVEFORM STEMS (architect 2026-08-01): the view bar is the trim
     // window's WHOLE RESTING display — the sweep's transient canvas
     // highlight the one exception (paint_sweep_highlight, 2026-11-12).
-    // THE DRAG LOOK (architect 2026-11-17, session 140): while a drag moves
-    // the span the pill wears `selected_fill` (trim_span_dragging,
-    // app_state.h, its edges' damage there); no caps, no hover look.
+    // THE BAR'S STATE (architect 2026-11-19 / 2026-11-20, send CC): the
+    // part under the hovering pen, the part the bar's own press holds and
+    // a TRIM sweep that wrote, read off their records (trim_bar_look,
+    // app_state.h, every edge's damage there); the tones and the caps are
+    // the one table's (trim_bar_tones, render.h).
     // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "no dots on the
     // trim bar"; render.h's view-bar paragraph).
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame,
-                      basis.lattice_origin, trim, trim_span_dragging(app),
+                      basis.lattice_origin, trim, trim_bar_look(app),
                       out_hit);
 }
 

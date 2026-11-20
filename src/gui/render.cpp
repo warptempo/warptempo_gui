@@ -955,13 +955,13 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 }
 
 TrimBridgeGap trim_bridge_gap(const TrimBoundColumn& begin,
-                              const TrimBoundColumn& end, int endcap_w) {
-    // Contract at the declaration: the gap runs between the two buttons'
-    // inner edges, wherever the buttons stand — on screen, part on it, or
+                              const TrimBoundColumn& end, double inside) {
+    // Contract at the declaration: the gap runs between the two zones'
+    // inner edges, wherever the zones stand — on screen, part on it, or
     // past either edge (architect 2026-10-05).
     TrimBridgeGap g;
-    g.lo = begin.x + static_cast<double>(endcap_w);
-    g.hi = end.x + 1.0 - static_cast<double>(endcap_w);
+    g.lo = begin.x + inside;
+    g.hi = end.x + 1.0 - inside;
     return g;
 }
 
@@ -989,35 +989,35 @@ double displayed_trim_ms(int64_t frame,
 GuiRectF trim_endcap_rect(bool is_begin, int strip_x,
                           const TrimBoundColumn& begin,
                           const TrimBoundColumn& end, GuiRect row) {
-    const double btn_w = static_cast<double>(view_bar_grab_w_px());
-    GuiRectF r;
-    // Begin left-edge-anchored (rect left ON the span's left end); end
-    // right-edge-anchored (rect right ON the span's right end, one px past
-    // the end bound's exact place), so each bound's
-    // zone stands on the span's own end — UNLESS THE DRAWN WIDTH IS UNDER TWO
-    // ZONES (architect 2026-10-03): then the begin keeps its end and the
-    // end zone stands edge to edge right of it, overrunning its own by
-    // 2 x btn_w − span. THE RULE READS THE PLACES WHEREVER THEY ARE, on
-    // screen or off (architect 2026-10-05): a narrow window panned past an
-    // edge keeps its two zones edge to edge and slides off whole. With the
-    // strip on the glass's edges (waveform_area x 0, the panel's width) a
-    // narrow window near the strip's right edge has its end zone cut by the
-    // lane, and wholly past it once the begin stands within one zone of the
-    // edge — at the song's end at FIT, a window of a few px — so that end
-    // has no grab until a zoom-in makes the window two zones wide or the
-    // begin's stroke widens it (the rule's consequence, input_trim.cpp's
-    // update_trim_drag). The rect is the ZONE over the trim lane `row`'s
-    // whole height — the hit band, before the lane's clip.
-    const double span = end.x - begin.x + 1.0;
-    const bool narrow = span < 2.0 * btn_w;
+    // Contract at the declaration (THE TRIM BAR'S CAPS AND GRABS, render.h):
+    // each zone reaches `outside` past its bound and `inside` into the span
+    // — on the tablet 4 and 24 device px — and where the two inside reaches
+    // cross the zones split at the midpoint between the bounds, each keeping
+    // its outside reach. THE RULE READS THE PLACES WHEREVER THEY ARE, on
+    // screen or off (architect 2026-10-05): a window panned past an edge
+    // keeps its zones and slides off with them. The rect is the ZONE over
+    // the trim lane `row`'s whole height — the hit band, before the lane's
+    // clip.
+    const double outside = trim_grab_outside_px();
+    const double inside  = trim_grab_inside_px();
     const double sx = static_cast<double>(strip_x);
-    if (is_begin)
-        r.x = sx + begin.x;
-    else
-        r.x = narrow ? sx + begin.x + btn_w
-                     : sx + end.x + 1.0 - btn_w;
+    const double b_lo = sx + begin.x;         // the begin bound, the span's left end
+    const double e_hi = sx + end.x + 1.0;     // the end bound, its right end
+    const bool narrow = e_hi - b_lo < 2.0 * inside;
+    const double mid = 0.5 * (b_lo + e_hi);
+    double x0 = 0.0;
+    double x1 = 0.0;
+    if (is_begin) {
+        x0 = b_lo - outside;
+        x1 = narrow ? mid : b_lo + inside;
+    } else {
+        x0 = narrow ? mid : e_hi - inside;
+        x1 = e_hi + outside;
+    }
+    GuiRectF r;
+    r.x = x0;
     r.y = row.y;
-    r.w = btn_w;
+    r.w = std::max(0.0, x1 - x0);
     r.h = row.h;
     return r;
 }
@@ -1025,6 +1025,37 @@ GuiRectF trim_endcap_rect(bool is_begin, int strip_x,
 // (THE POPUP LISTS' SCROLL ARROW BUTTON — paint_trim_arrow_button, up and
 // down, the trim caps' left and right gone with the view bar 2026-10-09 —
 // went with the popup lists' scroll bar, 2026-10-14.)
+
+TrimBarTones trim_bar_tones(const TrimBarLook& look, bool caps_fit) {
+    // THE ONE TABLE (the declaration, render.h), first match.
+    const GuiPalette& p = palette();
+    TrimBarTones t;
+    t.body = p.trim_span_face;
+    if (!caps_fit) {
+        // Arc's own slider: the pill is the whole of it.
+        if (look.held != TrimBarPart::None || look.swept)
+            t.body = p.selected_fill;
+        else if (look.hovered != TrimBarPart::None)
+            t.body = p.trim_span_hover_face;
+        return t;
+    }
+    const auto with_caps = [&](TrimBarPart part, GuiColor tone) {
+        t.caps      = true;
+        t.begin_cap = p.text;
+        t.end_cap   = p.text;
+        if (part == TrimBarPart::Body)  t.body = tone;
+        if (part == TrimBarPart::Begin) t.begin_cap = tone;
+        if (part == TrimBarPart::End)   t.end_cap = tone;
+    };
+    if (look.held != TrimBarPart::None) {
+        with_caps(look.held, p.selected_fill);
+    } else if (look.swept) {
+        t.body = p.selected_fill;
+    } else if (look.hovered != TrimBarPart::None) {
+        with_caps(look.hovered, p.trim_span_hover_face);
+    }
+    return t;
+}
 
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
@@ -1034,7 +1065,7 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        long long viewport_lattice_origin,
                        const TrimRange& trim,
-                       bool dragging,
+                       const TrimBarLook& look,
                        TrimBarHit* out_hit) {
     // COLD FIRST, so every early return below publishes "nothing grabbable"
     // over a lane that painted no bar (the contract at the declaration).
@@ -1122,19 +1153,45 @@ void render_trim_flags(cairo_t* cr,
     // grab's EOF-wall clamp never holds a core end while its bound moves.
     // An end wholly past the edge is drawn at one pill height beyond it, its
     // round corners still wholly outside, so the stamp's whole-cell arithmetic
-    // stays bounded and no pixel changes. The drag look below wears the same
+    // stays bounded and no pixel changes. Every state below wears the same
     // geometry. The pill stands inside the
     // lane's rows and clip, so the trim lane's whole rows, every trim
     // write's and drag edge's damage (top_trim_row_area), hold it. Painted
     // at each pixel's exact coverage through the coverage stamp
     // (CoverageStampPass, cool_edit_paint.h; coverage_of_rounded_rect,
-    // coverage_stamp.h) over the trough laid above. ITS TONE:
-    // `trim_span_face` (ScrollbarInnerHandle, Arc's slider) at rest,
-    // `selected_fill` (StandbySelectionBackground, Arc's slider:active)
-    // WHILE A DRAG MOVES THE SPAN (`dragging`, trim_span_dragging; ruled:
-    // the trim bar's own drags and a TRIM sweep alike). No outline, no hover
-    // look. NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought
-    // we agreed no dots on the trim bar").
+    // coverage_stamp.h) over the trough laid above. ITS TONE and whether
+    // the caps show are `look`'s through the one table (trim_bar_tones,
+    // render.h): at rest `trim_span_face` (ScrollbarInnerHandle, Arc's
+    // slider) and no caps. No outline. NO PLAYHEAD IN THE BAR (architect
+    // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
+    //
+    // THE CAPS (render.h's THE TRIM BAR'S CAPS AND GRABS; architect
+    // 2026-11-20, send CC), PAINTED OVER THE PILL in the same pass: at each
+    // end ONE ROUNDED RECT OF ONE ROUNDED SIDE — kTrimCapW wide and two
+    // radii tall, the radius the pill's own plus the outset, its two corners
+    // on the outer side quarter disks of that radius and its inner side
+    // square — so its outer half is the half disc concentric with the
+    // pill's round end and the rest the straight part (coverage_of_rounded_rect
+    // holds it exactly: one side's radius at most the width and half the
+    // height, the other 0). On the tablet: the radius 8 device px, the cap
+    // 12 x 16, rows 148 .. 163, the begin's from its bound's place + 4 to
+    // + 16 (the circle's center + 12, the pill's round end's), the end's
+    // the mirror off the end column's right edge. THE PILL RUNS ON UNDER
+    // EACH CAP — it stands from the seat inside the bound, the cap's outer
+    // edge one outset outside that and its straight side well inside the
+    // pill's straight run — so the cap's every pixel is its exact coverage
+    // blended over the pill's own as laid (the trough where the pill does
+    // not reach), and no edge of the two shapes coincides: no seam. Cut by
+    // the lane's clip as the pill is, at its real place off the box's
+    // unclamped places, so it slides off the strip's edge with its bound;
+    // a cap wholly past the edge is not stamped. THE CAPS FIT (`caps_fit`)
+    // where the box is at least two caps and their insets wide, 2 x (2 + 6)
+    // W, 32 device px on the tablet: there the pill keeps its whole seat at
+    // both ends (the short span's inset rule above leaves it whole from pill
+    // height + two seats, 12 W) and each cap stands whole inside its own
+    // half of the box, the two at most meeting at its middle; under it no
+    // cap is drawn and the pill alone wears the part's tone (the table's
+    // narrow rule).
     const double pill_h = std::min(static_cast<double>(trim_pill_h_px()),
                                    static_cast<double>(trough_h));
     const double seat = (static_cast<double>(trough_h) - pill_h) / 2.0;
@@ -1145,42 +1202,59 @@ void render_trim_flags(cairo_t* cr,
     const double core_lo = box_lo + inset;
     const double core_hi = box_hi - inset;
     const double strip_w = static_cast<double>(lane_w);
+    const double outset = static_cast<double>(trim_cap_outset_px());
+    const double cap_w = static_cast<double>(trim_cap_w_px());
+    const double cap_r = pill_h / 2.0 + outset;
+    const double cap_inset = seat - outset;
+    const bool caps_fit = pill_h > 0.0 && 2.0 * cap_r <= trough_h &&
+                          box_hi - box_lo >= 2.0 * (cap_inset + cap_w);
+    const TrimBarTones tones = trim_bar_tones(look, caps_fit);
+    CoverageStampPass stamp;
+    stamp.begin(cr);
     if (core_hi > core_lo && pill_h > 0.0 && core_hi > 0.0 &&
         core_lo < strip_w) {
         const double y0 = static_cast<double>(trough_y) + seat;
         const double radius = std::min(pill_h / 2.0, (core_hi - core_lo) / 2.0);
         const double draw_lo = std::max(core_lo, -pill_h);
         const double draw_hi = std::min(core_hi, strip_w + pill_h);
-        CoverageStampPass stamp;
-        stamp.begin(cr);
         stamp.rounded_rect(static_cast<double>(lane_x) + draw_lo, y0,
                            static_cast<double>(lane_x) + draw_hi, y0 + pill_h,
-                           radius, radius,
-                           dragging ? palette().selected_fill
-                                    : palette().trim_span_face);
-        stamp.end();
+                           radius, radius, tones.body);
     }
+    if (caps_fit && tones.caps) {
+        const double cy0 = static_cast<double>(trough_y) +
+                           static_cast<double>(trough_h) / 2.0 - cap_r;
+        const double cy1 = cy0 + 2.0 * cap_r;
+        const double lx = static_cast<double>(lane_x);
+        const double b0 = box_lo + cap_inset;   // the begin cap's outer edge
+        const double e1 = box_hi - cap_inset;   // the end cap's outer edge
+        if (b0 + cap_w > 0.0 && b0 < strip_w)
+            stamp.rounded_rect(lx + b0, cy0, lx + b0 + cap_w, cy1, cap_r, 0.0,
+                               tones.begin_cap);
+        if (e1 > 0.0 && e1 - cap_w < strip_w)
+            stamp.rounded_rect(lx + e1 - cap_w, cy0, lx + e1, cy1, 0.0, cap_r,
+                               tones.end_cap);
+    }
+    stamp.end();
 
     // THE GRABS, as painted: the span's two end zones and the body between
-    // them (render.h's view_bar_grab_w_px, trim_endcap_rect,
+    // them (render.h's THE TRIM BAR'S CAPS AND GRABS, trim_endcap_rect,
     // trim_bridge_gap) — each zone cut to the lane's painted width, the clip
-    // the pixels take, so a zone overrunning the lane claims its visible
-    // stretch alone; a window wholly off one side publishes no zone on that
-    // side and an empty bridge, and a narrow window's end zone standing
-    // wholly past the right edge (trim_endcap_rect's narrow rule) publishes
-    // none though its end is on screen. REAL EDGES (architect 2026-11-15, the
+    // the pixels take, so a zone overrunning the lane (its 2 W outside reach
+    // past a bound at the strip's edge among them) claims its visible
+    // stretch alone, and a window wholly off one side publishes no zone on
+    // that side and an empty bridge. REAL EDGES (architect 2026-11-15, the
     // no-grid arc): the zones stand on the span's two real ends — the
-    // bounds' own places, not the pill's ink the seat inside them (architect
-    // 2026-11-18) — AS THE GRABS HAVE THEM, `x`, the EOF-wall clamp in it
-    // (render.h's TrimBoundColumn): an in-view bound past the last column's
-    // left edge stands on it, so at the strip's right edge a zone can stand
-    // up to a px left of the slider's box, whose places are unclamped
-    // (`x_raw`), and a begin on the named start a fraction of a px left of
-    // the strip's left edge has its zone at 0, inside the box's edge.
-    const int btn_w = view_bar_grab_w_px();
+    // bounds' own places, around the caps drawn off them (architect
+    // 2026-11-18 / 2026-11-20) — AS THE GRABS HAVE THEM, `x`, the EOF-wall
+    // clamp in it (render.h's TrimBoundColumn): an in-view bound past the
+    // last column's left edge stands on it, so at the strip's right edge a
+    // zone can stand up to a px left of the slider's box and its cap, whose
+    // places are unclamped (`x_raw`), and a begin on the named start a
+    // fraction of a px left of the strip's left edge has its bound at 0.
     const GuiRectF begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
     const GuiRectF end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
-    const TrimBridgeGap gap = trim_bridge_gap(bc, ec, btn_w);
+    const TrimBridgeGap gap = trim_bridge_gap(bc, ec, trim_grab_inside_px());
     const double lane_lo = static_cast<double>(lane_x);
     const double lane_hi = static_cast<double>(lane_x + lane_w);
     const auto lane_cut = [&](GuiRectF r) {

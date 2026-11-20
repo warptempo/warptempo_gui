@@ -278,13 +278,14 @@
 //                                     the pill's own role is composited
 //                                     (arc_dark 676B78, Thunar's scrollbar
 //                                     slider under the pointer, measured on
-//                                     his desktop): THE TRIM BAR'S PILL UNDER
-//                                     THE HOVERING PEN; a Live theme's
-//                                     ScrollbarInnerHandle. NO PAINTER READS
-//                                     IT YET: the pill's hover look is send
-//                                     CC's next package's, on this tone and
-//                                     the hover gate
-//                                     (GuiInputHandler::hover_admitted)
+//                                     his desktop): THE TRIM BAR'S PART UNDER
+//                                     THE HOVERING PEN, the pill's body or an
+//                                     end's cap (render.h's trim_bar_tones;
+//                                     the walk
+//                                     GuiInputHandler::walk_trim_bar_hover);
+//                                     a Live theme's ScrollbarInnerHandle,
+//                                     where the theme's term shows no hover
+//                                     on the bar at all
 //   NEITHER IS A BRIGHT TONE: a surface's own face, never mixed toward the
 //   ground (THE BRIGHT MIX below).
 //   and the window's FRAME EDGE, no role of its own: = ControlContrastFrame
