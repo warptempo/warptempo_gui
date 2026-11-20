@@ -41,7 +41,9 @@ SidebarForeground its ControlForeground; send AA's stage D1, 2026-11-19:
 TooltipBackground its SurfaceBackground, CardBackground and
 CardStandingBackground its Alert; send AA's stage D2, 2026-11-19:
 TitleHighlight its SurfaceArea, ScaleTrough its ScrollbarInnerTrack; send
-AA's stage D3, 2026-11-19: ScaleSliderBorder its ClipBorder), after the
+AA's stage D3, 2026-11-19: ScaleSliderBorder its ClipBorder; send CC,
+2026-11-20: ButtonHoverBackground its SurfaceBackground, ScrollbarSliderHover
+its ScrollbarInnerHandle), after the
 --set replacements, and a
 --set on an own role itself wins.
 
