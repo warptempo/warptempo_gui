@@ -2049,8 +2049,8 @@ enum class RedesignButton {
     // I just have to shift-click everything. That's how the old script worked,
     // and I'm comfortable with it" — the provenance he gave is that old
     // script). EVERY BOTTOM-ROW VERB IS POINTED AT
-    // SOMETHING FIRST: Delete and Toggle disabled walk a selection, Ctrl+N
-    // collapses to the focus, Copy resolved value read the focus alone (it
+    // SOMETHING FIRST: Delete, Toggle disabled and Ctrl+N walk a selection,
+    // Copy resolved value read the focus alone (it
     // left the row 2026-09-29), Add to selection is the posture that builds one, and even the
     // drop — the group's one member with no existing subject — acts at the
     // playhead you put there. With nothing pointed at, that whole row acts on
@@ -2546,7 +2546,7 @@ enum class RedesignButton {
     // (architect: "move drop/delete/disable/toggle inherit to bottom right
     // row — place a separator to the left of previous marker icon, and place
     // drop/etc to its left"): drop (bare `s`), delete (`Delete`), the disable
-    // toggle (`Ctrl+D`) and inherit/collapse (`Ctrl+N`). They opened a group of
+    // toggle (`Ctrl+D`) and the inherit toggle (`Ctrl+N`). They opened a group of
     // their own in the ICON ROW from 2026-08-12 until this move, and NOTHING
     // ABOUT THEM CHANGED WITH THE ROW — the chords, the gates and both faces
     // came across whole.
@@ -2582,8 +2582,8 @@ enum class RedesignButton {
     // column has no off-home arm, authoring in both audio views; their
     // shifted presses' no-definition refusal does not grey them, the twin
     // rule, and cards at the arms),
-    // TOGGLE INHERIT greys in the P view and with no selection or
-    // focus (inherit_toggle_actionable, the op's own leading return). THE
+    // TOGGLE INHERIT greys in the P view and with no selection
+    // (inherit_toggle_actionable, the op's own leading return). THE
     // DROP IS THE ONE THAT DOES NOT GREY OFF HOME, and its arm says why: its
     // shift twin drops from either warp view, and that twin is the long press — glass's
     // only road to it (it greys in T+W only where the hold would not act
@@ -10939,14 +10939,14 @@ inline bool active_column_authoring_allowed(const AppState& app) {
 // the truthful-buttons ruling: "Any time a button would be a no-op, grey it"
 // — which gave every verb on the bottom row a FACE reader of the same refusal
 // its ACT already ran, and so needed the refusal to have one owner):
-//   * DOES A SELECTION STAND — the batch verbs' subject (Delete, Ctrl+D), the
-//     first refusal of every op that iterates app.selected_markers, and THE
+//   * DOES A SELECTION STAND — the batch verbs' subject (Delete, Ctrl+D,
+//     Ctrl+N), the first refusal of every op that iterates
+//     app.selected_markers, and THE
 //     MARKER LANE ITSELF: a non-empty selection IS the lane the bare
 //     horizontal arrows step in (GuiInputHandler::playhead_in_marker_lane
 //     delegates here, its own contract at its declaration).
 //   * DOES A FOCUS STAND — the single-marker acts' subject (the flag editor,
-//     the inherit toggle, the cent step), read off
-//     app.last_selected_marker. The dispatch arms run
+//     the cent step), read off app.last_selected_marker. The dispatch arms run
 //     Selection::repair_last_selected ahead of asking; a face cannot repair
 //     (it reads const state per tick) and does not need to — the selection
 //     layer keeps the focus a member at every mutator, so the unrepaired read
@@ -12301,14 +12301,19 @@ inline bool marker_selection_holds_label_definition(const AppState& app) {
 
 // THE INHERIT TOGGLE'S REFUSAL, composed (architect 2026-08-30): Ctrl+N is
 // the WARP column's alone (a phase reset has no tempo source to inherit
-// from), collapses to the focus and so needs one, and takes no home-view gate
-// (a pass/owner conversion is a VALUE edit, the fifth ruled exception).
+// from), acts on the whole selection and so needs one standing — a group
+// verb since 2026-11-19 (send CC), each selected marker flipping its own
+// tempo source, so it asks no focus: the act reads the focus only in its
+// target-view re-land, which skips where none stands — and takes no
+// home-view gate (a pass/owner conversion is a VALUE edit, the fifth ruled
+// exception). In the W column it is the batch verbs' refusal
+// (marker_selection_verb_actionable, above), so the Toggle inherit key greys
+// exactly where DISABLE does there.
 // READERS: GuiWarpMarkersOps::toggle_inherits' leading return — the act, the
-// dispatch arm having no test of its own since the P-view return it carried
-// moved in here — and the Toggle inherit button's disabled face.
+// dispatch arm carding its refusal on the same question — and the Toggle
+// inherit button's disabled face.
 inline bool inherit_toggle_actionable(const AppState& app) {
-    return app.active_markers_view == 'W' &&
-           marker_selection_standing(app) && marker_focus_standing(app);
+    return app.active_markers_view == 'W' && marker_selection_standing(app);
 }
 
 // THE TWO FLATTEN COMMANDS' KIND (architect 2026-09-19). A warp marker's
@@ -16177,7 +16182,7 @@ inline bool redesign_button_enabled(const AppState& a,
                    !iteration_lock_greys(a, b) &&
                    marker_selection_verb_actionable(a);
         // TOGGLE INHERIT GREYS ON THE OP'S OWN LEADING RETURN (2026-08-30):
-        // the P view, an empty selection, no focus — inherit_toggle_actionable.
+        // the P view, an empty selection — inherit_toggle_actionable.
         //
         // AND IT ASKS THE CHORD THE STATE ADMITS (2026-09-19, the twin rule):
         // under a lit lamp Ctrl+N is dead and CTRL+SHIFT+N — the TIE, this

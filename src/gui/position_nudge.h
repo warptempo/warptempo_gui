@@ -40,20 +40,23 @@ struct GuiTargetRender;
 // here, every verb site stating only its own class plus a pointer:
 //   * GROUP-CAPABLE where the members are INDEPENDENT of one another or the
 //     selection's SPAN is merely READ: the value edits (Ctrl+D's disable toggle,
-//     the Up/Down cent step, Delete) and, reading the span, `m`, bare P (the phase-reset copy), the
+//     Ctrl+N's inherit toggle, the Up/Down cent step, Delete) and, reading the
+//     span, `m`, bare P (the phase-reset copy), the
 //     zoom framing, and the undo/redo + paste
 //     restores (which DEFINE a group selection). (The trim region toggle READ
 //     a span until 2026-08-18 — the trim-scratch region's — and the toggle
 //     itself is deleted since 2026-09-22. Space left this list on 2026-07-30, its
 //     left-bound region launch dropped for an unconditional
-//     play-from-the-playhead;)
-//   * FOCUS-COLLAPSE where the members are COUPLED to one another or the act is
-//     POSITIONAL: Ctrl+N and all horizontal movement. Ctrl+N is coupled because
-//     the pass -> owner freeze reads the RESOLVED walk — a member's frozen tempo
-//     depends on what the members before it just became, so a group toggle's
-//     result would depend on iteration order; positional acts are coupled because
-//     one step per member and one rigid delta for all of them are
-//     different arrangements, and neither can be the honest reading of "move the
+//     play-from-the-playhead;) CTRL+N'S MEMBERS ARE INDEPENDENT ONCE EACH IS
+//     RESOLVED AGAINST THE PRE-STATE (architect 2026-11-19, send CC): the
+//     pass -> owner freeze reads the resolved walk, and read over what the
+//     members before it had just become a member's frozen tempo would depend
+//     on the iteration order — so every member resolves against the store as
+//     it stood before the press, and none reads another's new state
+//     (GuiWarpMarkersOps::toggle_inherits' head, warpmarkers_ops.cpp);
+//   * FOCUS-COLLAPSE where the act is POSITIONAL: all horizontal movement. One
+//     step per member and one rigid delta for all of them are different
+//     arrangements, and neither can be the honest reading of "move the
 //     selection".
 // THE ARCHITECT'S GENERAL RULE, verbatim (2026-07-29), which generalizes those two
 // classes and is the authoritative statement for any FUTURE verb: "the rule is - if
@@ -62,11 +65,11 @@ struct GuiTargetRender;
 // group-capable OR collapses to the focus with the playhead landed on it; there is
 // no third answer, and "collapse to last selected" means exactly
 // collapse_to_focused + the marker land, the shape below.
-// THE COLLAPSE+LAND SITES, one form and TWO of them (re-derived by grep over
-// Selection::collapse_to_focused's callers, 2026-07-30): this prologue serving
-// both position nudges, and Ctrl+N (warpmarkers_ops.cpp). The singleton tempo
-// step's call (warpmarkers_ops.cpp's Up/Down arm) is NOT one: its selection is
-// already a singleton, so the collapse moves no focus and owes no land.
+// THE COLLAPSE+LAND SITE, ONE (re-derived by grep over
+// Selection::collapse_to_focused's callers, 2026-11-19): this prologue serving
+// both position nudges. The singleton tempo step's call (warpmarkers_ops.cpp's
+// Up/Down arm) is NOT one: its selection is already a singleton, so the
+// collapse moves no focus and owes no land.
 // `t` AND `c` LEFT THIS LIST (architect 2026-07-30): each collapsed only to keep a
 // group from resting SPANLESS — the state the 2026-07-29 rejection was about — and
 // with the SPAN FORM retired that state does not exist, a group's cue being its
@@ -185,7 +188,7 @@ struct PositionNudgePrologue {
 // compares the PRE-collapse selection against what record_gesture stamped
 // POST-collapse in the tail.
 // Then (3) THE COLLAPSE: a 2+ selection collapses to its focus and the playhead
-// LANDS on that focus, the Ctrl+N shape (collapse + land at the CALLER of
+// LANDS on that focus (collapse + land at the CALLER of
 // Selection::collapse_to_focused, the convention that keeps the land at the site
 // which hands the marker lane a focus). The step below is therefore always the
 // SINGLETON op on `focused`, bit-for-bit what a singleton selection always got.

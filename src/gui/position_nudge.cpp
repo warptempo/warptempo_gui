@@ -99,8 +99,8 @@ PositionNudgePrologue position_nudge_prologue(
     const int focused = app.last_selected_marker;
     // HORIZONTAL MOVEMENT IS A FOCUS ACT (architect 2026-07-29): a 2+ selection
     // collapses to its focus here, and the playhead lands on that focus — the
-    // Ctrl+N shape, the land sitting at the CALLER of collapse_to_focused because
-    // the site that hands the marker lane a focus is the site that owes it a land.
+    // land sitting at the CALLER of collapse_to_focused because the site that
+    // hands the marker lane a focus is the site that owes it a land.
     // The step every caller runs after this is therefore always the singleton op.
     // THE PRESS'S STOP — the collapse-to-point class of the keyboard stop rule
     // (architect 2026-07-30, stated at stop_playback_if_playing's declaration,

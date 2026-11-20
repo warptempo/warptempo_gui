@@ -2195,7 +2195,7 @@ struct TransportRowDef {
 // THE SINGLE-MARKER VERBS (architect 2026-08-18, "move drop/delete/disable/
 // toggle inherit to bottom right row"), the RIGHT BLOCK'S MARKER GROUP: drop
 // (bare `s`), delete (`Delete`), the disable toggle (`Ctrl+D`: a disabled
-// marker is one the render does not hear) and inherit/collapse (`Ctrl+N` — a
+// marker is one the render does not hear) and the inherit toggle (`Ctrl+N` — a
 // pass marker links its tempo to its neighbor). They opened their own
 // separator-led group in the ICON ROW from 2026-08-12 until this move.
 //

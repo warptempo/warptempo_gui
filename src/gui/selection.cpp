@@ -238,10 +238,11 @@ void Selection::clear_selection() {
 
 void Selection::collapse_to_focused() {
     // TWO CALLER CLASSES, both DELIBERATE ACTS OF THE GESTURE — re-derived by grep
-    // 2026-07-30:
-    //   * the FINE-TUNING VALUE gestures (the Ctrl+N inherit toggle, the singleton
-    //     tempo step), which narrow the selection so the operation and the
-    //     resulting selection both target last_selected only;
+    // 2026-11-19:
+    //   * the singleton TEMPO STEP (adjust_tempo_cents, warpmarkers_ops.cpp),
+    //     which narrows the selection so the operation and the resulting
+    //     selection both target last_selected only — its selection already a
+    //     singleton there, the group step taking every 2+ press;
     //   * HORIZONTAL MOVEMENT, which is a FOCUS ACT (architect 2026-07-29 —
     //     groups are never moved): both position nudges collapse here through
     //     their shared prologue and then step the focus alone.
@@ -275,8 +276,8 @@ void Selection::collapse_to_focused() {
     app.selected_markers.insert(app.last_selected_marker);
     // The phase-reset overlay's own P+target repaint — the 2+ -> 1 case here
     // brings the ring back — rides the publish's flag rebuild, which
-    // compares the ring. (The fine-tuning callers can
-    // collapse then REFUSE and full-invalidate nothing, so the stems the
+    // compares the ring. (A 2+ position nudge can collapse then REFUSE at
+    // its wall and full-invalidate nothing, so the stems the
     // collapse takes off the other members are that rebuild's
     // to repaint too, in this event.)
     publish_selection_change();

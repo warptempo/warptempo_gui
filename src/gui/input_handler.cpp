@@ -1353,9 +1353,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         }
     }
-    // Ctrl+N: toggle pass (inherit) status on the focused warp marker,
-    // symmetric with Ctrl+D below — pass, like disabled, is a status
-    // toggled on an existing marker, never dropped directly. No
+    // Ctrl+N: toggle pass (inherit) status on every selected warp marker,
+    // each its own flip (architect 2026-11-19, send CC), symmetric with
+    // Ctrl+D below — pass, like disabled, is a status toggled on an existing
+    // marker, never dropped directly. No
     // phase-reset equivalent (a reset has no tempo source to inherit
     // from), so this refuses in P view — THE PREDICATE IS THE OP'S OWN
     // (inherit_toggle_actionable, app_state.h, which the Toggle inherit
@@ -1373,7 +1374,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // THE REFUSAL SAYS WHICH ONE IT IS (architect 2026-08-30), forked on
         // the predicate's own first term: the P column has no tempo source to
         // inherit at all — a fact about the column — while a missing
-        // selection or focus is a subject the user can supply. ONE CARD PER
+        // selection is a subject the user can supply. ONE CARD PER
         // PRESS: the op's identical leading return is the belt below it and
         // stays silent, and the button greys on this same predicate, so no
         // lift reaches this line.
@@ -1388,8 +1389,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         }
         // THE SELECTION IS SPENT (architect 2026-09-12): a press past the
         // refusal above is a marker verb acting on what Add to selection built,
-        // so the building pass ends here — at the act's entry, ahead of the
-        // op's own collapse and of every changed-path test inside it. The class
+        // so the building pass ends here — at the act's entry, ahead of every
+        // changed-path test inside the op. The class
         // and its whole inventory are at selection_consumed (app_state.h).
         selection_consumed(app);
         warpops.toggle_inherits();

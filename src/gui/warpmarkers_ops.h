@@ -150,10 +150,10 @@ struct GuiWarpMarkersOps {
     // (app_state.h, beside the predicate this body's leading return reads).
     // ITS SUBJECT IS THE WHOLE PIECE AND IT READS NO SELECTION: the body
     // walks the store, so nothing needs selecting first and no selection can
-    // narrow it. A PLAIN GROUP VERB in toggle_disabled's shape and NOT
-    // toggle_inherits': the members are UNCOUPLED — each marker's own terms,
-    // with no inheritance walk in the act — so there is no collapse to the
-    // focus and no playhead land. ONE undo entry per press, from the
+    // narrow it. A PLAIN GROUP VERB in toggle_disabled's shape: the members
+    // are UNCOUPLED — each marker's own terms, with no inheritance walk in
+    // the act — so there is no collapse to the focus and no playhead land.
+    // ONE undo entry per press, from the
     // pre-state, and NOTHING MOVES: the act lands no marker and moves no
     // cursor, so it calls neither movement owner.
     void flatten_tempo_deviations(TempoFlattenKind kind);

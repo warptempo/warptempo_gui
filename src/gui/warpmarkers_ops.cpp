@@ -6,7 +6,6 @@
 #include "notifications.h"      // kTabReadOnlyCard (the value steps' lock),
                                 // the off-edge nudge and drop cards, the
                                 // drop's occupied-frame card
-#include "input_handler.h"      // land_playhead_on_marker (the Ctrl+N collapse)
 #include "warp_frame_map_build.h"
 #include "warp_frame_map_view.h"
 #include "target_render.h"
@@ -459,17 +458,34 @@ void GuiWarpMarkersOps::delete_selected_body(bool with_references) {
     target_render.trigger();
 }
 
-// Ctrl+N: convert the FOCUSED marker's tempo source — a 2+ selection
-// COLLAPSES to its focus first (the body below), the group-verb doctrine's own
-// example of COUPLED members, so this never acts on more than one marker.
+// Ctrl+N: convert the tempo source of EVERY SELECTED MARKER, EACH FLIPPING
+// ITS OWN STATE (architect 2026-11-19, send CC: "Toggle inherit should work
+// on multiple. ... It should be like toggle disable, which does work on
+// multiple."; put back to him as "toggle inherit on every selected marker,
+// each its own flip, a follower freezing at the tempo it sounds at before the
+// press": "Number four. Agree."). A GROUP VERB in toggle_disabled's shape
+// (the group-verb doctrine at the head of position_nudge.h): no collapse to
+// the focus, the selection kept.
 // Cache-free — the only stored state on a pass marker is `tempo_inherits =
-// true` plus inert defaults. THREE INPUT CASES for that one marker:
+// true` plus inert defaults. THREE INPUT CASES, per member:
 //   - owning   → pass: inert defaults; label_def preserved; iter bracket
 //                cleared (the pass is iter-ineligible).
 //   - pass     → owning: freeze the resolved tempo/scale at this moment;
 //                label_def preserved.
 //   - label_ref → pass: clear the ref; inert defaults; iter bracket cleared
 //                (the pass is iter-ineligible).
+// EVERY MEMBER IS RESOLVED AGAINST THE STATE BEFORE THE PRESS, which is what
+// makes the members independent and the result independent of their order:
+// each arm's branch reads the member's PRE-PRESS row (mv_const), and the
+// freeze reads marker_effective over `resolved_src`, sliced once from that
+// same pre-state — no arm reads `proposed`, where an earlier member's new
+// state stands, and each member writes its own row of `proposed` alone (the
+// selection is a set, so no index is visited twice). So a follower that
+// becomes an owner freezes the tempo it SOUNDS AT before the press, whatever
+// its predecessors became in the same press. THE CONSEQUENCE, told to him and
+// accepted (2026-11-19): AN OWNER AND ITS FOLLOWER BOTH SELECTED SWAP ROLES —
+// the owner becomes a pass and the follower an owner at the old owner's
+// tempo.
 // Eligibility LOSS (both → pass cases) clears the iter bracket so a hidden
 // bracket cannot resurrect through a later pass → owner freeze against a
 // different frozen base; undo is the sanctioned restore route (this gesture
@@ -481,63 +497,44 @@ void GuiWarpMarkersOps::delete_selected_body(bool with_references) {
 // nothing gates this gesture.
 void GuiWarpMarkersOps::toggle_inherits() {
     // THE LEADING REFUSAL IS ONE PREDICATE (inherit_toggle_actionable,
-    // app_state.h — 2026-08-30): the P view, an empty selection, no focus.
-    // The P-view return lived at the Ctrl+N dispatch arm until then and the
-    // two subject returns here; the Toggle inherit button's face reads the
-    // same predicate, so the act and the glyph are one decision. SILENT: the
-    // dispatch arm asks the same predicate ahead of this call so it can NAME
-    // the refusal on a card (input_handler.cpp), and one press owes one card,
-    // so this stays the belt.
+    // app_state.h — 2026-08-30): the P view, an empty selection. The Toggle
+    // inherit button's face reads the same predicate, so the act and the
+    // glyph are one decision. SILENT: the dispatch arm asks the same
+    // predicate ahead of this call so it can NAME the refusal on a card
+    // (input_handler.cpp), and one press owes one card, so this stays the
+    // belt.
     if (!inherit_toggle_actionable(app)) return;
-    // A PASS/OWNER CONVERSION IS A MARKER MUTATION AND STOPS (architect
-    // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
-    // declaration). Past the one refusal, and AHEAD OF THE COLLAPSE AND THE
-    // LAND below, which are this act's first writes: past the predicate every
-    // press changes its focus (each of the three arms writes the marker), so
-    // the `changed` belt further down never returns on a live focus.
-    playback_lifecycle.stop_playback_if_playing();
-    // FOCUS-COLLAPSE, and this gesture is the group-verb doctrine's own example of
-    // COUPLED members (the doctrine is at the head of position_nudge.h): the
-    // pass -> owner freeze below reads the RESOLVED inheritance walk, so what a
-    // member freezes to depends on what the members before it just became — a group
-    // toggle's result would depend on iteration order. Collapsing to the focus is
-    // the honest act.
-    selection.collapse_to_focused();
-    // The marker lane owns the playhead (the rule is stated in full at
-    // land_playhead_on_marker, input_pointer.cpp): the collapse leaves the FOCUS
-    // as the whole selection, so with 3,4,5 selected, the focus at 5 and the
-    // playhead resting anywhere else, the lane would rest with the flag at 5
-    // claiming to be the playhead while Space played from that other spot. Land on
-    // the focus — through land_playhead_on_marker, a movement owner: a Ctrl+N
-    // collapse moves the cursor onto the focus from wherever it stood. (It hid
-    // the trim region overlay from 2026-08-19 until the resting overlay was
-    // deleted on 2026-09-22.)
-    // The land sits at THIS caller and not inside collapse_to_focused, because the
-    // site that hands the lane a new focus is the site that owes it a land — and
-    // not every caller does: the singleton tempo step has no focus change to land
-    // for (its selection is already a singleton — adjust_tempo_cents returns to the
-    // group path at size >= 2 — so collapse_to_focused cannot move the focus
-    // there). The position nudges pair the collapse with their own land the same
-    // way, at their shared prologue.
-    // No index guard: the focus was checked >= 0 two lines above, collapse_to_focused
-    // cannot move it, and the helper is internally bounds-guarded regardless.
-    land_playhead_on_marker(app, audio, viewport, app.last_selected_marker);
+    // NO PLAYHEAD LAND AHEAD OF THE WRITE, toggle_disabled_body's shape
+    // (2026-11-19): the act hands the marker lane no new focus — the
+    // membership and the focus stand as they were — and the site that hands
+    // the lane a new focus is the site that owes it a land (the rule at
+    // land_playhead_on_marker, input_pointer.cpp). The playhead already
+    // stands on the focus: every route that seats a focus lands on it, and
+    // every route that moves the playhead with a selection standing clears
+    // the selection or lands on the focus (that rule's two halves), so a
+    // selection — a singleton included — never rests with the playhead off
+    // its focus, and a land here would move nothing. In target view the
+    // focus's IMAGE moves with the map, and the tail below follows it.
     const auto& mv_const = app.warpmarkers.markers();
     std::vector<GuiWarpMarker> proposed = mv_const;
-    // Single-marker resolve via marker_effective (slice once) — the
-    // projection-aware walk, NOT the raw backward walk. Freezing a pass into
-    // an owner must land the value hover shows and the render produces:
-    // where the nearest prior owner is a coincident member, the render makes
-    // it a plain 1.00 owner, so the raw walk's authored member value (e.g.
-    // 150) would silently change the rendered bytes. marker_effective
-    // resolves a surviving non-member pass against that same projection, and
-    // a member pass to its own 1.00 (architect 2026-11-17), keeping the
-    // freeze lossless (resolve_inherited_tempo's contract).
+    // Resolve via marker_effective (slice once, from the PRE-PRESS store —
+    // the head's rule) — the projection-aware walk, NOT the raw backward
+    // walk. Freezing a pass into an owner must land the value hover shows
+    // and the render produces: where the nearest prior owner is a coincident
+    // member, the render makes it a plain 1.00 owner, so the raw walk's
+    // authored member value (e.g. 150) would silently change the rendered
+    // bytes. marker_effective resolves a surviving non-member pass against
+    // that same projection, and a member pass to its own 1.00 (architect
+    // 2026-11-17), keeping the freeze lossless (resolve_inherited_tempo's
+    // contract).
     const std::vector<WarpMarker> resolved_src = slice_to_warp_markers(mv_const);
     bool changed = false;
     for (int idx : app.selected_markers) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
-        GuiWarpMarker& m = proposed[idx];
+        // The branch reads the member's pre-press row, the write goes to its
+        // own row of `proposed` (the head's rule).
+        const GuiWarpMarker& was = mv_const[static_cast<size_t>(idx)];
+        GuiWarpMarker& m = proposed[static_cast<size_t>(idx)];
         // THE DEVIATION CHAIN IS THE TEMPO'S SPELLING, so it goes wherever
         // the tempo goes (architect approval 2026-09-18). A marker that
         // STOPS OWNING loses it with the value — and the undo entry puts
@@ -548,7 +545,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
         // this marker never had. The two non-owner arms clear explicitly; the
         // freeze arm has nothing to clear, a pass carrying no chain by
         // grammar, and simply writes no terms.
-        if (!m.label_ref.empty()) {
+        if (!was.label_ref.empty()) {
             m.label_ref.clear();
             m.tempo_inherits = true;
             m.tempo_cents    = 100;
@@ -560,7 +557,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
             // non-carrier govern somebody's cells.
             clear_iter_bracket(m);
             m.iter_tie_group = 0;
-        } else if (m.tempo_inherits) {
+        } else if (was.tempo_inherits) {
             const MarkerEffective eff =
                 marker_effective(resolved_src, idx, audio.sample_rate(),
                                  audio.total_frames());
@@ -588,20 +585,31 @@ void GuiWarpMarkersOps::toggle_inherits() {
         }
         changed = true;
     }
+    // A belt, silent: past the predicate every live member's arm writes its
+    // row, so only a selection of stale indices alone (the selection layer
+    // keeps them live) falls here.
     if (!changed) return;
+    // A PASS/OWNER CONVERSION IS A MARKER MUTATION AND STOPS (architect
+    // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
+    // declaration), past the refusal and the no-change return and ahead of
+    // the store write — toggle_disabled_body's seat, this act's first write
+    // being the store's.
+    playback_lifecycle.stop_playback_if_playing();
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
+    // ONE ENTRY PER PRESS FROM THE PRE-STATE, with no identity hint, the
+    // sibling's: the same-count arm of restore_touched_indices (app_state.h)
+    // finds every member's row changed, so an undo or a redo re-selects the
+    // members (the earliest the focus).
     undo.push_undo_warp(std::move(pre_state));
     undo.recompute_dirty();
     viewport.invalidate_waveform_area();
     // THE TARGET-VIEW TAIL, the family contract at the head of this file. A
-    // pass/owner conversion changes the tempo that sounds from this marker on,
-    // so in W+target the plate re-warps and the FOCUS re-lands on its
-    // post-toggle image. The focus survives by construction — the collapse
-    // above made it the whole selection — and the pre-mutation land it already
-    // took (land_playhead_on_marker) is a different
-    // act from this one: that one moved the cursor onto the focus, this one
-    // follows the focus's image as the domain re-derives under it.
+    // pass/owner conversion changes the tempo that sounds from each member
+    // on, so in W+target the plate re-warps and the FOCUS re-lands on its
+    // post-toggle image. The focus is a member of the toggled selection by
+    // the never-parked rule; a selection resting without one simply skips
+    // the re-land, the toggle having nothing to follow.
     if (app.active_audio_view == 'T') {
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();

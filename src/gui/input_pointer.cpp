@@ -1568,8 +1568,7 @@ bool history_view_hides_button(RedesignButton b) {
 //     horizontal movement is a focus act, the doctrine at the head of
 //     position_nudge.h;
 //   * THE KEYBOARD FOCUS-COLLAPSE COMMANDS, which collapse a 2+ selection to its
-//     focus and land there — the Ctrl+N inherit toggle (warpmarkers_ops.cpp) and,
-//     since 2026-07-29, BOTH POSITION NUDGES through their shared prologue
+//     focus and land there — BOTH POSITION NUDGES through their shared prologue
 //     (position_nudge.cpp). Esc's singleton rung was in this class until
 //     2026-07-29, when the whole Esc ladder was deleted: bare Esc lands nothing
 //     now, because it does nothing at all outside the editors, the prompts, the
@@ -1635,7 +1634,7 @@ bool history_view_hides_button(RedesignButton b) {
 // navigation). Some callers stop playback first (the marker click owns that
 // stop at its one act site, Tab-family symmetry; the restores and the bpm-editor
 // open stop too); the others — the bare-Return flag-editor open,
-// the `p` swap, the Ctrl+N collapse — may land DURING playback, safe because the
+// the `p` swap — may land DURING playback, safe because the
 // land is a direct RESTING-cursor write and a live scanner is untouched by
 // cursor writes (move_playhead_to's scanner-inactive
 // convention). External linkage (declared in input_handler.h) so undo.cpp and

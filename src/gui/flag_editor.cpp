@@ -814,8 +814,8 @@ void GuiFlagEditor::payload_commit_tail(int reland_idx) {
     // clear and the retired retroactive clamp — cannot happen under the
     // iteration lock, so the two gates collapsed into one. THE LABEL PASTE
     // re-lands on ITS FOCUS (app.last_selected_marker, a member of the pasted
-    // selection), the group verbs' own re-land (toggle_disabled_body,
-    // warpmarkers_ops.cpp).
+    // selection), the group verbs' own re-land (toggle_disabled_body and
+    // toggle_inherits, warpmarkers_ops.cpp).
     if (app.active_audio_view == 'T') {
         viewport.kick_waveform_sync();
         const auto& mv_post = app.warpmarkers.markers();
