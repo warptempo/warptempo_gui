@@ -13,12 +13,17 @@
 //
 // (INTERFACE VERSUS MODAL, architect 2026-10-14: the player and the picker
 // stand in the box but are interface, so what they leave dead greys; the
-// prompts, editors and progress modal are modal and grey nothing — the rule
-// is recorded at redesign_button_enabled's head, app_state.h.)
+// prompts, editors and progress modal are modal and grey nothing of their
+// own, the roster wearing the page behind's face — a dialog editor's the
+// page it was opened from, send BB — the rule recorded at
+// redesign_button_enabled's head, app_state.h.)
 //
 // THE BOX TAKES THE VIEW (architect 2026-11-18 / 2026-11-19, send Z;
 // tmp/sendY/P2_design_overlays.md §A): the title bar and the top icon row
-// above it stay as the main window paints them. Across, it runs the panel's
+// above it stay as the main window paints them, the top icon row wearing
+// the face of the page behind (under an overlay or a dialog editor's
+// backdrop that page's, its opener lit — roster_face_page_owner,
+// app_state.h). Across, it runs the panel's
 // width (render.h's well_columns, edge to edge since send Z). Top to bottom:
 //   1. THE BOX — its first rows THE LINE UNDER THE TOP ICON ROW (the trim
 //      lane's first rows), its last THE LINE OVER THE BOTTOM ICON ROW (the
@@ -39,8 +44,10 @@
 //      the overlay standing, or a dialog editor's backdrop — and the main
 //      page's keys and timestamp otherwise (paint_handler.cpp's
 //      modal_owns_bottom_row); UNDER A QUESTION, THE PROGRESS DIALOG OR AN
-//      EDITOR IT IS PAINTED AS THE TOP ICON ROW IS UNDER THE SAME MODAL, not
-//      dimmed (GTK greys no window under its dialog), and DEAD TO PRESSES
+//      EDITOR IT IS PAINTED AS THE TOP ICON ROW IS UNDER THE SAME MODAL, the
+//      same page's face, not dimmed (GTK greys no window under its dialog;
+//      under a dialog editor the whole window is the page it was opened
+//      from, as it stood — roster_face_page_owner), and DEAD TO PRESSES
 //      (the modal's veil), the dialog's answers its window's own buttons and
 //      the keyboard's Enter / Esc;
 //   3. under both, THE STATUS BAR on the app's foot (render.h's status bar

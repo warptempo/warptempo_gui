@@ -106,7 +106,10 @@
 // app_state.h, whose head owns the rule), so a lit one wears the lit and
 // inert look and an unlit one the disabled look — ONE RULE for a dead key
 // wherever it is dead; the overlay's opener and the tooltip lamp, live
-// there, keep their live states. A MODAL changes no key behind it. NOTHING
+// there, keep their live states. A MODAL changes no key behind it: the
+// roster wears the page behind's face — under a dialog editor the page it
+// was opened from, its opener lit and live-faced, the rest disabled
+// (roster_face_page_owner, app_state.h; send BB, 2026-11-19). NOTHING
 // IS PRINTED UNDER A KEY (the legends retired 2026-11-18, send Z: "That's
 // from the hi-fi theme"); the tooltip names the act.
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word

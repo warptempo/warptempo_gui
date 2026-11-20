@@ -9159,7 +9159,10 @@ struct AppState {
     // trim_presets_button_enabled's page form; the BPM form's off the live
     // markers; the settings page's Close) and its window's title and label
     // off `title` while a dialog editor stands, and reads neither otherwise;
-    // the next opener overwrites both. Nothing writes the page, the trim or
+    // and THE ROSTER'S FACE reads `page.owner` there (roster_face_page_owner:
+    // the top icon row the page behind's, its opener lit — one rule for both
+    // icon rows and the list, architect 2026-11-19, send BB). The next
+    // opener overwrites both. Nothing writes the page, the trim or
     // the markers under the editor's veil, so the row shows the bits the list
     // showed at the open.
     // Paint alone: nothing presses the backdrop (the editor's veil), and the
@@ -9582,8 +9585,13 @@ inline bool folder_overlay_stands(const AppState& a) {
 // lifted through the veil (finish_chrome_press_release's head) — the tooltip
 // lamp the one other roster key an overlay leaves live
 // (overlay_admits_button, below); false with nothing standing.
-inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
-    switch (a.folder_overlay.owner) {
+// ON A GIVEN OWNER TAG (send BB, 2026-11-19): the same answer for `owner`,
+// the standing overlay's or the page behind a dialog editor
+// (roster_face_page_owner, below — the roster's face alone reads that form);
+// the AppState form, the live overlay's tag, is every input road's.
+inline bool is_folder_overlay_opener(AppState::FolderOverlay::Owner owner,
+                                     RedesignButton b) {
+    switch (owner) {
         case AppState::FolderOverlay::Owner::None:
             return false;
         case AppState::FolderOverlay::Owner::Player:
@@ -9599,6 +9607,38 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
             return b == RedesignButton::IconBpm;
     }
     return false;
+}
+inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
+    return is_folder_overlay_opener(a.folder_overlay.owner, b);
+}
+
+// THE OVERLAY PAGE WHOSE FACE THE ROSTER WEARS — ONE RULE FOR BOTH ICON ROWS
+// AND THE LIST (architect 2026-11-19, send BB, on the planner's
+// recommendation that under a line editor the top icon row show the page
+// behind as it stood, as the bottom icon row and the list already do: "They
+// have a similar disabling behavior. I tend to agree with your overall
+// direction too."): UNDER A DIALOG EDITOR THE WHOLE WINDOW SHOWS THE PAGE THE
+// EDITOR WAS OPENED FROM, AS IT STOOD, DEAD — GTK changes nothing of a window
+// under its dialog. The list is the backdrop's rows in the editor's room and
+// the bottom icon row the backdrop's controls row (paint_modal_dialog,
+// modal_owns_bottom_row, paint_handler.cpp); the top icon row is this tag's:
+// THE STANDING FOLDER OVERLAY'S, or, while a dialog editor stands
+// (AppState::dialog_editor_session — the overlay then down, closed at the
+// editor's open), THE BACKDROP PAGE'S (AppState::dialog_backdrop, written by
+// the editor's three openers just before their close_picker, read only while
+// the editor stands): the settings page under the settings line, the trim
+// presets list under Save As, the BPM form under its field. TWO READERS, the
+// roster's face alone: redesign_button_enabled's dialog editor arm (the
+// page's opener and the tooltip lamp live-faced, every other key disabled)
+// and redesign_button_selected's openers (the page's opener lit). PAINT
+// ALONE: every key stays dead under the editor's veil (no press, hover,
+// tooltip or chord reaches one, keyboard_modal_editor_active), and the input
+// predicates — is_overlay_opener, overlay_admits_button, overlay_leave_word —
+// read the live overlay, none standing there. None with neither standing.
+inline AppState::FolderOverlay::Owner roster_face_page_owner(
+    const AppState& a) {
+    if (a.dialog_editor_session() != 0) return a.dialog_backdrop.page.owner;
+    return a.folder_overlay.owner;
 }
 
 // DOES THE SCORE VIEWER STAND? (architect 2026-10-26, score_viewer.h) — THE
@@ -9680,9 +9720,12 @@ inline constexpr const char* kModalCloseLabel  = "Close";
 //   the TRIM PRESETS LIST (PRESETS)       Close, its row's last word
 //   the BPM FORM (BPM)                    Cancel, its controls row's word
 //   the SCORE VIEWER (SCORE)              Close
-// The line editor the page opens is a modal, no overlay standing under it,
-// so no tooltip shows there (tooltip_dwell_suppressed). nullptr with nothing
-// standing; the score viewer answers first, is_overlay_opener's order.
+// A dialog editor (the settings line, Save As, the BPM field) is a modal
+// that closed its overlay: this answers nullptr there, the live tag being
+// None, though the opener stands lit on the page behind's face
+// (roster_face_page_owner), and no tooltip shows under the editor's veil to
+// carry a word (tooltip_dwell_suppressed). nullptr with nothing standing; the
+// score viewer answers first, is_overlay_opener's order.
 inline const char* overlay_leave_word(const AppState& a) {
     if (score_viewer_stands(a)) return kModalCloseLabel;
     switch (a.folder_overlay.owner) {
@@ -9713,7 +9756,10 @@ inline const char* overlay_leave_word(const AppState& a) {
 // input_pointer.cpp) and GuiInputHandler::tooltip_dwell_suppressed (the
 // tooltip's gate, input_pointer.cpp — the keys that answer there keep
 // their hints, architect 2026-11-11). The struck clip lamp answers under an
-// overlay too, a lamp and no roster key (ChromePress's Lamp kind).
+// overlay too, a lamp and no roster key (ChromePress's Lamp kind). (Under a
+// dialog editor, no overlay standing, redesign_button_enabled's dialog editor
+// arm spells the same membership over the page behind's tag for the face
+// alone — roster_face_page_owner — and every road here stays veiled.)
 inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
     return is_overlay_opener(a, b) || b == RedesignButton::IconTooltips;
 }
@@ -15534,8 +15580,14 @@ inline bool redesign_button_enabled(const AppState& a,
     // face (the folder-overlay arm below): on screen is as painted, the
     // roster's truthful rule. THE PROMPTS, THE DIALOG EDITORS AND THE PROGRESS
     // MODAL are MODAL: they take focus and control by definition, so what
-    // they cover — the toolbar — is dead behind their veil WITHOUT
-    // greying, and this body has no arm for them. SINCE 2026-10-25 THE LANE
+    // they cover — the toolbar — is dead behind their veil, and NONE GREYS A
+    // KEY OF ITS OWN: the roster wears the face of the page behind, as it
+    // stood. Under a prompt or the progress modal that is the main page's or
+    // the standing overlay's own face, so this body has no arm for them; A
+    // DIALOG EDITOR closes its overlay at its open, so its arm below gives the
+    // roster the face of the page it was opened from (architect 2026-11-19,
+    // send BB: one rule for both icon rows and the list, the owner
+    // roster_face_page_owner). SINCE 2026-10-25 THE LANE
     // EDITORS ARE MODALS TOO — the flag editor and the iteration bound
     // editor (architect: "acts that need a keyboard — shouldn't they just be
     // modals?"): an act that takes the keyboard is a modal, and a modal
@@ -15649,6 +15701,22 @@ inline bool redesign_button_enabled(const AppState& a,
     // glyph (materials.h's THE KEY).
     if (folder_overlay_stands(a) || score_viewer_stands(a))
         return overlay_admits_button(a, b);
+    // A DIALOG EDITOR'S ROSTER WEARS THE PAGE BEHIND'S FACE (architect
+    // 2026-11-19, send BB: "They have a similar disabling behavior. I tend to
+    // agree with your overall direction too."; the rule's one owner
+    // roster_face_page_owner): the settings line, Save As and the BPM field
+    // each close the overlay they were opened from, and the roster answers
+    // as the overlay arm above answered while that page stood — its opener
+    // and the tooltip lamp (overlay_admits_button's membership, spelled here
+    // over the backdrop's tag, the live tag being None) live-faced, every
+    // other key disabled, a lit one keeping its lit bit (the lit-but-inert
+    // look). PAINT ALONE: the editor's veil keeps every key dead
+    // (keyboard_modal_editor_active), the opener and the lamp included.
+    // Ranked where the overlay arm is, above the `h` partition, which it
+    // outranks as that arm does.
+    if (a.dialog_editor_session() != 0)
+        return is_folder_overlay_opener(roster_face_page_owner(a), b) ||
+               b == RedesignButton::IconTooltips;
     // THE `h` HISTORY VIEW IS THE ONE MODE-SCOPED EXCEPTION TO THE ROWS' FACE
     // SCOPES (architect 2026-08-04): while it stands, EVERY button whose act the
     // view consumes wears its row's disabled face and ignores the pointer, and
@@ -15735,9 +15803,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // player greys it (its router consumes Ctrl+O); the `h` view leaves
         // it lit (Ctrl+O is on its allowlist, the derived partition above).
         // THE MODALS ARE NO TERM: a prompt, the progress modal and every
-        // editor veil the chrome, every press on it silently consumed, and
-        // nothing behind a modal changes face — dead and ungreyed (the
-        // classes' record at this predicate's head). Neither lock drops Ctrl+O (read_only_key_blocked admits
+        // editor veil the chrome, every press on it silently consumed, and no
+        // modal greys a key of its own — the roster wears the page behind's
+        // face, a dialog editor's the page it was opened from (the dialog
+        // editor arm above; the classes' record at this predicate's head),
+        // where OPEN PROJECT is grey. Neither lock drops Ctrl+O (read_only_key_blocked admits
         // it, the iteration lock inheriting the admission). ITS SHIFT TWIN,
         // REVERT, ADDS NOTHING HERE under the twin rule: the plain act is
         // live wherever the roster is, and Revert's own refusals (a
@@ -17068,8 +17138,10 @@ inline bool redesign_button_enabled(const AppState& a,
 // as a key dead on a locked tab or under grid iterations does: ONE RULE for a
 // dead checked key everywhere. The opener and the tooltip lamp, the keys an
 // overlay leaves live, wear their live looks. A MODAL changes no key behind
-// it. Three readers: the painter (which stashes what it
-// painted), main.cpp's staleness comparator and the band's fingerprint
+// it: the bits are the page behind's — under a dialog editor the page it was
+// opened from, whose opener stays lit (the openers' arm below,
+// roster_face_page_owner; send BB, 2026-11-19). Three readers: the painter
+// (which stashes what it painted), main.cpp's staleness comparator and the band's fingerprint
 // (GuiPaintHandler::upper_rows_fingerprint). (The lift's radio refusal, a
 // lit view pair member's press a consumed nothing, was one more until the
 // pop of 2026-10-23 night, kToolbarChords' NO RADIO COLUMN.)
@@ -17268,13 +17340,18 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // the tooltip lamp the other live key, 2026-11-10). The per-tick
         // comparator carries the edge. (All three were momentary, no lamp,
         // until that day.) The five picker contents share the picker's bit,
-        // so the tag says whose key is lit (is_folder_overlay_opener).
+        // so the tag says whose key is lit (is_folder_overlay_opener) — THE
+        // TAG OF THE PAGE WHOSE FACE THE ROSTER WEARS (roster_face_page_owner;
+        // architect 2026-11-19, send BB): the standing overlay's, or under a
+        // dialog editor the page it was opened from, so SETTINGS stays lit
+        // under the settings line, PRESETS under Save As and BPM under the BPM
+        // field, as with no editor over the page.
         case RedesignButton::IconListen:
         case RedesignButton::OpenProject:
         case RedesignButton::IconSettings:
         case RedesignButton::IconTrimPresets:
         case RedesignButton::IconBpm:
-            return is_folder_overlay_opener(a, b);
+            return is_folder_overlay_opener(roster_face_page_owner(a), b);
         // THE SCORE KEY, the same pattern over the score viewer's own bit
         // (architect 2026-10-26): lit while the viewer stands, its press the
         // viewer's close.

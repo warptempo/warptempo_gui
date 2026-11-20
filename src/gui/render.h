@@ -2430,8 +2430,9 @@ WellColumns well_columns(const AppState& a);
 // CONTROLS ROW (modal_box.h); UNDER A QUESTION, THE PROGRESS DIALOG OR AN
 // EDITOR THE ROWS SHOW THE PAGE BEHIND'S ROW — the main page's keys and
 // timestamp, or the overlay's controls (a dialog editor's backdrop's among
-// them) — painted as the top icon row is under the same modal and dead to
-// presses (architect 2026-11-19, send BB; paint_handler.cpp's
+// them) — the top icon row the same page's face under the same modal
+// (roster_face_page_owner, app_state.h), both rows dead to presses
+// (architect 2026-11-19, send BB; paint_handler.cpp's
 // modal_owns_bottom_row), relaid over the status bar above the on-screen
 // keyboard while it stands (main.cpp's app_foot_y).
 inline int bottom_row_h_px() {
