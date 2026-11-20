@@ -2577,8 +2577,9 @@ bool GuiInputHandler::touch_point_in_pan_zone(
     // 2026-10-07 to 2026-10-14, for the dropdown's reason, and went with the
     // list.)
     // THE ZONE YIELDS UNDER A NOTIFICATION CARD (2026-08-29), for the
-    // keyboard clause's reason below: the cards stack over the waveform's
-    // upper right, the whole waveform is the pan zone, and a finger landing
+    // keyboard clause's reason below: the stack hangs from the window's top
+    // right and a card can reach the waveform, the whole waveform is the pan
+    // zone, and a finger landing
     // on a card inside a pan zone would become the phone-model pan and
     // deliver its press only at the lift, if at all. Answering false lets the
     // finger resolve to the pointer translation ON CONTACT and reach the
@@ -8018,8 +8019,8 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit) {
 // stands above the bottom icon row or a controls row for theirs), so
 // no strip's damage reaches it. Surface-agnostic: the painted rect is
 // wherever that hint was drawn. Over the canvas the rect's repaint leaves
-// the hole's zeros, which the upload carries whole while a floater stood at
-// the last walk (GuiGlCanvas::present_frame's upload rule).
+// the hole's zeros, which the upload carries through the last walk's
+// tooltip hull (GuiGlCanvas::present_frame's upload rule).
 static void take_tooltip_box_down(AppState& app, Viewport& viewport) {
     AppState::RedesignTooltip& t = app.redesign_tooltip;
     if (!t.visible) return;

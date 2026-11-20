@@ -4,6 +4,7 @@
 #include "audio.h"
 #include "playback.h"
 #include "render.h"
+#include "canvas_sink.h"   // GuiFloaterHulls, the known-clear record's hulls
 #include "platform.h"
 #include "warp_frame_map.h"   // WarpFrameMapSegment
 
@@ -937,7 +938,7 @@ struct GuiPaintHandler {
 
     // THE GL CANVAS'S FRAME BOUNDARY (2026-10-13, canvas_sink.h): clears the
     // two per-frame bits on_redraw's canvas block keeps — the list's clip and
-    // floater bit written, the list built — so the next frame's first damage
+    // floaters' hulls written, the list built — so the next frame's first damage
     // rect writes them again and its first rect meeting the canvas's paint
     // area builds the list. Called from the pre-paint hook (main.cpp), the
     // one seat that opens every painted frame.
@@ -1011,26 +1012,38 @@ private:
     bool waveform_rebuild_owed = false;
 
     // THE GL CANVAS'S PER-FRAME BITS (begin_canvas_frame above, on_redraw's
-    // canvas block): the frame's list clip and floater bit written, and the
-    // frame's list built.
+    // canvas block): the frame's list clip and floaters' hulls written, and
+    // the frame's list built.
     bool canvas_frame_seen = false;
     bool canvas_list_built = false;
-    // THE CANVAS PAINT AREA'S KNOWN-CLEAR RECORD (2026-10-14; the rule at
-    // on_redraw's canvas block, where the CLEAR it skips stands). Between
-    // painted frames: `canvas_clear_known` — every backbuffer pixel of
-    // `canvas_clear_area` (the last painted frame's paint area, client px) is
-    // 0. Through a frame, the summary the next frame's first rect folds into
-    // it: `canvas_clear_open` (a painted frame's summary is pending), the
-    // frame's decision `canvas_clear_skip`, whether a rect of it covered the
-    // area whole (`canvas_clear_covered`), and whether a floating surface
-    // stood over it (`canvas_clear_floater`, the frame's floater bit).
+    // THE CANVAS PAINT AREA'S KNOWN-CLEAR RECORD (2026-10-14; OUTSIDE THE
+    // FLOATERS' HULLS since send BB, 2026-11-19; the rule at on_redraw's
+    // canvas block, where the CLEAR it narrows stands). Between painted
+    // frames: `canvas_clear_known` — every backbuffer pixel of
+    // `canvas_clear_area` (the last painted frame's paint area, client px)
+    // outside `canvas_clear_hulls` (that frame's floaters' hulls as it
+    // finished them, GuiCanvasDrawList::floaters) is 0. Through a frame, the
+    // summary the next frame's first rect folds into it: `canvas_clear_open`
+    // (a painted frame's summary is pending), the frame's decision
+    // `canvas_clear_narrow` (its clears only where a rect meets a hull), and
+    // whether a rect of it covered the area whole (`canvas_clear_covered`).
     // on_resize forgets it.
-    bool    canvas_clear_known   = false;
-    GuiRect canvas_clear_area{0, 0, 0, 0};
-    bool    canvas_clear_open    = false;
-    bool    canvas_clear_skip    = false;
-    bool    canvas_clear_covered = false;
-    bool    canvas_clear_floater = false;
+    bool            canvas_clear_known   = false;
+    GuiRect         canvas_clear_area{0, 0, 0, 0};
+    GuiFloaterHulls canvas_clear_hulls{};
+    bool            canvas_clear_open    = false;
+    bool            canvas_clear_narrow  = false;
+    bool            canvas_clear_covered = false;
+    // THE FLOATERS' HULLS (canvas_sink.h's GuiCanvasDrawList::floaters):
+    // measured from live state at the frame's first rect, before any pass
+    // paints, and widened after each run's floaters paint by what they
+    // published — the definitions' block (paint_handler.cpp, beside
+    // tooltip_overlays_owed_rows) holds the rule. `floater_cards_measured_`
+    // the cards' measure's buffer, kept so a standing card's frames do not
+    // allocate it.
+    void measure_floater_hulls(GuiFloaterHulls& out);
+    void widen_floater_hulls(GuiFloaterHulls& h);
+    std::vector<AppState::NotificationPainted> floater_cards_measured_;
     // The frame's draw list from the canvas passes, through the sink, in
     // on_redraw's paint order (the definition, paint_handler.cpp).
     void build_canvas_list(GuiCanvasDrawList& frame, bool plate_branch);

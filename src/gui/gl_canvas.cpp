@@ -71,17 +71,28 @@ constexpr const char* kCanvasVertexShader =
 // AN ALPHA-0 TEXEL IS DISCARDED (2026-10-13, the canvas sink's transparency
 // invariant, canvas_sink.h): the backbuffer's canvas paint area is cleared
 // to 0 where no overlay stands, so the canvas the list drew under it shows
-// there. Every other texel is placed as above, its alpha written 1 — EXCEPT
-// WHILE A FLOATING SURFACE STANDS (u_over 1, the list's floater bit; send
-// AA's stage D1, 2026-11-19, the tooltip's .95 fill and its shadow, the
-// cards' .95 fills): then the texel goes out as cairo holds it,
-// PREMULTIPLIED (t.bgr, t.a), under the blend present_frame enables for
-// this draw — the fixed state's premultiplied source-over — so a partly
-// covered texel over the canvas composites over what the list drew there,
-// G · (1 − a) + texel, rounded once, the framebuffer's alpha staying 1 (the
-// list and the clear leave it 1, and a + 1 · (1 − a) is 1); AN OPAQUE TEXEL
-// LANDS EXACTLY AS UNBLENDED (texel · 1 + G · 0), so every pixel outside a
-// floater's own partial pixels is the same bytes either way.
+// there. THREE MODES, u_over (present_frame's THE TEXTURE'S DRAW):
+//   0 — THE UNBLENDED DRAW: every other texel placed as above, its alpha
+//       written 1 — the draw of every frame whose floaters' hulls meet no
+//       part of the canvas clip, the same bytes it always was;
+//   2 — THE UNBLENDED DRAW BESIDE THE HULLS (send BB, 2026-11-19): mode 0,
+//       but A PARTLY TRANSPARENT TEXEL IS DISCARDED TOO (t.a under .998, a
+//       threshold between the two highest bytes' fetches, 254 / 255 = .99608
+//       and 255 / 255 = 1, so a partial byte is and an opaque one is not
+//       whatever the fetch's last bit), so no
+//       partial texel is ever written as opaque: inside the clip such
+//       texels stand only inside a hull (the transparency invariant), where
+//       mode 1 draws them over the list's pixel this draw left untouched;
+//   1 — THE BLENDED DRAW INSIDE A HULL (send AA's stage D1, the tooltip's
+//       .95 fill and its shadow, the cards' .95 fills, a question's shadow;
+//       confined to the hulls since send BB): the texel goes out as cairo
+//       holds it, PREMULTIPLIED (t.bgr, t.a), under the blend present_frame
+//       enables for this draw — the fixed state's premultiplied source-over
+//       — so a partly covered texel over the canvas composites over what the
+//       list drew there, G · (1 − a) + texel, rounded once, the framebuffer's
+//       alpha staying 1 (the list and the clear leave it 1, and a + 1 ·
+//       (1 − a) is 1); AN OPAQUE TEXEL LANDS EXACTLY AS UNBLENDED (texel · 1 +
+//       G · 0), so mode 1 over mode 2's opaque pixels rewrites the same bytes.
 constexpr const char* kCanvasFragmentShader =
     "#version 300 es\n"
     "precision highp float;\n"
@@ -94,7 +105,8 @@ constexpr const char* kCanvasFragmentShader =
     "    ivec2 p = ivec2(int(gl_FragCoord.x), u_height - 1 - int(gl_FragCoord.y));\n"
     "    vec4 t = texelFetch(u_tex, p, 0);\n"
     "    if (t.a == 0.0) discard;\n"
-    "    o_color = vec4(t.bgr, u_over != 0 ? t.a : 1.0);\n"
+    "    if (u_over == 2 && t.a < 0.998) discard;\n"
+    "    o_color = vec4(t.bgr, u_over == 1 ? t.a : 1.0);\n"
     "}\n";
 
 // THE CANVAS LIST'S PROGRAM (2026-10-13; the records at GuiCanvasPrimitive,
@@ -1353,10 +1365,10 @@ void GuiGlCanvas::build_list_program(int grow) {
 // tests, and THE BLEND IS OFF AT REST — its function set once here, the
 // premultiplied source-over the plate's fringe and the tint need
 // (kListFragmentShader's composite and tint arm), and enabled for the canvas list's draw (present_frame,
-// 2026-10-30) and for the texture's draw while a floating surface stands
-// (the floater bit; send AA's stage D1, 2026-11-19, kCanvasFragmentShader)
-// alone — so a texel and an opaque list word reach the framebuffer as
-// written.
+// 2026-10-30) and for the texture's draw inside the floaters' hulls (send
+// AA's stage D1, 2026-11-19; the hulls send BB's, kCanvasFragmentShader's
+// mode 1) alone — so a texel and an opaque list word reach the framebuffer
+// as written.
 void GuiGlCanvas::bind_fixed_state() {
     glDisable(GL_DITHER);
     glDisable(GL_BLEND);
@@ -1490,14 +1502,24 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // the GUI's waveform_area ∩ waveform_paint_area — or the modal box's
 // interior while the score viewer's page stands, 2026-10-27 — the platform
 // computes no GUI geometry), split into up to four rects, because the
-// backbuffer holds nothing there but zeros the texture already holds. THE WHOLE
-// RECT GOES UP instead while the list's floater bit stands or stood at
-// the last walk (a floating surface's pixels over the canvas, and the
-// zeros it leaves when it goes, ride containing rects), when the clip
-// differs from the last walk's (a keyboard or a folder overlay came or
-// went, and texels it uploaded now lie inside the clip), and at the
-// first walk on a remade texture (no texel is known yet). So every texel
-// inside the clip is the backbuffer's: 0 where no overlay stands.
+// backbuffer holds nothing there but zeros the texture already holds —
+// EXCEPT WHERE IT MEETS A FLOATER'S HULL OF THIS WALK OR OF THE LAST (send
+// BB, 2026-11-19; GuiCanvasDrawList::floaters, the hulls cut to the clip and
+// united where two overlap, so no part goes up twice): there the rect's
+// part goes up too — a floater's pixels over the canvas this walk, and the
+// zeros a departed or moved one leaves (its leave damages its old pixels,
+// the floaters' damage owners, and they lie in the last walk's hull). A
+// floater whose hull meets no part of the clip costs this walk nothing. THE
+// WHOLE RECT GOES UP when the clip differs from the last walk's (a keyboard
+// or a folder overlay came or went, and texels it uploaded now lie inside
+// the clip) and at the first walk on a remade texture (no texel is known
+// yet). So every texel inside the clip is the backbuffer's: 0 where no
+// overlay stands. THE PROOF, a pixel p of the clip inside a damage rect and
+// outside both walks' hulls: no floater stood at p at the last walk's end
+// nor stands now (each family's hull holds every pixel it may have
+// standing), so the backbuffer is 0 at p now (on_redraw's CLEAR: the area
+// is cleared, or known clear outside the hulls) and was 0 at the last walk,
+// which put that 0 in the texture.
 //
 // THE PAGE TEXTURES (2026-10-27; gl_canvas.h's rule, reconcile_pages): after
 // the walk, the request's wanted list reconciled — the textures it no longer
@@ -1522,10 +1544,11 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // triangle over the surface's own viewport, the fragment shader placing
 // each texel at its pixel and DISCARDING an alpha-0 one, so the canvas
 // shows wherever the backbuffer's interior is clear and every other
-// pixel is the backbuffer's (kCanvasFragmentShader) — WHILE A FLOATING
-// SURFACE STANDS (the list's floater bit) drawn under the premultiplied
-// blend, so the tooltip's and the cards' translucent pixels composite over
-// the canvas the list drew (send AA's stage D1, 2026-11-19). The frame is
+// pixel is the backbuffer's (kCanvasFragmentShader) — AND INSIDE THE
+// FLOATERS' HULLS drawn under the premultiplied blend, so the tooltip's,
+// the cards' and a question's translucent pixels composite over the canvas
+// the list drew (send AA's stage D1, 2026-11-19; confined to the hulls by
+// send BB the same day, THE TEXTURE'S DRAW below). The frame is
 // cleared first, opaque black: with discards a pixel neither draw writes
 // would otherwise hold a recycled buffer's bytes, though by the
 // invariant none exists (the list's first record is the canvas's ground,
@@ -1538,7 +1561,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // under every opaque overlay: an 8-bit UNORM texel
 // fetched without a filter round-trips to the same 8-bit value in the
 // RGBA8 framebuffer, dithering is off, the texture's draw is unblended (or,
-// under a floater, blended, which lands an opaque texel exactly), and
+// inside a floater's hull, blended, which lands an opaque texel exactly), and
 // the framebuffer is plain RGBA (the passthrough colorspace encodes nothing
 // — never an sRGB framebuffer, which is what makes the plate's blend the
 // byte-space blend ruled); inside the clip it is the list's words, each a
@@ -1570,18 +1593,64 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // 2026-10-24): an empty clip — no list yet, or a paint area the folder
 // overlay emptied — leaves nothing out of any upload and draws no list.
 // present_frame's and change_undescribed's one reading.
-void GuiGlCanvas::frame_clip(const GuiCanvasDrawList* list, int clip[4],
-                             bool& floater) {
+void GuiGlCanvas::frame_clip(const GuiCanvasDrawList* list, int clip[4]) {
     clip[0] = clip[1] = clip[2] = clip[3] = 0;
-    floater = false;
     if (list && list->clip.w > 0 && list->clip.h > 0) {
         clip[0] = list->clip.x;
         clip[1] = list->clip.y;
         clip[2] = list->clip.w;
         clip[3] = list->clip.h;
-        floater = list->floater;
     }
 }
+
+namespace {
+
+// THE HULLS' PARTS IN THE CLIP (present_frame's upload rule and THE
+// TEXTURE'S DRAW): each of the `n` rects cut to the clip, the empty ones
+// dropped, and any two that overlap replaced by the rect bounding both until
+// no two overlap — so no pixel lies in two parts (an upload is not sent
+// twice, a texel is not blended twice) and every pixel of a rect lies in a
+// part. A bounding rect may take in pixels of no hull: they hold the
+// backbuffer's bytes (an upload of them is the texel already there) or an
+// alpha-0 or opaque texel (the blend lands it as the unblended draw does),
+// so the generosity changes no byte. Families apart stay apart. Returns the
+// parts' count, at most n.
+int hull_parts_in_clip(const GuiGlRect* in, int n, const int clip[4],
+                       GuiGlRect* out) {
+    int m = 0;
+    for (int i = 0; i < n; ++i) {
+        const int x0 = std::max(in[i].x, clip[0]);
+        const int y0 = std::max(in[i].y, clip[1]);
+        const int x1 = std::min(in[i].x + in[i].w, clip[0] + clip[2]);
+        const int y1 = std::min(in[i].y + in[i].h, clip[1] + clip[3]);
+        if (x1 <= x0 || y1 <= y0) continue;
+        out[m++] = GuiGlRect{x0, y0, x1 - x0, y1 - y0};
+    }
+    for (bool merged = true; merged;) {
+        merged = false;
+        for (int i = 0; i < m && !merged; ++i) {
+            for (int j = i + 1; j < m && !merged; ++j) {
+                const GuiGlRect& a = out[i];
+                const GuiGlRect& b = out[j];
+                if (std::max(a.x, b.x) >= std::min(a.x + a.w, b.x + b.w) ||
+                    std::max(a.y, b.y) >= std::min(a.y + a.h, b.y + b.h))
+                    continue;
+                const int x0 = std::min(a.x, b.x);
+                const int y0 = std::min(a.y, b.y);
+                const int x1 = std::max(a.x + a.w, b.x + b.w);
+                const int y1 = std::max(a.y + a.h, b.y + b.h);
+                out[i] = GuiGlRect{x0, y0, x1 - x0, y1 - y0};
+                out[j] = out[--m];
+                merged = true;
+            }
+        }
+    }
+    return m;
+}
+
+GuiGlRect gl_rect(const GuiRect& r) { return GuiGlRect{r.x, r.y, r.w, r.h}; }
+
+} // namespace
 
 bool GuiGlCanvas::ready(cairo_surface_t* back) const {
     return texture_ != 0 && back != nullptr &&
@@ -1601,9 +1670,8 @@ bool GuiGlCanvas::ready(cairo_surface_t* back) const {
 // present even where all its damage lies off the surface.
 bool GuiGlCanvas::change_undescribed(const GuiCanvasDrawList* list) const {
     if (!upload_seeded_) return true;
-    int  clip[4];
-    bool floater = false;
-    frame_clip(list, clip, floater);
+    int clip[4];
+    frame_clip(list, clip);
     for (int i = 0; i < 4; ++i)
         if (clip[i] != upload_clip_[i]) return true;
     if (page_stood_) return true;
@@ -1623,16 +1691,31 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         cairo_image_surface_get_data(back));
     if (!src) return false;
 
-    int  clip[4];
-    bool floater = false;
-    frame_clip(list, clip, floater);
+    int clip[4];
+    frame_clip(list, clip);
     const bool clip_moved = !upload_seeded_ ||
                             clip[0] != upload_clip_[0] ||
                             clip[1] != upload_clip_[1] ||
                             clip[2] != upload_clip_[2] ||
                             clip[3] != upload_clip_[3];
-    const bool whole = clip_moved || floater || upload_floater_ ||
-                       clip[2] <= 0;
+    const bool whole = clip_moved || clip[2] <= 0;
+    static_assert(kFloaterSlots == kGuiFloaterFamilies,
+                  "one walk hull a floater family");
+    // THE FLOATERS' HULLS (the upload rule above): this walk's, from the
+    // list, and the last walk's; their parts in the clip, this walk's and
+    // the last's together for the upload, this walk's alone for the blend.
+    GuiGlRect hulls[2 * kFloaterSlots] = {};
+    if (list && clip[2] > 0)
+        for (int f = 0; f < kFloaterSlots; ++f)
+            hulls[f] = gl_rect(list->floaters[static_cast<std::size_t>(f)]);
+    for (int f = 0; f < kFloaterSlots; ++f)
+        hulls[kFloaterSlots + f] = upload_hulls_[f];
+    GuiGlRect upload_parts[2 * kFloaterSlots];
+    const int n_upload_parts =
+        hull_parts_in_clip(hulls, 2 * kFloaterSlots, clip, upload_parts);
+    GuiGlRect blend_parts[kFloaterSlots];
+    const int n_blend_parts =
+        hull_parts_in_clip(hulls, kFloaterSlots, clip, blend_parts);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_);
@@ -1662,11 +1745,18 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         upload(x0, iy1, x1, y1);     // the rows below it
         upload(x0, iy0, ix0, iy1);   // beside it, left
         upload(ix1, iy0, x1, iy1);   // beside it, right
+        // Inside the clip, where a floater's hull of this walk or the last
+        // meets the rect (the parts are disjoint and inside the clip).
+        for (int i = 0; i < n_upload_parts; ++i) {
+            const GuiGlRect& u = upload_parts[i];
+            upload(std::max(ix0, u.x), std::max(iy0, u.y),
+                   std::min(ix1, u.x + u.w), std::min(iy1, u.y + u.h));
+        }
     }
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
     for (int i = 0; i < 4; ++i) upload_clip_[i] = clip[i];
-    upload_floater_ = floater;
-    upload_seeded_  = true;
+    for (int f = 0; f < kFloaterSlots; ++f) upload_hulls_[f] = hulls[f];
+    upload_seeded_ = true;
 
     if (list) reconcile_pages(list->page);
 
@@ -1718,19 +1808,44 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         glActiveTexture(GL_TEXTURE0);
         glDisable(GL_SCISSOR_TEST);
     }
-    // THE TEXTURE, BLENDED WHILE A FLOATER STANDS (kCanvasFragmentShader's
-    // u_over; send AA's stage D1): the floater bit — a tooltip or a card
-    // standing, the bit the upload walk already reads — enables the blend
-    // for this one draw and has the shader write the premultiplied texel,
-    // so the floater's translucent pixels composite over the canvas; with
-    // no floater the draw is the unblended one it always was. No pass is
-    // added: the same draw, its blend on for the frames a floater stands.
+    // THE TEXTURE'S DRAW, BLENDED ONLY INSIDE THE FLOATERS' HULLS
+    // (kCanvasFragmentShader's three modes; the blend send AA's stage D1,
+    // its confinement send BB, 2026-11-19). WHERE NO HULL MEETS THE CLIP,
+    // ONE UNBLENDED DRAW (mode 0) — today's draw of a frame with no
+    // floater, texel for texel, whatever floater stands beside the canvas
+    // (over chrome every floater's pixel is opaque: cairo composites it
+    // over the opaque chrome). WHERE ONE DOES, TWO PASSES: the unblended
+    // draw over the whole surface discarding every partial texel as well as
+    // the alpha-0 ones (mode 2) — so a partial texel is never written
+    // opaque, and under it the list's pixel stands untouched — then, under
+    // a scissor to each hull's part in the clip (disjoint, so no texel is
+    // blended twice), the blended draw (mode 1), which lays each partial
+    // texel over the list's pixel exactly as the whole-surface blend did,
+    // rewrites each opaque texel with its own bytes and discards the alpha-0
+    // ones. Outside the parts no partial texel exists (canvas_sink.h's THE
+    // TRANSPARENCY INVARIANT: inside the clip a partial alpha is a floater's,
+    // inside its hull; outside the clip every pixel is opaque), so mode 2
+    // is mode 0 there and every pixel is the bytes of the whole-surface
+    // blend this replaces.
     glUseProgram(program_);
     glUniform1i(height_uniform_, texture_h_);
-    glUniform1i(over_uniform_, floater ? 1 : 0);
-    if (floater) glEnable(GL_BLEND);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    if (floater) glDisable(GL_BLEND);
+    if (n_blend_parts == 0) {
+        glUniform1i(over_uniform_, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    } else {
+        glUniform1i(over_uniform_, 2);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glUniform1i(over_uniform_, 1);
+        glEnable(GL_BLEND);
+        glEnable(GL_SCISSOR_TEST);
+        for (int i = 0; i < n_blend_parts; ++i) {
+            const GuiGlRect& b = blend_parts[i];
+            glScissor(b.x, texture_h_ - (b.y + b.h), b.w, b.h);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+        }
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_BLEND);
+    }
     page_stood_ = page_stands;
     return true;
 }
@@ -1764,6 +1879,7 @@ void GuiGlCanvas::forget() {
     page_rect_uniform_   = -1;
     page_field_uniform_  = -1;
     pages_.clear();
+    for (GuiGlRect& h : upload_hulls_) h = GuiGlRect{0, 0, 0, 0};
     upload_seeded_       = false;
 }
 

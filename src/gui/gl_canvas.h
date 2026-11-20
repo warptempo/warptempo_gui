@@ -64,7 +64,9 @@ public:
     // THE FRAME (the definition): the upload walk of `damage` out of `back`
     // into the texture, less the canvas clip; the page textures reconciled
     // with the list's request; the clear; the list's draw — or the page's,
-    // while it stands — under the scissor; the texture's draw over it.
+    // while it stands — under the scissor; the texture's draw over it,
+    // blended only inside the list's floater hulls (canvas_sink.h's
+    // GuiCanvasDrawList::floaters).
     // `list` the GUI's canvas frame (its px the surface's: the app paints no
     // window frame since 2026-10-24), null before the first, its page's
     // REPORT written here (GuiCanvasPage, canvas_sink.h); `surface_w` x
@@ -107,12 +109,11 @@ private:
     void upload_list(const GuiCanvasDrawList& list);
     void reconcile_pages(GuiCanvasPage& page);
     void draw_page(GuiCanvasPage& page, const int clip[4]);
-    static void frame_clip(const GuiCanvasDrawList* list, int clip[4],
-                           bool& floater);
+    static void frame_clip(const GuiCanvasDrawList* list, int clip[4]);
 
     GuiGlCanvasHost host_{};
     // The texture triangle's program and its two uniforms (the height, and
-    // u_over: the floater bit's blend, kCanvasFragmentShader), and THE
+    // u_over: the draw's three modes, kCanvasFragmentShader), and THE
     // BACKBUFFER'S TEXTURE with its size (ensure_texture).
     unsigned int program_        = 0;
     int          height_uniform_ = -1;
@@ -187,10 +188,14 @@ private:
     int                      page_field_uniform_  = -1;
     std::vector<PageTexture> pages_;
     // THE LAST UPLOAD WALK'S CANVAS (present_frame's upload rule): its clip
-    // in surface px, its floater bit, and whether the texture has had a walk
-    // since it was made (ensure_texture clears it).
+    // in surface px, THE FLOATERS' HULLS it walked with (one a family,
+    // GuiCanvasDrawList::floaters, kFloaterSlots of them: the zeros a
+    // departed floater leaves go up through them at the next walk), and
+    // whether the texture has had a walk since it was made (ensure_texture
+    // clears it).
+    static constexpr int kFloaterSlots = 3;
     int          upload_clip_[4]      = {0, 0, 0, 0};
-    bool         upload_floater_      = false;
+    GuiGlRect    upload_hulls_[kFloaterSlots] = {};
     bool         upload_seeded_       = false;
     // Whether the last frame drew the score viewer's page
     // (change_undescribed: the page's leaving presents too).

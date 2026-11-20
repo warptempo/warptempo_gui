@@ -137,13 +137,14 @@
 //
 // THE CANVAS FRAME (2026-10-13, the GPU canvas; canvas_sink.h owns the rule):
 // set_canvas_frame(list) names the GUI's one process-wide draw list
-// (gui_canvas_frame) — its records, its clip and its floater bit, all the
+// (gui_canvas_frame) — its records, its clip and its floaters' hulls, all the
 // GUI's — and on_redraw calls it on the first damage rect of every frame,
 // after which the backend reads the list at that frame's present and at
 // every later one until the next call — GuiGlCanvas's frame (gl_canvas.h),
 // the one canvas road (architect 2026-10-30): the records — or the score
 // viewer's page while it stands (2026-10-27) — drawn under a scissor to the
-// clip, the clip left out of every upload unless the floater bit stands, and
+// clip, the clip left out of every upload but where a floater's hull meets
+// it, the texture blended inside the hulls alone, and
 // the page's report written back into the list (GuiCanvasPage,
 // canvas_sink.h). The list outlives every project set (it is the process's),
 // so a run stop strands no pointer.

@@ -1,6 +1,7 @@
 #pragma once
 #include "render.h"   // GuiRect, GuiColor, GuiPlateColumns
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <span>
@@ -90,14 +91,17 @@
 // is an integral rectangle whose antialiasing blends against its own ground
 // alone, design record §2) — OR, WHERE A FLOATING SURFACE STANDS, ANY
 // PREMULTIPLIED ALPHA (send AA's stage D1, 2026-11-19: Arc's tooltip, its
-// .95 fill, rounded corners and GTK's shadow, and notifyd's .95 cards —
-// "if we can do the transparency, we might as well"): cairo lays the
-// floater over the cleared zeros, so its texels are its own premultiplied
-// color, and WHILE THE FLOATER BIT STANDS the texture's draw blends them
-// source-over the canvas the list drew (GuiGlCanvas::present_frame,
-// kCanvasFragmentShader), an opaque texel landing as unblended. No other
-// surface may leave a partial alpha there: it would show with no floater
-// to turn the blend on.
+// .95 fill, rounded corners and GTK's shadow, notifyd's .95 cards, and a
+// question's or the progress modal's xfwm shadow — "if we can do the
+// transparency, we might as well"): cairo lays the floater over the cleared
+// zeros, so its texels are its own premultiplied color, and INSIDE THE
+// FLOATERS' HULLS (GuiCanvasDrawList::floaters below; send BB, 2026-11-19)
+// the texture's draw blends them source-over the canvas the list drew
+// (GuiGlCanvas::present_frame, kCanvasFragmentShader), an opaque texel
+// landing as unblended. No other surface may leave a partial alpha there,
+// and no floater outside its family's hull: a partial texel outside every
+// hull is never drawn (the unblended pass discards it while a hull meets
+// the clip, and shows it opaque while none does).
 // THE HOLE IS ONE RECT, ITS TENANT THE CANVAS OR THE PAGE (architect
 // 2026-10-27, "1 a", the GPU page; design record §3.13): the list's clip is
 // the canvas paint area, or — while the score viewer's page stands
@@ -108,9 +112,10 @@
 // paints under the box (the lanes paint their exposure under it and the box
 // covers them, on_redraw's paint-order block step 12). The invariant is the
 // same inside it: alpha 0, an opaque overlay's 255, or a floater's
-// premultiplied alpha (the tooltip and the cards, the floater bit's two). The two tenants never stand together, so
-// the scissor, the rect every upload leaves out and the floater bit's
-// whole-walk rule are one rule for both.
+// premultiplied alpha inside its hull (a card, the tooltip or a question
+// over the viewer). The two tenants never stand together, so the scissor,
+// the rect every upload leaves out but where a hull meets it, and the
+// hulls' blend are one rule for both.
 //
 // WHAT EACH RECORD WRITES, the rules the GPU's draw keeps: a rect writes its
 // word on its cells; the plate writes, per cell, the
@@ -203,13 +208,11 @@ struct GuiCanvasPrimitive {
 // bands' columns behind them, and what the platform needs to place them —
 // the clip (waveform_area ∩ waveform_paint_area: the GL draw's scissor and
 // the rect every upload leaves out; the modal box's interior instead while
-// the score viewer's page stands, `page` below, 2026-10-27) and whether a
-// floating surface stands
-// (floating_surface_stands, paint_handler.cpp: its changes ride containing
-// rects, so every damage rect uploads whole). The keyboard slot needs no
-// bit: its tenants stand outside the clip (the keyboard and a dialog on it
-// below the paint area, the folder overlay emptying it), and a clip that
-// moved makes the platform's next walk whole. THE PROCESS'S ONE OBJECT
+// the score viewer's page stands, `page` below, 2026-10-27) and THE
+// FLOATERS' HULLS below. The keyboard slot needs no hull: its tenants stand
+// outside the clip (the keyboard and a dialog on it below the paint area,
+// the folder overlay emptying it), and a clip that moved makes the
+// platform's next walk whole. THE PROCESS'S ONE OBJECT
 // (gui_canvas_frame below), because the platform reads it at present and
 // outlives every project set (platform.h's loop contract). `generation`
 // moves at every rebuild of the records, so the platform re-reads the
@@ -299,9 +302,28 @@ inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
     return GuiRect{box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h};
 }
 
+// THE FLOATERS' HULLS (architect 2026-11-19, send BB: "ok to implement the
+// fix you suggested for the power draw by card"; the cost of a standing
+// floater confined to where it stands): ONE RECT A FAMILY — the cards'
+// stack, the tooltip, a question's or the progress modal's window — in
+// surface px, empty where the family paints nothing, every pixel the family
+// may have standing in the backbuffer inside it (a hull, generous, never a
+// mask; written by on_redraw's canvas block, paint_handler.cpp's
+// floater_hulls: the measure at the frame's first rect, widened after each
+// run by what the floaters published that run). THE FAMILIES ARE KEPT
+// APART, so a tooltip at the foot and a card at the top cost two small
+// rects, never the page between them. Read by the GL canvas alone: inside
+// the clip a damage rect's part goes up only where it meets a hull of this
+// walk or of the last, and the texture is blended only inside this walk's
+// hulls (GuiGlCanvas::present_frame); and by the canvas paint area's
+// known-clear record (on_redraw's CLEAR).
+enum class GuiFloaterFamily : int { Cards = 0, Tooltip = 1, Dialog = 2 };
+inline constexpr int kGuiFloaterFamilies = 3;
+using GuiFloaterHulls = std::array<GuiRect, kGuiFloaterFamilies>;
+
 struct GuiCanvasDrawList {
     GuiRect  clip{};
-    bool     floater = false;
+    GuiFloaterHulls floaters{};
     uint64_t generation = 0;
     uint64_t plate_revision = 0;
     // THE PLATE'S GROW in subcells (2026-10-31; the `waveform_grow` device
@@ -325,8 +347,8 @@ struct GuiCanvasDrawList {
 GuiCanvasDrawList& gui_canvas_frame();
 
 // THE SINK (the head's ONE SINK, ONE ROAD). Constructed over the frame's list,
-// it rebuilds the list's records from empty (the clip and the floater bit
-// are the caller's), the generation moved at construction; the plate's
+// it rebuilds the list's records from empty (the clip and the floaters'
+// hulls are the caller's), the generation moved at construction; the plate's
 // columns are kept while their revision holds (GuiCanvasDrawList's plate
 // payload). rects append in `color` (an authored color,
 // display_color applied here); plate the cache's

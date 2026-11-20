@@ -1871,8 +1871,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //     (render_flag_editor_box);
     //   * a cue's standing tooltip: it seats on its cue's face in the live
     //     stash (marker_cue_face), so it moves with the cue under this rect
-    //     — which a standing floater widens to the window's top
-    //     (settle_owed_lane_damage);
+    //     — which a standing tooltip widens to the window's top
+    //     (settle_owed_lane_damage, tooltip_overlays_owed_rows);
     //   * a change of more than kFlagRebuildNarrowRects rects (the count's
     //     reason at the constant).
     // A REBUILD THAT CHANGED NOTHING VISIBLE DECLARES NOTHING (a focus that

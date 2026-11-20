@@ -73,9 +73,9 @@ struct ChromeSpec {
     // every chrome, its height and its 5-W pad program_spec.h's.)
     // (THE DROPDOWN's item height and margin, Windows' popup menu, went with
     // the Settings popup, 2026-10-21.)
-    // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: ONE RULE FOR EVERY
-    // VOCABULARY, read off the live lane table at the trim lane's first row —
-    // notification_stack_bound, notifications.cpp; architect 2026-10-08.)
+    // (THE NOTIFICATION CARDS' SEAT IS NO FIELD: notifyd's 16 W off the
+    // window's top and right — notification_stack_bound, notifications.cpp;
+    // architect 2026-11-19, send BB.)
     // (THE WINDOW'S FRAME — its relief lines and whether it stood on a
     // maximized window — left the spec 2026-10-24 with the app's sizing
     // frame: the tablet's window is the whole panel.)

@@ -295,7 +295,8 @@ public:
     // THE GL CANVAS'S FRAME (2026-10-13; the seam's contract at platform.h's
     // head): present() reads the list it names — its records, or the score
     // viewer's page while it stands, drawn under a scissor to its clip, its
-    // clip left out of every upload unless a floater stands — and writes its
+    // clip left out of every upload but where a floater's hull meets it —
+    // and writes its
     // page's report (GuiCanvasPage, canvas_sink.h), until the next call names
     // another.
     void set_canvas_frame(GuiCanvasDrawList* frame);

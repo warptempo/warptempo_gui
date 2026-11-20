@@ -266,8 +266,8 @@
 //   bits and its alpha byte the word's TOP BYTE (FF for a 6-digit word,
 //   opaque; packed_carried, theme_roles.cpp), read back by tone_alpha
 //   (render.h) and painted through set_palette_source_alpha (cairo over the
-//   chrome; the floater bit's blend over the canvas, canvas_sink.h's THE
-//   TRANSPARENCY INVARIANT). Every other row word's top byte is 0. EVERY
+//   chrome; the GPU's blend inside the floaters' hulls over the canvas,
+//   canvas_sink.h's THE TRANSPARENCY INVARIANT). Every other row word's top byte is 0. EVERY
 //   FILE BUT ARC'S CARRIES ITS OWN NEAREST EXISTING VALUE, OPAQUE
 //   (kOwnThemeRoles' source), so a Live theme's tooltip and cards are
 //   today's tones:

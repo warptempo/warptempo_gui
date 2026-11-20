@@ -102,15 +102,15 @@ struct GuiRectF {
 //   A BOX PAINTED OVER THE CANVAS'S HOLE — the canvas is the GPU's, and
 //     the backbuffer over it holds alpha 0 or alpha 255 but where a
 //     floating surface stands (canvas_sink.h's THE TRANSPARENCY INVARIANT:
-//     the texture's draw is unblended but under the floater bit), so an
+//     the texture's draw is unblended but inside a floater's hull), so an
 //     edge at a fraction there would leave a partly covered pixel nothing
 //     composites: whatever chrome other than the floaters stands over the
 //     hole is whole pixels on its OUTER edges — the on-screen keyboard's
 //     outer edge, and any other chrome that reaches over it. THE FLOATING
 //     SURFACES' BOXES (the tooltip's and the notification cards') COMPOSITE
 //     TRULY since send AA's stage D1 (2026-11-19: their carried fills at
-//     .95, their rounded corners, the tooltip's shadow — the floater bit's
-//     blend), and stay whole px as LAYOUT: their sizes the ceiling of their
+//     .95, their rounded corners, the tooltip's shadow — the GPU's blend
+//     inside their hulls), and stay whole px as LAYOUT: their sizes the ceiling of their
 //     text under whole-W pads, their seats a face's and the panel's whole
 //     edges. What is painted IN such a box — its text, its inner marks — is
 //     exact.
@@ -349,8 +349,9 @@ struct TrimRange {
 // each its own look on the one rounded box (paint_floating_box,
 // paint_handler.cpp: no border, no ring), ITS FILL A CARRIED FILL PAINTED
 // AT ITS OPACITY OVER WHAT LIES UNDER IT (theme_roles.h's CARRIED block;
-// set_palette_source_alpha over the chrome, the floater bit's blend over the
-// canvas — canvas_sink.h's THE TRANSPARENCY INVARIANT): THE TOOLTIP
+// set_palette_source_alpha over the chrome, the GPU's blend inside the
+// floaters' hulls over the canvas — canvas_sink.h's THE TRANSPARENCY
+// INVARIANT): THE TOOLTIP
 // `tooltip_fill` (Arc's $osd_bg_color, arc_dark 4B5162 at .95), radius 2 W,
 // its words `sidebar_text`, ARC'S SHADOW outside it (the tooltip block's
 // THE TOOLTIP IS ARC'S and ARC'S TOOLTIP SHADOW); A NORMAL CARD notifyd's
@@ -420,7 +421,8 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // their row's opacity, tone_alpha) and the tooltip's shadow's black. The
 // palette's one translucent road: a box painted through it composites over
 // what lies under it, the chrome on the CPU and the canvas on the GPU
-// (canvas_sink.h's THE TRANSPARENCY INVARIANT, the floater bit's blend).
+// (canvas_sink.h's THE TRANSPARENCY INVARIANT, the GPU's blend inside the
+// floaters' hulls).
 void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha);
 
 // A CARRIED FILL'S OPACITY (theme_roles.h's CARRIED block): the top byte of
@@ -2022,8 +2024,9 @@ inline int program_run_gap_px() {
 // (the line Arc's scrollbar draws in $borders_color on its content side):
 // 14 W, 28 device rows, rows 142 .. 169 at key_height 28 on the tablet, the
 // trough 144 .. 167. The modal family's box keeps its seat on the lane's
-// first row (modal_box.h), and the cards theirs one hairline below, on the
-// trough's first row (notification_stack_bound, ruled kept 2026-11-03).
+// first row (modal_box.h); the cards stand at the window's top right over
+// whatever is there, notifyd's seat (notification_stack_bound, send BB,
+// 2026-11-19).
 inline constexpr double kTrimTroughW = 12.0;
 inline constexpr double kTrimPillW   = 6.0;
 inline int trim_trough_h_px() {
@@ -2381,8 +2384,9 @@ inline int edge_inset_px() {
 // THE BOTTOM ICON ROW'S LEFT RUN'S PEN 14 W (kBottomLeftPenW); THE TOOLTIP'S BOX
 // AND THE MODAL PANE ARE HELD INSIDE THEM (the tooltip's clamp — its
 // shadow may hang past them — and modal_box_rect on these columns); THE
-// CARDS' STACK STANDS kNotificationSeatW (16 W) INSIDE THEM, notifyd's seat
-// (notification_stack_bound, send AA's stage D1). The
+// CARDS' STACK STANDS kNotificationSeatW (16 W) INSIDE THE WINDOW'S LAST
+// COLUMN AND UNDER ITS FIRST ROW, notifyd's seat (notification_stack_bound,
+// send BB, 2026-11-19). The
 // on-screen keyboard is exempt, a small block seated on the window's
 // center by his ruling (onscreen_keyboard.h's block_x_px).
 struct WellColumns {

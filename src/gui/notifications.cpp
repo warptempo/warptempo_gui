@@ -20,12 +20,26 @@ int notification_line_px() {
     return scaled_px(gui_font_line_box_w(gui_font(GuiFace::Body)).line(), 1);
 }
 
-int notification_card_h_px() {
-    // top pad + one line box + bottom pad, each its own rounded part (the
-    // composite rule, scaled_px's head): 28 + 28 + 28 = 84 device rows on
-    // the tablet at 200 % (DESIGN §9's 42 W).
-    return scaled_px(kNotificationPadTopW, 1) + notification_line_px() +
-           scaled_px(kNotificationPadBottomW, 1);
+int notification_card_h_px(int lines) {
+    // The padding, the taller of the glyph's box and the lines, the padding
+    // (notifyd's one 14 and GTK's row box, the declaration), each its own
+    // rounded part (the composite rule, scaled_px's head): 28 + max(32,
+    // 28 n) + 28 device rows on the tablet at 200 %.
+    const int pad = scaled_px(kNotificationPadW, 1);
+    const int content = std::max(scaled_px(kNotificationGlyphBoxW, 1),
+                                 std::max(1, lines) * notification_line_px());
+    return pad + content + pad;
+}
+
+int notification_text_top_px(int lines) {
+    // The declaration's rule, in whole W: the lines centered on the glyph's
+    // box where they are shorter than it (one line: (16 − 14) / 2 = 1 W),
+    // the top pad otherwise.
+    const int line_w = gui_font_line_box_w(gui_font(GuiFace::Body)).line();
+    const int text_w = std::max(1, lines) * line_w;
+    const int glyph_w = static_cast<int>(kNotificationGlyphBoxW);
+    const int centered_w = text_w < glyph_w ? (glyph_w - text_w) / 2 : 0;
+    return scaled_px(kNotificationPadW, 1) + scaled_px(centered_w);
 }
 
 int notification_card_max_w_px(const AppState& a) {
@@ -36,31 +50,28 @@ int notification_card_max_w_px(const AppState& a) {
     // kept as an authored length rather than a fraction of the window.
     const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
     // THE WINDOW IS A SAFETY BELOW THE CEILING: the stack sits inside the
-    // panel's columns (well_columns, THE EDGE RULE; notification_stack_bound),
-    // so a window that cannot hold the ceiling gets what it has. This number
-    // is also the ROOM the painter clips to and publishes within, and with no
-    // floor (architect 2026-11-19, send AA) no card is wider than it.
-    const WellColumns well = well_columns(a);
-    const int room_w = well.end - well.x - 2 * scaled_px(kNotificationSeatW);
+    // window's columns, notifyd's seat off each side (notification_stack_bound;
+    // send BB, 2026-11-19), so a window that cannot hold the ceiling gets
+    // what it has. This number is also the ROOM the painter clips to and
+    // publishes within, and with no floor (architect 2026-11-19, send AA) no
+    // card is wider than it.
+    const int room_w = a.width - 2 * scaled_px(kNotificationSeatW);
     return std::max(0, std::min(ceiling_w, room_w));
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
     // THE STACK'S MARGINS: NOTIFYD'S SEAT ABOVE AND AT THE RIGHT, THE PANEL'S
-    // PAD AT THE FOOT (architect 2026-11-19, send Z, DESIGN §9: the first
-    // card's top 16 W under the top icon row's line, its right edge 16 W
-    // inside the panel — rows from 176 and columns to 2271 on the tablet at
-    // key_height 28; flush with the glass on the trim trough's first row
-    // until send AA's stage D1). THE TOP IS READ OFF THE LIVE LANE TABLE
-    // (architect 2026-10-08: "it looks like absolute positioning where it
-    // should be relative to the elements"): the trim lane's first row is the
-    // top icon row's line (one W, 142..143 on the tablet), so the row under
-    // it is the trim lane's top plus one hairline, and the seat
-    // kNotificationSeatW under that — whatever stands between the band's
-    // keys and the trim lane, the card meets the lanes the same way at every
-    // scale. The foot is the panel's own pad, folder_overlay::pad_px
-    // (architect 2026-08-30; one W). The card's INTERNAL pads are a
-    // different concept — notifyd's, the box's own (notifications.h).
+    // PAD AT THE FOOT (architect 2026-11-19, send BB: "in xfce the card
+    // appears at the top right of the screen without regard for what it
+    // obstructs - it can always be dismissed with a tap ... simply using the
+    // xfce notification margin"): the first card's top kNotificationSeatW
+    // (16 W) under the window's first row and its right edge 16 W inside the
+    // window's last column — rows from 32 and columns to 2271 on the tablet
+    // — over the title bar and the top icon row, whatever stands there. The
+    // foot is the panel's own pad, folder_overlay::pad_px (architect
+    // 2026-08-30; one W) above the bottom icon row's lane, as before. The
+    // card's INTERNAL padding is a different concept — notifyd's, the box's
+    // own (notifications.h).
     //
     // THE ANSWER IS THE ROOM, NOT A TIGHT BOUND (the whole reasoning at the
     // declaration): a wrapped card is taller than a line and no window
@@ -69,8 +80,8 @@ GuiRect notification_stack_bound(const AppState& a) {
     const int pad     = folder_overlay::pad_px();
     const int seat    = scaled_px(kNotificationSeatW);
     const int w       = notification_card_max_w_px(a);
-    const int x       = well_columns(a).end - seat - w;
-    const int y       = top_trim_row_area(a).y + hairline_px() + seat;
+    const int x       = a.width - seat - w;
+    const int y       = seat;
     const int floor_y = bottom_row_area(a).y - pad;
     return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }
