@@ -158,8 +158,9 @@ void GuiCarTransport::car_skip(bool forward) {
 }
 
 // THE DERIVED STATE (the three lines and the clock at the head comment).
-GuiMediaState GuiCarTransport::derive() const {
+GuiMediaState GuiCarTransport::derive(ClockSide& side) const {
     GuiMediaState st;
+    side = ClockSide::None;
     // The app is running, so the console's buttons must reach it: active
     // always, which the consuming side publishes as PLAYING at speed 1.0 —
     // the dummy display, the player's ruling extended to the transport.
@@ -216,10 +217,53 @@ GuiMediaState GuiCarTransport::derive() const {
         // console would have to interpret.
         if (span > 0) st.duration_ms = span * 1000 / rate;
         // The loop clock: the predictor's position less the trim's begin,
-        // floored at 0 (a position under the begin is the launch anchor's
-        // floor or the frame before a resync lands, both momentary).
-        int64_t pos = playback.cursor() - trim.first;
+        // CLAMPED INTO [0, the length] where the length is known, so no push
+        // carries a position outside the duration it publishes. ON THE CAR'S
+        // LOOP NEITHER CLAMP BITES while the trim stands as it was launched
+        // on: the loop's window is that trim (GuiPlaybackLifecycle::
+        // car_toggle_playback; the publish only clamps its start up and its
+        // end down into the buffer), and the predictor is floored at the
+        // window's start or loop target and clamped at its end. A ONCE-
+        // THROUGH PLAY (Space's, the scrub's; the console's seek over it,
+        // GuiPlaybackLifecycle::seek_live_session_by) CAN STAND OUTSIDE THE
+        // TRIM — in source view it runs to the song's end — and then each
+        // push carries 0 BEFORE THE TRIM'S BEGIN AND THE FULL LENGTH AT ITS END
+        // AND BEYOND: the clock keeps the loop's meaning (the planner's
+        // choice, 2026-11-20, to be put to him; the other option a once-
+        // through session publishing its own window as the duration).
+        // THE CROSSING IS A PUSH (2026-11-20, send CC's second review,
+        // finding A2): the side the cursor stands on — before the begin,
+        // inside the trim (both bounds included), past the end — is a term of
+        // tick()'s comparator, so the tick that first finds the cursor on
+        // another side pushes once: ENTERING THE TRIM pushes the position at
+        // that moment (0 plus the tick's few ms), and the console's count is
+        // right from there on; LEAVING PAST THE END pushes the held full
+        // position. One push per crossing and none while the side stands —
+        // the position itself is no term, so a held clamp never storms — and
+        // a crossing made by a seek or a wrap rides that jump's own push
+        // (one tick, one push). The predictor runs forward between its
+        // resyncs, so a side is crossed once per run of the line, never
+        // chattered. On the car's loop the cursor never leaves the trim it
+        // was launched on (its window that trim, the predictor floored at the
+        // loop's start or target and clamped at its end), so no side push adds
+        // to its laps; a trim moved under a sounding loop moves the duration,
+        // a push of its own. WHAT STAYS
+        // UNTRUE: the console extrapolates every push at speed 1.0 (the
+        // session published PLAYING at all times, the dummy display's ruling
+        // on the Java side), so A HELD POSITION STILL COUNTS ON BY ITSELF
+        // THERE — the stretch BEFORE THE ENTRY counts up from 0 until the
+        // entry's push sets it back, and PAST THE END the console runs on
+        // from the full position — and nothing in this publisher can hold
+        // that clock still. The other option above has no such stretch.
+        const int64_t raw = playback.cursor() - trim.first;
+        int64_t pos = raw;
         if (pos < 0) pos = 0;
+        if (span > 0) {
+            if (pos > span) pos = span;
+            side = raw < 0     ? ClockSide::Before
+                 : raw > span  ? ClockSide::Past
+                               : ClockSide::Inside;
+        }
         st.position_ms = pos * 1000 / rate;
     }
     return st;
@@ -232,10 +276,12 @@ void GuiCarTransport::tick() {
         handed_to_player_ = true;
         return;
     }
-    const GuiMediaState st = derive();
+    ClockSide side = ClockSide::None;
+    const GuiMediaState st = derive(side);
     const bool changed =
         !last_pushed_.valid || handed_to_player_ ||
         jump_epoch_ != last_pushed_.jump_epoch ||
+        side != last_pushed_.side ||
         st.session_active != last_pushed_.state.session_active ||
         st.playing        != last_pushed_.state.playing ||
         st.title          != last_pushed_.state.title ||
@@ -247,6 +293,7 @@ void GuiCarTransport::tick() {
     last_pushed_.valid      = true;
     last_pushed_.state      = st;
     last_pushed_.jump_epoch = jump_epoch_;
+    last_pushed_.side       = side;
     handed_to_player_       = false;
 }
 

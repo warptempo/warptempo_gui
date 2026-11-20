@@ -659,9 +659,12 @@ bool GuiPlaybackLifecycle::seek_live_session_by(int64_t delta_frames) {
     // on from there (its old place the seeded one). Its new place and the
     // clock cell are declared here, as the launch's success tail does; a
     // FOLLOW scroll the next pre-paint takes carries its own whole-area
-    // damage.
+    // damage. THAT PRE-PAINT RUNS ITS WHOLE ADVANCE even where the frame's
+    // position equals the seed (seek_frame_owed, the field's comment): the
+    // seek's own frame takes FOLLOW's step.
     app.playhead_scanner_sample  = target;
     app.playhead_scanner_precise = static_cast<double>(target);
+    seek_frame_owed = true;
     viewport.invalidate_standing_scanner();
     viewport.invalidate_clock_area();
     return true;

@@ -8,7 +8,8 @@
 
 void paint_linked_group(cairo_t* cr, int x, int y,
                         std::span<const KeyState> states,
-                        std::span<const double> hover) {
+                        std::span<const double> hover,
+                        std::span<const double> seam) {
     const int n = static_cast<int>(states.size());
     if (n <= 0) return;
     // A member's hover mix (the declaration's THE HOVER): a resting
@@ -77,20 +78,25 @@ void paint_linked_group(cairo_t* cr, int x, int y,
         if (states[static_cast<std::size_t>(i)] != KeyState::Lit) continue;
         pass.rect(box_x(i), y0 + b, box_x(i) + b, y1 - b, p.cue);
     }
-    // (4) A HOVERING MEMBER'S TWO SEAMS in the border tone by the hover's
-    //     mix, the larger of its two sides': the seam between members i − 1
-    //     and i, whole cells between the border's rows, from the face it
-    //     wears at rest (the left member's) toward `well_border` — but a
-    //     seam a lit member takes, which stays the accent.
-    for (int i = 1; i < n; ++i) {
-        const double m = std::max(hover_of(i - 1), hover_of(i));
-        if (!(m > 0.0)) continue;
-        const KeyState left = states[static_cast<std::size_t>(i - 1)];
-        if (left == KeyState::Lit ||
-            states[static_cast<std::size_t>(i)] == KeyState::Lit)
-            continue;
+    // (4) THE SEAMS in the border tone, each by ITS OWN stored mix as the
+    //     caller read it for this run's states (the declaration): the
+    //     seam between members i − 1 and i, whole cells between the border's
+    //     rows, from the face it wears at rest (the left member's) toward
+    //     `well_border`. NO LINE BESIDE A CHECKED MEMBER, lit or lit and
+    //     inert, on either side (gtk3 CSS line 292: `:not(:checked)` of the
+    //     hovering button and of its sibling; line 296: `button:checked +
+    //     button:hover { box-shadow: none }`; `:checked` holds the checked
+    //     and disabled key): that seam stays as (2) and (3) left it.
+    const auto checked = [&](int i) {
+        const KeyState s = states[static_cast<std::size_t>(i)];
+        return s == KeyState::Lit || s == KeyState::LitInert;
+    };
+    for (int i = 1; i < n && static_cast<std::size_t>(i) < seam.size(); ++i) {
+        const double m = std::clamp(seam[static_cast<std::size_t>(i)], 0.0, 1.0);
+        if (!(m > 0.0) || checked(i - 1) || checked(i)) continue;
         pass.rect(box_x(i), y0 + b, box_x(i) + b, y1 - b,
-                  StampTone(rest_face(left), p.well_border, m));
+                  StampTone(rest_face(states[static_cast<std::size_t>(i - 1)]),
+                            p.well_border, m));
     }
     pass.end();
 }

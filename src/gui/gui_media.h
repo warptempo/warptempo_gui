@@ -181,7 +181,8 @@ struct GuiMediaState {
     int64_t     duration_ms    = 0;
     // MILLISECONDS INTO WHAT THE TITLE NAMES. The player's item arm carries
     // the engine's cursor in the item and its silence track sends 0. WITH THE
-    // PLAYER CLOSED it is THE LOOP CLOCK — the cursor less the trim's begin —
+    // PLAYER CLOSED it is THE LOOP CLOCK — the cursor less the trim's begin,
+    // clamped into [0, the duration] (GuiCarTransport::derive) —
     // while the project's transport is live, and 0 at rest, and it is
     // RE-PUSHED AT EVERY LOOP WRAP (GuiCarTransport::note_loop_wrap), so the
     // console's clock re-starts at the trim's start on each lap and, with the

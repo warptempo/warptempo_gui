@@ -7467,7 +7467,7 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     }
 
     // BARE `t` CLOSES THE TRIM PRESETS LIST (architect 2026-10-28 night, the
-    // same rule one content over): the TRIM key's lift under the list, the
+    // same rule one content over): the PRESETS key's lift under the list, the
     // opener's own chord, runs the one close body.
     if (trim_presets && bare && key == GuiKeys::T) {
         close_picker();

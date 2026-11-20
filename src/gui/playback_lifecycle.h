@@ -154,6 +154,19 @@ struct GuiPlaybackLifecycle {
     // Meaningful only while a project play runs; its value at rest is never
     // read.
     bool restrictable_play = false;
+    // THE SEEK'S FRAME IS OWED ITS ADVANCE (2026-11-20, send CC's review,
+    // finding A3): SET by seek_live_session_by on a seek that moved, its one
+    // writer of true; READ AND CLEARED by the next pre-paint advance
+    // (main.cpp's pre_paint_advance, its one reader, at its top, whatever
+    // that frame then does), so the bit lives for one frame. What it buys:
+    // the seek seeds the scanner at its landing and the publish floors the
+    // predictor there, so the due frame's integer position can equal the
+    // seed and the advance's "nothing moved" early return would skip
+    // FOLLOW's step (and RESTRICT's stop) for that frame — the old camera
+    // painted with the new clock and the line off screen. With the bit the
+    // seek's own frame runs the advance's whole body. No other road sets it:
+    // a launch, a loop wrap and a stop leave it alone.
+    bool seek_frame_owed = false;
     // THE DISPLAY KEEP-ALIVE'S TWO STAMPS (architect 2026-11-13, session 118;
     // the facts and the ruling at kDisplayKeepAliveFastStopMs above), both
     // monotonic_ms() (app_state.h, the application layer's one clock).

@@ -313,8 +313,15 @@ public:
     // (the rare-discrete-event shape). A COUNT DIFFERENCE
     // against a main-thread-private mirror of the audio thread's wrap
     // counter, so a wrap per tick and ten per tick answer alike, and the
-    // mirror catches up whole at each call. Always false on a once-through
-    // session.
+    // mirror catches up whole at each call. A true is answered only once the
+    // wrapping fill's cycle stamp is published (the count is stored after
+    // it, 2026-11-20), so the resync that follows anchors on a wrapped
+    // cursor. ALWAYS FALSE ON A ONCE-THROUGH SESSION: every once-through
+    // window is published from rest or over a live once-through session (a
+    // live reseek), never over a loop, and a publish from rest levels the
+    // mirror with the counter after the old session's last fill has landed
+    // (playback_publish_play, 2026-11-20), so no wrap of a previous loop
+    // reaches it — and its own window never wraps.
     bool consume_loop_wrap();
 
     // Stop playback and block until any in-flight audio callback has exited,

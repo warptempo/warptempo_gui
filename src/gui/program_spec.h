@@ -84,10 +84,6 @@ struct ProgramSpec {
     // (THE CASE HAS NO W TERM HERE: the key is render.h's case block, its
     // width the `key_width` tuning key's, 2026-11-06, and its height the
     // `key_height` tuning key's, 2026-11-03, its gap kKeyGapW, 2026-11-04.)
-    // (THE CASE'S HOT-FACE BIT — false from 2026-10-09, Cool Edit's toolbar
-    // having no hover face — left 2026-11-20, send CC: the keys are Arc's
-    // buttons and hover as Arc's do, materials.h's THE HOVER, the rule's one
-    // owner AppState::HoverFaces.)
     // (THE STRIPS' RUN GAP AND PADS are render.h's: the `run_gap` tuning
     // key, the toolbar pads, the panel's inset kEdgeInsetW — THE EDGE RULE
     // at well_columns, the strips' seats paint_handler.cpp's icon_row_seats

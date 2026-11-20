@@ -131,10 +131,18 @@
 // BORDER TONE `well_border` between the border's rows (measured on his
 // desktop, a linked pair and a message dialog's answers: the seam shows the
 // face at rest and the border tone while either neighbor hovers; Arc's
-// `.linked > button:hover` inset line on itself and on its next sibling),
-// the group's ring untouched; a seam a LIT neighbor takes stays the accent
-// (a lit key is unchanged, its neighbors' hover included); the on-screen
-// keyboard's grid wears its lines always, so only the face moves there.
+// `box-shadow: inset 1px 0 #2b2e39` on the hovering button and on its next
+// sibling, gtk3 CSS line 292), the group's ring untouched; NO LINE BESIDE A
+// LIT NEIGHBOR, LIT AND INERT INCLUDED — Arc's CSS, not a choice of ours:
+// both selectors of line 292 want `:not(:checked)` of the hovering button
+// and of the sibling, and line 296 sets `button:checked + button:hover {
+// box-shadow: none }`; `:checked` holds the checked-and-disabled key — so
+// that seam column stays what the group paints there with no hover line (a
+// lit key's left seam the accent, every other the face of the key on its
+// left: paint_linked_group's (2) and (3), the seam being the left key's);
+// a DISABLED neighbor's seam does take the line (line 292's sibling half
+// asks nothing of `:disabled`); the on-screen keyboard's grid wears its
+// lines always, so only the face moves there.
 // ONLY A RESTING KEY HOVERS: a lit key is unchanged (Arc's checked + hover
 // is the checked face), a disabled key and a key dead under a veil wear
 // nothing, a pressed key is the accent at once. THE FACE FADES, ARC'S
@@ -144,11 +152,15 @@
 // painted tone THE MIX OF ITS TWO ENDS AS PAINTED — rest + (hover − rest) ·
 // mix per channel between the two colors' own words (StampTone,
 // cool_edit_paint.h), the seam's between the face it wears at rest and the
-// border tone, by the larger mix of its two sides. THE MIX IS A STORED
-// VALUE, never a clock read here: WHICH FACE HOVERS, ITS FADE'S CLOCK AND
-// ITS DAMAGE HAVE ONE OWNER, AppState::HoverFaces (app_state.h), whose head
-// holds the gate — a face hovers only where a press there would act — and
-// the frames' rule; every painter below takes the mix as a number.
+// border tone BY THE SEAM'S OWN MIX: the line is one inset shadow on the
+// right key whichever of its two keys hovers, so it holds the border tone
+// while the pen slides from a key to its neighbor, and only a seam with one
+// hovering side fades, with that side (AppState::HoverFaces' THE SEAMS FADE
+// ON THEIR OWN). THE MIX IS A STORED VALUE, never a clock read here: WHICH
+// FACE HOVERS, ITS FADE'S AND ITS SEAMS' CLOCK AND THEIR DAMAGE HAVE ONE
+// OWNER, AppState::HoverFaces (app_state.h), whose head holds the gate — a
+// face hovers only where a press there would act — and the frames' rule;
+// every painter below takes the mixes as numbers.
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and a
@@ -218,8 +230,9 @@
 // Top to bottom — THE TRIM BAR, ARC'S SCROLLBAR (ruling 4): the 12-W
 // trough `trim_bar_face`, Default's 242424 (ScrollbarInnerTrack over the
 // ground; Live's track is transparent), and on it THE PILL, the span,
-// `trim_span_face`, Default's 696969, or `selected_fill` while a drag
-// moves it (render_trim_flags); the line; THE RULER `ruler_face`,
+// `trim_span_face`, Default's 696969, at rest — its hovered, held and
+// swept looks and the caps THE TRIM BAR'S TWO TONES below and render.h's
+// one table, trim_bar_tones; the line; THE RULER `ruler_face`,
 // THE CANVAS'S TONE, Default's 393939 (architect 2026-11-17, session 140,
 // ruling 3: "the ruler lane is light, the marker lane is dark, and then the
 // canvas is lighter"), with the `ruler_text` digits (send Z) and the
@@ -407,18 +420,32 @@ inline int linked_key_seam_px(int i) {
 // key takes both its seams whatever its neighbors; (4) THE HOVER (the
 // head's THE HOVER; send CC, 2026-11-20): `hover[i]` member i's stored mix
 // in [0, 1] (an empty span is no hover; read for a RESTING member alone) —
-// its face in (2) the key face mixed toward `key_hover_face` by it, and
-// EACH SEAM BESIDE A HOVERING MEMBER, whole cells between the border's
-// rows, the face it wears at rest (the left member's) mixed toward
-// `well_border` by THE LARGER MIX OF ITS TWO SIDES — so through a slide
-// from one key to its neighbor, one fading out as the other fades in, the
-// seam between them stays the border tone by whichever side shows more —
-// but a seam a lit member takes, which stays the accent. EVERY PIXEL A
+// its face in (2) the key face mixed toward `key_hover_face` by it; AND
+// THE SEAMS, EACH BY ITS OWN STORED MIX: `seam[i]` the mix of the seam
+// between members i − 1 and i (index 0 unread; an empty span is no seam) —
+// whole cells between the border's rows, the face it wears at rest (the
+// left member's) mixed toward `well_border` by it. THE CALLER HANDS THE
+// MIX AS THIS RUN PAINTS THE TWO MEMBERS
+// (AppState::HoverFaces::seam_mix_as_painted, off the very `states` it
+// hands here): 0 where the member that held the seam is painted not at
+// rest in this run — a hovered key this run is the first to paint
+// disabled takes its seams in this same frame — and 0 between two members
+// neither of which is at rest; a DISABLED member that held nothing
+// forbids nothing, its seam beside a hovering live key takes the line
+// (gtk3 CSS line 292's sibling half asks nothing of `:disabled`). The seam's mix is its
+// own, not its two members' larger one: through a slide from one key to
+// its neighbor the two faces cross while the seam between them holds the
+// border tone (the head's THE HOVER). NO LINE BESIDE A LIT OR LIT-INERT
+// MEMBER, on either side (Arc's `:not(:checked)` twice in gtk3 CSS line
+// 292, and line 296's `button:checked + button:hover { box-shadow: none
+// }`): that seam is left as (2) and (3) painted it — the accent on a lit
+// member's left, the left member's face everywhere else. EVERY PIXEL A
 // MEMBER'S STATE OR HOVER MOVES LIES INSIDE ITS OWN BOX, its corners
 // included (a seam column
-// is inside both boxes it joins): a member's damage is its box, and a
-// repaint under any clip paints every member from its own state as
-// published and its own stored mix. THE ROAD: one
+// is inside both boxes it joins): a member's damage is its box, a seam's
+// its own columns, and a repaint under any clip paints every member from
+// its own state as published and every face and seam from its own stored
+// mix. THE ROAD: one
 // CoverageStampPass (cool_edit_paint.h), every shape a rounded rect with real
 // edges stamped straight into the target in the order above — NOTHING
 // ELSE IS DRAWN between begin() and end() (the drawings go on after, the
@@ -426,7 +453,8 @@ inline int linked_key_seam_px(int i) {
 // glyphs are the caller's.
 void paint_linked_group(cairo_t* cr, int x, int y,
                         std::span<const KeyState> states,
-                        std::span<const double> hover = {});
+                        std::span<const double> hover = {},
+                        std::span<const double> seam = {});
 
 // ONE WORD BUTTON on `box` (Arc's text button; architect 2026-11-18, his
 // ruling "the word alone, no glyph", Delete a plain button; the kit's

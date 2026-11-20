@@ -2581,9 +2581,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // under one painted level, before the DOWN's press arm drops the
         // fade and paints the accent (GuiInputHandler::drop_hover_face) —
         // nothing darkens for a frame and nothing restarts. THE TRIM BAR'S
-        // HOVERED PART goes with it, at once and with its caps (the walk
-        // rides this one, walk_trim_bar_hover; its frozen answer too, the
-        // pointer being out), one lane damage where a part stood.
+        // HOVERED PART, which has no fade, is NOT cleared here: the leave
+        // stamps it (stamp_trim_bar_leave) and the walk keeps it, damaging
+        // nothing, until the tick drops it kTrimBarLeaveHoldMs on or a
+        // press, a motion or a veil resolves it first (AppState::
+        // TrimBarHover's `leave_ms`; the planner's choice, 2026-11-20, to be
+        // put to him), so the HOVER_EXIT before a DOWN on the bar shows no
+        // bare pill between the hover look and the held look.
+        input_handler.stamp_trim_bar_leave();
         input_handler.walk_hover_face();
         // AND THE PEN'S HOT-FACE LATCH (GuiInputHandler::pen_hot_latch_, the
         // hold on every hover face after a lift): every leave clears it, the
@@ -3925,6 +3930,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // fade's step, stays the tick's — a frame is one stored value).
         input_handler.settle_hover_faces();
 
+        // THE CONSOLE SEEK'S FRAME (send CC's review, finding A3, 2026-11-20;
+        // GuiPlaybackLifecycle::seek_frame_owed, the bit's owner): read and
+        // cleared here, ahead of every return below, so it is this frame's
+        // alone whichever way the frame goes; read at the scanner gate.
+        const bool seek_frame = playback_lifecycle.seek_frame_owed;
+        playback_lifecycle.seek_frame_owed = false;
+
         if (app.loading || audio.total_frames() <= 0) return;
         // UNDER THE RENDER PLAYER the engine's cursor is the item's, not the
         // project's: the scanner sampling below would move the waveform's
@@ -3987,8 +3999,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // moves the continuous pixel without changing cur is covered elsewhere —
         // the strip-drag path invalidates the whole waveform area each frame, so
         // the scanner repaints at its new continuous pixel through the normal
-        // paint even while this gate holds.
-        if (cur == app.playhead_scanner_sample) return;
+        // paint even while this gate holds. EXCEPT ON THE CONSOLE SEEK'S
+        // FRAME (`seek_frame` above): the seek seeded the scanner at its
+        // landing and the publish floors the predictor there, so a frame whose
+        // vsync precedes the publish answers the seed itself — and that frame
+        // still owes RESTRICT's test and FOLLOW's step below, or it would
+        // paint the old camera under the new clock. The advance's writes are
+        // then the seed again and its damage the seed's own cells.
+        if (cur == app.playhead_scanner_sample && !seek_frame) return;
 
         // PLATE basis for both places, not live: the scanner's pixels are
         // plate-registered (paint_scanner), so its damage resolves there —

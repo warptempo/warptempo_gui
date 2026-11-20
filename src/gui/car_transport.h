@@ -74,7 +74,10 @@ struct GuiInputHandler;
 // together. ONE COMPOSER PER LINE, so a respelling is one edit.
 //
 // THE CLOCK IS THE LOOP'S, AND SO IS THE LENGTH. The POSITION is the cursor
-// less the trim's begin while a transport session is live, and 0 at rest; the
+// less the trim's begin, clamped into [0, the duration] (a once-through play
+// outside the trim pushes 0 or the full length, and its crossing into or out
+// of the trim pushes; derive()), while a transport
+// session is live, and 0 at rest; the
 // DURATION is THE TRIM WINDOW'S OWN LENGTH under the SAME gate — the trim is
 // the whole lap, so the console's bar fills through it and refills at each
 // wrap, the way a media file's does (architect 2026-09-17, from the car) —
@@ -96,7 +99,8 @@ struct GuiInputHandler;
 // with no call at any mutator. So tick() derives the state every tick and
 // pushes only when a field but the position differs from the last push (or
 // the player just came down, or a loop wrap or a seek bumped the jump
-// epoch): a handful of short strings compared per tick, and a binder call
+// epoch, or the cursor crossed into or out of the trim — the clock's side,
+// derive()): a handful of short strings compared per tick, and a binder call
 // only on change.
 //
 // WHERE THE CAR ACTS AND WHERE IT IS DROPPED — admits(), one predicate: a
@@ -312,7 +316,8 @@ struct GuiCarTransport {
     // or not the player stands: with the player active it remembers the
     // hand-over and returns (the player owns the wire then); otherwise it
     // derives the state and pushes iff the player just came down, the jump
-    // epoch moved, or a field but the position differs from the last push.
+    // epoch moved, the clock's side moved (ClockSide below), or a field but
+    // the position differs from the last push.
     void tick();
 
     // A LOOP WRAP HAPPENED — called by main.cpp's tick right after the wrap's
@@ -335,16 +340,25 @@ private:
     // PREVIOUS (forward false) AND NEXT (true): THE TWO MODES (the head
     // comment's block and the table at on_media_command).
     void car_skip(bool forward);
-    GuiMediaState derive() const;
+    // THE CLOCK'S SIDE (2026-11-20, send CC's second review, finding A2):
+    // where the cursor stands against the trim the clock is measured on —
+    // BEFORE its begin, INSIDE it (begin and end included), PAST its end —
+    // or NONE where no clock runs (at rest, an unknown length). A term of
+    // the comparator, so the tick that first finds the cursor on another
+    // side pushes the clock at its true place (derive()'s clamp says why).
+    enum class ClockSide : uint8_t { None, Before, Inside, Past };
+    GuiMediaState derive(ClockSide& side) const;
 
-    // THE COMPARATOR'S RECORD: the last pushed state, plus the jump epoch it
-    // was pushed under (a field of this record and not of GuiMediaState — the
-    // wire carries a position, and the epoch is what makes the tick re-send
-    // one). `valid` is false until the first push of this project.
+    // THE COMPARATOR'S RECORD: the last pushed state, plus the jump epoch and
+    // the clock's side it was pushed under (fields of this record and not of
+    // GuiMediaState — the wire carries a position, and these are what make
+    // the tick re-send one). `valid` is false until the first push of this
+    // project.
     struct Published {
         bool          valid      = false;
         GuiMediaState state;
         int64_t       jump_epoch = 0;
+        ClockSide     side       = ClockSide::None;
     };
     Published last_pushed_;
     // THE JUMP EPOCH: bumped wherever the cursor jumps rather than runs —

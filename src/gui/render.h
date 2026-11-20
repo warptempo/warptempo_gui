@@ -14,6 +14,7 @@
 #include <cairo/cairo.h>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <set>
 #include <string>
@@ -2936,11 +2937,31 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 //     it (16 device px) — the begin's off the begin's place, the end's the
 //     mirror image off the end's (the end column's right edge, end.x + 1).
 //     12 x 16 device px on the tablet. THE CAPS SHOW ONLY WHERE BOTH FIT
-//     WHOLE, each its whole width inside its own half of the slider's box:
-//     a box at least 2 x (2 + 6) = 16 W wide (32 device px; render_trim_flags'
-//     `caps_fit`), where the pill keeps its whole seat at each bound and so
-//     the cap stays concentric with its end, and the two caps at most meet
-//     at the box's middle; a narrower box shows THE PILL ALONE, wearing what
+//     WHOLE WITH A WHOLE DEVICE PX OF PILL BETWEEN THEM, each its whole
+//     width inside its own half of the slider's box. THE THRESHOLD IS IN
+//     DEVICE PX, BUILT FROM THE CAP'S INSET AND WIDTH AS SCALED AND ROUNDED
+//     (render_trim_flags' `caps_fit`): a box at least
+//     2 x (trim_cap_inset_px + trim_cap_w_px) + 1 device px wide — the inset
+//     the pill's seat less the outset, each of trough, pill and outset
+//     rounded at its element, so the threshold is no fixed W count:
+//     33 device px (16.5 W) on the tablet at 200 % (inset 4, width 12),
+//     17 px (17 W) at 100 % (inset 2, width 6), 22 px at 125 % (inset 2.5,
+//     width 8) — THIS IS THE THRESHOLD'S ONE STATEMENT; every other comment
+//     that names it points here. There the pill keeps its whole seat at
+//     each bound and so the cap stays concentric with its end, and the two caps'
+//     straight sides stand at least a device px apart, so NO PIXEL IS
+//     REACHED BY BOTH CAPS at any fractional place or gui_scale (send CC's
+//     review A, F2, 2026-11-20: two caps sharing a pixel, each stamped
+//     source-over at its partial coverage, leave a + b − ab of cover and
+//     weigh the second cap over the first — at a box of exactly two caps
+//     and their insets (32 device px on the tablet) with the middle half
+//     way through a pixel, 25 % pill and the caps 1 : 2
+//     where the exact answer is the two caps half and half — and a false
+//     line against the trough on the cap rows above and below the pill;
+//     the extra device px keeps every stamp one shape over the pill as
+//     laid, the case that is exact, and asks no two-shape stamp, which the
+//     cairo road, compositing path by path, could not draw exactly either);
+//     a narrower box shows THE PILL ALONE, wearing what
 //     the part under the pen or the press would wear (trim_bar_tones: Arc's
 //     own slider, which has no caps). The zones below are not narrowed with
 //     them: a short span keeps both grabs and its body, uncapped.
@@ -3200,13 +3221,11 @@ inline int level_travel_px() {
     return scaled_px(kLevelTravelW, 1);
 }
 
-// (BREEZE'S HOVER FADE of 2026-09-27 — the HoverFade edge-and-level model,
-// its tick, kHoverFadeMs / kHoverFadeSteps and the menu pill's
-// kMenuPillHoldMs hold — retired 2026-10-02, "hover is awkward with pen and
-// sometimes flickers, ok to drop it", and is git history. THE HOVER AND ITS
-// FADE ARE ARC'S since send CC, 2026-11-20, on the low-contrast Arc page and
-// behind the pen latch that answers the flicker: materials.h's THE HOVER,
-// AppState::HoverFaces.)
+// (THE HOVER'S FADE HAS NO LENGTH HERE: the hover and its fade are Arc's
+// (architect 2026-11-18 / 2026-11-20, send CC) — the look materials.h's THE
+// HOVER; the duration, the curve, the clock and the damage
+// AppState::HoverFaces, app_state.h; the pen latch that keeps a lifting pen
+// from blinking a face GuiInputHandler::pen_hot_latch_.)
 
 // (THE DROPDOWN'S METRICS — Windows 95's popup menu at the Windows pixel,
 // architect 2026-10-02: the plain raised two-line frame, one W of margin, the
@@ -4911,10 +4930,7 @@ double displayed_trim_ms(int64_t frame,
 // BOUNDS, (B_b + B_e) / 2: the begin's [B_b − outside, midpoint), the end's
 // [midpoint, B_e + outside), each keeping its own outside reach, so a press
 // takes the nearer bound and NEITHER ZONE STANDS PAST ITS OWN BOUND'S
-// OUTSIDE REACH (the begin-keeps-its-zone rule before it stood the end
-// zone edge to edge right of the begin's, up to two zones past the end's
-// own place, and cut it off the glass whole near the strip's right edge).
-// The two rects never overlap, and the split is continuous with the wide
+// OUTSIDE REACH. The two rects never overlap, and the split is continuous with the wide
 // case: at a span of exactly two inside reaches the inner edges meet at the
 // midpoint.
 //
@@ -4996,21 +5012,22 @@ struct TrimBarHit {
 //                      the other cap `text`
 //   none ............. the body at rest (`trim_span_face`), NO CAPS — the
 //                      bar as Arc and Kdenlive draw it.
-// WHERE THE CAPS DO NOT FIT (`caps_fit` false: a slider's box under 16 W,
-// THE TRIM BAR'S CAPS AND GRABS) the pill is the
+// WHERE THE CAPS DO NOT FIT (`caps_fit` false: a slider's box under the
+// threshold in device px stated at THE TRIM BAR'S CAPS AND GRABS, 33 px on
+// the tablet) the pill is the
 // whole slider and wears what the part would — `selected_fill` while
 // anything is held or swept, else `trim_span_hover_face` while any part is
 // hovered, else at rest: Arc's own slider, which has no caps.
-// NO FADE: Arc's `scrollbar slider` carries no transition (gtk3 CSS lines
-// 956 .. 960; the 300 ms of line 934 is the trough node's and is not
-// inherited), so every state changes AT ONCE, the caps with it; every edge
-// damages the trim lane (trim_bar_look's head).
+// NO FADE: Arc's `scrollbar slider` carries no transition (arc-theme's
+// `gtk-3.0/gtk-dark.css` as built, its `scrollbar slider` rules, lines
+// 956 .. 960; the 300 ms transition at line 934 is the `scrollbar` trough
+// node's and is not inherited), so every state changes AT ONCE, the caps
+// with it; every edge damages the trim lane (trim_bar_look's head).
 enum class TrimBarPart : uint8_t { None, Begin, End, Body };
 struct TrimBarLook {
     TrimBarPart hovered = TrimBarPart::None;
     TrimBarPart held    = TrimBarPart::None;
     bool        swept   = false;
-    bool operator==(const TrimBarLook&) const = default;
 };
 struct TrimBarTones {
     GuiColor body{};
@@ -5057,6 +5074,11 @@ TrimBarTones trim_bar_tones(const TrimBarLook& look, bool caps_fit);
 // (GuiPaintHandler::paint_trim passes null unless the damage clip covers the
 // whole lane), so a narrow repaint cannot stamp the stash over pixels it did
 // not redraw.
+// `look` IS ASKED ONCE, AFTER `out_hit` IS PUBLISHED AND BEFORE ANYTHING IS
+// STAMPED, so a look decided on the picture this pass paints reads the
+// zones this pass publishes: the caller's resolves a pen lift's pending
+// answer there (GuiPaintHandler::paint_trim, resolve_trim_bar_lift,
+// AppState::TrimBarHover's `lift_pending`). An early return asks nothing.
 void render_trim_flags(cairo_t* cr,
                        GuiRect top_strip_area,
                        GuiRect trim_bar,
@@ -5065,7 +5087,7 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        long long viewport_lattice_origin,
                        const TrimRange& trim,
-                       const TrimBarLook& look,
+                       const std::function<TrimBarLook()>& look,
                        TrimBarHit* out_hit);
 
 // The top-strip lane the cues occupy, exactly as the lane accessor reports

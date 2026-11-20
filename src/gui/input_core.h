@@ -80,38 +80,28 @@
 //     (GuiPlatform::end_pen_hover, through pointer_leave: a HOVER_EXIT —
 //     which the platform sends just before every tip DOWN — a report above
 //     the GUI's plane, any first down, focus loss; architect 2026-09-27,
-//     every pen hover effect acts only within the plane). Its one
-//     difference, while it stood (no face it would spare is left since the
-//     Settings popup retired 2026-10-21: the record follows): THE PEN'S
-//     HOVER END DARKENED NOTHING (architect 2026-10-10, his S Pen
-//     touching down on the open Settings menu's row: "the word Pick Colors
-//     blinks" — the exit's leave put the lit row out for the frame before the
-//     DOWN's own walk re-lit it): every hover-lit face kept what was painted
-//     (pointer_leave_keeps_lit_rows, retired with the popup), the pen latch's own principle
-//     (GuiInputHandler::pen_hot_latch_), and the next pointer event re-derived
-//     the faces as ever. ARC'S HOVER FACES (send CC, 2026-11-20) ANSWER
-//     THE SAME GAP WITHOUT A KEEP: every leave starts the hovered face's
-//     200 ms fade-out, a millisecond of which is under one painted level,
-//     and the DOWN's press arm then drops the fade and paints the accent
-//     (AppState::HoverFaces; GuiInputHandler::drop_hover_face) — no dip a
-//     frame could show, nothing restarted, and the hook still needs no
-//     reason.
-//     TRACED ON HIS GLASS 2026-10-10 (three taps on the open Settings menu's
-//     Pick Colors row, three on the Font row's drop-down): the stylus
-//     HOVER_EXIT and its DOWN arrive in SEPARATE deliveries within one
-//     millisecond (steady-clock ms 92518249 → 92518250, 92524919 → 92524919,
-//     92528433 → 92528434), the exit's leave running before the DOWN's own
-//     motion and press, so a frame could paint between them — the darkening
-//     showed whenever one did, which is why the blink came and went on most
-//     rows (the frame boundary falling in that gap or not, the tip's speed
-//     moving it); with the hold, no face changed on any of the six taps.
-//     Everything else the leave does it still does: the tooltip goes at once
-//     as on leaving any tool (architect 2026-10-06), the in-window bit drops,
-//     the press arms, the drags, the cards' hover and the pen latch clear
-//     (the popup list's scroll holds beside them until 2026-10-14).
-// (The lit rows' clear, pointer_leave_keeps_lit_rows, which the pen's hover
-// end skipped, went with the Settings popup, 2026-10-21.) Every clear the
-// hook performs (main.cpp's body) is unconditional.
+//     every pen hover effect acts only within the plane). THE HOVER END
+//     BEFORE A TIP DOWN DARKENS NOTHING A FRAME COULD SHOW (architect
+//     2026-10-10, his S Pen touching down on a hover-lit row: "the word
+//     Pick Colors blinks"): THE STYLUS HOVER_EXIT AND ITS DOWN ARRIVE IN
+//     SEPARATE DELIVERIES WITHIN ONE MILLISECOND (traced on his glass
+//     2026-10-10, six taps: steady-clock ms 92518249 → 92518250, 92524919 →
+//     92524919, 92528433 → 92528434), the exit's leave running before the
+//     DOWN's own motion and press, so a frame can paint between the two.
+//     The leave is read like every other and needs no reason: it starts the
+//     hovered face's 200 ms fade-out (Arc's hover, AppState::HoverFaces), a
+//     millisecond of which is under one painted level, and the DOWN's press
+//     arm then drops the fade whole and paints the accent
+//     (GuiInputHandler::drop_hover_face) — the face goes from its hover to
+//     the accent with no dip and nothing restarted. Everything else the
+//     leave does it does here too: the tooltip goes at once as on leaving
+//     any tool (architect 2026-10-06), the in-window bit drops, the press
+//     arms, the drags, the cards' hover and the pen latch clear.
+// Every clear the hook performs (main.cpp's body) is unconditional, save
+// the trim bar's hovered part, which has no fade to hide that gap behind:
+// the leave stamps it and the tick drops it 10 ms on, unless a press, a
+// motion or a veil resolves it first (AppState::TrimBarHover's `leave_ms`;
+// the planner's choice, 2026-11-20, to be put to him).
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names

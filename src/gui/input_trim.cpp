@@ -1272,9 +1272,12 @@ void GuiInputHandler::commit_trim_drag() {
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }
-    // The bar returns to its rest look, the held part's tone and the caps
-    // gone (arm_pending_trim_drag's damage, the other edge; trim_bar_look,
-    // app_state.h).
+    // The held look ends (arm_pending_trim_drag's damage, the other edge;
+    // trim_bar_look, app_state.h): the bar returns to its rest look, the
+    // held part's tone and the caps gone — save where a pen lifts on the
+    // part it held, which the next frame shows in its hover look, the caps
+    // kept, under the pen latch (AppState::TrimBarHover's `lift_pending`,
+    // resolved by the painting pass this damage invites).
     viewport.invalidate_rect(top_trim_row_area(app));
     app.trim_drag = TrimDragState{};
 }
@@ -1663,9 +1666,12 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
 
 // THE PENDING'S END WITHOUT A CROSSING — the lift, the lost button (the touch
 // layer's hard end included) and the force-end finalizer, each of which
-// commits nothing: disarm, and return the bar to its rest look, the held
-// part's tone and the caps gone (the other edge of arm_pending_trim_drag's
-// damage). The crossing does not come here: it hands the arm to
+// commits nothing: disarm, and end the held look (the other edge of
+// arm_pending_trim_drag's damage) — the bar at rest, the held part's tone
+// and the caps gone, save where a pen's tap lifts on the part it held,
+// which the next frame shows in its hover look under the pen latch
+// (AppState::TrimBarHover's `lift_pending`). The crossing does not come
+// here: it hands the arm to
 // begin_trim_drag, and the held look stands.
 void GuiInputHandler::disarm_pending_trim_drag() {
     if (app.pending_trim_drag.active)

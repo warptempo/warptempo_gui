@@ -4107,8 +4107,9 @@ bool GuiInputHandler::finish_folder_overlay_release(
     // A MOTIONLESS LIFT ON THE ARMED ROW HIGHLIGHTS IT AND THEN OPENS IT — A
     // CLICK ACTIVATES (architect 2026-08-29: in the player a wav plays from
     // its start, a folder is entered and `..` goes up; in the Open project
-    // picker the row's project opens, refusals and all, exactly as Enter's
-    // does). The band moves first, so what the act runs on is what the user
+    // picker the row's project opens, refusals and all). THIS LIFT IS THE ONE
+    // ROAD TO A ROW'S OPEN: no Enter reaches a row (folder_overlay.h's head).
+    // The band moves first, so what the act runs on is what the user
     // can see it named. A lift elsewhere is a consumed nothing, and so is a
     // lift on an INERT row (folder_overlay::row_is_inert, the settings page's
     // group rows, architect 2026-10-28, and its disabled `scale` and `bpm`
@@ -6024,8 +6025,10 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // return (AppState::TrimBarHover's `lifted`): only the bar's own grab
     // arms below write it, so the pen latch's arm after any other lift —
     // the bar's long press, which returns above them, among them — installs
-    // none.
-    app.trim_bar_hover.lifted = TrimBarPart::None;
+    // none; a lift's pending answer ends here too (none can stand at a
+    // release: the press before it came through a leave, which ends it).
+    app.trim_bar_hover.lifted       = TrimBarPart::None;
+    app.trim_bar_hover.lift_pending = false;
     // THE NOTIFICATION CARD'S LIFT (architect 2026-10-01), FIRST — the press
     // claim's mirror at the press claim's rank: the card's claim outranks
     // every veil, so its lift must outrank their releases too. Guarded on the Card arm alone, which
@@ -6266,8 +6269,9 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // DELETED, architect 2026-07-29 — the tempo surface is the bare Up/Down cent
     // step alone. See marker_drag.h.)
     // THE BAR'S OWN GRAB ENDS AT THIS LIFT (the two arms below): the part
-    // it held is recorded for the pen latch's frozen answer, which reads it
-    // as hovered until the pen rearms or leaves (AppState::TrimBarHover's
+    // it held is recorded for the pen latch's frozen answer, which keeps it
+    // as hovered, where the pen lifted on it, until the pen rearms or
+    // leaves (AppState::TrimBarHover's
     // `lifted`; architect 2026-11-20, send CC — a finger's lift arms no
     // latch, and its leave drops the record). Read before the arms end the
     // records it is read off.
@@ -6464,28 +6468,46 @@ void GuiInputHandler::arm_pen_hot_latch() {
     // THE TRIM BAR'S FROZEN ANSWER (AppState::TrimBarHover; architect
     // 2026-11-20, send CC: no blink of the caps at the lift): the part the
     // bar's own grab held at this lift — `lifted`, written by that release
-    // — is installed as the hovered part where the frozen answer's terms
-    // admit one (trim_bar_frozen_part_kept), else none, none after any other
-    // lift; the walk below keeps it under the latch while those terms hold.
-    // The restore motion's unlatched walk answered the part under the pen a
-    // moment ago, the same part where the pen lifted on it (the zone rides
-    // its bound); no frame has painted since, so the two writes are one
-    // repaint of the lane at most.
+    // — is to read as hovered ONLY WHERE THE PEN LIFTED ON IT, ON THE
+    // PICTURE THE NEXT PAINT SHOWS: the lift's delivery ran the drag's last
+    // motion (the bound moved), the release, the restore motion and now
+    // this arm with no paint between, so the stash every hit reads still
+    // holds the zones where the bound was, and the restore motion's walk
+    // answered against them. So the answer is not decided here: `part` goes
+    // none, and where a grab lifted and the frozen answer's terms admit one
+    // (trim_bar_frozen_part_kept) `lifted` is kept, the lift's exact place
+    // recorded and the answer marked pending — resolved by the trim
+    // painter's publishing pass of the next frame on the new stash
+    // (resolve_trim_bar_lift: `lifted` where the lift's place is on that
+    // part, none anywhere else — a body run on past a wall onto an end's
+    // zone, an end past its partner, the ruler); every other lift, and a
+    // lift whose terms fail, ends with none and nothing pending. The walk
+    // below keeps the pending under the latch while those terms hold
+    // (AppState::TrimBarHover's `lift_pending`, the rule and its every end).
+    // No frame has painted since the release damaged the lane, so these
+    // writes ride that one repaint.
     pen_hot_latch_ = PenHotLatch{.armed = true, .anchored = false,
                                  .x = 0.0, .y = 0.0};
-    set_trim_bar_hover(trim_bar_frozen_part_kept() ? app.trim_bar_hover.lifted
-                                                   : TrimBarPart::None);
-    app.trim_bar_hover.lifted = TrimBarPart::None;
+    set_trim_bar_hover(TrimBarPart::None);
+    if (app.trim_bar_hover.lifted != TrimBarPart::None &&
+        trim_bar_frozen_part_kept()) {
+        app.trim_bar_hover.lift_pending = true;
+        app.trim_bar_hover.lift_rx      = app.last_mouse_rx;
+        app.trim_bar_hover.lift_ry      = app.last_mouse_ry;
+    } else {
+        app.trim_bar_hover.lifted = TrimBarPart::None;
+    }
     recompute_redesign_button_hover();
     walk_hover_face();
 }
 
 void GuiInputHandler::clear_pen_hot_latch() {
     pen_hot_latch_.armed = false;
-    // The bar's lifted part belongs to the lift the latch would hold: every
-    // leave — a finger's lift among them, which arms no latch — drops it
-    // (AppState::TrimBarHover).
-    app.trim_bar_hover.lifted = TrimBarPart::None;
+    // The bar's lifted part and its pending answer belong to the lift the
+    // latch would hold: every leave — a finger's lift among them, which arms
+    // no latch — drops them (AppState::TrimBarHover).
+    app.trim_bar_hover.lifted       = TrimBarPart::None;
+    app.trim_bar_hover.lift_pending = false;
 }
 
 void GuiInputHandler::recompute_redesign_button_hover() {
@@ -6783,10 +6805,12 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // THE POINTER'S HALF OF THE GATE (the declaration). The held bit is the
 // tooltip's own record of the logical button as the last pointer event
 // delivered it (AppState::RedesignTooltip::button_held: every press, release
-// and motion writes it, a lost button's unheld motion among them).
+// and motion writes it, a lost button's unheld motion among them); the
+// barrel's is the last motion's too (pointer_barrel_held_, whose declaration
+// says where it lags the button and what the screen shows then).
 bool GuiInputHandler::hover_admitted() const {
     return app.pointer_in_window && !app.redesign_tooltip.button_held &&
-           !pen_hot_latch_holds();
+           !pointer_barrel_held_ && !pen_hot_latch_holds();
 }
 
 bool GuiInputHandler::hover_admitted_on_main_page() const {
@@ -6933,11 +6957,15 @@ bool GuiInputHandler::hover_face_live(
 // / above it); THE DIALOG STASH's buttons (modal_dialog_button_hit: the
 // painted box less its seam), then THE SCRUB'S KNOB, its disc where it is
 // painted (the published center, render_player_scrub_handle_hit); then THE
-// ROSTER, the chord table's keys, each its painted box less its seam
-// (point_on_key — THE KEY'S BOX ALONE: Play's second rect, the bottom left's
-// timestamp, presses Play but is a time label, and lights nothing). The
-// surfaces are disjoint; the face found answers only where it is live
-// (hover_face_live).
+// ROSTER, the chord table's keys, each BY THE PRESS'S OWN TWO RECTS
+// (RedesignButtonFace::contains, what arm_redesign_press and the lift ask):
+// its painted box less its seam, and Play's second rect, the bottom left's
+// timestamp — a press there is a PLAY press and lights Play's key, so by the
+// gate ("a face hovers only where a press there would act") the pen hovering
+// the timestamp lights PLAY'S KEY; the timestamp itself, a time label, wears
+// nothing (the face's extent is the key's box). THE PLANNER'S CHOICE,
+// 2026-11-20, TO BE PUT TO HIM. The surfaces are disjoint; the face found
+// answers only where it is live (hover_face_live).
 AppState::HoverFaces::Face GuiInputHandler::hover_face_under_pointer() const {
     using Face    = AppState::HoverFaces::Face;
     using Surface = AppState::HoverFaces::Surface;
@@ -6968,7 +6996,7 @@ AppState::HoverFaces::Face GuiInputHandler::hover_face_under_pointer() const {
                 const int i = redesign_button_index(tc.id);
                 const AppState::RedesignButtonFace& f =
                     app.redesign_buttons[static_cast<size_t>(i)];
-                if (!point_on_key(f.rect, f.seam, at.x, at.y)) continue;
+                if (!f.contains(at)) continue;
                 found = Face{Surface::Roster, i};
                 break;
             }
@@ -7027,8 +7055,9 @@ GuiRect GuiInputHandler::hover_face_extent(
 }
 
 // THE ONE SETTER of the hovered face (AppState::HoverFaces::hovered). A
-// change turns two fades and damages nothing — the clock's next step does
-// (tick_hover_faces), so every damage is one step's:
+// change turns two fades and the seams beside them, and damages nothing —
+// the clock's next step does (tick_hover_faces), so every damage is one
+// step's:
 //   * THE FACE THE PEN HAS LEFT goes toward rest FROM THE VALUE ITS FADE HAS
 //     REACHED, the stored mix — the value on screen — over the whole 200 ms
 //     (the head's reading of GTK: a new transition from the current value,
@@ -7039,6 +7068,14 @@ GuiRect GuiInputHandler::hover_face_extent(
 //   * THE FACE THE PEN IS NOW ON goes toward the hover face the same way:
 //     from its stored mix where it was still fading out, from rest
 //     otherwise.
+//   * THE SEAMS, AT THE SAME INSTANT (sync_hover_seams, handed this body's
+//     `now`): each seam whose target the change moved is turned from its own
+//     stored mix — the seams beside the face left toward rest, the seams
+//     beside the face reached toward the border tone, AND THE ONE BETWEEN
+//     THE TWO, where they are neighbors, NOT AT ALL: one of its faces
+//     hovered before and the other hovers now, its target is 1 on both
+//     sides of the change, and it holds what it shows (Arc's one inset
+//     line, AppState::HoverFaces' THE SEAMS FADE ON THEIR OWN).
 void GuiInputHandler::set_hover_face(const AppState::HoverFaces::Face& face) {
     AppState::HoverFaces& h = app.hover_faces;
     if (face == h.hovered) return;
@@ -7058,16 +7095,235 @@ void GuiInputHandler::set_hover_face(const AppState::HoverFaces::Face& face) {
         }
     }
     h.hovered = face;
-    if (face.none()) return;
-    for (AppState::HoverFaces::Fade& f : h.fades) {
-        if (!(f.face == face)) continue;
-        f.from     = f.mix;
-        f.to       = 1.0;
-        f.start_ms = now;
-        return;
+    if (!face.none()) {
+        bool standing = false;
+        for (AppState::HoverFaces::Fade& f : h.fades) {
+            if (!(f.face == face)) continue;
+            f.from     = f.mix;
+            f.to       = 1.0;
+            f.start_ms = now;
+            standing   = true;
+            break;
+        }
+        if (!standing)
+            h.fades.push_back(AppState::HoverFaces::Fade{.face     = face,
+                                                         .from     = 0.0,
+                                                         .to       = 1.0,
+                                                         .start_ms = now,
+                                                         .mix      = 0.0});
     }
-    h.fades.push_back(AppState::HoverFaces::Fade{
-        .face = face, .from = 0.0, .to = 1.0, .start_ms = now, .mix = 0.0});
+    sync_hover_seams(now);
+}
+
+// -- THE SEAMS (the declarations' block, input_handler.h; the rule at
+//    AppState::HoverFaces' THE SEAMS FADE ON THEIR OWN) ----------------------
+
+// THE FACE ON THE SEAM'S LEFT, off the stashes as painted: a roster key's
+// the published box that ends on `right`'s seam columns, on its rows (the
+// two boxes that share one seam column, materials.h's linked_key_box — the
+// groups stand a run gap apart, so no other box ends there); a dialog
+// button's the button before it in the stash, where the two are linked (a
+// glyph key publishes its seam, an answer the seam after it).
+AppState::HoverFaces::Face GuiInputHandler::hover_seam_left_face(
+        const AppState::HoverFaces::Face& right) const {
+    using Face    = AppState::HoverFaces::Face;
+    using Surface = AppState::HoverFaces::Surface;
+    switch (right.surface) {
+        case Surface::Roster: {
+            if (right.index < 0 || right.index >= kRedesignButtonCount) break;
+            const AppState::RedesignButtonFace& r =
+                app.redesign_buttons[static_cast<size_t>(right.index)];
+            if (r.seam <= 0 || r.rect.w <= 0 || r.rect.h <= 0) break;
+            for (int j = 0; j < kRedesignButtonCount; ++j) {
+                const AppState::RedesignButtonFace& l =
+                    app.redesign_buttons[static_cast<size_t>(j)];
+                if (j != right.index && l.rect.w > 0 && l.rect.h > 0 &&
+                    l.rect.y == r.rect.y && l.rect.h == r.rect.h &&
+                    l.rect.x + l.rect.w == r.rect.x + r.seam)
+                    return Face{Surface::Roster, j};
+            }
+            break;
+        }
+        case Surface::Dialog: {
+            const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+            if (!dlg.valid || right.dialog_owner != dlg.owner ||
+                right.dialog_session != dlg.session)
+                break;
+            if (right.index < 1 ||
+                right.index >= static_cast<int>(dlg.buttons.size()))
+                break;
+            const size_t k = static_cast<size_t>(right.index);
+            if (dlg.buttons[k].seam > 0 || dlg.buttons[k - 1].seam_after > 0)
+                return Face{Surface::Dialog, right.index - 1,
+                            right.dialog_owner, right.dialog_session};
+            break;
+        }
+        case Surface::None:
+        case Surface::Keyboard:
+        case Surface::Knob:
+            break;
+    }
+    return Face{};
+}
+
+// ITS INVERSE: the face whose seam `left`'s box ends on.
+AppState::HoverFaces::Face GuiInputHandler::hover_seam_right_face(
+        const AppState::HoverFaces::Face& left) const {
+    using Face    = AppState::HoverFaces::Face;
+    using Surface = AppState::HoverFaces::Surface;
+    if (left.surface == Surface::Roster) {
+        if (left.index < 0 || left.index >= kRedesignButtonCount) return Face{};
+        const AppState::RedesignButtonFace& l =
+            app.redesign_buttons[static_cast<size_t>(left.index)];
+        if (l.rect.w <= 0 || l.rect.h <= 0) return Face{};
+        for (int j = 0; j < kRedesignButtonCount; ++j) {
+            const AppState::RedesignButtonFace& r =
+                app.redesign_buttons[static_cast<size_t>(j)];
+            if (j != left.index && r.seam > 0 && r.rect.w > 0 &&
+                r.rect.h > 0 && r.rect.y == l.rect.y &&
+                r.rect.h == l.rect.h &&
+                l.rect.x + l.rect.w == r.rect.x + r.seam)
+                return Face{Surface::Roster, j};
+        }
+        return Face{};
+    }
+    if (left.surface == Surface::Dialog) {
+        const Face next{Surface::Dialog, left.index + 1, left.dialog_owner,
+                        left.dialog_session};
+        return hover_seam_left_face(next) == left ? next : Face{};
+    }
+    return Face{};
+}
+
+// "IS THIS A PAINTED SEAM A HOVER MAY SHOW ON?" (the declaration): its two
+// faces published as one seam, NEITHER PAINTED LIT — the stashed selected /
+// lit bit, whatever the enabled bit: Arc's `:checked` holds the checked and
+// disabled key, and neither of its two selectors (gtk3 CSS line 292) draws
+// the line beside one, line 296 taking it away under `button:checked +
+// button:hover` — and a press acting on at least one of them.
+bool GuiInputHandler::hover_seam_live(
+        const AppState::HoverFaces::Face& right) const {
+    using Face    = AppState::HoverFaces::Face;
+    using Surface = AppState::HoverFaces::Surface;
+    const Face left = hover_seam_left_face(right);
+    if (left.none()) return false;
+    const auto painted_lit = [&](const Face& f) {
+        if (f.surface == Surface::Roster)
+            return app.redesign_buttons[static_cast<size_t>(f.index)].selected;
+        return app.modal_dialog.buttons[static_cast<size_t>(f.index)].lit;
+    };
+    if (painted_lit(left) || painted_lit(right)) return false;
+    return hover_face_live(left) || hover_face_live(right);
+}
+
+// THE SEAM'S OWN COLUMNS (the declaration) — the first border's columns of
+// the face that names it, on its box's rows: a roster key's `seam` columns
+// from its box's left edge, cut to its painted extent; a dialog button's
+// the same, an answer's the one border the answer before it publishes as
+// its seam after. Both lie inside each neighbor's own damage
+// (hover_face_extent: a linked key's box holds both its seam columns; an
+// answer's extent its box and the seam after it).
+GuiRect GuiInputHandler::hover_seam_extent(
+        const AppState::HoverFaces::Face& right) const {
+    using Surface = AppState::HoverFaces::Surface;
+    if (right.surface == Surface::Roster) {
+        if (right.index < 0 || right.index >= kRedesignButtonCount)
+            return GuiRect{0, 0, 0, 0};
+        const AppState::RedesignButtonFace& f =
+            app.redesign_buttons[static_cast<size_t>(right.index)];
+        if (f.seam <= 0 || f.rect.w <= 0 || f.rect.h <= 0)
+            return GuiRect{0, 0, 0, 0};
+        const GuiRect box =
+            f.painted.w > 0 && f.painted.h > 0 ? f.painted : f.rect;
+        const int x0 = std::max(f.rect.x, box.x);
+        const int x1 = std::min(f.rect.x + f.seam, box.x + box.w);
+        return GuiRect{x0, box.y, std::max(0, x1 - x0), box.h};
+    }
+    if (right.surface == Surface::Dialog) {
+        const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
+        if (!dlg.valid || right.dialog_owner != dlg.owner ||
+            right.dialog_session != dlg.session || right.index < 1 ||
+            right.index >= static_cast<int>(dlg.buttons.size()))
+            return GuiRect{0, 0, 0, 0};
+        const size_t k = static_cast<size_t>(right.index);
+        const AppState::ModalDialogButton& b = dlg.buttons[k];
+        const int w = b.seam > 0 ? b.seam : dlg.buttons[k - 1].seam_after;
+        return GuiRect{b.rect.x, b.rect.y, std::max(0, w), b.rect.h};
+    }
+    return GuiRect{0, 0, 0, 0};
+}
+
+// THE SEAMS' ONE SETTER (the declaration). The dead seams first, at once;
+// then each standing seam toward its target where the target moved — a
+// fade-in no step has advanced leaving without a trace, as a face's does;
+// then the hovered face's own two seams, where none stands yet. A seam
+// whose target did not move is not touched: THAT IS THE SLIDE'S SEAM, which
+// holds the border tone between the key the pen left and the one it
+// reached.
+void GuiInputHandler::sync_hover_seams(int64_t now_ms) {
+    using Face = AppState::HoverFaces::Face;
+    AppState::HoverFaces& h = app.hover_faces;
+    if (h.hovered.none() && h.seams.empty()) return;
+    for (size_t i = 0; i < h.seams.size();) {
+        AppState::HoverFaces::Fade& s = h.seams[i];
+        if (!hover_seam_live(s.face)) {
+            if (s.mix > 0.0)
+                viewport.invalidate_rect(hover_seam_extent(s.face));
+            h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
+            continue;
+        }
+        const bool hovered =
+            !h.hovered.none() && (s.face == h.hovered ||
+                                  hover_seam_left_face(s.face) == h.hovered);
+        const double to = hovered ? 1.0 : 0.0;
+        if (to != s.to) {
+            if (to == 0.0 && s.mix == 0.0) {
+                h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
+                continue;
+            }
+            s.from     = s.mix;
+            s.to       = to;
+            s.start_ms = now_ms;
+        }
+        ++i;
+    }
+    if (h.hovered.none()) return;
+    const Face own[2] = {h.hovered, hover_seam_right_face(h.hovered)};
+    for (const Face& right : own) {
+        if (right.none() || !hover_seam_live(right)) continue;
+        bool standing = false;
+        for (const AppState::HoverFaces::Fade& s : h.seams)
+            standing = standing || s.face == right;
+        if (!standing)
+            h.seams.push_back(AppState::HoverFaces::Fade{.face     = right,
+                                                         .from     = 0.0,
+                                                         .to       = 1.0,
+                                                         .start_ms = now_ms,
+                                                         .mix      = 0.0});
+    }
+}
+
+// A FACE THAT LANDS AT ONCE TAKES ITS SEAMS WITH IT (the declaration): the
+// press's claim and the settle call it for the face they drop. A seam whose
+// other face is the hovered one stays — that face still holds it; where the
+// dropped face went lit, the seams' own settle takes it next.
+void GuiInputHandler::land_hover_seams_beside(
+        const AppState::HoverFaces::Face& face) {
+    using Face = AppState::HoverFaces::Face;
+    AppState::HoverFaces& h = app.hover_faces;
+    for (size_t i = 0; i < h.seams.size();) {
+        const Face right = h.seams[i].face;
+        const Face left  = hover_seam_left_face(right);
+        const bool beside = right == face || left == face;
+        const Face other  = right == face ? left : right;
+        if (!beside || (!h.hovered.none() && other == h.hovered)) {
+            ++i;
+            continue;
+        }
+        if (h.seams[i].mix > 0.0)
+            viewport.invalidate_rect(hover_seam_extent(right));
+        h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
+    }
 }
 
 namespace {
@@ -7083,8 +7339,9 @@ bool installed_theme_hovers() {
 
 // THE WALK (the declaration): none unless the theme's term holds — on a
 // Live theme no face hovers, the seams included, and nothing fades or is
-// damaged — and the pointer's gate admits one; else the live face under the
-// pen.
+// damaged (THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM: the seams
+// alone could have gone to the border tone there) — and the pointer's gate
+// admits one; else the live face under the pen.
 void GuiInputHandler::walk_hover_face() {
     set_hover_face(installed_theme_hovers() && hover_admitted()
                        ? hover_face_under_pointer()
@@ -7119,29 +7376,48 @@ bool GuiInputHandler::trim_bar_takes_grab() const {
 // page taking a press at the pointer, the theme's term and the bar's own.
 bool GuiInputHandler::trim_bar_frozen_part_kept() const {
     return app.pointer_in_window && !app.redesign_tooltip.button_held &&
-           main_page_takes_press_at_pointer() && installed_theme_hovers() &&
+           trim_bar_part_terms_hold();
+}
+
+// THE TERMS A STANDING PART KEEPS WITHOUT RE-READING THE PEN'S PLACE (the
+// declaration): the main page taking a press at the place, the theme's term
+// and the bar's own — what the frozen answer and the leave's held clear
+// both re-ask, each adding its own pointer terms.
+bool GuiInputHandler::trim_bar_part_terms_hold() const {
+    return main_page_takes_press_at_pointer() && installed_theme_hovers() &&
            trim_bar_takes_grab();
 }
 
-// THE PART UNDER THE POINTER BY THE PRESS'S OWN TWO HITS, in the router's
-// order (route_trim_bar_press): an end's zone first, then the bridge — the
-// same stash the press reads, so the part that lights is the part a press
-// there takes, strictly as painted.
+// THE LEAVE'S STAMP (the declaration; AppState::TrimBarHover's `leave_ms`,
+// THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM): the pointer-leave
+// hook calls it ahead of its walk; a standing part is stamped, so the walk
+// that follows keeps it for kTrimBarLeaveHoldMs instead of clearing it.
+// No part standing, nothing to hold and nothing stamped.
+void GuiInputHandler::stamp_trim_bar_leave() {
+    if (app.trim_bar_hover.part != TrimBarPart::None)
+        app.trim_bar_hover.leave_ms = monotonic_ms();
+}
+
+// THE PART UNDER THE POINTER BY THE PRESS'S OWN TWO HITS (trim_bar_part_at,
+// app_state.h) — the same stash the press reads, so the part that lights is
+// the part a press there takes, strictly as painted.
 TrimBarPart GuiInputHandler::trim_bar_part_under_pointer() const {
     const GuiPointerPlace at = app.last_mouse_place();
-    switch (hit_test_trim_endcap(app, at.rx, at.ry)) {
-        case TrimHit::Begin: return TrimBarPart::Begin;
-        case TrimHit::End:   return TrimBarPart::End;
-        case TrimHit::None:  break;
-    }
-    return point_in_trim_bridge_span(app, at.rx, at.ry) ? TrimBarPart::Body
-                                                        : TrimBarPart::None;
+    return trim_bar_part_at(app, at.rx, at.ry);
 }
 
 // THE ONE SETTER: a change damages the trim lane, once (trim_bar_look's
 // head: every edge of the bar's state is one lane damage); the same part
-// again damages nothing, so a pen resting in one part costs nothing.
+// again damages nothing, so a pen resting in one part costs nothing. Every
+// write answers the part afresh, so it ends a leave's held clear (`leave_ms`)
+// and a lift's pending answer (`lift_pending`, `lifted` with it) whatever it
+// writes.
 void GuiInputHandler::set_trim_bar_hover(TrimBarPart part) {
+    app.trim_bar_hover.leave_ms.reset();
+    if (app.trim_bar_hover.lift_pending) {
+        app.trim_bar_hover.lift_pending = false;
+        app.trim_bar_hover.lifted       = TrimBarPart::None;
+    }
     if (app.trim_bar_hover.part == part) return;
     app.trim_bar_hover.part = part;
     viewport.invalidate_rect(top_trim_row_area(app));
@@ -7150,13 +7426,30 @@ void GuiInputHandler::set_trim_bar_hover(TrimBarPart part) {
 // THE WALK (the declaration). UNLATCHED, the part under the pen where the
 // main page's gate (hover_admitted_on_main_page), the theme's term and the
 // bar's own (trim_bar_takes_grab) admit one, else none. WHILE THE PEN LATCH
-// HOLDS, THE ANSWER IS FROZEN: the part standing — the part the bar's own
-// grab held, which the latch's arm installed (arm_pen_hot_latch), or none
-// after any other lift — is kept while trim_bar_frozen_part_kept holds (the
-// latch freezes the pointer's place, never the other terms) and goes
+// HOLDS, THE ANSWER IS FROZEN: the part standing — none from the latch's
+// arm (arm_pen_hot_latch) and, after a grab's lift, the held part the trim
+// painter's next publishing pass resolves the pending answer to where the
+// lift was on it (resolve_trim_bar_lift) — and that pending answer are
+// kept while trim_bar_frozen_part_kept holds (the
+// latch freezes the pointer's place, never the other terms) and go
 // otherwise, never re-read off the pen's place; the walk after the rearm,
-// or the leave that clears the latch, answers the truth.
+// or the leave that clears the latch, answers the truth. AFTER A LEAVE
+// (`leave_ms` stamped, stamp_trim_bar_leave), first: the standing part is
+// kept, nothing damaged, while the stamp is younger than
+// kTrimBarLeaveHoldMs, the pointer is still out, no contact is down and
+// trim_bar_part_terms_hold; past any of those the stamp goes and the walk
+// below answers — the pointer out or a contact down, none (one lane
+// damage), the pointer back in, the part under it (the same part again
+// damaging nothing).
 void GuiInputHandler::walk_trim_bar_hover() {
+    if (app.trim_bar_hover.leave_ms) {
+        if (!app.pointer_in_window && !app.redesign_tooltip.button_held &&
+            monotonic_ms() - *app.trim_bar_hover.leave_ms <
+                AppState::TrimBarHover::kTrimBarLeaveHoldMs &&
+            trim_bar_part_terms_hold())
+            return;
+        app.trim_bar_hover.leave_ms.reset();
+    }
     if (pen_hot_latch_holds()) {
         if (!trim_bar_frozen_part_kept())
             set_trim_bar_hover(TrimBarPart::None);
@@ -7173,17 +7466,28 @@ void GuiInputHandler::walk_trim_bar_hover() {
 // grab any more — a veil raised, a card over the place, the `h` view
 // entered, the stash gone cold, a load begun, a drag gone live — goes at
 // once, ahead of the frame that would paint it (the faces'
-// settle_hover_faces runs this, from the pre-paint hook and the tick).
+// settle_hover_faces runs this, from the pre-paint hook and the tick). AND
+// A LIFT'S PENDING ANSWER (AppState::TrimBarHover's `lift_pending`) whose
+// frozen terms no longer hold (trim_bar_frozen_part_kept: the theme, a
+// contact, the pointer out besides the above) goes here too, ahead of the
+// frame whose publishing pass would otherwise resolve it.
 void GuiInputHandler::settle_trim_bar_hover() {
-    if (app.trim_bar_hover.part != TrimBarPart::None &&
-        !(main_page_takes_press_at_pointer() && trim_bar_takes_grab()))
+    const AppState::TrimBarHover& h = app.trim_bar_hover;
+    if ((h.part != TrimBarPart::None &&
+         !(main_page_takes_press_at_pointer() && trim_bar_takes_grab())) ||
+        (h.lift_pending && !trim_bar_frozen_part_kept()))
         set_trim_bar_hover(TrimBarPart::None);
 }
 
 // THE DEAD FACES LAND AT ONCE (the declaration): each fade whose face no
 // press would act on leaves the list, its extent damaged where a mix showed
 // (a face painted at rest under a veil would keep the tone it was caught
-// in); the hovered slot goes with its fade, so the next walk re-answers.
+// in); the hovered slot goes with its fade, so the next walk re-answers;
+// THE SEAMS BESIDE IT GO WITH IT (land_hover_seams_beside), and the seams'
+// own half follows (sync_hover_seams: a seam no longer painted, one beside
+// a face gone lit, one whose two faces are both dead; and a seam of the
+// hovered face owed again, a neighbor having gone dark under a resting
+// pen).
 void GuiInputHandler::settle_hover_faces() {
     AppState::HoverFaces& h = app.hover_faces;
     for (size_t i = 0; i < h.fades.size();) {
@@ -7192,10 +7496,14 @@ void GuiInputHandler::settle_hover_faces() {
             ++i;
             continue;
         }
-        if (f.mix > 0.0) viewport.invalidate_rect(hover_face_extent(f.face));
-        if (f.face == h.hovered) h.hovered = AppState::HoverFaces::Face{};
+        const AppState::HoverFaces::Face dead = f.face;
+        if (f.mix > 0.0) viewport.invalidate_rect(hover_face_extent(dead));
+        if (dead == h.hovered) h.hovered = AppState::HoverFaces::Face{};
         h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
+        land_hover_seams_beside(dead);
     }
+    if (!h.hovered.none() || !h.seams.empty())
+        sync_hover_seams(monotonic_ms());
     // And the trim bar's hovered part, on the same rule (no fade to drop).
     settle_trim_bar_hover();
 }
@@ -7208,13 +7516,17 @@ void GuiInputHandler::settle_hover_faces() {
 // runs and the painters of that frame read the one value this step stored;
 // the step that lands is the last damage. A fade landed at the hover face
 // stays in the list at 1, moving nothing and damaging nothing, for as long
-// as the pen rests there; one landed at rest leaves it. With no fade
-// standing the body is the walk's few compares.
+// as the pen rests there; one landed at rest leaves it. THE SEAMS THE SAME,
+// after the faces, at the same now: a step that moves a seam's stored mix
+// damages the seam's own columns (hover_seam_extent — inside the rect the
+// face fading beside it damaged a moment before, which carries them), and
+// the two seams of a resting hover stand at 1 and cost nothing. With no
+// fade standing the body is the walk's few compares.
 void GuiInputHandler::tick_hover_faces() {
     walk_hover_face();
     settle_hover_faces();
     AppState::HoverFaces& h = app.hover_faces;
-    if (h.fades.empty()) return;
+    if (h.fades.empty() && h.seams.empty()) return;
     const int64_t now = monotonic_ms();
     for (size_t i = 0; i < h.fades.size();) {
         AppState::HoverFaces::Fade& f = h.fades[i];
@@ -7229,6 +7541,19 @@ void GuiInputHandler::tick_hover_faces() {
         }
         ++i;
     }
+    for (size_t i = 0; i < h.seams.size();) {
+        AppState::HoverFaces::Fade& s = h.seams[i];
+        const double v = AppState::HoverFaces::value_at(s, now);
+        if (v != s.mix) {
+            s.mix = v;
+            viewport.invalidate_rect(hover_seam_extent(s.face));
+        }
+        if (s.to == 0.0 && now - s.start_ms >= AppState::HoverFaces::kFadeMs) {
+            h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
+            continue;
+        }
+        ++i;
+    }
 }
 
 // THE PRESS'S CLAIM (the declaration): `face`'s fade leaves the list whole
@@ -7238,7 +7563,12 @@ void GuiInputHandler::tick_hover_faces() {
 // presses, and the hover's extent is that face or a seam column more (an
 // action row's answer's right seam, the next answer's first column, which
 // the accent does not cover and which returns to the face tone with the
-// press) — a rect that holds the arm's, so the two are one repaint.
+// press) — a rect that holds the arm's, so the two are one repaint. THE
+// SEAMS BESIDE THE FACE GO WITH IT, whether or not its own fade stood (the
+// pen can press a key it reached a moment ago, whose left seam its
+// neighbor's hover still held): a pressed key takes both its seams, and
+// both are at rest at its lift (land_hover_seams_beside, each seam's own
+// columns damaged where a mix showed).
 void GuiInputHandler::drop_hover_face(const AppState::HoverFaces::Face& face) {
     AppState::HoverFaces& h = app.hover_faces;
     if (h.hovered == face) h.hovered = AppState::HoverFaces::Face{};
@@ -7247,8 +7577,9 @@ void GuiInputHandler::drop_hover_face(const AppState::HoverFaces::Face& face) {
         if (h.fades[i].mix > 0.0)
             viewport.invalidate_rect(hover_face_extent(face));
         h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
-        return;
+        break;
     }
+    land_hover_seams_beside(face);
 }
 
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect

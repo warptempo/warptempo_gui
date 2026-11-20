@@ -207,9 +207,8 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // instead, and none survives: the flags are hit on their painted boxes with
 // no halo at all, the marker stems' grab constant died with their pointer
 // surface (stems pointer-inert, 2026-08-12 — the record is at the retired
-// hit_test_marker_stem's site below), and the trim endcaps' went when the
-// caps became their painted arrow buttons (architect 2026-10-03,
-// trim_arrow_button_w_px in render.h).
+// hit_test_marker_stem's site below), and the trim bounds are hit on their
+// grab zones (trim_endcap_rect in render.h, which owns their reach).
 // The rule it carried outlives it and belongs to nothing in particular: a grab
 // tolerance is NOT a spacing gap. Markers may sit arbitrarily close, overlap
 // exactly, and cross during gestures; ordering degeneracy collapses at the
@@ -1161,12 +1160,12 @@ enum class PendingClickKind {
 // user aimed at, sub-threshold travel being jitter).
 //
 // WHICH BOUND THE CLICK WRITES IS A VERDICT AT THE ACT, NOT A PRESS-TIME FACT
-// (architect 2026-11-10): the lift or the crossing moves WHICHEVER END CAP IS
-// NEAREST THE PRESS'S PLACE ON THE PAINTED COLUMNS (the caps as the trim bar
-// shows them, on screen is as painted), a tie the begin's but right of
-// both caps, where it is the end's, a click outside
-// the trim
-// moving the near cap outward — the S Pen's side button is the Ctrl bit
+// (architect 2026-11-10): the lift or the crossing moves WHICHEVER BOUND IS
+// NEAREST THE PRESS'S PLACE ON THE PAINTED COLUMNS (the bounds' places as
+// the trim bar last painted them, on screen is as painted — not the drawn
+// caps, which stand inside the bounds and show only on hover or press), a
+// tie the begin's but right of both bounds, where it is the end's, a click
+// outside the trim moving the near bound outward — the S Pen's side button is the Ctrl bit
 // (platform_android.cpp), so a tap with the button held is the click. THE
 // BARREL'S PRESS READS NO CLOCK (2026-11-10): the record carries no stamp
 // and the verdict is the same however long the press was held (the begin
@@ -1602,10 +1601,12 @@ struct TouchNavZoomState {
 // ends, its body, or the bare trough beside it — the whole band
 // (trim_bar_press_area: the lane's rows on the waveform area's columns, the
 // panel's whole width since 2026-11-19): the gesture
-// frames rather than grabs, so the pill is no boundary for it. A press on the pill arms its pending drag beside
-// this record (route_trim_bar_press); one beside the pill arms this alone, and
-// can end only as a long press or as the consumed nothing a still trim-bar
-// click has always been. In a locked tab and in the `h` view too, framing
+// frames rather than grabs, so the pill is no boundary for it. A press in an
+// end's grab zone or on the bridge arms its pending drag beside this record
+// (route_trim_bar_press; the zones reach past the bounds, render.h's THE
+// TRIM BAR'S CAPS AND GRABS); one on the bare trough beyond them arms this
+// alone, and can end only as a long press or as the consumed nothing a
+// still trim-bar click has always been. In a locked tab and in the `h` view too, framing
 // being navigation. The barrel's press arms no record: its bound set reads no
 // clock (PendingClickAct).
 // WHAT IT ASKS AT THE LIFT (on_button_release, the one resolver): the press
@@ -5635,8 +5636,10 @@ struct AppState {
     // tooltip nor a press can fire before the button has been shown.
     //
     // NO HOVER IS STORED HERE: a key's hover face (Arc's, send CC,
-    // 2026-11-20) is AppState::HoverFaces's, whose walk reads `rect`, `seam`
-    // and the two painted bits below. The tooltip's pointer walk
+    // 2026-11-20) is AppState::HoverFaces's, whose walk reads the press's
+    // own hit (`contains`: `rect` less `seam`, and Play's `field`) and the
+    // two painted bits below, and whose seams read `rect` and `seam` for
+    // the two boxes that share a seam column. The tooltip's pointer walk
     // (recompute_redesign_button_hover) reads `rect`
     // and Play's second rect, row 8's clock (`field`, `contains`), for the
     // tooltip's owner; a press writes the armed chrome press
@@ -5714,7 +5717,9 @@ struct AppState {
         // that clears both (publish_button_face) — so the clock answers
         // exactly where the key answers. Every roster reader asks
         // `contains`, never `rect` alone: the press, the lift, the band's
-        // modifier gate and the tooltip's owner. A press on the field arms
+        // modifier gate, the tooltip's owner and the hover's walk (the
+        // key's face lights under a pen hovering the field, as it does
+        // under a press there; AppState::HoverFaces). A press on the field arms
         // the ordinary Roster press on Play (the key wears its lit face
         // while the pointer stays on either rect — `contains`, the walk's
         // inside bit — the clock changes nothing; the act shows).
@@ -7126,9 +7131,10 @@ struct AppState {
     // (input_pointer.cpp): THE WALK (walk_hover_face: which face the pen is
     // on, under the gate), THE ONE SETTER (set_hover_face), THE CLOCK
     // (tick_hover_faces, on the run loop's tick beside the tooltip's, and
-    // its first half alone ahead of every frame, settle_hover_faces) and
-    // THE PRESS'S CLAIM (drop_hover_face). THE LOOK
-    // is materials.h's THE HOVER; THE FACES THAT HOVER are enumerated once,
+    // its first half alone ahead of every frame, settle_hover_faces), THE
+    // PRESS'S CLAIM (drop_hover_face) and THE SEAMS' ONE SETTER
+    // (sync_hover_seams, run by the faces' setter and by the settle). THE
+    // LOOK is materials.h's THE HOVER; THE FACES THAT HOVER are enumerated once,
     // at the pen latch's inventory (GuiInputHandler::pen_hot_latch_). THE
     // TRIM BAR HOVERS TOO BUT IS NONE OF THESE FACES: it does not fade, so
     // its state is one value of its own beside this struct
@@ -7150,9 +7156,15 @@ struct AppState {
     //     pen_report_in_plane: a report above it is a leave; A FINGER NEVER
     //     HOVERS — its every motion is a contact's), no contact down
     //     anywhere (a pen or finger in contact is a press or a gesture: a
-    //     gesture begun elsewhere and dragged over a key lights nothing), and
-    //     the pen latch not holding (after a pen lift no face hovers until
-    //     the pen has moved the rearm distance or left and come back);
+    //     gesture begun elsewhere and dragged over a key lights nothing),
+    //     THE BARREL NOT HELD (every surface that hovers consumes a press
+    //     carrying the barrel as a no-op — the band's modifier gate, the
+    //     keyboard's claim, both scrubs, every dialog arm — so under a held
+    //     barrel no press there would act and no face hovers: THE PLANNER'S
+    //     CHOICE, 2026-11-20, TO BE PUT TO HIM; the bit, and when it lags
+    //     the button, at GuiInputHandler::pointer_barrel_held_), and the pen
+    //     latch not holding (after a pen lift no face hovers until the pen
+    //     has moved the rearm distance or left and come back);
     //   * THE FACE'S (hover_face_live, one arm per surface, on the stashes
     //     as painted): a key the press claim would arm — painted enabled,
     //     NOT LIT (Arc: checked + hover is the checked face, so a lit key is
@@ -7160,11 +7172,18 @@ struct AppState {
     //     modal only that dialog's own buttons and the keyboard; under an
     //     overlay the keys it leaves live, which are the ones painted
     //     enabled, and the overlay's own) — found by the press's own hit
-    //     (point_on_key and the seam, the keyboard's key_at, the knob's
-    //     disc as painted), under no card. AND THE THEME'S: where the
-    //     installed theme's hover face is its key face (every Live theme,
-    //     the own roles' rule) no face hovers at all, so nothing fades and
-    //     nothing is damaged there.
+    //     (a roster key's two rects, RedesignButtonFace::contains: its box
+    //     less its seam and, PLAY's alone, the bottom left's timestamp,
+    //     where a press is a PLAY press — THE KEY'S FACE LIGHTS THERE, the
+    //     timestamp, a time label, wears nothing: the planner's choice,
+    //     2026-11-20, to be put to him; a dialog button's box less its
+    //     seam, the keyboard's key_at, the knob's disc as painted), under
+    //     no card. AND THE THEME'S: where the installed theme's hover face
+    //     is its key face (every Live theme, the own roles' rule) no face
+    //     hovers at all, THE SEAMS INCLUDED, so nothing fades and nothing
+    //     is damaged there (the planner's choice, 2026-11-20, to be put to
+    //     him: a Live theme's seams could have gone to the border tone
+    //     with no face moving).
     // THE FADE IS ARC'S TRANSITION AS IT IS (`button { transition: all
     // 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94) }`, gtk3 CSS line 126; the
     // scale's slider the same 200 ms, line 1144): `fades` holds every face
@@ -7178,6 +7197,43 @@ struct AppState {
     // with no jump and no stuck mix. `mix` IS THE VALUE THE PAINTERS READ
     // (mix_of), STORED BY THE CLOCK'S LAST STEP, never a clock read in a
     // painter: one frame is one value whatever its clip.
+    // THE SEAMS FADE ON THEIR OWN (package 6's review, 2026-11-20): in a
+    // linked group — a roster group, a controls row's glyph keys, a
+    // question's answers — THE SEAM BETWEEN TWO NEIGHBORS IS ARC'S ONE INSET
+    // LINE ON THE RIGHT KEY (`box-shadow: inset 1px 0 #2b2e39`, gtk3 CSS
+    // line 292: the hovering button's own, and the next sibling's of a
+    // hovering button), the same computed value whichever of its two keys
+    // hovers. So while the pen slides from a key to its neighbor GTK runs no
+    // transition on the seam between them — IT HOLDS THE BORDER TONE — and
+    // only the seam behind the key the pen left fades out and the one ahead
+    // of the key it reached fades in. A seam is therefore not a function of
+    // its two faces' mixes (their larger one dips to about a half where the
+    // two fades cross): `seams` holds one Fade per seam, NAMED BY THE FACE
+    // ON ITS RIGHT (Arc's own naming: the line is the right key's, and that
+    // face's box holds the seam's columns), on the faces' clock and curve.
+    // ITS TARGET IS 1 WHILE EITHER OF ITS TWO FACES IS THE HOVERED FACE AND
+    // NEITHER IS PAINTED LIT, else 0 (Arc's two selectors each want
+    // `:not(:checked)` of both keys, and `button:checked + button:hover`
+    // sets `box-shadow: none`, lines 292 and 296; `:checked` holds the
+    // lit-and-inert key too; a disabled neighbor forbids nothing); a change
+    // of target turns it FROM ITS STORED MIX OVER THE WHOLE 200 ms, as a
+    // face's. THE SETTER TURNS THE SEAMS AT THE FACES' OWN INSTANT
+    // (set_hover_face → sync_hover_seams), so A SEAM THAT HAS MOVED WITH ONE
+    // FACE ALONE — an arrival on a key, and a leave from it or a reversal
+    // on it with no neighbor hovered between — carries that face's mix step
+    // for step. AFTER A SLIDE IT DOES NOT, and is not meant to: a slide
+    // leaves the seam between the two keys untouched (its target stays 1,
+    // its start and stored mix stand), so that seam GOES ON WITH WHAT IT WAS
+    // DOING — at 1 if the first key's hover had landed, still rising on its
+    // own original 200 ms if the pen crossed before — while the face the pen
+    // left starts down from its stored mix and the face it reached starts up
+    // from its own; the seam behind the key the pen left runs its own 200 ms
+    // from the slide's instant, and at a leave the faces and the seams each
+    // turn toward rest from their own stored value — so the slide's seam can
+    // stand above both its faces through that fade-out. `seam_mix_of` is the
+    // stored value,
+    // the clock's last step's as `mix` is; THE PAINTERS READ IT THROUGH
+    // seam_mix_as_painted (WHAT DOES NOT FADE, below).
     // WHAT DOES NOT FADE (the planner's rulings for send CC, each reported
     // to the architect as a decision): A PRESS LANDS AND LIFTS AT ONCE — the
     // press arm that takes a face drops its fade whole (drop_hover_face: the
@@ -7189,7 +7245,26 @@ struct AppState {
     // dialog goes) LANDS AT ONCE on what its state gives: the clock drops it
     // (tick_hover_faces' first half, run ahead of every frame too,
     // settle_hover_faces), and its painter reads no mix for a face that is
-    // not at rest. EVERY LEAVE FADES OUT, as Arc's does when the pointer
+    // not at rest. A SEAM LANDS AT ONCE WITH THE FACE BESIDE IT THAT DOES —
+    // the pressed key takes both its seams, a key gone dead returns them to
+    // rest — unless its other face is the hovered one, which still holds it
+    // (land_hover_seams_beside); and at once where it is no painted seam
+    // any more, a face beside it is painted lit, or no press would act on
+    // either of its faces (sync_hover_seams' first half, the settle's).
+    // AND THE PAINT RUN THAT FIRST PAINTS A FACE DEAD LANDS THEM ITSELF: the
+    // settle ahead of a frame reads the bits the LAST paint published, and
+    // that frame's own run may be the first to paint a key disabled or lit
+    // (the publisher refreshes the bit in the run: a redo from the car's
+    // console under a pen resting on REDO) — so the run reads no mix for a
+    // face it paints not at rest, AND A SEAM'S MIX AS THAT RUN PAINTS ITS
+    // TWO FACES (seam_mix_as_painted): 0 where a face that holds a fade is
+    // painted not at rest in this run and the seam's other face is not the
+    // hovered one, and 0 where neither face is painted at rest — the
+    // settle's own two rules on this run's bits, one frame before the next
+    // tick's settle erases the entries. (A disabled face that holds no fade
+    // forbids nothing: beside a hovering live key its seam takes the line,
+    // gtk3 CSS line 292's sibling half asking nothing of `:disabled`.)
+    // EVERY LEAVE FADES OUT, as Arc's does when the pointer
     // leaves the widget: the pen rising out of the plane, a HOVER_EXIT,
     // focus loss (the pointer-leave hook, main.cpp, through the walk). THE
     // HOVER_EXIT THE PLATFORM SENDS A MILLISECOND BEFORE EVERY TIP DOWN
@@ -7206,7 +7281,15 @@ struct AppState {
     // paint_linked_group), which invites a frame on every beat
     // (platform_android.cpp's kFrameBeat) until the fade lands; the landing
     // step is the last damage, and a landed hover — the pen resting on the
-    // key — costs nothing. No strip, no row, no window. A fade-in no step
+    // key — costs nothing. No strip, no row, no window. A SEAM'S STEP
+    // DAMAGES THE SEAM'S OWN COLUMNS (hover_seam_extent: the first border's
+    // columns of the face that names it, on its box's rows), WHICH LIE
+    // INSIDE THE DAMAGE OF EACH FACE BESIDE IT (a linked key's box holds
+    // both its seams; an answer's box holds its left seam and its extent
+    // the one after it): a seam moves only while a face beside it fades,
+    // save the instant it lands at once, so the face's rect carries it and
+    // the damage list, which merges by containment, takes no rect more; the
+    // seam between two keys of a slide moves nothing and damages nothing. A fade-in no step
     // has yet advanced ends without a trace (set_hover_face), so the pen
     // lift's restore motion and the latch's arm right after it paint
     // nothing. THE TOOLTIP IS NOT TIED TO IT: the face shows on the pen's
@@ -7273,6 +7356,11 @@ struct AppState {
         Face              hovered;
         // Every face whose mix is not zero or is moving.
         std::vector<Fade> fades;
+        // EVERY SEAM whose mix is not zero or is moving (the head's THE
+        // SEAMS FADE ON THEIR OWN), each a Fade whose `face` is THE FACE ON
+        // THE SEAM'S RIGHT — the seam is that face's first border's columns
+        // — its `to` 1 while either face beside it is `hovered`.
+        std::vector<Fade> seams;
         // THE PAINTERS' ONE READ: `face`'s stored mix in [0, 1], 0 for a
         // face with no fade. A painter asks it for a face AT REST alone and
         // hands the number on (paint_linked_group, paint_word_button,
@@ -7281,6 +7369,43 @@ struct AppState {
             for (const Fade& f : fades)
                 if (f.face == face) return f.mix;
             return 0.0;
+        }
+        // AND THE SEAM'S: the stored mix of the seam on `right`'s left, 0
+        // with no fade — the key face it wears at rest toward the border
+        // tone.
+        double seam_mix_of(const Face& right) const {
+            for (const Fade& f : seams)
+                if (f.face == right) return f.mix;
+            return 0.0;
+        }
+        // Whether `face` holds a fade — the hovered face, or one still
+        // fading out.
+        bool fading(const Face& face) const {
+            for (const Fade& f : fades)
+                if (f.face == face) return true;
+            return false;
+        }
+        // THE SEAM'S MIX AS ONE PAINT RUN READS IT — THE PAINTERS' ONE READ
+        // OF A SEAM (the head's WHAT DOES NOT FADE: the run that first
+        // paints a face dead lands its seams itself): the seam between
+        // `left` and `right`, each handed with whether THIS RUN paints it at
+        // rest (KeyState::Rest off the bits as this run published them).
+        // 0 where neither is at rest (no press would act on either); 0
+        // where a face that holds a fade is painted not at rest — it lands
+        // at once and takes its seams — unless the other face is the
+        // hovered one, which still holds the seam; else the stored mix. A
+        // seam beside a lit or lit-and-inert member is not painted whatever
+        // this answers (Arc's `:not(:checked)`, the painters' own skip:
+        // materials.h's paint_linked_group, paint_action_row).
+        double seam_mix_as_painted(const Face& left, bool left_at_rest,
+                                   const Face& right,
+                                   bool right_at_rest) const {
+            if (!left_at_rest && !right_at_rest) return 0.0;
+            if (!left_at_rest && fading(left) && !(right == hovered))
+                return 0.0;
+            if (!right_at_rest && fading(right) && !(left == hovered))
+                return 0.0;
+            return seam_mix_of(right);
         }
     };
     HoverFaces hover_faces;
@@ -7311,19 +7436,84 @@ struct AppState {
     //   `lifted` THE PART THE BAR'S OWN GRAB HELD AT ITS LIFT, cleared by
     //     every release at its head and written by the release that ends a
     //     grab (on_button_release's trim arms; not the long press's lift,
-    //     which reframes the view and returns above them), read once by the
-    //     pen latch's arm (arm_pen_hot_latch), which installs it as `part`
-    //     where the frozen answer's terms hold (trim_bar_frozen_part_kept)
-    //     and clears it, and cleared by every pointer leave
-    //     (clear_pen_hot_latch): WHILE THE LATCH HOLDS THE BAR'S ANSWER IS
-    //     FROZEN — after the bar's own drag or tap lifts, the part that was
-    //     held reads as hovered until the pen rearms or leaves, so the caps
-    //     do not blink at the lift; after any other lift nothing on the bar
-    //     lights until the rearm (input_handler.h's pen latch inventory). A
-    //     finger's lift never arms the latch, and its leave clears `lifted`.
+    //     which reframes the view and returns above them). WHILE THE LATCH
+    //     HOLDS THE BAR'S ANSWER IS FROZEN — after the bar's own drag or tap
+    //     lifts ON THE PART IT HELD, that part reads as hovered until the pen
+    //     rearms or leaves, so the caps do not blink at the lift; after a
+    //     grab lifted anywhere else (run on past a wall onto an end's zone,
+    //     an end past its partner, the ruler) and after any other lift
+    //     nothing on the bar lights until the rearm (input_handler.h's pen
+    //     latch inventory).
+    //   `lift_pending`, `lift_rx` / `lift_ry` THE LIFT'S ANSWER WAITS FOR
+    //     THE PICTURE IT IS FOR (send CC's review A, F1, 2026-11-20): the
+    //     lift's delivery runs the drag's last motion (the bound moved), the
+    //     release, the restore motion and the latch's arm with no paint
+    //     between, so the stash the press's hits read (TrimBarHit) still
+    //     holds the zones where the bound WAS — and the part the lift is on
+    //     is a question about the picture the next paint shows, the opposite
+    //     of a press's ON SCREEN IS AS PAINTED. So the latch's arm
+    //     (arm_pen_hot_latch), where the frozen answer's terms hold
+    //     (trim_bar_frozen_part_kept) and a grab lifted, writes `part` none,
+    //     keeps `lifted`, records the lift's exact place here and marks the
+    //     answer pending; THE FIRST PUBLISH OF THE STASH AFTER IT RESOLVES
+    //     IT (resolve_trim_bar_lift, run by the trim painter inside its
+    //     publishing pass, after the new zones are published and before the
+    //     pill and the caps are stamped): the part at the lift's place on
+    //     the NEW stash (trim_bar_part_at) equal to `lifted` installs it,
+    //     anything else none — in the very pass that paints the bar, so the
+    //     held look's last frame is followed straight by the frozen look (or
+    //     the bare bar), never a capless frame between: every grab's lift
+    //     damages the trim lane whole (commit_trim_drag,
+    //     disarm_pending_trim_drag), so the frame after the lift always has
+    //     the publishing pass, and a pass of that frame under a narrower clip
+    //     painted before it is repainted by it. The pending ends on every
+    //     road: that resolution; any write of `part` (set_trim_bar_hover:
+    //     the latched walk where the frozen terms fail, the settle — which,
+    //     ahead of every frame, also re-asks the frozen terms of a pending
+    //     answer — the rearm's walk); every pointer leave
+    //     (clear_pen_hot_latch); every release's head. `lifted` is cleared
+    //     with it, so nothing lingers. A finger's lift never arms the latch,
+    //     and its leave clears `lifted`.
+    //   `leave_ms` THE LEAVE'S HELD CLEAR (THE PLANNER'S CHOICE, 2026-11-20,
+    //     TO BE PUT TO HIM; the other option was to accept one bare frame in
+    //     about 22 presses): the pen's HOVER_EXIT comes about a millisecond
+    //     ahead of its tip DOWN, in a delivery of its own (input_core.h's
+    //     THE POINTER LEAVE'S THREE FIRES), and a part cleared at that leave
+    //     would let a frame painted in the gap show the bare pill between
+    //     the hover look and the held look — the keys hide the same gap
+    //     behind their 200 ms fade, the bar has none. So a POINTER LEAVE
+    //     (the hook's one road, the plane's exit and the HOVER_EXIT alike:
+    //     it carries no reason) does not clear a standing part: it stamps
+    //     monotonic_ms() here (stamp_trim_bar_leave), the hover's own clock,
+    //     and the walk keeps the part, damaging nothing, while the stamp is
+    //     younger than kTrimBarLeaveHoldMs, the pointer still out, no
+    //     contact down and the terms a press there needed still holding
+    //     (the main page taking a press at the place, the theme's term, the
+    //     bar's own). THE STAMP GOES ON EVERY ROAD, by whichever comes
+    //     first: the first TICK that finds it that old (the walk drops the
+    //     part, one lane damage); a press (its walk under the held bit
+    //     answers none, and the bar's own arm installs the held look in the
+    //     same delivery); a motion (the pointer back in: the walk answers
+    //     the truth, the same part again costing nothing); any write of the
+    //     part (set_trim_bar_hover clears it: the settle's veil, card, `h`
+    //     view, cold stash, load or live drag, all at once as ever). While it
+    //     stands the pen is OUT, so no press can land without a new motion
+    //     or a DOWN, which resolve it: the part painted is the one a press
+    //     there would have taken a moment ago.
     struct TrimBarHover {
+        // Two of the platform's 5 ms ticks, under half a 22.2 ms beat
+        // (kFrameBeat): the DOWN that follows a HOVER_EXIT lands about 1 ms
+        // after it (traced 2026-10-10), well inside; the tick that finds a
+        // real leave's stamp this old falls 10 to 15 ms after the leave,
+        // under one beat, so a real leave keeps the caps at most one frame
+        // longer than an immediate clear would.
+        static constexpr int64_t kTrimBarLeaveHoldMs = 10;
         TrimBarPart part   = TrimBarPart::None;
         TrimBarPart lifted = TrimBarPart::None;
+        bool   lift_pending = false;
+        double lift_rx      = 0.0;   // the lift's real place, window px
+        double lift_ry      = 0.0;
+        std::optional<int64_t> leave_ms;
     };
     TrimBarHover trim_bar_hover;
 
@@ -19465,20 +19655,19 @@ enum class TrimHit { None, Begin, End };
 // 2026-11-15, the no-grid arc) — or None. It reads THE PAINTER'S STASH (AppState::trim_bar_hit,
 // architect 2026-09-24 — strictly as-painted): the two caps the live trim pass
 // last DREW, never the store's pair, so a press between a trim write and its
-// repaint grabs the cap on screen. Each bound's cap is its SCROLL-BAR ARROW
-// BUTTON at that end of the trim lane's thumb (architect 2026-10-03; the rule
-// at trim_arrow_button_w_px, render.h): a trim_arrow_button_w_px() square at the
-// lane's full height, EDGE-ANCHORED on the bound's painted column — the begin
-// button's LEFT edge on it, the end button's RIGHT edge on it, or in the
-// narrow case edge to edge right of the begin's — from trim_endcap_rect, the
-// ONE rect owner render_trim_flags paints and publishes from. THE HIT RECT IS
-// THE BUTTON, with no tolerance, and the two never overlap. Tests both
-// mouse_x and mouse_y, the y against the lane the thumb was painted in. A
-// button sliding off an edge answers on its visible columns alone (architect
-// 2026-10-05) and one wholly off the lane published none and answers nothing; cold (nothing
-// painted) answers None. The two buttons and the thumb's body between them
-// (the bridge span) are the ONLY trim grab handles (the waveform stem grab
-// retired).
+// repaint grabs the zone on screen. Each bound's hit is its GRAB ZONE over
+// the trim lane's whole rows, reaching a little past the bound and further
+// into the span, the two split at the midpoint between the bounds where
+// they would overlap (architect 2026-11-20, send CC; the arithmetic's one
+// owner is trim_endcap_rect and render.h's THE TRIM BAR'S CAPS AND GRABS,
+// the numbers there), the ONE rect owner render_trim_flags publishes from.
+// THE HIT RECT IS THE ZONE, with no tolerance, and the two never overlap.
+// Tests both mouse_x and mouse_y, the y against the lane the bar was
+// painted in. A zone sliding off an edge answers on its visible columns
+// alone (architect 2026-10-05) and one wholly off the lane published none
+// and answers nothing; cold (nothing painted) answers None. The two zones
+// and the span's body between them (the bridge span) are the ONLY trim grab
+// handles (the waveform stem grab retired).
 TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
                              double mouse_y);
 
@@ -19498,9 +19687,9 @@ TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
 // true here. Nothing is re-derived on the store's
 // pair.
 //
-// THE ARROW BUTTONS ARE NOT IN IT: trim_bridge_gap insets each end by its
-// button's width, so the button rects sit outside the interval and
-// this needs no reliance on a caller testing the buttons first. Both bounds are always set (the trim window
+// THE GRAB ZONES ARE NOT IN IT: trim_bridge_gap insets each end by the
+// zone's inside reach (trim_grab_inside_px), so the zones sit outside the
+// interval and this needs no reliance on a caller testing the zones first. Both bounds are always set (the trim window
 // always rests), so there is no pair gate.
 bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
                                double mouse_y);
@@ -19874,11 +20063,22 @@ SweepHighlightChange sweep_highlight_change(
 // disarm_pending_trim_drag), the drag's commit (commit_trim_drag), the
 // crossing's refused begin — the sweep's first accepted write (its every
 // write damages the lane) and its commit (commit_region_sweep), and THE
-// HOVER'S EDGES, every change of the hovered part (set_trim_bar_hover: the
-// pen's arrival over the bar, its move between the body and an end, its
-// leave, the plane's exit, the latch's arm installing the lifted part and
-// the latch's clear re-walking); nothing at rest, nothing while the pen
-// rests in one part. THE COST OF ONE: the lane's rect, 28 device rows
+// HOVER'S EDGES, every change of the hovered part (set_trim_bar_hover, its
+// one setter): the walk's — the pen's arrival over the bar, its move
+// between the body and an end or off the bar, a contact going down (the
+// press's walk and the DOWN's own motion), the zones moving under a resting
+// pen or a gate term turning (the tick's walk) — the leave's held clear
+// dropping the part on the first tick 10 ms after the pen's leave or the
+// plane's exit (AppState::TrimBarHover's `leave_ms`; a press, a motion or
+// a veil inside those 10 ms resolving it first), the latch's arm writing
+// none (its pending answer for a grab's lift resolved by the next frame's
+// publishing pass, which repaints the lane whole under the lift's own
+// damage: resolve_trim_bar_lift, `lift_pending`), the frozen answer — or
+// its pending — dropped where its
+// terms fail, the latch's rearm re-walking, and the settle (a veil, a card,
+// the `h` view, a cold stash, a load, a live drag); nothing at rest,
+// nothing while the pen rests in one part, nothing while the leave's clear
+// is held. THE COST OF ONE: the lane's rect, 28 device rows
 // across the panel on the tablet, redrawn by on_redraw under that clip —
 // render_background's erase, paint_trim (the lane's ground and lines, the
 // trough, the pill and the caps, and the hit stash republished, the clip
@@ -19901,6 +20101,46 @@ inline TrimBarLook trim_bar_look(const AppState& app) {
                  app.region_drag.wrote_trim;
     look.hovered = app.trim_bar_hover.part;
     return look;
+}
+
+// THE PART OF THE BAR AT A REAL PLACE, by the press's own two hits in the
+// router's order (route_trim_bar_press): an end's zone first, then the
+// bridge — read off the stash (AppState::trim_bar_hit), so the part named
+// is the part a press there takes on the picture the stash was published
+// for. The hover's walk asks it at the pointer
+// (GuiInputHandler::trim_bar_part_under_pointer), the lift's resolution at
+// the lift's place (resolve_trim_bar_lift).
+inline TrimBarPart trim_bar_part_at(const AppState& app, double rx,
+                                    double ry) {
+    switch (hit_test_trim_endcap(app, rx, ry)) {
+        case TrimHit::Begin: return TrimBarPart::Begin;
+        case TrimHit::End:   return TrimBarPart::End;
+        case TrimHit::None:  break;
+    }
+    return point_in_trim_bridge_span(app, rx, ry) ? TrimBarPart::Body
+                                                  : TrimBarPart::None;
+}
+
+// THE LIFT'S ANSWER, RESOLVED ON THE PICTURE IT IS FOR (AppState::
+// TrimBarHover's `lift_pending`, the rule): run by the trim painter's
+// publishing pass (GuiPaintHandler::paint_trim, through render_trim_flags'
+// look, asked after the stash is published and before anything is
+// stamped). A pending answer becomes the lifted part where the lift's place
+// is on that part on the NEW stash, else none, and the pending and
+// `lifted` end. It writes `part` with no damage of its own: the pass that
+// asks it is repainting the trim lane whole, the caps with it, so the
+// change is painted in the frame it is decided in (trim_bar_look's head:
+// every edge of the bar's state is one lane damage — this one's is the
+// lift's own, commit_trim_drag's or disarm_pending_trim_drag's). Nothing
+// pending, nothing done.
+inline void resolve_trim_bar_lift(AppState& app) {
+    AppState::TrimBarHover& h = app.trim_bar_hover;
+    if (!h.lift_pending) return;
+    h.part = trim_bar_part_at(app, h.lift_rx, h.lift_ry) == h.lifted
+                 ? h.lifted
+                 : TrimBarPart::None;
+    h.lift_pending = false;
+    h.lifted       = TrimBarPart::None;
 }
 
 // Promoted from a lambda in main(). Eligible iff the warp marker at `idx` has

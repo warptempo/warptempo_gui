@@ -1487,15 +1487,21 @@ struct GuiInputHandler {
     // THE POINTER'S HALF OF THE GATE, AND THE ONE EVERY HOVER LOOK ASKS —
     // "may a hover face show for the pen where it is now?": the pen hovering
     // in the plane (AppState::pointer_in_window: every leave drops it, the
-    // platform's plane among them, and a finger's unheld motion never sets
-    // it), NO CONTACT DOWN (the logical button as the last pointer event
-    // delivered it; a contact the touch layer keeps to itself — a pan, a
-    // pinch, a sweep, a caret drag — ended the hover through the leave
-    // first), and THE PEN LATCH NOT HOLDING (pen_hot_latch_holds: after a
-    // pen lift no face hovers until the rearm distance or a leave). It
-    // names no surface: each surface's own walk adds what a press there
-    // would meet (the faces' walk below; the well's targets through
-    // hover_admitted_on_main_page).
+    // platform's plane among them; every motion sets it, a finger's too —
+    // its contact's motions carry the held button, and the one unheld
+    // motion a finger delivers, its hard end's lost-button motion, is
+    // followed in the same delivery by the leave, which drops the bit
+    // before any tick or frame), NO CONTACT DOWN (the logical button as the
+    // last pointer event delivered it; a contact the touch layer keeps to
+    // itself — a pan, a pinch, a sweep, a caret drag — ended the hover
+    // through the leave first), THE BARREL NOT HELD (pointer_barrel_held_,
+    // the bit's one description: a press carrying the barrel is a consumed
+    // no-op on every surface that hovers, so nothing hovers under it — the
+    // planner's choice, 2026-11-20, to be put to him) and THE PEN LATCH NOT
+    // HOLDING (pen_hot_latch_holds: after a pen lift no face hovers until
+    // the rearm distance or a leave). It names no surface: each surface's
+    // own walk adds what a press there would meet (the faces' walk below;
+    // the well's targets through hover_admitted_on_main_page).
     bool hover_admitted() const;
     // THE SAME GATE FOR A TARGET OF THE MAIN PAGE'S WELL at the pointer's
     // place (the trim bar, walk_trim_bar_hover below, its one asker):
@@ -1524,13 +1530,16 @@ struct GuiInputHandler {
     // keys show no hover shows none on the bar either, the held states'
     // caps unchanged) and trim_bar_takes_grab, the part under the pen under
     // hover_admitted_on_main_page; WHILE THE PEN LATCH HOLDS, the part
-    // already standing (the lifted part the latch's arm installed, or none)
-    // while trim_bar_frozen_part_kept answers — run inside walk_hover_face,
+    // already standing (none from the latch's arm, or the lifted part the
+    // trim painter's publishing pass resolved a grab's pending answer to,
+    // resolve_trim_bar_lift) and that pending answer, while
+    // trim_bar_frozen_part_kept answers — run inside walk_hover_face,
     // so on every motion, tick, latch arm and leave. THE SETTLE — a standing
     // part no press there would grab any more (a veil, the `h` view, a cold
-    // stash, a drag gone live) goes at once, ahead of every frame
-    // (settle_hover_faces runs it). THE ONE SETTER, which damages the trim
-    // lane on a change. "WOULD A PRESS HERE ARM A GRAB?" past the main
+    // stash, a drag gone live), and a pending answer whose frozen terms
+    // fail, goes at once, ahead of every frame (settle_hover_faces runs it).
+    // THE ONE SETTER, which damages the trim lane on a change and ends a
+    // pending answer and a leave's held clear on every write. "WOULD A PRESS HERE ARM A GRAB?" past the main
     // page's refusals: the stash published, NOT THE `h` VIEW (its router
     // takes only the framing long press on the bar), and NOT THE BARREL
     // (pointer_barrel_held_: a barrel press on the bar is the bound-set
@@ -1539,14 +1548,26 @@ struct GuiInputHandler {
     // taking a press there, the theme's term and the bar's own — the
     // pointer's half less the latch. The part under the pointer by the
     // press's own two hits (hit_test_trim_endcap, point_in_trim_bridge_span).
+    // THE LEAVE'S HELD CLEAR (AppState::TrimBarHover's `leave_ms`, the rule;
+    // the planner's choice, 2026-11-20, to be put to him): the pointer-leave
+    // hook stamps a standing part (stamp_trim_bar_leave) ahead of its walk,
+    // and the walk keeps it for kTrimBarLeaveHoldMs while the pointer stays
+    // out, no contact is down and trim_bar_part_terms_hold — the terms a
+    // standing part keeps without re-reading the pen's place (the main
+    // page taking a press there, the theme's term, the bar's own), which the
+    // frozen answer re-asks too.
     void walk_trim_bar_hover();
     void settle_trim_bar_hover();
     void set_trim_bar_hover(TrimBarPart part);
+    void stamp_trim_bar_leave();
     bool trim_bar_takes_grab() const;
     bool trim_bar_frozen_part_kept() const;
+    bool trim_bar_part_terms_hold() const;
     TrimBarPart trim_bar_part_under_pointer() const;
     // THE WALK: the face the pen is on now, under both halves of the gate
-    // and the theme's term, handed to the one setter. Run on every pointer
+    // and the theme's term (a theme whose hover face is its key face hovers
+    // nothing, seams included: the planner's choice, 2026-11-20, to be put
+    // to him), handed to the one setter. Run on every pointer
     // motion (on_motion's head, above every branch: a held button answers
     // none), on every tick (the stashes move with no pointer event), at the
     // pen latch's arm and at every pointer leave (main.cpp's hook: none, so
@@ -1554,26 +1575,77 @@ struct GuiInputHandler {
     // on the same theme term (walk_trim_bar_hover).
     void walk_hover_face();
     // THE CLOCK, on the run loop's tick (main.cpp, beside tick_tooltip):
-    // the walk, then settle_hover_faces, then every fade stepped to now —
-    // each step that moves a stored mix damages that face's own painted
-    // extent, a fade that lands at 0 leaves the list.
+    // the walk, then settle_hover_faces, then every fade stepped to now,
+    // the faces' and then the seams' — each step that moves a stored mix
+    // damages that face's own painted extent or that seam's own columns, a
+    // fade that lands at 0 leaves its list.
     void tick_hover_faces();
     // THE FACES NO PRESS WOULD ACT ON ANY MORE LAND AT ONCE (the head's
     // WHAT DOES NOT FADE): every fade whose face fails hover_face_live is
-    // dropped, its extent damaged where it showed. The clock's first half,
-    // and run by itself AHEAD OF EVERY FRAME (the pre-paint hook, main.cpp):
-    // a key or a release can raise a modal or close the keyboard and be
-    // painted in the same pass, before any tick.
+    // dropped, its extent damaged where it showed, and the seams beside it
+    // with it (land_hover_seams_beside); then the seams' own half
+    // (sync_hover_seams). The clock's first half, and run by itself AHEAD
+    // OF EVERY FRAME (the pre-paint hook, main.cpp): a key or a release can
+    // raise a modal or close the keyboard and be painted in the same pass,
+    // before any tick. IT READS THE BITS THE LAST PAINT PUBLISHED, so a key
+    // the coming frame is the first to paint disabled or lit is still live
+    // here: that frame's painters land it themselves — no mix for a face
+    // painted not at rest, its seams through
+    // AppState::HoverFaces::seam_mix_as_painted — and the next tick's
+    // settle erases the entries.
     void settle_hover_faces();
     // THE PRESS'S CLAIM: the press arm that takes `face` ends its fade whole
     // — the accent at once whatever the fade's value, nothing left to run
-    // after the lift; where a mix showed, the hover's own extent is damaged
-    // (the face the arm damages, or a seam column more). Called by every
-    // arm that takes a hover face: arm_redesign_press,
-    // arm_modal_dialog_press and the keyboard's arm on a focused dialog
-    // button (input_key_dispatch.cpp), the on-screen keyboard's press, the
-    // two scrubs' claims.
+    // after the lift — and the seams beside it (a pressed key takes both
+    // its seams; land_hover_seams_beside); where a mix showed, the hover's
+    // own extent is damaged (the face the arm damages, or a seam column
+    // more). Called by every arm that takes a hover face:
+    // arm_redesign_press, arm_modal_dialog_press and the keyboard's arm on
+    // a focused dialog button (input_key_dispatch.cpp), the on-screen
+    // keyboard's press, the two scrubs' claims.
     void drop_hover_face(const AppState::HoverFaces::Face& face);
+    // THE SEAMS' BODIES (the head's THE SEAMS FADE ON THEIR OWN; a seam is
+    // named by the face on its right):
+    //   hover_seam_left_face — THE FACE ON THE SEAM'S LEFT, the other of
+    //     the two published boxes that share `right`'s seam columns, none
+    //     where `right` has no seam (a group's first key, a word button, a
+    //     keyboard key, the knob): a roster key's by the two boxes as
+    //     published — the box that ends where `right`'s seam ends, on its
+    //     rows; a dialog button's the button before it, where `right`
+    //     publishes a seam (a linked glyph key) or that one a seam after
+    //     (a question's answer).
+    //   hover_seam_right_face — its inverse: the face whose seam `left`'s
+    //     box ends on, none at a group's last key.
+    //   hover_seam_live — "is this a painted seam a hover may show on?":
+    //     both its faces published as above, NEITHER PAINTED LIT (the
+    //     roster's selected bit, a dialog button's lit bit — enabled or
+    //     inert alike, Arc's `:checked`), and a press acting on at least
+    //     one of them (hover_face_live: under a veil, or with both keys
+    //     dead, no seam stands).
+    //   hover_seam_extent — the seam's own columns on its box's rows, cut
+    //     to what is painted: its damage. Empty where its stash is gone.
+    //   sync_hover_seams(now) — THE SEAMS' ONE SETTER: every standing seam
+    //     that is no longer live lands at once (its columns damaged where a
+    //     mix showed); every other is turned toward its target where that
+    //     changed — 1 while a face beside it is the hovered face, else 0 —
+    //     from its stored mix, begun at `now`; and a seam of the hovered
+    //     face with no fade yet starts one from 0. It damages nothing else:
+    //     the clock's steps do. Run by set_hover_face on a change, with the
+    //     faces' own instant, and by settle_hover_faces (a neighbor's lit
+    //     bit can move under a resting pen); with no face hovered and no
+    //     seam standing it is one compare.
+    //   land_hover_seams_beside(face) — the at-once landing a face shares
+    //     with its seams: each standing seam beside `face` leaves the list,
+    //     its columns damaged where a mix showed, but one whose other face
+    //     is the hovered face.
+    AppState::HoverFaces::Face
+        hover_seam_left_face(const AppState::HoverFaces::Face& right) const;
+    AppState::HoverFaces::Face
+        hover_seam_right_face(const AppState::HoverFaces::Face& left) const;
+    bool hover_seam_live(const AppState::HoverFaces::Face& right) const;
+    GuiRect hover_seam_extent(const AppState::HoverFaces::Face& right) const;
+    void sync_hover_seams(int64_t now_ms);
+    void land_hover_seams_beside(const AppState::HoverFaces::Face& face);
     // THE WALK'S AND THE CLOCK'S PARTS (each rule at its definition): the
     // one setter of the hovered face, which turns the two fades a change
     // owes; the face's half of the gate, "would a press on this face act
@@ -3276,11 +3348,16 @@ private:
     // STATEMENT (re-derived 2026-11-20, send CC, Arc's hover; every other
     // site points here). Each wears Arc's hover face, faded in and out over
     // Arc's 200 ms, while the pen hovers it AT REST — enabled, not lit, not
-    // pressed, not dead under a veil (the look materials.h's THE HOVER; the
-    // state, the gate, the fade and the damage AppState::HoverFaces, one
-    // owner; the walk walk_hover_face):
+    // pressed, not dead under a veil, the barrel not held (the look
+    // materials.h's THE HOVER; the state, the gate, the fade and the damage
+    // AppState::HoverFaces, one owner; the walk walk_hover_face):
     //   * THE KEYS OF BOTH ICON ROWS — the roster's linked buttons, each
-    //     chord key's box (NOISE's entry is no key);
+    //     chord key's box (NOISE's entry is no key), PLAY's also while the
+    //     pen is on the bottom left's timestamp, where a press is a PLAY
+    //     press (the key's face lights, the timestamp wears nothing; the
+    //     planner's choice, 2026-11-20, to be put to him), each group's
+    //     seams with them (AppState::HoverFaces' THE SEAMS FADE ON THEIR
+    //     OWN);
     //   * THE DIALOG STASH'S BUTTONS — every controls row's keys and word
     //     buttons (the render player's, the score viewer's, the trim presets
     //     list's, the BPM form's, the picker's one word) and a dialog
@@ -3300,13 +3377,20 @@ private:
     //   `trim_span_hover_face` under two caps in the text tone, a hovered
     //   end's cap that tone and the other cap the text tone). UNDER THIS
     //   LATCH ITS ANSWER IS FROZEN rather than none — the one exception to
-    //   "every face answers no hover": the arm installs the part the bar's
-    //   own press held at this lift (AppState::TrimBarHover's `lifted`,
-    //   written by the lift's release) — an end: that cap the hover tone,
-    //   the other cap the text tone; the body: the body the hover tone, both
-    //   caps the text tone — or none after any other lift, the bar's long
-    //   press (whose lift reframes the view) among them, and the walk keeps
-    //   that answer, never re-reading the pen's place, while
+    //   "every face answers no hover": AFTER THE BAR'S OWN GRAB LIFTS ON THE
+    //   PART IT HELD, that part reads as hovered from the first frame after
+    //   the lift (AppState::TrimBarHover's `lifted`, written by the lift's
+    //   release; the arm leaves the answer pending with the lift's exact
+    //   place, and the trim painter's publishing pass of that frame resolves
+    //   it on the zones it publishes — the stash at the arm is still the
+    //   one painted before the drag's last motion, `lift_pending`) — an
+    //   end: that cap the hover tone, the other cap the text tone; the
+    //   body: the body the hover tone, both caps the text tone — or none
+    //   after a grab lifted off the part it held (run on past a wall onto an
+    //   end's zone, past the partner, on the ruler) and after any other
+    //   lift, the bar's long press (whose lift reframes the view) among
+    //   them, and the walk keeps that answer, pending or resolved, never
+    //   re-reading the pen's place, while
     //   trim_bar_frozen_part_kept holds (the pen in the plane with no
     //   contact, no veil or card there, audio and no live drag, the theme
     //   and the bar's own terms), until the pen rearms or leaves; so the
@@ -3336,7 +3420,9 @@ private:
     // fade-out as every leave does, and a millisecond of Arc's 200 ms is
     // under one painted level; the DOWN's press arm then drops the fade
     // whole and paints the accent (drop_hover_face), so the face goes from
-    // its hover to the accent with no dip and nothing restarted.
+    // its hover to the accent with no dip and nothing restarted. The trim
+    // bar, with no fade, holds its hovered part across that leave instead
+    // (AppState::TrimBarHover's `leave_ms`).
     // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
     // would light the very face it withheld; the latch is a DISTANCE, as
     // the plane's own hysteresis is.
@@ -3387,11 +3473,35 @@ private:
     // THE BARREL AS THE LAST POINTER MOTION DELIVERED IT (the core's ctrl
     // bit, GuiInputCore::set_ctrl: the S Pen's side button, sampled before
     // the hover report that carried it): written at on_motion's head beside
-    // the tooltip's held bit, read by the trim bar's hover
-    // (trim_bar_takes_grab) and so on every tick too. With the barrel held a
-    // press on the bar is the bound-set click, not the grab, so the bar
-    // shows no hover and no caps (architect 2026-11-20, send CC). The keys'
-    // walk does not read it (package 6's open question, his to rule).
+    // the tooltip's held bit, read by the hover's two gates, on every motion
+    // and on every tick:
+    //   * THE FACES' (hover_admitted): NO FACE HOVERS WHILE THE BARREL IS
+    //     HELD. A hover face says a press there would act, and a press
+    //     carrying the barrel is a consumed no-op on every surface that
+    //     hovers (the band's modifier gate chrome_band_modifiers_refused,
+    //     the on-screen keyboard's claim, both scrubs' claims, every dialog
+    //     arm: "a barrel press on a key is a consumed no-op", architect
+    //     2026-11-08). THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM.
+    //   * THE TRIM BAR'S (trim_bar_takes_grab): with the barrel held a
+    //     press on the bar is the bound-set click, not the grab, so the bar
+    //     shows no hover and no caps (architect 2026-11-20, send CC) — its
+    //     own term, which its frozen answer under the pen latch and its
+    //     leave's held clear (AppState::TrimBarHover's `leave_ms`) re-ask.
+    // THE BIT IS THE LAST MOTION'S, NOT THE BUTTON'S, and lags it in one
+    // case that shows: A BARREL EDGE WITH THE PEN STILL IN THE PLANE — the
+    // platform sets the core's bit and delivers no motion for the edge
+    // itself (platform_android.cpp's BUTTON_PRESS / BUTTON_RELEASE arm) —
+    // so the hovered face stays, or stays away, until the pen's next hover
+    // report, which the walk then answers: the face fades out, or in, from
+    // that report. Where else it is old nothing reads it to a yes: after a
+    // leave (the platform drops the button at a hover exit with no motion)
+    // the in-window bit refuses first and the return's own motion rewrites
+    // this one ahead of its walk — save the trim bar's held clear, which
+    // with the pointer out re-asks it for at most kTrimBarLeaveHoldMs and
+    // so keeps, at most that long, the part the last report in the plane
+    // answered under that same bit; at the pen latch's arm and through its
+    // hold (the lift's restore motion wrote the stroke's last bit) the
+    // latch refuses first; a finger's motions carry the held button.
     bool pointer_barrel_held_ = false;
     // THE RE-ARM DISTANCE, 18 W (architect 2026-10-08, retuned on measured
     // data from 3; the W since 2026-11-05): 36 device px on the tablet at

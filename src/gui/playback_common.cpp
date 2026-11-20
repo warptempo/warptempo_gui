@@ -256,6 +256,8 @@ void playback_render_block(GuiPlaybackState& state,
     double pos = state.fractional_cursor;
 
     int64_t n = 0;
+    // THE WRAPS THIS FILL TOOK, published after its stamp (below).
+    int64_t wraps = 0;
     // THE SAMPLE FORMAT IS HOISTED OUT OF THE LOOP (2026-10-26 night, the
     // score's soundtrack): the bound buffer is float32 (the project source,
     // the target preview, a render player item) or PCM16 (the score's
@@ -285,8 +287,9 @@ void playback_render_block(GuiPlaybackState& state,
             // lands inside the window. The `total` clamp stays as the natural
             // end's — the wrap target is inside the buffer by the publish's
             // clamps, and `end <= total`, so a wrapped position can never sit at
-            // or past `total` either. The count is a relaxed +1 for the main
-            // thread's consume (the field's comment, playback_common.h). THE CUT
+            // or past `total` either. The wrap is COUNTED HERE, in the fill's
+            // own local `wraps`, and PUBLISHED AFTER THE FILL-END STAMP (below,
+            // the field's comment, playback_common.h). THE CUT
             // IS RAW: no crossfade, no ramp at the seam — the ruling that built
             // the first loop stands ("clicks accepted"), the trim's ends being
             // the user's own to place.
@@ -296,9 +299,7 @@ void playback_render_block(GuiPlaybackState& state,
                     do {
                         pos -= window;
                     } while (pos >= static_cast<double>(end));
-                    state.loop_wraps.store(
-                        state.loop_wraps.load(std::memory_order_relaxed) + 1,
-                        std::memory_order_relaxed);
+                    ++wraps;
                     floor_pos = std::floor(pos);
                     src_floor = static_cast<int64_t>(floor_pos);
                 } else {
@@ -353,6 +354,23 @@ void playback_render_block(GuiPlaybackState& state,
     write_stamp(state, new_cur,
                 fill_ns + n * 1000000000LL / static_cast<int64_t>(output_rate),
                 generation);
+    // THE WRAP COUNT, PUBLISHED AFTER THE STAMP (2026-11-20, send CC's
+    // review, finding A1): one RELEASE store of the fill's wraps, sequenced
+    // after write_stamp's own release, so a main thread whose ACQUIRE load
+    // sees the new count (playback_consume_loop_wrap) is ordered after this
+    // fill's stamp, and the resync it then takes reads this stamp or a later
+    // one — never a pre-wrap stamp. Counted inside the sample loop and stored
+    // there, as until this day, the count could be read between the wrap and
+    // the stamp (a tick landing in the fill's remainder, or simply the
+    // relaxed store becoming visible ahead of the stamp's) and the resync
+    // anchored on the PREVIOUS fill's pre-wrap stamp: the line clamped at the
+    // window's end for a whole lap, and after the console's seek into the
+    // loop the floor left at the seek's start. One writer, so the load is
+    // relaxed; no wrap, no store.
+    if (wraps != 0)
+        state.loop_wraps.store(
+            state.loop_wraps.load(std::memory_order_relaxed) + wraps,
+            std::memory_order_release);
     state.cursor.store(new_cur, std::memory_order_relaxed);
     if (natural_end) {
         // THE TERMINAL, generation-qualified (the session word's comment):
@@ -537,9 +555,45 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
     // audio thread's only write to this word is its terminal exchange, which
     // either landed before this (an ended old session, overwritten below) or
     // will fail against the word stored below (the field's comment).
-    const uint64_t word = playback_session_next(
-        state.session.load(std::memory_order_relaxed));
+    const uint64_t old_word = state.session.load(std::memory_order_relaxed);
+    const uint64_t word = playback_session_next(old_word);
     const uint64_t generation = playback_session_generation(word);
+
+    // THE WRAP COUNT A SESSION STARTS FROM (2026-11-20, send CC's second
+    // review, finding A1): A PUBLISH FROM REST LEVELS THE MAIN THREAD'S
+    // MIRROR WITH THE COUNTER, so a wrap the previous session took and no
+    // playing tick consumed (its fill finishing after the last such tick, a
+    // stop landing right at the wrap) is never consumed by this one — no
+    // resync over its launch anchor, no damage, no console push. WHY NO
+    // WRAP OF AN OLD SESSION CAN LAND AFTER THIS LEVEL: the playing bit is
+    // down, and a looping session's bit comes down only by stop() — which
+    // returns after its quiescence fence has seen two callback cycles, whose
+    // release increment follows every fill's count store, so the count is
+    // final and visible here — or by the device's loss, where launch_window's
+    // head check has already closed the dead stream (AAudioStream_close
+    // returns only once the callback thread has left); the natural end lowers
+    // only a once-through session's bit, and that window never wraps. Each
+    // of those lowerings is ordered before this load (stop() and the close
+    // run on this thread; the launch entries read is_playing with acquire),
+    // so a down bit read here is the truth. (The one leg left — a loss
+    // landing between that head check and this publish, its last fill still
+    // running — is the publish's own failure: the disconnect outranks the
+    // publish (launch_window), this session's bit comes down before it
+    // sounds, and the next launch's publish levels again; a playing tick
+    // that reads a stray in between costs a resync the stamp's generation
+    // refuses, one damage and one push.) A PUBLISH
+    // OVER A LIVE SESSION (the bit up: the console's seek, a player's or the
+    // score viewer's live reseek) DOES NOT LEVEL: a fill of the old
+    // generation may still be running and wrap after it, and a wrap of that
+    // session already counted is the same play's, so both stay pending and
+    // the tick consumes them — the resync's stamp generation the
+    // qualification (an old generation's stamp refused, the publish's anchor
+    // standing; the new one's an ordinary anchor), the epoch's push carrying
+    // the clock at its true place. The main thread is the mirror's one
+    // writer, here and at the consumer.
+    if (!playback_session_playing(old_word))
+        state.loop_wraps_seen =
+            state.loop_wraps.load(std::memory_order_acquire);
 
     // THE COMMAND PACKET, written under its sequence word for exactly this
     // generation (the packet's ordering argument, playback_common.h): busy,
@@ -634,11 +688,14 @@ void playback_resync_predictor(GuiPlaybackState& state) {
 // THE WRAP'S CONSUMER: a count difference against the main thread's private
 // mirror, so however many wraps the audio thread took since the last call
 // the answer is one "yes" and the mirror catches up whole (the field's
-// comment, playback_common.h). Relaxed is enough — the caller's next act is
-// a resync, which reads the cycle stamp under its own seqlock, and nothing
-// here orders a buffer read.
+// comment, playback_common.h). ACQUIRE (2026-11-20, finding A1): it pairs
+// with the fill's release store of the count, which that fill makes AFTER
+// its stamp, so the resync the caller takes next (main.cpp's tick, consume
+// then resync) reads the stamp of the fill that wrapped or a later one: a
+// stamp whose cursor has wrapped. No retry is owed and no wrap is ever
+// consumed against a pre-wrap stamp.
 bool playback_consume_loop_wrap(GuiPlaybackState& state) {
-    const int64_t wraps = state.loop_wraps.load(std::memory_order_relaxed);
+    const int64_t wraps = state.loop_wraps.load(std::memory_order_acquire);
     if (wraps == state.loop_wraps_seen) return false;
     state.loop_wraps_seen = wraps;
     return true;

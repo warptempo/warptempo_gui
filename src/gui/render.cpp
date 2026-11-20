@@ -1065,7 +1065,7 @@ void render_trim_flags(cairo_t* cr,
                        long long viewport_end_sample,
                        long long viewport_lattice_origin,
                        const TrimRange& trim,
-                       const TrimBarLook& look,
+                       const std::function<TrimBarLook()>& look,
                        TrimBarHit* out_hit) {
     // COLD FIRST, so every early return below publishes "nothing grabbable"
     // over a lane that painted no bar (the contract at the declaration).
@@ -1184,14 +1184,18 @@ void render_trim_flags(cairo_t* cr,
     // not reach), and no edge of the two shapes coincides: no seam. Cut by
     // the lane's clip as the pill is, at its real place off the box's
     // unclamped places, so it slides off the strip's edge with its bound;
-    // a cap wholly past the edge is not stamped. THE CAPS FIT (`caps_fit`)
-    // where the box is at least two caps and their insets wide, 2 x (2 + 6)
-    // W, 32 device px on the tablet: there the pill keeps its whole seat at
+    // a cap wholly past the edge is not stamped. THE CAPS FIT (`caps_fit`;
+    // the rule's one statement is render.h's THE TRIM BAR'S CAPS AND GRABS)
+    // where the box is two caps and their insets wide plus ONE DEVICE PX,
+    // 2 x (cap_inset + cap_w) + 1 in device px as scaled and rounded (33 px
+    // on the tablet, 17 at 100 %, 22 at 125 %; no fixed W count, the owner
+    // says why): there the pill keeps its whole seat at
     // both ends (the short span's inset rule above leaves it whole from pill
-    // height + two seats, 12 W) and each cap stands whole inside its own
-    // half of the box, the two at most meeting at its middle; under it no
-    // cap is drawn and the pill alone wears the part's tone (the table's
-    // narrow rule).
+    // height + two seats, 12 W), each cap stands whole inside its own half
+    // of the box, and a whole device px of the pill stands between the two
+    // straight sides, so no pixel is reached by both caps and each stamp is
+    // one shape over the pill as laid — exact; under it no cap is drawn and
+    // the pill alone wears the part's tone (the table's narrow rule).
     const double pill_h = std::min(static_cast<double>(trim_pill_h_px()),
                                    static_cast<double>(trough_h));
     const double seat = (static_cast<double>(trough_h) - pill_h) / 2.0;
@@ -1207,8 +1211,51 @@ void render_trim_flags(cairo_t* cr,
     const double cap_r = pill_h / 2.0 + outset;
     const double cap_inset = seat - outset;
     const bool caps_fit = pill_h > 0.0 && 2.0 * cap_r <= trough_h &&
-                          box_hi - box_lo >= 2.0 * (cap_inset + cap_w);
-    const TrimBarTones tones = trim_bar_tones(look, caps_fit);
+                          box_hi - box_lo >= 2.0 * (cap_inset + cap_w) + 1.0;
+
+    // THE GRABS, as painted: the span's two end zones and the body between
+    // them (render.h's THE TRIM BAR'S CAPS AND GRABS, trim_endcap_rect,
+    // trim_bridge_gap) — each zone cut to the lane's painted width, the clip
+    // the pixels take, so a zone overrunning the lane (its 2 W outside reach
+    // past a bound at the strip's edge among them) claims its visible
+    // stretch alone, and a window wholly off one side publishes no zone on
+    // that side and an empty bridge. REAL EDGES (architect 2026-11-15, the
+    // no-grid arc): the zones stand on the span's two real ends — the
+    // bounds' own places, around the caps drawn off them (architect
+    // 2026-11-18 / 2026-11-20) — AS THE GRABS HAVE THEM, `x`, the EOF-wall
+    // clamp in it (render.h's TrimBoundColumn): an in-view bound past the
+    // last column's left edge stands on it, so at the strip's right edge a
+    // zone can stand up to a px left of the slider's box and its cap, whose
+    // places are unclamped (`x_raw`), and a begin on the named start a
+    // fraction of a px left of the strip's left edge has its bound at 0.
+    // PUBLISHED BEFORE THE LOOK IS ASKED (the declaration's `look`): the
+    // zones depend on no tone, and a look decided on the picture this pass
+    // paints (a lift's pending answer, AppState::TrimBarHover) reads them.
+    const GuiRectF begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
+    const GuiRectF end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
+    const TrimBridgeGap gap = trim_bridge_gap(bc, ec, trim_grab_inside_px());
+    const double lane_lo = static_cast<double>(lane_x);
+    const double lane_hi = static_cast<double>(lane_x + lane_w);
+    const auto lane_cut = [&](GuiRectF r) {
+        const double lo = std::max(r.x, lane_lo);
+        const double hi = std::min(r.x + r.w, lane_hi);
+        r.x = lo;
+        r.w = std::max(0.0, hi - lo);
+        return r;
+    };
+    if (out_hit) {
+        if (lane_cut(begin_r).w > 0.0)
+            out_hit->begin = {true, lane_cut(begin_r)};
+        if (lane_cut(end_r).w > 0.0)
+            out_hit->end = {true, lane_cut(end_r)};
+        out_hit->published = true;
+        out_hit->lane      = lane;
+        out_hit->bridge_lo = lane_lo + std::max(gap.lo, 0.0);
+        out_hit->bridge_hi = lane_lo + std::min(gap.hi,
+                                                static_cast<double>(lane_w));
+    }
+
+    const TrimBarTones tones = trim_bar_tones(look(), caps_fit);
     CoverageStampPass stamp;
     stamp.begin(cr);
     if (core_hi > core_lo && pill_h > 0.0 && core_hi > 0.0 &&
@@ -1236,45 +1283,6 @@ void render_trim_flags(cairo_t* cr,
                                tones.end_cap);
     }
     stamp.end();
-
-    // THE GRABS, as painted: the span's two end zones and the body between
-    // them (render.h's THE TRIM BAR'S CAPS AND GRABS, trim_endcap_rect,
-    // trim_bridge_gap) — each zone cut to the lane's painted width, the clip
-    // the pixels take, so a zone overrunning the lane (its 2 W outside reach
-    // past a bound at the strip's edge among them) claims its visible
-    // stretch alone, and a window wholly off one side publishes no zone on
-    // that side and an empty bridge. REAL EDGES (architect 2026-11-15, the
-    // no-grid arc): the zones stand on the span's two real ends — the
-    // bounds' own places, around the caps drawn off them (architect
-    // 2026-11-18 / 2026-11-20) — AS THE GRABS HAVE THEM, `x`, the EOF-wall
-    // clamp in it (render.h's TrimBoundColumn): an in-view bound past the
-    // last column's left edge stands on it, so at the strip's right edge a
-    // zone can stand up to a px left of the slider's box and its cap, whose
-    // places are unclamped (`x_raw`), and a begin on the named start a
-    // fraction of a px left of the strip's left edge has its bound at 0.
-    const GuiRectF begin_r = trim_endcap_rect(true, lane_x, bc, ec, trim_bar);
-    const GuiRectF end_r = trim_endcap_rect(false, lane_x, bc, ec, trim_bar);
-    const TrimBridgeGap gap = trim_bridge_gap(bc, ec, trim_grab_inside_px());
-    const double lane_lo = static_cast<double>(lane_x);
-    const double lane_hi = static_cast<double>(lane_x + lane_w);
-    const auto lane_cut = [&](GuiRectF r) {
-        const double lo = std::max(r.x, lane_lo);
-        const double hi = std::min(r.x + r.w, lane_hi);
-        r.x = lo;
-        r.w = std::max(0.0, hi - lo);
-        return r;
-    };
-    if (out_hit) {
-        if (lane_cut(begin_r).w > 0.0)
-            out_hit->begin = {true, lane_cut(begin_r)};
-        if (lane_cut(end_r).w > 0.0)
-            out_hit->end = {true, lane_cut(end_r)};
-        out_hit->published = true;
-        out_hit->lane      = lane;
-        out_hit->bridge_lo = lane_lo + std::max(gap.lo, 0.0);
-        out_hit->bridge_hi = lane_lo + std::min(gap.hi,
-                                                static_cast<double>(lane_w));
-    }
 
     cairo_restore(cr);
 }

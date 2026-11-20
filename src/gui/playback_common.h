@@ -419,13 +419,24 @@ struct GuiPlaybackState {
     std::atomic<int64_t>  command_loop_begin{kPlaybackNoLoop};
 
     // THE WRAP COUNTER (2026-09-17): a monotonic count of loop wraps the
-    // render body has taken, ONE WRITER — the audio thread, a relaxed store
-    // of +1 at each wrap — and ONE READER, the main thread's
-    // playback_consume_loop_wrap, which compares it against its own private
+    // render body has taken, ONE WRITER — the audio thread, ONE RELEASE STORE
+    // PER FILL THAT WRAPPED, of the fill's own count, AFTER THAT FILL'S
+    // CYCLE STAMP (2026-11-20, send CC's review, finding A1) — and ONE
+    // READER, the main thread's playback_consume_loop_wrap, an ACQUIRE load,
+    // so a consumer that sees a wrap reads that fill's stamp or a later one
+    // in the resync it takes next (the store's comment, playback_render_block;
+    // a count stored mid-fill, ahead of the stamp, let a tick resync on the
+    // previous fill's pre-wrap stamp and lose the wrap for a lap). The
+    // reader compares it against its own private
     // `loop_wraps_seen` below. It is a COUNT DIFFERENCE, not a flag: a wrap
     // per tick and ten wraps per tick answer the same "at least one", and a
     // main-thread compare tolerates any base, which is why rebind leaves it
-    // alone and only bind (no callback exists there) resets the pair. What
+    // alone and only bind (no callback exists there) resets the pair. THE
+    // COUNT IS QUALIFIED BY SESSION AT THE PUBLISH (2026-11-20): a publish
+    // from rest levels the mirror with the counter, so a session never
+    // consumes a wrap its predecessor took; a publish over a live session
+    // (a seek) leaves both standing (playback_publish_play, where the proof
+    // is). What
     // the wrap means to the main thread is a RESYNC EVENT (playback.h's
     // design note): the predictor sits clamped at the mirror's end until the
     // tick that consumes the wrap re-anchors it on the cycle stamp, whose
@@ -499,7 +510,8 @@ bool playback_clip_block(float* const* channel_buffers, int64_t stride,
 // nowhere. See playback_write_silence for the stride. ONE CLOCK READ per fill
 // (the vDSO's steady_clock, at the fill's top), one no-retry seqlock read of
 // the packet while the fill's generation is unseated, one compare-exchange at
-// a natural end, the stamp seqlock's stores — no lock, no allocation, no
+// a natural end, the stamp seqlock's stores and, on a fill that wrapped, one
+// store of the wrap count after them — no lock, no allocation, no
 // syscall. Every sample written from the bound buffer is written as it is,
 // unscaled (the voice at 0 dB, the head's paragraph); the silence it writes
 // stays zero.
