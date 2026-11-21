@@ -4010,13 +4010,15 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // press is a consumed no-op — nothing on a row reads shift or ctrl, and
     // nothing on a row reads kHoldBeatMs either: the load is the modal row's
     // own button (strict modifier validation's answer, and the roster's
-    // shift-hold is elsewhere). A press on the pad or on a gap between rows
-    // arms nothing — the claim is this SURFACE rect (the modal family's
+    // shift-hold is elsewhere). A PRESS ON NO ROW ARMS NOTHING, ONE RULE FOR
+    // EVERY SUCH POINT — the list's head pad over its first row
+    // (folder_overlay::head_pad_px; architect 2026-11-20, send EE), the
+    // empty view under a short listing's last row and the box's two lines:
+    // no highlight, no open and no scroll drag (the drag is a row press
+    // past its gate). The claim is this SURFACE rect (the modal family's
     // panel), while row_at contains against the content rect (the box's
-    // interior inside its outer rows and columns of ground, folder_overlay.h),
-    // so those, the margins,
-    // the foot and the pad are claimed and inert by construction at every
-    // scroll offset.
+    // interior, folder_overlay.h) and each row's own rect, so those points
+    // are claimed and inert by construction at every scroll offset.
     //
     // A MODIFIED PRESS ON A ROW IS SILENT LIKE ONE ANYWHERE ELSE ON THE BAND
     // (architect 2026-08-30, the unbound-keys ruling read on the pointer:

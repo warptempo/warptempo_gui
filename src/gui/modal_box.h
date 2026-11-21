@@ -162,8 +162,9 @@ inline GuiRect modal_box_rect(const AppState& a) {
 // THE VIEW (architect 2026-11-19, send Z; send AA's stage D2): THE INTERIOR
 // is the box less ONE HAIRLINE above and below (hairline_px: 2 device px on
 // the tablet at 200 %, 1 at 100 %; those rows the box's lines), across the
-// panel's own columns, 0 .. 2303 on the tablet — the lists' rows stand on
-// it edge to edge (folder_overlay.h), the score viewer's page in it, and a
+// panel's own columns, 0 .. 2303 on the tablet — the lists' rows stand
+// across it edge to edge under their head pad (folder_overlay.h; THE PAGE
+// MARGIN below), the score viewer's page in it, and a
 // dialog editor's window centered in it (the room; y 142..1307, the
 // keyboard over its foot while it stands, the head's rows).
 inline GuiRect modal_box_interior_rect(const AppState& a) {
@@ -172,6 +173,39 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
     if (box.w <= 2 * lw || box.h <= 2 * lw) return GuiRect{0, 0, 0, 0};
     return GuiRect{box.x, box.y + lw, box.w, box.h - 2 * lw};
 }
+
+// THE PAGE MARGIN (architect 2026-11-20, send EE: "i think we just need a
+// little more top and left margin spacing for the other windows, but it
+// should come from arc xfce app not just invented. the lists (picker,
+// player, presets) would then inherit the spacing so as to make it uniform.
+// ok to deviate a little"; on the rule as worded here, "1 agree" / "2
+// agree"): ON EVERY PAGE BUT THE MAIN ONE — whatever is laid in the view —
+// THE INK STANDS 13 W FROM THE VIEW'S LEFT AND FROM ITS TOP. Two numbers,
+// this their one owner:
+//   kPageMarginPenW 12 W     a text's PEN from the view's left edge, its ink
+//                            then about 13 W in (the face's own left
+//                            bearing) — THE XFCE APPEARANCE DIALOG'S INK,
+//                            MEASURED 13 on his desktop; and NOTHING STANDS
+//                            CLOSER THAN THE SAME 12 W TO THE VIEW'S RIGHT
+//                            EDGE (a text is cut there);
+//   kPageMarginCapTopW 13 W  the first line's CAP TOP under the view's top,
+//                            whatever that line's kind — OURS, RULED: GTK
+//                            lays its margin to the line box, which leaves
+//                            more air above the capitals than left of the
+//                            ink ("it looks liek it has more padding above
+//                            than on the left"), so the top is measured to
+//                            the ink as the left is.
+// Each a whole W through scaled_px, rounded at the element (24 and 26
+// device px on the tablet at 200 %). A FILL ACROSS THE VIEW KEEPS THE VIEW'S
+// WHOLE WIDTH (a list's lit row, x 0..2303 on the tablet): the margin seats
+// ink, not faces. ITS READERS: the lists — the pad over a list's first row
+// that seats its caps (folder_overlay.h's head_pad_px), the rows' pens and
+// their right cut (paint_handler.cpp's THE LIST VIEW). The score viewer's
+// page is a picture on its mat and takes none.
+inline constexpr double kPageMarginPenW    = 12.0;
+inline constexpr double kPageMarginCapTopW = 13.0;
+inline int page_margin_pen_px()     { return scaled_px(kPageMarginPenW); }
+inline int page_margin_cap_top_px() { return scaled_px(kPageMarginCapTopW); }
 
 // THE SCORE VIEWER'S PANE — THE ONE DELIBERATE EXCEPTION to the view's tone
 // (architect 2026-11-01 night, M9 A2, "THE SCORE VIEWER IS
@@ -241,5 +275,6 @@ inline GuiRect xfwm_shadow_rect(const GuiRect& win) {
                    win.h + l.size - l.delta_y};
 }
 
-// (The lists stand edge to edge on the view, and every dialog's text in
-// its own window, paint_handler.cpp's THE DIALOG WINDOW.)
+// (The lists' rows stand edge to edge across the view, their text on THE
+// PAGE MARGIN above, and every dialog's text in its own window,
+// paint_handler.cpp's THE DIALOG WINDOW.)

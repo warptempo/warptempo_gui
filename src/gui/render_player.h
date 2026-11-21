@@ -82,7 +82,8 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // car) — the operations cluster for the MODE that plays the project's own
 // renders through the one playback engine: the folder overlay — THE MODAL
 // FAMILY'S BOX since 2026-10-14 (folder_overlay.h, modal_box.h: from the view
-// bar's top row down, its first row at the box's top, no folder-name header)
+// bar's top row down, its first row under the list's head pad at the view's
+// top, no folder-name header)
 // — lists `tmp/` — its batch folders and their
 // cells, THE PLAYER'S WHOLE SUBJECT since 2026-09-01 (the ruling below) — and
 // the family's CONTROLS ROW under it (row 8's rows, its outermost faces flush

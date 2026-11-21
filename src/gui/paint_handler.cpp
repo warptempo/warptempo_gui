@@ -9030,31 +9030,39 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            header in the text tone, Bold 12 W
 // NO HOVER FACE (architect 2026-10-02) AND NO FOCUS FRAME (architect
 // 2026-10-23): the lit row is the only sign.
-// THE ROW'S DRAWING AND NAME (Thunar's at 9 pt, measured on his shot): a
-// list row's drawing — Folder on a folder or project row, ViewMediaTrack,
-// the double notes, on a wav row (SOURCE's drawing, architect 2026-11-02,
-// R14 (4) / R15 (Q4)) — the set's whole 16 W canvas (kListDrawingBoxW) at
-// +3 W across and +2 W down (kListDrawingXW, kListDrawingYW), in the TEXT
-// TONE on every face (the drawing unchanged under the highlight, as
-// Thunar's); its name Regular 12 W (GuiFace::Body) at pen +22 W
-// (kListNameXW) in a listing whose rows wear drawings, +6 W (kListTextXW)
-// in one where none does (the settings page, the value lists, the trim
-// presets, the BPM form: "all lists that don't have the player's icons hold
-// an empty space for an icon that doesn't exist", architect 2026-10-28
-// night), on the line-box baseline (+14 W of the 20: line_box_baseline); a
-// heading's name Bold 12 W (GuiFace::Bold) at pen +8 W (kListHeadingXW) on
-// the line-box baseline (+16 W of the 24). Every length a whole W through
-// scaled_px; every seat at the row's real place under the real scroll
-// offset (the no-grid arc, 2026-11-15).
+// THE ROW'S DRAWING AND NAME, ON THE PAGE MARGIN (architect 2026-11-20,
+// send EE; modal_box.h's THE PAGE MARGIN the rule's owner, its 12 W pen
+// kPageMarginPenW; the row and its drawing Thunar's at 9 pt, measured on
+// his shot): EVERY ROW'S FIRST THING STANDS AT THE MARGIN'S PEN, 12 W from
+// the view's left edge — a plain row's name, A GROUP HEADING'S NAME ON THE
+// ROWS' OWN PEN ("yes align"), and in a listing whose rows wear drawings
+// the drawing's canvas. A list row's drawing — Folder on a folder or
+// project row, ViewMediaTrack, the double notes, on a wav row (SOURCE's
+// drawing, architect 2026-11-02, R14 (4) / R15 (Q4)) — is the set's whole
+// 16 W canvas (kListDrawingBoxW) at the pen across and +2 W down
+// (kListDrawingYW), in the TEXT TONE on every face (the drawing unchanged
+// under the highlight, as Thunar's), its name 3 W after the canvas
+// (kListDrawingGapW, Thunar's: the pen 12 + 16 + 3 = 31 W); the name
+// Regular 12 W (GuiFace::Body) at the margin's pen itself in a listing
+// where no row wears a drawing (the settings page, the value lists, the
+// trim presets, the BPM form: "all lists that don't have the player's
+// icons hold an empty space for an icon that doesn't exist", architect
+// 2026-10-28 night), a heading's name Bold 12 W (GuiFace::Bold) at that
+// pen in every listing; each on its row's line-box baseline, +14 W of the
+// 20 and +16 W of the 24 (folder_overlay::row_face / row_baseline_px, the
+// seat the head pad reads too). NOTHING STANDS CLOSER THAN THE SAME 12 W
+// TO THE VIEW'S RIGHT EDGE: a name and a heading are cut there on their
+// own mask. THE LIT ROW'S BAR KEEPS THE VIEW'S WHOLE WIDTH. Every length a
+// whole W through scaled_px (a composite the sum of its rounded parts);
+// every seat at the row's real place under the real scroll offset (the
+// no-grid arc, 2026-11-15); the first row's capitals 13 W under the view's
+// top at scroll 0 by the list's head pad (folder_overlay::head_pad_px).
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT (the
 // row Load in place and the highlight pair act on) and the TRANSPORT'S
 // ITEM, which its row does not mark (architect 2026-10-23).
 static constexpr double kListDrawingBoxW = 16.0;
-static constexpr double kListDrawingXW   = 3.0;
 static constexpr double kListDrawingYW   = 2.0;
-static constexpr double kListNameXW      = 22.0;
-static constexpr double kListTextXW      = 6.0;
-static constexpr double kListHeadingXW   = 8.0;
+static constexpr double kListDrawingGapW = 3.0;
 
 // ONE LIST VIEW: the rows of `ov` in the band `band` under the scroll
 // offset `scroll`, clipped to the band (whole pixels: a row the band cuts is
@@ -9075,8 +9083,6 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
     cairo_clip(cr);
     const GuiPalette&    pal = palette();
     const GuiThemeTones& t   = installed_theme().tones;
-    const GuiFont body = gui_font(GuiFace::Body);
-    const GuiFont bold = gui_font(GuiFace::Bold);
     // THE NAMES' COLUMN, ONE PER LISTING (the block above), derived from the
     // rows themselves.
     const bool wears_drawings = std::any_of(
@@ -9085,9 +9091,11 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
             return row.kind == AppState::FolderOverlayRow::Kind::Folder ||
                    row.kind == AppState::FolderOverlayRow::Kind::Wav;
         });
-    const int name_dx =
-        scaled_px(wears_drawings ? kListNameXW : kListTextXW);
+    const int margin      = page_margin_pen_px();
     const int drawing_box = scaled_px(kListDrawingBoxW, 1);
+    const int name_dx =
+        wears_drawings ? margin + drawing_box + scaled_px(kListDrawingGapW)
+                       : margin;
     folder_overlay::for_each_row(
         ov, band, scroll,
         [&](int index, const AppState::FolderOverlayRow& row,
@@ -9104,16 +9112,25 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                                  !press.scrolling && press.row == index;
             const bool lit = !inert && (index == ov.highlight_row || pressed);
             if (lit) paint_cell_rect(cr, r, pal.selected_fill);
+            // THE ROW'S TEXT SEAT: its kind's face, its baseline the row's
+            // real top plus the kind's depth (folder_overlay.h's one
+            // definition, the head pad's too), and the right cut, the page
+            // margin inside the view's right edge (the block above).
+            const GuiFont font = gui_font(folder_overlay::row_face(row.kind));
+            const double baseline =
+                r.y + folder_overlay::row_baseline_px(row.kind);
+            const double text_end = r.x + r.w - static_cast<double>(margin);
             if (row.kind == AppState::FolderOverlayRow::Kind::Group) {
-                // THE HEADING: Bold 12 W in the text tone at +8 W, its
-                // line-box baseline in the 24 W row.
+                // THE HEADING: Bold 12 W in the text tone on the rows' pen,
+                // its line-box baseline in the 24 W row.
                 const text_shape::ShapedRun run =
-                    text_shape::shape_text_run(bold, row.name);
+                    text_shape::shape_text_run(font, row.name);
+                const text_raster::XSpan head_span{r.x, text_end};
                 set_palette_source(cr, pal.text);
-                text_shape::show_shaped_run(
-                    cr, run, r.x + static_cast<double>(scaled_px(kListHeadingXW)),
-                    line_box_baseline(bold, r.y,
-                                      static_cast<int>(folder_overlay::kListHeadingW)));
+                if (head_span.x1 > head_span.x0)
+                    text_shape::show_shaped_run_within(
+                        cr, run, r.x + static_cast<double>(margin), baseline,
+                        &head_span, 1);
                 return;
             }
             if (row.kind == AppState::FolderOverlayRow::Kind::Folder ||
@@ -9127,27 +9144,24 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                 if (fit.ink_px > 0)
                     icons::draw_glyph(
                         cr, glyph,
-                        r.x + static_cast<double>(scaled_px(kListDrawingXW)) +
-                            fit.left,
+                        r.x + static_cast<double>(margin) + fit.left,
                         r.y + static_cast<double>(scaled_px(kListDrawingYW)) +
                             fit.top,
                         fit.ink_px, t.text);
             }
-            // THE NAME, cut at the row's right edge on its own mask
-            // (text_shape::show_shaped_run_within: no clip per row).
+            // THE NAME, cut the page margin inside the view's right edge on
+            // its own mask (text_shape::show_shaped_run_within: no clip per
+            // row).
             const text_shape::ShapedRun run =
-                text_shape::shape_text_run(body, row.name);
+                text_shape::shape_text_run(font, row.name);
             const double pen = r.x + static_cast<double>(name_dx);
-            const text_raster::XSpan name_span{pen, r.x + r.w};
+            const text_raster::XSpan name_span{pen, text_end};
             set_palette_source(cr, inert ? pal.text_dim
                                          : surface_text(lit ? GuiSurface::ListRowLit
                                                             : GuiSurface::ListRow));
             if (name_span.x1 > name_span.x0)
-                text_shape::show_shaped_run_within(
-                    cr, run, pen,
-                    line_box_baseline(body, r.y,
-                                      static_cast<int>(folder_overlay::kListRowW)),
-                    &name_span, 1);
+                text_shape::show_shaped_run_within(cr, run, pen, baseline,
+                                                   &name_span, 1);
         });
     cairo_restore(cr);
 }
