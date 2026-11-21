@@ -7306,9 +7306,10 @@ struct AppState {
     // (walk_hover_face: which face the pen is on, under the gate), THE HOVER'S
     // SETTER (set_hover_face), THE PRESS'S RETARGET (press_face), THE CLOCK
     // (tick_face_fades, on the run loop's tick beside the tooltip's, its
-    // first half — the settle, settle_face_records — run alone ahead of
-    // every frame too, there followed by the lanes' repaint:
-    // settle_face_fades). THE LOOK
+    // first half — the settle, settle_face_fades — run alone ahead of
+    // every frame too, the pre-paint hook's, whose lanes' repaint comes
+    // after its owed plate rebuild: GuiPaintHandler::sync_lane_hovers).
+    // THE LOOK
     // is materials.h's THE KEY and THE HOVER; THE FACES THAT HOVER are
     // enumerated once, at the pen latch's inventory
     // (GuiInputHandler::pen_hot_latch_). THE TRIM BAR HOVERS TOO BUT IS NONE
@@ -7498,7 +7499,8 @@ struct AppState {
     // the keys' clock and curve — INTO HOVER AND BACK TO REST 200 ms
     // (duration_ms), a reversal from the value reached. THE TONES are
     // resolve_flag_face's (render.cpp: the table's four hover pairs, a
-    // disabled marker its own dimmer pair, the strike in the label's ink as
+    // disabled marker its own pair — a grey chip, a dimmer label —, the
+    // strike in the label's ink as
     // mixed) and the head's `playhead_head` toward `playhead_head_hover`
     // (paint_ruler_row); the painters take the Hover weight of the stored mix
     // as a number (hover_weight below), never a clock, and START NO FADE —
@@ -7559,20 +7561,31 @@ struct AppState {
     //   AND DAMAGES ONLY (GuiPaintHandler::damage_lane_hovers) — each such
     //   cue's own extent over the lane's rows, the same rect each tick until
     //   a frame paints, merged in the damage list — and AHEAD OF EVERY FRAME
-    //   (the frame's settle, settle_face_fades from the pre-paint hook) it
+    //   (the pre-paint hook, main.cpp, AFTER the frame's settle,
+    //   settle_face_fades, its scanner advance and FOLLOW's scroll, AND
+    //   AFTER THE OWED PLATE REBUILD; architect 2026-11-21, send FF) it
     //   REPAINTS those cues into the cache in place at the weights of that
     //   moment (GuiPaintHandler::sync_lane_hovers, cue_pass_sync_hover:
     //   their own extents, under the pass's cuts, never a rebuild) and
-    //   damages the same extents; the triangle's painted box over the
-    //   ruler's rows is damaged on either road where its weight moved (its
-    //   painter reads the weight live) — NOTHING ELSE OF THE LANES, NOTHING
-    //   OF THE CANVAS. So a frame shows every cue at the stored mix of the
-    //   moment its settle ran, and THE CACHE IS REPAINTED ONCE PER SHOWN
-    //   FRAME: an edge (200 ms, nine beats of 2 / 90 s) is nine beats + 1 =
-    //   10 repaints at most, the landing's the last; nothing at rest,
-    //   where both roads return before walking the laid-out cues (no Marker
-    //   record, no hovered marker, no cue painted lit:
-    //   GuiPaintHandler::scan_lane_hovers).
+    //   damages the same extents, which the frame about to paint reads (the
+    //   hook runs before the damage list is read); the triangle's painted
+    //   box over the ruler's rows is damaged on either road where its weight
+    //   moved (its painter reads the weight live) — NOTHING ELSE OF THE
+    //   LANES, NOTHING OF THE CANVAS. A rebuild that ran in the same hook (a
+    //   FOLLOW scroll's, any kick's) painted every cue at these very weights
+    //   (cue_hover_of, its count `hovered` recounted), so the repaint after
+    //   it finds nothing to repaint: the cache is never repainted into a
+    //   surface the same hook then discards. A CUE WHOSE EXTENT HAS NO PIXEL
+    //   on the waveform's columns (its ink just off an edge, kept in the
+    //   layout by the conservative cull) has nothing to repaint: the
+    //   clock's compare retires its weight as painted at once
+    //   (cue_hover_regions), inviting no frame. So a frame shows every cue
+    //   at the stored mix of the moment its hook ran, and THE CACHE IS
+    //   REPAINTED ONCE PER SHOWN FRAME: an edge (200 ms, nine beats of 2 /
+    //   90 s) is nine beats + 1 = 10 repaints at most, the landing's the
+    //   last; nothing at rest, where both roads return before walking the
+    //   laid-out cues (no Marker record, no hovered marker, no cue painted
+    //   lit: GuiPaintHandler::scan_lane_hovers).
     //   NOT ON A LIVE THEME: the walk's theme term hovers no lane face there,
     //   so nothing fades or is damaged.
     // THE LIST ROW'S HOVER (architect 2026-11-21; the look at
@@ -8057,23 +8070,46 @@ struct AppState {
     //   `painted_x` THE LINE AS LAST PAINTED: its exact place (device px
     //     from waveform_area's left edge) in the canvas list the GPU draws
     //     now, or none — written by the painter at every list build
-    //     (GuiPaintHandler::paint_hover_line; the no-audio list writes none),
+    //     (GuiPaintHandler::paint_hover_line; the no-audio list writes none;
+    //     `declared_x` written beside it to the same value),
     //     drawn or yielded to a coincident line alike. THE OLD CELLS EVERY
     //     DAMAGE ERASES ARE THESE, so a picture that moved between two pen
     //     events can leave no ghost: the cells the list on the glass holds
     //     are always the ones declared.
-    //   `declared_x` THE PLACE THE LAST DAMAGE DECLARED (the walk's
-    //     set_hover_line): the walk damages only where the place it derives
-    //     now differs from this one — the old cells as painted and the new
-    //     ones (Viewport::invalidate_hover_line) — so a pen resting, or
-    //     away, damages nothing and invites no frame, while nearly every
+    //   `declared_x` THE PLACE THE GLASS IS OWED: written by BOTH its
+    //     writers — the walk's setter (set_hover_line), where the place it
+    //     derives now differs from this one, damaging the old cells as
+    //     painted and the new ones (Viewport::invalidate_hover_line); and
+    //     the painter at every list build, beside `painted_x` and to the
+    //     same value (the list takes the projection's ownership: a picture
+    //     that moved under a still pen since the last declaration — FOLLOW's
+    //     scroll at a fractional step, the item basis promoted in the same
+    //     hook — is drawn at its new place and declared there, so the next
+    //     tick does not damage a span already painted). So a pen resting,
+    //     or away, damages nothing and invites no frame, while nearly every
     //     hover report that moves the pen's real x moves the place (the Tap
     //     place stands within half a frame of the pen inside the song, a
     //     frame never wider than 1/20 px, kDeepestZoomMinFramesPerPx: 1/40
     //     px at most) and costs a frame at the beat, the cost accepted
-    //     above; and a frame whose list is not rebuilt
-    //     (an overlay emptying the canvas's paint area) is not asked for
-    //     again and again.
+    //     above. WHY TWO WRITERS LEAVE NO GHOST AND NO MISSED FRAME: every
+    //     frame draws the whole list (present_frame's THE WHOLE DRAW), so
+    //     the glass shows the line at the place the last list build derived,
+    //     and that build wrote both fields to it; the setter damages
+    //     whenever the place it derives differs from that one — two pen
+    //     events before a frame each damage the cells as painted and their
+    //     own (the first one's then holding no line, a damaged span with
+    //     nothing to change), and the frame draws the latest; a picture
+    //     that moves between the setter and the paint comes with its own
+    //     damage (the mover's, the whole waveform area or a plate's
+    //     publication), and the paint declares the place it drew. A frame
+    //     whose list is not rebuilt (an overlay emptying the canvas's paint
+    //     area) writes neither, so the setter's own declaration stands and
+    //     that frame is not asked for again and again. A place yielded to a
+    //     coincident line is recorded painted and declared alike: the line
+    //     standing there owes the damage when it leaves (its own cells, the
+    //     same exact x), and the next build draws this one. A STILL PEN
+    //     UNDER A STILL PICTURE derives the place both fields hold: nothing
+    //     is damaged.
     struct HoverLine {
         enum class Place : uint8_t { None, Tap, Anchor };
         Place                 place = Place::None;
@@ -13779,8 +13815,10 @@ double  scanner_exact_x(const AppState& a, int64_t vp_start, double spp,
 // resting cursor's frame): the waveform's hover line stands at the frame a
 // tap would land on through it, on the plate basis paint_playheads hands it,
 // so after the tap the playhead's line stands on the very double the hover
-// line stood on (GuiPaintHandler::hover_line_x; architect 2026-11-21, send
-// FF). -1 on a degenerate spp, as playhead_exact_x's.
+// line stood on, save where the placement's keep-visible camera moves the
+// picture (the exception at render.h's render_hover_line)
+// (GuiPaintHandler::hover_line_x; architect 2026-11-21, send FF). -1 on a
+// degenerate spp, as playhead_exact_x's.
 double  cursor_frame_exact_x(int64_t frame, int64_t vp_start, double spp,
                              int64_t origin);
 // Active-domain total frame count. Source view returns audio.total_frames();

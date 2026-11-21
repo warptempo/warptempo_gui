@@ -304,11 +304,14 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // to even (architect 2026-11-12, session 113), the word a converted Default
 // file carries for our own PlayheadLine (send FF, 2026-11-21; theme_roles.h's
 // OUR OWN, THE WAVEFORM'S HOVER). THE WAVEFORM'S HOVER, our own five more of
-// send FF, is each Default's own number for the tone it stands beside, so
-// nothing hovers on the reference row: the hover line 696969, Default's
-// ScrollbarInnerHandle (opaque) over the canvas; the hovered chip FFAD56,
-// the accent; the hovered triangle 03C3D5, the head; the hovered disabled
-// chip 5D5D5D, BackgroundClip; and its label 757575, TextDisabled. THE ENABLED
+// send FF, is each Default's own number for the tone it stands beside: the
+// hover line 696969, Default's ScrollbarInnerHandle (opaque), a line of its
+// own that DOES SHOW on the reference row, over the canvas 393939 (the line
+// has no theme term, render.h's render_hover_line); and the four lane
+// tones, each its rest's own, so NO MARKER AND NO TRIANGLE HOVERS on the
+// reference row: the hovered chip FFAD56, the accent; the hovered triangle
+// 03C3D5, the head; the hovered disabled chip 5D5D5D, BackgroundClip; and
+// its label 757575, TextDisabled. THE ENABLED
 // CHIP'S FILL FFAD56 is the accent, Default's ViewCheckControlEnabledOn
 // (architect 2026-11-13, session 119; the ROLE-NAMED block). Every word
 // here is the row's own number, k = 100 of THE BRIGHT MIX (theme_roles.h),

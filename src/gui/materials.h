@@ -187,7 +187,8 @@
 // 2026-11-21, send FF: "The markers could get a hover action ... If the pen
 // is in the ruler lane, maybe the playhead would light up somehow"): a cue a
 // tap would act on lights its chip and its label's ink, a disabled marker in
-// its own dimmer pair (render.cpp's resolve_flag_face, the table), and the
+// its own pair, a grey chip and a dimmer label (render.cpp's
+// resolve_flag_face, the table), and the
 // triangle its fill toward `playhead_head_hover` (paint_ruler_row), each the
 // mix of its two tones as painted on the keys' 200 ms (StampTone below;
 // AppState::FaceFades' THE LANES' TWO FACES). A marker's stem, the canvas's

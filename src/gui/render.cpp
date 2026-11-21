@@ -1725,9 +1725,12 @@ struct FlagFace {
 // A DISABLED MARKER HOVERS TOO, IN ITS OWN PAIR (architect 2026-11-21: "a
 // disabled button means that it can't be clicked, whereas our disabled
 // marker means that it's ignored by the parser, but otherwise fully
-// clickable and actionable ... the analogy doesn't quite apply"): both of
-// its hover tones stay dimmer than an enabled marker at rest, so a hovered
-// disabled marker still reads disabled. THE SELECTION CHANGES NOTHING OF IT
+// clickable and actionable ... the analogy doesn't quite apply"), and a
+// hovered disabled marker still reads disabled — ITS LABEL BY BEING DIMMER
+// (9DA3AD against an enabled label's BAC3CF at rest), ITS CHIP BY ITS HUE:
+// 90939B is a GREY of about the accent's brightness (relative luminance
+// 0.292 against 5294E2's 0.285), so it is not dimmer than the enabled chip
+// at rest but grey against the accent. THE SELECTION CHANGES NOTHING OF IT
 // (the stem stands as it stands); A STRIKE IS LAID IN THE LABEL'S INK AS
 // MIXED (show_cue_label: the bar is part of the text); the `h` view's items
 // take the pair of their row's fill and their segments' inertness, a
@@ -2826,7 +2829,17 @@ namespace {
 // the repaint (cue_pass_sync_hover) find the same regions on one layout and
 // one set of weights. `write` stores each such cue's weight as the one it
 // is now painted at, keeping the count of the lit (`hovered`): the
-// repaint's alone. False where nothing differs.
+// repaint's. AND ON THE COMPARE ROAD (`write` false; architect 2026-11-21,
+// send FF), A CHANGED CUE WHOSE EXTENT IS EMPTY — none of its columns on
+// the pass's, its ink just off an edge while the conservative cull keeps it
+// in the layout (a pan that took it off mid-fade) — has its weight retired
+// there to the one it has now, the count kept true: the cache's ink is cut
+// to the pass's columns, so NO PIXEL OF THE CACHE DEPENDS ON THAT WEIGHT,
+// and writing it at the tick changes nothing any frame shows. Without it
+// such a cue declares no region, so no frame comes to write it, and the
+// clock would walk the lane on every tick, never reaching the at-rest exit
+// (GuiPaintHandler::scan_lane_hovers). A cue with any pixel there is the
+// repaint's alone. False where no region is declared.
 bool cue_hover_regions(
         const std::function<double(const CueKey&)>& weight_of, bool write) {
     CuePassScratch& sc = g_cue_pass_scratch;
@@ -2849,10 +2862,6 @@ bool cue_hover_regions(
         CueDraw& c = cues[static_cast<std::size_t>(i)];
         const double now = weight_of ? weight_of(c.key) : 0.0;
         if (now == c.hover) continue;
-        if (write) {
-            sc.hovered += (now != 0.0 ? 1 : 0) - (c.hover != 0.0 ? 1 : 0);
-            c.hover = now;
-        }
         if (!laid) {
             lay_cue_boxes(cues, x0, half, lo, hi);
             laid = true;
@@ -2867,7 +2876,15 @@ bool cue_hover_regions(
         }
         const int c0 = std::max(x0, static_cast<int>(std::floor(e0)));
         const int c1 = std::min(x0 + w, static_cast<int>(std::ceil(e1)));
-        if (c1 > c0) regions.emplace_back(c0, c1);
+        const bool pixels = c1 > c0;
+        if (pixels) regions.emplace_back(c0, c1);
+        // THE WEIGHT AS PAINTED IS WRITTEN by the repaint (`write`), and on
+        // the compare road where the cue's extent has NO PIXEL on the
+        // pass's columns: no pixel of the cache depends on that weight.
+        if (write || !pixels) {
+            sc.hovered += (now != 0.0 ? 1 : 0) - (c.hover != 0.0 ? 1 : 0);
+            c.hover = now;
+        }
     }
     if (regions.empty()) return false;
     // Neighbors' regions that meet are one region: no column is cleared and

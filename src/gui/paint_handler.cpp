@@ -4639,7 +4639,8 @@ GuiPaintHandler::plate_viewport_basis() const {
 //     back to its exact place by the playhead line's own expression
 //     (cursor_frame_exact_x, playhead_exact_x's, on wf_cache.fp_vp_start as
 //     paint_playheads passes it), so the playhead the tap seats stands on
-//     this very double;
+//     this very double, save where the placement's keep-visible camera
+//     moves the picture (the same frame then, render.h's exception);
 //   Anchor: the zoom's seat at the pen's real place (zoom_anchor_seat_at,
 //     the seat's own conversion) through the anchor stem's own place
 //     (strip_anchor_stem_x, as paint_strip_drag_anchor reads it), so the
@@ -4732,7 +4733,9 @@ void GuiPaintHandler::damage_head_hover(double head) {
 }
 
 // THE CLOCK'S COMPARE: the cues' half on a standing layout only (the cache's
-// record, FlagCache::layout_stands), damage alone.
+// record, FlagCache::layout_stands), damage alone — but a changed cue with
+// no pixel on the waveform's columns, whose weight it retires
+// (cue_hover_regions).
 void GuiPaintHandler::damage_lane_hovers() {
     const LaneHoverScan scan = scan_lane_hovers();
     if (!scan.cues_rest && flag_cache.surface != nullptr &&
@@ -4747,7 +4750,10 @@ void GuiPaintHandler::damage_lane_hovers() {
     damage_head_hover(scan.head);
 }
 
-// THE FRAME'S REPAINT: the same, the cues repainted into the cache.
+// THE FRAME'S REPAINT: the same, the cues repainted into the cache — the
+// pre-paint hook's step after the owed plate rebuild (main.cpp), so it
+// paints into the cache the frame shows and, after a rebuild that read the
+// same weights, finds nothing to repaint.
 void GuiPaintHandler::sync_lane_hovers() {
     const LaneHoverScan scan = scan_lane_hovers();
     if (!scan.cues_rest && flag_cache.surface != nullptr &&
@@ -5717,7 +5723,10 @@ void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
 // hover_line_x's, DERIVED HERE AT THE PAINT from the stored gate answer, the
 // pointer's place and the picture this list draws, and RECORDED AS PAINTED
 // (`painted_x`, drawn or yielded alike) — the cells every later damage of
-// the line erases. THE LIST'S FIRST LINE, under the lead-in ring, the
+// the line erases — AND AS DECLARED (`declared_x`, the same value: the list
+// takes the projection's ownership, so the setter's next compare is against
+// the place on the glass, not one the picture moved from since its last
+// declaration; AppState::HoverLine). THE LIST'S FIRST LINE, under the lead-in ring, the
 // playhead's line, the selection stems, the scanner, the zoom anchor's stem
 // and the sweep highlight (build_canvas_list), and NOT DRAWN where a later
 // line of the same width stands on the same exact x over the canvas's whole
@@ -5729,7 +5738,8 @@ void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
 void GuiPaintHandler::paint_hover_line(GuiCanvasSink& sink,
                                        const GuiRect& area) {
     const std::optional<double> x = hover_line_x();
-    app.hover_line.painted_x = x;
+    app.hover_line.painted_x  = x;
+    app.hover_line.declared_x = x;
     if (!x) return;
     const PlateViewportBasis basis = plate_viewport_basis();
     if (*x == playhead_exact_x(app, wf_cache.fp_vp_start, basis.spp,
@@ -9982,9 +9992,11 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
         render_waveform_divider(sink, area);
         // This list holds no ring (the note's rule, FlagCache's
         // `ring_declared`), and no hover line — no tap acts with no audio —
-        // so none is recorded as painted (AppState::HoverLine).
+        // so none is recorded as painted, nor as declared
+        // (AppState::HoverLine).
         note_ring_drawn(GuiPhaseResetRingSides{});
         app.hover_line.painted_x.reset();
+        app.hover_line.declared_x.reset();
         return;
     }
     paint_waveform_plate(sink, area);

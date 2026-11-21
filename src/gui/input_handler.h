@@ -1611,7 +1611,7 @@ struct GuiInputHandler {
     // the marker's and the triangle's faces alike.
     void walk_hover_face();
     // THE CLOCK, on the run loop's tick (main.cpp, beside tick_tooltip):
-    // the walk, then settle_face_records, then every fading record stepped
+    // the walk, then settle_face_fades, then every fading record stepped
     // to now — a fade a painter began takes now as its start; each step that
     // moves a stored mix damages that face's own painted extent or that
     // seam's own columns — a lane face's step its compare's, at the body's
@@ -1625,17 +1625,16 @@ struct GuiInputHandler {
     // goes where no press would act on its face; a lane face's record at
     // rest, or a marker's whose cue the lane no longer lays out, dropped;
     // the trim bar's part on its own rule; the waveform's hover line
-    // re-walked (walk_hover_line, its settle) — settle_face_records, the
-    // clock's first half. settle_face_fades is THE FRAME'S SETTLE, run by
-    // itself AHEAD OF EVERY FRAME (the pre-paint hook, main.cpp: a key or a
-    // release can raise a modal or close the keyboard and be painted in the
-    // same pass, before any tick): the same records' settle, then THE
-    // LANES' REPAINT (GuiPaintHandler::sync_lane_hovers), the flag cache's
-    // one repaint a frame. A face's new look is never this body's: its
-    // painter resolves it and begins the fade
-    // (AppState::FaceFades::as_painted).
+    // re-walked (walk_hover_line, its settle). Two callers: the clock's
+    // first half, and THE FRAME'S SETTLE AHEAD OF EVERY FRAME (the
+    // pre-paint hook, main.cpp: a key or a release can raise a modal or
+    // close the keyboard and be painted in the same pass, before any tick).
+    // NOT THE LANES' REPAINT (GuiPaintHandler::sync_lane_hovers, the flag
+    // cache's one repaint a frame): that is the pre-paint hook's own step,
+    // after the owed plate rebuild (architect 2026-11-21, send FF). A
+    // face's new look is never this body's: its painter resolves it and
+    // begins the fade (AppState::FaceFades::as_painted).
     void settle_face_fades();
-    void settle_face_records();
     // THE PRESS'S RETARGET: the press arm that takes `face` turns it toward
     // its pressed look — Lit, the accent; the knob held — from its picture
     // as painted, over the destination's duration from now (Arc's 50 ms; the
@@ -3459,7 +3458,8 @@ private:
     //     (hit_test_flag's walk), the rightmost on top; enabled or disabled,
     //     selected or not, struck or not, a live column's marker or an `h`
     //     view item — its chip and its label's ink toward their hover tones
-    //     (resolve_flag_face's table: a disabled marker its own dimmer pair),
+    //     (resolve_flag_face's table: a disabled marker its own pair, a grey
+    //     chip and a dimmer label),
     //     and THE PLAYHEAD'S TRIANGLE in the ruler where a press would arm
     //     the head drag, `playhead_head` toward `playhead_head_hover`; each
     //     on the keys' 200 ms both ways, the walk's one hit for both and for

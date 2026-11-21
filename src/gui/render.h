@@ -917,7 +917,8 @@ void install_true_colors(bool on);
 // color of 2026-10-11 retired with its role. THE TABLE — which fill, which
 // stem, which label, which strike, AND WHAT EACH WEARS UNDER THE HOVERING
 // PEN (its four hover pairs: a cue a tap would act on lights its chip and
-// its label over Arc's 200 ms, a disabled one in its own dimmer pair;
+// its label over Arc's 200 ms, a disabled one in its own pair, a grey chip
+// and a dimmer label;
 // architect 2026-11-21, send FF; the gate, the fade, the key and the damage
 // AppState::FaceFades' THE LANES' TWO FACES) — is resolve_flag_face's
 // head (render.cpp), the one resolver every cue goes through.
@@ -4826,6 +4827,9 @@ void render_playhead(GuiCanvasSink& sink,
 //     HoverLine (arc_dark 767B87, Arc's scrollbar slider: "an even more dark
 //     and faint version of the playhead stem"); on every theme (every theme
 //     file carries a visible HoverLine; no theme term, unlike the faces).
+//     The order is the theme's own numbers' (bright_mix 100): the stem is a
+//     bright tone and the line is not, so below about 60 % the mixed stem
+//     falls under the line (theme_roles.h's THE BRIGHT MIX, the numbers).
 //   ITS FORM: the playhead's line's — a one-W line (waveform_line_px)
 //     centered on its exact place `x` (device px from area.x), drawn wherever
 //     any of its real interval lies inside the strip and cut at both edges
@@ -4849,7 +4853,15 @@ void render_playhead(GuiCanvasSink& sink,
 //     under the pen's real place on the painted item basis, the live
 //     domain's clamp) — back to its exact place by the playhead line's own
 //     expression on the plate basis (cursor_frame_exact_x), so after the tap
-//     the playhead's line stands on the very double this line stood on.
+//     the playhead's line stands on the very double this line stood on —
+//     SAVE WHERE THE PLACEMENT'S KEEP-VISIBLE CAMERA MOVES THE PICTURE (a
+//     tap in the strip's last half column away from the song's right wall:
+//     the landing frame's column rounds to w, off screen to the camera,
+//     displayed_frame_on_screen, and Viewport::reseat_playhead edge-aligns
+//     it into the last column): the playhead lands on the same FRAME, the
+//     picture moved under it, its line a fraction of a px left of where
+//     this one stood on the old picture. THE LINE IS RIGHT there too: it
+//     marks the frame the tap lands on, on the picture as painted.
 //     Inside the song that is the pen's place to within half a frame — a
 //     frame is never wider than 1/20 px (kDeepestZoomMinFramesPerPx,
 //     app_state.h), so 1/40 px at most; past either end of the song (the
@@ -4861,8 +4873,12 @@ void render_playhead(GuiCanvasSink& sink,
 //     viewport, no frame taken and no song clamp) through the anchor stem's
 //     own place (strip_anchor_stem_x), so the white stem replaces the line
 //     in place when the zoom starts. The two places part by up to half a
-//     frame's width (the tap's whole frame) and, past either end of the
-//     song, by the whole stretch past it (the anchor stands under the pen). When the
+//     frame's width (the tap's whole frame); past either end of the song,
+//     by the whole stretch past it (the anchor stands under the pen); and
+//     IN THE STRIP'S LAST COLUMN, inside the song too, by up to a device px:
+//     the anchor's column is clamped into [0, w − 1]
+//     (clamp_col_into_waveform, input_pointer.cpp) while the tap takes the
+//     whole last column up to w (playhead_landing_at_click_x). When the
 //     picture moves under a still pen (FOLLOW's scroll, a key's zoom, a
 //     landing, a plate's publication) the line stays under the pen and its
 //     landing frame follows, with no event of the pen's.
@@ -4883,7 +4899,9 @@ void render_playhead(GuiCanvasSink& sink,
 //     last painted cells the same way. THE OLD CELLS ARE AS PAINTED
 //     (AppState::HoverLine's `painted_x`, written by the painter at every
 //     list build), so no ghost can stand: the cells erased are always the
-//     ones the list on the glass holds.
+//     ones the list on the glass holds; and THE PLACE COMPARED IS THE
+//     GLASS'S (`declared_x`, written by that build too), so a picture that
+//     moved under a still pen invites no frame after the one that drew it.
 void render_hover_line(GuiCanvasSink& sink,
                        GuiRect area,
                        double  x,
@@ -5854,11 +5872,16 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
 //     tick): every laid-out cue whose weight as painted is not `weight_of`'s
 //     now has its OWN EXTENT appended to `damage` — the region
 //     cue_pass_sync_hover below would repaint for it, found the same way —
-//     and NOTHING IS PAINTED OR WRITTEN: the cue's weight as painted stays
-//     the surface's, so the damage invites the frame whose repaint, ahead of
-//     it, paints the weights of that moment.
+//     and NOTHING IS PAINTED: the cue's weight as painted stays the
+//     surface's, so the damage invites the frame whose repaint, ahead of
+//     it, paints the weights of that moment. THE ONE WRITE: a changed cue
+//     whose extent has no column on the pass's (its ink just off an edge,
+//     kept in the layout by the conservative cull) has its weight as
+//     painted retired to its weight now, the count kept — no pixel of the
+//     surface depends on it, and no frame would come to write it
+//     (cue_hover_regions, render.cpp; architect 2026-11-21, send FF).
 //   cue_pass_sync_hover — THE REPAINT, the frame's (run once ahead of each
-//     frame): EVERY LAID-OUT CUE WHOSE WEIGHT AS PAINTED IS NOT
+//     frame, after the owed plate rebuild): EVERY LAID-OUT CUE WHOSE WEIGHT AS PAINTED IS NOT
 //     `weight_of`'s NOW IS REPAINTED INTO `surface` IN PLACE, and nothing
 //     else: each such cue's OWN EXTENT — its chip's painted reach round its
 //     exact place (cue_chip_paint_reach_px) and its label's ink as cut, the

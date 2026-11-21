@@ -633,7 +633,16 @@
 // tones, the cue outline, the inactive cue
 // (dark: "those weren't bright to begin with"), the waveform's hover line
 // and a hovered disabled marker's chip and label (send FF: dim tones, as
-// the inactive cue and the dim text are) and the scanner (below). At 75,
+// the inactive cue and the dim text are) and the scanner (below). SO THE
+// WAVEFORM'S BRIGHTNESS ORDER — the scanner, the playhead's stem, the hover
+// line (render.h's render_hover_line) — IS THE THEME'S OWN NUMBERS' ORDER
+// (mix 100, the default and his tablet's line; architect 2026-11-21, send
+// FF): the stem is mixed and the line is not, so at a lower mix the stem
+// falls toward the ground past the line — on Arc-Dark (bright_mixed_tones,
+// the code) the mixed stem stands under the line's 767B87 in all three
+// channels at 59 and below (at 50 6A707A), at 60 767B86, at 61 777D87 (at
+// or over it in every channel, the first percent that is), and over it in
+// every channel from 62. At 75,
 // for one, on the reference row: the accent FFAD56 -> C88B4A, the head
 // 03C3D5 -> 0B9BA9 and its line 81E1EA -> 6AB2B8 (bright_mixed_tones, the
 // code); on Arc-Dark the accent 5294E2 -> 497CB9 and its hover 639FE5 ->

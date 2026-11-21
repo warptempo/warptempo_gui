@@ -1024,8 +1024,8 @@ struct GuiPaintHandler {
 
     // THE LANES' TWO FACES AS PAINTED (architect 2026-11-21, send FF; the
     // rule at AppState::FaceFades' THE LANES' TWO FACES). PUBLIC for the
-    // faces' clock and settle (GuiInputHandler::tick_face_fades,
-    // settle_face_fades), as hover_line_x is for the line's setter.
+    // faces' clock (GuiInputHandler::tick_face_fades) and the pre-paint
+    // hook (main.cpp), as hover_line_x is for the line's setter.
     //   cue_hover_of — THE LANE'S HOVER FOR A PASS (CueLaneHover, render.h):
     //     the listing the lane lists now (marker_lane_listing) and each cue's
     //     weight, its marker face's AppState::FaceFades::hover_weight — the
@@ -1041,20 +1041,28 @@ struct GuiPaintHandler {
     //   rows (playhead_head_damage_rect) — nothing else:
     //   damage_lane_hovers — THE CLOCK'S, at the end of every 5 ms tick
     //     (tick_face_fades): COMPARE AND DAMAGE ONLY (cue_pass_hover_damage)
-    //     — no cue repainted and no weight as painted written, so while a
-    //     cue's painted weight differs from its face's each tick declares
-    //     its extent again, the same rect, which the damage list merges by
-    //     containment; its cost a walk of the laid-out cues and one boxes'
-    //     layout, no paint. The damage invites the frame.
-    //   sync_lane_hovers — THE FRAME'S, at the end of the settle that runs
-    //     ahead of every frame (settle_face_fades from the pre-paint hook,
-    //     main.cpp, where a frame about to paint may still add damage:
-    //     GuiPlatform::paint_one_frame runs the hook before it reads the
-    //     damage list): those cues REPAINTED into the cache in place
+    //     — no cue repainted, so while a cue's painted weight differs from
+    //     its face's each tick declares its extent again, the same rect,
+    //     which the damage list merges by containment; its cost a walk of
+    //     the laid-out cues and one boxes' layout, no paint. The damage
+    //     invites the frame. ONE WEIGHT AS PAINTED IS WRITTEN HERE: a
+    //     changed cue whose extent has no pixel on the waveform's columns
+    //     is retired at once (cue_hover_regions), no pixel of the cache
+    //     depending on it, so no frame is asked for it and the at-rest
+    //     exit is reached.
+    //   sync_lane_hovers — THE FRAME'S, run by the pre-paint hook
+    //     (main.cpp) AFTER the frame's settle (settle_face_fades) AND AFTER
+    //     THE OWED PLATE REBUILD (flush_owed_waveform_rebuild; architect
+    //     2026-11-21, send FF), where a frame about to paint may still add
+    //     damage (GuiPlatform::paint_one_frame runs the hook before it reads
+    //     the damage list): those cues REPAINTED into the cache in place
     //     (cue_pass_sync_hover: their own extents, never a rebuild) at the
     //     weights of that moment and their extents damaged — ONE REPAINT OF
     //     THE CACHE PER FRAME, so a frame shows every cue at the stored mix
-    //     of the moment its settle ran.
+    //     of the moment its hook ran. A rebuild in the same hook already
+    //     painted those weights (the pass reads cue_hover_of), so the sync
+    //     after it repaints nothing: no repaint lands in a cache the hook
+    //     then replaces.
     //   Both only on a cache whose layout stands (the rebuild's record): a
     //   cache that does not is rebuilt whole, reading the weights, by the
     //   next rebuild. BOTH RETURN AT ONCE FROM THE CUES' HALF AT REST
@@ -1449,7 +1457,8 @@ private:
     // THE WAVEFORM'S HOVER LINE (architect 2026-11-21, send FF; the rule at
     // render.h's render_hover_line): the canvas list's first line, at
     // hover_line_x's place in the palette's `hover_line`, recording that
-    // place as painted (AppState::HoverLine's `painted_x`) and yielding to a
+    // place as painted and as declared (AppState::HoverLine's `painted_x`
+    // and `declared_x`, the same value) and yielding to a
     // later line on the same exact x (THE COINCIDENT LINES, paint_playheads'
     // paragraph).
     void paint_hover_line(GuiCanvasSink& sink, const GuiRect& area);

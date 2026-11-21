@@ -3926,13 +3926,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // question, open an overlay or close the keyboard, and that frame
         // paints before any tick, so the faces of a surface that left are
         // dropped here (whatever replaced them paints its looks at once) and
-        // the hovered slot goes where no press would act on its face; AND
-        // THE LANES' CUES ARE REPAINTED INTO THE FLAG CACHE here, once a
-        // frame, at the weights of this moment, their extents damaged
-        // (GuiPaintHandler::sync_lane_hovers: the tick only compares and
-        // damages) (GuiInputHandler::settle_face_fades; a face's new look is
-        // its painter's to resolve, and the fade's step stays the tick's — a
-        // frame is one stored value).
+        // the hovered slot goes where no press would act on its face
+        // (GuiInputHandler::settle_face_fades; a face's new look is its
+        // painter's to resolve, and the fade's step stays the tick's — a
+        // frame is one stored value). THE LANES' REPAINT IS NOT HERE: it
+        // follows the owed plate rebuild, in the hook below.
         input_handler.settle_face_fades();
 
         // THE CONSOLE SEEK'S FRAME (send CC's review, finding A3, 2026-11-20;
@@ -4161,6 +4159,22 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // scanner's narrow damage above resolved on the plate it replaces,
         // and the rebuild's full rect covers both of its places.
         paint_handler.flush_owed_waveform_rebuild();
+        // THE LANES' CUES ARE REPAINTED INTO THE FLAG CACHE HERE, once a
+        // frame, at the weights of this moment, their extents damaged
+        // (GuiPaintHandler::sync_lane_hovers; the tick only compares and
+        // damages; architect 2026-11-21, send FF) — AFTER THE OWED REBUILD,
+        // so the repaint lands in the cache this frame shows: a rebuild just
+        // run (a FOLLOW scroll's, any kick's) painted every cue at these
+        // same weights (cue_hover_of) and the sync finds nothing to repaint,
+        // where before it the repaint would go into a surface the rebuild
+        // then replaced. Nothing between the settle above and here reads a
+        // weight as painted but that rebuild's own compare
+        // (cue_pass_changed_rects), which declares a cue whose weight moved
+        // since the pass before, as it must. Its damage is read by the
+        // frame about to paint (paint_one_frame reads the list after this
+        // hook), and the owed check below is the rows above the viewport's
+        // lanes and the clock, which this touches neither.
+        paint_handler.sync_lane_hovers();
         // THE OWED CHECK LAST (2026-10-13): the rows above the viewport's
         // lanes and the clock cell, which the narrowed routes owe a check
         // rather than a repaint, are compared after every write the advance

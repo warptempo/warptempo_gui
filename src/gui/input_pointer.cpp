@@ -7873,8 +7873,8 @@ void GuiInputHandler::walk_trim_bar_hover() {
 // THE SETTLE (the declaration): a standing part over a bar no press would
 // grab any more — a veil raised, the `h` view entered, the stash gone cold,
 // a load begun, a drag gone live — goes at once, ahead of the frame that
-// would paint it (the faces' settle_face_records runs this, from the
-// pre-paint hook's settle_face_fades and from the tick); a card over the
+// would paint it (the faces' settle, settle_face_fades, runs this, from the
+// pre-paint hook and from the tick); a card over the
 // place goes the tick after the frame that first paints the card (its hit
 // reads the rects that frame publishes, notification_card_at). AND
 // A LIFT'S PENDING ANSWER (AppState::TrimBarHover's `lift_pending`) whose
@@ -7945,6 +7945,9 @@ void GuiInputHandler::walk_hover_line() {
 // differs from the place the last damage declared, the line's cells AS LAST
 // PAINTED (`painted_x`) and its new cells are damaged — the canvas's rows
 // alone (Viewport::invalidate_hover_line) — and the new place is declared.
+// The painter declares too, at every list build, the place it drew
+// (paint_hover_line), so this compare is against the glass even where the
+// picture moved under a still pen since this setter's last write.
 // The same place again damages nothing: a pen resting, or away, invites no
 // frame. A pen moving in hover range moves the place on nearly every report
 // that moves its real x — the Tap place within half a frame of it, a frame
@@ -7987,28 +7990,27 @@ void GuiInputHandler::set_hover_line(AppState::HoverLine::Place place) {
 // marker's goes too where no laid-out cue holds its key (cue_pass_holds:
 // deleted, moved, off the lane — no ghost, the rebuild that took the cue
 // away having painted without it). And the trim bar's hovered part, on its
-// own rule, and the hover line's walk. THE FRAME'S SETTLE
-// (settle_face_fades, the pre-paint hook's) then runs THE LANES' REPAINT
-// (GuiPaintHandler::sync_lane_hovers), so a hover this settle cleared, a
-// record it dropped and every step the clock stored since the last frame
-// are painted into the flag cache, and damaged, in the frame about to
-// paint — the cache's one repaint a frame; the clock's settle
-// (settle_face_records, from tick_face_fades) runs no repaint, its
-// changes compared and damaged at the clock's end (damage_lane_hovers).
-// WHY NO CUE STAYS LIT FOR A DROPPED RECORD on that road: a record dropped
+// own rule, and the hover line's walk. TWO CALLERS: the pre-paint hook,
+// ahead of every frame (main.cpp), and the clock's first half
+// (tick_face_fades). NEITHER REPAINTS THE LANES HERE (architect 2026-11-21,
+// send FF): the flag cache's repaint (GuiPaintHandler::sync_lane_hovers)
+// is the pre-paint hook's own step AFTER THE OWED PLATE REBUILD, so a
+// hover this settle cleared, a record it dropped and every step the clock
+// stored since the last frame are painted into the cache that frame shows
+// — once, on the geometry it is drawn at (a FOLLOW scroll in the same hook
+// rebuilds the cache at these weights, and the sync then finds nothing to
+// repaint); the clock's changes are compared and damaged at its end
+// (damage_lane_hovers) and repainted by the frame that damage invites.
+// WHY NO CUE STAYS LIT FOR A DROPPED RECORD: a record dropped
 // AT REST has landed at Hover weight 0, and with no record the face's
 // weight is 0 (not the hovered face), so the drop moves no weight — the
 // cue is painted at 0 by the repaint the landing step's damage invited, or
-// was already; a record dropped because NO LAID-OUT CUE HOLDS ITS KEY names
+// was already, or has no pixel to paint and was retired at the compare
+// (cue_hover_regions); a record dropped because NO LAID-OUT CUE HOLDS ITS KEY names
 // no cue the cache shows (the rebuild that took the cue away painted the
 // whole surface without it), and the lanes' at-rest exit cannot skip a cue
 // still painted lit, its count (cue_pass_hovered_cues) holding it.
 void GuiInputHandler::settle_face_fades() {
-    settle_face_records();
-    paint_handler.sync_lane_hovers();
-}
-
-void GuiInputHandler::settle_face_records() {
     using FaceFades = AppState::FaceFades;
     using Surface   = FaceFades::Surface;
     FaceFades& h = app.face_fades;
@@ -8105,9 +8107,8 @@ void GuiInputHandler::settle_face_records() {
 
 // THE CLOCK (the declaration; AppState::FaceFades' THE FRAMES). The walk
 // first — the stashes move under a resting pen (a relayout, a knob the
-// transport carries, a key repainted dead or lit) — then the settle's
-// records (settle_face_records: the frame's settle less the lanes'
-// repaint), then
+// transport carries, a key repainted dead or lit) — then the settle
+// (settle_face_fades, the pre-paint hook's own), then
 // each fading record's value at now: a fade a painter began takes now as
 // its start (its value its from, which that painter painted), a fade held at
 // a press's end waits for its retarget (FaceFades::Record::hold); A STEP THAT
@@ -8130,14 +8131,16 @@ void GuiInputHandler::settle_face_records() {
 // the flag cache shows at a weight that is not its face's now, and the
 // triangle's painted box where its weight moved — COMPARE AND DAMAGE ONLY,
 // the keys' rule: the cue is repainted into the cache once, by the frame
-// that damage invites, at the weights of its own settle
-// (GuiPaintHandler::sync_lane_hovers, from settle_face_fades ahead of the
-// frame; AppState::FaceFades' THE LANES' TWO FACES). With no fade running
+// that damage invites, at the weights of that frame's moment
+// (GuiPaintHandler::sync_lane_hovers, the pre-paint hook's step after the
+// owed plate rebuild; AppState::FaceFades' THE LANES' TWO FACES) — or, a
+// cue whose extent has no pixel on the waveform's columns, retired at the
+// compare itself (cue_hover_regions). With no fade running
 // the body is the walk's few compares, one pass over the records, and the
 // lanes' one walk of them (their at-rest exit).
 void GuiInputHandler::tick_face_fades() {
     walk_hover_face();
-    settle_face_records();
+    settle_face_fades();
     using FaceFades = AppState::FaceFades;
     using Surface   = FaceFades::Surface;
     FaceFades& h = app.face_fades;
