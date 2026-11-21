@@ -4296,9 +4296,10 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // NO HATCH (architect 2026-10-25: "we can even block Ctrl+Q — we are
     // letting the window manager handle everything now … block all gestures
     // except the one escape, or anything that closes the modal"): the editor's
-    // own keys — typing, its motion keys, Esc and Enter — and a line
-    // editor's Tab are the whole admitted set; every other chord is
-    // consumed, silently (on_key's gate).
+    // own keys — typing, its motion keys, Esc and Enter — the completion's
+    // Tab (a line editor's and the flag editor's) and the flag editor's live
+    // extra keys (UP, DOWN, the pass key) are the whole admitted set; every
+    // other chord is consumed, silently (on_key's gate).
     // The platform's close — Back — is the quit road under every modal
     // (GuiPrompt::request_close).
     const bool is_editor_key =
@@ -5954,7 +5955,9 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // and the BPM form's line editor (all three on the settings editor's buffer),
 // and the marker lane's flag editor and iteration bound editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
-// admits only the editor's own keys and a line editor's Tab — NO HATCH since
+// admits only the editor's own keys, a line editor's Tab and the flag
+// editor's Tab (and the flag editor's live extra keys, which are answered
+// ahead of this route, handle_top_flag_editor_key) — NO HATCH since
 // 2026-10-25, every other chord consumed at the gate — so a NotConsumed key
 // here is swallowed and this route answers true for every key. The
 // platform's close (Back) still tears the editor down uncommitted on the close

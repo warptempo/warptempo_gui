@@ -627,6 +627,37 @@ std::expected<GuiWarpMarker, std::string> parse_payload_line(
     return parsed;
 }
 
+// THE STORE AS IF THE TEXT WERE COMMITTED (architect 2026-11-20 / 21, send
+// EE: "a true toggle inherit that works just like the one in the main window
+// does"): the extra keys' one answer to "the tempo this marker sounds at" —
+// the store sliced (slice_to_warp_markers), the row under edit REPLACED BY
+// THE PARSED TEXT `parsed` (parse_payload_line's answer on that row), so a
+// `pass` text sounds at what a pass at this place inherits whatever the row
+// committed holds. A LOCAL COPY, NEVER A WRITE: nothing commits, no undo, no
+// damage. Its cost is the slice's one copy of the store per key press (a
+// press, not a frame). PRECONDITION: `idx` names a row of `mv`.
+//
+// WHY THE ROW ALONE AND NOT THE COMMIT'S WHOLE PROPOSAL (propose_payload_
+// commit's rename cascade and duplicate refusal): its one reader is
+// marker_effective on THIS row, and only when the row is a pass (an owner
+// answers its own fields, a reference is refused or toggled without a
+// tempo). A pass's answer is the projection's backward walk to the nearest
+// prior surviving owner (resolve_inherited_tempo, warp_frame_map_build.h),
+// which SKIPS every label reference and runs before the references are
+// normalized (the resolver's stage 4 ahead of its stage 5), so no label
+// binding — the text's definition, a rename's cascade, a duplicate — moves
+// it; the row's frame and disabled bit are the committed ones (the parse
+// carries them over), so the coincidence (a fact of frames) is the
+// committed store's. The row alone is therefore the commit's answer for
+// this marker, byte for byte.
+std::vector<WarpMarker> resolved_as_if_committed(
+        const std::vector<GuiWarpMarker>& mv, int idx,
+        const GuiWarpMarker& parsed) {
+    std::vector<WarpMarker> resolved = slice_to_warp_markers(mv);
+    resolved[static_cast<size_t>(idx)] = static_cast<const WarpMarker&>(parsed);
+    return resolved;
+}
+
 std::expected<PayloadCommit, std::string> propose_payload_commit(
         const std::vector<GuiWarpMarker>& mv_const, int idx,
         const std::string& payload) {
@@ -1015,11 +1046,12 @@ void GuiFlagEditor::paste_payload_onto_selection(
 // onscreen_keyboard.h's THE EDITOR'S EXTRA KEYS; the router
 // handle_top_flag_editor_key (input_key_dispatch.cpp).
 
-// THE NOT-WELL-FORMED CARD: one sentence, its stderr line and the card — the
-// payload refusal's own shape (card_payload_refusal), in words that say the
-// text was judged, not committed.
+// THE NOT-WELL-FORMED CARD: one sentence on the card, in words that say the
+// text was judged, not committed. NO STDERR LINE, as the keys' other refusal
+// cards write none (the label reference's, the coincidence's): a held UP on
+// a malformed text fires once per synthesized repeat, the card coalescing
+// (held_repeat_dispatch) where a line per fire would not.
 void GuiFlagEditor::card_unparsed_editor_text(const std::string& sentence) {
-    std::fprintf(stderr, "warptempo_gui: %s\n", sentence.c_str());
     notifications.notify(AppState::NotificationClass::Normal, sentence);
 }
 
@@ -1121,10 +1153,14 @@ void GuiFlagEditor::step_editor_text(int delta) {
     }
     // THE SINGLETON ARM'S LOOP BODY on the parsed flag (adjust_tempo_cents,
     // warpmarkers_ops.cpp): the start through the one seed body (a pass
-    // resolved through the projection of the store as it stands), the move
-    // through the one landing owner (the chain's last term riding the step),
-    // the write through the one write site, the start's scale written beside.
-    const std::vector<WarpMarker> resolved = slice_to_warp_markers(mv);
+    // resolved through the projection of THE STORE AS IF THE TEXT WERE
+    // COMMITTED, resolved_as_if_committed — so a `pass` text freezes at what
+    // a pass here inherits, whatever the committed row holds; an owner text
+    // answers its own fields and reads no store), the move through the one
+    // landing owner (the chain's last term riding the step), the write
+    // through the one write site, the start's scale written beside.
+    const std::vector<WarpMarker> resolved =
+        resolved_as_if_committed(mv, idx, m);
     const WarpTempoStart start = warp_tempo_step_start(
         m, resolved, idx, audio.sample_rate(), audio.total_frames());
     const WarpTempoStepMove move = warp_tempo_step_move(
@@ -1169,13 +1205,16 @@ void GuiFlagEditor::toggle_inherit_editor_text() {
         m.tempo_scale.reset();
         m.tempo_deviation_cents.clear();
     } else if (m.tempo_inherits) {
-        // THE FREEZE: the tempo this marker sounds at, marker_effective over
-        // the store as it stands (the verb's projection-aware walk; a
-        // coincident member its 1.00), the plain base it lands as — no chain,
-        // the verb's own rule. base_cents 0 ("could not resolve") is the
-        // verb's unreachable fallback, mirrored.
+        // THE FREEZE: the tempo this marker would sound at with the text
+        // committed, marker_effective over THE STORE AS IF THE TEXT WERE
+        // COMMITTED (resolved_as_if_committed: the row the parsed `pass`, so
+        // the answer is what a pass here inherits, never the committed
+        // row's own number; the verb's projection-aware walk; a coincident
+        // member its 1.00), the plain base it lands as — no chain, the verb's
+        // own rule. base_cents 0 ("could not resolve") is the verb's
+        // unreachable fallback, mirrored.
         const MarkerEffective eff =
-            marker_effective(slice_to_warp_markers(mv), idx,
+            marker_effective(resolved_as_if_committed(mv, idx, m), idx,
                              audio.sample_rate(), audio.total_frames());
         m.tempo_inherits = false;
         if (eff.base_cents != 0) {

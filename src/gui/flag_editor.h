@@ -120,10 +120,20 @@ struct GuiFlagEditor {
     // and no selection — a selection standing in the text is replaced with
     // the rest; NOTHING IS COMMITTED (the keyboard's Enter commits the
     // rewritten text through the editor's own road, its Esc throws it away),
-    // the store, its undo and the playhead untouched. A TEXT THE PARSE
+    // the store, its undo and the playhead untouched. THE KEYS READ THE TEXT
+    // AS IF IT WERE THE MARKER'S COMMITTED FLAG (architect 2026-11-20 / 21,
+    // send EE: "a true toggle inherit that works just like the one in the
+    // main window does"): each gives what committing the text and pressing
+    // the main page's key would give, the tempo a `pass` text sounds at read
+    // off the store with the row under edit replaced by the parsed text
+    // (resolved_as_if_committed, flag_editor.cpp, where its construction,
+    // its cost and why the row alone suffices stand); the refusals that are
+    // facts of the committed marker — its coincidence, a fact of frames the
+    // text cannot change — read the committed store. A TEXT THE PARSE
     // REFUSES CARDS ("The flag is not well formed: <the parse's reason>" /
-    // "The bound is not well formed: <the bound's grammar>", one stderr line
-    // beside) and changes nothing. The damage is the marker lane's (the
+    // "The bound is not well formed: <the bound's grammar>", no stderr line,
+    // as the keys' other refusal cards) and changes nothing. The damage is
+    // the marker lane's (the
     // editor's box). THE GATES ARE THE CALLER'S: the keyboard paints and the
     // keyboard-modal gate admits each key only where it means something
     // (onscreen_keyboard::key_live; handle_top_flag_editor_key the router).
@@ -134,10 +144,12 @@ struct GuiFlagEditor {
     // the parsed flag: a LABEL REFERENCE refuses on its card ("A label
     // reference has no tempo of its own"); in target view an enabled
     // COINCIDENT member refuses on its card ("That marker coincides with
-    // another"; the store's row, its place being committed); a PASS freezes
-    // to owning at the tempo it sounds at (warp_tempo_step_start: the store as
-    // it stands, the marker's committed state, the projection-aware walk)
-    // and steps from there; an OWNER steps in place, a deviation chain's last
+    // another"; the store's row, its place being committed); a PASS text
+    // freezes to owning at the tempo a pass at this place sounds at
+    // (warp_tempo_step_start over the store as if the text were committed,
+    // the projection-aware walk — the previous owner's effective tempo and
+    // scale, whatever the committed row holds) and steps from there; an
+    // OWNER text steps in place from its own number, a deviation chain's last
     // term taking the step (warp_tempo_step_move); the label definition and
     // the scale ride along; AN OWNER ON THE BRACKET'S END IS THE SILENT WALL
     // (the main page's, whose key greys there instead: this key cannot, a
@@ -151,16 +163,23 @@ struct GuiFlagEditor {
     // THE PASS KEY: A TRUE TOGGLE INHERIT ON THE FLAG EDITOR'S TEXT — the
     // three arms of GuiWarpMarkersOps::toggle_inherits on the parsed flag: an
     // OWNER becomes `pass` (its label definition kept, its scale and chain
-    // gone), a `pass` becomes an OWNER AT THE TEMPO THIS MARKER SOUNDS AT
-    // (marker_effective on the store as it stands — the marker under edit in
-    // its committed state, the projection-aware walk the verb uses; the
-    // definition kept), a LABEL REFERENCE becomes `pass`. No refusal past the
-    // parse: the main page's verb refuses only on the column and an empty
-    // selection, neither of which an open flag editor can stand in. SO TWICE
-    // IN A ROW RETURNS THE TEXT wherever the committed marker sounds what
-    // the text said — an owner's tempo and definition, a pass's `pass` —
-    // and is the verb's own loss elsewhere (a scale or chain on an owner, a
-    // reference's name, as on the main page).
+    // gone), a `pass` becomes an OWNER AT THE TEMPO A PASS HERE SOUNDS AT
+    // (marker_effective on the store as if the text were committed — the
+    // row under edit the parsed `pass`, the projection-aware walk the verb
+    // uses: the previous owner's effective tempo and scale, a coincident
+    // member's 1.00, 1.00 with no owner before it (the frame-0 seed's, or
+    // the walk's no-owner answer for a pass on frame 0); never
+    // the committed row's own number; the definition kept), a LABEL
+    // REFERENCE becomes `pass`. No refusal past the parse: the main page's
+    // verb refuses only on the column and an empty selection, neither of
+    // which an open flag editor can stand in. TWICE IN A ROW, EXACTLY: from
+    // a `pass` text, `pass` again (its definition kept, the canonical
+    // spelling); from an OWNER text, `pass` and then an owner at the tempo a
+    // pass here inherits — its own number, scale and chain gone, the
+    // definition kept (`1.23*1.5` and `1.23+0.01` come back as that
+    // inherited value, not as themselves); from a REFERENCE, `pass` and then
+    // that same inherited owner, the reference's name gone — the main page's
+    // verb pressed twice, exactly.
     void toggle_inherit_editor_text();
     // TAB: COMPLETE A LABEL REFERENCE. Where the whole text is the start of a
     // label reference — a proper prefix of at least one DEFINED label, the
@@ -270,7 +289,7 @@ struct GuiFlagEditor {
     void card_payload_refusal(const std::string& err);
     void payload_commit_tail(int reland_idx);
     // THE EXTRA KEYS' TWO SHARED PIECES: the not-well-formed card (its one
-    // sentence on stderr and the card) and the whole-text rewrite (the text
+    // sentence on the card, no stderr line) and the whole-text rewrite (the text
     // through the one incoming filter, the caret at its end, the lane's
     // damage).
     void card_unparsed_editor_text(const std::string& sentence);
