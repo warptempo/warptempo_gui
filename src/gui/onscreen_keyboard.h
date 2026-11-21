@@ -48,13 +48,17 @@
 // paste takes the editors' one paste body (text_editor::handle_key's chord
 // arms, GuiInputHandler::apply_editor_clipboard) — and a held one does what
 // a held Ctrl+C or Ctrl+V does, the editor's chord keys being one-shot
-// (repeat_eligible's editor arm). SO ARE LEFT, RIGHT AND THE PASS KEY
-// (architect 2026-11-08, sessions 95 / 96): LEFT and RIGHT synthesize the
-// editors' Left / Right, carrying the latched Shift as the key event's own
-// shift (the selection's extend, text_editor::handle_key's caret arm), and
-// repeat while held; the pass key synthesizes GuiKeys::Pass, which the
-// editors answer with `pass` at the caret through the one incoming filter,
-// one-shot. THAT OWN CTRL IS THE ONLY CTRL A KEY HERE
+// (repeat_eligible's editor arm). SO ARE LEFT, RIGHT, UP, DOWN AND THE PASS
+// KEY (LEFT / RIGHT / the pass key architect 2026-11-08, sessions 95 / 96;
+// UP / DOWN and the pass key's act 2026-11-20 / 21, send EE): LEFT and RIGHT
+// synthesize the editors' Left / Right, carrying the latched Shift as the
+// key event's own shift (the selection's extend, text_editor::handle_key's
+// caret arm), and repeat while held; UP and DOWN synthesize bare Up / Down
+// and the pass key GuiKeys::Pass, which THE MARKER LANE'S EDITOR answers by
+// REWRITING ITS TEXT — the tempo step, a true Toggle Inherit — through the
+// one incoming filter, committing nothing (THE EDITOR'S EXTRA KEYS below;
+// handle_top_flag_editor_key, input_key_dispatch.cpp), UP / DOWN repeating
+// while held, the pass key one-shot. THAT OWN CTRL IS THE ONLY CTRL A KEY HERE
 // CARRIES: THE BARREL HAS NO ROAD ON ANY KEY, THIS KEYBOARD'S INCLUDED
 // (architect 2026-11-08, session 94) — a press carrying it is consumed with
 // no act, Shift and the page key included (GuiInputHandler::
@@ -71,11 +75,40 @@
 // advertised cadence.
 //
 // WHAT IT HAS (architect 2026-11-08, sessions 95 / 96): LEFT and RIGHT, the
-// caret keys; A PASS KEY (`pass` typed whole — Toggle Inherit is veiled
-// under the editor); A STICKY SHIFT, a latch (a press lights it, a second
+// caret keys; A PASS KEY, A TRUE TOGGLE INHERIT ON THE FLAG EDITOR'S TEXT
+// since 2026-11-20 / 21 (send EE; `pass` typed whole until then); UP AND
+// DOWN, THE TEMPO STEP ON THAT TEXT (2026-11-20 / 21, send EE; THE EDITOR'S
+// EXTRA KEYS below); A STICKY SHIFT, a latch (a press lights it, a second
 // puts it out; lit, the letters type capital and LEFT / RIGHT extend the
 // selection — THE SELECTION'S ONE ROAD); and GLYPHS, the `icons` set's, on the function keys that act on the text
-// (Tab, Bksp, Enter, Copy, Paste, LEFT, RIGHT, the pass key; cap_word).
+// (Tab, Bksp, Enter, Copy, Paste, LEFT, RIGHT, UP, DOWN, the pass key;
+// cap_word).
+//
+// THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21, send EE: "I'd like to
+// consider adding an up and down key so that we can also do tempo step. And
+// I'd like to make the pass button a toggle inherit, a true toggle inherit.
+// So both of those will be contingent upon a well-formed string being in
+// place already ... we could just card if it's not a well-formed string.
+// This will make it less jarring, the fact that the flag is sitting there
+// with the old value and we're editing the new value"; "extra keys keep";
+// on part 2 installed: "if it was never built, I guess we should build
+// it"). UP, DOWN, THE PASS KEY AND TAB each REWRITE THE MARKER LANE'S
+// EDITOR'S TEXT and commit nothing — the keyboard's Enter commits it
+// through the editor's own road, its Esc throws it away — each one
+// GuiFlagEditor act (step_editor_text, toggle_inherit_editor_text,
+// complete_label_reference, flag_editor.cpp, where each act's rules
+// stand). UP, DOWN AND THE PASS KEY ARE GREYED WHERE THEY MEAN NOTHING
+// (his "Number four. Yes"): the keyboard's disabled key, no hover, a press
+// arming nothing — every line editor (a settings value, Save As, a BPM
+// field) and, for the pass key, the iteration bound editor, a bound having
+// no tempo source to toggle; UP and DOWN stay live on the bound editor of
+// either column, the main page's Up / Down stepping an addressed bound cell
+// there (input_handler.cpp's Up / Down arm). ONE PREDICATE, key_live below,
+// read by the painter (paint_onscreen_keyboard), the press
+// (claim_onscreen_keyboard_press) and the hover (hover_face_live) alike, and
+// by the keyboard-modal gate's admission of the keys it lets through
+// (modal_editor_key_blocked). Tab is never greyed: it completes where an
+// editor has a completion and is silent elsewhere (route_modal_editor_key).
 // WHAT IT DELIBERATELY HAS NOT GOT: no language switching (one layout), no
 // hide act (it leaves with the editor that raised it), no long-press
 // alternates (an act at the press precludes them), no third page and no
@@ -112,40 +145,49 @@ namespace onscreen_keyboard {
 // the SAME `ch`, so a key cannot type one thing and say another.
 //
 // THE TWO PAGES (architect 2026-10-29, on the sheets kb_f_flags and
-// kb_g_symbols_repeated; rows 0 to 3 re-laid 2026-11-08, sessions 95 / 96).
+// kb_g_symbols_repeated; rows 0 to 3 re-laid 2026-11-08, sessions 95 / 96;
+// UP and DOWN joined 2026-11-20 / 21, send EE).
 // Rows counted from 0 at the top; widths in units
 // (one standard key), every row LEFT-ALIGNED on the block's left edge — no
 // centering of a short row, and since 2026-11-08 no stagger (row 2's
 // one-unit inset is the pass key's slot):
 //   FLAGS
 //     row 0:  1 2 3 4 5 6 7 8 9 0 + -                                (12u)
-//     row 1:  Tb q w e r t y u i o p *                                (12u)
-//     row 2:  Pass a s d f g h j k l ; :                              (12u)
+//     row 1:  Tb q w e r t y u i o p * Up                             (13u)
+//     row 2:  Pass a s d f g h j k l ; : Down                         (13u)
 //     row 3:  Shift(1.5) z x c v b n m Bksp(2.5) Left Right           (13u)
 //     row 4:  &123(1.5) Copy(1.5) Paste(1.5) Space(4) . Esc(1.5)
 //             Enter(2)                                                (13u)
 //   SYMBOLS
 //     row 0:  1 2 3 4 5 6 7 8 9 0 + -
-//     row 1:  Tb @ # % & _ = / \ ~ ^ *
-//     row 2:  Pass ( ) [ ] { } < > | ; :
+//     row 1:  Tb @ # % & _ = / \ ~ ^ * Up
+//     row 2:  Pass ( ) [ ] { } < > | ; : Down
 //     row 3:  Shift ' " , ? ! $ ` Bksp Left Right
 //     row 4:  ABC Copy Paste Space . Esc Enter
 // THE 2026-11-08 RE-LAYING: the `*` left row 0 for row 1's tail, the same
 // character in the same slot on both pages (a non-letter slot, like the
 // digits); the PASS KEY took row 2's old one-unit inset; LEFT and RIGHT
 // stand at row 3's tail, quarters 44..48 and 48..52, flush over Enter.
+// UP AND DOWN, A THIRTEENTH COLUMN ON ROWS 1 AND 2 (architect 2026-11-20 /
+// 21, send EE, the ruled mock DD_01: "UP on the q row, DOWN on the a row"):
+// quarters 48..52 of the q row and the a row, the grid's right column
+// standing over RIGHT, so rows 1 to 4 are the block's thirteen units and row
+// 0 alone its twelve — the grid's outline closing round them (the painter's
+// convex corners: the top right corner moves from row 0's `-` to UP's top
+// right, the step between them square). The block stays thirteen units, so
+// its seat (block_x_px) and every other key stand where they stood.
 // NOTHING MOVES BETWEEN THE PAGES (architect 2026-10-29: "I prefer that
 // things not move around"): the symbols page is the flags page with its 26
 // LETTER SLOTS re-lettered — exactly the 26 printable ASCII symbols the flags
 // page lacks — and every other key, the digits, `+ - *`, `;`, `:`, `.`, Tb,
-// the pass key, Shift, Bksp, LEFT, RIGHT and the bottom row, in the same slot
-// on both (the page key's cap alone changing, cap_word). Shift on the symbols
-// page capitalizes nothing (no letter there) but its latch still extends the
-// selection with LEFT / RIGHT. ESC AND
+// the pass key, UP, DOWN, Shift, Bksp, LEFT, RIGHT and the bottom row, in the
+// same slot on both (the page key's cap alone changing, cap_word). Shift on
+// the symbols page capitalizes nothing (no letter there) but its latch still
+// extends the selection with LEFT / RIGHT. ESC AND
 // ENTER STAND LOWER RIGHT (architect 2026-10-29: "that is where my hand
 // rests"). Both facts, and the 26, are checked at compile time
-// (pages_are_well_formed, below); the pass key, LEFT and RIGHT are function
-// keys, outside the character count.
+// (pages_are_well_formed, below); the pass key, UP, DOWN, LEFT and RIGHT are
+// function keys, outside the character count.
 
 // THE PAGE, the keyboard's one layout state beside the shift latch. Declared
 // on AppState (this header includes app_state.h) and aliased here.
@@ -165,20 +207,26 @@ enum class Role : uint8_t {
     Paste,         // GuiKeys::V carrying ctrl — the editors' Ctrl+V
     Left,          // GuiKeys::Left, carrying the latch's shift when lit
     Right,         // GuiKeys::Right, the same
-    Pass,          // GuiKeys::Pass — the editors type `pass` (2026-11-08)
+    Pass,          // GuiKeys::Pass — the flag editor's Toggle Inherit on its
+                   // text (2026-11-20 / 21, send EE; `pass` typed until then)
+    Up,            // GuiKeys::Up, bare — the editor's tempo step up
+                   // (2026-11-20 / 21, send EE)
+    Down,          // GuiKeys::Down, bare — its step down
 };
 
 // WIDTHS ARE AUTHORED IN QUARTER-UNITS (one standard key, 1u, is 4), so the
 // half and quarter widths of the table are whole numbers; the geometry turns
 // a quarter into device px (for_each_key). THE BLOCK IS THE WIDEST ROW,
-// thirteen units (rows 3 and 4).
+// thirteen units (rows 1 to 4 since UP and DOWN, 2026-11-20 / 21; rows 3
+// and 4 before).
 inline constexpr int kQuartersPerUnit = 4;
 inline constexpr int kBlockQuarters   = 13 * kQuartersPerUnit;
 inline constexpr int kRowCount        = 5;
-// The most keys a row holds (rows 0, 1 and 2's twelve since 2026-11-08); the
-// index arithmetic below reserves this many slots per row so a key's index
-// is a pure function of where it sits.
-inline constexpr int kMaxRowKeys      = 12;
+// The most keys a row holds (rows 1 and 2's thirteen since UP and DOWN,
+// 2026-11-20 / 21; twelve from 2026-11-08); the index arithmetic below
+// reserves this many slots per row so a key's index is a pure function of
+// where it sits.
+inline constexpr int kMaxRowKeys      = 13;
 
 struct KeyDef {
     Role     role   = Role::Character;
@@ -213,22 +261,28 @@ inline constexpr KeyDef kRow0[] = {
 // picker is field-less and stands in this band, so the keyboard does not
 // paint there at all and the gesture is the Open Project button, tap the
 // project's row. What the key serves is the settings editor's completions,
-// its value recall and the path's.
+// its value recall and the path's, and since 2026-11-20 / 21 (architect,
+// send EE: "a" then Tab gives "a.0") the flag editor's LABEL REFERENCE
+// completion (GuiFlagEditor::complete_label_reference).
 inline constexpr KeyDef kFlagsRow1[] = {
     {Role::Tab},
     {Role::Character, U'q'}, {Role::Character, U'w'}, {Role::Character, U'e'},
     {Role::Character, U'r'}, {Role::Character, U't'}, {Role::Character, U'y'},
     {Role::Character, U'u'}, {Role::Character, U'i'}, {Role::Character, U'o'},
     {Role::Character, U'p'}, {Role::Character, U'*'},
+    {Role::Up},
 };
 // THE PASS KEY leads row 2 on both pages (architect 2026-11-08, sessions
-// 95 / 96), in what was the row's one-unit inset.
+// 95 / 96), in what was the row's one-unit inset. UP closes row 1 and DOWN
+// row 2 on both pages, the thirteenth column (architect 2026-11-20 / 21,
+// send EE; the table's head).
 inline constexpr KeyDef kFlagsRow2[] = {
     {Role::Pass},
     {Role::Character, U'a'}, {Role::Character, U's'}, {Role::Character, U'd'},
     {Role::Character, U'f'}, {Role::Character, U'g'}, {Role::Character, U'h'},
     {Role::Character, U'j'}, {Role::Character, U'k'}, {Role::Character, U'l'},
     {Role::Character, U';'}, {Role::Character, U':'},
+    {Role::Down},
 };
 // LEFT AND RIGHT close row 3 on both pages (architect 2026-11-08, sessions
 // 95 / 96), flush over Enter: Shift 0..6, the seven 6..34, Bksp 34..44, LEFT
@@ -249,6 +303,7 @@ inline constexpr KeyDef kSymbolsRow1[] = {
     {Role::Character, U'&'}, {Role::Character, U'_'}, {Role::Character, U'='},
     {Role::Character, U'/'}, {Role::Character, U'\\'}, {Role::Character, U'~'},
     {Role::Character, U'^'}, {Role::Character, U'*'},
+    {Role::Up},
 };
 inline constexpr KeyDef kSymbolsRow2[] = {
     {Role::Pass},
@@ -256,6 +311,7 @@ inline constexpr KeyDef kSymbolsRow2[] = {
     {Role::Character, U']'}, {Role::Character, U'{'}, {Role::Character, U'}'},
     {Role::Character, U'<'}, {Role::Character, U'>'}, {Role::Character, U'|'},
     {Role::Character, U';'}, {Role::Character, U':'},
+    {Role::Down},
 };
 inline constexpr KeyDef kSymbolsRow3[] = {
     {Role::Shift, 0, 6},
@@ -300,8 +356,8 @@ constexpr bool is_letter(char32_t c) { return c >= U'a' && c <= U'z'; }
 // PRINTABLE ASCII THE FLAGS PAGE LACKS — across the flags page's characters
 // and the symbols page's letter slots every printable ASCII character but
 // the capitals (the shift latch's) appears exactly once, and space with them
-// (the function keys — the pass key, LEFT and RIGHT among them — type no
-// character and are outside the count).
+// (the function keys — the pass key, UP, DOWN, LEFT and RIGHT among them —
+// type no character and are outside the count).
 constexpr bool pages_are_well_formed() {
     int widest = 0;
     for (int p = 0; p < kPageCount; ++p) {
@@ -386,7 +442,8 @@ inline constexpr uint32_t kStableCodeBase = 1;
 // base above — and deliberately not the keysym: the pages put different
 // characters on one slot, so only the place is unique per key. Codes run from
 // kStableCodeBase to kStableCodeBase + kPageCount*kRowCount*kMaxRowKeys - 1,
-// which is 1..120.
+// which is 1..130 since UP and DOWN made a row of thirteen (2026-11-20 /
+// 21; 1..120 before).
 inline constexpr uint32_t key_index(Page page, int row, int col) {
     return kStableCodeBase + static_cast<uint32_t>(
         ((detail::page_number(page) * kRowCount) + row) * kMaxRowKeys + col);
@@ -473,13 +530,16 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // its X), Enter `key-enter` (KeyEnter), Copy and Paste row 8's EditCopy /
 // EditPaste, LEFT and RIGHT the chevrons GoPrevious / GoNext, the pass key
 // the INHERIT key's InsertLink (redesign_button_icon's IconMarkerInherit
-// arm: the same act, `pass` inherits). AT THE PROGRAM KEYS' ONE SIZE,
+// arm: the same act, Toggle Inherit, since 2026-11-20 / 21), UP and DOWN the
+// main page's UP / DOWN keys' GoUp / GoDown (redesign_button_icon's
+// TransportUp / TransportDown arms: the same act, the tempo step; send EE).
+// AT THE PROGRAM KEYS' ONE SIZE,
 // centered on the face (paint_key_glyph, paint_handler.cpp — the one owner
 // of the size, the set's 16 W canvas since send Z, 2026-11-19, never of
 // osk_key_h), in the key's ink (paint_onscreen_keyboard: the text tone at
 // rest, `text_on_lit` on a lit face — a latched key or a key under the
-// finger; no key here is ever disabled). A null answer: the key wears its
-// word or its character.
+// finger — and `key_dim_ink` on a greyed one, key_live). A null answer: the
+// key wears its word or its character.
 inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
     using icons::Icon;
     switch (k.role) {
@@ -491,6 +551,8 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
         case Role::Left:      return Icon::GoPrevious;
         case Role::Right:     return Icon::GoNext;
         case Role::Pass:      return Icon::InsertLink;
+        case Role::Up:        return Icon::GoUp;
+        case Role::Down:      return Icon::GoDown;
         case Role::Character:
         case Role::Shift:
         case Role::Escape:
@@ -568,9 +630,64 @@ inline const char* cap_word(const KeyDef& k, Page page) {
         case Role::Paste:
         case Role::Left:
         case Role::Right:
-        case Role::Pass:        return nullptr;   // a glyph, cap_icon
+        case Role::Pass:
+        case Role::Up:
+        case Role::Down:        return nullptr;   // a glyph, cap_icon
     }
     return nullptr;
+}
+
+// IS THE KEY LIVE — THE ONE PREDICATE OF THE EDITOR'S EXTRA KEYS' GREY (the
+// head's THE EDITOR'S EXTRA KEYS; architect 2026-11-20, send EE, "Number
+// four. Yes": UP, DOWN and the pass key "greyed where they mean nothing").
+// Its readers: the painter (the disabled key), the press (a greyed key arms
+// nothing), the hover (a greyed key hovers nothing) and the keyboard-modal
+// gate's admission of the bare Up / Down / pass key (so no road but a live
+// key's reaches the editor's act). The editor it asks about is the one the
+// keyboard stands for: THE MARKER LANE'S, and no line editor standing (the
+// line editor's buffer outranks it in text_editor_session, and the two never
+// stand together).
+//   * UP AND DOWN: the flag editor (FlagPayload — the tempo step on its
+//     text) and the iteration bound editor of either column (IterBound — the
+//     bound step on its text, as the main page's Up / Down step an addressed
+//     bound cell, input_handler.cpp's Up / Down arm);
+//   * THE PASS KEY: the flag editor alone — a bound has no tempo source to
+//     toggle;
+//   * EVERY OTHER KEY: always live (no other key here is ever greyed).
+// The answer is constant through one editor session (its kind is the
+// session's), so the grey moves only with the session, whose change repaints
+// the whole surface (reconcile_session).
+inline bool lane_editor_stands(const AppState& a,
+                               text_editor::Kind kind) {
+    return a.dialog_editor_session() == 0 &&
+           text_editor::is_active(a.top_flag_editor) &&
+           a.top_flag_editor.kind == kind;
+}
+inline bool step_keys_live(const AppState& a) {
+    return lane_editor_stands(a, text_editor::Kind::FlagPayload) ||
+           lane_editor_stands(a, text_editor::Kind::IterBound);
+}
+inline bool pass_key_live(const AppState& a) {
+    return lane_editor_stands(a, text_editor::Kind::FlagPayload);
+}
+inline bool key_live(const AppState& a, Role role) {
+    switch (role) {
+        case Role::Up:
+        case Role::Down:       return step_keys_live(a);
+        case Role::Pass:       return pass_key_live(a);
+        case Role::Character:
+        case Role::Shift:
+        case Role::Backspace:
+        case Role::Enter:
+        case Role::Escape:
+        case Role::Tab:
+        case Role::SymbolMode:
+        case Role::Copy:
+        case Role::Paste:
+        case Role::Left:
+        case Role::Right:      return true;
+    }
+    return true;
 }
 
 // THE PAGE KEY'S ACT, one owner for where it goes: the flags page to the
@@ -1214,9 +1331,10 @@ inline void for_each_grid_row(const AppState& a, Page page, Fn&& fn) {
 // keys its top line, a row's last key its right line, the last row's keys
 // its bottom line; the ground the ring's rounded corners leave counts with
 // its key, as a main-page group's box does. WHERE NO KEY STANDS ABOVE A LINE
-// — a wider row's top line past a narrower row's end (rows 3 and 4 are 52
-// quarters, rows 0–2 48: the line over row 3's RIGHT key) — THE LINE IS THE
-// KEY BELOW's, the ring of its own row. So the keys tile the grid's outer
+// — a wider row's top line past a narrower row's end (rows 1 to 4 are 52
+// quarters since UP and DOWN, 2026-11-20 / 21, row 0 48: the line over
+// row 1's UP key) — THE LINE IS THE KEY BELOW's, the ring of its own row.
+// So the keys tile the grid's outer
 // rects with no shared point (half-open, THE POINTER'S REAL PLACE against
 // real edges, architect 2026-11-15, the no-grid arc), and a press on the
 // band's ground beside or round the grid answers -1, still CONSUMED by the
@@ -1231,8 +1349,10 @@ inline void for_each_grid_row(const AppState& a, Page page, Fn&& fn) {
 //   line 2): the `5` | `6` line on columns 1151..1152 is the `5`'s — its hit
 //   x [1103, 1153), the `6`'s from 1153; the line under row 0 on y
 //   [1136, 1138) is row 0's — the `1`'s hit y [1064, 1138) with the
-//   ring's top line, row 1's from 1138; the line over RIGHT, x
-//   [1503, 1553) on y [1280, 1282), is RIGHT's.
+//   ring's top line, row 1's from 1138; the line over UP, x [1503, 1553) on
+//   y [1136, 1138), is UP's (its hit x [1503, 1553), y [1136, 1210)); the
+//   line over RIGHT, y [1280, 1282), is DOWN's, the row above standing a key
+//   there now.
 inline int key_at(const AppState& a, Page page, double x, double y,
                   KeyDef& out_def) {
     const double gap = static_cast<double>(key_gap_px());

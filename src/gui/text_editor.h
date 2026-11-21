@@ -43,7 +43,11 @@
 //     completion's, upstream of this module), Copy and Paste
 //     (Ctrl+C / Ctrl+V, the two keys' own ctrl), and since 2026-11-08
 //     (sessions 95 / 96) LEFT and RIGHT — the caret, and with the latched
-//     Shift the selection — and the pass key. THE BARREL HAS NO ROAD ON ANY
+//     Shift the selection. (The keyboard's pass key, UP and DOWN are the
+//     marker lane editor's own whole-text acts since 2026-11-20 / 21, send
+//     EE, through this module's incoming filter but not its keymap —
+//     GuiFlagEditor's step_editor_text and toggle_inherit_editor_text.)
+//     THE BARREL HAS NO ROAD ON ANY
 //     KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session 94): its
 //     word erase, Ctrl+A and Ctrl+X went with it. It has no Home / End and
 //     no Delete. THE SELECTION COMES FROM THE KEYS ALONE (architect
@@ -396,8 +400,9 @@ struct State {
     // [min(selection_anchor, cursor_pos), max(...)). Set by a shifted LEFT /
     // RIGHT (the anchor where the caret stood, the free end cursor_pos) and
     // a refused Enter (refuse); cleared by a pointer caret placement or drag,
-    // an unshifted LEFT / RIGHT, any printable insertion, the pass key, any
-    // backspace, and by enter/deactivate.
+    // an unshifted LEFT / RIGHT, any printable insertion, any backspace, a
+    // whole-text rewrite (the flag editor's extra keys, which seat the caret
+    // at the text's end), and by enter/deactivate.
     int selection_anchor = -1;
 
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
@@ -539,9 +544,8 @@ enum class KeyClass {
     NotEditorKey,   // not the editor's — the keyboard-modal gate drops it
     SessionKey,     // BARE Escape, Return — end the session, never repeat
     ChordKey,       // CTRL-EXACT C/V (Copy, Paste) — one-shot
-    // The pass key (GuiKeys::Pass), BARE — one-shot (architect 2026-11-08,
-    // sessions 95 / 96).
-    InsertKey,
+    // (InsertKey, the pass key typing `pass`, stood 2026-11-08 to 2026-11-20
+    // / 21: the key became the flag editor's Toggle Inherit, send EE.)
     // BackSpace, BARE, and LEFT / RIGHT, bare or SHIFT-ONLY (architect
     // 2026-11-08, sessions 95 / 96) — repeat. Any other modifier is
     // NotEditorKey.
@@ -554,11 +558,11 @@ enum class KeyClass {
 
 // Classify key+mods against the editor's owned keymap, reproducing handle_key's
 // exact predicates and precedence: the session keys before the Ctrl chords, the
-// chords (specific C/V) before the pass key, the pass key before BackSpace and
-// the caret keys, those before printable. A
+// chords (specific C/V) before BackSpace and the caret keys, those before
+// printable. A
 // key that could satisfy two predicates classifies as the one handle_key acts
 // on (Ctrl+C is a chord, not printable — printable already excludes ctrl). NO
-// ARM ADMITS ALT: session, the pass key and BackSpace are bare-exact, the
+// ARM ADMITS ALT: session and BackSpace are bare-exact, the
 // chords ctrl-exact, LEFT / RIGHT bare or shift-only, printable already
 // excludes ctrl and alt. So a press wearing a modifier its
 // arm does not bind (Ctrl+Escape, Ctrl+Shift+V, Ctrl+BackSpace — no producer
@@ -582,8 +586,10 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // settings editor's completion append and its recall prefix
 // (settings_editor.cpp), THE TYPED KEYSTROKE, which handle_key encodes and
 // hands over rather than repeating the ladder (its own contribution is the
-// KeyAction::OverCapacity it returns when this refuses), and THE PASS KEY's
-// `pass`, handle_key's one whole-token insertion (2026-11-08). Its
+// KeyAction::OverCapacity it returns when this refuses), and THE FLAG
+// EDITOR'S EXTRA KEYS' WHOLE-TEXT REWRITES (the tempo step, the Toggle
+// Inherit and the label reference's completion, architect 2026-11-20 / 21,
+// send EE; GuiFlagEditor, flag_editor.cpp). Its
 // acceptance rule:
 //   - PRINTABLE ASCII (0x20..0x7e) passes.
 //   - WELL-FORMED MULTI-BYTE UTF-8 passes verbatim — the sequence's length

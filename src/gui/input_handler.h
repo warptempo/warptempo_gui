@@ -2340,7 +2340,9 @@ struct GuiInputHandler {
     // typing inside an already-open editor does. Public because main.cpp's
     // probe lambda calls it. NOTHING REPEATS UNDER A PROMPT, THE PROGRESS
     // PAGE OR AN OVERLAY, and under an editor only its motion and typing
-    // keys (a line editor's Tab is one-shot).
+    // keys and the marker lane editor's live UP / DOWN (the main page's
+    // UP / DOWN hold; architect 2026-11-20 / 21, send EE) — a Tab and the
+    // pass key are one-shot.
     bool repeat_eligible(GuiKey key, GuiInputState mods) const;
 
     // Per-iteration promotion check for the SINGLE archival render's status
@@ -2872,7 +2874,13 @@ private:
     // it to fall through. BOTH kinds this editor state carries take
     // route_modal_editor_key: the FlagPayload flag editor since it became
     // keyboard-modal, and the IterBound editor since 2026-09-05 — they
-    // differ only in their commit/cancel bodies. There is no longer a tail that cancels an edit to let an
+    // differ only in their commit/cancel bodies and the flag editor's Tab
+    // completion. AHEAD OF THE ROUTE it answers THE EDITOR'S EXTRA KEYS
+    // (architect 2026-11-20 / 21, send EE): bare Up / Down step the text,
+    // the bare pass key toggles the flag editor's text between owner and
+    // pass, each rewriting the text and committing nothing (GuiFlagEditor's
+    // step_editor_text / toggle_inherit_editor_text). There is no longer a
+    // tail that cancels an edit to let an
     // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
@@ -4432,7 +4440,9 @@ private:
     // iteration bound editor (AppState::text_editor_session, the one
     // membership; any_text_editor_active is the same expression under its
     // platform name). Such a modal ADMITS ITS OWN VOCABULARY ALONE: its
-    // typed characters, Backspace, Esc and Enter, a line editor's Tab
+    // typed characters, Backspace, Esc and Enter, a line editor's and the
+    // flag editor's Tab, the flag editor's live extra keys (UP, DOWN, the
+    // pass key; architect 2026-11-20 / 21, send EE)
     // — and its FIELD'S TEXT for the pointer; every other key, press
     // and touch gesture is consumed, silently, and the on-screen keyboard
     // it raises greys the whole roster behind it, a lit key lit and inert —
@@ -4499,7 +4509,10 @@ private:
     // shape and input routing like it (it judges no data): true when
     // key+mods should be dropped while a keyboard-modal editor stands. It
     // admits only the keys the active editor consumes (text_editor::Kind, the
-    // five kinds) and a line editor's Tab — NO HATCH since 2026-10-25, Ctrl+S
+    // five kinds), a line editor's and the flag editor's Tab, and the flag
+    // editor's extra keys where the on-screen keyboard paints them live (bare
+    // Up / Down, the bare pass key; onscreen_keyboard::key_live, architect
+    // 2026-11-20 / 21, send EE) — NO HATCH since 2026-10-25, Ctrl+S
     // consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
     // Ctrl+Z is not admitted, so typing inside an editor has NO UNDO — the
     // gap these editors have always had, which is also why a refused

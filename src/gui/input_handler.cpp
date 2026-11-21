@@ -258,8 +258,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the BPM form's line; the commit title stood beside it 2026-08-07 to
     // 2026-10-10), and the top-strip flag editor
     // (architect 2026-07-28, which brought the last of them in) — only the keys
-    // the editor itself consumes (typing, its motion keys, Esc and Enter)
-    // and a line editor's Tab get through (modal_editor_key_blocked); everything
+    // the editor itself consumes (typing, its motion keys, Esc and Enter),
+    // a line editor's and the flag editor's Tab and the flag editor's live
+    // extra keys (UP, DOWN, the pass key; architect 2026-11-20 / 21, send EE)
+    // get through (modal_editor_key_blocked); everything
     // else — playback, navigation, zoom, mode toggles, tab switches,
     // undo/redo, marker / trim chords, the Ctrl+Alt render chords, and since
     // 2026-10-25 Ctrl+S (NO HATCH) — drops HERE, SILENTLY, so no

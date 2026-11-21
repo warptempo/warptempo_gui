@@ -77,6 +77,15 @@ bool parse_signed_hops(const std::string& v, int& out) {
     return true;
 }
 
+// THE TWO BOUND GRAMMARS' SENTENCES, each one composer for two readers: the
+// bound commit's refusal ("Range bound rejected: …") and the bound editor's
+// UP / DOWN on a text the grammar refuses ("The bound is not well formed:
+// …", step_editor_text; architect 2026-11-20 / 21, send EE).
+constexpr const char* kCentBoundGrammar =
+    "a bound is a sign, one digit and two decimals, as +0.00";
+constexpr const char* kHopBoundGrammar =
+    "a hop bound is a sign and one digit, as +0";
+
 } // namespace
 
 // Flag-editor cluster: the marker lane's two editors (the flag's
@@ -365,7 +374,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     } else {
         int64_t value = 0;
         if (!parse_signed_2dp_cents(next, value)) {
-            refuse("a bound is a sign, one digit and two decimals, as +0.00");
+            refuse(kCentBoundGrammar);
             return;
         }
         // THE WALLS, the landing owner's two, refused rather than clamped:
@@ -480,7 +489,7 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     } else {
         int value = 0;
         if (!parse_signed_hops(next, value)) {
-            refuse("a hop bound is a sign and one digit, as +0");
+            refuse(kHopBoundGrammar);
             return;
         }
         // THE PARTNER, first and cheapest: the lower never rises above the
@@ -586,9 +595,15 @@ struct PayloadCommit {
     std::string                new_def;
 };
 
-std::expected<PayloadCommit, std::string> propose_payload_commit(
-        const std::vector<GuiWarpMarker>& mv_const, int idx,
-        const std::string& payload) {
+// THE COMMIT'S PARSE, ONE BODY FOR ITS THREE READERS: the payload commit's
+// judgment below, and the flag editor's extra keys (architect 2026-11-20 /
+// 21, send EE), whose "well-formed string" is exactly the line this parse
+// admits — step_editor_text and toggle_inherit_editor_text, which card its
+// reason when it refuses. `row` is the marker the editor stands on (its
+// position and its disabled bit, the two fields the payload does not carry);
+// the answer is the parsed marker, the reason on failure.
+std::expected<GuiWarpMarker, std::string> parse_payload_line(
+        const GuiWarpMarker& row, const std::string& payload) {
     // The buffer is the plain payload: no bracket rides in it (the bounds
     // are the cells' own, each with its own editor), so
     // parse_single_canonical_line reads it as it reads a sidecar line.
@@ -600,19 +615,30 @@ std::expected<PayloadCommit, std::string> propose_payload_commit(
     // grammar expects (format_authored_frame, frame_format.h — never the
     // MM:SS.mmm form the GUI shows elsewhere).
     std::string candidate;
-    if (mv_const[idx].disabled) candidate += '#';
-    candidate += format_authored_frame(mv_const[idx].time_frame);
+    if (row.disabled) candidate += '#';
+    candidate += format_authored_frame(row.time_frame);
     candidate += '|';
     candidate += payload;
 
-    GuiWarpMarker parsed;
-    std::string err;
     auto result = warpmarkers_internal::parse_single_canonical_line(candidate);
-    bool ok = result.has_value();
+    if (!result) return std::unexpected(std::move(result.error()));
+    GuiWarpMarker parsed;
+    static_cast<WarpMarker&>(parsed) = std::move(*result);
+    return parsed;
+}
+
+std::expected<PayloadCommit, std::string> propose_payload_commit(
+        const std::vector<GuiWarpMarker>& mv_const, int idx,
+        const std::string& payload) {
+    std::expected<GuiWarpMarker, std::string> line =
+        parse_payload_line(mv_const[idx], payload);
+    bool ok = line.has_value();
+    std::string err;
+    GuiWarpMarker parsed;
     if (ok) {
-        static_cast<WarpMarker&>(parsed) = std::move(*result);
+        parsed = std::move(*line);
     } else {
-        err = std::move(result.error());
+        err = std::move(line.error());
     }
 
     // Cross-marker check (edit target excluded), through the rule's ONE owner
@@ -980,6 +1006,228 @@ void GuiFlagEditor::paste_payload_onto_selection(
         std::fprintf(stderr, "warptempo_gui: %s\n", line.c_str());
     undo.push_undo_warp(std::move(pre_state));
     payload_commit_tail(app.last_selected_marker);
+}
+
+// -- THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21, send EE) ----------
+//
+// The three acts' contract, his words and the rules each follows are at the
+// declarations (flag_editor.h); the keys' seat and grey at
+// onscreen_keyboard.h's THE EDITOR'S EXTRA KEYS; the router
+// handle_top_flag_editor_key (input_key_dispatch.cpp).
+
+// THE NOT-WELL-FORMED CARD: one sentence, its stderr line and the card — the
+// payload refusal's own shape (card_payload_refusal), in words that say the
+// text was judged, not committed.
+void GuiFlagEditor::card_unparsed_editor_text(const std::string& sentence) {
+    std::fprintf(stderr, "warptempo_gui: %s\n", sentence.c_str());
+    notifications.notify(AppState::NotificationClass::Normal, sentence);
+}
+
+// THE WHOLE-TEXT REWRITE: the whole text selected and replaced through THE
+// ONE INCOMING FILTER (text_editor::replace_selection), so the caret lands at
+// the new text's end with no selection (an empty text has no selection to
+// replace, so the caret seats at 0 first and the insertion carries it to the
+// end). ITS CAP REFUSAL HAS NO PRODUCER: every text these acts write is the
+// canonical spelling of a line the commit's parse admits — the flag's
+// through flag_text, inside kMaxPendingChars, a tight bound on every
+// well-formed line (text_editor.h), a bound's through its own formatter,
+// the field's exact width — so the answer is not asked. The lane's damage is
+// the box's (the strip, as every keystroke's).
+void GuiFlagEditor::rewrite_editor_text(const std::string& text) {
+    text_editor::State& ed = app.top_flag_editor;
+    if (ed.pending.empty()) {
+        ed.selection_anchor = -1;
+        ed.cursor_pos       = 0;
+    } else {
+        ed.selection_anchor = 0;
+        ed.cursor_pos       = static_cast<int>(ed.pending.size());
+    }
+    (void)text_editor::replace_selection(ed, text);
+    viewport.invalidate_top_strip();
+}
+
+void GuiFlagEditor::step_editor_text(int delta) {
+    const text_editor::State& ed = app.top_flag_editor;
+    if (!text_editor::is_active(ed)) return;
+    const int idx = ed.target;
+
+    if (ed.kind == text_editor::Kind::IterBound) {
+        // THE BOUND STEP ON THE TEXT'S BOUND (the declaration). The column is
+        // the live one, which is the open's (commit_iter_bound_edit's own
+        // reading). An empty text is the blank, whose cells read zero, the
+        // main page's step's start from a blank bracket; any other text must
+        // be the bound commit's grammar. The tie follower and the ineligible
+        // marker, the main page's two other refusals, cannot stand under
+        // this editor (enter_iter_bound_edit refuses to open on either).
+        const MarkerCell side = iter_bound_editor_side(ed);
+        if (app.active_markers_view == 'P') {
+            if (idx < 0 ||
+                idx >= static_cast<int>(app.phaseresetmarkers.markers().size()))
+                return;
+            int start = 0;
+            if (!ed.pending.empty() && !parse_signed_hops(ed.pending, start)) {
+                card_unparsed_editor_text(
+                    std::string("The bound is not well formed: ") +
+                    kHopBoundGrammar);
+                return;
+            }
+            const int landing = phase_iter_bound_step_landing_from(
+                app, audio, idx, side, start, delta);
+            if (landing == start) return;   // the wall, silent
+            rewrite_editor_text(format_signed_hops(landing));
+            return;
+        }
+        const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+        if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
+        int64_t start = 0;
+        if (!ed.pending.empty() && !parse_signed_2dp_cents(ed.pending, start)) {
+            card_unparsed_editor_text(
+                std::string("The bound is not well formed: ") +
+                kCentBoundGrammar);
+            return;
+        }
+        const int64_t landing =
+            iter_bound_step_landing_from(mv, idx, side, start, delta);
+        if (landing == start) return;   // the wall, silent
+        rewrite_editor_text(format_signed_delta_cents(landing));
+        return;
+    }
+
+    if (ed.kind != text_editor::Kind::FlagPayload) return;
+    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
+    std::expected<GuiWarpMarker, std::string> line =
+        parse_payload_line(mv[static_cast<size_t>(idx)], ed.pending);
+    if (!line) {
+        card_unparsed_editor_text("The flag is not well formed: " +
+                                  line.error());
+        return;
+    }
+    GuiWarpMarker m = std::move(*line);
+    // THE KIND REFUSAL, the singleton arm's, in its order: the reference
+    // asked of the TEXT (it is the text that would be stepped), the
+    // coincidence of the store's row (tempo_cent_step_kind_refusal_for's two
+    // tests; the coincident one shared, tempo_cent_step_coincident_refusal_
+    // for). Both card, as the main page's key does.
+    if (!m.label_ref.empty()) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kLabelRefHasNoTempoCard);
+        return;
+    }
+    if (const char* refusal =
+            tempo_cent_step_coincident_refusal_for(app, audio, idx)) {
+        notifications.notify(AppState::NotificationClass::Normal, refusal);
+        return;
+    }
+    // THE SINGLETON ARM'S LOOP BODY on the parsed flag (adjust_tempo_cents,
+    // warpmarkers_ops.cpp): the start through the one seed body (a pass
+    // resolved through the projection of the store as it stands), the move
+    // through the one landing owner (the chain's last term riding the step),
+    // the write through the one write site, the start's scale written beside.
+    const std::vector<WarpMarker> resolved = slice_to_warp_markers(mv);
+    const WarpTempoStart start = warp_tempo_step_start(
+        m, resolved, idx, audio.sample_rate(), audio.total_frames());
+    const WarpTempoStepMove move = warp_tempo_step_move(
+        start.cents, m.tempo_deviation_cents, static_cast<int64_t>(delta));
+    // THE BRACKET'S END (or the last term's wall) IS THE SILENT WALL: an
+    // owner whose landing is its own value. A pass always freezes, so it
+    // always changes.
+    if (!m.tempo_inherits && move.cents == m.tempo_cents) return;
+    m.tempo_inherits = false;
+    warp_tempo_step_write(m, move);
+    m.tempo_scale = start.scale;
+    // SPELLED BACK BY THE FLAG'S OWN FORMATTER (flag_text, the editor's
+    // seed's composer), the label definition and the scale with it.
+    rewrite_editor_text(flag_text(std::vector<GuiWarpMarker>{m}, 0));
+}
+
+void GuiFlagEditor::toggle_inherit_editor_text() {
+    const text_editor::State& ed = app.top_flag_editor;
+    if (!text_editor::is_active(ed) ||
+        ed.kind != text_editor::Kind::FlagPayload)
+        return;
+    const int idx = ed.target;
+    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return;
+    std::expected<GuiWarpMarker, std::string> line =
+        parse_payload_line(mv[static_cast<size_t>(idx)], ed.pending);
+    if (!line) {
+        card_unparsed_editor_text("The flag is not well formed: " +
+                                  line.error());
+        return;
+    }
+    GuiWarpMarker m = std::move(*line);
+    // THE VERB'S THREE ARMS (GuiWarpMarkersOps::toggle_inherits,
+    // warpmarkers_ops.cpp), on the parsed flag, in its order. The bracket
+    // and tie clears of its two carrier-loss arms have nothing to clear
+    // here: the flag editor cannot open while grid iterations stands
+    // (authoring_locked), and the commit's own belt clears them anyway.
+    if (!m.label_ref.empty()) {
+        m.label_ref.clear();
+        m.tempo_inherits = true;
+        m.tempo_cents    = 100;
+        m.tempo_scale.reset();
+        m.tempo_deviation_cents.clear();
+    } else if (m.tempo_inherits) {
+        // THE FREEZE: the tempo this marker sounds at, marker_effective over
+        // the store as it stands (the verb's projection-aware walk; a
+        // coincident member its 1.00), the plain base it lands as — no chain,
+        // the verb's own rule. base_cents 0 ("could not resolve") is the
+        // verb's unreachable fallback, mirrored.
+        const MarkerEffective eff =
+            marker_effective(slice_to_warp_markers(mv), idx,
+                             audio.sample_rate(), audio.total_frames());
+        m.tempo_inherits = false;
+        if (eff.base_cents != 0) {
+            m.tempo_cents = eff.base_cents;
+            m.tempo_scale = eff.scale;
+        } else {
+            m.tempo_cents = 100;
+            m.tempo_scale.reset();
+        }
+        m.tempo_deviation_cents.clear();
+    } else {
+        m.tempo_inherits = true;
+        m.tempo_cents    = 100;
+        m.tempo_scale.reset();
+        m.tempo_deviation_cents.clear();
+    }
+    rewrite_editor_text(flag_text(std::vector<GuiWarpMarker>{m}, 0));
+}
+
+bool GuiFlagEditor::complete_label_reference() {
+    const text_editor::State& ed = app.top_flag_editor;
+    if (!text_editor::is_active(ed) ||
+        ed.kind != text_editor::Kind::FlagPayload)
+        return false;
+    const std::string& text = ed.pending;
+    if (text.empty()) return false;
+    const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
+    // THE CANDIDATES: every distinct defined label the whole text is a
+    // proper prefix of, the row under edit's own definition excluded (the
+    // declaration). A label is the grammar's four bytes, so a text of four
+    // or more has nothing to extend, and a text no label starts with —
+    // garbage, an owner, a definition — has no candidate.
+    std::string run;
+    bool any = false;
+    for (int i = 0; i < static_cast<int>(mv.size()); ++i) {
+        if (i == ed.target) continue;
+        const std::string& label = mv[static_cast<size_t>(i)].label_def;
+        if (label.size() <= text.size() || !label.starts_with(text)) continue;
+        if (!any) {
+            run = label;
+            any = true;
+            continue;
+        }
+        // THE LONGEST RUN EVERY CANDIDATE SHARES, narrowed one label at a
+        // time (never below the text, which every candidate starts with).
+        std::size_t k = 0;
+        while (k < run.size() && k < label.size() && run[k] == label[k]) ++k;
+        run.resize(k);
+    }
+    if (!any || run.size() <= text.size()) return false;
+    rewrite_editor_text(run);
+    return true;
 }
 
 // Wipe BOTH STORES' session-only iter brackets (2026-09-09, with the mode's

@@ -103,6 +103,80 @@ struct GuiFlagEditor {
     // clipboard read.
     void paste_payload_onto_selection(const std::string& clipboard_text);
 
+    // THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21, send EE: "I'd like
+    // to consider adding an up and down key so that we can also do tempo
+    // step. And I'd like to make the pass button a toggle inherit, a true
+    // toggle inherit. So both of those will be contingent upon a well-formed
+    // string being in place already ... we could just card if it's not a
+    // well-formed string. This will make it less jarring, the fact that the
+    // flag is sitting there with the old value and we're editing the new
+    // value"; Tab, his "a" then Tab gives "a.0"; the keys' seat and their
+    // grey at onscreen_keyboard.h's THE EDITOR'S EXTRA KEYS). THREE ACTS ON
+    // THE MARKER LANE EDITOR'S TEXT, one function each, the same shape:
+    // each reads the editor's WHOLE TEXT, judges it by THE COMMIT'S OWN PARSE
+    // (parse_payload_line for the flag, the bound commit's reader for a
+    // bound), and on success REWRITES THE WHOLE TEXT through the one
+    // incoming filter (text_editor::replace_selection), THE CARET AT ITS END
+    // and no selection — a selection standing in the text is replaced with
+    // the rest; NOTHING IS COMMITTED (the keyboard's Enter commits the
+    // rewritten text through the editor's own road, its Esc throws it away),
+    // the store, its undo and the playhead untouched. A TEXT THE PARSE
+    // REFUSES CARDS ("The flag is not well formed: <the parse's reason>" /
+    // "The bound is not well formed: <the bound's grammar>", one stderr line
+    // beside) and changes nothing. The damage is the marker lane's (the
+    // editor's box). THE GATES ARE THE CALLER'S: the keyboard paints and the
+    // keyboard-modal gate admits each key only where it means something
+    // (onscreen_keyboard::key_live; handle_top_flag_editor_key the router).
+    //
+    // UP / DOWN, `delta` +1 / −1: THE MAIN PAGE'S STEP ON ONE MARKER, on the
+    // text. On the FLAG editor the tempo step's singleton arm
+    // (GuiWarpMarkersOps::adjust_tempo_cents) with its rules and refusals on
+    // the parsed flag: a LABEL REFERENCE refuses on its card ("A label
+    // reference has no tempo of its own"); in target view an enabled
+    // COINCIDENT member refuses on its card ("That marker coincides with
+    // another"; the store's row, its place being committed); a PASS freezes
+    // to owning at the tempo it sounds at (warp_tempo_step_start: the store as
+    // it stands, the marker's committed state, the projection-aware walk)
+    // and steps from there; an OWNER steps in place, a deviation chain's last
+    // term taking the step (warp_tempo_step_move); the label definition and
+    // the scale ride along; AN OWNER ON THE BRACKET'S END IS THE SILENT WALL
+    // (the main page's, whose key greys there instead: this key cannot, a
+    // malformed text having to card). On the BOUND editor the bound step on
+    // the text's bound (the main page's Up / Down on an addressed bound cell:
+    // adjust_iter_bound_cents / adjust_iter_bound_hops), the text's value the
+    // start — an empty text the blank's 0 — clamped into the tie's window and
+    // at the committed partner (iter_bound_step_landing_from and its phase
+    // twin), the wall silent.
+    void step_editor_text(int delta);
+    // THE PASS KEY: A TRUE TOGGLE INHERIT ON THE FLAG EDITOR'S TEXT — the
+    // three arms of GuiWarpMarkersOps::toggle_inherits on the parsed flag: an
+    // OWNER becomes `pass` (its label definition kept, its scale and chain
+    // gone), a `pass` becomes an OWNER AT THE TEMPO THIS MARKER SOUNDS AT
+    // (marker_effective on the store as it stands — the marker under edit in
+    // its committed state, the projection-aware walk the verb uses; the
+    // definition kept), a LABEL REFERENCE becomes `pass`. No refusal past the
+    // parse: the main page's verb refuses only on the column and an empty
+    // selection, neither of which an open flag editor can stand in. SO TWICE
+    // IN A ROW RETURNS THE TEXT wherever the committed marker sounds what
+    // the text said — an owner's tempo and definition, a pass's `pass` —
+    // and is the verb's own loss elsewhere (a scale or chain on an owner, a
+    // reference's name, as on the main page).
+    void toggle_inherit_editor_text();
+    // TAB: COMPLETE A LABEL REFERENCE. Where the whole text is the start of a
+    // label reference — a proper prefix of at least one DEFINED label, the
+    // definitions the store's as it stands, the marker under edit's own
+    // excluded (its definition goes when its text becomes a reference),
+    // a disabled definition counted (a reference binds one where no enabled
+    // one stands) — the text is extended by the longest run every such label
+    // shares (one candidate: the whole label). True iff the text advanced.
+    // NOTHING TO COMPLETE IS SILENT — an empty text, no candidate, a text
+    // already at the candidates' common run, a text that is no reference's
+    // start (garbage, an owner, a definition): the one autocomplete model's
+    // rule (route_modal_editor_key, architect 2026-11-20, send EE). It needs
+    // no well-formed string — a reference's start is never one — so it
+    // cards nothing.
+    bool complete_label_reference();
+
     // THE ITERATION BOUND EDITOR'S ONE ENTRY (the seventh text_editor Kind,
     // architect 2026-09-05: "each should be like a mini flag with its own
     // double-click" — its double tap, or EDIT on the addressed cell).
@@ -195,6 +269,12 @@ struct GuiFlagEditor {
     // `reland_idx`, the render trigger.
     void card_payload_refusal(const std::string& err);
     void payload_commit_tail(int reland_idx);
+    // THE EXTRA KEYS' TWO SHARED PIECES: the not-well-formed card (its one
+    // sentence on stderr and the card) and the whole-text rewrite (the text
+    // through the one incoming filter, the caret at its end, the lane's
+    // damage).
+    void card_unparsed_editor_text(const std::string& sentence);
+    void rewrite_editor_text(const std::string& text);
     // The phase-reset arm of commit_iter_bound_edit above, split out so the
     // two columns' walls and grammars each read straight through. Called with
     // the session's target, side and pending; every belt, refusal and tail is

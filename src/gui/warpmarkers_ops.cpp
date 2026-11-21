@@ -917,14 +917,13 @@ WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
     return {eff.base_cents, eff.scale};
 }
 
-// THE LABEL REFERENCE'S STEP SENTENCE (architect 2026-09-13). ONE READER since
-// the later ruling of the same day: the step's kind refusal
-// (tempo_cent_step_kind_refusal_for, below), which asks it in BOTH audio views
-// — the source-view no-change tail that carded it too is gone, the refusal
+// THE LABEL REFERENCE'S STEP SENTENCE (architect 2026-09-13) is
+// kLabelRefHasNoTempoCard (app_state.h, beside its second reader's
+// declaration, the flag editor's UP / DOWN). The step's kind refusal
+// (tempo_cent_step_kind_refusal_for, below) asks it in BOTH audio views —
+// the source-view no-change tail that carded it too is gone, the refusal
 // now standing ahead of the write in either view. It names no view because a
 // reference refuses in both — its tempo is the definition's.
-static constexpr const char* kLabelRefHasNoTempoCard =
-    "A label reference has no tempo of its own";
 
 // Nudge the selected marker(s)' tempo along the 0.01 grid. SINGLETON ARM
 // ONLY, IN EITHER AUDIO VIEW: a label ref refuses on a card (no tempo to
@@ -1320,7 +1319,7 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // and a ref shared one view-naming sentence here ("In target view only a
 // marker that owns its tempo can be stepped"); what remains is the REFERENCE,
 // which refuses in source view too, so it takes a view-free sentence
-// (kLabelRefHasNoTempoCard, above).
+// (kLabelRefHasNoTempoCard, app_state.h).
 //
 // NOR IS A DISABLED MARKER (architect 2026-09-13, "disabled should be
 // steppable"): the singleton steps the one marker asked for. THE COINCIDENCE
@@ -1367,7 +1366,18 @@ const char* tempo_cent_step_kind_refusal_for(const AppState& a,
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return nullptr;
     const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
     if (!m.label_ref.empty()) return kLabelRefHasNoTempoCard;
+    return tempo_cent_step_coincident_refusal_for(a, audio, idx);
+}
+
+// The kind refusal's coincident arm (the declaration, app_state.h): the
+// index form's second test, and the flag editor's UP / DOWN's.
+const char* tempo_cent_step_coincident_refusal_for(const AppState& a,
+                                                   const GuiAudio& audio,
+                                                   int idx) {
+    if (a.active_markers_view != 'W') return nullptr;
     if (a.active_audio_view != 'T') return nullptr;
+    const auto& mv = a.warpmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return nullptr;
     const std::set<int>& collapsed = warp_red_flag_set_cached(
         a, audio.sample_rate(),
         static_cast<long>(audio.total_frames())).collapsed;

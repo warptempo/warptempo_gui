@@ -12065,6 +12065,26 @@ const char* tempo_cent_step_kind_refusal_for(const AppState& a,
                                              const GuiAudio& audio, int idx);
 const char* tempo_cent_step_kind_refusal(const AppState& a,
                                          const GuiAudio& audio);
+// THE KIND REFUSAL'S COINCIDENT ARM ALONE, of the marker at `idx` (the
+// index form's second test, which that form asks after its label-ref test):
+// in target view an enabled member of a coincident run, kCoincidentCollapse
+// StepCard, else nullptr. Its second reader is THE FLAG EDITOR'S UP / DOWN
+// (architect 2026-11-20 / 21, send EE; GuiFlagEditor::step_editor_text),
+// which asks the label-ref test of the TEXT it steps — not of the store's
+// row — and this one of the store's row, the coincidence being a fact of
+// the marker's committed place.
+const char* tempo_cent_step_coincident_refusal_for(const AppState& a,
+                                                   const GuiAudio& audio,
+                                                   int idx);
+
+// THE LABEL REFERENCE'S STEP SENTENCE (architect 2026-09-13): a reference
+// has no tempo of its own, its tempo being the definition's, so the step
+// refuses it in both views. THREE READERS: the kind refusal's index form
+// (warpmarkers_ops.cpp), and through it the act's card and the Up / Down
+// face; and THE FLAG EDITOR'S UP / DOWN on a text that is a reference
+// (architect 2026-11-20 / 21, send EE; GuiFlagEditor::step_editor_text).
+inline constexpr const char* kLabelRefHasNoTempoCard =
+    "A label reference has no tempo of its own";
 
 // THE COINCIDENT STEP SENTENCE (architect 2026-09-16): the tempo step's kind
 // refusal above raises it for an enabled member of a coincident warp run,
@@ -12346,19 +12366,35 @@ inline IterBoundWindow iter_bound_tie_window(
 // phase twin's own shape: the window is a fact about the TIE and a marker
 // alone cannot see its fellows, and resolving the tie at each caller instead
 // would put the walk in three places.
+//
+// THE `_from` FORM TAKES THE START AS AN ARGUMENT, the walls the store's:
+// THE BOUND EDITOR'S UP / DOWN (architect 2026-11-20 / 21, send EE;
+// GuiFlagEditor::step_editor_text) step the bound the field's text holds,
+// which is not yet the store's, against the same tie window and the same
+// committed partner the step and the commit read. The store form is the
+// `_from` form started at the bound's resting value.
+inline int64_t iter_bound_step_landing_from(
+        const std::vector<GuiWarpMarker>& mv, int idx, MarkerCell side,
+        int64_t start, int64_t delta_cents) {
+    if (idx < 0 || idx >= static_cast<int>(mv.size())) return 0;
+    const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
+    const int64_t partner = side == MarkerCell::Upper
+                                ? m.iter_start_cents.value_or(0)
+                                : m.iter_end_cents.value_or(0);
+    const IterBoundWindow w = iter_bound_tie_window(mv, idx);
+    const int64_t windowed = std::clamp(start + delta_cents, w.lo, w.hi);
+    return side == MarkerCell::Upper ? std::max(windowed, partner)
+                                       : std::min(windowed, partner);
+}
 inline int64_t iter_bound_step_landing(const std::vector<GuiWarpMarker>& mv,
                                        int idx, MarkerCell side,
                                        int64_t delta_cents) {
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return 0;
     const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
-    const int64_t lo = m.iter_start_cents.value_or(0);
-    const int64_t hi = m.iter_end_cents.value_or(0);
-    const int64_t start   = side == MarkerCell::Upper ? hi : lo;
-    const int64_t partner = side == MarkerCell::Upper ? lo : hi;
-    const IterBoundWindow w = iter_bound_tie_window(mv, idx);
-    const int64_t windowed = std::clamp(start + delta_cents, w.lo, w.hi);
-    return side == MarkerCell::Upper ? std::max(windowed, partner)
-                                       : std::min(windowed, partner);
+    const int64_t start = side == MarkerCell::Upper
+                              ? m.iter_end_cents.value_or(0)
+                              : m.iter_start_cents.value_or(0);
+    return iter_bound_step_landing_from(mv, idx, side, start, delta_cents);
 }
 
 // Commit a bound step's landing — the step's ONE write site, and a step is
@@ -12475,20 +12511,35 @@ inline PhaseHopWindow phase_iter_bound_tie_window(const AppState& app,
 // authored. That is what retired the sweep's per-read re-verification and its
 // off-wall refusal. Clamping to the window FIRST and to the partner SECOND
 // stays the order, the pair being kept ordered by the partner clamp.
+// THE `_from` FORM TAKES THE START AS AN ARGUMENT, the warp twin's
+// (iter_bound_step_landing_from: the bound editor's UP / DOWN on its text,
+// architect 2026-11-20 / 21, send EE).
+inline int phase_iter_bound_step_landing_from(const AppState& app,
+                                              const GuiAudio& audio, int idx,
+                                              MarkerCell side, int start,
+                                              int delta_hops) {
+    const std::vector<GuiPhaseResetMarker>& pv = app.phaseresetmarkers.markers();
+    if (idx < 0 || idx >= static_cast<int>(pv.size())) return 0;
+    const GuiPhaseResetMarker& m = pv[static_cast<size_t>(idx)];
+    const int partner = side == MarkerCell::Upper
+                            ? m.iter_start_hops.value_or(0)
+                            : m.iter_end_hops.value_or(0);
+    const PhaseHopWindow w = phase_iter_bound_tie_window(app, audio, idx);
+    const int windowed = std::clamp(start + delta_hops, w.k_min, w.k_max);
+    return side == MarkerCell::Upper ? std::max(windowed, partner)
+                                     : std::min(windowed, partner);
+}
 inline int phase_iter_bound_step_landing(const AppState& app,
                                          const GuiAudio& audio, int idx,
                                          MarkerCell side, int delta_hops) {
     const std::vector<GuiPhaseResetMarker>& pv = app.phaseresetmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(pv.size())) return 0;
     const GuiPhaseResetMarker& m = pv[static_cast<size_t>(idx)];
-    const int lo = m.iter_start_hops.value_or(0);
-    const int hi = m.iter_end_hops.value_or(0);
-    const int start   = side == MarkerCell::Upper ? hi : lo;
-    const int partner = side == MarkerCell::Upper ? lo : hi;
-    const PhaseHopWindow w = phase_iter_bound_tie_window(app, audio, idx);
-    const int windowed = std::clamp(start + delta_hops, w.k_min, w.k_max);
-    return side == MarkerCell::Upper ? std::max(windowed, partner)
-                                     : std::min(windowed, partner);
+    const int start = side == MarkerCell::Upper
+                          ? m.iter_end_hops.value_or(0)
+                          : m.iter_start_hops.value_or(0);
+    return phase_iter_bound_step_landing_from(app, audio, idx, side, start,
+                                              delta_hops);
 }
 
 // Commit a phase bound step's landing — iter_bound_step_write's twin, and the

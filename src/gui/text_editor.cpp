@@ -54,10 +54,6 @@ int next_codepoint_boundary(const std::string& s, int pos) {
     return i;
 }
 
-// THE PASS KEY'S TEXT (architect 2026-11-08, sessions 95 / 96): the flag
-// grammar's `pass` token, the one word a key types whole.
-constexpr const char* kPassKeyText = "pass";
-
 // The insertable codepoints for the typed path: everything from U+0020 up
 // EXCEPT the C0 controls, DEL, the surrogate range, and anything past the
 // Unicode maximum. ASCII controls are dropped as they always were (Return and
@@ -277,20 +273,25 @@ void enter(State& s, int target,
 
 KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // Precedence mirrors handle_key's branch order exactly (see the header):
-    // session first, then the Ctrl chords, then the pass key, then Backspace
-    // (bare) and the caret keys, then printable. Each test returns before the
+    // session first, then the Ctrl chords, then Backspace (bare) and the
+    // caret keys, then printable. Each test returns before the
     // next, so a key satisfying two predicates classifies as the branch
     // handle_key would act on. THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S
     // (architect 2026-10-30, its one producer under an editor): its
     // characters, Backspace, Enter, Esc, Copy and Paste (the two keys
     // carrying their own ctrl), and since 2026-11-08 (sessions 95 / 96) LEFT
-    // and RIGHT (bare, or carrying the latched Shift) and the pass key. THE
+    // and RIGHT (bare, or carrying the latched Shift). The keyboard's pass
+    // key, UP and DOWN are NOT this module's (architect 2026-11-20 / 21,
+    // send EE: they rewrite the marker lane editor's whole text, its own
+    // acts, handle_top_flag_editor_key; the pass key typed `pass` here
+    // 2026-11-08 to then), so they classify NotEditorKey and the
+    // keyboard-modal gate admits them on its own terms. THE
     // BARREL HAS NO ROAD ON ANY KEY, THE KEYBOARD'S INCLUDED (architect
     // 2026-11-08, session 94: claim_onscreen_keyboard_press consumes a press
     // carrying it), so the barrel's word erase, select-all and cut went that
     // day with their last producer.
     //
-    // NO ARM ADMITS ALT. Session, the pass key and Backspace are bare-exact,
+    // NO ARM ADMITS ALT. Session and Backspace are bare-exact,
     // the chords are ctrl-exact, the caret keys shift-free or shift-only,
     // printable already excludes ctrl and alt — so
     // a press wearing a modifier the arm does not bind falls all the way to
@@ -315,12 +316,6 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     if (mods.ctrl && !mods.shift && !mods.alt &&
         (key == GuiKeys::C || key == GuiKeys::V))
         return KeyClass::ChordKey;
-    // THE PASS KEY is BARE-EXACT and ONE-SHOT (architect 2026-11-08, sessions
-    // 95 / 96): one insertion of a whole token per press, so a hold has
-    // nothing to continue (repeat_eligible repeats MotionEditKey and
-    // PrintableKey alone).
-    if (!mods.ctrl && !mods.alt && !mods.shift && key == GuiKeys::Pass)
-        return KeyClass::InsertKey;
     // Backspace is BARE-EXACT: no producer carries a modifier on it (the
     // keyboard's latched Shift rides LEFT and RIGHT alone, the capitals
     // travelling in the codepoint, and the barrel has no road on a key since
@@ -365,9 +360,9 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // classifier arm admits alt. That is why no branch tests it.
     const bool ctrl  = mods.ctrl;
 
-    // The session, chord and pass branches below need no modifier tests of
+    // The session and chord branches below need no modifier tests of
     // their own: the membership gate above already rejected every modified
-    // Escape / Return / pass key, every Ctrl+Shift / Ctrl+Alt C/V and every
+    // Escape / Return, every Ctrl+Shift / Ctrl+Alt C/V and every
     // ctrl- or alt-carrying caret key as NotEditorKey, so only the
     // exactly-bound presses reach here. The classifier is the single owner
     // of those predicates.
@@ -393,18 +388,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     }
     if (ctrl && key == GuiKeys::V) {
         return KeyAction::PasteRequested;
-    }
-
-    // THE PASS KEY (architect 2026-11-08, sessions 95 / 96, reversing
-    // 2026-10-29's "no `pass` key" — Toggle Inherit is veiled under the
-    // editor): the text `pass` at the caret, REPLACING a selection, as ONE
-    // insertion through the one incoming filter, so each editor's byte cap
-    // and its commit's grammar judge it exactly as a paste of the same four
-    // bytes; a refused one is the typed path's OverCapacity (its card at
-    // route_modal_editor_key). Bare by the membership gate.
-    if (key == GuiKeys::Pass) {
-        return replace_selection(s, kPassKeyText) ? KeyAction::Consumed
-                                                  : KeyAction::OverCapacity;
     }
 
     // THE CARET KEYS, LEFT AND RIGHT (architect 2026-11-08, sessions 95 /

@@ -7975,8 +7975,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // them, neighbors sharing the line between them) in `well_border` (Arc's
 // $borders_color, 2B2E39), THE GRID'S CONVEX OUTER CORNERS rounded
 // kKeyCornerW (3 W) — the block's four, and a wider row's corner past a
-// narrower neighbor's end (rows 3 and 4 are a unit wider than rows 0–2) —
-// the concave ones square; each key's FACE `key_face` (444A58) on the walk's
+// narrower neighbor's end (rows 1 to 4 a unit wider than row 0 since UP and
+// DOWN, 2026-11-20 / 21: UP's top right) — the concave ones square; each
+// key's FACE `key_face` (444A58) on the walk's
 // rect, the gap between faces the line, a face on a convex corner rounded
 // one W less (key_inner_corner_px). EVERY EDGE AT EXACT COVERAGE through one
 // coverage stamp pass (cool_edit_paint.h), the caps and the drawings after
@@ -7992,18 +7993,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // since 2026-11-08) and the page key while the symbols page stands, the two
 // lamps — AND A KEY UNDER PRESS (held BY SLOT, so the page key's own page
 // change keeps the face under the finger, same_slot) wear THE ACCENT `cue`
-// under the lit print `text_on_lit` (FFFFFF); no key here is ever disabled.
+// under the lit print `text_on_lit` (FFFFFF). A GREYED KEY — UP, DOWN or
+// the pass key where it means nothing (onscreen_keyboard::key_live; the
+// editor's extra keys, architect 2026-11-20 / 21, send EE: "Number four.
+// Yes") — wears Arc's disabled face `key_dim_face` under `key_dim_ink`, the
+// grid's lines round it unchanged (they are the grid's, shared with its
+// neighbors), and is never lit, pressed or hovered (its press arms nothing).
 // UNDER THE HOVERING PEN A RESTING KEY'S FACE IS ARC'S HOVER FACE (architect
 // 2026-11-20, send CC, on the keyboard's keys: "Four, yes."; materials.h's
 // THE HOVER), the face alone — the grid wears its lines always — the cap
-// unchanged; a lit key is unchanged. EVERY CHANGE AMONG THE THREE LOOKS
+// unchanged; a lit key is unchanged. EVERY CHANGE AMONG THE FOUR LOOKS
 // FADES AS ARC'S SHEET SAYS, the face and the cap's ink on one clock — a
-// press or a latch 50 ms into the accent, a lift, an unlatch or a hover 200
-// ms (architect 2026-11-20, send DD; AppState::FaceFades, the one owner;
-// each key painted as it stands, face_as_painted); a cap's letter,
-// shifted or not, changes at once, and the keyboard appearing or turning
-// its page paints its keys at once. NO TOOLTIP: a hint has nowhere to hang
-// here.
+// press or a latch 50 ms into the accent, a lift, an unlatch, a hover or a
+// greying 200 ms (architect 2026-11-20, send DD; AppState::FaceFades, the
+// one owner; each key painted as it stands, face_as_painted); a cap's
+// letter, shifted or not, changes at once, and the keyboard appearing or
+// turning its page paints its keys at once — a greyed key greyed from its
+// first frame (the keys' records go with the keyboard, settle_face_fades;
+// a grey moves only with the editor session, key_live). NO TOOLTIP: a hint
+// has nowhere to hang here.
 //
 // A CAP IS A GLYPH, A WORD OR A CHARACTER (architect 2026-11-08, sessions
 // 95 / 96, reversing "no glyphs" of 2026-08-27 / 2026-10-29): the function
@@ -8150,7 +8158,9 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                     AppState::FaceFades::Surface::Keyboard,
                     static_cast<int>(index)};
                 const FaceLook look =
-                    key_lit(index, k)                     ? FaceLook::Lit
+                    !onscreen_keyboard::key_live(app, k.role)
+                                                          ? FaceLook::Disabled
+                    : key_lit(index, k)                   ? FaceLook::Lit
                     : app.face_fades.hovered == fface     ? FaceLook::Hover
                                                           : FaceLook::Rest;
                 FaceMix& m = key_mix[slot_of(index)];
@@ -8171,10 +8181,13 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
             const GuiRectF& r) {
             if (!rects_intersect(exposed, hull(r))) return;
             // The print as painted: the key's mix of its looks' inks (the
-            // keyboard's two, the text and the print on a lit face).
+            // keyboard's three, the text, the print on a lit face and the
+            // greyed key's dim ink).
             const StampTone ink =
                 mix_looks(key_mix[slot_of(index)], [&](FaceLook l) {
-                    return hex(l == FaceLook::Lit ? t.text_on_lit : t.text);
+                    return hex(l == FaceLook::Lit        ? t.text_on_lit
+                               : l == FaceLook::Disabled ? t.key_dim_ink
+                                                         : t.text);
                 });
             if (const std::optional<icons::Icon> icon =
                     onscreen_keyboard::cap_icon(k)) {

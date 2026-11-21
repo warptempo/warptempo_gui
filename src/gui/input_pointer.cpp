@@ -3728,7 +3728,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     // long press will do just fine ..., whereas a barrel click is awkward"):
     // A PRESS CARRYING THE BARREL'S CTRL IS CONSUMED BEFORE THE HIT TEST, on
     // every key — the letters, Bksp, Shift, the page key, Copy, Paste, Enter,
-    // Esc, Tab, LEFT, RIGHT, the pass key, the space bar — exactly as a press
+    // Esc, Tab, LEFT, RIGHT, UP, DOWN, the pass key, the space bar — exactly
+    // as a press
     // on the band's ground off the grid is: nothing typed, no lamp toggled,
     // no held key (so no lit face and no key-up owed at the lift), the
     // band's refusal's shape. Copy and Paste keep their OWN
@@ -3751,6 +3752,11 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     const int hit =
         onscreen_keyboard::key_at(app, page, at.rx, at.ry, def);
     if (hit < 0) return true;   // the band's ground off the grid: consumed
+    // A GREYED KEY ARMS NOTHING (onscreen_keyboard::key_live, the one
+    // predicate its face reads; architect 2026-11-20 / 21, send EE: UP, DOWN
+    // and the pass key greyed where they mean nothing): consumed as the
+    // band's ground is — no press face, no held key, no key-up owed.
+    if (!onscreen_keyboard::key_live(app, def.role)) return true;
     // THE PRESS TURNS THE KEY'S FACE TOWARD THE ACCENT from its picture as
     // painted, over Arc's 50 ms from now (AppState::FaceFades' GTK'S RULE);
     // both arms below damage the key (a lamp key the whole surface).
@@ -3846,16 +3852,22 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
             keysym        = GuiKeys::Right;
             carried.shift = shift_latched;
             break;
-        // THE PASS KEY IS A KEY ON THE ONE ROAD (architect 2026-11-08,
-        // sessions 95 / 96): a key event carries one codepoint, never a
-        // string, so the key synthesizes its own keysym, GuiKeys::Pass, and
-        // the EDITOR answers it with the text `pass` through the one incoming
-        // filter (text_editor::handle_key's pass arm) — so it meets the same
-        // modal gate, the same session, the same byte cap and card as every
-        // other key, rather than the press router writing into an editor's
-        // buffer behind the key path. (No editor's text is on the undo
-        // stack, so there is no coalescing for it to join.) One-shot.
+        // THE PASS KEY, UP AND DOWN ARE KEYS ON THE ONE ROAD (the pass key
+        // architect 2026-11-08, sessions 95 / 96; its act and UP / DOWN
+        // 2026-11-20 / 21, send EE): each synthesizes its own bare keysym —
+        // GuiKeys::Pass, Up, Down — and THE MARKER LANE'S EDITOR answers it
+        // by rewriting its text (handle_top_flag_editor_key: the Toggle
+        // Inherit, the tempo or bound step), so it meets the same modal gate
+        // (which admits the three while key_live says so), the same session
+        // and the same incoming filter as every other key, rather than the
+        // press router writing into an editor's buffer behind the key path.
+        // (No editor's text is on the undo stack, so there is no coalescing
+        // for it to join.) The pass key one-shot, UP / DOWN repeating while
+        // held (repeat_eligible's editor arm), the main page's UP / DOWN keys'
+        // own hold.
         case Role::Pass:      keysym = GuiKeys::Pass;      break;
+        case Role::Up:        keysym = GuiKeys::Up;        break;
+        case Role::Down:      keysym = GuiKeys::Down;      break;
         case Role::Shift:
         case Role::SymbolMode: return true;   // handled above; unreachable
     }
@@ -7088,7 +7100,9 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //     the button painted enabled and not lit (Repeat One).
 //   KEYBOARD — the keyboard standing on the page the key's index names, the
 //     key not a lit lamp (Shift while latched, the page key on the symbols
-//     page: the painter's two); no key there is ever disabled.
+//     page: the painter's two) and not greyed (onscreen_keyboard::key_live:
+//     UP, DOWN and the pass key where they mean nothing, architect
+//     2026-11-20 / 21, send EE).
 //   KNOB — the stash as for a button, the scrub's item and its knob
 //     published, no drag armed, and the owner's claim taking a press.
 //   LIST ROW (architect 2026-11-21, send EE) — the press's own road:
@@ -7143,6 +7157,7 @@ bool GuiInputHandler::hover_face_live(
                 return false;
             bool found = false;
             bool lit   = false;
+            bool live  = false;
             onscreen_keyboard::for_each_key(
                 app, kb.page,
                 [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
@@ -7153,8 +7168,9 @@ bool GuiInputHandler::hover_face_live(
                     lit = (k.role == Role::Shift && kb.shift_latched) ||
                           (k.role == Role::SymbolMode &&
                            kb.page == onscreen_keyboard::Page::Symbols);
+                    live = onscreen_keyboard::key_live(app, k.role);
                 });
-            return found && !lit;
+            return found && !lit && live;
         }
         case Surface::Knob: {
             if (!stash_is_faces()) return false;

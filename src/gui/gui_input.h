@@ -72,10 +72,12 @@ namespace GuiKeys {
     // THE ON-SCREEN KEYBOARD'S PASS KEY (architect 2026-11-08, sessions 95 /
     // 96): no physical key, so no X11 name; it rides XK_Insert's code, the
     // editing block's one keysym nothing else here names. Its one meaning is
-    // the editors' (text_editor::handle_key: the text `pass` inserted at the
-    // caret, through the one incoming filter); nothing in the dispatch binds
-    // it, so outside an editor it would be an unbound key — and the keyboard
-    // that types it stands only under one.
+    // THE FLAG EDITOR'S TOGGLE INHERIT ON ITS TEXT (architect 2026-11-20 /
+    // 21, send EE: "a true toggle inherit"; handle_top_flag_editor_key,
+    // GuiFlagEditor::toggle_inherit_editor_text — it typed `pass` until
+    // then); nothing in the main dispatch binds it, so outside that editor
+    // it would be an unbound key — and the keyboard greys it everywhere else
+    // (onscreen_keyboard::key_live).
     constexpr GuiKey Pass       = 0xff63;
 }
 

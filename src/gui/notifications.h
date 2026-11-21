@@ -167,7 +167,12 @@
 //     the device config's write failure (write_device_config, device_config.h)
 //     and kProjectsPathAppliesCard below on a successful persist.
 //   * EVERY REFUSED FIELD'S REASON (2026-08-30): the flag-editor cluster's
-//     "Edit rejected: …", "Range bound rejected: …", and the BPM form's
+//     "Edit rejected: …", "Range bound rejected: …", the flag editor's
+//     extra keys' "The flag is not well formed: …" / "The bound is not well
+//     formed: …" (UP, DOWN and the pass key on a text the commit's parse
+//     refuses, architect 2026-11-20 / 21, send EE; their kind refusals the
+//     main page's step's own sentences, GuiFlagEditor::step_editor_text),
+//     and the BPM form's
 //     "BPM edit rejected: …" — its line's three (the row's key, the beats
 //     grammar, the low / high grammar: commit_bpm_field) and RENDER's two
 //     bracket walls (bpm_sweep_bracket_admits), flag_editor.cpp; the settings editor's

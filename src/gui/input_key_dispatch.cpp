@@ -16,6 +16,8 @@
                                    // deliverable folder)
 #include "renders_dir.h"     // project_batch_root (the sync act's batch root)
 #include "history_diff.h"
+#include "onscreen_keyboard.h"  // key_live's two editor facts (the flag
+                                // editor's extra keys at the gate)
 #include "phase_reset_clipboard.h"  // warp_marker_label_name / warp_marker_propagates
 #include "phase_reset_propagate.h"  // format_domain_timestamp (the family's one register)
 #include "paint_handler.h"
@@ -4172,9 +4174,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         // Only the editor's motion/edit keys — Backspace and, since
         // 2026-11-08 (sessions 95 / 96), LEFT / RIGHT bare or carrying the
         // latched Shift, the shift riding every fire — and its
-        // printable-insert keys auto-repeat while held; its session (bare
-        // Escape/Return), chord (ctrl-exact C/V, Copy and Paste) and pass
-        // keys are one-shot, and NotEditorKey is not the editor's to
+        // printable-insert keys auto-repeat while held (and UP / DOWN, the
+        // arm below); its session (bare Escape/Return) and chord (ctrl-exact
+        // C/V, Copy and Paste) keys are one-shot, and NotEditorKey is not the editor's to
         // repeat — the keyboard-modal gate drops it before anything could act on
         // it anyway. An ALT-carrying motion press is in that last bucket and so
         // does not repeat, which falls out of the classifier rather than being
@@ -4184,7 +4186,19 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         // (handle_key never consumes a Tab — the completions are
         // route_modal_editor_key's, above handle_key in that route, not the
         // editor's own keymap), under a line editor and the flag editor
-        // alike.
+        // alike. SO IS THE PASS KEY, the flag editor's Toggle Inherit on its
+        // text (architect 2026-11-20 / 21, send EE), as the main page's
+        // Toggle Inherit is.
+        //
+        // AND UP / DOWN REPEAT under the marker lane's editor wherever they
+        // are live (onscreen_keyboard::step_keys_live, the keys' one
+        // predicate: the flag editor's tempo step and the bound editor's
+        // bound step on the text, handle_top_flag_editor_key; architect
+        // 2026-11-20 / 21, send EE) — the main page's UP / DOWN keys' own
+        // hold (the arms below), bare alone.
+        if ((key == GuiKeys::Up || key == GuiKeys::Down) && !mods.ctrl &&
+            !mods.alt && !mods.shift)
+            return onscreen_keyboard::step_keys_live(app);
         const auto kc = text_editor::classify_key(key, mods);
         return kc == text_editor::KeyClass::MotionEditKey ||
                kc == text_editor::KeyClass::PrintableKey;
@@ -4254,7 +4268,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // set, which is the on-screen keyboard's vocabulary (architect 2026-10-30,
 // the keyboard the one key producer under an editor): BARE Escape / Enter,
 // CTRL-EXACT C/V (the keyboard's Copy and Paste, carrying their own ctrl),
-// the bare pass key, bare BackSpace, LEFT / RIGHT bare or carrying the
+// bare BackSpace, LEFT / RIGHT bare or carrying the
 // latched Shift (2026-11-08 — so a main-page Left / Right binding never
 // fires under an editor: the editor's own arm takes the key, and every
 // other spelling drops here), and printable insertion (Space lands in the
@@ -4266,13 +4280,17 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // keyboard went, claim_onscreen_keyboard_press) is NotEditorKey like any
 // other unbound chord and drops right here, so it cannot cancel, commit,
 // paste or erase. The gate-level
-// carve-out below is NOT editor consumption — it is gate policy layered on
-// top: bare Tab under any LINE editor of the value sub-page (where the
-// editor has one, its autocomplete; silent otherwise — the fork is
-// route_modal_editor_key's, not this gate's), one predicate,
-// modal_editor_tab above, read here and by that route alike. Admitted keys
+// carve-outs below are NOT editor consumption — they are gate policy layered
+// on top: bare Tab under any LINE editor of the value sub-page and under the
+// FLAG editor (where the editor has one, its autocomplete; silent otherwise
+// — the fork is route_modal_editor_key's, not this gate's), one predicate,
+// modal_editor_tab above, read here and by that route alike; and THE FLAG
+// EDITOR'S EXTRA KEYS, bare Up / Down and the bare pass key, wherever the
+// on-screen keyboard paints them live (onscreen_keyboard::key_live's two
+// facts; architect 2026-11-20 / 21, send EE), their acts the marker lane
+// editor's own (handle_top_flag_editor_key). Admitted keys
 // flow into the editor routing unchanged; no chord outside the editor's
-// keys and that Tab reaches route_modal_editor_key at all.
+// keys and those carve-outs reaches the editors' routes at all.
 bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
                                                GuiInputState mods) {
     // NO HATCH (architect 2026-10-25: "we can even block Ctrl+Q — we are
@@ -4287,17 +4305,30 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
     // THE COMPLETION'S TAB, admitted while any LINE editor of the value
-    // sub-page stands (2026-08-13): the one editor that HAS a completion,
-    // SETTINGS (its value recall, the path), completes; under the trim
-    // preset's name and the BPM form's line the admitted Tab does nothing
-    // (route_modal_editor_key: a Tab that completes nothing is silent,
-    // architect 2026-11-20, send EE). The top-strip FLAG editor is
-    // deliberately outside it: it has no vocabulary to complete, and its
-    // Tab drops here while it stands. THE LINE EDITORS ALONE ARE MEANT here
-    // (modal_dialog_editor_active, never the wider predicate).
-    const bool is_line_editor_tab =
-        (modal_dialog_editor_active() && modal_editor_tab(key, mods));
-    return !(is_editor_key || is_line_editor_tab);
+    // sub-page stands (2026-08-13): the one line editor that HAS a
+    // completion, SETTINGS (its value recall, the path), completes; under
+    // the trim preset's name and the BPM form's line the admitted Tab does
+    // nothing (route_modal_editor_key: a Tab that completes nothing is
+    // silent, architect 2026-11-20, send EE). AND UNDER THE FLAG EDITOR
+    // since 2026-11-20 / 21 (architect, send EE: "a" then Tab gives "a.0"):
+    // it completes a label reference (GuiFlagEditor::
+    // complete_label_reference). The iteration bound editor has nothing to
+    // complete, and its Tab drops here while it stands.
+    const bool is_completion_tab =
+        modal_editor_tab(key, mods) &&
+        (modal_dialog_editor_active() ||
+         onscreen_keyboard::lane_editor_stands(
+             app, text_editor::Kind::FlagPayload));
+    // THE FLAG EDITOR'S EXTRA KEYS (the head's carve-outs): bare, and live
+    // exactly where the keyboard paints them live — so a greyed key's act
+    // has no road even in principle.
+    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
+    const bool is_lane_editor_extra_key =
+        bare &&
+        (((key == GuiKeys::Up || key == GuiKeys::Down) &&
+          onscreen_keyboard::step_keys_live(app)) ||
+         (key == GuiKeys::Pass && onscreen_keyboard::pass_key_live(app)));
+    return !(is_editor_key || is_completion_tab || is_lane_editor_extra_key);
 }
 
 // The render cancel as a callable body, the RENDER key's Cancel face's act
@@ -5931,9 +5962,9 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // swallows every roster press since 2026-10-25, so the on-screen keyboard is
 // the one producer of the keys this route sees.
 // `autocomplete` is the optional
-// bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the trim preset's name, the
-// BPM field and the flag editors have no vocabulary to complete and pass an
-// empty hook).
+// bare-Tab hook, PASSED BY THE SETTINGS EDITOR AND THE FLAG EDITOR (the trim
+// preset's name, the BPM field and the iteration bound editor have no
+// vocabulary to complete and pass an empty hook).
 //
 // THE ONE AUTOCOMPLETE MODEL — the authoritative statement: BARE TAB OFFERS
 // THE COMPLETION, AND A TAB THAT COMPLETES NOTHING IS SILENT (architect
@@ -5948,9 +5979,12 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 //   * Tab under the SETTINGS editor offers its completion
 //     (GuiSettingsEditor::autocomplete_value: the held value onto an empty
 //     entry, a folder in `projects_path`).
+//   * Tab under the FLAG editor completes a label reference against the
+//     defined labels (GuiFlagEditor::complete_label_reference; architect
+//     2026-11-20 / 21, send EE).
 //   * Tab under an editor with NO hook (the trim preset's name, the BPM
 //     field) does nothing.
-//   * The top-strip FLAG editor's Tab drops at the gate before this route
+//   * The ITERATION BOUND editor's Tab drops at the gate before this route
 //     sees it.
 // The key is one predicate, modal_editor_tab, read by this arm and by
 // modal_editor_key_blocked's admission alike: bare Tab, the on-screen
@@ -8918,13 +8952,31 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // contract. BOTH kinds take the shared modal route (architect 2026-07-28)
 // and differ only in their commit / cancel bodies: the FlagPayload editor
 // commits the flag's own payload and the IterBound editor commits its bound,
-// both drawing in the TOP strip. Neither passes a bare-Tab hook, having no
-// vocabulary to complete, and a bare Tab never reaches this route at all —
-// the on_key gate swallows it (modal_editor_key_blocked). Esc / Enter are
-// the session's only exits:
+// both drawing in the TOP strip. Esc / Enter are the session's only exits:
 // NO HATCH since 2026-10-25, every other chord consumed at the gate.
+//
+// THE EDITOR'S EXTRA KEYS ARE ANSWERED HERE, AHEAD OF THE ROUTE (architect
+// 2026-11-20 / 21, send EE; onscreen_keyboard.h's THE EDITOR'S EXTRA KEYS):
+// bare UP / DOWN step the text — the tempo step on the flag editor's, the
+// bound step on the bound editor's (GuiFlagEditor::step_editor_text) — and
+// the bare pass key toggles the flag editor's text between owner and pass
+// (toggle_inherit_editor_text); each rewrites the text and commits nothing.
+// The gate admits each only where the keyboard paints it live, so no other
+// kind sees one. TAB is the route's own completion hook: the flag editor
+// passes its label reference's completion (complete_label_reference), the
+// bound editor no hook (its Tab drops at the gate).
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
+    const bool bare = !mods.ctrl && !mods.shift && !mods.alt;
+    if (bare && (key == GuiKeys::Up || key == GuiKeys::Down)) {
+        flag_editor.step_editor_text(key == GuiKeys::Up ? +1 : -1);
+        return true;
+    }
+    if (bare && key == GuiKeys::Pass &&
+        app.top_flag_editor.kind == text_editor::Kind::FlagPayload) {
+        flag_editor.toggle_inherit_editor_text();
+        return true;
+    }
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
         // The ITERATION BOUND editor: the payload editor's route — the same
         // modal route, the same top-strip repaint, its whole surface (a
@@ -8942,7 +8994,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     // whole damage of its every keystroke.
     return route_modal_editor_key(
         app.top_flag_editor, key, mods,
-        /*autocomplete=*/nullptr,
+        [this] { return flag_editor.complete_label_reference(); },
         [this] { flag_editor.commit_top_flag_edit(); },
         [this] { flag_editor.exit_top_flag_edit_no_commit(); },
         [this] { viewport.invalidate_top_strip(); });
