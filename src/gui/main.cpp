@@ -2585,8 +2585,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // stamps it (stamp_trim_bar_leave) and the walk keeps it, damaging
         // nothing, until the tick drops it kTrimBarLeaveHoldMs on or a
         // press, a motion or a veil resolves it first (AppState::
-        // TrimBarHover's `leave_ms`; the planner's choice, 2026-11-20, to be
-        // put to him), so the HOVER_EXIT before a DOWN on the bar shows no
+        // TrimBarHover's `leave_ms`; the hold KEPT, architect 2026-11-20,
+        // send DD), so the HOVER_EXIT before a DOWN on the bar shows no
         // bare pill between the hover look and the held look.
         input_handler.stamp_trim_bar_leave();
         input_handler.walk_hover_face();

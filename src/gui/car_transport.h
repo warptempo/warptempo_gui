@@ -175,8 +175,8 @@ struct GuiInputHandler;
 //     once-through play stops back at its lower wall and runs on to its own
 //     end where a forward step would pass it. NEVER AN UNDO OR A REDO,
 //     whatever the seek's own outcome: a refused or clamped seek steps no
-//     history. A STANDING A/B AUDITION CONSUMES BOTH IN SILENCE (the
-//     planner's choice, 2026-11-20, to be put to him): the act is four
+//     history. A STANDING A/B AUDITION CONSUMES BOTH IN SILENCE
+//     (architect 2026-11-20, send DD: ruled as built): the act is four
 //     bounded plays, a pair on each tab, each the same span from that tab's
 //     resting playhead with rests and a tab switch between, and its promise
 //     is that the two plays of a pair are identical (ab_audition.h's head) —

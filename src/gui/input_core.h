@@ -102,7 +102,7 @@
 // the trim bar's hovered part, which has no fade to hide that gap behind:
 // the leave stamps it and the tick drops it 10 ms on, unless a press, a
 // motion or a veil resolves it first (AppState::TrimBarHover's `leave_ms`;
-// the planner's choice, 2026-11-20, to be put to him).
+// the 10 ms hold KEPT, architect 2026-11-20, send DD).
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names

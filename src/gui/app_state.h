@@ -7219,8 +7219,8 @@ struct AppState {
     //     THE BARREL NOT HELD (every surface that hovers consumes a press
     //     carrying the barrel as a no-op — the band's modifier gate, the
     //     keyboard's claim, both scrubs, every dialog arm — so under a held
-    //     barrel no press there would act and no face hovers: THE PLANNER'S
-    //     CHOICE, 2026-11-20, TO BE PUT TO HIM; the bit, and when it lags
+    //     barrel no press there would act and no face hovers: architect
+    //     2026-11-20, send DD: "good"; the bit, and when it lags
     //     the button, at GuiInputHandler::pointer_barrel_held_), and the pen
     //     latch not holding (after a pen lift no face hovers until the pen
     //     has moved the rearm distance or left and come back);
@@ -7237,9 +7237,8 @@ struct AppState {
     //     button's box less its seam, the keyboard's key_at, the knob's disc
     //     as painted), under no card. AND THE THEME'S: where the installed
     //     theme's hover face is its key face (every Live theme, the own
-    //     roles' rule) no face hovers at all, THE SEAMS INCLUDED (the
-    //     planner's choice, 2026-11-20, to be put to him: a Live theme's seams
-    //     could have gone to the border tone with no face moving) — the
+    //     roles' rule) no face hovers at all, THE SEAMS INCLUDED (architect
+    //     2026-11-20, send DD: agreed) — the
     //     press, lit and greyed tones exist on every theme, so THOSE FADE ON
     //     EVERY THEME (the fade is behavior, the tones the theme's).
     // EVERY LEAVE FADES OUT, as Arc's does when the pointer leaves the
@@ -7590,9 +7589,8 @@ struct AppState {
     //     (clear_pen_hot_latch); every release's head. `lifted` is cleared
     //     with it, so nothing lingers. A finger's lift never arms the latch,
     //     and its leave clears `lifted`.
-    //   `leave_ms` THE LEAVE'S HELD CLEAR (THE PLANNER'S CHOICE, 2026-11-20,
-    //     TO BE PUT TO HIM; the other option was to accept one bare frame in
-    //     about 22 presses): the pen's HOVER_EXIT comes about a millisecond
+    //   `leave_ms` THE LEAVE'S HELD CLEAR (the 10 ms hold KEPT, architect
+    //     2026-11-20, send DD): the pen's HOVER_EXIT comes about a millisecond
     //     ahead of its tip DOWN, in a delivery of its own (input_core.h's
     //     THE POINTER LEAVE'S THREE FIRES), and a part cleared at that leave
     //     would let a frame painted in the gap show the bare pill between

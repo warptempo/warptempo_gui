@@ -7294,8 +7294,7 @@ bool installed_theme_hovers() {
 
 // THE WALK (the declaration): none unless the theme's term holds — on a
 // Live theme no face hovers, the seams included, so no hover fades or is
-// damaged there (THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM: the
-// seams alone could have gone to the border tone there; a press, a lit edge
+// damaged there (architect 2026-11-20, send DD: agreed; a press, a lit edge
 // and a greying fade on every theme, AppState::FaceFades) — and the
 // pointer's gate admits one; else the live face under the pen.
 void GuiInputHandler::walk_hover_face() {
@@ -7345,7 +7344,7 @@ bool GuiInputHandler::trim_bar_part_terms_hold() const {
 }
 
 // THE LEAVE'S STAMP (the declaration; AppState::TrimBarHover's `leave_ms`,
-// THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM): the pointer-leave
+// the 10 ms hold KEPT, architect 2026-11-20, send DD): the pointer-leave
 // hook calls it ahead of its walk; a standing part is stamped, so the walk
 // that follows keeps it for kTrimBarLeaveHoldMs instead of clearing it.
 // No part standing, nothing to hold and nothing stamped.

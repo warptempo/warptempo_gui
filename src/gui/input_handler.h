@@ -1496,8 +1496,8 @@ struct GuiInputHandler {
     // itself — a pan, a pinch, a sweep, a caret drag — ended the hover
     // through the leave first), THE BARREL NOT HELD (pointer_barrel_held_,
     // the bit's one description: a press carrying the barrel is a consumed
-    // no-op on every surface that hovers, so nothing hovers under it — the
-    // planner's choice, 2026-11-20, to be put to him) and THE PEN LATCH NOT
+    // no-op on every surface that hovers, so nothing hovers under it —
+    // architect 2026-11-20, send DD: "good") and THE PEN LATCH NOT
     // HOLDING (pen_hot_latch_holds: after a pen lift no face hovers until
     // the rearm distance or a leave). It names no surface: each surface's
     // own walk adds what a press there would meet (the faces' walk below;
@@ -1549,7 +1549,7 @@ struct GuiInputHandler {
     // pointer's half less the latch. The part under the pointer by the
     // press's own two hits (hit_test_trim_endcap, point_in_trim_bridge_span).
     // THE LEAVE'S HELD CLEAR (AppState::TrimBarHover's `leave_ms`, the rule;
-    // the planner's choice, 2026-11-20, to be put to him): the pointer-leave
+    // the 10 ms hold KEPT, architect 2026-11-20, send DD): the pointer-leave
     // hook stamps a standing part (stamp_trim_bar_leave) ahead of its walk,
     // and the walk keeps it for kTrimBarLeaveHoldMs while the pointer stays
     // out, no contact is down and trim_bar_part_terms_hold — the terms a
@@ -1566,8 +1566,8 @@ struct GuiInputHandler {
     TrimBarPart trim_bar_part_under_pointer() const;
     // THE WALK: the face the pen is on now, under both halves of the gate
     // and the theme's term (a theme whose hover face is its key face hovers
-    // nothing, seams included: the planner's choice, 2026-11-20, to be put
-    // to him), handed to the one setter. Run on every pointer
+    // nothing, seams included: architect 2026-11-20, send DD: agreed),
+    // handed to the one setter. Run on every pointer
     // motion (on_motion's head, above every branch: a held button answers
     // none), on every tick (the stashes move with no pointer event), at the
     // pen latch's arm and at every pointer leave (main.cpp's hook: none, so
@@ -3475,7 +3475,7 @@ private:
     //     hovers (the band's modifier gate chrome_band_modifiers_refused,
     //     the on-screen keyboard's claim, both scrubs' claims, every dialog
     //     arm: "a barrel press on a key is a consumed no-op", architect
-    //     2026-11-08). THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM.
+    //     2026-11-08; architect 2026-11-20, send DD: "good").
     //   * THE TRIM BAR'S (trim_bar_takes_grab): with the barrel held a
     //     press on the bar is the bound-set click, not the grab, so the bar
     //     shows no hover and no caps (architect 2026-11-20, send CC) — its

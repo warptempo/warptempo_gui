@@ -265,8 +265,7 @@
 //   role the tone moves from, so NO HOVER SHOWS ON A LIVE THEME — and where
 //   the key's hover tone is the key face itself no face hovers at all, the
 //   linked groups' seams included (GuiInputHandler::walk_hover_face's theme
-//   term — the planner's choice, 2026-11-20, to be put to him: the seams
-//   alone could have gone to the border tone there):
+//   term — architect 2026-11-20, send DD: agreed):
 //     key hover face         363636 = ButtonHoverBackground, read flat as the
 //                                     key face's role is (arc_dark 505666,
 //                                     Arc's button:hover, gtk3 CSS line 136,

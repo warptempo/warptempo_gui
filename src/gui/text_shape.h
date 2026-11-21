@@ -204,12 +204,7 @@ void show_shaped_run_within(cairo_t* cr, const ShapedRun& run, double x,
 // show_shaped_run puts down — the chokepoint's one-run property, said of
 // ink — and a seat that aligns ink to an edge aligns it exactly.
 //
-// ITS CONSUMERS: row 8's STATE LINE (architect 2026-10-08): its first ink
-// stands one field pad past the clock's field, the same air the field
-// stands in from the lane's edge (paint_bottom_row_buttons_and_clock), so
-// the line's origin is pulled back by this bearing — a placement off the
-// origin would read wider by whatever bearing the line's first glyph
-// carries; THE TITLE BAR (render.h's title bar block): the right group's
+// ITS CONSUMERS: THE TITLE BAR (render.h's title bar block): the right group's
 // runs and its battery cell spaced off each other's ink; and THE
 // TIME FIELDS' CELL (architect 2026-11-05, paint_handler.cpp's kTimeShape
 // block): the cell is the whole hull of the widest-digit specimen's ink
