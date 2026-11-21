@@ -858,7 +858,7 @@ GuiRectF tooltip_box_rect(const AppState& a, const GuiRectF& face, double w,
 }
 
 // The owner's painted face, read as the painter reads it (the stash's button
-// for a dialog owner, the roster face the show chose for a roster owner, the
+// for a dialog owner, the key's box for a roster owner, the
 // cue's face in the live flag stash for a marker owner, marker_cue_face, and
 // the item's for a history owner, history_cue_face) —
 // without the painter's stash-session and value refusals, which only ever
@@ -877,8 +877,7 @@ static GuiRect tooltip_owner_face(const AppState& a) {
         return GuiRect{0, 0, 0, 0};
     }
     if (o.index >= 0 && o.index < kRedesignButtonCount)
-        return a.redesign_buttons[static_cast<size_t>(o.index)].tooltip_face(
-            t.shown_on_field);
+        return a.redesign_buttons[static_cast<size_t>(o.index)].rect;
     return GuiRect{0, 0, 0, 0};
 }
 

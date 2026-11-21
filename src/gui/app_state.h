@@ -2526,9 +2526,8 @@ enum class RedesignButton {
     // Shift+Space, THE A/B AUDITION, so a long press runs the
     // four-play sequence (redesign_button_shift_admits owns the
     // membership; the act is GuiAbAudition, ab_audition.h).
-    // ROW 8'S CLOCK IS ITS SECOND RECT (architect 2026-10-27): a press on
-    // the clock's field is a press on this key, its tooltip this key's
-    // (RedesignButtonFace::field holds the rule).
+    // ITS BOX IS ITS ONE HIT: the bottom left's timestamp beside it presses
+    // nothing (architect 2026-11-20, send DD; RedesignButtonFace::contains).
     TransportPlayStop,
     // GO TO START / GO TO END (architect 2026-10-24, back on row 8 after
     // their removal of 2026-10-12): bare Home / End, the trim bounds' jump
@@ -5637,11 +5636,11 @@ struct AppState {
     //
     // NO HOVER IS STORED HERE: a key's hover face (Arc's, send CC,
     // 2026-11-20) is AppState::HoverFaces's, whose walk reads the press's
-    // own hit (`contains`: `rect` less `seam`, and Play's `field`) and the
+    // own hit (`contains`: `rect` less `seam`) and the
     // two painted bits below, and whose seams read `rect` and `seam` for
     // the two boxes that share a seam column. The tooltip's pointer walk
-    // (recompute_redesign_button_hover) reads `rect`
-    // and Play's second rect, row 8's clock (`field`, `contains`), for the
+    // (recompute_redesign_button_hover) reads `rect` and `seam`
+    // (tooltip_column_rect) for the
     // tooltip's owner; a press writes the armed chrome press
     // (AppState::ChromePress), whose inside bit the key's press face reads
     // (redesign_button_pressed_face, the press arc 2026-11-05).
@@ -5706,49 +5705,19 @@ struct AppState {
         // the publication's coverage test. Empty until the button's first
         // paint and whenever the key does not stand.
         GuiRect painted{0, 0, 0, 0};
-        // THE SECOND RECT — THE BOTTOM ICON ROW'S TIMESTAMP, THE PLAY KEY'S
-        // ALONE (architect 2026-10-27: a press on the clock is a press on
-        // Play / Stop): the timestamp's own box, published by the row's
-        // painter (paint_bottom_row_buttons_and_clock), cut at the right block's
-        // left edge where a narrow window lays the block over it (the
-        // block wins in z). EMPTY ON EVERY OTHER MEMBER, and empty on Play
-        // whenever its key does not stand — the `h` view's hide and the
-        // modal's yield publish the empty rect through the one overload
-        // that clears both (publish_button_face) — so the clock answers
-        // exactly where the key answers. Every roster reader asks
-        // `contains`, never `rect` alone: the press, the lift, the band's
-        // modifier gate, the tooltip's owner and the hover's walk (the
-        // key's face lights under a pen hovering the field, as it does
-        // under a press there; AppState::HoverFaces). A press on the field arms
-        // the ordinary Roster press on Play (the key wears its lit face
-        // while the pointer stays on either rect — `contains`, the walk's
-        // inside bit — the clock changes nothing; the act shows).
-        // THE FIELD IS THE TIMESTAMP'S OWN BOX — the specimen's advance from
-        // its pen by the line box's rows, real edges (bottom_left_run's
-        // `time_box`, paint_handler.cpp; plain text, no entry, architect
-        // 2026-11-19, send AA) — tested half-open with the pointer's real
-        // place.
-        GuiRectF field{0.0, 0.0, 0.0, 0.0};
         // `rect` IS THE PAINTED BOX, border included (architect 2026-11-02,
         // R5: the ground is not pressable; send Z, 2026-11-19: "the border
         // is clickable"), asked less its seam through the keys' one
         // predicate, point_on_key's linked form — a whole box, so
-        // the place's pixel answers it; the clock's field
-        // is no key.
+        // the place's pixel answers it. IT IS THE KEY'S ONE HIT, PLAY'S
+        // INCLUDED: the bottom left's timestamp presses nothing (architect
+        // 2026-11-20, send DD: "it no longer carries button look" — plain
+        // text since send AA, so it is ground like the pipe and the tab's
+        // name beside it), so no press, hover or tooltip reaches PLAY from
+        // it. Every roster reader asks `contains`: the press, the lift, the
+        // tooltip's owner and the hover's walk.
         bool contains(const GuiPointerPlace& at) const {
-            return point_on_key(rect, seam, at.x, at.y) ||
-                   rect_contains(field, at.rx, at.ry);
-        }
-        // THE TOOLTIP'S FACE (tooltip_box_rect's `face`; architect
-        // 2026-11-07, session 90): the field where the show found the pointer
-        // on it (RedesignTooltip::shown_on_field), the key otherwise — so a
-        // box raised over the clock stands on the clock's left edge, one
-        // raised over Play's column on the key's (session 91), and neither
-        // moves while it stands.
-        // The field's face is its whole pixels (render.h's hull: a
-        // tooltip's anchor and a damage rect name pixels).
-        GuiRect tooltip_face(bool on_field) const {
-            return on_field ? hull(field) : rect;
+            return point_on_key(rect, seam, at.x, at.y);
         }
     };
     std::array<RedesignButtonFace, kRedesignButtonCount> redesign_buttons{};
@@ -7172,11 +7141,10 @@ struct AppState {
     //     modal only that dialog's own buttons and the keyboard; under an
     //     overlay the keys it leaves live, which are the ones painted
     //     enabled, and the overlay's own) — found by the press's own hit
-    //     (a roster key's two rects, RedesignButtonFace::contains: its box
-    //     less its seam and, PLAY's alone, the bottom left's timestamp,
-    //     where a press is a PLAY press — THE KEY'S FACE LIGHTS THERE, the
-    //     timestamp, a time label, wears nothing: the planner's choice,
-    //     2026-11-20, to be put to him; a dialog button's box less its
+    //     (a roster key's box less its seam, RedesignButtonFace::contains —
+    //     the bottom left's timestamp, a time label, presses nothing and so
+    //     hovers nothing, architect 2026-11-20, send DD: "it no longer
+    //     carries button look"; a dialog button's box less its
     //     seam, the keyboard's key_at, the knob's disc as painted), under
     //     no card. AND THE THEME'S: where the installed theme's hover face
     //     is its key face (every Live theme, the own roles' rule) no face
@@ -7531,7 +7499,8 @@ struct AppState {
     //     group's columns tile with no hole and the pen sliding along a
     //     group never leaves one. The same column on every
     //     tooltip-bearing key surface — the band (the level case among it),
-    //     row 8 (Play's clock field an owner's rect beside its column), the
+    //     row 8 (the timestamp beside it no owner's: it presses nothing,
+    //     architect 2026-11-20, send DD), the
     //     dialogs' and overlays' controls rows. The presses ask the same box
     //     (point_on_key's linked form).
     //     A CUE'S TARGET IS ITS PRESS TARGET (2026-11-09): the marker lane's
@@ -7596,11 +7565,9 @@ struct AppState {
     // the painter draws, `rect` the painter's published box (damage only —
     // nothing hit-tests a tooltip; THE HIDE EDGE'S WHOLE DAMAGE since
     // 2026-11-16, so it is held until a run's clip has repainted where the
-    // box stood, paint_shift_tooltip's head), `shown_on_field` the one fact of the pen
-    // the seat keeps — whether the show found the pointer on row 8's clock
-    // field, Play's second rect, rather than on Play's column, which face the
-    // box stands over (RedesignButtonFace::tooltip_face; false for every
-    // other owner, whose field is empty). `rect`, the
+    // box stood, paint_shift_tooltip's head); the seat keeps no fact of
+    // the pen (a roster owner's face is its key's box, tooltip_box_rect).
+    // `rect`, the
     // two `painted_line` strings and `painted_struck` are AS PAINTED (2026-09-29):
     // the painter runs on every frame, under whatever clip that frame's
     // damage gave it, so a frame whose clip does not cover the new box
@@ -7617,7 +7584,7 @@ struct AppState {
     // THE WAIT: `hovered` is the tooltip-bearing button whose column holds the
     // pointer (no owner off every column, under a held press and after a hard
     // end until the next walk), `hovered_column` the rect the walk found it in
-    // (the column, Play's clock field, or a cue's face) — the rect a
+    // (the column or a cue's face) — the rect a
     // standing box's leave hands the chain — and `wake_due_ms` the wait's
     // deadline (0 = no wait runs). A standing box's owner is always `hovered`: a box shows only on
     // it, and any other owner takes the box down first.
@@ -7737,7 +7704,6 @@ struct AppState {
         // cut line (marker_tooltip_text, 2026-11-17), empty for every other
         // owner and wherever the run is absent.
         std::string painted_struck;
-        bool    shown_on_field = false;
         // THE SHOW IS PENDING (architect 2026-11-16, the beats): raised by
         // the show (show_tooltip_box, input_pointer.cpp), which declares the
         // damage that holds the new box, and put out by the first paint run
@@ -8546,7 +8512,7 @@ struct AppState {
     // no-grid arc; GuiPointerPlace's invariant, input_core.h: the ints are
     // the reals' containing pixel, written together at on_motion's top and
     // nowhere else), so the re-walk asks the fractional boxes — a cue's chip
-    // and label, Play's clock field — with the place the pointer really has.
+    // and label — with the place the pointer really has.
     int               last_mouse_x = -1;
     int               last_mouse_y = -1;
     double            last_mouse_rx = -1.0;
@@ -10993,7 +10959,7 @@ int app_foot_y(const AppState& a);
 // PLACEMENT'S ONE STATEMENT, the painter's (paint_shift_tooltip), ONE RULE ON
 // EVERY SURFACE — the band, row 8, every controls row of a dialog or an
 // overlay — for a w x h box over `face` (the owner's painted face: the key's,
-// row 8's clock field where the show chose it, a modal button's rect, a cue's
+// a modal button's rect, a cue's
 // label box ∪ chip since 2026-11-09 — "same placement as for icons", the box
 // then above the marker lane, over the ruler and the trim bar; a cue's x
 // handed in moved so the box's text stands on the label's, the same day's

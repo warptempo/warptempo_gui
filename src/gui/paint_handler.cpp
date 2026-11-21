@@ -690,11 +690,8 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // A MEMBER THAT DOES NOT STAND publishes the EMPTY rect and paints nothing
 // (the modal yield, the overflow, the `h` view's stand-ins and hide, above;
 // the overload below); its stash refreshes unconditionally (the empty rect
-// has no pixel to be stale), its painted extent empties (the walk's own
-// damage having erased what stood there) and ITS SECOND RECT GOES WITH IT
-// (RedesignButtonFace::field, 2026-10-27): the PLAY key hidden in the `h`
-// view or yielded under a modal takes row 8's clock out of the roster with
-// it, the clock answering where the key does.
+// has no pixel to be stale) and its painted extent empties (the walk's own
+// damage having erased what stood there).
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
@@ -705,10 +702,7 @@ AppState::RedesignButtonFace& publish_button_face(
         app.redesign_buttons[redesign_button_index(id)];
     face.rect = rect;
     face.seam = rect.w > 0 && rect.h > 0 ? seam : 0;
-    if (rect.w <= 0 || rect.h <= 0) {
-        face.field   = GuiRectF{0.0, 0.0, 0.0, 0.0};
-        face.painted = GuiRect{0, 0, 0, 0};
-    }
+    if (rect.w <= 0 || rect.h <= 0) face.painted = GuiRect{0, 0, 0, 0};
     const GuiRect covered =
         face.painted.w <= 0 || face.painted.h <= 0 ? painted
         : painted.w <= 0 || painted.h <= 0         ? face.painted
@@ -2435,6 +2429,12 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // tablet, session 40) — so every digit slot is one advance and the colon
 // and the point stand still as the time runs.
 //
+// EVERY TIME LABEL PRESSES NOTHING (architect 2026-11-20, send DD: "it no
+// longer carries button look"): the bottom left's timestamp is ground like
+// the pipe and the name (RedesignButtonFace::contains, PLAY's box its one
+// hit), and the overlays' times stand outside the scrub's item and every
+// key's box, publishing only their damage rect (ModalDialogGeometry::clock).
+//
 // EACH FIELD'S WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
 // the time runs): the widest digit in every digit slot of "DD:DD.DDD"
@@ -2721,8 +2721,8 @@ static void row8_block_walk(bool history, const Row8Block& b,
 // STANDS AT THE TIMESTAMP SPECIMEN'S ADVANCE ("00:00.000", time_w), so the
 // pipe and the name never move as the digits run. THE TIMESTAMP'S OWN BOX
 // (`time_box`): the specimen's advance from the pen by the line box's rows,
-// real edges — the play field and the damage cell's ground. The row's
-// painter's one layout.
+// real edges — the damage cell's ground (a box of no press: the run presses
+// nothing, architect 2026-11-20, send DD). The row's painter's one layout.
 struct BottomLeftRun {
     double   pen      = 0.0;   // the timestamp's pen
     double   pipe_pen = 0.0;   // the "  |  <name>" run's pen
@@ -2862,16 +2862,16 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE BLOCK WINS IN Z (architect 2026-10-14, on a restored laptop window
     // about 392 W wide: "icons row should win in z-index … msg goes under it.
     // It should be fully opaque"): the block is MEASURED here, ahead of the
-    // clock, because the clock's press rect is cut at its left edge, but it
+    // clock, but it
     // is PAINTED LAST — after the clock and the name, on its own span of the
     // ground laid fresh — so where the window is narrow enough for it to walk
     // over the clock, the block is what shows, whole and opaque, and nothing
     // of the left run comes through. The press agrees by
-    // construction: the pipe and the name are pointer-inert ground, the
-    // timestamp's own box answers as the PLAY key (its second rect, cut at
-    // the block's left edge, the left run's block below) and the press resolves
-    // against the published rects alone (claim_button_row_press,
-    // input_pointer.cpp). Every repaint of the clock
+    // construction: the whole left run — the timestamp, the pipe and the
+    // name — is pointer-inert ground (the timestamp since architect
+    // 2026-11-20, send DD: "it no longer carries button look"), and the
+    // press resolves against the keys' published rects alone
+    // (claim_button_row_press, input_pointer.cpp). Every repaint of the clock
     // is this body run whole under the damage clip (the clock cell's rect,
     // clock_invalidate_rect, main.cpp — there is no field-only path), so the
     // per-frame clock damage repaints the block over the clock inside the
@@ -2887,8 +2887,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // empty rects here.
     const bool history = app.history_mode.active;
     // THE BLOCK, MEASURED (row8_block: the standing members, the left
-    // edge): the clock's press rect is cut there (below), and the block's
-    // painting (after the clock) starts from it.
+    // edge): the block's painting (after the clock) starts from it.
     const Row8Block block = row8_block(app, history, lane);
     const int right_block_x = block.x;
     for (const TransportStandIn& s : kTransportHistoryStandIns)
@@ -2906,39 +2905,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     {
         const GuiFont font = gui_font(GuiFace::Program);
         const BottomLeftRun run = bottom_left_run(app, lane);
-        // THE TIMESTAMP IS PRESSED AS THE PLAY KEY (architect 2026-10-27):
-        // THE TIMESTAMP'S OWN BOX — the specimen's advance from the pen by
-        // the line box (architect 2026-11-19, send AA: what the entry
-        // published keeps a box of the text's own) — is Play / Stop's
-        // second rect (RedesignButtonFace::field), so a press on it is a
-        // press on that key — the lift bare Space, the Shift press or the
-        // long press Shift+Space, the A/B audition — the key's grey its
-        // consumed nothing, and its tooltip the key's own. Published on
-        // every pass, whatever the clip, as the keys' rects are; CUT AT THE
-        // RIGHT BLOCK'S LEFT EDGE, the block winning in z where a narrow
-        // window lays it over the run (the z rule above), so no point
-        // answers twice. Play hidden (the `h` view) or the row yielded (an
-        // overlay's row) publishes the key's empty rect after this, which empties
-        // the field with it (publish_button_face's empty overload). NOTHING
-        // IS PAINTED ON THE TIMESTAMP FOR THE PRESS: the press arms the PLAY
-        // key (lit while the pointer stays on either rect), and the digits
-        // starting or stopping are the act's own confirmation. The digits
-        // are never greyed. ROW 8'S TIMESTAMP ALONE: the render player's
-        // and the score viewer's time fields share the face and never the
-        // press. The pipe and the name are pointer-inert ground (no press
-        // target: the TAB key keeps its walk, LOCK the lock's one road;
-        // RULINGS §10).
-        {
-            GuiRectF play_field = run.time_box;
-            play_field.w = std::min(play_field.x + play_field.w,
-                                    static_cast<double>(right_block_x)) -
-                           play_field.x;
-            if (play_field.w <= 0.0)
-                play_field = GuiRectF{0.0, 0.0, 0.0, 0.0};
-            app.redesign_buttons[redesign_button_index(
-                                     RedesignButton::TransportPlayStop)]
-                .field = play_field;
-        }
+        // THE LEFT RUN PRESSES NOTHING (architect 2026-11-20, send DD: "it
+        // no longer carries button look"): the timestamp is plain text since
+        // send AA, a time label, so it is ground like the pipe and the name —
+        // no press, no hover, no tooltip; PLAY is pressed from its own box
+        // alone (RedesignButtonFace::contains). The pipe and the name are
+        // pointer-inert ground too (no press target: the TAB key keeps its
+        // walk, LOCK the lock's one road; RULINGS §10). The digits are never
+        // greyed. The render player's and the score viewer's time labels
+        // share the face and press nothing either.
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // main.cpp — the stash contract is at the field): THE TIMESTAMP'S
@@ -3412,11 +3387,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         if (text.line1 == nullptr) return;
         line1 = text.line1;
         line2 = text.line2;
-        // The face the show chose: row 8's clock where the pointer stood on
-        // it at the show (RedesignButtonFace::tooltip_face), the key
-        // otherwise — tooltip_damage_band reads the same.
-        btn   = app.redesign_buttons[owner.index].tooltip_face(
-            app.redesign_tooltip.shown_on_field);
+        // The key's box — tooltip_damage_band reads the same.
+        btn   = app.redesign_buttons[owner.index].rect;
     }
     if (btn.w <= 0 || btn.h <= 0) return;
 
@@ -9194,9 +9166,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //         column between it and the spared upper rows, so it never holds
 //         that check; its shadow's
 //         bottom rows (1322..1339) lie over the bottom icon row, so it holds
-//         the clock cell's check where its record meets the cell — always
-//         for the clock field's own box (Play's second rect,
-//         shown_on_field), which stands over the cell.
+//         the clock cell's check where its record meets the cell.
 //       - A DIALOG OWNER (a question's or the progress modal's window, a
 //         dialog editor's window in the box's view, the render
 //         player's, the score viewer's and the folder overlay's controls on

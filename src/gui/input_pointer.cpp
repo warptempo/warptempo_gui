@@ -858,13 +858,11 @@ static_assert(std::size(kToolbarChords) + kLevelCaseCount ==
 // pairs (and the history opener seated with them), only the columns it
 // painted (paint_icon_row). A zero rect (before
 // that row's first paint, or a member the overflow hides whole) contains no
-// point, which is the correct answer. THE PLAY KEY'S SECOND RECT, ROW 8'S
-// CLOCK (architect 2026-10-27), answers here too (RedesignButtonFace's
-// `contains`, the field's record), so the clock arms, lifts and passes the
-// band's modifier gate as the key does, and the dispatch is the key's.
+// point, which is the correct answer. The key's box is its one hit, PLAY's
+// included: the bottom left's timestamp presses nothing (architect
+// 2026-11-20, send DD; RedesignButtonFace::contains).
 // IT TAKES THE PLACE (GuiPointerPlace; architect 2026-11-15, the no-grid arc):
-// the key's whole face reads its pixel, the clock's real field its real point
-// (RedesignButtonFace::contains).
+// the key's whole face reads its pixel.
 bool redesign_button_hit(const AppState& app, RedesignButton id,
                          const GuiPointerPlace& at) {
     return app.redesign_buttons[redesign_button_index(id)].contains(at);
@@ -4727,8 +4725,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // ABOVE EVERY CLAIM BELOW — the CLAIM ranks above every veil, so this
     // ranks above the claims, and no claim can turn the press into a gesture
     // under a standing act — every place on the window. THE ONE
-    // EXCEPTION is a press that lands on the PLAY key (either rect, the
-    // clock's field included) and not on a card over it: its lift dispatches
+    // EXCEPTION is a press that lands on the PLAY key (its box; the
+    // timestamp beside it presses nothing) and not on a card over it: its lift dispatches
     // bare Space, or Shift+Space held, through on_key — the two
     // chords whose own dispatch forks on the act and takes its stop side — so
     // ending the act at this press would make that lift a launch or a restart.
@@ -5143,9 +5141,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // span (the status chain that shared that ground until 2026-08-13 took
     // no clicks either, and took none away with it) — and the active tab's
     // name beside the clock (2026-10-22) is that same inert ground, a text
-    // with no rect of its own to test. THE CLOCK'S FIELD IS ON A BUTTON: the
-    // PLAY key's second rect (architect 2026-10-27,
-    // RedesignButtonFace::field), so a press there is the key's. ABOVE it stand
+    // with no rect of its own to test. THE TIMESTAMP IS THAT SAME INERT
+    // GROUND (architect 2026-11-20, send DD: "it no longer carries button
+    // look"; RedesignButtonFace::contains). ABOVE it stand
     // the well's foot (inert chrome, the frame's bottom line) and
     // GAP 2's blank window ground — outside every band here and falling
     // through to the tail's consumed nothing, the ground as window ground by
@@ -6570,21 +6568,16 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // ENABLED TERM (architect 2026-08-07): a disabled button still explains
         // itself, kdenlive's own behaviour. (The hover zone's open-dropdown
         // term went with the popup, 2026-10-21.)
-        // Play's second rect, row 8's clock, raises the key's own tooltip
-        // (2026-10-27; the field's arm below).
         // THE TOOLTIP'S TARGET IS THE KEY'S COLUMN (architect 2026-11-07,
         // session 87; tooltip_column_rect, render.h): the key's box less the
         // seam its left neighbor owns — the hit box itself since send Z's
-        // linked groups — and Play's clock field beside it. The rect the
-        // pointer is in goes to the writer with the owner (the bypass chain
-        // measures from it at the leave). The columns of a group tile, so the
-        // walk's first hit is the only one.
+        // linked groups; the bottom left's timestamp is no key's (architect
+        // 2026-11-20, send DD). The column goes to the writer with the owner
+        // (the bypass chain measures from it at the leave). The columns of a
+        // group tile, so the walk's first hit is the only one.
         if (modal_veil || under_card) continue;
         const GuiRect column = tooltip_column_rect(f.rect, f.seam);
-        const bool on_column = rect_contains(column, mx, my);
-        if (!on_column &&
-            !rect_contains(f.field, app.last_mouse_rx, app.last_mouse_ry))
-            continue;
+        if (!rect_contains(column, mx, my)) continue;
         // THE NO-WAIT RULE, ASKED OF THE KEY THE POINTER IS ON (architect
         // 2026-11-11: under an overlay the live band keys show their
         // tooltips): refused under a modal — the veil above already said so
@@ -6603,7 +6596,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // reads the words at paint time.
         if (redesign_button_tooltip(id).line1 != nullptr) {
             hovered_tip = i;
-            tip_column  = on_column ? column : hull(f.field);
+            tip_column  = column;
             break;
         }
     }
@@ -6611,9 +6604,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // the press face's gate, redesign_button_pressed_face; back 2026-11-05
     // with the press look), maintained here because this walk is the one
     // body that runs on every motion AND every tick under a standing arm: is
-    // the pointer inside the armed target's published face? Both of the
-    // face's rects (`contains`): a press on row 8's clock holds the PLAY
-    // key down while the pointer stays on the clock. The bit serves the
+    // the pointer inside the armed target's published face (`contains`,
+    // the press's own hit)? The bit serves the
     // paint alone — the RELEASE re-hits the armed target's rect at its own
     // coordinates, so a slide off the key runs nothing at the lift without
     // this walk's help — and a crossing damages the key's own painted
@@ -6957,15 +6949,13 @@ bool GuiInputHandler::hover_face_live(
 // / above it); THE DIALOG STASH's buttons (modal_dialog_button_hit: the
 // painted box less its seam), then THE SCRUB'S KNOB, its disc where it is
 // painted (the published center, render_player_scrub_handle_hit); then THE
-// ROSTER, the chord table's keys, each BY THE PRESS'S OWN TWO RECTS
+// ROSTER, the chord table's keys, each BY THE PRESS'S OWN HIT
 // (RedesignButtonFace::contains, what arm_redesign_press and the lift ask):
-// its painted box less its seam, and Play's second rect, the bottom left's
-// timestamp — a press there is a PLAY press and lights Play's key, so by the
-// gate ("a face hovers only where a press there would act") the pen hovering
-// the timestamp lights PLAY'S KEY; the timestamp itself, a time label, wears
-// nothing (the face's extent is the key's box). THE PLANNER'S CHOICE,
-// 2026-11-20, TO BE PUT TO HIM. The surfaces are disjoint; the face found
-// answers only where it is live (hover_face_live).
+// its painted box less its seam — the bottom left's timestamp, a time label,
+// presses nothing, so by the gate ("a face hovers only where a press there
+// would act") the pen hovering it lights nothing (architect 2026-11-20, send
+// DD: "it no longer carries button look"). The surfaces are disjoint; the
+// face found answers only where it is live (hover_face_live).
 AppState::HoverFaces::Face GuiInputHandler::hover_face_under_pointer() const {
     using Face    = AppState::HoverFaces::Face;
     using Surface = AppState::HoverFaces::Surface;
@@ -8849,11 +8839,7 @@ void GuiInputHandler::hide_shift_tooltip() {
 // above every other face, its left edge on the face's (architect
 // 2026-11-07, sessions 90 and 91; send Z, 2026-11-19; the placement at
 // tooltip_box_rect, main.cpp) — and the chain is spent into it (`left_ms` 0: the box's
-// own leave re-arms it). The pen's one say in the seat is taken here and held
-// while the box stands: whether the pointer is on row 8's clock field, Play's
-// second rect (`shown_on_field`, the face the box stands over), so motion
-// between the
-// clock and Play's key under a standing box moves nothing.
+// own leave re-arms it). The pen has no say in the seat.
 // IT DAMAGES THE BOX'S OWN RECT (architect 2026-11-16, the beats: the box's
 // rect, shown and taken down): the rect the painter will lay this owner's
 // box out on, grown by Arc's shadow's reach (send AA's stage D1,
@@ -8876,12 +8862,6 @@ static void show_tooltip_box(AppState& app, Viewport& viewport) {
     t.left_ms     = 0;
     t.owner       = t.hovered;
     t.visible     = true;
-    t.shown_on_field =
-        t.owner.surface == AppState::RedesignTooltip::Surface::Roster &&
-        t.owner.index >= 0 && t.owner.index < kRedesignButtonCount &&
-        rect_contains(
-            app.redesign_buttons[static_cast<size_t>(t.owner.index)].field,
-            app.last_mouse_rx, app.last_mouse_ry);
     t.show_pending = true;
     const GuiRect box = viewport.tooltip_box_for_show_
                             ? viewport.tooltip_box_for_show_()
@@ -8914,7 +8894,7 @@ static void break_lapsed_tooltip_chain(AppState& app, int64_t now) {
 // modal dialog's) so the model is one rule rather than two copies; the model
 // is stated at AppState::RedesignTooltip. `o` is the owner whose column holds
 // the pointer (no owner off every column) and `column` the rect the walk found
-// it in (tooltip_column_rect, or Play's clock field). In order:
+// it in (tooltip_column_rect). In order:
 //   * A HELD PRESS: no column is held and no wait runs (a box cannot stand —
 //     the press took it down — but one would go down here), the chain broken;
 //   * THE CHAIN'S LAPSE (break_lapsed_tooltip_chain), before any arrival

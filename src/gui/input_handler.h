@@ -962,8 +962,8 @@ struct GuiInputHandler {
     //     here too and find the act already ended by their pointer press.
     //   * on_button_press, above every claim (the cards', the on-screen
     //     keyboard's, the veils', the bands') — every button, every place on
-    //     the window, EXCEPT A LEFT PRESS THAT LANDS ON THE PLAY KEY (either of
-    //     its rects, the clock's field included, and not under a card): its
+    //     the window, EXCEPT A LEFT PRESS THAT LANDS ON THE PLAY KEY (its box,
+    //     and not under a card): its
     //     lift dispatches bare Space or, shifted or held, Shift+Space through
     //     on_key, the two excepted chords, so the press leaves the act to the
     //     stop side its lift takes; a left press there that arms nothing (a
@@ -1715,7 +1715,7 @@ struct GuiInputHandler {
     // THE WAIT'S ONE WRITER, for both hover walks (the roster's and the modal
     // dialog's), handed the tooltip-bearing button whose COLUMN holds the
     // pointer (index < 0: none) and the rect it was found in (its column,
-    // tooltip_column_rect, or Play's clock field), reading the pointer at
+    // tooltip_column_rect), reading the pointer at
     // app.last_mouse_x/y: an arrival starts the wait — or, while the bypass
     // chain holds, shows the box at once — the same column restarts nothing,
     // a held press or no column stops the wait, and the pointer leaving a
@@ -3352,12 +3352,11 @@ private:
     // materials.h's THE HOVER; the state, the gate, the fade and the damage
     // AppState::HoverFaces, one owner; the walk walk_hover_face):
     //   * THE KEYS OF BOTH ICON ROWS — the roster's linked buttons, each
-    //     chord key's box (NOISE's entry is no key), PLAY's also while the
-    //     pen is on the bottom left's timestamp, where a press is a PLAY
-    //     press (the key's face lights, the timestamp wears nothing; the
-    //     planner's choice, 2026-11-20, to be put to him), each group's
-    //     seams with them (AppState::HoverFaces' THE SEAMS FADE ON THEIR
-    //     OWN);
+    //     chord key's box (NOISE's entry is no key; the bottom left's
+    //     timestamp presses nothing and lights nothing, architect
+    //     2026-11-20, send DD: "it no longer carries button look"), each
+    //     group's seams with them (AppState::HoverFaces' THE SEAMS FADE ON
+    //     THEIR OWN);
     //   * THE DIALOG STASH'S BUTTONS — every controls row's keys and word
     //     buttons (the render player's, the score viewer's, the trim presets
     //     list's, the BPM form's, the picker's one word) and a dialog
