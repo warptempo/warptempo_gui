@@ -5815,53 +5815,72 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     }
 }
 
-// "WOULD A PLAIN PRESS HERE ARM THE PENDING CLICK WHOSE MOTIONLESS RELEASE
-// RUNS run_nav_click_act — THE PLAYHEAD PLACED AT THE PLACE, OR ON THE
-// WAVEFORM'S LOWER HALF PLAY STARTED FROM IT?" — the waveform's hover line's
-// place test (walk_hover_line; architect 2026-11-21, send FF: the line shows
-// "whenever a tap at the pen's place would move the playhead"). A MIRROR OF
-// THE TWO PRESS ROUTERS' OWN TESTS, not a list of rectangles of its own:
-// the routers interleave the double taps' consumes, the trim bar's seed and
-// the marker's act-at-press with these tests, so they read no predicate of
-// this shape, and factoring them to would touch every claim of the band walk
-// for no change in behavior. What it mirrors, past the main page's refusals
-// (main_page_takes_press_at_pointer, its caller's), each a plain press:
+// "WHAT WOULD A PLAIN PRESS HERE DO IN THE LANES?" — THE ONE HIT THE HOVER
+// READS (architect 2026-11-21, send FF): Places where it would arm the
+// pending click whose motionless release runs run_nav_click_act — THE
+// PLAYHEAD PLACED AT THE PLACE, OR ON THE WAVEFORM'S LOWER HALF PLAY STARTED
+// FROM IT — the waveform's hover line's place test (walk_hover_line_on: the
+// line shows "whenever a tap at the pen's place would move the playhead");
+// Marker, with the hit cue's key, where it would run that flag's click (the
+// marker's hover, AppState::FaceFades' THE LANES' TWO FACES); Head where it
+// would arm the head drag on the playhead's triangle as painted (the
+// triangle's hover); None everywhere else. ONE ANSWER FOR THE LINE AND THE
+// LANES' FACES: walk_hover_face asks it once and hands it to both, so the
+// line's "no line over a marker or on the triangle" and the face's "this
+// marker, this triangle hovers" are one hit with one set of arguments.
+// A MIRROR OF THE TWO PRESS ROUTERS' OWN TESTS, not a list of rectangles of
+// its own: the routers interleave the double taps' consumes, the trim bar's
+// seed and the marker's act-at-press with these tests, so they read no
+// predicate of this shape, and factoring them to would touch every claim of
+// the band walk for no change in behavior. What it mirrors, past the main
+// page's refusals (main_page_takes_press_at_pointer, its callers'), each a
+// plain press:
 //   on_button_press's band walk — `inside_waveform` (point_on_nav_surface)
 //   and `inside_top` (top_strip_area), the marker hit `mh_index` resolved for
-//   the top strip alone (hit_test_flag at the pointer's real place); in the
-//   top strip, THE RULER BAND (ruler_press_area) arms the placement pending
-//   — the head drag where no flag is hit and the place is on the playhead's
-//   head as painted (point_on_playhead_head), which this answers no: the
-//   triangle hovers on its own terms — THE TRIM BAR (trim_bar_press_area)
-//   takes its own grab or framing, A FLAG (mh_index >= 0) its click at the
-//   press, THE EMPTY MARKER LANE (marker_lane_press_area) the placement
-//   pending, every other top-strip spot nothing; below the top strip THE
-//   WAVEFORM (inside_waveform) arms arm_nav_press, both halves, and any other
-//   place nothing (the stereo divider's rows among them: chrome is not
-//   waveform);
+//   the top strip alone (hit_test_flag's walk at the pointer's real place,
+//   hit_test_flag_rect, whose rect carries the cue's key); in the top strip,
+//   THE RULER BAND (ruler_press_area) arms the placement pending — the head
+//   drag where no flag is hit and the place is on the playhead's head as
+//   painted (point_on_playhead_head): Head, else Places — THE TRIM BAR
+//   (trim_bar_press_area) takes its own grab or framing, A FLAG (mh_index >=
+//   0) its click at the press: Marker, THE EMPTY MARKER LANE
+//   (marker_lane_press_area) the placement pending, every other top-strip
+//   spot nothing; below the top strip THE WAVEFORM (inside_waveform) arms
+//   arm_nav_press, both halves, and any other place nothing (the stereo
+//   divider's rows among them: chrome is not waveform);
 //   handle_history_mode_press, the `h` view's — the ruler band the same arm
 //   on the same head term, the trim bar its framing double tap alone, the
-//   marker lane a diff flag's focus click (hit_test_flag >= 0) or the
-//   mode's placement pending on an empty stretch, the waveform the mode's
-//   pending click (no scrub half there: both halves land the playhead) —
-//   which answers every place as the live walk does (a flag hit outside
-//   the lane's rect falls to nothing in both), so ONE TEST SERVES BOTH VIEWS.
+//   marker lane a diff flag's focus click (hit_test_flag >= 0: every item
+//   acts, whatever its style) or the mode's placement pending on an empty
+//   stretch, the waveform the mode's pending click (no scrub half there:
+//   both halves land the playhead) — which answers every place as the live
+//   walk does (a cue's rects stand on the marker lane's rows alone, so a
+//   flag hit is in the lane in both), so ONE TEST SERVES BOTH VIEWS.
 // THE LAMPS CHANGE NO ANSWER: a tap under TRIM or ADD SEL is the same click
-// act (the sweeps are drags), ADD SEL forking only a press on a flag.
-bool GuiInputHandler::plain_press_places_playhead_at(
+// act (the sweeps are drags), ADD SEL forking only a press on a flag, which
+// acts either way.
+GuiInputHandler::PlainLanePress GuiInputHandler::plain_lane_press_at(
         const GuiPointerPlace& at) const {
+    using Kind = PlainLanePress::Kind;
     const int x = at.x;
     const int y = at.y;
     if (rect_contains(top_strip_area(app), x, y)) {
-        const int mh_index = hit_test_flag(app, audio, at.rx, at.ry);
+        const FlagHitRect* flag = hit_test_flag_rect(app, at.rx, at.ry);
+        const int mh_index = flag != nullptr ? flag->marker_index : -1;
         if (rect_contains(ruler_press_area(app), x, y))
-            return !(mh_index < 0 &&
-                     point_on_playhead_head(app, at.rx, at.ry));
-        if (rect_contains(trim_bar_press_area(app), x, y)) return false;
-        if (mh_index >= 0) return false;
-        return rect_contains(marker_lane_press_area(app), x, y);
+            return PlainLanePress{
+                mh_index < 0 && point_on_playhead_head(app, at.rx, at.ry)
+                    ? Kind::Head
+                    : Kind::Places};
+        if (rect_contains(trim_bar_press_area(app), x, y))
+            return PlainLanePress{};
+        if (mh_index >= 0) return PlainLanePress{Kind::Marker, flag->key};
+        return PlainLanePress{rect_contains(marker_lane_press_area(app), x, y)
+                                  ? Kind::Places
+                                  : Kind::None};
     }
-    return point_on_nav_surface(app, x, y);
+    return PlainLanePress{point_on_nav_surface(app, x, y) ? Kind::Places
+                                                         : Kind::None};
 }
 
 void GuiInputHandler::finalize_editor_text_drag() {
@@ -7202,6 +7221,15 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //     2026-11-20 / 21).
 //   KNOB — the stash as for a button, the scrub's item and its knob
 //     published, no drag armed, and the owner's claim taking a press.
+//   MARKER (architect 2026-11-21, send FF; AppState::FaceFades' THE LANES'
+//     TWO FACES) — the main page taking a press at the pointer (its
+//     refusals: no veil, no overlay, no card, audio and no load, no live
+//     drag) and a cue of the face's key standing in the published stash (on
+//     screen as painted): every flag a tap acts on, the live columns' and
+//     the `h` view's items alike.
+//   PLAYHEAD HEAD — the main page taking a press at the pointer and the
+//     triangle's hit published (paint_ruler_row: a head painted on the
+//     waveform's columns).
 //   LIST ROW (architect 2026-11-21) — the press's own road:
 //     claim_folder_overlay_press under the modals' veil, so no question, no
 //     editor, no progress page; the list standing and painted (no question's
@@ -7298,6 +7326,17 @@ bool GuiInputHandler::hover_face_live(
             if (folder_overlay::row_is_inert(ov, face.index)) return false;
             return face.index != ov.highlight_row && !ov.press.armed;
         }
+        case Surface::Marker: {
+            if (face.seam || !main_page_takes_press_at_pointer()) return false;
+            const CueKey key = face.cue_key();
+            for (const FlagHitRect& r : app.flag_hit_rects)
+                if (r.marker_index >= 0 && r.key == key) return true;
+            return false;
+        }
+        case Surface::PlayheadHead:
+            return !face.seam && main_page_takes_press_at_pointer() &&
+                   app.playhead_head_hit.w > 0.0 &&
+                   app.playhead_head_hit.h > 0.0;
     }
     return false;
 }
@@ -7317,9 +7356,14 @@ bool GuiInputHandler::hover_face_live(
 // its painted box less its seam — the bottom left's timestamp, a time label,
 // presses nothing, so by the gate ("a face hovers only where a press there
 // would act") the pen hovering it lights nothing (architect 2026-11-20:
-// plain text with no button look). The surfaces are disjoint; the
+// plain text with no button look); THE LANES LAST — the walk's one hit
+// (`lane`, plain_lane_press_at, asked by walk_hover_face where the main page
+// takes a press and the barrel is not held): a flag's click, the cue's
+// marker face by its key; the head drag, the triangle's face (architect
+// 2026-11-21, send FF). The surfaces are disjoint; the
 // face found answers only where it is live (hover_face_live).
-AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer() const {
+AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer(
+        const PlainLanePress& lane) const {
     using Face    = AppState::FaceFades::Face;
     using Surface = AppState::FaceFades::Surface;
     const GuiPointerPlace at = app.last_mouse_place();
@@ -7364,6 +7408,12 @@ AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer() const {
                 break;
             }
         }
+        if (found.none()) {
+            if (lane.kind == PlainLanePress::Kind::Marker)
+                found = Face::marker(lane.key);
+            else if (lane.kind == PlainLanePress::Kind::Head)
+                found = Face{Surface::PlayheadHead, 0};
+        }
     }
     return !found.none() && hover_face_live(found) ? found : Face{};
 }
@@ -7376,7 +7426,9 @@ AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer() const {
 // keyboard key's face (its hull, key_rect:
 // the grid's lines do not move), the knob's disc at its published center
 // (its hull, cut to the item). EMPTY where the face's stash is no longer its
-// own — whatever replaced that surface repainted it.
+// own — whatever replaced that surface repainted it — and for the lanes' two
+// faces, whose damage is their comparator's (GuiPaintHandler::
+// sync_lane_hovers: a cue's own extent, the triangle's painted box).
 GuiRect GuiInputHandler::face_extent(
         const AppState::FaceFades::Face& face) const {
     using Surface = AppState::FaceFades::Surface;
@@ -7427,6 +7479,9 @@ GuiRect GuiInputHandler::face_extent(
             if (x1 <= x0 || y1 <= y0) break;
             return GuiRect{x0, y0, x1 - x0, y1 - y0};
         }
+        case Surface::Marker:
+        case Surface::PlayheadHead:
+            break;
     }
     return GuiRect{0, 0, 0, 0};
 }
@@ -7457,6 +7512,14 @@ GuiRect GuiInputHandler::face_extent(
 // motion names the key under the pen, and the latch's arm, in the same
 // delivery, takes it back) lands where it began: a retarget whose stored
 // mix is its target's own picture lands at once (Record::retarget).
+// THE LANES' TWO FACES (AppState::FaceFades' THE LANES' TWO FACES) hold no
+// record at rest either, and a lane face with no record shows its look at
+// once, so both ends are seated first at the look they show — the face
+// reached at rest, the face left (recordless only where a drop_all took it
+// while hovered) at the hover — and A LANE FACE LEFT ALWAYS TURNS TOWARD
+// REST: its looks are Rest and Hover alone, so no painter resolves another
+// look for it (a veil, a card, a drag gone live, a press: every leave fades
+// out over 200 ms).
 void GuiInputHandler::set_hover_face(const AppState::FaceFades::Face& face) {
     using FaceFades = AppState::FaceFades;
     FaceFades& h = app.face_fades;
@@ -7470,7 +7533,9 @@ void GuiInputHandler::set_hover_face(const AppState::FaceFades::Face& face) {
         if (r == nullptr || r->target != from_look) return;
         r->retarget(to_look, FaceFades::duration_ms(f.surface, to_look), now);
     };
-    if (!left.none() && hover_face_live(left))
+    if (!left.none() && left.lane())
+        h.seat_at(left, GuiRect{0, 0, 0, 0}, FaceLook::Hover);
+    if (!left.none() && (left.lane() || hover_face_live(left)))
         turn(left, FaceLook::Hover, FaceLook::Rest);
     // A LIST ROW AT REST HOLDS NO RECORD (AppState::FaceFades' THE LIST
     // ROW'S HOVER): the row the pen reached is seated at rest on its box as
@@ -7478,6 +7543,7 @@ void GuiInputHandler::set_hover_face(const AppState::FaceFades::Face& face) {
     // the turn below starts its fade and the clock's step damages it.
     if (face.surface == FaceFades::Surface::ListRow)
         h.seat_at_rest(face, hull(folder_overlay::row_rect(app, face.index)));
+    if (face.lane()) h.seat_at_rest(face, GuiRect{0, 0, 0, 0});
     if (!face.none()) turn(face, FaceLook::Rest, FaceLook::Hover);
     if (!left.none()) retarget_seams_beside(left, now);
     if (!face.none()) retarget_seams_beside(face, now);
@@ -7551,6 +7617,8 @@ AppState::FaceFades::Face GuiInputHandler::seam_left_face(
         case Surface::Keyboard:
         case Surface::Knob:
         case Surface::ListRow:
+        case Surface::Marker:
+        case Surface::PlayheadHead:
             break;
     }
     return Face{};
@@ -7659,9 +7727,21 @@ bool installed_theme_hovers() {
 // damaged there (architect 2026-11-20: agreed; a press, a lit edge
 // and a greying fade on every theme, AppState::FaceFades) — and the
 // pointer's gate admits one; else the live face under the pen.
+// THE LANES' ONE HIT IS ASKED HERE, ONCE (architect 2026-11-21, send FF:
+// plain_lane_press_at), wherever the pen hovers unlatched with the barrel
+// up and the main page takes a press at it — the terms both of its readers
+// share — and handed to the faces' walk (a marker's or the triangle's face)
+// and to the hover line's (Places, its Tap), so the line stands nowhere a
+// lane face hovers and a lane face hovers nowhere the line stands, by one
+// call on one set of arguments.
 void GuiInputHandler::walk_hover_face() {
+    const PlainLanePress lane =
+        pen_hovers_unlatched() && !pointer_barrel_held_ &&
+                main_page_takes_press_at_pointer()
+            ? plain_lane_press_at(app.last_mouse_place())
+            : PlainLanePress{};
     set_hover_face(installed_theme_hovers() && hover_admitted()
-                       ? hover_face_under_pointer()
+                       ? hover_face_under_pointer(lane)
                        : AppState::FaceFades::Face{});
     // THE TRIM BAR'S WALK RIDES THIS ONE (AppState::TrimBarHover), so it has
     // this walk's every caller, and it reads the same theme term: on a Live
@@ -7672,8 +7752,8 @@ void GuiInputHandler::walk_hover_face() {
     // AND THE WAVEFORM'S HOVER LINE'S (AppState::HoverLine), so it has this
     // walk's every caller too — on NO theme term: every theme file carries a
     // visible HoverLine, and the line is no face (architect 2026-11-21,
-    // send FF).
-    walk_hover_line();
+    // send FF), on the lanes' one hit above.
+    walk_hover_line_on(lane);
 }
 
 // -- THE TRIM BAR'S HOVER (AppState::TrimBarHover, the rule; the look and
@@ -7816,7 +7896,7 @@ void GuiInputHandler::settle_trim_bar_hover() {
 // running, a pinch, the pen's retained anchor: THE WHITE STEM IS THE MARK)
 // and then, BY THE BARREL:
 //   NOT HELD — a plain press there would place the playhead
-//     (plain_press_places_playhead_at, the routers' own tests): Tap;
+//     (plain_lane_press_at's Places, the routers' own tests): Tap;
 //   HELD — "the hover with the barrel would only work in the place where the
 //     barrel works": over the waveform, the navigation surface
 //     (point_on_nav_surface, the pan zone's own surface — a barrel tip-down
@@ -7825,7 +7905,10 @@ void GuiInputHandler::settle_trim_bar_hover() {
 //     line where the zoom would anchor: Anchor; everywhere else — the ruler,
 //     the marker lane — the barrel hides it as it hides every hover.
 // NO THEME TERM, NO FADE, NO CLOCK: the answer is handed to the one setter.
-void GuiInputHandler::walk_hover_line() {
+// THE PLAIN PRESS'S PLACE IS THE LANES' ONE HIT (`lane`, plain_lane_press_at:
+// Places), asked by walk_hover_face for this walk and the lanes' faces
+// together, or by walk_hover_line below for this walk alone (the settle's).
+void GuiInputHandler::walk_hover_line_on(const PlainLanePress& lane) {
     using Place = AppState::HoverLine::Place;
     Place place = Place::None;
     if (pen_hovers_unlatched() && main_page_takes_press_at_pointer() &&
@@ -7833,11 +7916,19 @@ void GuiInputHandler::walk_hover_line() {
         const GuiPointerPlace at = app.last_mouse_place();
         if (pointer_barrel_held_) {
             if (point_on_nav_surface(app, at.x, at.y)) place = Place::Anchor;
-        } else if (plain_press_places_playhead_at(at)) {
+        } else if (lane.kind == PlainLanePress::Kind::Places) {
             place = Place::Tap;
         }
     }
     set_hover_line(place);
+}
+
+void GuiInputHandler::walk_hover_line() {
+    walk_hover_line_on(
+        pen_hovers_unlatched() && !pointer_barrel_held_ &&
+                main_page_takes_press_at_pointer()
+            ? plain_lane_press_at(app.last_mouse_place())
+            : PlainLanePress{});
 }
 
 // THE ONE SETTER (AppState::HoverLine's `declared_x`, the rule): the place
@@ -7878,7 +7969,14 @@ void GuiInputHandler::set_hover_line(AppState::HoverLine::Place place) {
 // went lit or disabled, a veil rose, its surface left), so the next walk
 // re-answers; its record is its painter's to retarget — AND WHERE THE
 // HOVERED LIST ROW'S BOX MOVED and the pen is on another row now (the
-// ListRow arm below), with no retarget, its record gone with the move. And
+// ListRow arm below), with no retarget, its record gone with the move. THE
+// LANES' TWO FACES (AppState::FaceFades' THE LANES' TWO FACES): a record that
+// has landed at rest and is not the hovered face goes, as a list row's; a
+// marker's goes too where no laid-out cue holds its key (cue_pass_holds:
+// deleted, moved, off the lane — no ghost, the rebuild that took the cue
+// away having painted without it). THEN THE LANES' COMPARATOR
+// (GuiPaintHandler::sync_lane_hovers), so a hover this settle cleared or a
+// record it dropped is painted, and damaged, in the frame that follows. And
 // the trim bar's hovered part, on its own rule.
 void GuiInputHandler::settle_face_fades() {
     using FaceFades = AppState::FaceFades;
@@ -7947,12 +8045,23 @@ void GuiInputHandler::settle_face_fades() {
                             .rect;
                     return box.w <= 0 || box.h <= 0;
                 }
+                case Surface::Marker:
+                case Surface::PlayheadHead:
+                    // AT REST (landed there and not the hovered face: a
+                    // resting lane face holds no record), or a marker whose
+                    // cue the lane no longer lays out.
+                    if (!r.fading && r.target == FaceLook::Rest &&
+                        !(r.face == h.hovered))
+                        return true;
+                    return r.face.surface == Surface::Marker &&
+                           !cue_pass_holds(r.face.cue_key());
             }
             return false;
         });
     }
     if (!h.hovered.none() && !hover_face_live(h.hovered))
         set_hover_face(FaceFades::Face{});
+    paint_handler.sync_lane_hovers();
     settle_trim_bar_hover();
     // THE HOVER LINE'S SETTLE IS ITS WALK (AppState::HoverLine): no fade and
     // no frozen answer, so re-answering it ahead of the frame is its truth —
@@ -7980,8 +8089,13 @@ void GuiInputHandler::settle_face_fades() {
 // inside a neighbor's rect). The surfaces: the top icon row's roster keys,
 // the bottom icon row's, the dialog stash's buttons, the keyboard's keys,
 // a list's rows (two at a hover edge, the pair the pen moved between),
-// the knob. With no fade running the body is the walk's few compares and
-// one pass over the records.
+// the knob. THE LANES' TWO FACES DAMAGE NOTHING HERE: a step stores their
+// mix alone, and the lanes' comparator at the body's end
+// (GuiPaintHandler::sync_lane_hovers) repaints every cue whose weight moved
+// into the flag cache and damages each one's own extent, and the triangle's
+// painted box (AppState::FaceFades' THE LANES' TWO FACES). With no fade
+// running the body is the walk's few compares and one pass over the
+// records.
 void GuiInputHandler::tick_face_fades() {
     walk_hover_face();
     settle_face_fades();
@@ -8006,6 +8120,8 @@ void GuiInputHandler::tick_face_fades() {
             case Surface::Keyboard: return batches[3];
             case Surface::ListRow:  return batches[5];
             case Surface::Knob:
+            case Surface::Marker:
+            case Surface::PlayheadHead:
             case Surface::None:     break;
         }
         return batches[4];
@@ -8018,7 +8134,9 @@ void GuiInputHandler::tick_face_fades() {
             continue;
         }
         const FaceMix v = r.value_at(now);
-        if (!(v == r.mix)) {
+        if (!(v == r.mix) && r.face.lane()) {
+            r.mix = v;   // painted and damaged by sync_lane_hovers, below
+        } else if (!(v == r.mix)) {
             r.mix = v;
             const GuiRect rect =
                 r.face.seam ? seam_extent(r.face) : face_extent(r.face);
@@ -8040,6 +8158,7 @@ void GuiInputHandler::tick_face_fades() {
         for (int k = 0; k < b.n; ++k)
             viewport.invalidate_rect(b.rects[static_cast<std::size_t>(k)]);
     }
+    paint_handler.sync_lane_hovers();
 }
 
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect

@@ -798,6 +798,13 @@ void install_true_colors(bool on);
 // (input_pointer.cpp), a cue over the head keeping the press; a plain press
 // there drags the playhead, every motion past the slop the ruler's
 // placement act at the pointer's place (ScrollDragState::head_drag).
+// UNDER THE HOVERING PEN THE HEAD LIGHTS (architect 2026-11-21, send FF: "If
+// the pen is in the ruler lane, maybe the playhead would light up somehow"):
+// where a press there would arm that drag, its fill goes from
+// `playhead_head` toward `playhead_head_hover` (arc_dark D3DAE3 -> FFFFFF)
+// over Arc's 200 ms and back, still over the digits — a face of the
+// FaceFades' clock (AppState::FaceFades' THE LANES' TWO FACES, the gate,
+// the fade and the damage: its painted box over the ruler's rows).
 // NO HOLD LAMP (architect 2026-10-05): the head paints the same whether or
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
@@ -908,7 +915,11 @@ void install_true_colors(bool on);
 // wears the plain cue with its label STRUCK (show_cue_label's bar, the face's own
 // stroke on its own strikeout rows, gui_font_strike_band) — the invalid
 // color of 2026-10-11 retired with its role. THE TABLE — which fill, which
-// stem, which label, which strike — is resolve_flag_face's
+// stem, which label, which strike, AND WHAT EACH WEARS UNDER THE HOVERING
+// PEN (its four hover pairs: a cue a tap would act on lights its chip and
+// its label over Arc's 200 ms, a disabled one in its own dimmer pair;
+// architect 2026-11-21, send FF; the gate, the fade, the key and the damage
+// AppState::FaceFades' THE LANES' TWO FACES) — is resolve_flag_face's
 // head (render.cpp), the one resolver every cue goes through.
 //
 // THE LABEL'S SEGMENTS: the marker's payload label, then — while grid
@@ -994,9 +1005,13 @@ void install_true_colors(bool on);
 //             whatever the chip's fill, its chip and label unchanged — so a
 //             disable toggle of a selected marker flips the chip's fill and
 //             the label and leaves the stem.
-// A CUE HAS NO HOVER FACE (architect 2026-09-29), AND NO PRESS FACE: the
-// press look of 2026-11-05 is the keys' and the lists' rows' alone
-// (materials.h's head), never a marker's.
+// A CUE'S HOVER IS ITS CHIP'S AND ITS LABEL'S INK (architect 2026-11-21, send
+// FF, replacing 2026-09-29's "no hover face"): under the hovering pen, where
+// a tap would act on it, each goes toward its hover tone over Arc's 200 ms
+// and back — resolve_flag_face's table, its four hover pairs; the stem, the
+// selection's, is untouched. A CUE HAS NO PRESS FACE: the press look of
+// 2026-11-05 is the keys' and the lists' rows' alone (materials.h's head),
+// never a marker's; under a contact its hover fades out.
 //
 // THE PHASE-RESET LEAD-IN RING on the waveform is FOUR SOLID ONE-W LINES in
 // the `cue_outline` (architect 2026-11-04, the stems at rest retired;
@@ -3362,8 +3377,48 @@ inline int level_travel_px() {
 //
 // THE `h` VIEW'S RECTS are one per item (architect 2026-11-11, session 106:
 // one item, one cue), `marker_index` the index into history_mode.flags.
+//
+// A CUE'S IDENTITY ACROSS REBUILDS OF THE LANE — THE KEY A HOVERED MARKER'S
+// FADE IS RECORDED UNDER (architect 2026-11-21, send FF: the lanes' hovers;
+// AppState::FaceFades' THE LANES' TWO FACES, the rule). The marker stores
+// give a marker no stable id — a marker is its row in a frame-sorted
+// vector, and an insert or a delete anywhere before it renumbers it — so a
+// cue is named by WHAT ITS ROW SAYS AND NO NEIGHBOR'S DOES: its AUTHORED
+// FRAME (the store's time_frame, a source frame in either view, never moved
+// by a pan, a zoom, the target view's map or a live drag's overlay, which
+// paints a dragged marker elsewhere and writes its frame at the commit) and
+// its RANK AMONG THE CUES OF ITS LISTING ON THAT FRAME (a stack's members
+// are told apart by their store order), in its LISTING — the lane's
+// content's own name (marker_lane_listing, app_state.h): the live columns
+// W and P each one listing, every commit the `h` view shows another, so a
+// key never names a cue of another column or another commit. TWO CUES OF
+// ONE PASS NEVER SHARE A KEY. An edit elsewhere — a marker added, deleted
+// or moved at another frame, a label renamed, a bit flipped — leaves the
+// key standing; the marker's own move re-keys it (a new face: the old
+// record names no cue any more and is dropped).
+struct CueKey {
+    uint64_t listing = 0;
+    int64_t  frame   = 0;
+    int      ordinal = 0;
+    bool operator==(const CueKey&) const = default;
+};
+// THE LANE'S HOVER AS A PASS READS IT (AppState::FaceFades' THE LANES' TWO
+// FACES): the listing the pass's cues are keyed in, and each cue's HOVER
+// WEIGHT — the Hover look's weight in its face's stored mix, 0 at rest, 1
+// hovered, between them while it fades — answered by the one reader of the
+// faces' records (GuiPaintHandler::cue_hover_of), never a clock. An empty
+// `weight_of` paints every cue at rest.
+struct CueLaneHover {
+    uint64_t                              listing = 0;
+    std::function<double(const CueKey&)> weight_of;
+};
 struct FlagHitRect {
     int    marker_index = -1;
+    // THE CUE'S IDENTITY ACROSS REBUILDS (CueKey above): the hover's walk
+    // takes a hovered marker's face from it, never from `marker_index`,
+    // which an edit elsewhere in the store renumbers. The riding cells' run
+    // carries none (no hover reaches it: the editor's veil).
+    CueKey key{};
     double x            = 0.0;
     double y            = 0.0;
     double w            = 0.0;
@@ -4748,7 +4803,9 @@ void render_playhead(GuiCanvasSink& sink,
 //     waveform (both halves: the lower half's tap auditions from the place,
 //     it moves where play starts), over the ruler off the playhead's
 //     triangle, over the marker lane where no marker is hit; never over a
-//     marker or the triangle (they hover on their own terms), the trim bar,
+//     marker or the triangle (they hover on their own terms, AppState::
+//     FaceFades' THE LANES' TWO FACES — the walk's one hit,
+//     GuiInputHandler::plain_lane_press_at, answers both), the trim bar,
 //     a key, a card or chrome the press router refuses. WITH THE BARREL
 //     HELD, over the waveform alone, where a tip-down would anchor the zoom
 //     (pointer_barrel_held_'s one exception, input_handler.h); once the zoom
@@ -5380,7 +5437,8 @@ void render_flags(cairo_t* cr,
                   std::vector<MarkerStem>* out_stems = nullptr,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map = nullptr,
                   const DragOverlay* drag_overlay = nullptr,
-                  SuppressedBox suppressed = SuppressedBox{});
+                  SuppressedBox suppressed = SuppressedBox{},
+                  const CueLaneHover& hover = CueLaneHover{});
 
 // THE OPEN MARKER-LANE EDITOR'S RESOLVED GEOMETRY, published by
 // render_flag_editor_box and consumed by the pointer path. Every field is
@@ -5591,7 +5649,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             // suppression naming the payload box, that editor
                             // being a warp-column surface by its own open
                             // gates, while the bound editor is both columns'.
-                            SuppressedBox suppressed = SuppressedBox{});
+                            SuppressedBox suppressed = SuppressedBox{},
+                            const CueLaneHover& hover = CueLaneHover{});
 
 // ONE PREPARED DIFF FLAG — ONE ITEM — for the `h` history mode's lane, in the
 // ORDER it is painted and published. The caller (maybe_rebuild_flag_cache)
@@ -5731,7 +5790,8 @@ void render_history_diff_flags(cairo_t* cr,
                                const std::set<int>& selected,
                                std::vector<FlagHitRect>* out_hit_rects,
                                std::vector<MarkerStem>* out_stems,
-                               const std::vector<WarpFrameMapSegment>* warp_frame_map);
+                               const std::vector<WarpFrameMapSegment>* warp_frame_map,
+                               const CueLaneHover& hover = CueLaneHover{});
 
 // THE CUE PASS'S OWN CHANGE (architect 2026-11-16, the beats: a rebuild of
 // the flag cache damages what it changed and nothing else, so a marker
@@ -5747,8 +5807,8 @@ void render_history_diff_flags(cairo_t* cr,
 //   cue_pass_changed_rects — after the pass: appends to `out` one rect for
 //     every cue that DIFFERS between the previous layout and the present
 //     one, cues matched by marker index — a cue in one and not the other; a
-//     cue whose exact place, chip colors, or any segment's presence, run,
-//     box, look or strike differs (EXACT x INCLUDED: the chip and the label
+//     cue whose exact place, chip colors, hover weight (CueDraw's, send FF),
+//     or any segment's presence, run, box, look or strike differs (EXACT x INCLUDED: the chip and the label
 //     stand on it, so a sub-pixel move changes their ink under whole-px
 //     rects that stand); the two cues of a pair whose painted order flipped.
 //     THE RECT is the hull of the cue's previous and present painted extents
@@ -5772,6 +5832,41 @@ void render_history_diff_flags(cairo_t* cr,
 void cue_pass_keep_previous();
 void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
                             std::vector<GuiRect>& out);
+
+// THE LANE'S HOVER BETWEEN REBUILDS (architect 2026-11-21, send FF: the
+// marker's hover, a fade of about nine frames an edge, several at once on a
+// glide across a dense lane; AppState::FaceFades' THE LANES' TWO FACES).
+// The pass's kept layout (CuePassScratch) is the surface's content, cue for
+// cue, each laid out with THE HOVER WEIGHT IT WAS PAINTED AT; these two
+// read and repair it without a rebuild:
+//   cue_pass_holds — whether the last pass laid out a cue of key `key` (a
+//     cue on the lane, as the surface shows it): the faces' settle drops a
+//     marker's record whose cue is no longer on the lane.
+//   cue_pass_sync_hover — EVERY LAID-OUT CUE WHOSE WEIGHT AS PAINTED IS NOT
+//     `weight_of`'s NOW IS REPAINTED INTO `surface` IN PLACE, and nothing
+//     else: each such cue's OWN EXTENT — its chip's painted reach round its
+//     exact place (cue_chip_paint_reach_px) and its label's ink as cut, the
+//     hull of the visible intervals no later label's box covers (paint_cues'
+//     cut) — is united with any such neighbor's it meets, each union's whole
+//     columns over the lane's rows are cleared, and every laid-out cue whose
+//     extent meets them is painted again there in the pass's own order —
+//     the labels left to right on their own cuts, then the chips — under
+//     the pass's clip and that region's, so THE REGION'S BYTES ARE THE ONES
+//     A WHOLE REBUILD AT THOSE WEIGHTS LEAVES (a cue outside it lays no
+//     pixel there: its ink stays inside its own extent, the pass's own rule
+//     at cue_pass_changed_rects), and a hovered label is not raised over its
+//     neighbors. `surface` is the flag cache's, its row 0 client row
+//     `origin_y` (FlagCache's head, paint_handler.h). Each region is
+//     appended to `damage` in client coordinates — the lane's rows, the
+//     region's whole columns cut to the pass's: the marker's own painted
+//     extent and nothing else of the lanes. THE PREMISE: the surface holds
+//     the last pass's picture (the caller's: the rebuild's record stands
+//     and its band is the live one), whose lane, columns and lengths the
+//     scratch keeps beside the cues.
+bool cue_pass_holds(const CueKey& key);
+void cue_pass_sync_hover(cairo_surface_t* surface, int origin_y,
+                         const std::function<double(const CueKey&)>& weight_of,
+                         std::vector<GuiRect>& damage);
 
 // THE ONE COMPOSER FOR WARP FLAG TEXT (defined in render.cpp): the canonical
 // line's payload WHOLE — the tempo's derived base and its every deviation

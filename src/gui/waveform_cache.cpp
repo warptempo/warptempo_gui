@@ -1668,6 +1668,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THE LAYOUT THE LAST PASS LEFT IS KEPT FIRST (cue_pass_keep_previous,
     // render.h): the tail compares this pass's cues with it.
     cue_pass_keep_previous();
+    // THE LANE'S HOVER (architect 2026-11-21, send FF; AppState::FaceFades'
+    // THE LANES' TWO FACES): the listing every cue's key is taken in and each
+    // cue's hover weight as its face stores it now, the one reader of the
+    // records (cue_hover_of) — so a rebuild paints every cue at the weight
+    // the lanes' comparator would, and its tail's comparison of the two
+    // layouts declares a cue whose weight moved since the last pass.
+    const CueLaneHover lane_hover = cue_hover_of();
     if (history_active) {
         // THE HISTORY MODE OWNS THE LANE WHOLE (AppState::HistoryMode): no live
         // marker paints. (The lane is not the whole of that suppression — the
@@ -1692,7 +1699,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             // stores, so target view translates it through the same segments and
             // a removed marker lands on the column a live one at that frame
             // would.
-            tmap_arg);
+            tmap_arg,
+            lane_hover);
     } else if (mv == 'P') {
         render_phase_reset_flags(
             ccr, local_top_strip, flag_lanes, wave_w,
@@ -1707,7 +1715,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
             &app.staged_marker_stems,
             tmap_arg,
             drag_overlay,
-            suppressed);
+            suppressed,
+            lane_hover);
     } else {
         // The WARP column — mv == 'W', the one letter left after the two arms
         // above.
@@ -1726,7 +1735,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                      &app.staged_marker_stems,
                      tmap_arg,
                      drag_overlay,
-                     suppressed);
+                     suppressed,
+                     lane_hover);
     }
 
     cairo_destroy(ccr);

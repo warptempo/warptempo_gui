@@ -71,7 +71,11 @@
 // flat look). The color is resolve_flag_face's for a cue (render.cpp, the
 // one table: `cue_fill`, a disabled chip's `inactive_cue`) and the
 // `playhead_head` for the playhead's head (the same chip, mock k1,
-// 2026-11-04).
+// 2026-11-04) — A TONE, so a hovered chip and a hovered head are the mix of
+// their rest and hover tones as painted (materials.h's StampTone; architect
+// 2026-11-21, send FF: the lanes' hovers, resolve_flag_face's table and
+// AppState::FaceFades' THE LANES' TWO FACES), a resting one its plain color,
+// byte for byte.
 // PAINTED THROUGH THE COVERAGE STAMP (CoverageStampPass::chip, below): the
 // triangle's exact coverage of each pixel (coverage_of_triangle,
 // coverage_stamp.h), straight into the
@@ -82,7 +86,7 @@
 // cue_chip_paint_reach_px, every cull's and damage box's; the hit boxes
 // keep their own extent (cue_chip_hit_left_px / cue_chip_hit_right_px).
 // One chip alone (the playhead's head): a one-chip pass.
-void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
+void paint_ce_cue_chip(cairo_t* cr, double x, double yb, StampTone fill);
 
 // -- THE COVERAGE STAMP ---------------------------------------------------------
 
@@ -208,11 +212,12 @@ public:
                           double cx1, double cy1, StampTone tone);
     // THE DOWN-POINTING 45° TRIANGLE of apex (ax, ay) and height `h` in the
     // context's user space (coverage_of_triangle's shape, coverage_stamp.h),
-    // in `color`: nothing where h <= 0.
-    void triangle(double ax, double ay, double h, GuiColor color);
+    // in `tone` (a plain color, or a hovered chip's mix as painted):
+    // nothing where h <= 0.
+    void triangle(double ax, double ay, double h, StampTone tone);
     // THE CHIP at the mark's exact x, its apex on the row edge `yb` (THE
     // CUE'S CHIP above): the one triangle of height H in `fill`.
-    void chip(double x, double yb, GuiColor fill);
+    void chip(double x, double yb, StampTone fill);
     void end();
 
 private:

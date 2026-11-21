@@ -183,6 +183,15 @@
 // block), across the lit bar's width, in at once
 // and out over Arc's 150 ms `row` transition (paint_handler.cpp's THE LIST
 // VIEW; AppState::FaceFades' THE LIST ROW'S HOVER).
+// THE LANES HOVER TOO — A MARKER'S CUE AND THE PLAYHEAD'S TRIANGLE (architect
+// 2026-11-21, send FF: "The markers could get a hover action ... If the pen
+// is in the ruler lane, maybe the playhead would light up somehow"): a cue a
+// tap would act on lights its chip and its label's ink, a disabled marker in
+// its own dimmer pair (render.cpp's resolve_flag_face, the table), and the
+// triangle its fill toward `playhead_head_hover` (paint_ruler_row), each the
+// mix of its two tones as painted on the keys' 200 ms (StampTone below;
+// AppState::FaceFades' THE LANES' TWO FACES). A marker's stem, the canvas's
+// lines and the time labels light nothing.
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and the

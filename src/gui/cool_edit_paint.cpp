@@ -531,7 +531,7 @@ void CoverageStampPass::rounded_rect_bands(double x0, double y0, double x1,
 }
 
 void CoverageStampPass::triangle(double ax, double ay, double h,
-                                 GuiColor color) {
+                                 StampTone tone) {
     if (h <= 0.0) return;
     if (!direct_) {
         // CAIRO'S ROAD: the same triangle as a path, at cairo's default
@@ -543,7 +543,7 @@ void CoverageStampPass::triangle(double ax, double ay, double h,
         cairo_line_to(cr_, ax + h, ay - h);
         cairo_line_to(cr_, ax, ay);
         cairo_close_path(cr_);
-        set_palette_source(cr_, color);
+        set_tone_source(tone);
         cairo_fill(cr_);
         cairo_restore(cr_);
         return;
@@ -565,7 +565,7 @@ void CoverageStampPass::triangle(double ax, double ay, double h,
     const int by1 = static_cast<int>(std::ceil(day));
     const int bx0 = static_cast<int>(std::floor(dax - h));
     const int bx1 = static_cast<int>(std::ceil(dax + h));
-    const uint32_t word = word_of(color);
+    const uint32_t word = word_of(tone);
     for (const GuiRect& r : target_.clip) {
         const int cx0 = std::max(bx0, r.x);
         const int cx1 = std::min(bx1, r.x + r.w);
@@ -606,7 +606,7 @@ void CoverageStampPass::triangle(double ax, double ay, double h,
 // THE CHIP (the rule at THE CUE'S CHIP, cool_edit_paint.h; the height
 // render.h's cue block, read at the pass's first chip): the one triangle of
 // height H with its apex at (x, yb), in the fill.
-void CoverageStampPass::chip(double x, double yb, GuiColor fill) {
+void CoverageStampPass::chip(double x, double yb, StampTone fill) {
     if (!chip_read_) {
         chip_h_    = cue_chip_h_exact_px();
         chip_read_ = true;
@@ -621,7 +621,7 @@ void CoverageStampPass::end() {
     dirty_any_ = false;
 }
 
-void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill) {
+void paint_ce_cue_chip(cairo_t* cr, double x, double yb, StampTone fill) {
     CoverageStampPass pass;
     pass.begin(cr);
     pass.chip(x, yb, fill);

@@ -7321,9 +7321,12 @@ struct AppState {
     // on-screen keyboard's keys — and the scrub's knob, AND A LIST'S ACTING
     // ROWS (the folder overlay's, architect 2026-11-21: "I'd like
     // to add hover"; Arc's `row.activatable:hover`; THE LIST ROW'S HOVER
-    // below), each named by its
+    // below), AND THE LANES' TWO FACES — A MARKER'S CUE AND THE PLAYHEAD'S
+    // TRIANGLE (architect 2026-11-21, send FF; THE LANES' TWO FACES below),
+    // each named by its
     // surface and its index there (a dialog button's and the knob's with the
-    // stash's owner and session, a list row's with its listing, so a face
+    // stash's owner and session, a list row's with its listing, a marker's
+    // by its cue's key, so a face
     // never outlives the surface it was read from; a keyboard key's index
     // names its page); AND THE SEAMS of a
     // linked group, each named by the face on its right with `seam` set
@@ -7480,7 +7483,85 @@ struct AppState {
     // screen; no page paints a roster key's look at once for being under a
     // veil. Not faces at all:
     // NOISE's entry and its level line, the title bar's lamps,
-    // the trim bar, the cards, the tooltips.
+    // the trim bar, the cards, the tooltips, the time labels, the title bar,
+    // a marker's stem and the canvas's lines (the hover line is its own,
+    // AppState::HoverLine).
+    // THE LANES' TWO FACES (architect 2026-11-21, send FF: "The markers could
+    // get a hover action ... if the pen is on the marker's lane, the marker
+    // flags would light up ... If the pen is in the ruler lane, maybe the
+    // playhead would light up somehow"; "Cost is accepted. I keep the pen
+    // away when I don't need it."): A MARKER'S CUE (its chip and its label,
+    // `Surface::Marker`) and THE PLAYHEAD'S TRIANGLE in the ruler
+    // (`Surface::PlayheadHead`) are faces of TWO LOOKS, Rest and Hover, on
+    // the keys' clock and curve — INTO HOVER AND BACK TO REST 200 ms
+    // (duration_ms), a reversal from the value reached. THE TONES are
+    // resolve_flag_face's (render.cpp: the table's four hover pairs, a
+    // disabled marker its own dimmer pair, the strike in the label's ink as
+    // mixed) and the head's `playhead_head` toward `playhead_head_hover`
+    // (paint_ruler_row); the painters take the Hover weight of the stored mix
+    // as a number (hover_weight below), never a clock, and START NO FADE —
+    // a lane face's two looks are the hover's alone, so the hover's setter
+    // turns them (set_hover_face), never as_painted.
+    //   THE GATE: a face hovers where the pen's real place hits it AS A TAP
+    //   WOULD AND A TAP THERE WOULD ACT ON IT — the press routers' own hits,
+    //   in their order, read once per walk (GuiInputHandler::plain_lane_press_at:
+    //   a flag by hit_test_flag over the published stash, its chip's hit
+    //   extent or its label's box, the rightmost on top; else the triangle by
+    //   point_on_playhead_head in the ruler band; a cue never stands in the
+    //   ruler, so the two never answer together) — under the main page's
+    //   form of the pointer's gate (hover_admitted_on_main_page: the pen in
+    //   the plane, no contact, the barrel not held, the latch not holding,
+    //   no veil, no overlay, no card there, audio and no load, no live drag)
+    //   and the theme's term. Every flag a tap there acts on: enabled and
+    //   disabled, selected or not, struck or not, a live column's marker and
+    //   every `h` view item alike (its press is the item's focus click).
+    //   THE ONE HIT SERVES THE HOVER LINE TOO: the walk hands the same answer
+    //   to the line (walk_hover_face), whose "no line here" over a marker or
+    //   on the triangle is this "this face hovers".
+    //   A MARKER'S FACE IS KEYED BY ITS CUE'S KEY (CueKey, render.h: the
+    //   lane's listing in `dialog_session`, the cue's authored frame in
+    //   `frame`, its rank among the listing's cues on that frame in `index`),
+    //   read off the hit's published rect — what survives every rebuild of the
+    //   lane and an edit elsewhere in the store (the store's index does not:
+    //   an insert or a delete before a marker renumbers it). A FADING-OUT
+    //   MARKER CANNOT HAND ITS FADE TO A NEIGHBOR: no two cues of a listing
+    //   share a key, a key is never re-derived from an index, and a record
+    //   whose key no laid-out cue holds any more is dropped (the settle);
+    //   only a stack's later member, standing on the very frame of a deleted
+    //   lower member, takes that member's rank — the same chip, on the same
+    //   place.
+    //   A ROW AT REST HOLDS NO RECORD, as a list row's: the hover's setter
+    //   seats a lane face's record at the look it shows (seat_at) and turns
+    //   it, the settle drops one that has landed at rest and is not the
+    //   hovered face, and A FACE WITH NO RECORD SHOWS ITS LOOK AT ONCE (Hover
+    //   if it is the hovered face, else Rest: hover_weight), the faces' rule
+    //   for a face first painted. A marker's record goes too WHEN NO
+    //   LAID-OUT CUE HOLDS ITS KEY (cue_pass_holds: deleted, moved — its key
+    //   is its frame —, or off the lane): NO GHOST.
+    //   A CUE THE PICTURE MOVES UNDER A STILL PEN (FOLLOW's scroll, a key's
+    //   zoom, the target view) KEEPS ITS RECORD — its key is not its place,
+    //   so its fade goes on wherever it is painted (GTK keeps a moved
+    //   widget's transition) — and the walk, re-asked on every tick against
+    //   the picture as painted, takes the hover off it the tick after the
+    //   frame that showed it moved from under the pen, the fade out running
+    //   from there; a cue still under the pen keeps the hover. Under a
+    //   contact the hover ends as a key's does (the leave's fade out; no
+    //   press look), so a pressed, dragged marker and a dragged head wear
+    //   their resting look, fading to it over 200 ms from the touch.
+    //   THE PAINT AND THE FRAMES: the cues are the flag cache's
+    //   (paint_cues, the rebuild reading each cue's weight through
+    //   GuiPaintHandler::cue_hover_of) and the triangle the ruler's live
+    //   paint; WHEREVER A WEIGHT AS SHOWN DIFFERS FROM ITS FACE'S NOW — a
+    //   clock step, a seat, a drop, a drop_all — THE ONE COMPARATOR
+    //   (GuiPaintHandler::sync_lane_hovers, run at the clock's end and the
+    //   settle's, ahead of every frame) repaints those cues into the cache
+    //   in place (cue_pass_sync_hover: their own extents, under the pass's
+    //   cuts, never a rebuild) and damages each one's own extent over the
+    //   lane's rows, or the triangle's painted box over the ruler's rows —
+    //   NOTHING ELSE OF THE LANES, NOTHING OF THE CANVAS. An edge is
+    //   ceil(200 / 22.2) + 1 = 10 steps at most; nothing at rest.
+    //   NOT ON A LIVE THEME: the walk's theme term hovers no lane face there,
+    //   so nothing fades or is damaged.
     // THE LIST ROW'S HOVER (architect 2026-11-21; the look at
     // paint_handler.cpp's THE LIST VIEW, the tone theme_roles.h's
     // `list_hover_face`, Arc's own 3 % white over the view, the same day:
@@ -7524,7 +7605,8 @@ struct AppState {
     // EXTENT (face_extent: a roster key's painted box, a dialog button's box,
     // a keyboard key's face, the knob's disc, a list row's box cut to the
     // view — a linked key's box holds both
-    // its seam columns, materials.h's paint_linked_group), and a seam's step
+    // its seam columns, materials.h's paint_linked_group; a lane face's step
+    // is its comparator's, THE LANES' TWO FACES above), and a seam's step
     // its own columns (seam_extent, inside each neighbor's extent), which
     // invites a frame on every beat (platform_android.cpp's kFrameBeat) until
     // the fade lands; the landing step is the last damage, and a landed face
@@ -7540,13 +7622,14 @@ struct AppState {
     // THE BOUND: `records` is reserved kCapacity at construction and never
     // grows past it — every roster key, the largest keyboard page's keys,
     // every dialog button and the knob, a seam each beside a linked key, and
-    // the few list rows that hover or fade (a resting row holds none), are a
+    // the few list rows, markers and the triangle that hover or fade (a
+    // resting one holds none), are a
     // few hundred at most — so the clock and the painters allocate
     // nothing per tick or frame; a face past the bound paints its look at
     // once.
     struct FaceFades {
         enum class Surface : uint8_t { None, Roster, Dialog, Keyboard, Knob,
-                                       ListRow };
+                                       ListRow, Marker, PlayheadHead };
         // ONE FACE: its surface and its index there — Roster the roster
         // index (RedesignButton), Dialog the index into modal_dialog.buttons
         // with the stash's owner and session, Keyboard the key's index
@@ -7554,15 +7637,32 @@ struct AppState {
         // with the stash's owner and session, ListRow the folder overlay's
         // row index with ITS LISTING in `dialog_session`
         // (FolderOverlay::listing: a rebuilt list is another listing, so its
-        // rows are new faces) — or, with `seam`, THE SEAM ON THAT FACE'S LEFT
-        // (no list row has one). Compared whole.
+        // rows are new faces), Marker its cue's key (CueKey, render.h: the
+        // rank on its frame in `index`, the lane's listing in
+        // `dialog_session`, the authored frame in `frame`), PlayheadHead
+        // index 0 — or, with `seam`, THE SEAM ON THAT FACE'S LEFT
+        // (no list row and no lane face has one). Compared whole.
         struct Face {
             Surface          surface        = Surface::None;
             int              index          = -1;
             ModalDialogOwner dialog_owner   = ModalDialogOwner::None;
             uint64_t         dialog_session = 0;
             bool             seam           = false;
+            int64_t          frame          = 0;
             bool operator==(const Face&) const = default;
+            // A MARKER'S FACE OF ITS CUE'S KEY, and the key back.
+            static Face marker(const CueKey& k) {
+                return Face{Surface::Marker, k.ordinal, ModalDialogOwner::None,
+                            k.listing, false, k.frame};
+            }
+            CueKey cue_key() const {
+                return CueKey{dialog_session, frame, index};
+            }
+            // THE LANES' TWO FACES (the head's THE LANES' TWO FACES).
+            bool lane() const {
+                return surface == Surface::Marker ||
+                       surface == Surface::PlayheadHead;
+            }
             bool none() const { return surface == Surface::None; }
             Face left_seam() const {
                 Face f = *this;
@@ -7582,7 +7682,9 @@ struct AppState {
         // 0.45, 0.94) }`, the hovered row carrying none): INTO HOVER AT ONCE
         // (0 ms, the clock's next step), OUT OF IT kRowFadeMs on the same
         // curve. A row only ever records Rest and Hover (a lit row is no
-        // fading face, paint_list_view).
+        // fading face, paint_list_view). THE LANES' TWO FACES record Rest
+        // and Hover alone too, on the keys' 200 ms both ways (the head's THE
+        // LANES' TWO FACES).
         static constexpr int64_t kCheckedFadeMs = 50;
         static constexpr int64_t kFadeMs        = 200;
         static constexpr int64_t kRowFadeMs     = 150;
@@ -7775,12 +7877,26 @@ struct AppState {
         // it). A face already recorded keeps its record; past the bound none
         // is seated (the face paints its look at once).
         void seat_at_rest(const Face& face, const GuiRect& box) {
+            seat_at(face, box, FaceLook::Rest);
+        }
+        // THE SAME SEAT AT THE LOOK THE FACE SHOWS WITH NO RECORD (the
+        // head's THE LANES' TWO FACES: a lane face with no record shows its
+        // look at once, Hover where it is the hovered face), so the setter's
+        // turn starts from the picture on screen either way.
+        void seat_at(const Face& face, const GuiRect& box, FaceLook look) {
             if (find(face) != nullptr || records.size() >= kCapacity) return;
             records.push_back(Record{.face   = face,
                                      .box    = box,
-                                     .target = FaceLook::Rest,
-                                     .from   = FaceMix::of(FaceLook::Rest),
-                                     .mix    = FaceMix::of(FaceLook::Rest)});
+                                     .target = look,
+                                     .from   = FaceMix::of(look),
+                                     .mix    = FaceMix::of(look)});
+        }
+        // A LANE FACE'S HOVER WEIGHT AS IT IS TO BE PAINTED (the head's THE
+        // LANES' TWO FACES): its stored mix's Hover weight, or, with no
+        // record, its look at once — 1 for the hovered face, else 0.
+        double hover_weight(const Face& face) const {
+            if (const Record* r = find(face)) return r->mix[FaceLook::Hover];
+            return face == hovered ? 1.0 : 0.0;
         }
     };
     FaceFades face_fades;
@@ -20189,6 +20305,24 @@ SettingsSnapshot capture_current_settings(const AppState& app);
 // veil consuming it).
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   double mouse_x, double mouse_y);
+// THE SAME WALK'S RECT: the topmost published rect under the real point (the
+// riding cells' first), or null — hit_test_flag's answer is its
+// marker_index. The hover's walk reads it for the cue's key (FlagHitRect's
+// `key`; GuiInputHandler::plain_lane_press_at), so the press, the hover line
+// and the marker's hover answer one walk.
+const FlagHitRect* hit_test_flag_rect(const AppState& app, double mouse_x,
+                                      double mouse_y);
+// THE MARKER LANE'S LISTING — the name of the content the lane lists, in
+// which every cue's key is taken (CueKey, render.h; architect 2026-11-21,
+// send FF, the lanes' hovers): a live column's own letter, W or P, while
+// the `h` view is down; while it stands, the commit shown and the column
+// whose half of it the lane lists — the walk source, the index in it (the
+// local walk's too), the reading, the visit's generation and the column
+// folded into one word with the top bit set, so no commit's listing is a column's
+// and two commits' are two (the prefetch's growing walk changes none of
+// them: the item at an index is the same commit). Read by the flag cache's
+// rebuild for its pass (maybe_rebuild_flag_cache).
+uint64_t marker_lane_listing(const AppState& app);
 
 // WHICH CELL of that run the point landed on — the topmost rect's three
 // published boundaries compared against mouse_x, nothing more. ITS ONE

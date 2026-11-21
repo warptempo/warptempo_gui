@@ -1623,6 +1623,10 @@ struct FlagFace {
     GuiColor fill;
     bool     stem;
     bool     struck;
+    // THE CHIP'S HOVER TONE, the far end of its mix under the hovering pen
+    // (the table's hover column below): `cue_hover` beside a `cue_fill`
+    // fill, `inactive_cue_hover` beside an `inactive_cue` one.
+    GuiColor hover_fill;
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
@@ -1702,21 +1706,66 @@ struct FlagFace {
 // STRUCK CUE — the red set counts disabled rows
 // (warp_red_flag_set_cached's (3)) — is the grey chip with its inert label
 // struck.
+// THE HOVER'S FOUR PAIRS (architect 2026-11-21, send FF: "The markers could
+// get a hover action ... if the pen is on the marker's lane, the marker
+// flags would light up"; every tone arc_dark's own, Arc's numbers): A CUE
+// THE HOVERING PEN IS ON — where a tap there would act on it, the faces'
+// gate (AppState::FaceFades' THE LANES' TWO FACES, which owns the gate, the
+// fade, the key and the damage) — wears, of each tone below, THE MIX OF ITS
+// REST AND ITS HOVER BY ITS FACE'S STORED WEIGHT (StampTone, materials.h;
+// Arc's 200 ms both ways, a reversal from the value reached):
+//   chip   `cue_fill`      (arc_dark 5294E2) -> `cue_hover`          (639FE5,
+//          Arc's hover of a blue thing) — every row whose fill is the accent;
+//   chip   `inactive_cue`  (666A74)          -> `inactive_cue_hover` (90939B)
+//          — every row whose fill is the disabled grey;
+//   label  `sidebar_text`  (BAC3CF)          -> `text`               (D3DAE3)
+//          — a live label;
+//   label  `text_dim`      (7E838F)          -> `inactive_cue_label_hover`
+//          (9DA3AD) — an inert label (cue_label_ink below).
+// A DISABLED MARKER HOVERS TOO, IN ITS OWN PAIR (architect 2026-11-21: "a
+// disabled button means that it can't be clicked, whereas our disabled
+// marker means that it's ignored by the parser, but otherwise fully
+// clickable and actionable ... the analogy doesn't quite apply"): both of
+// its hover tones stay dimmer than an enabled marker at rest, so a hovered
+// disabled marker still reads disabled. THE SELECTION CHANGES NOTHING OF IT
+// (the stem stands as it stands); A STRIKE IS LAID IN THE LABEL'S INK AS
+// MIXED (show_cue_label: the bar is part of the text); the `h` view's items
+// take the pair of their row's fill and their segments' inertness, a
+// removed item the disabled pair, an added or changed one the enabled pair.
+// On a Live theme each hover tone is its rest's own, so nothing hovers there
+// (theme_roles.h's own roles; the walk asks the faces' theme term first).
 FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
                            bool selected) {
     const GuiPalette& p = palette();
+    const FlagFace enabled_face{p.cue_fill, selected, false, p.cue_hover};
+    const FlagFace disabled_face{p.inactive_cue, selected, false,
+                                 p.inactive_cue_hover};
+    const auto with_strike = [](FlagFace f, bool struck) {
+        f.struck = struck;
+        return f;
+    };
     switch (side) {
         case GuiFlagSide::Live:
-            return disabled ? FlagFace{p.inactive_cue, selected, strike}
-                            : FlagFace{p.cue_fill, selected, strike};
+            return with_strike(disabled ? disabled_face : enabled_face,
+                               strike);
         case GuiFlagSide::Removed:
-            return FlagFace{p.inactive_cue, selected, true};
+            return with_strike(disabled_face, true);
         case GuiFlagSide::Added:
-            return FlagFace{p.cue_fill, selected, false};
+            return with_strike(enabled_face, false);
         case GuiFlagSide::Changed:
-            return FlagFace{p.cue_fill, selected, false};
+            return with_strike(enabled_face, false);
     }
-    return FlagFace{p.cue_fill, selected, strike};
+    return with_strike(enabled_face, strike);
+}
+
+// A LABEL'S INK AS PAINTED (the table above): an inert label's `text_dim`
+// toward `inactive_cue_label_hover`, every other's `sidebar_text` toward
+// `text`, by the cue's hover weight — the one color at 0, byte for byte the
+// resting road.
+static StampTone cue_label_ink(bool inert, double hover) {
+    const GuiPalette& p = palette();
+    return inert ? StampTone(p.text_dim, p.inactive_cue_label_hover, hover)
+                 : StampTone(p.sidebar_text, p.text, hover);
 }
 
 // ONE SEGMENT OF A CUE'S LABEL, as the pass paints it: its shaped run (the
@@ -1739,7 +1788,10 @@ struct CueSegment {
     // session 107).
     bool   struck   = false;
 };
-// THE CUE LABEL'S ONE TEXT PAINTER: the run in `ink`, NO SHADOW (architect
+// THE CUE LABEL'S ONE TEXT PAINTER: the run in `ink` — a tone, the label's
+// rest and hover inks mixed by its cue's hover weight as painted
+// (cue_label_ink; resolve_flag_face's THE HOVER'S FOUR PAIRS), plain at
+// rest — NO SHADOW (architect
 // 2026-11-02, the well's part of the flat look, "no shadow anywhere"; its
 // shadow one label quantum right and down, 2026-10-25 to 2026-11-02, is git
 // history). Every label look on the lane's face goes through here —
@@ -1770,10 +1822,10 @@ struct CueSegment {
 // nothing cuts it the bar is the whole rect, and on whole edges it writes
 // the ink's word, the bytes an opaque fill of its cells leaves.
 static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
-                           double x, double baseline, GuiColor ink,
+                           double x, double baseline, const StampTone& ink,
                            bool struck, const text_raster::XSpan* visible,
                            int nvisible) {
-    set_palette_source(cr, ink);
+    set_stamp_tone_source(cr, ink);
     if (visible != nullptr)
         text_shape::show_shaped_run_within(cr, run, x, baseline, visible,
                                            nvisible);
@@ -1808,6 +1860,12 @@ struct CueDraw {
     double                    x     = 0.0;
     FlagFace                  face{};
     std::array<CueSegment, 3> seg{};
+    // ITS IDENTITY ACROSS REBUILDS (CueKey, render.h) and THE HOVER WEIGHT
+    // IT IS PAINTED AT — its face's Hover weight as the producer read it
+    // (CueLaneHover), or as cue_pass_sync_hover repainted it since: always
+    // what the flag cache's surface shows of this cue.
+    CueKey                    key{};
+    double                    hover = 0.0;
     // Whether segments 1 and 2 are the marker's bound cells (the live lanes)
     // or plain halves of one item (the `h` view's changed item, its older
     // and newer texts, architect 2026-11-11, session 107), whose label
@@ -1836,6 +1894,10 @@ struct CueDraw {
 // can damage the cues that differ and no others (cue_pass_changed_rects,
 // below the producers; the rule is there). `order` and `kept` are that
 // comparison's two working vectors.
+// AND THE PASS'S PLACE (architect 2026-11-21, send FF: the lanes' hovers):
+// the lane, the columns' origin and their width the last paint_cues laid
+// `cues` out on, so cue_pass_sync_hover repaints a cue on the very geometry
+// the surface was painted at; `regions` its working vector.
 struct CuePassScratch {
     std::vector<CueDraw>             cues;
     std::vector<double>              lo;
@@ -1844,6 +1906,10 @@ struct CuePassScratch {
     std::vector<CueDraw>             previous;
     std::vector<std::pair<int, int>> order;
     std::vector<unsigned char>       kept;
+    GuiRect                          lane{0, 0, 0, 0};
+    int                              x0 = 0;
+    int                              w  = 0;
+    std::vector<std::pair<int, int>> regions;
 };
 static CuePassScratch g_cue_pass_scratch;
 
@@ -1854,7 +1920,9 @@ static CuePassScratch g_cue_pass_scratch;
 // hides an earlier label only across its own extent, a selected label as at
 // rest (2026-11-02); then
 // the chips LEFT TO RIGHT, each in its face's fill, no outline
-// (resolve_flag_face; architect 2026-11-19, send AA); then the
+// (resolve_flag_face; architect 2026-11-19, send AA) — chip and label each
+// the mix of its rest and hover tones by the cue's hover weight (the table's
+// hover pairs; CueDraw::hover), plain at rest; then the
 // publication — one FlagHitRect per cue (its label box and its
 // chip, both clipped to the waveform's columns),
 // and one MarkerStem per cue whose face says `stem` — every SELECTED cue,
@@ -1877,37 +1945,16 @@ static double cue_segment_text_x(const CueSegment& s, int pad) {
     return s.x0 + static_cast<double>(pad);
 }
 
-static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
-                       std::vector<CueDraw>& cues,
-                       std::vector<FlagHitRect>* out_hit_rects,
-                       std::vector<MarkerStem>* out_stems) {
-    std::stable_sort(cues.begin(), cues.end(),
-                     [](const CueDraw& a, const CueDraw& b) {
-                         return a.x < b.x;
-                     });
-    const int pad      = cue_fill_pad_px();   // the label's fill pad
-    // The chip's HIT extent left of its mark (render.h's
-    // cue_chip_hit_left_px): the published chip box's and the label's
-    // occluding box's left edge, off the cue's exact place.
-    const double half  = static_cast<double>(cue_chip_hit_left_px());
-    const int fill_h   = cue_fill_h_px();
-    // The chip's rows (render.h's cue_chip_h_px, the whole hull of its
-    // height): the lane's last rows, its apex on THE BOTTOM EDGE OF THE
-    // LANE'S LAST ROW, `chip_yb`.
-    const int chip_top = lane.y + cue_above_chip_h_px();
-    const int chip_h   = cue_chip_h_px();
-    const double chip_yb = static_cast<double>(chip_top + chip_h);
-    const double base  = static_cast<double>(lane.y) + cue_baseline_px();
-    const GuiPalette& pal = palette();
+// EACH LABEL'S OCCLUDING BOX [lo, hi) in window x, REAL EDGES: from its own
+// chip's left edge (its exact place less the chip's hit extent, `half`) to
+// its last segment's end; empty where no segment paints. The text stands
+// where its segments put it; the box only reaches back to the chip. Into
+// the pass's kept scratch (CuePassScratch), refilled here — the one layout
+// of the boxes paint_cues and cue_pass_sync_hover both cut on.
+static void lay_cue_boxes(const std::vector<CueDraw>& cues, int x0,
+                          double half, std::vector<double>& lo,
+                          std::vector<double>& hi) {
     const int n = static_cast<int>(cues.size());
-    // Each label's OCCLUDING BOX [lo, hi) in window x, REAL EDGES: from its
-    // own chip's left edge (its exact place less the chip's hit extent) to
-    // its last segment's end; empty where no segment paints. The text
-    // stands where its segments put it; the box only reaches back to the
-    // chip. The three working vectors are the pass's kept scratch
-    // (CuePassScratch), refilled here.
-    std::vector<double>& lo = g_cue_pass_scratch.lo;
-    std::vector<double>& hi = g_cue_pass_scratch.hi;
     lo.assign(static_cast<std::size_t>(n), 0.0);
     hi.assign(static_cast<std::size_t>(n), 0.0);
     for (int i = 0; i < n; ++i) {
@@ -1923,6 +1970,110 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         lo[static_cast<std::size_t>(i)] = left;
         hi[static_cast<std::size_t>(i)] = any ? std::max(left, b) : left;
     }
+}
+
+// LABEL i's VISIBLE INTERVALS: its box [lo, hi) less every later non-empty
+// box, found in one walk over the later boxes that start inside it (the
+// cues are ordered by place, so a later box's left edge never lies left of
+// this one's) — into `spans`, empty where nothing of it shows.
+static void cue_label_spans(int i, const std::vector<double>& lo,
+                            const std::vector<double>& hi,
+                            std::vector<text_raster::XSpan>& spans) {
+    spans.clear();
+    const int n = static_cast<int>(lo.size());
+    const double a = lo[static_cast<std::size_t>(i)];
+    const double b = hi[static_cast<std::size_t>(i)];
+    if (b <= a) return;
+    double cursor = a;
+    for (int j = i + 1; j < n && cursor < b; ++j) {
+        const double ja = lo[static_cast<std::size_t>(j)];
+        const double jb = hi[static_cast<std::size_t>(j)];
+        if (ja >= b) break;
+        if (jb <= ja) continue;
+        if (ja > cursor) spans.push_back(text_raster::XSpan{cursor, ja});
+        cursor = std::max(cursor, jb);
+    }
+    if (cursor < b) spans.push_back(text_raster::XSpan{cursor, b});
+}
+
+// THE CUES' INK — THE LABELS, THEN THE CHIPS, EACH LEFT TO RIGHT — of every
+// cue `paints(i)` admits, under the clip the caller set (paint_cues: the
+// lane's rows over the pass's columns; cue_pass_sync_hover: a region of
+// them), on the boxes `lo` / `hi` lay_cue_boxes laid. The rules are
+// paint_cues' (below); this is their one body, so a cue repainted for its
+// hover is painted by the very code that painted it.
+template <class Paints>
+static void paint_cue_ink(cairo_t* cr, const GuiRect& lane, int x0,
+                          const std::vector<CueDraw>& cues,
+                          const std::vector<double>& lo,
+                          const std::vector<double>& hi, Paints&& paints) {
+    const int pad      = cue_fill_pad_px();   // the label's fill pad
+    // The chip's rows (render.h's cue_chip_h_px, the whole hull of its
+    // height): the lane's last rows, its apex on THE BOTTOM EDGE OF THE
+    // LANE'S LAST ROW, `chip_yb`.
+    const int chip_top = lane.y + cue_above_chip_h_px();
+    const int chip_h   = cue_chip_h_px();
+    const double chip_yb = static_cast<double>(chip_top + chip_h);
+    const double base  = static_cast<double>(lane.y) + cue_baseline_px();
+    const int n = static_cast<int>(cues.size());
+    std::vector<text_raster::XSpan>& spans = g_cue_pass_scratch.spans;
+    for (int i = 0; i < n; ++i) {
+        if (!paints(i)) continue;
+        const CueDraw& c = cues[static_cast<std::size_t>(i)];
+        cue_label_spans(i, lo, hi, spans);
+        if (spans.empty()) continue;
+        for (const CueSegment& s : c.seg) {
+            if (!s.present) continue;
+            // The label's ink (resolve_flag_face's table and its hover's
+            // pairs): the inert label `text_dim` or the sidebar text
+            // `sidebar_text`, selected or not, each mixed toward its hover
+            // tone by the cue's weight (cue_label_ink); a struck segment's
+            // bar in the same ink (show_cue_label). The pen is the
+            // segment's exact one.
+            show_cue_label(cr, *s.run, cue_segment_text_x(s, pad), base,
+                           cue_label_ink(s.inert, c.hover), s.struck,
+                           spans.data(), static_cast<int>(spans.size()));
+        }
+    }
+    CoverageStampPass chips;
+    chips.begin(cr);
+    for (int i = 0; i < n; ++i) {
+        if (!paints(i)) continue;
+        const CueDraw& c = cues[static_cast<std::size_t>(i)];
+        // Its fill mixed toward its hover tone by its weight (the table's
+        // hover pairs): plain at rest.
+        chips.chip(static_cast<double>(x0) + c.x, chip_yb,
+                   StampTone(c.face.fill, c.face.hover_fill, c.hover));
+    }
+    chips.end();
+}
+
+static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
+                       std::vector<CueDraw>& cues,
+                       std::vector<FlagHitRect>* out_hit_rects,
+                       std::vector<MarkerStem>* out_stems) {
+    std::stable_sort(cues.begin(), cues.end(),
+                     [](const CueDraw& a, const CueDraw& b) {
+                         return a.x < b.x;
+                     });
+    const int pad      = cue_fill_pad_px();   // the label's fill pad
+    // The chip's HIT extent left of its mark (render.h's
+    // cue_chip_hit_left_px): the published chip box's and the label's
+    // occluding box's left edge, off the cue's exact place.
+    const double half  = static_cast<double>(cue_chip_hit_left_px());
+    const int fill_h   = cue_fill_h_px();
+    const int chip_top = lane.y + cue_above_chip_h_px();
+    const int chip_h   = cue_chip_h_px();
+    const int n = static_cast<int>(cues.size());
+    // THE PASS'S PLACE, kept beside the layout (CuePassScratch).
+    g_cue_pass_scratch.lane = lane;
+    g_cue_pass_scratch.x0   = x0;
+    g_cue_pass_scratch.w    = w;
+    // Each label's OCCLUDING BOX [lo, hi) (lay_cue_boxes), into the pass's
+    // kept scratch.
+    std::vector<double>& lo = g_cue_pass_scratch.lo;
+    std::vector<double>& hi = g_cue_pass_scratch.hi;
+    lay_cue_boxes(cues, x0, half, lo, hi);
 
     // THE LABELS, LEFT TO RIGHT: a later cue's box hides an earlier cue's
     // text across its own extent alone.
@@ -1936,11 +2087,9 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // cues, which the lane's painter lays before this cache is blitted over
     // it — so all a box ever did was hide an earlier label's ink, and a
     // label whose ink is laid only where it shows needs no box at all. The
-    // VISIBLE INTERVALS of [a, b) less every later non-empty box, found in
-    // one walk over the later boxes that start inside it (the cues are
-    // ordered by place, so a later box's left edge never lies left of this
-    // one's), are the whole of what this label shows: its text and its
-    // strike are CUT TO THEM AT EXACT COVERAGE ON THEIR OWN INK
+    // VISIBLE INTERVALS of [a, b) less every later non-empty box
+    // (cue_label_spans) are the whole of what this label shows: its text and
+    // its strike are CUT TO THEM AT EXACT COVERAGE ON THEIR OWN INK
     // (show_cue_label: the text's mask multiplied by each column's visible
     // length, the bar intersected) — the picture an opaque box laid at its
     // real edges over the earlier ink leaves, column for column, with NO
@@ -1956,62 +2105,28 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // and the chips all stand under it, so no cue pixel leaves the lane's
     // rows however far a glyph overshoots (FlagCache's head,
     // paint_handler.h). Released after the chips.
-    cairo_save(cr);
-    cairo_rectangle(cr, static_cast<double>(x0), static_cast<double>(lane.y),
-                    static_cast<double>(w > 0 ? w : 0),
-                    static_cast<double>(lane.h));
-    cairo_clip(cr);
-    std::vector<text_raster::XSpan>& spans = g_cue_pass_scratch.spans;
-    for (int i = 0; i < n; ++i) {
-        const CueDraw& c = cues[static_cast<std::size_t>(i)];
-        const double a = lo[static_cast<std::size_t>(i)];
-        const double b = hi[static_cast<std::size_t>(i)];
-        if (b <= a) continue;
-
-        spans.clear();
-        double cursor = a;
-        for (int j = i + 1; j < n && cursor < b; ++j) {
-            const double ja = lo[static_cast<std::size_t>(j)];
-            const double jb = hi[static_cast<std::size_t>(j)];
-            if (ja >= b) break;
-            if (jb <= ja) continue;
-            if (ja > cursor) spans.push_back(text_raster::XSpan{cursor, ja});
-            cursor = std::max(cursor, jb);
-        }
-        if (cursor < b) spans.push_back(text_raster::XSpan{cursor, b});
-        if (spans.empty()) continue;
-
-        for (const CueSegment& s : c.seg) {
-            if (!s.present) continue;
-            // The label's ink (resolve_flag_face's table): the inert label
-            // `text_dim` or the sidebar text `sidebar_text`, selected or not;
-            // a struck segment's bar in the same ink (show_cue_label). The
-            // pen is the segment's exact one.
-            show_cue_label(cr, *s.run, cue_segment_text_x(s, pad), base,
-                           s.inert ? pal.text_dim : pal.sidebar_text, s.struck,
-                           spans.data(), static_cast<int>(spans.size()));
-        }
-    }
-
+    //
     // THE CHIPS, LEFT TO RIGHT, over every label: ONE PASS on one
     // prepared target (CoverageStampPass, cool_edit_paint.h), UNDER THE
-    // PASS'S CLIP OF THE LANE'S ROWS (above; whole pixels, the stamp's clip
+    // PASS'S CLIP OF THE LANE'S ROWS (whole pixels, the stamp's clip
     // box): EACH CHIP AT ITS MARK'S EXACT x (architect 2026-11-14, send J:
     // the window x of the cue's exact place, CueDraw::x — its apex on the
     // stem's center), on the lane's last rows, its one triangle in its fill,
     // each pixel at its exact coverage over what the labels and the
     // chips to its left laid there, so a right chip cuts its left
     // neighbour's as before, its edge soft. Its contract
-    // holds here: the label pass above changed no clip (each struck bar's
+    // holds here: the label pass changed no clip (each struck bar's
     // own stamp pass began and ended inside its label), the clip
     // was set before begin() and is released after end(), and the pass's
     // cairo road keeps its own, so the clip, the matrix, the operator and
     // the group are constant throughout the pass.
-    CoverageStampPass chips;
-    chips.begin(cr);
-    for (const CueDraw& c : cues)
-        chips.chip(static_cast<double>(x0) + c.x, chip_yb, c.face.fill);
-    chips.end();
+    // THE INK OF BOTH is paint_cue_ink's one body, every cue admitted.
+    cairo_save(cr);
+    cairo_rectangle(cr, static_cast<double>(x0), static_cast<double>(lane.y),
+                    static_cast<double>(w > 0 ? w : 0),
+                    static_cast<double>(lane.h));
+    cairo_clip(cr);
+    paint_cue_ink(cr, lane, x0, cues, lo, hi, [](int) { return true; });
     cairo_restore(cr);
 
     // THE PUBLICATION, left to right — ON THE CUE'S EXACT PLACE (architect
@@ -2025,6 +2140,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
         if (out_hit_rects) {
             FlagHitRect r;
             r.marker_index = c.index;
+            r.key          = c.key;
             // The label's box; each boundary its segment's box
             // start, collapsing onto the box's right edge where the segment
             // did not paint.
@@ -2098,6 +2214,18 @@ static int flag_box_rank(MarkerCell c) {
 }
 static constexpr int kFlagBoxRankNone = 3;
 
+// A CUE'S RANK AMONG ITS LIST'S ITEMS ON ITS OWN FRAME (CueKey's ordinal):
+// the items before it, in list order, that stand on the same authored
+// frame — 0 for every item but a stack's later members.
+template <typename Vec>
+static int cue_rank_on_frame(const Vec& items, int i) {
+    const int64_t f = items[static_cast<std::size_t>(i)].time_frame;
+    int rank = 0;
+    for (int j = 0; j < i; ++j)
+        if (items[static_cast<std::size_t>(j)].time_frame == f) ++rank;
+    return rank;
+}
+
 // The one body both columns' painters call. `label_of(i)` composes the
 // marker's display text and `disabled_of(i)` answers its column's disabled
 // question (the warp side's effective_disabled, the phase-reset side's bare
@@ -2139,7 +2267,10 @@ void render_flag_boxes_impl(
     // Reaches the LEFT CULL only — it widens the width bound by the two bound
     // cells. Which flags paint cells is the cells lambda's business, so this
     // body never asks whether a given marker is eligible.
-    bool iteration_on) {
+    bool iteration_on,
+    // THE LANE'S HOVER (CueLaneHover, render.h): the listing every cue's key
+    // is taken in, and each cue's hover weight as its face stores it.
+    const CueLaneHover& hover) {
     if (out_hit_rects) out_hit_rects->clear();
     if (out_stems)     out_stems->clear();
     if (top_strip_area.w <= 0 || top_strip_area.h <= 0) return;
@@ -2173,6 +2304,13 @@ void render_flag_boxes_impl(
             CueDraw c;
             c.index = i;
             c.x     = exact_x;
+            // ITS KEY AND ITS HOVER WEIGHT (CueKey, CueLaneHover): its
+            // authored frame and its rank among the store's markers on that
+            // frame, in the pass's listing.
+            c.key   = CueKey{hover.listing,
+                             markers[static_cast<std::size_t>(i)].time_frame,
+                             cue_rank_on_frame(markers, i)};
+            c.hover = hover.weight_of ? hover.weight_of(c.key) : 0.0;
             // WHICH OF THIS MARKER'S SEGMENTS THIS PASS PAINTS: everything
             // LEFT of the edited segment stands at rest, and nothing from it
             // rightward — those ride the field's right edge under
@@ -2278,7 +2416,8 @@ void render_flags(cairo_t* cr,
                   std::vector<MarkerStem>* out_stems,
                   const std::vector<WarpFrameMapSegment>* warp_frame_map,
                   const DragOverlay* drag_overlay,
-                  SuppressedBox suppressed) {
+                  SuppressedBox suppressed,
+                  const CueLaneHover& hover) {
     render_flag_boxes_impl(
         cr, top_strip_area, lanes, waveform_width, markers,
         viewport_start_sample, viewport_end_sample,
@@ -2296,7 +2435,7 @@ void render_flags(cairo_t* cr,
         // (warp_iter_cells above), and none outside the mode.
         [&](int i) { return warp_iter_cells(markers, i, iteration_on); },
         out_hit_rects, out_stems, warp_frame_map, drag_overlay,
-        suppressed, iteration_on);
+        suppressed, iteration_on, hover);
 }
 
 void render_phase_reset_flags(cairo_t* cr,
@@ -2314,7 +2453,8 @@ void render_phase_reset_flags(cairo_t* cr,
                             std::vector<MarkerStem>* out_stems,
                             const std::vector<WarpFrameMapSegment>* warp_frame_map,
                             const DragOverlay* drag_overlay,
-                            SuppressedBox suppressed) {
+                            SuppressedBox suppressed,
+                            const CueLaneHover& hover) {
     // NO RESET IS STRUCK (architect 2026-11-17: "phase resets should get no
     // strike b/c they effectively collapse to 1 in the engine already"): the
     // shared pass's strike set is empty on this column.
@@ -2351,7 +2491,7 @@ void render_phase_reset_flags(cairo_t* cr,
         // payload is dropped, so a warp target index can never be applied to
         // this store.
         suppressed.cell == MarkerCell::Payload ? SuppressedBox{} : suppressed,
-        iteration_on);
+        iteration_on, hover);
 }
 
 void render_history_diff_flags(
@@ -2367,7 +2507,8 @@ void render_history_diff_flags(
         const std::set<int>& selected,
         std::vector<FlagHitRect>* out_hit_rects,
         std::vector<MarkerStem>* out_stems,
-        const std::vector<WarpFrameMapSegment>* warp_frame_map) {
+        const std::vector<WarpFrameMapSegment>* warp_frame_map,
+        const CueLaneHover& hover) {
     // The same clear-first contract the two marker painters carry: this pass is
     // the SOLE producer of both stashes while the history mode stands, so a
     // frame that paints nothing must leave nothing claimable behind.
@@ -2464,6 +2605,12 @@ void render_history_diff_flags(
             CueDraw c;
             c.index = i;
             c.x     = exact_x;
+            // ITS KEY AND ITS HOVER WEIGHT (CueKey, CueLaneHover): the
+            // item's frame and its rank among the items on it, in the
+            // listing of the commit shown.
+            c.key   = CueKey{hover.listing, f.time_frame,
+                             cue_rank_on_frame(flags, i)};
+            c.hover = hover.weight_of ? hover.weight_of(c.key) : 0.0;
             c.face  = resolve_flag_face(side, /*disabled=*/false,
                                         /*strike=*/false, selected_item);
             c.segments_are_cells = false;
@@ -2515,7 +2662,8 @@ void render_history_diff_flags(
 namespace {
 
 // Whether two laid-out cues PAINT ALIKE: every input paint_cues reads of a
-// cue but its place in the order — its exact place, the chip's two colors,
+// cue but its place in the order — its exact place, the chip's two colors
+// and its hover weight (the chip's and the label's mix, send FF),
 // and each segment's presence, run, box, look and strike; `segments_are_cells`
 // beside them, which no pixel reads but the published hit rect does
 // (FlagHitRect's two boundaries), so that "no cue differs" also says "no
@@ -2530,7 +2678,9 @@ bool cue_paints_alike(const CueDraw& a, const CueDraw& b) {
         return p.r == q.r && p.g == q.g && p.b == q.b;
     };
     if (a.x != b.x || a.segments_are_cells != b.segments_are_cells ||
-        !same_color(a.face.fill, b.face.fill))
+        !same_color(a.face.fill, b.face.fill) ||
+        !same_color(a.face.hover_fill, b.face.hover_fill) ||
+        a.hover != b.hover)
         return false;
     for (std::size_t s = 0; s < a.seg.size(); ++s) {
         const CueSegment& p = a.seg[s];
@@ -2630,6 +2780,108 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
     }
     for (std::size_t p = 0; p < was.size(); ++p)
         if (!kept[p]) declare(&was[p], nullptr);   // a cue that left
+}
+
+// THE LANE'S HOVER BETWEEN REBUILDS (the contract at the declarations,
+// render.h; architect 2026-11-21, send FF).
+bool cue_pass_holds(const CueKey& key) {
+    for (const CueDraw& c : g_cue_pass_scratch.cues)
+        if (c.key == key) return true;
+    return false;
+}
+
+void cue_pass_sync_hover(cairo_surface_t* surface, int origin_y,
+                         const std::function<double(const CueKey&)>& weight_of,
+                         std::vector<GuiRect>& damage) {
+    CuePassScratch& sc = g_cue_pass_scratch;
+    std::vector<CueDraw>& cues = sc.cues;
+    const int n = static_cast<int>(cues.size());
+    if (surface == nullptr || n == 0 || sc.lane.h <= 0 || sc.w <= 0) return;
+    const GuiRect lane = sc.lane;
+    const int     x0   = sc.x0;
+    const int     w    = sc.w;
+    const double  half  = static_cast<double>(cue_chip_hit_left_px());
+    const double  reach = static_cast<double>(cue_chip_paint_reach_px());
+    // THE BOXES THE SURFACE WAS CUT ON, laid again from the layout itself
+    // (one walk, at the first cue that moved): the cut is this layout's by
+    // construction, whatever last wrote the scratch's two vectors.
+    std::vector<double>& lo = sc.lo;
+    std::vector<double>& hi = sc.hi;
+    std::vector<std::pair<int, int>>& regions = sc.regions;
+    regions.clear();
+    bool laid = false;
+    for (int i = 0; i < n; ++i) {
+        CueDraw& c = cues[static_cast<std::size_t>(i)];
+        const double now = weight_of ? weight_of(c.key) : 0.0;
+        if (now == c.hover) continue;
+        c.hover = now;
+        if (!laid) {
+            lay_cue_boxes(cues, x0, half, lo, hi);
+            laid = true;
+        }
+        // THE CUE'S OWN EXTENT: its chip's painted reach round its exact
+        // place, and its label's ink as cut — the hull of its visible
+        // intervals (empty where a later label covers it whole).
+        const double X = static_cast<double>(x0) + c.x;
+        double e0 = X - reach;
+        double e1 = X + reach;
+        cue_label_spans(i, lo, hi, sc.spans);
+        if (!sc.spans.empty()) {
+            e0 = std::min(e0, sc.spans.front().x0);
+            e1 = std::max(e1, sc.spans.back().x1);
+        }
+        const int c0 = std::max(x0, static_cast<int>(std::floor(e0)));
+        const int c1 = std::min(x0 + w, static_cast<int>(std::ceil(e1)));
+        if (c1 > c0) regions.emplace_back(c0, c1);
+    }
+    if (regions.empty()) return;
+    // Neighbors' regions that meet are one region: no column is cleared and
+    // painted twice.
+    std::sort(regions.begin(), regions.end());
+    std::size_t m = 0;
+    for (std::size_t k = 1; k < regions.size(); ++k) {
+        if (regions[k].first <= regions[m].second)
+            regions[m].second = std::max(regions[m].second, regions[k].second);
+        else
+            regions[++m] = regions[k];
+    }
+    regions.resize(m + 1);
+
+    cairo_t* cr = cairo_create(surface);
+    // CLIENT COORDINATES ON THE SURFACE, the rebuild's one translation
+    // (FlagCache's head), so the direct road takes the context as the
+    // rebuild's pass did.
+    cairo_translate(cr, 0.0, -static_cast<double>(origin_y));
+    for (const std::pair<int, int>& r : regions) {
+        const int c0 = r.first;
+        const int c1 = r.second;
+        cairo_save(cr);
+        cairo_rectangle(cr, static_cast<double>(c0),
+                        static_cast<double>(lane.y),
+                        static_cast<double>(c1 - c0),
+                        static_cast<double>(lane.h));
+        cairo_clip(cr);
+        cairo_save(cr);
+        cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+        cairo_paint(cr);
+        cairo_restore(cr);
+        // Every cue whose extent meets the region — its chip's reach and
+        // its label's whole box, the widest its ink can stand — painted
+        // again in the pass's order; a cue outside it lays nothing here.
+        paint_cue_ink(cr, lane, x0, cues, lo, hi, [&](int i) {
+            const CueDraw& c = cues[static_cast<std::size_t>(i)];
+            const double X  = static_cast<double>(x0) + c.x;
+            const double e0 = std::min(X - reach,
+                                       lo[static_cast<std::size_t>(i)]);
+            const double e1 = std::max(X + reach,
+                                       hi[static_cast<std::size_t>(i)]);
+            return e1 > static_cast<double>(c0) &&
+                   e0 < static_cast<double>(c1);
+        });
+        cairo_restore(cr);
+        damage.push_back(GuiRect{c0, lane.y, c1 - c0, lane.h});
+    }
+    cairo_destroy(cr);
 }
 
 namespace {

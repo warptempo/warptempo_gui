@@ -653,13 +653,15 @@ struct FlagCache {
     //     geometries, so the next rebuild declares the whole area and puts
     //     it out.
     //   `damage_scratch` — the rects a rebuild is about to declare, kept
-    //     across rebuilds for its capacity.
+    //     across rebuilds for its capacity; `hover_damage_scratch` the
+    //     lanes' comparator's (GuiPaintHandler::sync_lane_hovers) the same.
     bool                   layout_stands = false;
     std::vector<double>    stem_xs;
     std::vector<double>    stem_scratch;
     GuiPhaseResetRingSides ring_declared;
     bool                   ring_drawn_undeclared = false;
     std::vector<GuiRect>   damage_scratch;
+    std::vector<GuiRect>   hover_damage_scratch;
 
     void destroy_surface() {
         if (surface) {
@@ -1019,7 +1021,42 @@ struct GuiPaintHandler {
     // erases. Read-only geometry, no state touched.
     std::optional<double> hover_line_x() const;
 
+    // THE LANES' TWO FACES AS PAINTED (architect 2026-11-21, send FF; the
+    // rule at AppState::FaceFades' THE LANES' TWO FACES). PUBLIC for the
+    // faces' clock and settle (GuiInputHandler::tick_face_fades,
+    // settle_face_fades), as hover_line_x is for the line's setter.
+    //   cue_hover_of — THE LANE'S HOVER FOR A PASS (CueLaneHover, render.h):
+    //     the listing the lane lists now (marker_lane_listing) and each cue's
+    //     weight, its marker face's AppState::FaceFades::hover_weight — the
+    //     stored mix's Hover weight, or its look at once with no record —
+    //     read off a table of the few marker faces that are not at rest,
+    //     refilled at each call (`lane_hover_weights_`). The one reader of
+    //     the records for every cue painter: the rebuild's pass
+    //     (maybe_rebuild_flag_cache) and the comparator below.
+    //   sync_lane_hovers — THE ONE COMPARATOR: every cue the flag cache
+    //     shows at a weight that is not its face's now is repainted into the
+    //     cache in place (cue_pass_sync_hover: its own extent, never a
+    //     rebuild) and that extent damaged over the lane's rows; and where
+    //     the triangle's weight is not the one last declared
+    //     (`head_hover_declared_`), the triangle's painted box over the
+    //     ruler's rows (playhead_head_damage_rect) — nothing else. Run at
+    //     the end of the faces' clock and of their settle, so ahead of every
+    //     frame. Only on a cache whose layout stands (the rebuild's record):
+    //     a cache that does not is rebuilt whole, reading the weights, by the
+    //     next rebuild.
+    //   playhead_head_damage_rect — the triangle's painted box: the columns
+    //     [col − reach, col + reach) of its painted reach
+    //     (cue_chip_paint_reach_px) round the playhead's column on the plate
+    //     basis, cut to the waveform's columns, over the ruler's last
+    //     cue_chip_h_px rows — paint_ruler_row's own arithmetic; empty where
+    //     no head can paint.
+    CueLaneHover cue_hover_of();
+    void         sync_lane_hovers();
+    GuiRect      playhead_head_damage_rect() const;
+
 private:
+    std::vector<std::pair<CueKey, double>> lane_hover_weights_;
+    double                                 head_hover_declared_ = 0.0;
     // THE DEBT (2026-10-13): set by owe_waveform_rebuild, cleared at the head
     // of force_synchronous_waveform_rebuild by whichever road runs it. While it
     // stands the worker's dirty-detect stands down (maybe_enqueue_waveform_render's

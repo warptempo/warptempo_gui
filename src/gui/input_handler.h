@@ -1573,19 +1573,30 @@ struct GuiInputHandler {
     //     playhead, Tap; held, over the waveform where a tip-down seats the
     //     zoom, Anchor), handed to the setter. Run inside walk_hover_face
     //     (its every caller) and again by settle_face_fades ahead of every
-    //     frame.
+    //     frame. walk_hover_line_on is its body on a lanes' answer already
+    //     asked (walk_hover_face's one hit, which the lanes' faces read too);
+    //     walk_hover_line asks it itself.
     //   set_hover_line — THE ONE SETTER: the place stored; where the line's
     //     derived place (GuiPaintHandler::hover_line_x) differs from the one
     //     last declared, its cells as last painted and its new cells damaged
     //     (Viewport::invalidate_hover_line), nothing else.
-    //   plain_press_places_playhead_at — "would a plain press here arm the
-    //     pending click whose motionless release runs run_nav_click_act?",
-    //     past the main page's refusals: the two press routers' own tests
-    //     mirrored beside on_button_press (the lines it mirrors named
-    //     there).
+    //   plain_lane_press_at — "what would a plain press here do in the
+    //     lanes?" past the main page's refusals: place the playhead (Places:
+    //     the line's Tap), run a flag's click (Marker, with its cue's key:
+    //     the marker's hover) or arm the head drag on the playhead's
+    //     triangle (Head: the triangle's hover), or nothing — the two press
+    //     routers' own tests mirrored beside on_button_press (the lines it
+    //     mirrors named there), ONE HIT for the line and the lanes' faces
+    //     (architect 2026-11-21, send FF).
+    struct PlainLanePress {
+        enum class Kind : uint8_t { None, Places, Marker, Head };
+        Kind   kind = Kind::None;
+        CueKey key{};   // Marker's: the hit cue's (FlagHitRect::key)
+    };
     void walk_hover_line();
+    void walk_hover_line_on(const PlainLanePress& lane);
     void set_hover_line(AppState::HoverLine::Place place);
-    bool plain_press_places_playhead_at(const GuiPointerPlace& at) const;
+    PlainLanePress plain_lane_press_at(const GuiPointerPlace& at) const;
     // THE WALK: the face the pen is on now, under both halves of the gate
     // and the theme's term (a theme whose hover face is its key face hovers
     // nothing, seams included: architect 2026-11-20: agreed),
@@ -1595,21 +1606,26 @@ struct GuiInputHandler {
     // pen latch's arm and at every pointer leave (main.cpp's hook: none, so
     // the face fades out). The trim bar's walk rides it, after the faces',
     // on the same theme term (walk_trim_bar_hover), and the waveform's hover
-    // line's after that, on no theme term (walk_hover_line).
+    // line's after that, on no theme term (walk_hover_line_on), THE LANES'
+    // ONE HIT (plain_lane_press_at) asked once here for the line and for
+    // the marker's and the triangle's faces alike.
     void walk_hover_face();
     // THE CLOCK, on the run loop's tick (main.cpp, beside tick_tooltip):
     // the walk, then settle_face_fades, then every fading record stepped to
     // now — a fade a painter began takes now as its start; each step that
     // moves a stored mix damages that face's own painted extent or that
-    // seam's own columns; a fade that lands stops (its record stays, the
-    // face's as-painted look).
+    // seam's own columns — a lane face's step its comparator's, at the
+    // body's end (GuiPaintHandler::sync_lane_hovers) — ; a fade that lands
+    // stops (its record stays, the face's as-painted look).
     void tick_face_fades();
     // THE SETTLE: the faces of a surface that left are dropped (a keyboard
     // gone or on another page, a dialog stash's owner or session not the
     // live one), so whatever replaces them paints at once; the hovered slot
-    // goes where no press would act on its face; the trim bar's part on its
-    // own rule; the waveform's hover line re-walked (walk_hover_line, its
-    // settle). The clock's first half, and run by itself AHEAD OF EVERY
+    // goes where no press would act on its face; a lane face's record at
+    // rest, or a marker's whose cue the lane no longer lays out, dropped,
+    // and the lanes' comparator run (GuiPaintHandler::sync_lane_hovers); the
+    // trim bar's part on its own rule; the waveform's hover line re-walked
+    // (walk_hover_line, its settle). The clock's first half, and run by itself AHEAD OF EVERY
     // FRAME (the pre-paint hook, main.cpp): a key or a release can raise a
     // modal or close the keyboard and be painted in the same pass, before
     // any tick. A face's new look is never this body's: its painter resolves
@@ -1670,7 +1686,8 @@ struct GuiInputHandler {
     // extent, a fade's damage.
     void set_hover_face(const AppState::FaceFades::Face& face);
     bool hover_face_live(const AppState::FaceFades::Face& face) const;
-    AppState::FaceFades::Face hover_face_under_pointer() const;
+    AppState::FaceFades::Face
+        hover_face_under_pointer(const PlainLanePress& lane) const;
     GuiRect face_extent(const AppState::FaceFades::Face& face) const;
     // The two scrubs' "a press here arms the drag", each claim's refusals
     // past its geometry (one owner each; the claim and the knob's hover
@@ -3393,9 +3410,10 @@ private:
     // THE INVENTORY — EVERY FACE THE PRODUCT LIGHTS BY HOVER (AND THE TWO
     // HOVER LOOKS THAT ARE NO FACE, THE TRIM BAR'S AND THE WAVEFORM'S HOVER
     // LINE), ITS ONE
-    // STATEMENT (re-derived 2026-11-21 against AppState::FaceFades' five
+    // STATEMENT (re-derived 2026-11-21 against AppState::FaceFades' seven
     // surfaces, Arc's hover; every other site points here). Each but the list
-    // row (its own terms, below) wears Arc's hover face, faded in and out over
+    // row and the lanes' two faces (their own terms, below) wears Arc's
+    // hover face, faded in and out over
     // Arc's 200 ms, while the pen hovers it AT REST — enabled, not lit, not
     // pressed, not dead under a veil, the barrel not held (the look
     // materials.h's THE HOVER; the state, the gate, the fade and the damage
@@ -3427,6 +3445,23 @@ private:
     //     AppState::FaceFades' THE LIST ROW'S HOVER; the look at
     //     paint_handler.cpp's THE LIST VIEW). A drag scroll (a contact down)
     //     shows none, and after its lift this latch holds as for a key.
+    //   * THE LANES' TWO FACES (architect 2026-11-21, send FF: "The markers
+    //     could get a hover action ... If the pen is in the ruler lane,
+    //     maybe the playhead would light up somehow"; AppState::FaceFades'
+    //     THE LANES' TWO FACES, the gate, the key, the fade and the damage):
+    //     A MARKER'S CUE a tap at the pen's real place would act on — the
+    //     press's own hit, its chip's hit extent or its label's box
+    //     (hit_test_flag's walk), the rightmost on top; enabled or disabled,
+    //     selected or not, struck or not, a live column's marker or an `h`
+    //     view item — its chip and its label's ink toward their hover tones
+    //     (resolve_flag_face's table: a disabled marker its own dimmer pair),
+    //     and THE PLAYHEAD'S TRIANGLE in the ruler where a press would arm
+    //     the head drag, `playhead_head` toward `playhead_head_hover`; each
+    //     on the keys' 200 ms both ways, the walk's one hit for both and for
+    //     the hover line (plain_lane_press_at). The main page's gate
+    //     (hover_admitted_on_main_page) and the faces' theme term; no
+    //     marker or triangle hovers under the barrel, and after a lift on one
+    //     this latch holds as for a key.
     //   THE TRIM BAR hovers too, NOT ONE OF THESE FADING FACES: its own
     //   walk and its own one-value state (walk_trim_bar_hover, run inside
     //   walk_hover_face; AppState::TrimBarHover; architect 2026-11-20), on
@@ -3465,7 +3500,8 @@ private:
     //   `hover_line` down the canvas alone, at the exact place the playhead
     //   would land WHEREVER A TAP AT THE PEN'S PLACE WOULD MOVE THE PLAYHEAD
     //   — the pen over the waveform, over the ruler off the playhead's
-    //   triangle, over the marker lane where no marker is hit — AT ONCE,
+    //   triangle, over the marker lane where no marker is hit (the lanes'
+    //   two faces' one hit: where either hovers no line stands) — AT ONCE,
     //   WITH NO FADE, under the pointer's half of the gate LESS THE BARREL
     //   (pen_hovers_unlatched: this latch holds it like every hover, NO
     //   FROZEN ANSWER — "it should wait to prevent every lift turning into a
@@ -3474,8 +3510,8 @@ private:
     //   (pointer_barrel_held_): with it held the line shows over the
     //   waveform alone, where the zoom would anchor.
     //   NOTHING ELSE LIGHTS BY HOVER: no entry (NOISE's and its level line, the
-    //   value sub-page's field), the title bar's two lamps, a cue or a chip
-    //   (render.h's flag block), the time labels, the title bar; a
+    //   value sub-page's field), the title bar's two lamps, a marker's stem,
+    //   the time labels, the title bar; a
     //   notification card's hover banks its clock and paints nothing
     //   (GuiNotifications::set_hover).
     // THE HOVER STATE ITSELF STAYS LIVE under the latch: the pointer's
@@ -3532,8 +3568,8 @@ private:
     //   the pen's hover does, and every first down ends that hover through
     //   its leave (end_pen_hover).
     // THE LATCH IS THE POINTER'S, NOT A SURFACE'S: it holds every hover
-    // face alike, the keys', the dialogs', the keyboard's, the knob's and the
-    // list rows'.
+    // face alike, the keys', the dialogs', the keyboard's, the knob's, the
+    // list rows', the markers' and the playhead's triangle.
     // THE LIFT'S OWN PIXEL IS NOT KEPT (2026-10-08): the anchor is the
     // hover's, so the hook carries no coordinates and the latch none of
     // the contact's.

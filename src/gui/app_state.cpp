@@ -359,6 +359,34 @@ MarkerCell hit_test_flag_cell(const AppState& app, const GuiAudio& audio,
     return MarkerCell::Payload;
 }
 
+const FlagHitRect* hit_test_flag_rect(const AppState& app, double mouse_x,
+                                      double mouse_y) {
+    return topmost_flag_rect(app, mouse_x, mouse_y);
+}
+
+// THE LISTING (the contract at the declaration): FNV-1a over the `h`
+// view's five words, the top bit set.
+uint64_t marker_lane_listing(const AppState& app) {
+    if (!app.history_mode.active)
+        return static_cast<uint64_t>(
+            static_cast<unsigned char>(app.active_markers_view));
+    uint64_t h = 1469598103934665603ull;
+    const auto fold = [&](uint64_t v) {
+        for (int i = 0; i < 8; ++i) {
+            h ^= (v >> (8 * i)) & 0xFFu;
+            h *= 1099511628211ull;
+        }
+    };
+    fold(static_cast<uint64_t>(app.history_mode.source));
+    fold(static_cast<uint64_t>(app.history_mode.index));
+    fold(static_cast<uint64_t>(app.history_mode.local_index));
+    fold(static_cast<uint64_t>(app.history_mode.compare()));
+    fold(static_cast<uint64_t>(app.history_mode.generation));
+    fold(static_cast<uint64_t>(static_cast<unsigned char>(
+        app.active_markers_view)));
+    return h | (1ull << 63);
+}
+
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   double mouse_x, double mouse_y) {
     (void)audio;
