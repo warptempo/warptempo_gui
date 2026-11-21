@@ -2847,7 +2847,7 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // dialog. It answers two readers — the armed button's inside bit and this
 // surface's tooltip wait (the tail). THE BUTTONS' HOVER FACE IS NOT THIS
 // WALK'S (send CC, 2026-11-20): every surface's hover face has one walk,
-// walk_hover_face, under its own gate (AppState::HoverFaces).
+// walk_hover_face, under its own gate (AppState::FaceFades).
 //
 // AN ARMED BUTTON — THE FEINT (architect 2026-08-13): "if the user feints —
 // clicks a button and then drags away before the mouse goes up — then that
@@ -3008,10 +3008,10 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
     const AppState::ModalDialogButton& hb =
         app.modal_dialog.buttons[static_cast<size_t>(hit)];
     if (!hb.enabled) return true;
-    // THE PRESS CLAIMS THE FACE FROM THE HOVER, at once whatever its fade's
-    // value (AppState::HoverFaces' WHAT DOES NOT FADE).
-    drop_hover_face({AppState::HoverFaces::Surface::Dialog, hit,
-                     app.modal_dialog.owner, app.modal_dialog.session});
+    // THE PRESS TURNS THE FACE TOWARD THE ACCENT from its picture as
+    // painted, over Arc's 50 ms from now (AppState::FaceFades' GTK'S RULE).
+    press_face({AppState::FaceFades::Surface::Dialog, hit,
+                app.modal_dialog.owner, app.modal_dialog.session});
     // THE ARM, and its press face's damage (2026-11-05): a press is inside
     // what it hit, by construction — the feint's bit starts true.
     if (app.modal_dialog_pressed != hit || !app.modal_dialog_press_inside) {
@@ -3734,10 +3734,10 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     const int hit =
         onscreen_keyboard::key_at(app, page, at.rx, at.ry, def);
     if (hit < 0) return true;   // the band's ground off the grid: consumed
-    // THE PRESS CLAIMS THE KEY'S FACE FROM THE HOVER, at once whatever its
-    // fade's value (AppState::HoverFaces' WHAT DOES NOT FADE); both arms
-    // below damage the key (a lamp key the whole surface).
-    drop_hover_face({AppState::HoverFaces::Surface::Keyboard, hit});
+    // THE PRESS TURNS THE KEY'S FACE TOWARD THE ACCENT from its picture as
+    // painted, over Arc's 50 ms from now (AppState::FaceFades' GTK'S RULE);
+    // both arms below damage the key (a lamp key the whole surface).
+    press_face({AppState::FaceFades::Surface::Keyboard, hit});
 
     using Role = onscreen_keyboard::Role;
 
@@ -4372,13 +4372,11 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     // Audacious's own slider — dead while stopped), IDLE being no item bound
     // (the invariant at AppState::RenderPlayer::transport).
     if (!player_scrub_takes_press()) return true;
-    // THE PRESS TAKES THE SCALE, AND THE KNOB FROM THE HOVER, at once
-    // whatever its fade's value — on the knob (the accent) or on the trough
-    // (the knob carried at rest): a pen in contact hovers nothing
-    // (AppState::HoverFaces' WHAT DOES NOT FADE); the arm below damages the
-    // item.
-    drop_hover_face({AppState::HoverFaces::Surface::Knob, 0,
-                     app.modal_dialog.owner, app.modal_dialog.session});
+    // THE PRESS TAKES THE SCALE: on the knob the knob turns toward the
+    // accent over Arc's 200 ms from now (the knob's press_face below; gtk3
+    // CSS lines 1144 .. 1150, no 50 ms line on the scale's slider), on the
+    // trough the knob is carried at rest; a pen in contact hovers nothing
+    // (AppState::FaceFades); the arm below damages the item.
     // THE THUMB IS RESOLVED WHERE IT IS PAINTED (ON SCREEN IS AS PAINTED,
     // the displayed-not-live rule displayed_or_live_target_map states,
     // app_state.h): the painter's published center, its exact place, never
@@ -4399,6 +4397,9 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     const bool on_thumb =
         thumb_x >= 0.0 &&
         render_player_scrub_handle_hit(track, thumb_x, at.rx, at.ry);
+    if (on_thumb)
+        press_face({AppState::FaceFades::Surface::Knob, 0,
+                    app.modal_dialog.owner, app.modal_dialog.session});
     drag          = AppState::RenderPlayer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
@@ -4561,10 +4562,8 @@ bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
     // show: the scrub dead), takes no press (score_scrub_takes_press, the
     // refusals' one owner, the knob's hover reading it too).
     if (!score_scrub_takes_press()) return true;
-    // The press takes the scale, and the knob from the hover (the render
-    // player's claim's rule).
-    drop_hover_face({AppState::HoverFaces::Surface::Knob, 0,
-                     app.modal_dialog.owner, app.modal_dialog.session});
+    // The press takes the scale, and on the knob turns it toward the accent
+    // (the render player's claim's rule, below).
     // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED), its published exact
     // center: on its disc the press takes it where it stands, the grab
     // offset kept against that painted center (the render player's claim);
@@ -4575,6 +4574,9 @@ bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
         render_player_scrub_handle_hit(track, thumb_x, at.rx, at.ry);
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     const bool media = score_viewer_has_soundtrack(app);
+    if (on_thumb)
+        press_face({AppState::FaceFades::Surface::Knob, 0,
+                    app.modal_dialog.owner, app.modal_dialog.session});
     drag          = AppState::ScoreViewer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
@@ -4713,11 +4715,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // hovering on a column waits the delay as an arrival.
     app.redesign_tooltip.button_held = mods.primary_button_held;
     hide_shift_tooltip();
-    // AND NO FACE HOVERS UNDER A CONTACT (AppState::HoverFaces): the held
+    // AND NO FACE HOVERS UNDER A CONTACT (AppState::FaceFades): the held
     // bit just recorded answers none, so a face the pen still hovered fades
     // out from here (the pen's HOVER_EXIT, a millisecond before its DOWN,
-    // already began that); the arm this press takes below then drops its
-    // own face's fade whole (drop_hover_face).
+    // already began that); the arm this press takes below then turns its
+    // own face toward the accent from where that fade stands (press_face).
     walk_hover_face();
 
     // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
@@ -6452,7 +6454,7 @@ void GuiInputHandler::finalize_active_drags() {
 // painted button, its column read off the painted face
 // (tooltip_column_rect, render.h). (THE KEYS' HOVER FACE has its own walk,
 // walk_hover_face below — every surface's, under the press's own gate:
-// AppState::HoverFaces, send CC, 2026-11-20.)
+// AppState::FaceFades, send CC, 2026-11-20.)
 void GuiInputHandler::arm_pen_hot_latch() {
     // Armed and unanchored (the rule at pen_hot_latch_): the hook fires after
     // the lift's own delivery, whose restore motion walked the hover
@@ -6460,10 +6462,11 @@ void GuiInputHandler::arm_pen_hot_latch() {
     // a fade no step has advanced — so the latched answer, NONE, is
     // installed here before any frame paints: the hover's re-walk
     // (walk_hover_face, whose gate reads the latch) ends that fade without
-    // a trace (set_hover_face), and the key the pen tapped reads at rest or
-    // lit at once ("withholding the color change until the pen moves away
-    // makes it too slow"). The roster's tooltip walk runs again beside it,
-    // as it always did at the arm.
+    // a trace (set_hover_face), and the key the pen tapped goes toward its
+    // resting or lit look from the lift on ("withholding the color change
+    // until the pen moves away makes it too slow"; Arc's fade out of the
+    // accent, AppState::FaceFades). The roster's tooltip walk runs again
+    // beside it, as it always did at the arm.
     // THE TRIM BAR'S FROZEN ANSWER (AppState::TrimBarHover; architect
     // 2026-11-20, send CC: no blink of the caps at the lift): the part the
     // bar's own grab held at this lift — `lifted`, written by that release
@@ -6788,12 +6791,13 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                        tip_column);
 }
 
-// -- ARC'S HOVER: THE BODIES OF ITS ONE OWNER (architect 2026-11-18 /
-//    2026-11-20, send CC). The rule — which faces hover, the gate, Arc's
-//    fade, what does not fade and the frames' cost — is at
-//    AppState::HoverFaces (app_state.h), the look at materials.h's THE
-//    HOVER, the contracts at the declarations (input_handler.h). What is
-//    here is each body's own clause. ----------------------------------------
+// -- ARC'S HOVER AND EVERY FACE'S FADE: THE BODIES OF THEIR ONE OWNER
+//    (architect 2026-11-18 / 2026-11-20, sends CC and DD). The rule — which
+//    faces hover, the gate, Arc's transitions on every state, what does not
+//    fade and the frames' cost — is at AppState::FaceFades (app_state.h),
+//    the look at materials.h's THE KEY and THE HOVER, the contracts at the
+//    declarations (input_handler.h). What is here is each body's own
+//    clause. ------------------------------------------------------------------
 
 // THE POINTER'S HALF OF THE GATE (the declaration). The held bit is the
 // tooltip's own record of the logical button as the last pointer event
@@ -6848,9 +6852,10 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 // THE FACE'S HALF OF THE GATE — "would a press on this face act now?", ONE
 // ARM PER SURFACE, each on the stash AS PAINTED (the press claims read the
 // painted bits, so the hover does: a key painted live hovers, and the frame
-// that repaints it dead reads no mix for it). It asks nothing of the
-// pointer's place: the walk asks it of the face its hit found, and the clock
-// of every fading face, the pen on it or gone.
+// that repaints it dead resolves its disabled look and fades to it,
+// AppState::FaceFades). It asks nothing of the pointer's place: the walk
+// asks it of the face its hit found, the settle of the hovered face, and
+// the hover's setter of the face the pen left.
 //   ROSTER — the modals veil the whole roster (the press router's ranks: a
 //     question, any editor, the progress dialog); under an overlay the press
 //     reaches the top icon row's band alone (the three veils' claim); then
@@ -6867,8 +6872,8 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //   KNOB — the stash as for a button, the scrub's item and its knob
 //     published, no drag armed, and the owner's claim taking a press.
 bool GuiInputHandler::hover_face_live(
-        const AppState::HoverFaces::Face& face) const {
-    using Surface = AppState::HoverFaces::Surface;
+        const AppState::FaceFades::Face& face) const {
+    using Surface = AppState::FaceFades::Surface;
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     const auto stash_is_faces = [&] {
         return modal_dialog_stash_current() &&
@@ -6957,9 +6962,9 @@ bool GuiInputHandler::hover_face_live(
 // would act") the pen hovering it lights nothing (architect 2026-11-20, send
 // DD: "it no longer carries button look"). The surfaces are disjoint; the
 // face found answers only where it is live (hover_face_live).
-AppState::HoverFaces::Face GuiInputHandler::hover_face_under_pointer() const {
-    using Face    = AppState::HoverFaces::Face;
-    using Surface = AppState::HoverFaces::Surface;
+AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer() const {
+    using Face    = AppState::FaceFades::Face;
+    using Surface = AppState::FaceFades::Surface;
     const GuiPointerPlace at = app.last_mouse_place();
     if (notification_card_at(app, at.x, at.y) != 0) return Face{};
     Face found{};
@@ -6996,8 +7001,8 @@ AppState::HoverFaces::Face GuiInputHandler::hover_face_under_pointer() const {
     return !found.none() && hover_face_live(found) ? found : Face{};
 }
 
-// A FACE'S OWN PAINTED EXTENT — the hover's damage (AppState::HoverFaces'
-// THE FRAMES), the press faces' damage owners' shapes: a roster key's
+// A FACE'S OWN PAINTED EXTENT — a fade's damage (AppState::FaceFades' THE
+// FRAMES), the press faces' damage owners' shapes: a roster key's
 // painted extent (invalidate_roster_press_face's rect: its box, both seam
 // columns inside it), a dialog button's box as published and the seam
 // column after it where it is an action row's answer
@@ -7006,9 +7011,9 @@ AppState::HoverFaces::Face GuiInputHandler::hover_face_under_pointer() const {
 // the grid's lines do not move), the knob's disc at its published center
 // (its hull, cut to the item). EMPTY where the face's stash is no longer its
 // own — whatever replaced that surface repainted it.
-GuiRect GuiInputHandler::hover_face_extent(
-        const AppState::HoverFaces::Face& face) const {
-    using Surface = AppState::HoverFaces::Surface;
+GuiRect GuiInputHandler::face_extent(
+        const AppState::FaceFades::Face& face) const {
+    using Surface = AppState::FaceFades::Surface;
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     const bool stash_is_faces = dlg.valid && face.dialog_owner == dlg.owner &&
                                 face.dialog_session == dlg.session;
@@ -7045,69 +7050,66 @@ GuiRect GuiInputHandler::hover_face_extent(
     return GuiRect{0, 0, 0, 0};
 }
 
-// THE ONE SETTER of the hovered face (AppState::HoverFaces::hovered). A
-// change turns two fades and the seams beside them, and damages nothing —
-// the clock's next step does (tick_hover_faces), so every damage is one
-// step's:
-//   * THE FACE THE PEN HAS LEFT goes toward rest FROM THE VALUE ITS FADE HAS
-//     REACHED, the stored mix — the value on screen — over the whole 200 ms
-//     (the head's reading of GTK: a new transition from the current value,
-//     never a shortened one). A FADE-IN NO STEP HAS ADVANCED (its stored mix
-//     still 0: nothing of it was painted) leaves the list at once, without
-//     a trace — the pen lift's restore motion names the key under the pen,
-//     and the latch's arm, in the same delivery, takes it back.
-//   * THE FACE THE PEN IS NOW ON goes toward the hover face the same way:
-//     from its stored mix where it was still fading out, from rest
-//     otherwise.
-//   * THE SEAMS, AT THE SAME INSTANT (sync_hover_seams, handed this body's
-//     `now`): each seam whose target the change moved is turned from its own
-//     stored mix — the seams beside the face left toward rest, the seams
-//     beside the face reached toward the border tone, AND THE ONE BETWEEN
-//     THE TWO, where they are neighbors, NOT AT ALL: one of its faces
-//     hovered before and the other hovers now, its target is 1 on both
-//     sides of the change, and it holds what it shows (Arc's one inset
-//     line, AppState::HoverFaces' THE SEAMS FADE ON THEIR OWN).
-void GuiInputHandler::set_hover_face(const AppState::HoverFaces::Face& face) {
-    AppState::HoverFaces& h = app.hover_faces;
+// THE HOVER'S SETTER (AppState::FaceFades::hovered). A change retargets the
+// two faces it moves and the seams beside them AT ONE INSTANT, and damages
+// nothing — the clock's next step does (tick_face_fades), so every damage
+// is one step's:
+//   * THE FACE THE PEN HAS LEFT goes toward rest from its picture as
+//     painted, over the whole 200 ms (the head's reading of GTK) — where it
+//     is still a face a press would act on and its record still targets the
+//     hover; a face gone lit, disabled or dead under a veil is its painter's
+//     to retarget (it resolves the look its bits now give, the next frame
+//     that paints it), so this sends it toward no look its state does not
+//     give;
+//   * THE FACE THE PEN IS NOW ON goes toward the hover face the same way,
+//     from its picture as painted, where its record targets rest;
+//   * THEN THE SEAMS beside both, each toward the target their two faces'
+//     targets now give (retarget_seams_beside) — AND THE ONE BETWEEN THE
+//     TWO, where they are neighbors, NOT AT ALL: its target is the line on
+//     both sides of the change, so it holds what it shows (send CC's D1;
+//     AppState::FaceFades' THE SEAMS). Both faces are retargeted before any
+//     seam, so that seam never sees the left face at rest and the right not
+//     yet hovered.
+// A hover begun and taken back before any step (the pen lift's restore
+// motion names the key under the pen, and the latch's arm, in the same
+// delivery, takes it back) lands where it began: a retarget whose stored
+// mix is its target's own picture lands at once (Record::retarget).
+void GuiInputHandler::set_hover_face(const AppState::FaceFades::Face& face) {
+    using FaceFades = AppState::FaceFades;
+    FaceFades& h = app.face_fades;
     if (face == h.hovered) return;
     const int64_t now = monotonic_ms();
-    if (!h.hovered.none()) {
-        for (size_t i = 0; i < h.fades.size(); ++i) {
-            AppState::HoverFaces::Fade& f = h.fades[i];
-            if (!(f.face == h.hovered)) continue;
-            if (f.mix == 0.0) {
-                h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
-            } else {
-                f.from     = f.mix;
-                f.to       = 0.0;
-                f.start_ms = now;
-            }
-            break;
-        }
-    }
+    const FaceFades::Face left = h.hovered;
     h.hovered = face;
-    if (!face.none()) {
-        bool standing = false;
-        for (AppState::HoverFaces::Fade& f : h.fades) {
-            if (!(f.face == face)) continue;
-            f.from     = f.mix;
-            f.to       = 1.0;
-            f.start_ms = now;
-            standing   = true;
-            break;
-        }
-        if (!standing)
-            h.fades.push_back(AppState::HoverFaces::Fade{.face     = face,
-                                                         .from     = 0.0,
-                                                         .to       = 1.0,
-                                                         .start_ms = now,
-                                                         .mix      = 0.0});
-    }
-    sync_hover_seams(now);
+    const auto turn = [&](const FaceFades::Face& f, FaceLook from_look,
+                          FaceLook to_look) {
+        FaceFades::Record* r = h.find(f);
+        if (r == nullptr || r->target != from_look) return;
+        r->retarget(to_look, FaceFades::duration_ms(f.surface, to_look), now);
+    };
+    if (!left.none() && hover_face_live(left))
+        turn(left, FaceLook::Hover, FaceLook::Rest);
+    if (!face.none()) turn(face, FaceLook::Rest, FaceLook::Hover);
+    if (!left.none()) retarget_seams_beside(left, now);
+    if (!face.none()) retarget_seams_beside(face, now);
+}
+
+// THE PRESS'S RETARGET (the declaration): the face goes toward its pressed
+// look — the accent, Lit (the knob held, Lit too) — from its picture as
+// painted, starting now, and the seams beside it with it. A lit key pressed
+// stays where it is (its target is Lit already).
+void GuiInputHandler::press_face(const AppState::FaceFades::Face& face) {
+    using FaceFades = AppState::FaceFades;
+    FaceFades::Record* r = app.face_fades.find(face);
+    if (r == nullptr) return;
+    const int64_t now = monotonic_ms();
+    r->retarget(FaceLook::Lit,
+                FaceFades::duration_ms(face.surface, FaceLook::Lit), now);
+    retarget_seams_beside(face, now);
 }
 
 // -- THE SEAMS (the declarations' block, input_handler.h; the rule at
-//    AppState::HoverFaces' THE SEAMS FADE ON THEIR OWN) ----------------------
+//    AppState::FaceFades' THE SEAMS) -----------------------------------------
 
 // THE FACE ON THE SEAM'S LEFT, off the stashes as painted: a roster key's
 // the published box that ends on `right`'s seam columns, on its rows (the
@@ -7115,10 +7117,10 @@ void GuiInputHandler::set_hover_face(const AppState::HoverFaces::Face& face) {
 // groups stand a run gap apart, so no other box ends there); a dialog
 // button's the button before it in the stash, where the two are linked (a
 // glyph key publishes its seam, an answer the seam after it).
-AppState::HoverFaces::Face GuiInputHandler::hover_seam_left_face(
-        const AppState::HoverFaces::Face& right) const {
-    using Face    = AppState::HoverFaces::Face;
-    using Surface = AppState::HoverFaces::Surface;
+AppState::FaceFades::Face GuiInputHandler::seam_left_face(
+        const AppState::FaceFades::Face& right) const {
+    using Face    = AppState::FaceFades::Face;
+    using Surface = AppState::FaceFades::Surface;
     switch (right.surface) {
         case Surface::Roster: {
             if (right.index < 0 || right.index >= kRedesignButtonCount) break;
@@ -7158,10 +7160,10 @@ AppState::HoverFaces::Face GuiInputHandler::hover_seam_left_face(
 }
 
 // ITS INVERSE: the face whose seam `left`'s box ends on.
-AppState::HoverFaces::Face GuiInputHandler::hover_seam_right_face(
-        const AppState::HoverFaces::Face& left) const {
-    using Face    = AppState::HoverFaces::Face;
-    using Surface = AppState::HoverFaces::Surface;
+AppState::FaceFades::Face GuiInputHandler::seam_right_face(
+        const AppState::FaceFades::Face& left) const {
+    using Face    = AppState::FaceFades::Face;
+    using Surface = AppState::FaceFades::Surface;
     if (left.surface == Surface::Roster) {
         if (left.index < 0 || left.index >= kRedesignButtonCount) return Face{};
         const AppState::RedesignButtonFace& l =
@@ -7181,42 +7183,21 @@ AppState::HoverFaces::Face GuiInputHandler::hover_seam_right_face(
     if (left.surface == Surface::Dialog) {
         const Face next{Surface::Dialog, left.index + 1, left.dialog_owner,
                         left.dialog_session};
-        return hover_seam_left_face(next) == left ? next : Face{};
+        return seam_left_face(next) == left ? next : Face{};
     }
     return Face{};
-}
-
-// "IS THIS A PAINTED SEAM A HOVER MAY SHOW ON?" (the declaration): its two
-// faces published as one seam, NEITHER PAINTED LIT — the stashed selected /
-// lit bit, whatever the enabled bit: Arc's `:checked` holds the checked and
-// disabled key, and neither of its two selectors (gtk3 CSS line 292) draws
-// the line beside one, line 296 taking it away under `button:checked +
-// button:hover` — and a press acting on at least one of them.
-bool GuiInputHandler::hover_seam_live(
-        const AppState::HoverFaces::Face& right) const {
-    using Face    = AppState::HoverFaces::Face;
-    using Surface = AppState::HoverFaces::Surface;
-    const Face left = hover_seam_left_face(right);
-    if (left.none()) return false;
-    const auto painted_lit = [&](const Face& f) {
-        if (f.surface == Surface::Roster)
-            return app.redesign_buttons[static_cast<size_t>(f.index)].selected;
-        return app.modal_dialog.buttons[static_cast<size_t>(f.index)].lit;
-    };
-    if (painted_lit(left) || painted_lit(right)) return false;
-    return hover_face_live(left) || hover_face_live(right);
 }
 
 // THE SEAM'S OWN COLUMNS (the declaration) — the first border's columns of
 // the face that names it, on its box's rows: a roster key's `seam` columns
 // from its box's left edge, cut to its painted extent; a dialog button's
 // the same, an answer's the one border the answer before it publishes as
-// its seam after. Both lie inside each neighbor's own damage
-// (hover_face_extent: a linked key's box holds both its seam columns; an
-// answer's extent its box and the seam after it).
-GuiRect GuiInputHandler::hover_seam_extent(
-        const AppState::HoverFaces::Face& right) const {
-    using Surface = AppState::HoverFaces::Surface;
+// its seam after. Both lie inside each neighbor's own damage (face_extent:
+// a linked key's box holds both its seam columns; an answer's extent its
+// box and the seam after it).
+GuiRect GuiInputHandler::seam_extent(
+        const AppState::FaceFades::Face& right) const {
+    using Surface = AppState::FaceFades::Surface;
     if (right.surface == Surface::Roster) {
         if (right.index < 0 || right.index >= kRedesignButtonCount)
             return GuiRect{0, 0, 0, 0};
@@ -7244,76 +7225,27 @@ GuiRect GuiInputHandler::hover_seam_extent(
     return GuiRect{0, 0, 0, 0};
 }
 
-// THE SEAMS' ONE SETTER (the declaration). The dead seams first, at once;
-// then each standing seam toward its target where the target moved — a
-// fade-in no step has advanced leaving without a trace, as a face's does;
-// then the hovered face's own two seams, where none stands yet. A seam
-// whose target did not move is not touched: THAT IS THE SLIDE'S SEAM, which
-// holds the border tone between the key the pen left and the one it
-// reached.
-void GuiInputHandler::sync_hover_seams(int64_t now_ms) {
-    using Face = AppState::HoverFaces::Face;
-    AppState::HoverFaces& h = app.hover_faces;
-    if (h.hovered.none() && h.seams.empty()) return;
-    for (size_t i = 0; i < h.seams.size();) {
-        AppState::HoverFaces::Fade& s = h.seams[i];
-        if (!hover_seam_live(s.face)) {
-            if (s.mix > 0.0)
-                viewport.invalidate_rect(hover_seam_extent(s.face));
-            h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
-            continue;
-        }
-        const bool hovered =
-            !h.hovered.none() && (s.face == h.hovered ||
-                                  hover_seam_left_face(s.face) == h.hovered);
-        const double to = hovered ? 1.0 : 0.0;
-        if (to != s.to) {
-            if (to == 0.0 && s.mix == 0.0) {
-                h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
-                continue;
-            }
-            s.from     = s.mix;
-            s.to       = to;
-            s.start_ms = now_ms;
-        }
-        ++i;
-    }
-    if (h.hovered.none()) return;
-    const Face own[2] = {h.hovered, hover_seam_right_face(h.hovered)};
-    for (const Face& right : own) {
-        if (right.none() || !hover_seam_live(right)) continue;
-        bool standing = false;
-        for (const AppState::HoverFaces::Fade& s : h.seams)
-            standing = standing || s.face == right;
-        if (!standing)
-            h.seams.push_back(AppState::HoverFaces::Fade{.face     = right,
-                                                         .from     = 0.0,
-                                                         .to       = 1.0,
-                                                         .start_ms = now_ms,
-                                                         .mix      = 0.0});
-    }
-}
-
-// A FACE THAT LANDS AT ONCE TAKES ITS SEAMS WITH IT (the declaration): the
-// press's claim and the settle call it for the face they drop. A seam whose
-// other face is the hovered one stays — that face still holds it; where the
-// dropped face went lit, the seams' own settle takes it next.
-void GuiInputHandler::land_hover_seams_beside(
-        const AppState::HoverFaces::Face& face) {
-    using Face = AppState::HoverFaces::Face;
-    AppState::HoverFaces& h = app.hover_faces;
-    for (size_t i = 0; i < h.seams.size();) {
-        const Face right = h.seams[i].face;
-        const Face left  = hover_seam_left_face(right);
-        const bool beside = right == face || left == face;
-        const Face other  = right == face ? left : right;
-        if (!beside || (!h.hovered.none() && other == h.hovered)) {
-            ++i;
-            continue;
-        }
-        if (h.seams[i].mix > 0.0)
-            viewport.invalidate_rect(hover_seam_extent(right));
-        h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
+// THE SEAMS BESIDE A FACE THE INPUT MOVED (the declaration): its left seam
+// and its right seam, each toward the target its two faces' targets give,
+// over the right face's destination's duration, from `now_ms` — the
+// painter's own rule (FaceFades::seam_as_painted) on the records' targets,
+// so the painter then finds the target standing. A seam whose either face
+// or whose own record has not been painted yet is left to the painter.
+void GuiInputHandler::retarget_seams_beside(
+        const AppState::FaceFades::Face& face, int64_t now_ms) {
+    using FaceFades = AppState::FaceFades;
+    FaceFades& h = app.face_fades;
+    const FaceFades::Face rights[2] = {face, seam_right_face(face)};
+    for (const FaceFades::Face& right : rights) {
+        if (right.none()) continue;
+        const FaceFades::Face left = seam_left_face(right);
+        if (left.none()) continue;
+        const FaceFades::Record* l = h.find(left);
+        const FaceFades::Record* r = h.find(right);
+        FaceFades::Record* s = h.find(right.left_seam());
+        if (l == nullptr || r == nullptr || s == nullptr) continue;
+        s->retarget(FaceFades::seam_target(l->target, r->target),
+                    FaceFades::duration_ms(right.surface, r->target), now_ms);
     }
 }
 
@@ -7329,14 +7261,15 @@ bool installed_theme_hovers() {
 } // namespace
 
 // THE WALK (the declaration): none unless the theme's term holds — on a
-// Live theme no face hovers, the seams included, and nothing fades or is
-// damaged (THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM: the seams
-// alone could have gone to the border tone there) — and the pointer's gate
-// admits one; else the live face under the pen.
+// Live theme no face hovers, the seams included, so no hover fades or is
+// damaged there (THE PLANNER'S CHOICE, 2026-11-20, TO BE PUT TO HIM: the
+// seams alone could have gone to the border tone there; a press, a lit edge
+// and a greying fade on every theme, AppState::FaceFades) — and the
+// pointer's gate admits one; else the live face under the pen.
 void GuiInputHandler::walk_hover_face() {
     set_hover_face(installed_theme_hovers() && hover_admitted()
                        ? hover_face_under_pointer()
-                       : AppState::HoverFaces::Face{});
+                       : AppState::FaceFades::Face{});
     // THE TRIM BAR'S WALK RIDES THIS ONE (AppState::TrimBarHover), so it has
     // this walk's every caller, and it reads the same theme term: on a Live
     // theme the bar shows no hover and no hover caps either (its held
@@ -7457,7 +7390,7 @@ void GuiInputHandler::walk_trim_bar_hover() {
 // grab any more — a veil raised, a card over the place, the `h` view
 // entered, the stash gone cold, a load begun, a drag gone live — goes at
 // once, ahead of the frame that would paint it (the faces'
-// settle_hover_faces runs this, from the pre-paint hook and the tick). AND
+// settle_face_fades runs this, from the pre-paint hook and the tick). AND
 // A LIFT'S PENDING ANSWER (AppState::TrimBarHover's `lift_pending`) whose
 // frozen terms no longer hold (trim_bar_frozen_part_kept: the theme, a
 // contact, the pointer out besides the above) goes here too, ahead of the
@@ -7470,107 +7403,133 @@ void GuiInputHandler::settle_trim_bar_hover() {
         set_trim_bar_hover(TrimBarPart::None);
 }
 
-// THE DEAD FACES LAND AT ONCE (the declaration): each fade whose face no
-// press would act on leaves the list, its extent damaged where a mix showed
-// (a face painted at rest under a veil would keep the tone it was caught
-// in); the hovered slot goes with its fade, so the next walk re-answers;
-// THE SEAMS BESIDE IT GO WITH IT (land_hover_seams_beside), and the seams'
-// own half follows (sync_hover_seams: a seam no longer painted, one beside
-// a face gone lit, one whose two faces are both dead; and a seam of the
-// hovered face owed again, a neighbor having gone dark under a resting
-// pen).
-void GuiInputHandler::settle_hover_faces() {
-    AppState::HoverFaces& h = app.hover_faces;
-    for (size_t i = 0; i < h.fades.size();) {
-        const AppState::HoverFaces::Fade& f = h.fades[i];
-        if (hover_face_live(f.face)) {
-            ++i;
-            continue;
-        }
-        const AppState::HoverFaces::Face dead = f.face;
-        if (f.mix > 0.0) viewport.invalidate_rect(hover_face_extent(dead));
-        if (dead == h.hovered) h.hovered = AppState::HoverFaces::Face{};
-        h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
-        land_hover_seams_beside(dead);
+// THE SETTLE (the declaration): THE FACES OF A SURFACE THAT LEFT ARE
+// DROPPED — a keyboard key's while the keyboard stands no more or stands on
+// another page, a dialog button's and the knob's while their stash's owner
+// and session are not the live surface's (AppState::modal_dialog_live_session
+// and the owners' ladder, modal_dialog_stash_current's) — so whatever
+// replaces them paints its looks at once (AppState::FaceFades' WHAT DOES NOT
+// FADE); nothing is damaged, the surface that replaced them having been
+// repainted. THE HOVERED SLOT GOES where no press would act on its face (it
+// went lit or disabled, a veil rose, its surface left), so the next walk
+// re-answers; its record is its painter's to retarget. And the trim bar's
+// hovered part, on its own rule.
+void GuiInputHandler::settle_face_fades() {
+    using FaceFades = AppState::FaceFades;
+    using Surface   = FaceFades::Surface;
+    FaceFades& h = app.face_fades;
+    if (!h.records.empty()) {
+        const bool kb_stands = onscreen_keyboard::stands(app);
+        const uint64_t live_session = app.modal_dialog_live_session();
+        const AppState::ModalDialogOwner live_owner =
+            app.prompt.active         ? AppState::ModalDialogOwner::Prompt
+          : app.batch_progress.active ? AppState::ModalDialogOwner::Progress
+          : app.render_player.active  ? AppState::ModalDialogOwner::Player
+          : app.picker.active         ? AppState::ModalDialogOwner::Picker
+          : app.score_viewer.active   ? AppState::ModalDialogOwner::Score
+                                      : AppState::ModalDialogOwner::Editor;
+        std::erase_if(h.records, [&](const FaceFades::Record& r) {
+            switch (r.face.surface) {
+                case Surface::Keyboard:
+                    return !kb_stands ||
+                           r.face.index <
+                               static_cast<int>(onscreen_keyboard::kStableCodeBase) ||
+                           onscreen_keyboard::page_of_key_index(r.face.index) !=
+                               app.onscreen_keyboard.page;
+                case Surface::Dialog:
+                case Surface::Knob:
+                    return live_session == 0 ||
+                           r.face.dialog_session != live_session ||
+                           r.face.dialog_owner != live_owner;
+                case Surface::None:
+                    return true;
+                case Surface::Roster:
+                    break;
+            }
+            return false;
+        });
     }
-    if (!h.hovered.none() || !h.seams.empty())
-        sync_hover_seams(monotonic_ms());
-    // And the trim bar's hovered part, on the same rule (no fade to drop).
+    if (!h.hovered.none() && !hover_face_live(h.hovered))
+        set_hover_face(FaceFades::Face{});
     settle_trim_bar_hover();
 }
 
-// THE CLOCK (the declaration; AppState::HoverFaces' THE FRAMES). The walk
+// THE CLOCK (the declaration; AppState::FaceFades' THE FRAMES). The walk
 // first — the stashes move under a resting pen (a relayout, a knob the
-// transport carries, a key repainted dead or lit) — then the dead faces,
-// then each fade's value at now: A STEP THAT MOVES THE STORED MIX DAMAGES
-// THE FACE'S OWN EXTENT, so a frame is invited on every beat while the fade
-// runs and the painters of that frame read the one value this step stored;
-// the step that lands is the last damage. A fade landed at the hover face
-// stays in the list at 1, moving nothing and damaging nothing, for as long
-// as the pen rests there; one landed at rest leaves it. THE SEAMS THE SAME,
-// after the faces, at the same now: a step that moves a seam's stored mix
-// damages the seam's own columns (hover_seam_extent — inside the rect the
-// face fading beside it damaged a moment before, which carries them), and
-// the two seams of a resting hover stand at 1 and cost nothing. With no
-// fade standing the body is the walk's few compares.
-void GuiInputHandler::tick_hover_faces() {
+// transport carries, a key repainted dead or lit) — then the settle, then
+// each fading record's value at now: a fade a painter began takes now as
+// its start (its value its from, which that painter painted); A STEP THAT
+// MOVES THE STORED MIX DAMAGES THE FACE'S OWN EXTENT, or the seam's own
+// columns, so a frame is invited on every beat while the fade runs and the
+// painters of that frame read the one value this step stored; the step
+// that lands is the last damage. EACH RECT IS ONE on_redraw CALL
+// (GuiPlatform::invalidate_surface_rect), so A STEP THAT MOVES MORE THAN
+// kFaceStepRects FACES OF ONE SURFACE — a greying that runs over a whole
+// icon row as an overlay opens, a load flipping many keys — damages THE
+// UNION of their rects instead, one rect holding every one of them (the
+// tick's face comparator's own rule and number, main.cpp: four holds what a
+// tap moves — a key, its twin, a radio pair — and a seam's columns lie
+// inside a neighbor's rect). The surfaces: the top icon row's roster keys,
+// the bottom icon row's, the dialog stash's buttons, the keyboard's keys,
+// the knob. With no fade running the body is the walk's few compares and
+// one pass over the records.
+void GuiInputHandler::tick_face_fades() {
     walk_hover_face();
-    settle_hover_faces();
-    AppState::HoverFaces& h = app.hover_faces;
-    if (h.fades.empty() && h.seams.empty()) return;
+    settle_face_fades();
+    using FaceFades = AppState::FaceFades;
+    using Surface   = FaceFades::Surface;
+    FaceFades& h = app.face_fades;
+    constexpr int kFaceStepRects = 4;
+    struct Batch {
+        int                               n = 0;
+        std::array<GuiRect, kFaceStepRects> rects{};
+        GuiRect                           all{0, 0, 0, 0};
+    };
+    std::array<Batch, 5> batches{};
+    const auto batch_of = [&](const FaceFades::Face& f) -> Batch& {
+        switch (f.surface) {
+            case Surface::Roster:
+                return batches[redesign_button_in_transport_row(
+                                   static_cast<RedesignButton>(f.index))
+                                   ? 1
+                                   : 0];
+            case Surface::Dialog:   return batches[2];
+            case Surface::Keyboard: return batches[3];
+            case Surface::Knob:
+            case Surface::None:     break;
+        }
+        return batches[4];
+    };
     const int64_t now = monotonic_ms();
-    for (size_t i = 0; i < h.fades.size();) {
-        AppState::HoverFaces::Fade& f = h.fades[i];
-        const double v = AppState::HoverFaces::value_at(f, now);
-        if (v != f.mix) {
-            f.mix = v;
-            viewport.invalidate_rect(hover_face_extent(f.face));
-        }
-        if (f.to == 0.0 && now - f.start_ms >= AppState::HoverFaces::kFadeMs) {
-            h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
+    for (FaceFades::Record& r : h.records) {
+        if (!r.fading) continue;
+        if (r.start_ms == FaceFades::kPendingStart) {
+            r.start_ms = now;
             continue;
         }
-        ++i;
-    }
-    for (size_t i = 0; i < h.seams.size();) {
-        AppState::HoverFaces::Fade& s = h.seams[i];
-        const double v = AppState::HoverFaces::value_at(s, now);
-        if (v != s.mix) {
-            s.mix = v;
-            viewport.invalidate_rect(hover_seam_extent(s.face));
+        const FaceMix v = r.value_at(now);
+        if (!(v == r.mix)) {
+            r.mix = v;
+            const GuiRect rect =
+                r.face.seam ? seam_extent(r.face) : face_extent(r.face);
+            if (rect.w > 0 && rect.h > 0) {
+                Batch& b = batch_of(r.face);
+                if (b.n < kFaceStepRects)
+                    b.rects[static_cast<std::size_t>(b.n)] = rect;
+                b.all = b.n == 0 ? rect : union_rect(b.all, rect);
+                ++b.n;
+            }
         }
-        if (s.to == 0.0 && now - s.start_ms >= AppState::HoverFaces::kFadeMs) {
-            h.seams.erase(h.seams.begin() + static_cast<std::ptrdiff_t>(i));
+        if (now - r.start_ms >= r.duration_ms) r.fading = false;
+    }
+    for (const Batch& b : batches) {
+        if (b.n > kFaceStepRects) {
+            viewport.invalidate_rect(b.all);
             continue;
         }
-        ++i;
+        for (int k = 0; k < b.n; ++k)
+            viewport.invalidate_rect(b.rects[static_cast<std::size_t>(k)]);
     }
-}
-
-// THE PRESS'S CLAIM (the declaration): `face`'s fade leaves the list whole
-// and the hovered slot with it — the face is the accent from this press on,
-// and at rest (or lit) at its lift, with nothing left to run. WHERE A MIX
-// SHOWED, THE HOVER'S OWN EXTENT IS DAMAGED: the arm damages the face it
-// presses, and the hover's extent is that face or a seam column more (an
-// action row's answer's right seam, the next answer's first column, which
-// the accent does not cover and which returns to the face tone with the
-// press) — a rect that holds the arm's, so the two are one repaint. THE
-// SEAMS BESIDE THE FACE GO WITH IT, whether or not its own fade stood (the
-// pen can press a key it reached a moment ago, whose left seam its
-// neighbor's hover still held): a pressed key takes both its seams, and
-// both are at rest at its lift (land_hover_seams_beside, each seam's own
-// columns damaged where a mix showed).
-void GuiInputHandler::drop_hover_face(const AppState::HoverFaces::Face& face) {
-    AppState::HoverFaces& h = app.hover_faces;
-    if (h.hovered == face) h.hovered = AppState::HoverFaces::Face{};
-    for (size_t i = 0; i < h.fades.size(); ++i) {
-        if (!(h.fades[i].face == face)) continue;
-        if (h.fades[i].mix > 0.0)
-            viewport.invalidate_rect(hover_face_extent(face));
-        h.fades.erase(h.fades.begin() + static_cast<std::ptrdiff_t>(i));
-        break;
-    }
-    land_hover_seams_beside(face);
 }
 
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect
@@ -7680,10 +7639,13 @@ bool GuiInputHandler::arm_redesign_press(const GuiPointerPlace& at) {
             .press_ms      = now,
             .painted_glyph = face.glyph};   // N2's diagnostic (the field)
         invalidate_roster_press_face(app.chrome_press.index);
-        // THE PRESS CLAIMS THE FACE FROM THE HOVER, at once whatever its
-        // fade's value (AppState::HoverFaces' WHAT DOES NOT FADE).
-        drop_hover_face({AppState::HoverFaces::Surface::Roster,
-                         app.chrome_press.index});
+        // THE PRESS TURNS THE FACE TOWARD THE ACCENT from its picture as
+        // painted — the hover's fade-out the HOVER_EXIT began, or rest —
+        // over Arc's 50 ms from now, its seams with it (AppState::FaceFades'
+        // GTK'S RULE). The act waits for the lift as ever: the fade is paint
+        // alone.
+        press_face({AppState::FaceFades::Surface::Roster,
+                    app.chrome_press.index});
         // THE HOLD-REPEAT'S ARM (architect 2026-08-16), for the rows that
         // carry `repeats`. ELIGIBILITY IS JUDGED UNDER THE PRESS-TIME CONTEXT
         // and it is the KEYBOARD'S OWN PREDICATE SHARED, not mirrored:
@@ -8794,7 +8756,7 @@ void GuiInputHandler::select_history_diff_flags_modified(int hit) {
 // DAMAGES THE BOX'S OWN RECT AS LAST PAINTED AND NOTHING ELSE (architect
 // 2026-11-16, the beats: the box's rect, shown and taken down): the box is
 // the one thing that changes — a key's hover face is not tied to the hint
-// and pays its own damage (AppState::HoverFaces), the rows under the box
+// and pays its own damage (AppState::FaceFades), the rows under the box
 // read nothing of it — and its pixels are exactly the published rect
 // (AppState::RedesignTooltip::rect, the painter's as-painted record: the
 // box's hull grown by Arc's shadow's reach — tooltip_painted_extent, send
@@ -9249,7 +9211,7 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     // key among them, hovers nothing; none while the pen latch holds, read
     // after the latch's own anchoring and clear above, so the motion that
     // rearms it lights what is under the pen (walk_hover_face;
-    // AppState::HoverFaces).
+    // AppState::FaceFades).
     walk_hover_face();
     // THE NOTIFICATION CARDS' HOVER (2026-08-29), above every branch: the cards
     // are hit above every veil, so their hover must be answered under every

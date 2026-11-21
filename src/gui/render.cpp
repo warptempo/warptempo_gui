@@ -404,11 +404,14 @@ void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
 // 2026-11-18 / 19, send Z's design, built in send AA): one coverage-stamp
 // pass at exact coverage — the trough's pill in `scale_trough`; the played
 // part, the same pill cut at the knob's center, in the accent; the knob's
-// disc — at rest `key_face` inside a one-W `scale_slider_border` rim, the
-// fill mixed toward `key_hover_face` by `hover` as painted (the stamp's
-// tone), held the whole disc the accent.
-void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held,
-                 double hover) {
+// disc — at rest `key_face` inside a one-W `scale_slider_border` rim,
+// hovered its fill `key_hover_face`, held the whole disc the accent — AS
+// PAINTED, `knob` its FaceMix (Rest, Hover and Lit; send DD, 2026-11-20):
+// the fill and the rim each the mix of their looks' tones (the stamp's
+// tone); the knob wholly held is the one accent disc, byte for byte the
+// held picture of before.
+void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x,
+                 const FaceMix& knob) {
     if (item.w <= 0 || item.h <= 0) return;
     const GuiPalette& p = palette();
     const GuiRectF tr   = scale_trough_box(item);
@@ -424,17 +427,23 @@ void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held,
         pass.rounded_rect_cut(tr.x, tr.y, tr.x + tr.w, tr.y + tr.h, tr_r, tr_r,
                               tr.x, tr.y, std::min(knob_x, tr.x + tr.w),
                               tr.y + tr.h, p.cue);
-    if (held) {
+    if (knob == FaceMix::of(FaceLook::Lit)) {
         pass.rounded_rect(kn.x, kn.y, kn.x + kn.w, kn.y + kn.h, kn_r, kn_r,
                           p.cue);
     } else {
         const double in_r = std::max(0.0, kn_r - b);
         pass.rounded_rect(kn.x + b, kn.y + b, kn.x + kn.w - b, kn.y + kn.h - b,
                           in_r, in_r,
-                          StampTone(p.key_face, p.key_hover_face,
-                                    std::clamp(hover, 0.0, 1.0)));
+                          mix_looks(knob, [&](FaceLook l) {
+                              return l == FaceLook::Lit     ? p.cue
+                                   : l == FaceLook::Hover   ? p.key_hover_face
+                                                            : p.key_face;
+                          }));
         pass.rounded_ring(kn.x, kn.y, kn.x + kn.w, kn.y + kn.h, kn_r, b,
-                          p.scale_slider_border);
+                          mix_looks(knob, [&](FaceLook l) {
+                              return l == FaceLook::Lit ? p.cue
+                                                        : p.scale_slider_border;
+                          }));
     }
     pass.end();
 }

@@ -3,6 +3,7 @@
 #include "render.h"           // GuiRect, GuiColor, palette(), the chokepoints
 
 #include <algorithm>
+#include <array>
 #include <cairo/cairo.h>
 #include <cmath>
 #include <cstdint>
@@ -93,11 +94,20 @@
 // is right"): a dead key arms nothing (every press arm refuses a
 // painted-dead face). THE PRESS FOLLOWS THE PRESS ARM'S OWN "on"
 // (point_on_key below: the feint's inside bit, the key returning to rest
-// while the pointer is off it and pressing again when it slides back); THE
-// PRESS LANDS AND LIFTS AT ONCE — no timing, no hold, no fade into or out of
-// the accent (the one animation is the hover's, THE HOVER below); the press
-// arms — the slide-off feint, the hold-repeat and the long press — are
-// unchanged; THE OTHER FEEDBACK STAYS:
+// while the pointer is off it and pressing again when it slides back); EVERY
+// CHANGE OF A KEY'S STATE FADES AS ARC'S SHEET SAYS (architect 2026-11-20,
+// send DD, to the planner's "A press shows at once. Arc fades into the
+// pressed look over 50 ms and back over 200 ms; I kept the press and the
+// lit/dark change immediate": "i'd like to see arc-truthful version
+// instead") — INTO THE ACCENT, PRESSED OR LIT, OVER 50 ms (gtk3 CSS line
+// 138), OUT OF IT, INTO THE HOVER, INTO DISABLED, OVER 200 ms (line 126),
+// LIT AND INERT 50 ms as a checked look, each from the picture on screen,
+// the face, the ring, the seams, the print and the drawing on one clock
+// (THE FACE'S FADE: FaceLook, FaceMix and mix_looks below; the clock, the
+// damage and what does not fade AppState::FaceFades, app_state.h) — THE ACT
+// IS NEVER DELAYED: the press arms — the slide-off feint, the hold-repeat
+// and the long press — and the lift's act run on the stashed bits as ever,
+// the fade being paint alone; THE OTHER FEEDBACK STAYS:
 // the act itself, a stateful key's drawing showing the act its next press
 // runs. A LIST ROW UNDER A PRESS wears the selection pair, the highlight's
 // own look (THE SELECTION PAIR, below), a list row being no key. UNDER AN OVERLAY A DEAD LIT KEY STAYS
@@ -145,21 +155,21 @@
 // lines always, so only the face moves there.
 // ONLY A RESTING KEY HOVERS: a lit key is unchanged (Arc's checked + hover
 // is the checked face), a disabled key and a key dead under a veil wear
-// nothing, a pressed key is the accent at once. THE FACE FADES, ARC'S
+// nothing, a pressed key goes toward the accent. THE FACE FADES, ARC'S
 // TRANSITION (`button { transition: all 200ms cubic-bezier(0.25, 0.46,
 // 0.45, 0.94) }`, the scale's slider the same): rest to hover and hover to
-// rest over 200 ms on that curve, the face and its seams together, each
-// painted tone THE MIX OF ITS TWO ENDS AS PAINTED — rest + (hover − rest) ·
-// mix per channel between the two colors' own words (StampTone,
-// cool_edit_paint.h), the seam's between the face it wears at rest and the
-// border tone BY THE SEAM'S OWN MIX: the line is one inset shadow on the
-// right key whichever of its two keys hovers, so it holds the border tone
-// while the pen slides from a key to its neighbor, and only a seam with one
-// hovering side fades, with that side (AppState::HoverFaces' THE SEAMS FADE
-// ON THEIR OWN). THE MIX IS A STORED VALUE, never a clock read here: WHICH
-// FACE HOVERS, ITS FADE'S AND ITS SEAMS' CLOCK AND THEIR DAMAGE HAVE ONE
-// OWNER, AppState::HoverFaces (app_state.h), whose head holds the gate — a
-// face hovers only where a press there would act — and the frames' rule;
+// rest over 200 ms on that curve, as every other change of a key's look
+// (THE KEY above), each painted tone THE MIX OF ITS LOOKS' TONES AS PAINTED
+// — per channel between the colors' own words (StampTone below), the
+// seam's line between the tone the seam wears without it and the border
+// tone BY THE SEAM'S OWN MIX: the line is one inset shadow on the right key
+// whichever of its two keys hovers, so it holds the border tone while the
+// pen slides from a key to its neighbor, and only a seam with one hovering
+// side fades, with that side (AppState::FaceFades' THE SEAMS). THE MIX IS A
+// STORED VALUE, never a clock read here: WHICH FACE HOVERS, EVERY FACE'S
+// AND SEAM'S PICTURE AS PAINTED, THEIR FADES' CLOCK AND THEIR DAMAGE HAVE
+// ONE OWNER, AppState::FaceFades (app_state.h), whose head holds the gate —
+// a face hovers only where a press there would act — and the frames' rule;
 // every painter below takes the mixes as numbers.
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
@@ -190,7 +200,7 @@
 // alone and the ground round it — the run gaps, the pads — answers nothing;
 // the on-screen keyboard's band ground round its grid alike, its grid's
 // lines its keys' (onscreen_keyboard::key_at). THE HOVER'S HIT IS THE
-// PRESS'S (AppState::HoverFaces).
+// PRESS'S (AppState::FaceFades).
 //
 // THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
 // as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
@@ -329,6 +339,158 @@ inline constexpr KeyState key_state(bool checked, bool pressed, bool enabled) {
     return (checked || pressed) ? KeyState::Lit : KeyState::Rest;
 }
 
+// A STAMP'S TONE: an authored color — or THE MIX OF AUTHORED COLORS AS
+// PAINTED (architect 2026-11-18 / 2026-11-20, send CC, Arc's hover fade;
+// 2026-11-20, send DD, every state's fade: "i'd like to see arc-truthful
+// version instead"; THE FACE'S FADE below): up to kMaxTerms colors, each
+// with its weight, taken per channel BETWEEN THE COLORS' OWN WORDS — the
+// bytes the stamp stores and blends in, each color converted for the window
+// first (cool_edit_paint.cpp's cue_fill_pixel) — the weighed sum ROUNDED
+// ONCE, half to even, so a tone of one color is that color's word to the
+// byte, on a window that converts its colors as on one that does not (a mix
+// of the authored colors would be converted after it and land a level off
+// between the ends). `add` merges a color it holds already (the same three
+// doubles) and drops a weight under 1e-9, so A TONE WHOSE WEIGHTS ALL FALL
+// ON ONE COLOR IS THAT COLOR, PLAIN — a face at rest, and a fade between two
+// looks that wear one tone there (the hover's border, the print through a
+// hover), paint the plain color's own road, byte for byte. A plain color
+// converts to its tone by itself, so every caller that hands a GuiColor is
+// unchanged.
+struct StampTone {
+    static constexpr int kMaxTerms = 8;
+    std::array<GuiColor, kMaxTerms> color{};
+    std::array<double, kMaxTerms>   weight{};
+    int                             n = 0;
+    StampTone() = default;
+    StampTone(GuiColor c) { add(c, 1.0); }
+    // `t` of `b` over `a` (send CC's two-color mix).
+    StampTone(GuiColor a, GuiColor b, double t) {
+        add(a, 1.0 - std::clamp(t, 0.0, 1.0));
+        add(b, std::clamp(t, 0.0, 1.0));
+    }
+    void add(GuiColor c, double w) {
+        if (!(w > 1e-9)) return;
+        for (int i = 0; i < n; ++i) {
+            const GuiColor& k = color[static_cast<std::size_t>(i)];
+            if (k.r == c.r && k.g == c.g && k.b == c.b) {
+                weight[static_cast<std::size_t>(i)] += w;
+                return;
+            }
+        }
+        if (n == kMaxTerms) return;
+        color[static_cast<std::size_t>(n)]  = c;
+        weight[static_cast<std::size_t>(n)] = w;
+        ++n;
+    }
+    // THIS TONE WITH `top` LAID OVER IT AT `t` — each weight of this tone
+    // times (1 − t), each of `top`'s times t: a seam's line over the face it
+    // crosses, a lit key's left seam over its neighbor's face.
+    StampTone over(const StampTone& top, double t) const {
+        const double a = std::clamp(t, 0.0, 1.0);
+        StampTone out;
+        for (int i = 0; i < n; ++i)
+            out.add(color[static_cast<std::size_t>(i)],
+                    weight[static_cast<std::size_t>(i)] * (1.0 - a));
+        for (int i = 0; i < top.n; ++i)
+            out.add(top.color[static_cast<std::size_t>(i)],
+                    top.weight[static_cast<std::size_t>(i)] * a);
+        return out;
+    }
+    // ONE COLOR: the plain road's.
+    bool plain() const { return n <= 1; }
+    GuiColor first() const { return n > 0 ? color[0] : GuiColor{0.0, 0.0, 0.0}; }
+    // The same colors at the same weights, term for term.
+    bool same(const StampTone& t) const {
+        if (n != t.n) return false;
+        for (int i = 0; i < n; ++i) {
+            const GuiColor& a = color[static_cast<std::size_t>(i)];
+            const GuiColor& b = t.color[static_cast<std::size_t>(i)];
+            if (a.r != b.r || a.g != b.g || a.b != b.b ||
+                weight[static_cast<std::size_t>(i)] !=
+                    t.weight[static_cast<std::size_t>(i)])
+                return false;
+        }
+        return true;
+    }
+};
+
+// THE LOOKS A FACE SHOWS (architect 2026-11-20, send DD: "i'd like to see
+// arc-truthful version instead"; AppState::FaceFades, app_state.h, the one
+// owner of every face's fade): Arc's button states as our painters resolve
+// them — REST, HOVER (a resting face under the hovering pen, Arc's
+// button:hover), LIT (checked, or pressed: Arc's `:active` and `:checked`
+// one look; a latched keyboard key; the knob held), DISABLED, LIT AND INERT.
+// face_look folds a key's state and its hover; the scrub's knob takes Rest,
+// Hover and Lit alone, the on-screen keyboard's keys the same. A SEAM'S LINE
+// takes two of them: Rest (no line) and Hover (Arc's inset line).
+enum class FaceLook : uint8_t { Rest, Hover, Lit, Disabled, LitInert };
+inline constexpr int kFaceLooks = 5;
+inline constexpr FaceLook face_look(KeyState s, bool hovered) {
+    switch (s) {
+        case KeyState::Lit:      return FaceLook::Lit;
+        case KeyState::Disabled: return FaceLook::Disabled;
+        case KeyState::LitInert: return FaceLook::LitInert;
+        case KeyState::Rest:     break;
+    }
+    return hovered ? FaceLook::Hover : FaceLook::Rest;
+}
+// Arc's `:checked` (lit or lit and inert; a pressed key is Lit too, Arc's
+// `:active`): no seam line stands beside one (gtk3 CSS lines 292 / 296).
+inline constexpr bool face_look_checked(FaceLook l) {
+    return l == FaceLook::Lit || l == FaceLook::LitInert;
+}
+
+// A FACE AS PAINTED: the weight of each look in its picture, summing to 1 —
+// one look's alone at rest, two or more through a fade, a reversal's from
+// being the mix it had reached (AppState::FaceFades). Every tone of the face
+// — its fill, its ring, its print and its drawing — is the same weighed mix
+// of that tone's value in each look (mix_looks), so one clock moves them
+// all, as GTK's `transition: all` does.
+struct FaceMix {
+    std::array<double, kFaceLooks> w{};
+    static FaceMix of(FaceLook l) {
+        FaceMix m;
+        m.w[static_cast<std::size_t>(l)] = 1.0;
+        return m;
+    }
+    double operator[](FaceLook l) const {
+        return w[static_cast<std::size_t>(l)];
+    }
+    bool operator==(const FaceMix&) const = default;
+};
+// THE TONE OF A FACE AS PAINTED: Σ weight(look) · tone_of(look), as one
+// StampTone — plain wherever the looks it weighs share that tone.
+template <class ToneOf>
+inline StampTone mix_looks(const FaceMix& m, ToneOf&& tone_of) {
+    StampTone t;
+    for (int i = 0; i < kFaceLooks; ++i)
+        t.add(tone_of(static_cast<FaceLook>(i)),
+              m.w[static_cast<std::size_t>(i)]);
+    return t;
+}
+
+// THE TONES OF ONE LOOK on an Arc button (the head's THE KEY and THE HOVER;
+// render.h's palette): THE FACE — `key_face` at rest, `key_hover_face`
+// hovered, the accent `cue` lit, `key_dim_face` disabled, `lit_dim_fill`
+// lit and inert; THE RING — `key_dim_border` disabled, `well_border` in
+// every other look; THE DRAWING'S INK (key_ink below, the sRGB word) — the
+// hover's the rest's; THE WORD BUTTON'S WORD (word_button_ink).
+inline GuiColor key_face_tone(FaceLook l) {
+    const GuiPalette& p = palette();
+    switch (l) {
+        case FaceLook::Hover:    return p.key_hover_face;
+        case FaceLook::Lit:      return p.cue;
+        case FaceLook::Disabled: return p.key_dim_face;
+        case FaceLook::LitInert: return p.lit_dim_fill;
+        case FaceLook::Rest:     break;
+    }
+    return p.key_face;
+}
+inline GuiColor key_ring_tone(FaceLook l) {
+    const GuiPalette& p = palette();
+    return l == FaceLook::Disabled ? p.key_dim_border : p.well_border;
+}
+
 // THE INK OF A KEY'S DRAWING for its state, the installed theme's sRGB word
 // (the glyph road takes the word, icons::draw_glyph): `text` at rest,
 // `text_on_lit` lit, `key_dim_ink` disabled, `text_on_lit_dim` lit and inert.
@@ -349,6 +511,29 @@ inline uint32_t key_ink(KeyState s) {
 inline uint32_t word_button_ink(KeyState s) {
     return s == KeyState::Disabled ? installed_theme().tones.text_dim
                                    : key_ink(s);
+}
+// THE SAME TWO INKS BY LOOK (the hover's the rest's), and AS PAINTED: the
+// face's mix of them as one StampTone (the ink road takes it,
+// paint_key_glyph's tone overload and set_stamp_tone_source).
+inline uint32_t key_ink(FaceLook l) {
+    switch (l) {
+        case FaceLook::Lit:      return key_ink(KeyState::Lit);
+        case FaceLook::Disabled: return key_ink(KeyState::Disabled);
+        case FaceLook::LitInert: return key_ink(KeyState::LitInert);
+        case FaceLook::Rest:
+        case FaceLook::Hover:    break;
+    }
+    return key_ink(KeyState::Rest);
+}
+inline uint32_t word_button_ink(FaceLook l) {
+    return l == FaceLook::Disabled ? installed_theme().tones.text_dim
+                                   : key_ink(l);
+}
+inline StampTone key_ink_tone(const FaceMix& m) {
+    return mix_looks(m, [](FaceLook l) { return hex(key_ink(l)); });
+}
+inline StampTone word_button_ink_tone(const FaceMix& m) {
+    return mix_looks(m, [](FaceLook l) { return hex(word_button_ink(l)); });
 }
 
 // THE KEY'S LENGTHS (the head's THE KEY; render.h's case block owns the
@@ -418,34 +603,32 @@ inline int linked_key_seam_px(int i) {
 // over the ring; (3) A LIT MEMBER'S LEFT SEAM, `cue`, its first border's
 // columns between the border's top and bottom rows, whole cells over the
 // left key's face — so the border stays its tone round a lit key and a lit
-// key takes both its seams whatever its neighbors; (4) THE HOVER (the
-// head's THE HOVER; send CC, 2026-11-20): `hover[i]` member i's stored mix
-// in [0, 1] (an empty span is no hover; read for a RESTING member alone) —
-// its face in (2) the key face mixed toward `key_hover_face` by it; AND
-// THE SEAMS, EACH BY ITS OWN STORED MIX: `seam[i]` the mix of the seam
-// between members i − 1 and i (index 0 unread; an empty span is no seam) —
-// whole cells between the border's rows, the face it wears at rest (the
-// left member's) mixed toward `well_border` by it. THE CALLER HANDS THE
-// MIX AS THIS RUN PAINTS THE TWO MEMBERS
-// (AppState::HoverFaces::seam_mix_as_painted, off the very `states` it
-// hands here): 0 where the member that held the seam is painted not at
-// rest in this run — a hovered key this run is the first to paint
-// disabled takes its seams in this same frame — and 0 between two members
-// neither of which is at rest; a DISABLED member that held nothing
-// forbids nothing, its seam beside a hovering live key takes the line
-// (gtk3 CSS line 292's sibling half asks nothing of `:disabled`). The seam's mix is its
-// own, not its two members' larger one: through a slide from one key to
-// its neighbor the two faces cross while the seam between them holds the
-// border tone (the head's THE HOVER). NO LINE BESIDE A LIT OR LIT-INERT
-// MEMBER, on either side (Arc's `:not(:checked)` twice in gtk3 CSS line
-// 292, and line 296's `button:checked + button:hover { box-shadow: none
-// }`): that seam is left as (2) and (3) painted it — the accent on a lit
-// member's left, the left member's face everywhere else. EVERY PIXEL A
-// MEMBER'S STATE OR HOVER MOVES LIES INSIDE ITS OWN BOX, its corners
-// included (a seam column
-// is inside both boxes it joins): a member's damage is its box, a seam's
-// its own columns, and a repaint under any clip paints every member from
-// its own state as published and every face and seam from its own stored
+// key takes both its seams whatever its neighbors; (4) THE SEAM'S LINE,
+// Arc's inset line on the right key (gtk3 CSS line 292), whole cells
+// between the border's rows, (3)'s tone mixed toward `well_border` by
+// `seam[i]`, the stored mix of the line between members i − 1 and i (index
+// 0 unread; an empty span is no line).
+// EACH MEMBER IS HANDED AS PAINTED (THE FACE'S FADE, architect 2026-11-20,
+// send DD: "i'd like to see arc-truthful version instead"; send CC's hover
+// before it): `faces[i]` member i's FaceMix, the weight of each look in its
+// picture (AppState::FaceFades::as_painted, the one owner), so every tone
+// above is that mix of its look tones (mix_looks: the face key_face_tone,
+// the ring stretch key_ring_tone — the runs of (1) join where two members'
+// mixed ring tones are one — and (3)'s accent laid over the left key's face
+// by the member's Lit weight); a member at rest in one look paints that
+// look's tones plain, byte for byte the unmixed picture. The line's mix is
+// the seam's own (AppState::FaceFades' THE SEAMS), not its two members'
+// larger one: through a slide from one key to its neighbor the two faces
+// cross while the line between them holds the border tone, and beside a
+// member going lit it fades out on the right key's own clock (its target
+// is no line beside a checked member, Arc's `:not(:checked)` twice in line
+// 292 and line 296's `button:checked + button:hover { box-shadow: none }`;
+// a DISABLED member forbids nothing, line 292's sibling half asking nothing
+// of `:disabled`), so the painter draws whatever the stored mix says. EVERY
+// PIXEL A MEMBER'S STATE, ITS FADE OR ITS LINE MOVES LIES INSIDE ITS OWN
+// BOX, its corners included (a seam column is inside both boxes it joins):
+// a member's damage is its box, a seam's its own columns, and a repaint
+// under any clip paints every member and every line from its own stored
 // mix. THE ROAD: one
 // CoverageStampPass (cool_edit_paint.h), every shape a rounded rect with real
 // edges stamped straight into the target in the order above — NOTHING
@@ -453,8 +636,7 @@ inline int linked_key_seam_px(int i) {
 // caller's paint_key_glyph), so the stamp and cairo never interleave. The
 // glyphs are the caller's.
 void paint_linked_group(cairo_t* cr, int x, int y,
-                        std::span<const KeyState> states,
-                        std::span<const double> hover = {},
+                        std::span<const FaceMix> faces,
                         std::span<const double> seam = {});
 
 // ONE WORD BUTTON on `box` (Arc's text button; architect 2026-11-18, his
@@ -465,12 +647,12 @@ void paint_linked_group(cairo_t* cr, int x, int y,
 // — each at exact coverage, so an outer corner mixes the ground and the ring
 // alone and an inner corner pixel all three: at rest `key_face` in
 // `well_border`; lit (pressed) the accent `cue` in `well_border`; disabled
-// `key_dim_face` in `key_dim_border`; AT REST UNDER THE HOVERING PEN the
-// face mixed toward `key_hover_face` by `hover`, the button's stored mix
-// (the head's THE HOVER), the ring unchanged. The word is the caller's
-// (word_button_ink). One stamp pass, nothing drawn inside it.
-void paint_word_button(cairo_t* cr, const GuiRect& box, KeyState state,
-                       double hover = 0.0);
+// `key_dim_face` in `key_dim_border`; hovered `key_hover_face` in
+// `well_border` — EACH AS PAINTED, `face` the button's FaceMix
+// (AppState::FaceFades::as_painted; mix_looks of key_face_tone and
+// key_ring_tone), plain at rest in one look. The word is the caller's
+// (word_button_ink_tone). One stamp pass, nothing drawn inside it.
+void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 
 // ARC'S ENTRY on `box` (architect 2026-11-19, send Z; DESIGN §3, the kit's
 // body_entry; G3 `entry`) — NOISE's case and a dialog editor's field (the

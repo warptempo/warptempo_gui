@@ -73,32 +73,59 @@ uint32_t CoverageStampPass::word_of(GuiColor color) {
     return slot.word;
 }
 
-// A TONE'S WORD (StampTone's rule, cool_edit_paint.h): a plain color's own
-// word; a mix the two colors' words mixed per channel, rounded half to even
-// (nearbyint under the default rounding mode, the derivation's rounding,
-// theme_roles.h), the ends the words themselves.
-uint32_t CoverageStampPass::word_of(const StampTone& tone) {
-    const uint32_t a = word_of(tone.from);
-    if (!(tone.mix > 0.0)) return a;
-    const uint32_t b = word_of(tone.to);
-    if (tone.mix >= 1.0) return b;
+// A TONE'S WORD (StampTone's rule, materials.h): a plain color's own word;
+// a mix the colors' words weighed per channel, the sum over the weights'
+// total rounded once, half to even (nearbyint under the default rounding
+// mode, the derivation's rounding, theme_roles.h).
+namespace {
+template <class WordOf>
+uint32_t mixed_word(const StampTone& tone, WordOf&& word_of_color) {
+    if (tone.plain()) return word_of_color(tone.first());
+    double total = 0.0;
+    double acc[3] = {0.0, 0.0, 0.0};
+    for (int i = 0; i < tone.n; ++i) {
+        const double wt = tone.weight[static_cast<std::size_t>(i)];
+        const uint32_t w = word_of_color(tone.color[static_cast<std::size_t>(i)]);
+        total += wt;
+        for (int c = 0; c < 3; ++c)
+            acc[c] += wt * static_cast<double>((w >> (16 - 8 * c)) & 0xFFu);
+    }
     uint32_t out = 0xff000000u;
-    for (int shift = 0; shift < 24; shift += 8) {
-        const double ca = static_cast<double>((a >> shift) & 0xFFu);
-        const double cb = static_cast<double>((b >> shift) & 0xFFu);
-        const double v  = std::nearbyint(ca + tone.mix * (cb - ca));
-        out |= static_cast<uint32_t>(std::clamp(v, 0.0, 255.0)) << shift;
+    for (int c = 0; c < 3; ++c) {
+        const double v = std::nearbyint(total > 0.0 ? acc[c] / total : 0.0);
+        out |= static_cast<uint32_t>(std::clamp(v, 0.0, 255.0)) << (16 - 8 * c);
     }
     return out;
 }
+} // namespace
 
-// THE CAIRO ROAD'S SOURCE for a tone: a plain color through the palette's
-// chokepoint as ever; a mix its word's own bytes, already the window's (a
-// byte n set as n / 255 is the byte cairo's fill stores, cue_fill_pixel's
-// arithmetic).
+uint32_t CoverageStampPass::word_of(const StampTone& tone) {
+    return mixed_word(tone, [this](GuiColor c) { return word_of(c); });
+}
+
+uint32_t stamp_tone_word(const StampTone& tone) {
+    return mixed_word(tone, [](GuiColor c) { return cue_fill_pixel(c); });
+}
+
+// THE INK'S SOURCE (the declaration): a plain tone through the palette's
+// chokepoint; a mix its word's own bytes, already the window's (a byte n set
+// as n / 255 is the byte cairo's fill stores, cue_fill_pixel's arithmetic).
+void set_stamp_tone_source(cairo_t* cr, const StampTone& tone) {
+    if (tone.plain()) {
+        set_palette_source(cr, tone.first());
+        return;
+    }
+    const uint32_t w = stamp_tone_word(tone);
+    cairo_set_source_rgb(cr,
+                         static_cast<double>((w >> 16) & 0xFFu) / 255.0,
+                         static_cast<double>((w >> 8) & 0xFFu) / 255.0,
+                         static_cast<double>(w & 0xFFu) / 255.0);
+}
+
+// THE CAIRO ROAD'S SOURCE for a tone: the ink's, from the pass's kept words.
 void CoverageStampPass::set_tone_source(const StampTone& tone) {
-    if (!(tone.mix > 0.0)) {
-        set_palette_source(cr_, tone.from);
+    if (tone.plain()) {
+        set_palette_source(cr_, tone.first());
         return;
     }
     const uint32_t w = word_of(tone);
@@ -309,7 +336,7 @@ void rounded_rect_path(cairo_t* cr, double x0, double y0, double x1,
 
 void CoverageStampPass::rounded_ring(double x0, double y0, double x1,
                                      double y1, double r, double bw,
-                                     GuiColor color) {
+                                     StampTone color) {
     if (x1 <= x0 || y1 <= y0 || bw <= 0.0) return;
     const double ri = std::max(r - bw, 0.0);
     const double ix0 = x0 + bw, iy0 = y0 + bw, ix1 = x1 - bw, iy1 = y1 - bw;
@@ -323,7 +350,7 @@ void CoverageStampPass::rounded_ring(double x0, double y0, double x1,
         rounded_rect_path(cr_, x0, y0, x1, y1, r, r);
         if (ix1 > ix0 && iy1 > iy0)
             rounded_rect_path(cr_, ix0, iy0, ix1, iy1, ri, ri);
-        set_palette_source(cr_, color);
+        set_tone_source(color);
         cairo_fill(cr_);
         cairo_restore(cr_);
         return;

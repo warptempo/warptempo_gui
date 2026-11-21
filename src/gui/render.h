@@ -243,8 +243,10 @@ struct TrimRange {
 // STILL OPAQUE. A BUTTON'S HOVER FACE IS ARC'S (architect 2026-11-18 /
 // 2026-11-20, send CC, reopening 2026-10-02's no hover face): `key_hover_face`
 // over a resting key, word button, on-screen keyboard key and the scrub's
-// knob under the hovering pen, mixed in and out over Arc's 200 ms
-// (materials.h's THE HOVER; AppState::HoverFaces, its one owner); THE
+// knob under the hovering pen, mixed in and out over Arc's 200 ms, and
+// every other change of a button's state faded as Arc's sheet says (50 ms
+// into a pressed or lit look, 200 ms into any other; send DD, 2026-11-20 —
+// materials.h's THE HOVER; AppState::FaceFades, the one owner); THE
 // TRIM BAR'S PART under the pen — the pill's body or an end's cap — wears
 // `trim_span_hover_face` at once, with no fade, and both caps show
 // (trim_bar_tones; AppState::TrimBarHover; send CC, 2026-11-20); the
@@ -1937,10 +1939,13 @@ inline int program_run_gap_px() {
 //     at rest) — THE WHOLE DISC THE ACCENT, no rim (Arc's slider:active);
 //     UNDER THE HOVERING PEN, at rest, ITS FILL `key_hover_face` inside the
 //     unchanged rim (Arc's scale slider:hover, 505666, measured on his
-//     desktop; architect 2026-11-18 / 2026-11-20, send CC), faded in and
-//     out over Arc's 200 ms as a key's is — the hover's rule, its gate and
-//     its frames AppState::HoverFaces's (app_state.h), the mix handed to
-//     paint_scale as a number, the knob's hit the press's own
+//     desktop; architect 2026-11-18 / 2026-11-20, send CC); EVERY CHANGE
+//     AMONG THE THREE — rest, hover, held — FADES OVER ARC'S 200 ms, the
+//     fill and the rim (gtk3 CSS lines 1144 .. 1150: `transition: all 200ms
+//     ...; transition-property: background, border`, no 50 ms line; send DD,
+//     2026-11-20) — the gate and the frames AppState::FaceFades's
+//     (app_state.h), the knob's picture handed to paint_scale as a FaceMix,
+//     the knob's hit the press's own
 //     (scale_knob_hit, on the disc as painted), its damage the disc's hull
 //     at the published center. No glyph, no lit state. AT ITS POSITION'S EXACT PLACE (the
 //     no-grid rule, hull above): its center the real x of its frame or page
@@ -2622,11 +2627,13 @@ inline GuiRect scale_knob_move_rect(const GuiRect& item, double from_x,
     return GuiRect{x0, item.y, x1 - x0, item.h};
 }
 // THE SCALE PAINTED on `item` (render.cpp): the trough, the played part to
-// the knob's center `knob_x`, the knob at rest or `held`; at rest its fill
-// mixed toward `key_hover_face` by `hover`, the knob's stored hover mix in
-// [0, 1] (the scrub's block above; AppState::HoverFaces).
-void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x, bool held,
-                 double hover = 0.0);
+// the knob's center `knob_x`, the knob AS PAINTED — `knob` its FaceMix over
+// rest, hover and held (materials.h; the scrub's block above;
+// AppState::FaceFades, whose fades run every change of the knob's look over
+// Arc's 200 ms).
+struct FaceMix;
+void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x,
+                 const FaceMix& knob);
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas has none (row 6's canvas
 // paragraph), the rows and columns of ground stand outside the area.
 // THE WAVEFORM'S LINE WIDTH — ONE W, THE LINE RULE'S (architect 2026-11-04,
@@ -3220,11 +3227,11 @@ inline int level_travel_px() {
     return scaled_px(kLevelTravelW, 1);
 }
 
-// (THE HOVER'S FADE HAS NO LENGTH HERE: the hover and its fade are Arc's
-// (architect 2026-11-18 / 2026-11-20, send CC) — the look materials.h's THE
-// HOVER; the duration, the curve, the clock and the damage
-// AppState::HoverFaces, app_state.h; the pen latch that keeps a lifting pen
-// from blinking a face GuiInputHandler::pen_hot_latch_.)
+// (THE FACES' FADES HAVE NO LENGTH HERE: the hover and every state's fade
+// are Arc's (architect 2026-11-18 / 2026-11-20, sends CC and DD) — the look
+// materials.h's THE KEY and THE HOVER; the durations, the curve, the clock
+// and the damage AppState::FaceFades, app_state.h; the pen latch that keeps
+// a lifting pen from blinking a face GuiInputHandler::pen_hot_latch_.)
 
 // (THE DROPDOWN'S METRICS — Windows 95's popup menu at the Windows pixel,
 // architect 2026-10-02: the plain raised two-line frame, one W of margin, the

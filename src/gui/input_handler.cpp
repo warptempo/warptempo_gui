@@ -3600,6 +3600,9 @@ void GuiInputHandler::apply_waveform_fade_px(int hundredths) {
 }
 
 void GuiInputHandler::relayout_window() {
+    // A RE-LAID FACE PAINTS ITS LOOK AT ONCE (AppState::FaceFades' WHAT
+    // DOES NOT FADE): every record dropped, so no fade crosses a relayout.
+    app.face_fades.drop_all();
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
 }
@@ -3620,6 +3623,7 @@ void GuiInputHandler::apply_true_colors(bool on) {
     const WaveformPlateInks before = waveform_plate_inks();
     install_true_colors(on);
     icons::drop_rasters();
+    app.face_fades.drop_all();   // every face its look at once (FaceFades)
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
     viewport.invalidate_all();
@@ -3631,6 +3635,7 @@ void GuiInputHandler::apply_theme(const GuiTheme& theme, int bright_mix) {
     const WaveformPlateInks before = waveform_plate_inks();
     install_palette(theme, bright_mix);
     icons::drop_rasters();
+    app.face_fades.drop_all();   // every face its look at once (FaceFades)
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
     else                                 viewport.refresh_flag_cache();
     viewport.invalidate_all();
@@ -3640,6 +3645,7 @@ void GuiInputHandler::apply_icons(GuiIconSet set) {
     // The apply shape is at the declaration (input_handler.h).
     icons::select_set(set);
     icons::drop_rasters();
+    app.face_fades.drop_all();   // every face its look at once (FaceFades)
     viewport.invalidate_all();
 }
 

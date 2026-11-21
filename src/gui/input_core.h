@@ -89,11 +89,12 @@
 //     92524919, 92528433 → 92528434), the exit's leave running before the
 //     DOWN's own motion and press, so a frame can paint between the two.
 //     The leave is read like every other and needs no reason: it starts the
-//     hovered face's 200 ms fade-out (Arc's hover, AppState::HoverFaces), a
+//     hovered face's 200 ms fade-out (Arc's hover, AppState::FaceFades), a
 //     millisecond of which is under one painted level, and the DOWN's press
-//     arm then drops the fade whole and paints the accent
-//     (GuiInputHandler::drop_hover_face) — the face goes from its hover to
-//     the accent with no dip and nothing restarted. Everything else the
+//     arm then turns the face toward the accent from the value it holds,
+//     over Arc's 50 ms (GuiInputHandler::press_face; architect 2026-11-20,
+//     send DD) — GTK's own sequence, `:hover` lost then `:active` gained,
+//     with no dip. Everything else the
 //     leave does it does here too: the tooltip goes at once as on leaving
 //     any tool (architect 2026-10-06), the in-window bit drops, the press
 //     arms, the drags, the cards' hover and the pen latch clear.

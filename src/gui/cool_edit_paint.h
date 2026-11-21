@@ -109,10 +109,12 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // function of its input and of state no paint changes — the scale, the
 // installed display transform): THE CHIP'S THREE LENGTHS, at the pass's
 // first chip (a pass of rects alone never reads them), and A COLOR'S WORD,
-// kept for the last four colors the pass was handed — a lane's chips
+// kept for the last sixteen colors the pass was handed — a lane's chips
 // alternate an outline and a fill, the enabled pair and the disabled pair
 // interleaved where both stand, so its hundreds of triangles convert four
-// colors once each.
+// colors once each; a linked group fading through its looks (every tone a
+// mix of up to five, materials.h's StampTone) converts each look's tones
+// once (send DD, 2026-11-20).
 // THE PASS: begin() takes the direct target once
 // (direct_pixel_target, render.h: the surface flushed, the clip's boxes
 // copied — a clip region's boxes are disjoint, so no pixel is blended twice
@@ -129,7 +131,8 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // THE SHAPES: a rect with real edges — the selection stem's head segment
 // (GuiPaintHandler::paint_marker_stem_heads), the ruler's ticks
 // (paint_ruler_row), a lit linked key's left seam and a hovering key's two
-// seams (paint_linked_group, the second in a mixed tone, StampTone below);
+// seams (paint_linked_group, in a mixed tone through a fade, materials.h's
+// StampTone);
 // THE ROUNDED RECT, the trim bar's pill
 // (render_trim_flags; architect 2026-11-17, session 140; IN THREE BANDS
 // with its caps, send DD 2026-11-20) and Arc's keys'
@@ -139,23 +142,19 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // down-pointing 45° triangle; and THE CHIP, one of them (THE CUE'S CHIP
 // above: the lane's cues, paint_cues, and the ruler's head).
 
-// A STAMP'S TONE: an authored color — or THE MIX OF TWO AUTHORED COLORS AS
-// PAINTED (architect 2026-11-18 / 2026-11-20, send CC, Arc's hover fade:
-// materials.h's THE HOVER): `mix` of `to` over `from`, taken per channel
-// BETWEEN THE TWO COLORS' OWN WORDS — the bytes the stamp stores and blends
-// in, each color converted for the window first (cue_fill_pixel) — rounded
-// half to even, so at 0 the tone is `from`'s word to the byte and at 1
-// `to`'s, on a window that converts its colors as on one that does not (a
-// mix of the authored colors would be converted after it and land a level
-// off between the ends). A plain color converts to its tone by itself, so
-// every caller that hands a GuiColor is unchanged.
-struct StampTone {
-    GuiColor from{};
-    GuiColor to{};
-    double   mix = 0.0;
-    StampTone(GuiColor color) : from(color), to(color) {}
-    StampTone(GuiColor a, GuiColor b, double t) : from(a), to(b), mix(t) {}
-};
+// (A STAMP'S TONE, StampTone — an authored color or the mix of several as
+// painted — is materials.h's, beside the faces' looks it mixes.)
+
+// THE INK OF A TONE OFF THE STAMP (architect 2026-11-20, send DD: a face's
+// print and drawing fade with it; materials.h's StampTone): the word
+// StampTone's rule makes of `tone` — each color converted for the window
+// (cue_fill_pixel), weighed, rounded once — and the context's source set to
+// it: a plain tone through the palette's chokepoint as ever (set_palette_source,
+// byte for byte every unmixed print), a mix as its word's own bytes, already
+// the window's. The text road masks the source with its coverage
+// (text_raster.h), so a mixed print costs nothing more than a plain one.
+uint32_t stamp_tone_word(const StampTone& tone);
+void set_stamp_tone_source(cairo_t* cr, const StampTone& tone);
 
 class CoverageStampPass {
 public:
@@ -197,7 +196,7 @@ public:
     // on every side, of radius max(r − bw, 0) — each pixel the outer's
     // coverage less the padding box's (the kit's gtk_box), in `color`.
     void rounded_ring(double x0, double y0, double x1, double y1, double r,
-                      double bw, GuiColor color);
+                      double bw, StampTone tone);
     // THE ROUNDED RECT CUT TO A RECT (send Z, 2026-11-19: Arc's entry
     // progress, the entry's inner box cut at the level's real end and to its
     // foot's rows): rounded_rect's shape, left corners `rl`, right `rr`,
@@ -243,7 +242,7 @@ private:
         GuiColor color{};
         uint32_t word = 0;
     };
-    static constexpr int kKeptWords = 4;
+    static constexpr int kKeptWords = 16;
     KeptWord          kept_[kKeptWords]{};
     int               kept_next_ = 0;
     // The chip's height (render.h's cue block), read at the first chip.

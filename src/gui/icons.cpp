@@ -242,11 +242,15 @@ InkInBox ink_in_box(Icon icon, int box_px) {
     return it->second;
 }
 
-void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
-                uint32_t color) {
-    if (ink_px <= 0) return;
+namespace {
+// THE CROPPED RASTER of `icon` at `ink_px` in `color` at the place (x, y)
+// (draw_glyph's road, the declaration's THE CACHE), and the whole part of
+// the place it is copied at; null for a drawing with no ink.
+cairo_surface_t* placed_raster(Icon icon, double x, double y, int ink_px,
+                               uint32_t color, int& wx, int& wy) {
+    if (ink_px <= 0) return nullptr;
     const Fit& fit = fit_for(icon, ink_px);
-    if (fit.w <= 0 || fit.h <= 0) return;
+    if (fit.w <= 0 || fit.h <= 0) return nullptr;
     LoadedSet& set = *loaded_set();
     const int index = static_cast<int>(icon);
     const uint32_t rgb = color & 0xFFFFFFu;
@@ -262,7 +266,7 @@ void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
             ++whole;
         }
     };
-    int wx = 0, wy = 0, px = 0, py = 0;
+    int px = 0, py = 0;
     split(x, wx, px);
     split(y, wy, py);
     const GlyphKey key{index, ink_px, rgb, px, py};
@@ -292,9 +296,40 @@ void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
         svg_icon::convert_to_display(glyph.get());
         it = set.glyphs.emplace(key, std::move(glyph)).first;
     }
+    return it->second.get();
+}
+} // namespace
+
+void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
+                uint32_t color) {
+    int wx = 0, wy = 0;
+    cairo_surface_t* raster = placed_raster(icon, x, y, ink_px, color, wx, wy);
+    if (raster == nullptr) return;
     cairo_save(cr);
-    cairo_set_source_surface(cr, it->second.get(), wx, wy);
+    cairo_set_source_surface(cr, raster, wx, wy);
     cairo_paint(cr);
+    cairo_restore(cr);
+}
+
+void draw_glyph_tinted(cairo_t* cr, Icon icon, double x, double y,
+                       int ink_px, uint32_t raster_color,
+                       uint32_t window_word) {
+    // A drawing with its own inks ignores the tone (icons.h's head): its
+    // one raster.
+    if (loaded_set()->bound[static_cast<size_t>(icon)].empty()) {
+        draw_glyph(cr, icon, x, y, ink_px, raster_color);
+        return;
+    }
+    int wx = 0, wy = 0;
+    cairo_surface_t* raster =
+        placed_raster(icon, x, y, ink_px, raster_color, wx, wy);
+    if (raster == nullptr) return;
+    cairo_save(cr);
+    cairo_set_source_rgb(cr,
+                         static_cast<double>((window_word >> 16) & 0xFFu) / 255.0,
+                         static_cast<double>((window_word >> 8) & 0xFFu) / 255.0,
+                         static_cast<double>(window_word & 0xFFu) / 255.0);
+    cairo_mask_surface(cr, raster, wx, wy);
     cairo_restore(cr);
 }
 

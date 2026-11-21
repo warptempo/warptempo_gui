@@ -272,4 +272,20 @@ InkInBox ink_in_box(Icon icon, int box_px);
 void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
                 uint32_t color);
 
+// THE GLYPH IN A MIXED INK (architect 2026-11-20, send DD: a key's drawing
+// fades with its face, Arc's `transition: all` carrying `color`, the ink a
+// symbolic drawing is drawn in): THE SAME PLACE AND THE SAME CROPPED RASTER
+// AS draw_glyph's for `raster_color` (one of the mix's own inks, so the
+// cache holds no raster it would not hold at rest and grows by nothing), ITS
+// ALPHA THE MASK of a source in `window_word` — the mix's word, already the
+// window's (cool_edit_paint.h's stamp_tone_word). A bound drawing's
+// coverage does not depend on its color (one `currentColor` paint), so the
+// mask is the drawing's own coverage at that phase, and the mixed tone
+// costs one mask composite and no render; a drawing with its own inks
+// ignores the tone (the head's THE BOUND DRAWING) and draws its one raster.
+// Used only while a fade runs: a plain ink takes draw_glyph, byte for byte.
+void draw_glyph_tinted(cairo_t* cr, Icon icon, double x, double y,
+                       int ink_px, uint32_t raster_color,
+                       uint32_t window_word);
+
 } // namespace icons

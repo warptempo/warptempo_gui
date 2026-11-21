@@ -2484,7 +2484,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // modal dialog's armed button, the popup's two
     // item faces plus its press claim, the render player's row press and
     // scrub drag, the notification cards' hover and THE HOVER FACE'S LEAVE
-    // (AppState::HoverFaces: the face the pen hovered FADES OUT from this
+    // (AppState::FaceFades: the face the pen hovered FADES OUT from this
     // edge, as Arc's does when the pointer leaves the widget — a key's, a
     // word button's, an on-screen keyboard key's, the scrub's knob's — and
     // the pen latch clears; architect 2026-11-18 / 2026-11-20, send CC,
@@ -2570,16 +2570,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // hover paused has its clock re-armed here (a card a press still holds
         // keeps its bank until the press's own clear, above).
         input_handler.clear_notification_hover();
-        // AND THE HOVER FACE (AppState::HoverFaces): a pointer that has left
+        // AND THE HOVER FACE (AppState::FaceFades): a pointer that has left
         // — or a finger that has lifted, or a pen whose hover has ended — is
         // on no face, so the walk answers none (its gate reads the in-window
         // bit dropped above) and THE HOVERED FACE FADES OUT over Arc's
         // 200 ms from the value it had reached, every fire alike. THE
         // HOVER_EXIT BEFORE A TIP DOWN is one of them (input_core.h's THE
         // POINTER LEAVE'S THREE FIRES): its fade-out runs a millisecond,
-        // under one painted level, before the DOWN's press arm drops the
-        // fade and paints the accent (GuiInputHandler::drop_hover_face) —
-        // nothing darkens for a frame and nothing restarts. THE TRIM BAR'S
+        // under one painted level, before the DOWN's press arm turns the
+        // face toward the accent from there over Arc's 50 ms
+        // (GuiInputHandler::press_face; send DD, 2026-11-20) — nothing
+        // darkens for a frame. THE TRIM BAR'S
         // HOVERED PART, which has no fade, is NOT cleared here: the leave
         // stamps it (stamp_trim_bar_leave) and the walk keeps it, damaging
         // nothing, until the tick drops it kTrimBarLeaveHoldMs on or a
@@ -3047,15 +3048,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // per-frame damage: each edge damages once, inside the owner
         // (GuiInputHandler::tick_tooltip, whose body carries the damage rule).
         input_handler.tick_tooltip();
-        // THE HOVER FACES' CLOCK, the same shape (architect 2026-11-18 /
-        // 2026-11-20, send CC; AppState::HoverFaces, the one owner of Arc's
-        // hover): the walk, the faces no press would act on any more landed
-        // at once, and each fade stepped to now — a step that moves a face's
-        // stored mix damages that face's own painted extent and nothing
-        // else, so a frame is invited on every beat for the 200 ms a fade
-        // runs; with no fade running, a hover resting landed among them,
-        // nothing is damaged (GuiInputHandler::tick_hover_faces).
-        input_handler.tick_hover_faces();
+        // THE FACE FADES' CLOCK, the same shape (architect 2026-11-18 /
+        // 2026-11-20, sends CC and DD; AppState::FaceFades, the one owner of
+        // Arc's hover and of every face's fade): the walk, the settle (a
+        // surface that left drops its faces), and each fade stepped to now —
+        // a step that moves a face's stored mix damages that face's own
+        // painted extent and nothing else (more than four faces of one
+        // surface in a step, their union), so a frame is invited on every
+        // beat for the 50 or 200 ms a fade runs; with no fade running
+        // nothing is damaged (GuiInputHandler::tick_face_fades).
+        input_handler.tick_face_fades();
 
         {
             // THE TWO STRIPS, EACH ITS OWN VERDICT: a key's home strip is
@@ -3118,7 +3120,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // lies inside its own box, its seams and its group's corners
             // included (materials.h's paint_linked_group), and the repaint
             // under it paints the whole group from each member's state as
-            // published — and it is exactly the coverage publish_button_face
+            // published — THE REPAINT DOES NOT JUMP THE KEY: it republishes
+            // the bits and its painter, resolving the new look, begins the
+            // key's fade from the picture on screen and paints that picture
+            // (AppState::FaceFades::as_painted; architect 2026-11-20, send
+            // DD), the fade's own steps damaging the key from the next tick
+            // (tick_face_fades) — and it is exactly the coverage publish_button_face
             // asks before it refreshes the key's stash, so the frame repaints
             // the key and republishes it and this walk finds no drift at the
             // next tick. A drift never widens a key or moves a neighbor (the
@@ -3482,7 +3489,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // The fix is to run the ONE walk here as well: a handful of rect
         // compares, damaging only where an armed press's face crosses its
         // key. (The hover face's walk runs on every tick by its own clock,
-        // tick_hover_faces above, ungated: a contact answers none there.)
+        // tick_face_fades above, ungated: a contact answers none there.)
         // It runs AFTER the comparator so it reads the freshest published
         // stash.
         //
@@ -3919,15 +3926,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // be in this frame.
         input_handler.reconcile_keyboard_layout();
         onscreen_keyboard::reconcile_slot_standing(app, viewport);
-        // AND NO FRAME PAINTS A HOVER ON A FACE NO PRESS WOULD ACT ON, for
-        // the same reason (send CC, 2026-11-20; AppState::HoverFaces' WHAT
+        // AND NO FRAME FADES A FACE OF A SURFACE THAT LEFT, for the same
+        // reason (sends CC and DD, 2026-11-20; AppState::FaceFades' WHAT
         // DOES NOT FADE): a key or a release of this pass can raise a
-        // question, open an overlay or close the keyboard under a face the
-        // pen hovers or is fading on, and that frame paints before any tick,
-        // so the faces that died land here, each damaging its own extent
-        // (GuiInputHandler::settle_hover_faces; the clock's other half, the
-        // fade's step, stays the tick's — a frame is one stored value).
-        input_handler.settle_hover_faces();
+        // question, open an overlay or close the keyboard, and that frame
+        // paints before any tick, so the faces of a surface that left are
+        // dropped here (whatever replaced them paints its looks at once) and
+        // the hovered slot goes where no press would act on its face
+        // (GuiInputHandler::settle_face_fades; a face's new look is its
+        // painter's to resolve, and the fade's step stays the tick's — a
+        // frame is one stored value).
+        input_handler.settle_face_fades();
 
         // THE CONSOLE SEEK'S FRAME (send CC's review, finding A3, 2026-11-20;
         // GuiPlaybackLifecycle::seek_frame_owed, the bit's owner): read and

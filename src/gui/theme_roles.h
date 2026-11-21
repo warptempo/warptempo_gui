@@ -261,7 +261,7 @@
 //   AND TWO MORE FOR ARC'S HOVER (architect 2026-11-18, send Y: "lets go arc
 //   truthful re: hoevers"; 2026-11-20, send CC: "If they're from Canonical,
 //   from Arc, I'll just accept them"; the hover's rule and its one owner
-//   AppState::HoverFaces, app_state.h), each file but Arc's the word of the
+//   AppState::FaceFades, app_state.h), each file but Arc's the word of the
 //   role the tone moves from, so NO HOVER SHOWS ON A LIVE THEME — and where
 //   the key's hover tone is the key face itself no face hovers at all, the
 //   linked groups' seams included (GuiInputHandler::walk_hover_face's theme

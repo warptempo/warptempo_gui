@@ -2989,7 +2989,7 @@ void GuiPlatform::end_pen_hover() {
 // chrome length in W and so lives at the GUI's latch, which owns the
 // scale: kPenHotRearmPx, input_handler.h. THESE TWO THRESHOLDS ARE ARC'S
 // HOVER'S "ON" AND "RELEASED" HEIGHTS too, architect 2026-11-18, send Y:
-// a hover face shows only for a pen in the plane, AppState::HoverFaces.)
+// a hover face shows only for a pen in the plane, AppState::FaceFades.)
 constexpr float kPenPlaneEnter = 85.0f;
 constexpr float kPenPlaneExit  = 100.0f;
 
