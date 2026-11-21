@@ -366,9 +366,11 @@
 //     modified press the waveform, the top strip or the folder overlay's
 //     band (pad, gaps and rows) binds nothing for says nothing, and the
 //     render player's modified press on the scrub track likewise.
-//   * THE T+W POINTER AUTHORING GESTURE — the FLAG DRAG (the warp column's
-//     alone), because a gesture that never begins is its own answer. Its
-//     keyboard twin cards.
+//   * THE T+W POINTER AUTHORING PAIR — the FLAG DRAG and the EMPTY LANE'S
+//     DOUBLE-TAP DROP (the warp column's alone), because a gesture that
+//     never begins is its own answer; the double-tap drop's LOCK arm and the
+//     flag's double-tap open's refusals are silent on the same ground. Their
+//     keyboard twins card.
 //   * A GREYED BUTTON'S LIFT (a greyed dropdown item's press beside it
 //     until the popup retired, 2026-10-21): the grey IS the message,
 //     the card answering the keyboard; the grey is the PAINTED grey, so a
@@ -701,7 +703,9 @@ inline constexpr const char* kTrimFallbackCard =
 // (the singleton's on the keyboard alone, its Right button greying there; a
 // group's after its collapse); the
 // DROP's by the two at-playhead drop bodies through theirs (bare `s` in
-// either column and Shift+S's lead-in drop), and by
+// either column and Shift+S's lead-in drop; the empty lane's double tap,
+// through the same bodies, meets it only at the right wall's last half px,
+// create_marker_at_empty_lane), and by
 // Shift+S's group drop where it refuses whole, the edge having skipped every
 // place (GuiInputHandler::drop_phase_reset_crossing, 2026-11-10). "At this
 // zoom" is the sentence's truth: zooming in brings the column on screen.

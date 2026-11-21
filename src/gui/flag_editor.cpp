@@ -100,9 +100,9 @@ void GuiFlagEditor::exit_top_flag_edit_no_commit() {
 
 // Shared core for the enter-editor flows. The wrapper below
 // (enter_top_flag_edit) owns the kind-specific eligibility gates and
-// seed-text builder, then delegates here. The live open route is Enter (EDIT
-// on glass) on the focused marker with the payload addressed
-// (-> enter_top_flag_edit). Every route opens the editor with its
+// seed-text builder, then delegates here. The live open routes are: Enter
+// (EDIT on glass) on the focused marker with the payload addressed and the
+// flag box's double tap (both -> enter_top_flag_edit). Every route opens the editor with its
 // SEEDED content fully selected (open-selected) — typing replaces
 // wholesale — so there is no
 // clicked-glyph caret to seat; a specific caret spot is a click inside the
@@ -155,8 +155,8 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // THE LAND IS A MOVEMENT OWNER: an open moves the playhead onto one
     // marker, which ends an A/B audition as every movement does (the rule at
     // Viewport::move_playhead_to, viewport.cpp). This one
-    // chokepoint covers every open and retarget (bare Return, `m`, a pointer
-    // retarget of the live editor); `m` re-derives
+    // chokepoint covers every open and retarget (bare Return, the flag's
+    // double tap, `m`, a pointer retarget of the live editor); `m` re-derives
     // NOTHING after it since
     // 2026-07-30 (the extent owner died with the SPAN FORM). The same_target
     // early return above skips both: the
@@ -191,8 +191,9 @@ void GuiFlagEditor::enter_text_edit(int idx,
     viewport.invalidate_top_strip();
 }
 
-// The flag-editor open route (bare Return — EDIT on glass — with the payload
-// addressed) ends here. THE OPEN STOPS PLAY, as every editor's open does
+// The two flag-editor open routes (bare Return — EDIT on glass — with the
+// payload addressed, and the flag box's double tap, architect 2026-11-21)
+// end here. THE OPEN STOPS PLAY, as every editor's open does
 // (architect 2026-11-20, send EE: "play should stop on editor open. i don't
 // use that workflow and never have"): the stop is enter_text_edit's, past
 // the guards, through GuiPlaybackLifecycle::stop_playback_for_modal_open, the
@@ -242,7 +243,9 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
     // LEADER's numbers and its own pair is unread, so a field here would edit
     // one bracket while displaying another. Bare Return refuses on this same
     // predicate (flag_editor_open_actionable) and cards kBoundCellTiedCard at
-    // its own arm, so this arm is the belt behind it.
+    // its own arm; the DOUBLE-TAP road is silent, a
+    // pointer gesture's non-event being its own answer, so this arm is the
+    // refusal for that road and the belt for the other.
     if (bound_cell_is_tie_follower(app, column, idx)) return;
 
     if (text_editor::is_active(app.top_flag_editor) &&
@@ -730,8 +733,8 @@ std::expected<PayloadCommit, std::string> propose_payload_commit(
     // MEET ONE (architect 2026-09-10, the iteration lock). No line above
     // writes a bound — the bounds are the cells' own, each with its own
     // editor — and a bracket exists only while grid iterations is lit, where
-    // this editor cannot open at all: bare Return is refused on a payload
-    // axis while the lamp stands
+    // this editor cannot open at all: bare Return and the payload
+    // double tap are both refused on a payload axis while the lamp stands
     // (authoring_locked, app_state.h) — and the label paste, this body's
     // other road, is refused there at the lock's gate (Shift+Return is on
     // no admission of iteration_lock_key_blocked). So the invariant "a committed

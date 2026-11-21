@@ -5151,7 +5151,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // COMMIT'S DIFF SPAN while the `h` view stood from 2026-08-05 until then, a
     // display-only substitution at this one site; it is deleted, so the window
     // the user was in is the window the view shows, and the band's
-    // long press frames that window in here exactly as it does outside.
+    // long press and double tap frame that window in here exactly as they do
+    // outside.
     // (Trim never MUTATED in the view either way: the substitution never wrote
     // app.trim, and the mode consumes every press that could.)
     const int64_t bar_begin_frame = app.trim.begin_frame;

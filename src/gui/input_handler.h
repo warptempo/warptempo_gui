@@ -892,8 +892,8 @@ struct GuiInputHandler {
     //     in a way the press's does not, so acting at it spends accuracy for
     //     consistency, and on the warp side accuracy is the product.
     //   * CONTENT ACTS THE MOMENT ITS IDENTITY IS CERTAIN (2026-08-17): at the
-    //     press where the press can only mean one thing (a flag click), at
-    //     the motionless release only where
+    //     press where the press can only mean one thing (a flag click, every
+    //     double-click's second press), at the motionless release only where
     //     the same press arms a drag whose reading genuinely differs (the
     //     navigation surface's click, the placement lanes, the trim bar's
     //     bound sets — PendingClickAct, the one deferred click). Deferring
@@ -941,7 +941,7 @@ struct GuiInputHandler {
     // ends the act exactly as bare Space does there.
     // THE ENTRIES, whole (re-derived 2026-10-28 by reading main.cpp's hook
     // wiring and input_core.cpp's touch roads), each calling this at its head:
-    //   * on_key, at its head — for a BOUND chord
+    //   * on_key, directly after the double-click clear — for a BOUND chord
     //     (chord_is_bound: an unbound press is silent by its own rule and ends
     //     nothing; a bare modifier is no chord), EXCEPT BARE
     //     SPACE AND SHIFT+SPACE: their own dispatch FORKS on the standing act
@@ -1127,7 +1127,10 @@ struct GuiInputHandler {
     // the pan zone (touch_point_in_pan_zone) — so a frame whose point has
     // travelled onto chrome, a card or the keys navigates the waveform; the
     // list is at the body's gate (input_pointer.cpp). No tooltip hide rides a
-    // frame — this is a refusal, not a press act.
+    // frame — this is a refusal, not a press act — but the
+    // DOUBLE-CLICK CANDIDATE IS CLEARED on every applied frame (the C8 rule: a
+    // navigation that moves content between two clicks must not let the second
+    // consume as a double-click).
     //
     // Navigation-class whole: no playhead, no selection, no region, allowed in
     // read-only, and a frame that moves the camera puts out the hold and
@@ -1264,8 +1267,8 @@ struct GuiInputHandler {
     // pen barrel's one-finger zoom (apply_touch_nav_update's zoom frames, on
     // every frame that moved the level — idempotent past the first), Zoom to
     // Fit and its recall (run_overview_command), the span framings
-    // (run_span_framing_command: Shift+0, the trim bar's long press, a trim
-    // preset's apply) and the centre command (run_center_command, its
+    // (run_span_framing_command: Shift+0, the trim bar's long press and its
+    // double tap, a trim preset's apply) and the centre command (run_center_command, its
     // `user_zoom` true: `c`, the Center key, both marches, Ctrl+J).
     void darken_zoom_lamps_if_level_moved(double level_before);
 
@@ -1359,7 +1362,8 @@ struct GuiInputHandler {
     // editor moves the caret, the phone's own text vocabulary; the THIRD
     // ruled touch divergence, taking the region trio's shape). THE FIELD'S
     // VOCABULARY IS A TAP AND A DRAG, AND NOTHING ELSE (architect 2026-11-08,
-    // session 95): a TAP seats the caret, collapsing a selection, a plain DRAG
+    // session 95, retiring 2026-09-05's double tap and double-tap-drag by
+    // words): a TAP seats the caret, collapsing a selection, a plain DRAG
     // moves it, collapsing too, a HOLD MEANS NOTHING (a rest then a drag
     // moves the caret, a rest then a lift is still a tap — no touch window
     // has a deadline), the pen and the finger alike — no selection handles,
@@ -1374,7 +1378,9 @@ struct GuiInputHandler {
     // down — the touch window has one owner and the on-screen keyboard needs
     // a touch of its own), and with no editor active each is a no-op.
     //
-    // begin_touch_caret_drag(x, y): the down point — drop any selection, seat
+    // begin_touch_caret_drag(x, y): the down point — clear any double-click
+    // seed (a caret drag is motion, and motion breaks a candidate, the C8
+    // rule the nav frames apply), drop any selection, seat
     // the caret under x through THE ONE POINTER SEAT (set_editor_caret_from_x,
     // which restarts the blink) and damage the editor's surface.
     // update_touch_caret_drag(x, y): the same seat per delivered frame,
@@ -2078,8 +2084,8 @@ struct GuiInputHandler {
     // the THREE PENDINGS disarm (the
     // third is PendingClickAct — the trim bound sets, the one deferred click
     // since 2026-08-17 — which really has committed nothing; the marker
-    // pending's click already committed at its press, so only its drag dies
-    // here — the split is stated at the definition),
+    // pending's click already committed at its press, so only its drag and its
+    // release-side seed die here — the split is stated at the definition),
     // and the overlays' arms clear.
     // (The tempo drag was one more body here until 2026-07-29 —
     // the whole gesture is deleted, see marker_drag.h.)
@@ -2138,7 +2144,7 @@ struct GuiInputHandler {
     // button, past its own button-lost arm) and update_touch_region (the
     // platform's per-frame region hook, which never has a button to lose). The
     // whole live body: the shared Chebyshev gate from the press/down point
-    // (moved latches once), the
+    // (moved latches once), the moved-drag double-click-candidate clear, the
     // moving endpoint at the pointer's real place through the click->frame basis, THE
     // TRIM WRITE from the anchor to that endpoint (write_trim_from_sweep) — and
     // NO PLAYHEAD WRITE (architect 2026-11-07, session 88, reversing the
@@ -2185,8 +2191,8 @@ struct GuiInputHandler {
     // `click_rel_x` is x - waveform_area.x; the gutter (click_rel_x outside
     // [0, area.w)) seats nothing and stops nothing.
     // THE CLICK FAMILY TAKES THE REAL PLACE (architect 2026-11-15, the
-    // no-grid arc): `click_rel_x` here and in its sibling below
-    // (scrub_press_at) is the click's real x on
+    // no-grid arc): `click_rel_x` here and in the two siblings below
+    // (scrub_press_at, create_marker_at_empty_lane) is the click's real x on
     // the strip, waveform-relative, handed on to the family's one
     // conversion (playhead_frame_at_click_x, input_pointer.cpp).
     // `head_drag` (architect 2026-11-16, the beats) says the act is the
@@ -2197,23 +2203,24 @@ struct GuiInputHandler {
     void place_playhead_at_click_column(double click_rel_x, bool head_drag);
 
     // ARM THE NAVIGATION SURFACE'S PLAIN PRESS — the pending click (contract
-    // at ScrollDragState, app_state.h; the deferred act below). Records the press and its two
+    // at ScrollDragState, app_state.h; the deferred act below). Records the press and its three
     // surface facts and does nothing else. `scrub_release` is the waveform's
     // LOWER half (2026-08-13): the motionless release runs the audition scrub
     // instead of the placement, which is the halves' one remaining difference.
     void arm_nav_press(const GuiPointerPlace& at, bool history,
-                       bool scrub_release);
+                       bool seed_empty_lane, bool scrub_release);
 
     // THE PLACEMENT LANES' PRESS (architect 2026-09-25: the ruler and the
     // marker lane left the navigation surface): arm_nav_press, so the
-    // motionless release runs the click act and a crossed press runs nothing, the no-op every
+    // motionless release runs the click act (and the empty-lane seed when
+    // `seed_empty_lane`) and a crossed press runs nothing, the no-op every
     // pending's crossing is (architect 2026-10-30; contract at
     // ScrollDragState, app_state.h) — but for the HEAD DRAG
     // (`head_drag`, a plain press on the playhead's head as painted, architect
     // 2026-10-09 ~17:40): past the slop each motion runs the click act at the
     // pointer's column (ScrollDragState::head_drag).
     void arm_placement_press(const GuiPointerPlace& at, bool history,
-                             bool head_drag = false);
+                             bool seed_empty_lane, bool head_drag = false);
 
     // THE ONE-FINGER ZOOM'S LEVEL RULE — `zoom_level - dx/rate` at the
     // gui_scale-resolved rate (nav_zoom_px_per_level(), whose scaling argument
@@ -2241,16 +2248,22 @@ struct GuiInputHandler {
                            bool head_drag);
 
     // THE MARKER CLICK ACT, AT THE PRESS (2026-08-17) — stop, the two-way
-    // selection fork, the land, and the plain arm of PendingMarkerPress for
-    // the drag the press may become. TWO call sites, both in
+    // selection fork, the land, the PLAIN shape's
+    // double-tap consume-open (architect 2026-11-21, send EE; against the
+    // press-time candidate snapshot, its gates read live, the open EDIT's own
+    // two opens), and the plain arm of PendingMarkerPress for
+    // the drag the press may become and the seed its motionless release owes
+    // (a consumed open arms nothing). TWO call sites, both in
     // on_button_press's marker claims: the ctrl toggle branch and the
     // plain branch. Contract at PendingMarkerPress (app_state.h),
     // reasoning at the definition (input_pointer.cpp).
-    void run_marker_click_act(int hit, const GuiPointerPlace& at, bool ctrl);
+    void run_marker_click_act(int hit, const GuiPointerPlace& at, bool ctrl,
+                              const DoubleClickCandidate& dc_at_press);
 
     // THE PLAIN MARKER SELECT (2026-09-14) — the plain click's act whole (the
     // stop, the single-select, the land, the addressed cell `cell`) and
-    // NOTHING the press arms: no PendingMarkerPress. ONE caller: run_marker_click_act's
+    // NOTHING the press arms: no PendingMarkerPress,
+    // no double tap's seed or consume. ONE caller: run_marker_click_act's
     // plain arm. Definition in input_pointer.cpp.
     void run_marker_plain_select(int hit, MarkerCell cell);
 
@@ -2275,6 +2288,19 @@ struct GuiInputHandler {
     // definitions (input_pointer.cpp).
     void arm_pending_click_act(const GuiPointerPlace& at);
     void run_pending_click_act(PendingClickAct press);
+
+    // The empty marker lane's double-tap marker CREATE (architect
+    // 2026-11-21, send EE), run at the SECOND PRESS from the lane's consume
+    // in on_button_press: THE DROP at the tapped place — the copy-previous
+    // drop in W, the lead-in reset in P, the same two bodies bare `s` and the
+    // Drop key run, the drop's own rules all theirs (the warp coincidence
+    // refusal, the phase resets' anything-goes, the edge refusal, the stop,
+    // ADD SEL's spend, the single-select and the playhead land) — the lock
+    // and the home view gated silently, the drops' refusal cards raised.
+    // Places the playhead at the clicked place first, then drops through the
+    // standing _at_playhead paths so the create takes the full path (walls, undo,
+    // selection, the lead-in offset) unchanged.
+    void create_marker_at_empty_lane(double click_rel_x);
 
     // Pump half of the kill-and-park dispatch rule, reached through
     // GuiTargetRender's dispatch_pending_archival hook on every
@@ -2705,8 +2731,9 @@ private:
     void run_overview_command();
 
     // THE SPAN-FRAMING command, run by Shift+0, the TRIM BAR LANE's LONG
-    // PRESS (architect 2026-11-18, TrimBarPressSeed) and a trim preset's
-    // apply (the three callers at the definition): ZOOM TO A SPAN, never
+    // PRESS (architect 2026-11-18, TrimBarPressSeed), its DOUBLE TAP
+    // (architect 2026-11-21) and a trim preset's apply (the four callers at
+    // the definition): ZOOM TO A SPAN, never
     // the working zoom. TWO ARMS since 2026-08-18 (the
     // region arm above them died with the separate region state) — a proper
     // trim SUB-WINDOW (expressed in the active domain) → the whole
@@ -3961,7 +3988,7 @@ private:
     // pan, so each click pays AT MOST one stop quiescence fence and a stopped
     // session's launch pays none. A gutter/invalid column
     // (outside [0, area.w)) is a silent no-op (no launch position). Touches
-    // NOTHING else — no selection, trim, cursor or follow.
+    // NOTHING else — no selection, trim, cursor, follow, or double-click seed.
     // THAT is what makes it the REGION'S PREVIEW GESTURE (architect 2026-07-30,
     // Q2): clicking inside the trim window auditions from the clicked frame
     // and moves nothing, which is why Space no longer carries a region launch
@@ -4801,9 +4828,12 @@ private:
     //     acts: true when the press was consumed (as one of the mode's own acts
     //     or as a refusal), false for the navigation gestures the mode lets
     //     through untouched. Its own comment carries the admitted list and the
-    //     acts. The trim bar's framing is its long press, resolved at the lift
-    //     by on_button_release's one resolver (TrimBarPressSeed). IT ACTS AT
-    //     THE PRESS for all three diff-flag
+    //     acts. It takes the press's DOUBLE-TAP SNAPSHOT because one of
+    //     those acts is a double tap (the trim bar's framing, architect
+    //     2026-11-21; its long press resolved at the lift by on_button_release's
+    //     one resolver, TrimBarPressSeed) and on_button_press clears the shared
+    //     field before this is reached. IT ACTS AT THE PRESS for the double
+    //     tap's framing and for all three diff-flag
     //     clicks (2026-08-17, reverting the one-day lift deferral: the mode
     //     has no drag for any of them to become): the two bodies below are
     //     called from this router's
@@ -4836,9 +4866,9 @@ private:
     //     kick's flush.
     //   (THE MODE'S TWO FRAMING OWNERS ARE DELETED — 2026-08-18.
     //     frame_viewed_commit_diff_span framed the viewed checkpoint's whole
-    //     delta, an ON-DEMAND ACT from 2026-08-05 with the trim bar's framing
-    //     gesture as its one caller; that gesture (its long press since
-    //     2026-11-18) runs the ORDINARY span framing now
+    //     delta, an ON-DEMAND ACT from 2026-08-05 with the trim bar's plain
+    //     DOUBLE-CLICK as its one caller; the bar's framing gestures (its
+    //     double tap and its long press) run the ORDINARY span framing now
     //     (run_span_framing_command), the bar having stopped
     //     displaying the diff span, so the act went producer-less.
     //     frame_history_view_whole_song was the full zoom out it fell through
@@ -4928,7 +4958,8 @@ private:
     void set_history_delta(GuiHistoryWalkSource source,
                            GuiHistoryCompare    compare);
     bool handle_history_mode_press(const GuiPointerPlace& at,
-                                   GuiInputState mods);
+                                   GuiInputState mods,
+                                   const DoubleClickCandidate& dc_at_press);
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit);
     void close_history_mode();

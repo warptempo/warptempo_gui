@@ -769,8 +769,8 @@ inline double key_rows_top_px(const GuiRect& band) {
 // stands only under the render player or a picker, neither of which is a
 // text editor; each opener refuses under every editor and each router
 // consumes every editor opener; each veil consumes every pointer press that
-// could raise one (the roster, EDIT among it, is dead under both); and the
-// touch region begin refuses under
+// could raise one (the flag's double tap; the roster, EDIT among it, is dead
+// under both); and the touch region begin refuses under
 // both.
 // So the second term is false whenever the overlay stands, and this
 // predicate cannot answer true over the band without a producer this record

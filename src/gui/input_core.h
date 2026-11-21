@@ -510,7 +510,8 @@ public:
     //     covered by the same !active guard.
     //   * editor_field(at): THE EDITOR-FIELD QUERY (2026-09-05) — does this
     //     point lie in the ACTIVE EDITOR'S FIELD (GuiTouchEditorField,
-    //     gui_input.h — Field or Outside alone, the answer's contract,
+    //     gui_input.h — Field or Outside alone, the answer's contract; no
+    //     editor-text double-click candidate is asked since 2026-11-08,
     //     touch_point_in_editor_field)? Asked ONCE, at the FIRST
     //     finger's down, beside the pan-zone query, captured beside the
     //     down point and cleared with them. It reads the field rect the
@@ -526,7 +527,7 @@ public:
     //     OPENS A WINDOW where the pointer would otherwise land on contact, a
     //     window with no deadline (input_core.cpp's constants block): the
     //     architect's field vocabulary is a tap and a drag (2026-11-08,
-    //     session 95) and carries NO hold meaning,
+    //     session 95, the double tap retired) and carries NO hold meaning,
     //     so nothing there may be decided by a duration — a motionless
     //     contact stays Pending however long it rests and its LIFT is the
     //     ordinary tap burst, the press seating the caret, while a contact
@@ -538,7 +539,9 @@ public:
     //     SLOP CROSSING (its one road — no window expires)
     //     and this is the DOWN point: the
     //     GUI seats the caret under it through its one pointer seat body,
-    //     drops any selection and damages the editor's surface. NOTHING pointer-shaped starts — no
+    //     drops any selection, clears the double-click seed (a caret drag is
+    //     motion, and motion between two taps breaks a candidate), and
+    //     damages the editor's surface. NOTHING pointer-shaped starts — no
     //     press, no hold bit, no release, no translation end (the region
     //     trio's model). A begin with no editor open is a no-op, the body's
     //     own guard, so the stream is dead rather than a fallback.
@@ -547,8 +550,8 @@ public:
     //     seats the caret under it, nothing selects.
     //   * caret_end(): the drag ended — finger up, touch_cancel or
     //     touch-capability loss. THE DRAIN RULE: the caret stays where it
-    //     was last seated, nothing selects, nothing commits, and the editor
-    //     stays open with Enter its one commit
+    //     was last seated, nothing selects, nothing commits, nothing seeds a
+    //     double-click, and the editor stays open with Enter its one commit
     //     route; the GUI restarts the blink so the resting caret is lit the
     //     instant the finger leaves. Fired UNCONDITIONALLY once the drag
     //     began (the region end's rule).
@@ -588,8 +591,8 @@ public:
     // SCALE. The authored length (8 laptop px then, 6 Windows px from
     // 2026-10-02, 9 W since the rebase of 2026-11-05) was 1.7 mm on the
     // retired road rig's 1024x600 panel at 100 %
-    // and 0.8 mm on the tablet's 249 PPI one, which a fingertip's ordinary roll
-    // crosses; the GUI resolves it and pushes it here,
+    // and 0.8 mm on the tablet's 249 PPI one, which a fingertip's roll crosses
+    // during a relaxed double tap; the GUI resolves it and pushes it here,
     // so this layer keeps measuring raw device pixels and knows nothing about
     // percent. The default is kDefaultTouchSlopPx, which is the authored value
     // and therefore exactly right at gui_scale 100 — so a core nobody ever
@@ -864,7 +867,10 @@ private:
     //     clock). THE PLACEMENT LANES (the ruler, the marker lane's empty
     //     stretches) are this same road with no window and no touch-side
     //     machinery of their own: a tap's ordinary press+release burst
-    //     places exactly as a pen click does.
+    //     places exactly as a pen click does, and on the marker lane's
+    //     empty stretch that release also seeds the EmptyLane double-click
+    //     candidate, so TWO TAPS there reach the marker CREATE (the second
+    //     tap's press consumes the candidate).
     //   * (NO EXPIRY EDGE: no window carries a deadline — the zone's since
     //     2026-11-07, the region hold and its stillness radius retired; the
     //     field's since 2026-09-05. A resting contact stays Pending at any age
@@ -964,8 +970,8 @@ private:
     //   * touch UP, owner, Caret — the Region clause's shape: the staged
     //     dirty frame DELIVERS first (the finger's own final leg — the caret
     //     lands where the finger lifted), then caret_end, which always fires
-    //     (the drain rule at the contract: the caret stays, nothing selects
-    //     or commits, the editor stays open). No release and no
+    //     (the drain rule at the contract: the caret stays, nothing selects,
+    //     commits or seeds, the editor stays open). No release and no
     //     translation end; -> Drain / Idle.
     //   * touch UP, ignored finger  — bookkeeping only.
     //   * third DOWN during two-finger Nav / any DOWN during Drain — ignored:

@@ -132,10 +132,11 @@ enum class GestureKind {
 // long press, key repeat, etc."; the beat and his repeatDelay moved to 600
 // together 2026-09-29). It was its own 500 from 2026-08-01 until
 // that ruling. THE JOB IS UNCHANGED and so is the argument for the SIZE of it
-// — the interval a human leaves between deliberate taps of one key — so the
-// product asks the hand for ONE cadence rather than for a number per surface.
-// The beat's own declaration carries the readers' one inventory: this is not
-// a hold, and so it STAYS ON THE BEAT while
+// — the interval a human leaves between deliberate taps of one key is the
+// same interval a deliberate second tap has to arrive inside — so the product
+// asks the hand for ONE cadence rather than for a number per surface. The
+// beat's own declaration carries the readers' one inventory, the double-click
+// window beside this one: this is not a hold, and so it STAYS ON THE BEAT while
 // the holds read the hold delay (kHoldDelayMs; architect 2026-09-29: a window
 // measures the gap between two presses, not a hand resting on a thing until
 // it changes meaning).

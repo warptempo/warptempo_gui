@@ -31,13 +31,16 @@ namespace {
 // by a SECOND DOWN (the pinch). So no tick samples the window and a slow
 // start is simply a pan that has not crossed yet.
 //
-// THE FIELD'S VOCABULARY (architect 2026-11-08, session 95): a TAP seats
-// the caret, a DRAG moves it, and NOTHING ELSE — no hold meaning, no handles
-// and no toolbar,
+// THE FIELD'S VOCABULARY (architect 2026-11-08, session 95, retiring
+// 2026-09-05's double tap): a TAP seats the caret, a DRAG moves it, and
+// NOTHING ELSE — no double tap, no hold meaning, no handles and no toolbar,
 // the selection the on-screen keyboard's alone (begin_touch_caret_drag's
 // declaration, input_handler.h). A resting contact there stays Pending and
-// its lift is the ordinary tap burst. (No surface reads two taps as one
-// gesture: NO DOUBLE TAP, app_state.h beside TrimBarPressSeed.)
+// its lift is the ordinary tap burst.
+//
+// NOR CAN THE WINDOW COLLIDE WITH THE OTHER SURFACES' DOUBLE TAPS: a tap's
+// whole burst delivers at the LIFT, so a double-click candidate is only ever
+// seeded by a contact that has already left the glass.
 //
 // THE SLOP IS NO LONGER A CONSTANT HERE. It is touch_slop_px_, a settable
 // member whose default is the authored kDefaultTouchSlopPx and whose live
@@ -462,7 +465,7 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     the spelling every gesture already answers (the button-lost arms in
     //     GuiInputHandler::on_motion, and the force-end finalizer's own rule):
     //     a MOVED drag finalizes like a release, an UNMOVED press commits
-    //     NOTHING FURTHER — no click act still owed, and
+    //     NOTHING FURTHER — no click act still owed, no double-click seed, and
     //     no chrome dispatch, since dispatching an armed chrome/modal/menu
     //     press is the RELEASE's job and no release is delivered. NOTHING
     //     FURTHER RATHER THAN NOTHING SINCE 2026-08-17: a resolved MARKER touch
@@ -853,8 +856,9 @@ void GuiInputCore::touch_up(int32_t id) {
                 // centroid with dx 0.0 and ratio 1.0 by construction (the
                 // rebase wrote last_cx_/last_dist_ to exactly those bases) —
                 // an honest statement of the new geometry that applies
-                // nothing and seats nothing, the GUI's own no-op return
-                // catching it. It stays inside the update hook's vocabulary:
+                // nothing, seats nothing and consumes no double-click
+                // candidate, because the GUI's own no-op return sits above
+                // that clear. It stays inside the update hook's vocabulary:
                 // the end hook is still NOT owed here (a downgrade is a
                 // transform, not an end) and no hook member was added.
                 // GATED ON A PRIOR DELIVERY, which is exactly the condition
@@ -1241,8 +1245,8 @@ void GuiInputCore::hard_end_touch_stream() {
             break;
         case TouchPhase::Caret:
             // The Region arm's shape for the caret trio — staged frame
-            // DROPPED (no seat), then caret_end: no selection, the caret
-            // where the last delivered frame
+            // DROPPED (no seat), then caret_end: no selection, no
+            // double-click seed, the caret where the last delivered frame
             // put it and the editor still open, so a back-swipe mid-drag
             // leaves the edit standing (the drain rule at the contract).
             end_touch_caret_gesture(/*deliver_final_frame=*/false);

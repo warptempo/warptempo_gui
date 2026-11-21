@@ -112,6 +112,19 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // The dispatch's own repeat scope, first statement so it covers the whole
     // body (the ruling and the reasoning are at the guard above).
     const HeldRepeatDispatchScope repeat_scope(app, mods.synthesized_repeat);
+    // The double tap's lifecycle, KEY half (the family at DoubleClickSurface,
+    // app_state.h): any chord between two taps (a roster lift, an on-screen
+    // keyboard key) breaks EVERY pending candidate (Marker, EmptyLane and
+    // TrimBar alike) at this one chokepoint — no legitimate double tap types
+    // a key between its two presses, and a cross-context consume (seed a
+    // candidate, run a command, click again to consume in a different context)
+    // must not fire. The consume lives entirely in on_button_press (nothing on
+    // the keyboard path reads the candidate), and key-repeat re-entering here is
+    // equally fine — no candidate can survive a held key. The pointer-side
+    // per-branch clears (the on_button_press top-of-frame clear, the moved-drag
+    // clears, the force-end finalizer's clear) stay: they own the pointer half of the
+    // lifetime; this owns the keyboard half.
+    app.double_click = DoubleClickCandidate{};
     // THE A/B AUDITION IS HANDS-OFF (architect 2026-10-28; the rule at
     // end_audition_for_press's declaration): a bound chord ends a standing act
     // here, ahead of every gate below. THE TWO
@@ -1219,8 +1232,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // the PAYLOAD — the dropped marker carries the previous marker's
         // effective tempo instead of a plain 1.00. It no longer describes a
         // GESTURE: the plain-versus-augmented modifier convention died with
-        // Alt+S the same day, leaving bare `s` (the Drop key on glass) the
-        // only drop there is.
+        // Alt+S the same day, leaving bare `s` (the Drop key on glass) and
+        // the empty marker lane's double tap (create_marker_at_empty_lane,
+        // input_pointer.cpp, the same two drop bodies as this arm's) the only
+        // drops there are.
         // In W view it drops an owner carrying the
         // immediate-prior marker's effective tempo: the AUGMENTED drop splits a
         // section WITHOUT changing the map — render-neutral, which is why it
@@ -2852,10 +2867,11 @@ bool span_framing_would_act(const AppState& app, const GuiAudio& audio) {
 }
 
 void GuiInputHandler::run_span_framing_command() {
-    // THREE CALLERS (re-grepped 2026-11-18): Shift+0 (since 2026-10-24, Zoom
+    // FOUR CALLERS (re-grepped 2026-11-21): Shift+0 (since 2026-10-24, Zoom
     // to Fit's long press), the trim bar's long press (architect 2026-11-18,
-    // TrimBarPressSeed) and a trim
-    // preset's apply. They ZOOM TO A SPAN, their own route beside bare `0`'s
+    // TrimBarPressSeed), the trim bar's double tap (architect 2026-11-21,
+    // send EE; the live band's and the `h` view's arms, input_pointer.cpp)
+    // and a trim preset's apply. They ZOOM TO A SPAN, their own route beside bare `0`'s
     // whole-piece toggle (run_overview_command) and `c`'s marker-jump working
     // zoom. It only ever FRAMES a span,
     // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
@@ -2875,7 +2891,7 @@ void GuiInputHandler::run_span_framing_command() {
     // A FRAMING THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom
     // darkens (architect 2026-11-17, send U; darken_zoom_lamps_if_level_moved).
     // HERE AND NOT IN THE SHARED FRAMER: this command's callers are all user
-    // roads (the three above),
+    // roads (the four above),
     // while frame_span_into_view also serves the programmatic landings
     // (land_and_frame_active_markers: undo / redo's group restore, the
     // pastes), which darken nothing.

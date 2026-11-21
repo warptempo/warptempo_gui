@@ -118,7 +118,10 @@ constexpr int kHoldDelayMs = 300;
 // neither: its one wait is the `tooltip_delay_ms` tuning key, 100 ms at
 // first — architect 2026-11-07, the always-show model,
 // AppState::RedesignTooltip.)
-// THREE READERS:
+// FOUR READERS:
+//   * THE DOUBLE TAP'S WINDOW (kDoubleClickMs, app_state.h; architect
+//     2026-11-21, send EE, "an even 600") — the interval a deliberate SECOND
+//     TAP has to arrive inside, on the three double-tap surfaces;
 //   * THE UNDO TAP-COALESCE WINDOW (kTapCoalesceMs, undo.h), since
 //     2026-08-28 — the interval a deliberate SECOND PRESS of the same
 //     authoring key has to arrive inside to land in the burst's existing undo
@@ -132,8 +135,8 @@ constexpr int kHoldDelayMs = 300;
 //     the first beat of a stream;
 //   * THE BACKEND'S KEY-REPEAT DELAY (platform_android.cpp — the platform
 //     advertises no delay to ask for; the ruling is at that site).
-// So a keyboard hold's first repeat, a held button's first repeat and a
-// re-tapped nudge all land on the same beat.
+// So a keyboard hold's first repeat, a held button's first repeat, a double
+// tap and a re-tapped nudge all land on the same beat.
 //
 // 600 ms BY CONVENTION WITH THE ARCHITECT'S LAPTOP KEY-REPEAT DELAY, the
 // number's source, matched DELIBERATELY and not by coincidence: it is his own
@@ -1249,8 +1252,9 @@ inline bool is_trim_reset_key(GuiKey key, GuiInputState mods) {
 // `0` is the whole song to the camera, shifted the trim's span to the camera.
 // A CAMERA ACT: it writes no store and no trim, so the read-only allowlist
 // (read_only_key_blocked) and the `h` view's (history_mode_key_blocked)
-// both ADMIT it, as both states admit the trim bar's long press (its glass
-// twin, TrimBarPressSeed), and the iteration lock
+// both ADMIT it, as both states admit the trim bar's long press and double
+// tap (its glass twins, TrimBarPressSeed / DoubleClickSurface), and the
+// iteration lock
 // inherits the read-only admission. One-shot. THREE READERS: on_key's
 // dispatch arm (input_handler.cpp) and the two allowlists; the Zoom to Fit
 // button's long press reaches the first through on_key
