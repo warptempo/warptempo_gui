@@ -336,7 +336,7 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's TWELVE (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's SIXTEEN (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
@@ -353,9 +353,17 @@ struct TrimRange {
 //                 chip's fill alone; the playhead's two
 //                 roles,
 //                 `playhead_head` — its triangle in the ruler — and
-//                 `playhead_line` — its static light cyan 81E1EA in the
-//                 canvas, white half way to the head (architect 2026-11-12,
-//                 session 113; THE PLAYHEAD, below); and the
+//                 `playhead_line` — its stem's one static tone in the
+//                 canvas, our own PlayheadLine (send FF, 2026-11-21:
+//                 arc_dark A5ABB5, Arc's `.h4`; on a Live theme white half
+//                 way to its head, Default's 81E1EA; THE PLAYHEAD, below);
+//                 THE WAVEFORM'S HOVER's four (send FF, 2026-11-21) —
+//                 `hover_line` the waveform's hover line, `cue_hover` and
+//                 `inactive_cue_hover` a hovered chip, enabled and
+//                 disabled, `playhead_head_hover` the hovered triangle,
+//                 each its rest's own tone on a Live theme (a hovered
+//                 disabled marker's label the chrome's
+//                 `inactive_cue_label_hover`); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (both icon
@@ -472,7 +480,7 @@ struct GuiPalette {
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_text;      // COLOR_WINDOWTEXT
     GuiColor card_text;       // COLOR_INFOTEXT (a standing card's words and glyph; a normal card's are sidebar_text)
-    // THE FLAT LOOK'S TWENTY-EIGHT (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the clip lamp the lamp
     // arc's, the same night; the lit key's inert face 2026-11-11, session
@@ -482,12 +490,13 @@ struct GuiPalette {
     // FLOATERS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
     // and the limiter lamp; THE PROGRESS TROUGH, stage D2; THE SCALE'S RIM,
     // stage D3; THE TWO HOVER TONES 2026-11-20; THE LIST ROW'S HOVER
-    // 2026-11-21).
+    // 2026-11-21; A HOVERED DISABLED MARKER'S LABEL, send FF, 2026-11-21).
     GuiColor body_face;      // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
     GuiColor sidebar_text;    // the marker labels' ink on the Arc page, later the tooltip's and the cards' (SidebarForeground)
-    GuiColor text_dim;        // the inert rows, the tooltip's hint line
+    GuiColor text_dim;        // the inert rows, the tooltip's hint line, a disabled marker's label
+    GuiColor inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen (CueDisabledLabelHover; arc_dark 9DA3AD)
     GuiColor key_dim_ink;     // a disabled key's glyph, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
     GuiColor key_dim_face;    // a disabled key's face (the key face at 55 % over the body tone; paint_linked_group, paint_word_button)
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
@@ -523,10 +532,14 @@ struct GuiPalette {
     GuiColor center;
     GuiColor cue;
     GuiColor cue_fill;
+    GuiColor cue_hover;
     GuiColor cue_outline;
     GuiColor inactive_cue;
+    GuiColor inactive_cue_hover;
     GuiColor playhead_head;
+    GuiColor playhead_head_hover;
     GuiColor playhead_line;
+    GuiColor hover_line;
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of everything under the title bar — both icon
@@ -757,8 +770,8 @@ void install_true_colors(bool on);
 // 2026-11-04: Live's playhead line, measured; the exact place architect
 // 2026-11-14, send J, waveform_line_span; canvas_line, the scanner's
 // form) in
-// THE PALETTE'S `playhead_line` (81E1EA), down the area's whole height,
-// the stereo divider's row included (architect 2026-11-02) — ONE STATIC
+// THE PALETTE'S `playhead_line` (Default 81E1EA, arc_dark A5ABB5), down
+// the area's whole height, the stereo divider's row included (architect 2026-11-02) — ONE STATIC
 // TONE, opaque on the pixels it covers whole and the same over the ink and
 // over the canvas, blended over them by its coverage on the pixels its
 // edges cross (architect
@@ -790,9 +803,12 @@ void install_true_colors(bool on);
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
 // history.)
 // THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head, Live's
-// cyan 03C3D5, and `playhead_line` its line, 81E1EA, white half way to the
-// head (architect 2026-11-12, session 113: the mean of Live's fade, the
-// playhead's two tones); neither is
+// cyan 03C3D5 (arc_dark D3DAE3, Arc's text), and `playhead_line` its line,
+// our own PlayheadLine (send FF, 2026-11-21: arc_dark A5ABB5, Arc's `.h4` /
+// `.category-label`, his "the triangle should remain the font color ... but
+// the stem is too bright"; on a Live theme white half way to the head,
+// 81E1EA on Default, architect 2026-11-12, session 113: the mean of Live's
+// fade, the playhead's two tones); neither is
 // lent to a marker (the selection is the
 // chip's, THE MARKER LANE below). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
@@ -4686,15 +4702,18 @@ struct GuiPlateColumns {
 // ~46 % app / ~53 % SurfaceFlinger at 90 presents a second, the present
 // itself the cost: "seems like it's unavoidable"): a solid one-W line, opaque
 // on every pixel it covers whole,
-// in the palette's `playhead_line`, sRGB 81E1EA — THE MEAN OF LIVE'S FADE
-// between white and the head's cyan, white half way to the head on every
-// theme (architect 2026-11-12, session 113: the four lossless one-px
-// samples of Live's line, 4AD3E0, 59D7E3, 85E2EA and DBF6F9, lie on the
-// byte line from FFFFFF toward 03C3D5, so the triangle wave's mean is the
-// half; theme_roles.h's DERIVED block) — its own pixel
-// the same over the ink and over the canvas, stopped or playing; the
-// ruler's head keeps its own `playhead_head` 03C3D5, the scanner its
-// FFFFFF. NOTHING IS DAMAGED AT REST: the line moves only with the cursor,
+// in the palette's `playhead_line`, the theme's own PlayheadLine (send FF,
+// 2026-11-21; theme_roles.h's OUR OWN, THE WAVEFORM'S HOVER): on arc_dark
+// A5ABB5, Arc's `.h4` / `.category-label`, under the scanner's FFFFFF and
+// over the waveform's hover line 767B87, his brightness order; on a Live
+// theme sRGB 81E1EA on Default — THE MEAN OF LIVE'S FADE between white and
+// the head's cyan, white half way to the head (architect 2026-11-12,
+// session 113: the four lossless one-px samples of Live's line, 4AD3E0,
+// 59D7E3, 85E2EA and DBF6F9, lie on the byte line from FFFFFF toward
+// 03C3D5, so the triangle wave's mean is the half), the word its file
+// carries — its own pixel the same over the ink and over the canvas,
+// stopped or playing; the ruler's head keeps its own `playhead_head`, the
+// scanner its FFFFFF. NOTHING IS DAMAGED AT REST: the line moves only with the cursor,
 // whose writers own the damage (playhead_invalidate_rect, main.cpp). A
 // stepped fade was offered and not taken.
 //

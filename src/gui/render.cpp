@@ -2769,7 +2769,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // BRIGHT MIX: its bright tones toward its ground at `bright_mix`, every
     // tone derived from them recomputed) and copied for the word readers
     // (installed_theme), its slug and group the list row's; then THE
-    // PROGRAM'S TWELVE off the palette's role table (palette_file.h), THE
+    // PROGRAM'S SIXTEEN off the palette's role table (palette_file.h), THE
     // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the mixed
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly

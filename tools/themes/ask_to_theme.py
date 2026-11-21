@@ -42,9 +42,16 @@ TooltipBackground its SurfaceBackground, CardBackground and
 CardStandingBackground its Alert; send AA's stage D2, 2026-11-19:
 ScaleTrough its ScrollbarInnerTrack; send AA's stage D3, 2026-11-19:
 ScaleSliderBorder its ClipBorder; send CC, 2026-11-20: ButtonHoverBackground its SurfaceBackground, ScrollbarSliderHover
-its ScrollbarInnerHandle), after the
---set replacements, and a
---set on an own role itself wins.
+its ScrollbarInnerHandle; send FF, 2026-11-21: HoverLine its
+ScrollbarInnerHandle, CueHover its ViewCheckControlEnabledOn, PlayheadHover
+its RangeDefault, CueDisabledHover its BackgroundClip, CueDisabledLabelHover
+its TextDisabled), after the --set replacements, and a --set on an own role
+itself wins. A pair's third member names HOW THE SOURCE IS READ: the copy
+unless named, and OwnRoleRead::WhiteHalfWay -- PlayheadLine's, of its
+RangeDefault (send FF) -- white half way to the source's word read flat,
+per channel round(255 + 0.5 * (c - 255)), Python's round() half to even:
+the derivation's mix(white, word, 0.5) in theme_roles.cpp, bit for bit
+(doubles in its operation order), written as a 6-digit word.
 
 OPTIONS, for the files the app ships modified (a `_mod` theme), so that every
 role line is still this tool's output:
@@ -90,14 +97,51 @@ def role_table():
     return names
 
 
+OWN_READS = ('Copy', 'WhiteHalfWay')
+
+
 def own_roles():
-    """kOwnThemeRoles' (role, source) pairs, out of the C++ initializer."""
+    """kOwnThemeRoles' (role, source, read) triples, out of the C++
+    initializer; `read` an OwnRoleRead name, 'Copy' where the pair names
+    none (the member's default)."""
     with open(ROLE_TABLE_SRC, encoding='utf-8') as f:
         text = f.read()
     m = re.search(r'kOwnThemeRoles\[\]\s*=\s*\{(.*?)\n\};', text, re.S)
     if not m:
         die('no kOwnThemeRoles initializer in %s' % ROLE_TABLE_SRC)
-    return re.findall(r'\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\}', m.group(1))
+    body = m.group(1)
+    found = re.findall(r'\{\s*"([^"]*)"\s*,\s*"([^"]*)"\s*'
+                       r'(?:,\s*OwnRoleRead::(\w+)\s*)?\}', body)
+    if len(found) != body.count('{'):
+        die('a kOwnThemeRoles entry in %s is not {"Role", "Source"} or '
+            '{"Role", "Source", OwnRoleRead::Name}' % ROLE_TABLE_SRC)
+    out = []
+    for role, source, read in found:
+        read = read or 'Copy'
+        if read not in OWN_READS:
+            die('kOwnThemeRoles in %s: no OwnRoleRead::%s' % (ROLE_TABLE_SRC,
+                                                             read))
+        out.append((role, source, read))
+    return out
+
+
+def white_half_way(word):
+    """White half way to `word` read flat (its alpha byte dropped): per
+    channel round(255 + 0.5 * (c - 255)) -- the derivation's mix(white, c,
+    0.5), Python's round() half to even as its nearbyint -- a 6-digit
+    uppercase word."""
+    out = ''
+    for at in (0, 2, 4):
+        c = int(word[at:at + 2], 16)
+        out += '%02X' % max(0, min(255, int(round(255 + 0.5 * (c - 255)))))
+    return out
+
+
+def own_word(words, source, read):
+    """An own role's word off its source's (the docstring)."""
+    if read == 'WhiteHalfWay':
+        return white_half_way(words[source])
+    return words[source]
 
 
 def slug_of_stem(stem):
@@ -215,9 +259,9 @@ def main(argv):
         die('--slug takes one FILE.ask')
     roles = role_table()
     own = own_roles()
-    own_names = [r for r, _ in own]
+    own_names = [r for r, _, _ in own]
     if not own or any(r not in roles or src not in roles or src in own_names
-                      for r, src in own):
+                      for r, src, _ in own):
         die('the kOwnThemeRoles initializer in %s does not match kThemeRoles'
             % ROLE_TABLE_SRC)
     live = [r for r in roles if r not in own_names]
@@ -236,9 +280,9 @@ def main(argv):
             die('%s: the slug %r is not a slug' % (path, slug))
         words = read_ask(path, live)
         words.update(overrides)
-        for r, src in own:
+        for r, src, read in own:
             if r not in overrides:
-                words[r] = words[src]
+                words[r] = own_word(words, src, read)
         lines = ['# %s -- Ableton Live theme XML, converted by '
                  'tools/themes/ask_to_theme.py' % os.path.basename(path)]
         lines += ['# %s' % n if n else '#' for n in notes]

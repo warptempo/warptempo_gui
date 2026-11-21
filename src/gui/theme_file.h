@@ -40,7 +40,7 @@
 // six are Windows' own element names (ButtonFace, ButtonText, Hilight /
 // HilightText, WindowText and InfoText; InfoWindow and the cards' ring left
 // with the cards' orange, send AA's stage D1, 2026-11-19), the chrome's
-// painters written against them; the TWENTY-EIGHT after them
+// painters written against them; the TWENTY-NINE after them
 // are the flat look's tones (materials.h's head, 2026-11-01..05: the
 // look's own, the lamp arc's clip lamp of 2026-11-05 night, the lit key's
 // inert face of 2026-11-11, session 106, `lit_dim_fill`, the trough and
@@ -54,7 +54,11 @@
 // lamp; THE TWO HOVER TONES of send CC, 2026-11-20, `key_hover_face`
 // and `trim_span_hover_face` — the second the trim bar's hovered part,
 // render_trim_flags through trim_bar_tones; AND THE LIST ROW'S HOVER of
-// 2026-11-21, `list_hover_face`, paint_list_view), members since the
+// 2026-11-21, `list_hover_face`, paint_list_view; AND A HOVERED DISABLED
+// MARKER'S LABEL of send FF, 2026-11-21, `inactive_cue_label_hover`, the
+// inert label's `text_dim` under the hovering pen — a text tone, the
+// chrome's as the label's rest is, its chip's hover the palette's
+// `inactive_cue_hover`), members since the
 // theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
@@ -79,14 +83,15 @@
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's thirty-four (the six
+// 2026-10-04), in GuiPalette's order: the chrome's thirty-five (the six
 // of 2026-10-04's eight left — the caption's six, 2026-10-05..10-21, left
 // with the captions; the seven unread ones, 2026-11-02, with the overlays'
 // rings; the cards' ground and ring, send AA's stage D1 — and the
-// twenty-eight flat-look tones, the two lamps, the lit key's inert face,
+// twenty-nine flat-look tones, the two lamps, the lit key's inert face,
 // the trough, the well's frame, the Arc page's six, the floaters' three
 // carried fills, the progress trough, the scale's rim, the two hover
-// tones and the list row's hover among them). The
+// tones, the list row's hover and a hovered disabled marker's label among
+// them). The
 // program's roles are the palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
 // palette_file.cpp's coverage proof walks it, so a role cannot be valued and
@@ -106,14 +111,16 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"selected_text",   &GuiPalette::selected_text,   &GuiThemeTones::selection_text},
     {"field_text",      &GuiPalette::field_text,      &GuiThemeTones::text},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
-    // THE FLAT LOOK'S TWENTY-EIGHT (materials.h's head: the text tones, the
+    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head: the text tones, the
     // key, the lit key's inert face, the well's tones, the score viewer's
     // pane, the two lamps; THE PROGRESS TROUGH, send AA's stage D2,
     // 2026-11-19 — the progress bar's and the scrub's trough; THE SCALE'S
     // RIM, send AA's stage D3, the scrub's knob; THE TWO HOVER TONES, send
     // CC, 2026-11-20 — a key's face and the trim bar's pill under the
     // hovering pen; THE LIST ROW'S HOVER, architect 2026-11-21 — Arc's row
-    // hover, 3 % white over the list's view; THE ARC PAGE'S SIX, architect
+    // hover, 3 % white over the list's view; A HOVERED DISABLED MARKER'S
+    // LABEL, send FF, 2026-11-21 — the inert label's ink under the hovering
+    // pen; THE ARC PAGE'S SIX, architect
     // 2026-11-19, send Z, theme_roles.h's head — the body tone, the title
     // bar's text, the sidebar text, the ruler's digits, the disabled key's
     // face and border; and THE FLOATERS' FOUR, send AA's stage D1 the same
@@ -126,6 +133,7 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"title_text",      &GuiPalette::title_text,      &GuiThemeTones::title_text},
     {"sidebar_text",    &GuiPalette::sidebar_text,    &GuiThemeTones::sidebar_text},
     {"text_dim",        &GuiPalette::text_dim,        &GuiThemeTones::text_dim},
+    {"inactive_cue_label_hover", &GuiPalette::inactive_cue_label_hover, &GuiThemeTones::inactive_cue_label_hover},
     {"key_dim_ink",     &GuiPalette::key_dim_ink,     &GuiThemeTones::key_dim_ink},
     {"key_dim_face",    &GuiPalette::key_dim_face,    &GuiThemeTones::key_dim_face},
     {"key_dim_border",  &GuiPalette::key_dim_border,  &GuiThemeTones::key_dim_border},

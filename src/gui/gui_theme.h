@@ -31,6 +31,7 @@ struct GuiThemeTones {
     uint32_t title_text;          // the title bar's text and drawings (TitleForeground, our own role; a Live theme's ControlForeground; paint_title_bar)
     uint32_t sidebar_text;        // the live marker labels' ink, the tooltip's words and a normal card's words and glyph (SidebarForeground, our own role; a Live theme's ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
+    uint32_t inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen, its rest `text_dim` (CueDisabledLabelHover, our own role; arc_dark 9DA3AD, Arc's dim button under its row's hover, `.gedit-document-panel row:hover:not(:selected) button`; a Live theme's TextDisabled, the label's own tone: no hover)
     uint32_t text_on_lit;         // what is printed on a lit key's face, its glyph and the on-screen keyboard's lit cap (StandbySelectionForeground, the selection's text); a word alone, read by key_ink (materials.h)
     uint32_t key_dim_ink;         // a disabled key's glyph (ViewCheckControlDisabledOff over the face)
     uint32_t key_dim_face;        // a disabled key's and word button's face (the key face at 55 % over the body tone, theme_roles.h's DERIVED block)
@@ -70,10 +71,14 @@ struct GuiThemeTones {
     uint32_t center;              // each channel's zero line (= the ink)
     uint32_t cue;                 // THE ACCENT: a lit or pressed key's face, every checked key's, NOISE's progress line, the on-screen keyboard's lit keys, the scrub's played part and its held knob, the flag editor's border (ViewCheckControlEnabledOn)
     uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (= the accent, cue)
+    uint32_t cue_hover;           // an enabled marker's chip under the hovering pen, A BRIGHT TONE (CueHover, our own role; arc_dark 639FE5, Arc's hover of a blue thing, `.documents-entry-tag:hover`; a Live theme's ViewCheckControlEnabledOn, the chip's own tone: no hover)
     uint32_t cue_outline;         // the selection stem, the lead-in ring (ControlContrastFrame)
-    uint32_t inactive_cue;        // a disabled marker's chip fill and inert label (BackgroundClip)
+    uint32_t inactive_cue;        // a disabled marker's chip fill (BackgroundClip)
+    uint32_t inactive_cue_hover;  // a disabled marker's chip under the hovering pen (CueDisabledHover, our own role; arc_dark 90939B, Arc's `wm_icon_bg`, the titlebar glyph awake; a Live theme's BackgroundClip, the chip's own tone: no hover)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
-    uint32_t playhead_line;       // the playhead's canvas line (white half way to the head)
+    uint32_t playhead_head_hover; // that triangle under the hovering pen, A BRIGHT TONE (PlayheadHover, our own role; arc_dark FFFFFF, Arc's selected text; a Live theme's RangeDefault, the triangle's own tone: no hover)
+    uint32_t playhead_line;       // the playhead's canvas line, its stem, A BRIGHT TONE (PlayheadLine, our own role; arc_dark A5ABB5, Arc's `.h4` / `.category-label`; a Live theme's white half way to its RangeDefault)
+    uint32_t hover_line;          // the waveform's hover line (HoverLine, our own role, over the canvas; arc_dark 767B87, Arc's scrollbar slider; a Live theme's ScrollbarInnerHandle)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
@@ -98,7 +103,9 @@ inline constexpr std::string_view kGuiThemeGroupUser   = "USER-DEFINED";
 // THEME, the first row and the missing-theme fallback: a copy of the
 // shipped Arc-Dark (`arc_dark`, kGuiDefaultThemeSourceSlug, a file of
 // SYSTEM; architect 2026-11-18, send Y: "arc_dark and 75 will be my
-// default" — "let the remote session make that the default"). The launcher
+// default" — "let the remote session make that the default"; the bright
+// mix's default 100 since send FF, 2026-11-21, theme_roles.h's THE BRIGHT
+// MIX). The launcher
 // icon reads the same file (apk/build_apk.sh, which takes the slug from
 // this line: keep it one line, `= "<slug>";`).
 // `default_dark_neutral_medium` is the compiled reference row below. A
@@ -135,9 +142,17 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // THE RULER'S DIGITS 9C9C9C, the text at 80 % over the ruler 393939; THE
 // DISABLED KEY'S FACE 2E2E2E, the key face 363636 at 55 % over the body
 // tone, and ITS BORDER 272727, the well's border 2A2A2A at 55 % over it AND
-// THE PLAYHEAD'S
-// LINE 81E1EA, white half way to the head (architect 2026-11-12, session
-// 113) AND THE ENABLED CHIP'S FILL FFAD56, the accent
+// THE PLAYHEAD'S LINE 81E1EA, our own PlayheadLine (send FF, 2026-11-21),
+// the word a converted Default file carries: white half way to its head
+// 03C3D5 (architect 2026-11-12, session 113: the mean of Live's fade) AND
+// THE WAVEFORM'S HOVER, our own five more of send FF, each Default's own
+// number for the tone it stands beside, so the reference row shows no
+// marker or playhead hover: the hover line 696969 (its
+// ScrollbarInnerHandle, the pill's word, over the canvas), a hovered
+// chip's FFAD56 (the accent), the hovered triangle's 03C3D5 (the head), a
+// hovered disabled chip's 5D5D5D (BackgroundClip) and its label's 757575
+// (TextDisabled, the inert label's ink) AND THE ENABLED CHIP'S FILL
+// FFAD56, the accent
 // (ViewCheckControlEnabledOn; architect 2026-11-13, session 119) AND THE
 // TRIM BAR'S TROUGH 242424, Default's ScrollbarInnerTrack 00000000 over the
 // ground — Live's transparent track, so the ground itself — and THE WELL'S
@@ -166,6 +181,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0xB5B5B5, // title_text
     0xB5B5B5, // sidebar_text
     0x757575, // text_dim
+    0x757575, // inactive_cue_label_hover
     0x070707, // text_on_lit
     0x5D5D5D, // key_dim_ink
     0x2E2E2E, // key_dim_face
@@ -201,10 +217,14 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x191919, // center
     0xFFAD56, // cue
     0xFFAD56, // cue_fill
+    0xFFAD56, // cue_hover
     0x111111, // cue_outline
     0x5D5D5D, // inactive_cue
+    0x5D5D5D, // inactive_cue_hover
     0x03C3D5, // playhead_head
+    0x03C3D5, // playhead_head_hover
     0x81E1EA, // playhead_line
+    0x696969, // hover_line
     0xFFFFFF, // scanner
 };
 

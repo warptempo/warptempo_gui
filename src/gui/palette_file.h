@@ -39,12 +39,18 @@
 // canvas, the ink, the zero line, the grid's one-px equivalent, the
 // playhead's triangle, the orange of Live's markers and lit buttons;
 // 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) —
-// AND THE PLAYHEAD LINE'S STATIC TONE, white half way to the head on every
-// theme, the mean of Live's fade (81E1EA; architect 2026-11-12, session 113,
-// theme_roles.h's DERIVED block), and THE ENABLED CHIP'S FILL,
-// the accent FFAD56 (2026-11-13, session 119) — the
+// AND THE PLAYHEAD LINE'S STATIC TONE, the reference row's own PlayheadLine,
+// white half way to its head, the mean of Live's fade (81E1EA; architect
+// 2026-11-12, session 113; our own role since send FF, 2026-11-21,
+// theme_roles.h's OUR OWN, THE WAVEFORM'S HOVER), and THE ENABLED CHIP'S
+// FILL, the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-six words with its literal (the list row's hover of 2026-11-21,
+// fifty-one words with its literal (the waveform's hover of send FF,
+// 2026-11-21, five tones each Default's own number for the tone it stands
+// beside — the hover line 696969, the pill's ScrollbarInnerHandle; the
+// hovered chip FFAD56, the accent; the hovered triangle 03C3D5, the head;
+// the hovered disabled chip 5D5D5D and its label 757575, the inert chip's
+// and the inert label's — so no hover shows on the reference row; the list row's hover of 2026-11-21,
 // 393939, the ruler's own tone on a theme whose keys hover nothing; the two
 // hover tones of send CC, 2026-11-20, a key's 363636 and the pill's 696969,
 // each Default's own number for the role it copies; the progress bar's
@@ -65,13 +71,14 @@
 // THE ROWS ARE THE THEMES' OWN NUMBERS; THE PALETTE INSTALLED IS THE ROW
 // MIXED (architect 2026-11-13, session 119; theme_roles.h's THE BRIGHT
 // MIX): install_palette fills every member off the row with its bright
-// tones — of this table `cue`, `cue_fill` and the playhead's two, of the
+// tones — of this table `cue`, `cue_fill`, the hovered chip `cue_hover`,
+// the playhead's two and the hovered triangle `playhead_head_hover`, of the
 // chrome's the lit key's inert face, the selection fill, the standing card
 // and the two lamps — mixed toward its ground at the
 // `bright_mix` key. Every "Default N"
-// below is the reference row's own number, the record; at 100 the screen
-// shows exactly it, at the key's default 75 (architect 2026-11-18, send Y)
-// the accent C88B4A where it says FFAD56.
+// below is the reference row's own number, the record; at the key's default
+// 100 (architect 2026-11-21, send FF: the theme's own numbers) the screen
+// shows exactly it; at 75, for one, the accent C88B4A where it says FFAD56.
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -87,11 +94,11 @@
 // chrome widget keeps the chrome's colors even where it stands on such a
 // thing ("chrome means anything the accent color can highlight": the
 // flag editor's field and selection band, the chrome's selected pair). So
-// the palette's program roles are exactly the TWELVE below (TWO ROLES MAY
+// the palette's program roles are exactly the SIXTEEN below (TWO ROLES MAY
 // SHARE A NUMBER — the ink and `center` share Default's 191919, and
-// `cue_fill` the accent `cue`'s FFAD56: a role is what it paints, not its
-// value). Each role's Default word and its Live
-// source (the derivation, theme_roles.h's head):
+// `cue_fill` the accent `cue`'s FFAD56, and each hover its rest's on a Live
+// theme: a role is what it paints, not its value). Each role's Default word
+// and its source (the derivation, theme_roles.h's head):
 //   waveform_canvas  393939  the canvas, Live's darker band (DetailGridTiles
 //                            over DetailViewBackground)
 //   waveform_ink     191919  the waveform, Live's — the dark lamp's bar and
@@ -141,6 +148,13 @@
 //                            the markers and the lamps are one color
 //                            (ViewCheckControlEnabledOn, `cue`'s role, its
 //                            own member)
+//   cue_hover        FFAD56  AN ENABLED MARKER'S CHIP UNDER THE HOVERING PEN
+//                            (architect 2026-11-21, send FF: the waveform's
+//                            hover), a bright tone (CueHover, our own role;
+//                            arc_dark 639FE5, Arc's hover of a blue thing,
+//                            `.documents-entry-tag:hover`; a Live theme's
+//                            ViewCheckControlEnabledOn, the chip's own tone,
+//                            so no hover shows there)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): THE
 //                            SELECTION STEM down the canvas (every selected
 //                            marker, architect 2026-11-05; enabled or
@@ -167,17 +181,46 @@
 //                            (architect 2026-10-10): Live's grey shows the
 //                            marker exists and reads as off, the label with
 //                            it (BackgroundClip)
+//   inactive_cue_hover
+//                    5D5D5D  A DISABLED MARKER'S CHIP UNDER THE HOVERING PEN
+//                            (send FF, 2026-11-21: a disabled marker "is
+//                            ignored by the parser, but otherwise fully
+//                            clickable and actionable", so it hovers as an
+//                            enabled one does) (CueDisabledHover, our own
+//                            role; arc_dark 90939B, Arc's `wm_icon_bg`, the
+//                            titlebar glyph awake; a Live theme's
+//                            BackgroundClip, the chip's own tone). Its
+//                            label's hover is the chrome's
+//                            (`inactive_cue_label_hover`, theme_file.h,
+//                            beside the inert label's `text_dim`)
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
 //                            paragraph), the head's alone (RangeDefault)
-//   playhead_line    81E1EA  THE PLAYHEAD'S LINE IN THE CANVAS (architect
-//                            2026-11-04 night, mock n1, a static tone after
-//                            the measured cost of a fading line): solid,
-//                            one W, opaque, ONE STATIC TONE — white half
-//                            way to the head, the mean of Live's fade, on
-//                            every theme (architect 2026-11-12, session
-//                            113; render_playhead's paragraph,
-//                            theme_roles.h's DERIVED block)
+//   playhead_head_hover
+//                    03C3D5  THAT TRIANGLE UNDER THE HOVERING PEN (send FF,
+//                            2026-11-21), a bright tone (PlayheadHover, our
+//                            own role; arc_dark FFFFFF, Arc's selected text;
+//                            a Live theme's RangeDefault, the head's own
+//                            tone)
+//   playhead_line    81E1EA  THE PLAYHEAD'S LINE IN THE CANVAS, ITS STEM
+//                            (architect 2026-11-04 night, mock n1, a static
+//                            tone after the measured cost of a fading line):
+//                            solid, one W, opaque, ONE STATIC TONE, a bright
+//                            tone (PlayheadLine, our own role since send FF,
+//                            2026-11-21: arc_dark A5ABB5, Arc's `.h4` /
+//                            `.category-label` — of the playhead, "the
+//                            triangle should remain the font color ... but
+//                            the stem is too bright"; a Live theme's white
+//                            half way to its head, the mean of Live's fade,
+//                            architect 2026-11-12, session 113;
+//                            render_playhead's paragraph, theme_roles.h's
+//                            OUR OWN, THE WAVEFORM'S HOVER)
+//   hover_line       696969  THE WAVEFORM'S HOVER LINE (send FF, 2026-11-21:
+//                            "an even more dark and faint version of the
+//                            playhead stem") (HoverLine, our own role, over
+//                            the canvas; arc_dark 767B87, Arc's scrollbar
+//                            slider; a Live theme's ScrollbarInnerHandle,
+//                            the trim bar's pill)
 //   scanner          FFFFFF  THE SCANNER AND THE ZOOM ANCHOR'S STEM, the
 //                            white of the stems that belong to the controls
 //                            (architect 2026-10-09: "the non-playhead stems
@@ -211,17 +254,21 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::center,           &GuiThemeTones::center},
     {&GuiPalette::cue,              &GuiThemeTones::cue},
     {&GuiPalette::cue_fill,         &GuiThemeTones::cue_fill},
+    {&GuiPalette::cue_hover,        &GuiThemeTones::cue_hover},
     {&GuiPalette::cue_outline,      &GuiThemeTones::cue_outline},
     {&GuiPalette::inactive_cue,     &GuiThemeTones::inactive_cue},
+    {&GuiPalette::inactive_cue_hover, &GuiThemeTones::inactive_cue_hover},
     {&GuiPalette::playhead_head,    &GuiThemeTones::playhead_head},
+    {&GuiPalette::playhead_head_hover, &GuiThemeTones::playhead_head_hover},
     {&GuiPalette::playhead_line,    &GuiThemeTones::playhead_line},
+    {&GuiPalette::hover_line,       &GuiThemeTones::hover_line},
     {&GuiPalette::scanner,          &GuiThemeTones::scanner},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the forty-six words with its literal, so
+// 2026-11-01..05 — every one of the fifty-one words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
@@ -252,7 +299,14 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // 363636, so no row hovers on the reference row, as no key does.
 // THE PLAYHEAD'S LINE
 // 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
-// to even (architect 2026-11-12, session 113; the DERIVED block). THE ENABLED
+// to even (architect 2026-11-12, session 113), the word a converted Default
+// file carries for our own PlayheadLine (send FF, 2026-11-21; theme_roles.h's
+// OUR OWN, THE WAVEFORM'S HOVER). THE WAVEFORM'S HOVER, our own five more of
+// send FF, is each Default's own number for the tone it stands beside, so
+// nothing hovers on the reference row: the hover line 696969, Default's
+// ScrollbarInnerHandle (opaque) over the canvas; the hovered chip FFAD56,
+// the accent; the hovered triangle 03C3D5, the head; the hovered disabled
+// chip 5D5D5D, BackgroundClip; and its label 757575, TextDisabled. THE ENABLED
 // CHIP'S FILL FFAD56 is the accent, Default's ViewCheckControlEnabledOn
 // (architect 2026-11-13, session 119; the ROLE-NAMED block). Every word
 // here is the row's own number, k = 100 of THE BRIGHT MIX (theme_roles.h),
@@ -275,6 +329,7 @@ static_assert(kDefault.text            == 0xB5B5B5);
 static_assert(kDefault.title_text      == 0xB5B5B5);
 static_assert(kDefault.sidebar_text    == 0xB5B5B5);
 static_assert(kDefault.text_dim        == 0x757575);
+static_assert(kDefault.inactive_cue_label_hover == 0x757575);
 static_assert(kDefault.text_on_lit     == 0x070707);
 static_assert(kDefault.key_dim_ink     == 0x5D5D5D);
 static_assert(kDefault.key_dim_face    == 0x2E2E2E);
@@ -303,7 +358,7 @@ static_assert(kDefault.card_standing_fill == 0xFFE76942);
 static_assert(kDefault.card_ink        == 0x070707);
 static_assert(kDefault.limiter_lamp    == 0xE76942);
 static_assert(kDefault.clip_lamp       == 0xFF0A0A);
-// THE PALETTE (the head's twelve).
+// THE PALETTE (the head's sixteen).
 static_assert(kDefault.waveform_canvas == 0x393939);
 static_assert(kDefault.waveform_ink    == 0x191919);
 static_assert(kDefault.waveform_core   == 0x363636);
@@ -311,9 +366,13 @@ static_assert(kDefault.grid            == 0x303030);
 static_assert(kDefault.center          == 0x191919);
 static_assert(kDefault.cue             == 0xFFAD56);
 static_assert(kDefault.cue_fill        == 0xFFAD56);
+static_assert(kDefault.cue_hover       == 0xFFAD56);
 static_assert(kDefault.cue_outline     == 0x111111);
 static_assert(kDefault.inactive_cue    == 0x5D5D5D);
+static_assert(kDefault.inactive_cue_hover == 0x5D5D5D);
 static_assert(kDefault.playhead_head   == 0x03C3D5);
+static_assert(kDefault.playhead_head_hover == 0x03C3D5);
 static_assert(kDefault.playhead_line   == 0x81E1EA);
+static_assert(kDefault.hover_line      == 0x696969);
 static_assert(kDefault.scanner         == 0xFFFFFF);
 } // namespace gui_default_theme_proof

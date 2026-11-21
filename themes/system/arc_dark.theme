@@ -17,8 +17,8 @@
 # destructive red, below). The playhead's head is Arc's
 # fg D3DAE3, the icon glyph color; the markers' chips the accent, Arc's selection blue 5294E2
 # (architect 2026-11-17, session 140: "the marker should take selection blue ... the playhead can be the
-# glyph color"), Arc's own numbers at bright_mix 100 (the default 75 mixes them toward the ground,
-# src/gui/theme_roles.h's THE BRIGHT MIX). THE CANVAS ON ARC'S CONTENT BASE 404552,
+# glyph color"), Arc's own numbers at bright_mix 100, the default (architect 2026-11-21, send FF: the theme's own
+# numbers; a lower percent mixes them toward the ground, src/gui/theme_roles.h's THE BRIGHT MIX). THE CANVAS ON ARC'S CONTENT BASE 404552,
 # Thunar's list (architect 2026-11-17: "Thunar's is the official"; the ruler wears the canvas's tone, a
 # derivation rule, not this file).
 # One line per role:
@@ -75,8 +75,27 @@
 #   TooltipBackground           4B5162F2 $osd_bg_color, rgba(75, 81, 98, .95) (G3:1430): the tooltip's box
 #   CardBackground              353945F2 xfce4-notifyd's bubble under Arc ($dark_sidebar_bg at .95): a normal (timed) card
 #   CardStandingBackground      F04A50F2 $destructive_color, button.destructive-action (G3:216), at .95: a standing
-#                                       (critical) card, A BRIGHT TONE (C0444C at bright_mix 75); its words and glyph
-#                                       StandbySelectionForeground FFFFFF
+#                                       (critical) card, A BRIGHT TONE (its own F04A50 at the default bright_mix 100;
+#                                       C0444C at 75); its words and glyph StandbySelectionForeground FFFFFF
+# OUR OWN SIX MORE, send FF, 2026-11-21 (THE WAVEFORM'S HOVER and the playhead's stem: "just make sure they're all
+# colors from Arc, dark"; src/gui/theme_roles.h's OUR OWN, THE WAVEFORM'S HOVER). THE BRIGHTNESS ORDER ON THE WAVEFORM,
+# his: the scanner and the zoom anchor's stem FFFFFF ("the scanner should be this brightest one"), the playhead's stem
+# A5ABB5, the hover line 767B87 ("an even more dark and faint version of the playhead stem"):
+#   PlayheadLine                A5ABB5  Arc's `.h4, .category-label { color: #a5abb5; }` (G3:2123): the playhead's stem on the
+#                                       waveform, A BRIGHT TONE ("the triangle should remain the font color ... but the
+#                                       stem is too bright")
+#   HoverLine                   767B87  Arc's scrollbar slider, `scrollbar slider { ... background-color: #767b87; }` (G3:956,
+#                                       ScrollbarInnerHandle's word above): the waveform's hover line
+#   CueHover                    639FE5  `.documents-entry-tag:hover { ... background: #639fe5; }` (G3:1871), Arc's hover of a
+#                                       blue thing (the tag at rest 5294E2, the accent): a hovered marker's chip, A BRIGHT TONE
+#   PlayheadHover               FFFFFF  Arc's selected text, its pure white (`label selection { color: #ffffff; ... }`,
+#                                       G3:31): the hovered playhead triangle, A BRIGHT TONE
+#   CueDisabledHover            90939B  `@define-color wm_icon_bg #90939B;` (G3:2343): the titlebar glyph awake (its resting
+#                                       666A74, BackgroundClip above, is wm_icon_unfocused_bg, G3:2344, the same glyph of an
+#                                       unfocused, fully clickable window): a hovered disabled marker's chip
+#   CueDisabledLabelHover       9DA3AD  `.gedit-document-panel row:hover:not(:selected) button { color: #9da3ad; }` (G3:1759):
+#                                       a dim button under its row's hover: a hovered disabled marker's label ink (at rest
+#                                       TextDisabled 7E838F)
 SurfaceArea=2F343F
 Desktop=353945
 SurfaceBackground=444A58
@@ -109,3 +128,9 @@ ScaleTrough=2D303B
 ScaleSliderBorder=262933
 ButtonHoverBackground=505666
 ScrollbarSliderHover=676B78
+PlayheadLine=A5ABB5
+HoverLine=767B87
+CueHover=639FE5
+PlayheadHover=FFFFFF
+CueDisabledHover=90939B
+CueDisabledLabelHover=9DA3AD
