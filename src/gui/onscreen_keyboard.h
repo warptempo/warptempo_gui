@@ -815,7 +815,9 @@ inline bool stands(const AppState& a) {
 //   * THE BOTTOM ICON ROW (paint_bottom_strip): its keys, the timestamp and
 //     the tab name stand down and publish zero rects and a zero clock cell,
 //     the clock's damage owner answering an empty rect
-//     (clock_invalidate_rect, main.cpp; GuiClockFingerprint::yields); under
+//     (clock_invalidate_rect, main.cpp; GuiClockFingerprint::yields), the
+//     tab name's damage silent (Viewport::invalidate_tab_name_area) and the
+//     tick's face comparator skipping its keys (main.cpp's walk); under
 //     a dialog editor the backdrop page's controls row
 //     (paint_handler.cpp's modal_owns_bottom_row, paint_modal_dialog) yields
 //     with it;
@@ -832,7 +834,10 @@ inline bool stands(const AppState& a) {
 // dwell or the pan: the keyboard's claim is the whole surface and ranks
 // above every gate but the cards' (claim_rect; the press router, the hover
 // walk, the pan zone), the waveform's painted rect stops above it, the bottom
-// icon row publishes no rect, and the editor's veil holds everything else.
+// icon row publishes no rect, and the editor's veil holds everything else —
+// THE KEYBOARD THE ONE LIVE ELEMENT, the top icon row above it greyed whole
+// so the dead keys look dead (redesign_button_enabled's keyboard arm,
+// app_state.h, the owner; architect 2026-11-20, send EE).
 // ONE LINE OF ITS OWN OVER IT (top_line_px, `well_border`: Thunar's pane
 // line parting the keyboard from what stands above; architect 2026-11-19,
 // send Z, his approval of tmp/sendZ/VIEW/Z_06), THE BOTTOM ICON ROW'S TWO

@@ -661,7 +661,8 @@ struct Viewport {
     // switch (GuiActiveViews' switch), its one caller. THE RECT IS THE BOTTOM
     // ROW'S LANE WHOLE, deliberately: the name's extent is measured only at
     // paint and published nowhere, so "Tab A" and "Tab B" erase each other
-    // only inside the lane; it covers the clock cell as a superset.
+    // only inside the lane; it covers the clock cell as a superset. NONE
+    // while the on-screen keyboard stands over the row (the definition).
     void invalidate_tab_name_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole), WITH THE

@@ -82,7 +82,7 @@
 // stats"; the File menu that ruling kept live retired with the menu row
 // 2026-10-21, Quit being Android's Back): every icon-row button —
 // the view pairs' four included — greys through redesign_button_enabled's
-// first arm (each content's opener key excepted, its own closer:
+// overlay arm (each content's opener key excepted, its own closer:
 // Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
 // over the page and the value list it swaps in 2026-10-28, Trim Presets over
 // its list 2026-10-28 night, BPM over its form 2026-10-29 —

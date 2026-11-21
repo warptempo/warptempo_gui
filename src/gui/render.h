@@ -2457,12 +2457,12 @@ WellColumns well_columns(const AppState& a);
 // CONTROLS ROW (modal_box.h); UNDER A QUESTION OR THE PROGRESS DIALOG THE
 // ROWS SHOW THE PAGE BEHIND'S ROW — the main page's keys and timestamp, or
 // the overlay's controls — the top icon row the same page's face under the
-// same modal
-// (roster_face_page_owner, app_state.h), both rows dead to presses
+// same modal, both rows dead to presses
 // (architect 2026-11-19, send BB; paint_handler.cpp's
 // modal_owns_bottom_row); UNDER EVERY EDITOR THE ON-SCREEN KEYBOARD STANDS
 // OVER THE ROWS and the row yields (onscreen_keyboard.h's placement block,
-// send EE, 2026-11-20).
+// send EE, 2026-11-20), the top icon row greyed whole above it
+// (redesign_button_enabled's keyboard arm, app_state.h).
 inline int bottom_row_h_px() {
     return strip_h_px();
 }

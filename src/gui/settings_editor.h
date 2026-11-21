@@ -32,10 +32,11 @@ struct GuiInputHandler;
 // titled the row's key with the key and a colon its label — Z_06's words;
 // the label of 2026-10-14, "Setting:", was removed as "pointless that far
 // away"), centered in the box's view, the page it was opened from standing
-// under it there (AppState::dialog_backdrop) and its face on the top icon
-// row, SETUP lit (roster_face_page_owner, app_state.h; send BB, 2026-11-19),
-// all dead, the on-screen keyboard over the view's foot, the bottom icon
-// row and the status bar (onscreen_keyboard.h's placement block, send EE).
+// under it there (AppState::dialog_backdrop), all dead: the top icon row
+// greyed whole, SETUP lit and inert (redesign_button_enabled's keyboard arm,
+// roster_face_page_owner, app_state.h; send EE, 2026-11-20), the on-screen
+// keyboard over the view's foot, the bottom icon row and the status bar
+// (onscreen_keyboard.h's placement block, send EE).
 // THE
 // WINDOW IS Z_06's AND NEVER GROWS WITH THE TEXT (architect 2026-11-19, send
 // AA: "large enough that ... the title ... doesn't get ridiculous, but not

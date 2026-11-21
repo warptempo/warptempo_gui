@@ -182,8 +182,13 @@ void Viewport::invalidate_status_bar_area() {
 }
 
 // THE TAB NAME'S DAMAGE — the bottom icon row's lane whole (the reason at
-// the declaration, viewport.h).
+// the declaration, viewport.h). NONE WHILE THE ON-SCREEN KEYBOARD STANDS: it
+// covers the row, whose painter yields under it (the name painted nowhere),
+// and its hide damages its whole surface, the row among it, so the name
+// comes back current (onscreen_keyboard.h's placement block; architect
+// 2026-11-20, send EE) — the status bar's rule above.
 void Viewport::invalidate_tab_name_area() {
+    if (onscreen_keyboard::stands(app)) return;
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
 }

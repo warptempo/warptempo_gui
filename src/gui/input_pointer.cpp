@@ -5083,9 +5083,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     }
 
     // THE VEIL'S LAST WORD: any editor still standing here swallows the
-    // press — every button, every modifier, every surface: the band and row
-    // 8 (their keys dead behind it, wearing the page behind's face — a
-    // dialog editor's the page it was opened from, roster_face_page_owner),
+    // press — every button, every modifier, every surface: the band (its
+    // keys dead behind it and greyed, redesign_button_enabled's keyboard
+    // arm) and row 8 (under the on-screen keyboard, publishing no rect),
     // the view bar, the ruler,
     // the marker lane (no press on another flag), the waveform (no pan,
     // scrub, placement, marker or strip drag) — and CLOSES NOTHING. It asks

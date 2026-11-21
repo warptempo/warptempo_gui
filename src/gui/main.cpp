@@ -3135,8 +3135,24 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             StripDrift top;
             StripDrift row8;
             const uint64_t frame_now = paint_handler.frames_begun + 1;
+            // A KEY UNDER THE ON-SCREEN KEYBOARD DRIFTS NOTHING (architect
+            // 2026-11-20, send EE; onscreen_keyboard.h's placement block):
+            // while it stands it covers the bottom icon row whole, whose keys
+            // publish empty rects and paint nothing (paint_bottom_strip's
+            // yield), so a drift there — PLAY's glyph at a play's end under
+            // the flag editor, which play runs on under — is no pixel of the
+            // screen's, and the strip fallback would repaint the keyboard's
+            // rows for a key nobody sees. Skipped, its record cleared; the
+            // keyboard's hide damages its whole surface
+            // (onscreen_keyboard::reconcile_slot_standing), the row among it,
+            // so the row comes back republished.
+            const bool row8_covered = onscreen_keyboard::stands(app);
             for (int i = 0; i < kRedesignButtonCount; ++i) {
                 const RedesignButton id = static_cast<RedesignButton>(i);
+                if (row8_covered && redesign_button_in_transport_row(id)) {
+                    face_narrow_frame[static_cast<size_t>(i)] = 0;
+                    continue;
+                }
                 const AppState::RedesignButtonFace& f = app.redesign_buttons[i];
                 const bool drifted =
                     f.enabled  != redesign_button_enabled(

@@ -349,12 +349,14 @@ void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
 // Whether the clip reaches a rect (its rule at the definition below).
 static bool clip_meets(cairo_t* cr, const GuiRect& rect);
 
-// UNDER A MODAL'S VEIL (a question, a dialog editor, the progress dialog):
-// the page behind is painted dead and its faces take their looks at once
-// (AppState::FaceFades' WHAT DOES NOT FADE, the record's `veiled`).
+// UNDER A QUESTION OR THE PROGRESS DIALOG: the page behind is painted dead,
+// as it stood, and its faces take their looks at once (AppState::FaceFades'
+// WHAT DOES NOT FADE, the record's `veiled`). NOT UNDER AN EDITOR (architect
+// 2026-11-20, send EE): the on-screen keyboard greys the whole roster of the
+// page under it (redesign_button_enabled's keyboard arm), a state change of
+// standing keys, so they fade — the dialog editors' backdrop roster too.
 static bool modal_veil_stands(const AppState& app) {
-    return app.prompt.active || app.batch_progress.active ||
-           app.dialog_editor_session() != 0;
+    return app.prompt.active || app.batch_progress.active;
 }
 
 // A ROSTER GROUP'S PAINT (send Z, 2026-11-19; materials.h's
@@ -438,7 +440,8 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 // (architect 2026-11-17, send U: "Negative INF on the noise slider should
 // not have a disabled color because it's still enabled"). DISABLED
 // (`enabled` false — no folder or a failed load, and the roster's blanket
-// greys): THE NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry, the
+// greys: a load, an overlay, the on-screen keyboard standing, send EE): THE
+// NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry, the
 // kit's; the mix per channel of the installed words, rounded) and NO LINE.
 // The run shaped through the memo (memoized_run: a few dozen spellings).
 // THE REPAINT: every change of the case's level damages its box explicitly
@@ -5721,15 +5724,15 @@ static text_editor::State* dialog_editor_to_paint(AppState& app) {
 // page they were opened from, AppState::dialog_backdrop). Then
 // paint_modal_dialog paints that page's controls row on the row's rows, live
 // with no dialog over it and paint-only under one — and the top icon row
-// wears the same page's face (roster_face_page_owner, app_state.h: under a
-// dialog editor the backdrop's opener lit, the rest disabled), so under a
-// dialog editor the whole window is the page it was opened from, as it
-// stood. A QUESTION AND THE
+// lights the same page's opener (roster_face_page_owner, app_state.h: under
+// a dialog editor the backdrop's opener lit and inert, every key greyed while
+// the on-screen keyboard stands, redesign_button_enabled's keyboard arm,
+// send EE). A QUESTION AND THE
 // PROGRESS DIALOG OWN NOTHING OF IT, nor does the flag editor: over the main
 // page the row is the main page's own keys and timestamp
 // (paint_bottom_row_buttons_and_clock), painted as the top icon row is under
-// the same modal — the main page's face, not dimmed, GTK greying no window
-// under its dialog — and
+// the same modal — under a question or the progress dialog the main page's
+// face, not dimmed, GTK greying no window under its dialog — and
 // dead to presses by the same veil (input_pointer.cpp's modal gates: the
 // prompt's, the progress modal's and the editors' keyboard_modal_editor_active
 // veil consume every press on either row; the hover walk refuses both rows
@@ -7467,8 +7470,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // (`row_backdrop`, the page copied at the editor's open: Close under the
     // settings line, the trim presets list's row under Save As, the BPM
     // form's under the BPM field) — each row as that overlay paints it with
-    // no dialog over it, the top icon row wearing the same page's face
-    // (roster_face_page_owner, app_state.h). UNDER A DIALOG (`windowed`) THE
+    // no dialog over it, the top icon row lighting the same page's opener
+    // (roster_face_page_owner, app_state.h; under a dialog editor greyed
+    // whole, the opener lit and inert, redesign_button_enabled's keyboard
+    // arm). UNDER A DIALOG (`windowed`) THE
     // ROW IS PAINT-ONLY:
     // AppState::modal_dialog.buttons stays the WINDOW'S OWN live answers,
     // the one stash whose session the dialog's claim compares, so the row's

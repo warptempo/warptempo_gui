@@ -118,10 +118,14 @@
 // app_state.h, whose head owns the rule), so a lit one wears the lit and
 // inert look and an unlit one the disabled look — ONE RULE for a dead key
 // wherever it is dead; the overlay's opener and the tooltip lamp, live
-// there, keep their live states. A MODAL changes no key behind it: the
-// roster wears the page behind's face — under a dialog editor the page it
-// was opened from, its opener lit and live-faced, the rest disabled
-// (roster_face_page_owner, app_state.h; send BB, 2026-11-19). NOTHING
+// there, keep their live states. A QUESTION OR THE PROGRESS DIALOG changes
+// no key behind it: the roster wears the page behind's face. WHILE THE
+// ON-SCREEN KEYBOARD STANDS (every editor) EVERY ROSTER KEY IS DEAD AND
+// LOOKS IT, the same rule: each wears the disabled look, a lit one the lit
+// and inert look — the main page's lit view pair under the flag editor, the
+// backdrop page's opener under a dialog editor (roster_face_page_owner) —
+// Arc's own disabled look the dead keys' one sign (redesign_button_enabled's
+// keyboard arm, app_state.h, the owner; architect 2026-11-20, send EE). NOTHING
 // IS PRINTED UNDER A KEY (the legends retired 2026-11-18, send Z: "That's
 // from the hi-fi theme"); the tooltip names the act.
 // THE HOVER IS ARC'S (architect 2026-11-18, send Y: "I think we could

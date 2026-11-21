@@ -4413,11 +4413,12 @@ private:
     // platform name). Such a modal ADMITS ITS OWN VOCABULARY ALONE: its
     // typed characters, Backspace, Esc and Enter, a dialog's ring
     // and buttons — and its FIELD for the pointer; every other key, press
-    // and touch gesture is consumed, silently, and no key
-    // behind it greys of the editor's own — the roster wears the page
-    // behind's face, a dialog editor's the page it was opened from
-    // (redesign_button_enabled's record of the classes,
-    // roster_face_page_owner). The way out is Esc (cancel) and Enter
+    // and touch gesture is consumed, silently, and the on-screen keyboard
+    // it raises greys the whole roster behind it, a lit key lit and inert —
+    // the main page's, or a dialog editor's backdrop page's, its opener lit
+    // (redesign_button_enabled's record of the classes and its keyboard arm,
+    // architect 2026-11-20, send EE; roster_face_page_owner). PAINT ALONE:
+    // this predicate's veil is what keeps every key dead. The way out is Esc (cancel) and Enter
     // (commit) alone — the on-screen keyboard's own two keys (its Esc lower
     // right since 2026-10-29) — and a dialog's Cancel and OK. A PRESS
     // OUTSIDE THE FIELD CLOSES NOTHING, for the lane editors (the flag

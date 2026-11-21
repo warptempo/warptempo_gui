@@ -13,17 +13,18 @@
 //
 // (INTERFACE VERSUS MODAL, architect 2026-10-14: the player and the picker
 // stand in the box but are interface, so what they leave dead greys; the
-// prompts, editors and progress modal are modal and grey nothing of their
-// own, the roster wearing the page behind's face — a dialog editor's the
-// page it was opened from, send BB — the rule recorded at
-// redesign_button_enabled's head, app_state.h.)
+// prompts and progress modal are modal and grey nothing of their own, the
+// roster wearing the page behind's face; every editor raises the on-screen
+// keyboard, under which the whole roster greys (send EE) — the rule
+// recorded at redesign_button_enabled's head, app_state.h.)
 //
 // THE BOX TAKES THE VIEW (architect 2026-11-18 / 2026-11-19, send Z;
 // tmp/sendY/P2_design_overlays.md §A): the title bar and the top icon row
 // above it stay as the main window paints them, the top icon row wearing
-// the face of the page behind (under an overlay or a dialog editor's
-// backdrop that page's, its opener lit — roster_face_page_owner,
-// app_state.h). Across, it runs the panel's
+// the face of the page behind (under an overlay that page's, its opener
+// lit; under a dialog editor the backdrop's opener lit and inert, every key
+// greyed while the on-screen keyboard stands — roster_face_page_owner,
+// redesign_button_enabled's keyboard arm, app_state.h). Across, it runs the panel's
 // width (render.h's well_columns, edge to edge since send Z). Top to bottom:
 //   1. THE BOX — its first rows THE LINE UNDER THE TOP ICON ROW (the trim
 //      lane's first rows), its last THE LINE OVER THE BOTTOM ICON ROW (the
