@@ -369,8 +369,11 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     // DERIVED block): ARC'S OWN, `row.activatable:hover`'s rgba(255, 255,
     // 255, 0.03) over the list's view, the canvas's tone the view wears
     // (ruler_face below) — 3 % white source-over, per channel c + 0.03 ·
-    // (255 − c) rounded, as GTK composites it ("I prefer to go more truthful.
-    // It just needs to be very subtle."): arc_dark 404552 -> 464B57. THE ONE
+    // (255 − c) rounded, THE STYLESHEET'S OWN NUMBER computed exactly ("I
+    // prefer to go more truthful. It just needs to be very subtle."):
+    // arc_dark 404552 -> 464B57. The desktop's 8-bit compositing (cairo /
+    // pixman, the alpha 0.03 as 7 / 255) may read one level under it on two
+    // channels (454A57, reasoned, not measured) — the formula taken. THE ONE
     // CONDITION: a theme whose hover face is its key face (every Live theme)
     // hovers nothing (send CC / DD), so its row's hover tone is the view's own
     // — no hover shows, as no key's does; the walk never hovers a row there

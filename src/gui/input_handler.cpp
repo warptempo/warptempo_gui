@@ -2891,7 +2891,7 @@ void GuiInputHandler::run_span_framing_command() {
     // A FRAMING THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom
     // darkens (architect 2026-11-17, send U; darken_zoom_lamps_if_level_moved).
     // HERE AND NOT IN THE SHARED FRAMER: this command's callers are all user
-    // roads (the four above),
+    // roads (the three above),
     // while frame_span_into_view also serves the programmatic landings
     // (land_and_frame_active_markers: undo / redo's group restore, the
     // pastes), which darken nothing.

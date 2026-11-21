@@ -445,11 +445,17 @@
 //                                     prefer to go more truthful. It just
 //                                     needs to be very subtle."; paint_
 //                                     handler.cpp's THE LIST VIEW). arc_dark
-//                                     404552 -> 464B57. ONE CONDITION: a theme
-//                                     whose key hover face is its key face
-//                                     (every Live theme) hovers nothing (send
-//                                     CC / DD), so there the view's own tone:
-//                                     no row hovers, as no key does
+//                                     404552 -> 464B57, the stylesheet's own
+//                                     number computed exactly; the desktop's
+//                                     8-bit compositing (the alpha as 7 / 255)
+//                                     may read one level under it on two
+//                                     channels, 454A57 (reasoned, not
+//                                     measured) — the formula taken. ONE
+//                                     CONDITION: a theme whose key hover face
+//                                     is its key face (every Live theme)
+//                                     hovers nothing (send CC / DD), so there
+//                                     the view's own tone: no row hovers, as
+//                                     no key does
 //     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
 //                                     EXACTLY HALF WAY to the head on every
 //                                     theme (architect 2026-11-12, session

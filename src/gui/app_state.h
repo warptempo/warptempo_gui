@@ -215,9 +215,12 @@ constexpr double kViewportEdgeMarginFraction = 0.05;
 // begin on the left wall the span fills 1 − f of the window; on both walls it
 // fills it whole. L and R are floored at 0: the trim arm's bounds are mapped
 // through the DISPLAYED map (displayed_or_live_target_map) while `total` is
-// the live domain's, and the two may differ by a few frames between an edit
-// and its render's publish — the frames that exist are never fewer than
-// none. TWO READERS, one geometry (the never-zooms-in argument at
+// the live domain's, and the displayed map lags the live one between an edit
+// and the frame that promotes its displayed basis (staged by the flag-cache
+// rebuild, the promote deferred while displayed_basis_frozen holds — the
+// contract at displayed_or_live_target_map); the two totals may then differ
+// by any amount, so a bound may stand past either end of the live domain —
+// the frames that exist are never fewer than none. TWO READERS, one geometry (the never-zooms-in argument at
 // Viewport::land_subject): span_framing_landing's margin arm (input_handler.
 // cpp), which fits this window and centres the bare span in it, the walls
 // then handing each side exactly what it can show; and land_subject's fit
@@ -1789,9 +1792,12 @@ enum class DoubleClickSurface {
 struct DoubleClickCandidate {
     DoubleClickSurface surface = DoubleClickSurface::None;
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
-    double  press_x   = 0.0;    // seed x, REAL: every surface seeds at a
-    double  press_y   = 0.0;    //   motionless release, Marker and TrimBar
-                                //   with their PRESS place
+    double  press_x   = 0.0;    // seed x, REAL: Marker and TrimBar seed at
+    double  press_y   = 0.0;    //   any release whose press never crossed
+                                //   the grab gate (18 W), wherever inside it
+                                //   the lift is, at their PRESS place;
+                                //   EmptyLane at a lift inside the 9 W drag
+                                //   gate, at the lift's place
     int     target    = -1;     // marker index for Marker; unused otherwise
     // WHICH CELL THE SEEDING PRESS LANDED ON (Marker only; unused otherwise).
     // The consume forks on THE SEED and not on the second press's own position,
@@ -3475,12 +3481,13 @@ constexpr int     kDoubleClickSlackPx = 9;
 // ON THE TWO GRAB SURFACES THEY ARE TWO ANSWERS: a flag and the trim bar
 // become drags at grab_moved_threshold_px(), twice this, so a press there
 // can leave the slack and still be a tap at its release. That is fine
-// because the seed is the motionless release's alone and a release between
-// the two distances IS a tap, not a drag: on BOTH grab surfaces the seed is
-// written by any release whose press never crossed the grab gate, at the
-// PRESS place, and the second press is measured against this slack from it
-// (the flag's since 2026-11-08; the trim bar's by the same rule, architect
-// 2026-11-21, send EE; TrimBarPressSeed). Floor 1: a zero
+// because a release between the two distances IS a tap, not a drag: on BOTH
+// grab surfaces the seed is written by any release whose press never
+// crossed the grab gate, wherever inside it the lift is, at the PRESS
+// place, and the second press is measured against this slack from it (the
+// flag's since 2026-11-08; the trim bar's by the same rule, architect
+// 2026-11-21, send EE; TrimBarPressSeed). Only the empty lane's seed needs a
+// lift inside this slack, its drag gate. Floor 1: a zero
 // slack would demand a pixel-exact second press and starve the double tap
 // outright.
 inline int double_click_slack_px() {
@@ -3690,9 +3697,9 @@ inline double real_travel_px(double x0, double y0, double x1, double y1) {
 // set_touch_slop_px) binds the slop to the DRAG gate alone.
 // THE DOUBLE-CLICK SLACK STAYS THE DRAG GATE'S (the note at
 // double_click_slack_px above), so on a grab surface a press can leave the
-// slack before it becomes a drag; that is harmless because a seed is the
-// motionless release's alone — a release between the two distances is a
-// click, never a drag, whichever the seed then does with it.
+// slack before it becomes a drag; that is harmless because a release
+// between the two distances is a click, never a drag, and seeds at the
+// PRESS place like any release short of this gate.
 // TWICE THE ROUNDED DRAG GATE, NOT THE ROUNDED DOUBLE (architect 2026-10-02,
 // scaled_px's composite rule): the grab gate is built from its rounded part,
 // 2 × drag_moved_threshold_px() — 36 device px on the tablet at 200 % (2 ×

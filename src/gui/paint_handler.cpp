@@ -5151,8 +5151,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // COMMIT'S DIFF SPAN while the `h` view stood from 2026-08-05 until then, a
     // display-only substitution at this one site; it is deleted, so the window
     // the user was in is the window the view shows, and the band's
-    // long press and double tap frame that window in here exactly as they do
-    // outside.
+    // double tap frames that window in here exactly as it does outside.
     // (Trim never MUTATED in the view either way: the substitution never wrote
     // app.trim, and the mode consumes every press that could.)
     const int64_t bar_begin_frame = app.trim.begin_frame;
@@ -8375,8 +8374,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            across the view's whole width, the lit bar's
 //                            span, in `list_hover_face` — ARC'S OWN
 //                            `row.activatable:hover`, 3 % WHITE OVER THE
-//                            VIEW (theme_roles.h's DERIVED block; arc_dark
-//                            464B57 on 404552) —
+//                            VIEW, the stylesheet's own number computed
+//                            exactly (theme_roles.h's DERIVED block;
+//                            arc_dark 464B57 on 404552) —
 //                            the name, the drawing and their inks
 //                            unchanged; IN AT ONCE AND OUT OVER ARC'S
 //                            150 ms ROW TRANSITION, the fill the view's
