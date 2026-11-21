@@ -4514,8 +4514,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // somehow"): `playhead_head` toward `playhead_head_hover`
             // (arc_dark D3DAE3 -> FFFFFF) by the triangle's hover weight,
             // its face's stored mix (AppState::FaceFades' THE LANES' TWO
-            // FACES; the damage sync_lane_hovers'), plain at rest. Over the
-            // digits as ever.
+            // FACES; the damage damage_lane_hovers' and sync_lane_hovers'),
+            // plain at rest. Over the digits as ever.
             const double hover = app.face_fades.hover_weight(
                 AppState::FaceFades::Face{
                     AppState::FaceFades::Surface::PlayheadHead, 0});
@@ -4697,11 +4697,61 @@ CueLaneHover GuiPaintHandler::cue_hover_of() {
     return out;
 }
 
-// THE ONE COMPARATOR. The cues' half on a standing layout only (the cache's
-// record, FlagCache::layout_stands); the triangle's against the weight its
-// last damage declared.
+// THE LANES' STATE IN ONE WALK OF THE RECORDS (the declaration): whether
+// any Marker record stands, and the triangle's weight by hover_weight's
+// own two answers — its record's stored Hover weight, else 1 for the
+// hovered face and 0 — read off the same walk.
+GuiPaintHandler::LaneHoverScan GuiPaintHandler::scan_lane_hovers() const {
+    using FaceFades = AppState::FaceFades;
+    const FaceFades& h = app.face_fades;
+    const FaceFades::Face head{FaceFades::Surface::PlayheadHead, 0};
+    bool marker_record = false;
+    const FaceFades::Record* head_record = nullptr;
+    for (const FaceFades::Record& r : h.records) {
+        if (r.face.surface == FaceFades::Surface::Marker)
+            marker_record = true;
+        else if (head_record == nullptr && r.face == head)
+            head_record = &r;
+    }
+    LaneHoverScan out;
+    out.cues_rest = !marker_record &&
+                    h.hovered.surface != FaceFades::Surface::Marker &&
+                    cue_pass_hovered_cues() == 0;
+    out.head = head_record != nullptr ? head_record->mix[FaceLook::Hover]
+             : h.hovered == head      ? 1.0
+                                      : 0.0;
+    return out;
+}
+
+// THE TRIANGLE'S COMPARE (the declaration), on both roads.
+void GuiPaintHandler::damage_head_hover(double head) {
+    if (head == head_hover_declared_) return;
+    head_hover_declared_ = head;
+    const GuiRect r = playhead_head_damage_rect();
+    if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
+}
+
+// THE CLOCK'S COMPARE: the cues' half on a standing layout only (the cache's
+// record, FlagCache::layout_stands), damage alone.
+void GuiPaintHandler::damage_lane_hovers() {
+    const LaneHoverScan scan = scan_lane_hovers();
+    if (!scan.cues_rest && flag_cache.surface != nullptr &&
+        flag_cache.layout_stands) {
+        const CueLaneHover hover = cue_hover_of();
+        std::vector<GuiRect>& rects = flag_cache.hover_damage_scratch;
+        rects.clear();
+        cue_pass_hover_damage(hover.weight_of, rects);
+        for (const GuiRect& r : rects)
+            gui.invalidate_region(r.x, r.y, r.w, r.h);
+    }
+    damage_head_hover(scan.head);
+}
+
+// THE FRAME'S REPAINT: the same, the cues repainted into the cache.
 void GuiPaintHandler::sync_lane_hovers() {
-    if (flag_cache.surface != nullptr && flag_cache.layout_stands) {
+    const LaneHoverScan scan = scan_lane_hovers();
+    if (!scan.cues_rest && flag_cache.surface != nullptr &&
+        flag_cache.layout_stands) {
         const CueLaneHover hover = cue_hover_of();
         std::vector<GuiRect>& rects = flag_cache.hover_damage_scratch;
         rects.clear();
@@ -4710,14 +4760,7 @@ void GuiPaintHandler::sync_lane_hovers() {
         for (const GuiRect& r : rects)
             gui.invalidate_region(r.x, r.y, r.w, r.h);
     }
-    const double head = app.face_fades.hover_weight(
-        AppState::FaceFades::Face{AppState::FaceFades::Surface::PlayheadHead,
-                                  0});
-    if (head != head_hover_declared_) {
-        head_hover_declared_ = head;
-        const GuiRect r = playhead_head_damage_rect();
-        if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
-    }
+    damage_head_hover(scan.head);
 }
 
 // THE TRIANGLE'S PAINTED BOX (the declaration): paint_ruler_row's head

@@ -167,20 +167,22 @@
 //                            color sweep, mock C3; the solid chip since
 //                            2026-11-05, "disabled marker gets dim label"):
 //                            LIVE'S INACTIVE WARP MARKER, measured on its own
-//                            303030 lane — ONE ROLE, no blend: a disabled
-//                            chip's fill, alone (the stem the selection's
-//                            `cue_outline` as on an enabled chip,
-//                            resolve_flag_face) — the `h`
-//                            view's removed
-//                            items' too (2026-11-11) — and every INERT
-//                            LABEL — a disabled cue's segments, a tie
-//                            follower's cells and a removed history
-//                            item's label — and its strike bar. "The
-//                            arrow needs to be legible for me, but the text
-//                            doesn't … since it's disabled, it's inert"
-//                            (architect 2026-10-10): Live's grey shows the
-//                            marker exists and reads as off, the label with
-//                            it (BackgroundClip)
+//                            303030 lane — ONE ROLE, no blend: A DISABLED
+//                            MARKER'S CHIP FILL, ALONE (the stem the
+//                            selection's `cue_outline` as on an enabled
+//                            chip, resolve_flag_face) — the `h` view's
+//                            removed items' chips too (2026-11-11), their
+//                            row of the same table — and nothing else: the
+//                            INERT LABEL — a disabled cue's segments, a tie
+//                            follower's cells, a removed history item's
+//                            label — and its strike bar wear the chrome's
+//                            dim print `text_dim` (render.cpp's
+//                            cue_label_ink, resolve_flag_face's table).
+//                            "The arrow needs to be legible for me, but the
+//                            text doesn't … since it's disabled, it's
+//                            inert" (architect 2026-10-10): Live's grey
+//                            shows the marker exists and reads as off
+//                            (BackgroundClip)
 //   inactive_cue_hover
 //                    5D5D5D  A DISABLED MARKER'S CHIP UNDER THE HOVERING PEN
 //                            (send FF, 2026-11-21: a disabled marker "is

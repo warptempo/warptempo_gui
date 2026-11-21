@@ -1611,26 +1611,31 @@ struct GuiInputHandler {
     // the marker's and the triangle's faces alike.
     void walk_hover_face();
     // THE CLOCK, on the run loop's tick (main.cpp, beside tick_tooltip):
-    // the walk, then settle_face_fades, then every fading record stepped to
-    // now — a fade a painter began takes now as its start; each step that
+    // the walk, then settle_face_records, then every fading record stepped
+    // to now — a fade a painter began takes now as its start; each step that
     // moves a stored mix damages that face's own painted extent or that
-    // seam's own columns — a lane face's step its comparator's, at the
-    // body's end (GuiPaintHandler::sync_lane_hovers) — ; a fade that lands
-    // stops (its record stays, the face's as-painted look).
+    // seam's own columns — a lane face's step its compare's, at the body's
+    // end (GuiPaintHandler::damage_lane_hovers: damage alone, the cache
+    // repainted by the frame it invites) — ; a fade that lands stops (its
+    // record stays, the face's as-painted look).
     void tick_face_fades();
     // THE SETTLE: the faces of a surface that left are dropped (a keyboard
     // gone or on another page, a dialog stash's owner or session not the
     // live one), so whatever replaces them paints at once; the hovered slot
     // goes where no press would act on its face; a lane face's record at
-    // rest, or a marker's whose cue the lane no longer lays out, dropped,
-    // and the lanes' comparator run (GuiPaintHandler::sync_lane_hovers); the
-    // trim bar's part on its own rule; the waveform's hover line re-walked
-    // (walk_hover_line, its settle). The clock's first half, and run by itself AHEAD OF EVERY
-    // FRAME (the pre-paint hook, main.cpp): a key or a release can raise a
-    // modal or close the keyboard and be painted in the same pass, before
-    // any tick. A face's new look is never this body's: its painter resolves
-    // it and begins the fade (AppState::FaceFades::as_painted).
+    // rest, or a marker's whose cue the lane no longer lays out, dropped;
+    // the trim bar's part on its own rule; the waveform's hover line
+    // re-walked (walk_hover_line, its settle) — settle_face_records, the
+    // clock's first half. settle_face_fades is THE FRAME'S SETTLE, run by
+    // itself AHEAD OF EVERY FRAME (the pre-paint hook, main.cpp: a key or a
+    // release can raise a modal or close the keyboard and be painted in the
+    // same pass, before any tick): the same records' settle, then THE
+    // LANES' REPAINT (GuiPaintHandler::sync_lane_hovers), the flag cache's
+    // one repaint a frame. A face's new look is never this body's: its
+    // painter resolves it and begins the fade
+    // (AppState::FaceFades::as_painted).
     void settle_face_fades();
+    void settle_face_records();
     // THE PRESS'S RETARGET: the press arm that takes `face` turns it toward
     // its pressed look — Lit, the accent; the knob held — from its picture
     // as painted, over the destination's duration from now (Arc's 50 ms; the

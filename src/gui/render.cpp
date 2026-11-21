@@ -1897,7 +1897,13 @@ struct CueDraw {
 // AND THE PASS'S PLACE (architect 2026-11-21, send FF: the lanes' hovers):
 // the lane, the columns' origin and their width the last paint_cues laid
 // `cues` out on, so cue_pass_sync_hover repaints a cue on the very geometry
-// the surface was painted at; `regions` its working vector.
+// the surface was painted at; `regions` its working vector. AND `hovered`,
+// THE COUNT OF `cues` PAINTED AT A HOVER WEIGHT OTHER THAN 0 (architect
+// 2026-11-21, send FF: the lanes' at-rest exit,
+// GuiPaintHandler::scan_lane_hovers): counted by paint_cues over the layout
+// it paints, 0 at cue_pass_keep_previous (`cues` emptied), kept by
+// cue_pass_sync_hover at each weight it writes — always the number of cues
+// the surface shows lit, read without a walk.
 struct CuePassScratch {
     std::vector<CueDraw>             cues;
     std::vector<double>              lo;
@@ -1910,6 +1916,7 @@ struct CuePassScratch {
     int                              x0 = 0;
     int                              w  = 0;
     std::vector<std::pair<int, int>> regions;
+    int                              hovered = 0;
 };
 static CuePassScratch g_cue_pass_scratch;
 
@@ -2065,10 +2072,14 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     const int chip_top = lane.y + cue_above_chip_h_px();
     const int chip_h   = cue_chip_h_px();
     const int n = static_cast<int>(cues.size());
-    // THE PASS'S PLACE, kept beside the layout (CuePassScratch).
+    // THE PASS'S PLACE, kept beside the layout (CuePassScratch), and the
+    // count of its cues painted lit (`hovered`).
     g_cue_pass_scratch.lane = lane;
     g_cue_pass_scratch.x0   = x0;
     g_cue_pass_scratch.w    = w;
+    g_cue_pass_scratch.hovered = static_cast<int>(
+        std::count_if(cues.begin(), cues.end(),
+                      [](const CueDraw& c) { return c.hover != 0.0; }));
     // Each label's OCCLUDING BOX [lo, hi) (lay_cue_boxes), into the pass's
     // kept scratch.
     std::vector<double>& lo = g_cue_pass_scratch.lo;
@@ -2216,13 +2227,23 @@ static constexpr int kFlagBoxRankNone = 3;
 
 // A CUE'S RANK AMONG ITS LIST'S ITEMS ON ITS OWN FRAME (CueKey's ordinal):
 // the items before it, in list order, that stand on the same authored
-// frame — 0 for every item but a stack's later members.
+// frame — 0 for every item but a stack's later members. EVERY LIST IT IS
+// ASKED OF IS SORTED ASCENDING BY time_frame: the two live columns' stores
+// (GuiMarkerStore, marker_store.h: insert_marker places by lower_bound and
+// every time-mutating gesture reorders before the store is next read) and
+// the `h` view's diff list (GuiPaintHandler::rebuild_history_diff_flags'
+// closing stable_sort, waveform_cache.cpp). So the items before i on i's
+// frame are exactly the run immediately before it, and the walk back from
+// i − 1 while the frame holds counts the very items a walk over all of
+// 0 .. i − 1 counts — the same rank, at the cost of the stack's depth, not
+// of the list's length (a rebuild runs on every pan or zoom frame).
 template <typename Vec>
 static int cue_rank_on_frame(const Vec& items, int i) {
     const int64_t f = items[static_cast<std::size_t>(i)].time_frame;
     int rank = 0;
-    for (int j = 0; j < i; ++j)
-        if (items[static_cast<std::size_t>(j)].time_frame == f) ++rank;
+    for (int j = i - 1;
+         j >= 0 && items[static_cast<std::size_t>(j)].time_frame == f; --j)
+        ++rank;
     return rank;
 }
 
@@ -2715,6 +2736,7 @@ void widen_to_cue(const CueDraw& c, int x0, double& lo, double& hi) {
 void cue_pass_keep_previous() {
     std::swap(g_cue_pass_scratch.cues, g_cue_pass_scratch.previous);
     g_cue_pass_scratch.cues.clear();
+    g_cue_pass_scratch.hovered = 0;
 }
 
 void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
@@ -2790,38 +2812,51 @@ bool cue_pass_holds(const CueKey& key) {
     return false;
 }
 
-void cue_pass_sync_hover(cairo_surface_t* surface, int origin_y,
-                         const std::function<double(const CueKey&)>& weight_of,
-                         std::vector<GuiRect>& damage) {
+int cue_pass_hovered_cues() { return g_cue_pass_scratch.hovered; }
+
+namespace {
+
+// THE REGIONS OF THE CUES WHOSE WEIGHT AS PAINTED IS NOT `weight_of`'s NOW,
+// into the scratch's `regions` as whole columns cut to the pass's, those
+// that meet merged into one: each such cue's OWN EXTENT — its chip's
+// painted reach round its exact place and its label's ink as cut, the hull
+// of its visible intervals (empty where a later label covers it whole). A
+// cue's extent is its layout's alone (its place, its segments, the later
+// boxes), never its weight's, so the compare (cue_pass_hover_damage) and
+// the repaint (cue_pass_sync_hover) find the same regions on one layout and
+// one set of weights. `write` stores each such cue's weight as the one it
+// is now painted at, keeping the count of the lit (`hovered`): the
+// repaint's alone. False where nothing differs.
+bool cue_hover_regions(
+        const std::function<double(const CueKey&)>& weight_of, bool write) {
     CuePassScratch& sc = g_cue_pass_scratch;
     std::vector<CueDraw>& cues = sc.cues;
+    std::vector<std::pair<int, int>>& regions = sc.regions;
+    regions.clear();
     const int n = static_cast<int>(cues.size());
-    if (surface == nullptr || n == 0 || sc.lane.h <= 0 || sc.w <= 0) return;
-    const GuiRect lane = sc.lane;
-    const int     x0   = sc.x0;
-    const int     w    = sc.w;
+    if (n == 0 || sc.lane.h <= 0 || sc.w <= 0) return false;
+    const int     x0    = sc.x0;
+    const int     w     = sc.w;
     const double  half  = static_cast<double>(cue_chip_hit_left_px());
     const double  reach = static_cast<double>(cue_chip_paint_reach_px());
     // THE BOXES THE SURFACE WAS CUT ON, laid again from the layout itself
-    // (one walk, at the first cue that moved): the cut is this layout's by
+    // (one walk, at the first cue that differs): the cut is this layout's by
     // construction, whatever last wrote the scratch's two vectors.
     std::vector<double>& lo = sc.lo;
     std::vector<double>& hi = sc.hi;
-    std::vector<std::pair<int, int>>& regions = sc.regions;
-    regions.clear();
     bool laid = false;
     for (int i = 0; i < n; ++i) {
         CueDraw& c = cues[static_cast<std::size_t>(i)];
         const double now = weight_of ? weight_of(c.key) : 0.0;
         if (now == c.hover) continue;
-        c.hover = now;
+        if (write) {
+            sc.hovered += (now != 0.0 ? 1 : 0) - (c.hover != 0.0 ? 1 : 0);
+            c.hover = now;
+        }
         if (!laid) {
             lay_cue_boxes(cues, x0, half, lo, hi);
             laid = true;
         }
-        // THE CUE'S OWN EXTENT: its chip's painted reach round its exact
-        // place, and its label's ink as cut — the hull of its visible
-        // intervals (empty where a later label covers it whole).
         const double X = static_cast<double>(x0) + c.x;
         double e0 = X - reach;
         double e1 = X + reach;
@@ -2834,9 +2869,9 @@ void cue_pass_sync_hover(cairo_surface_t* surface, int origin_y,
         const int c1 = std::min(x0 + w, static_cast<int>(std::ceil(e1)));
         if (c1 > c0) regions.emplace_back(c0, c1);
     }
-    if (regions.empty()) return;
+    if (regions.empty()) return false;
     // Neighbors' regions that meet are one region: no column is cleared and
-    // painted twice.
+    // painted twice, nor declared twice.
     std::sort(regions.begin(), regions.end());
     std::size_t m = 0;
     for (std::size_t k = 1; k < regions.size(); ++k) {
@@ -2846,13 +2881,39 @@ void cue_pass_sync_hover(cairo_surface_t* surface, int origin_y,
             regions[++m] = regions[k];
     }
     regions.resize(m + 1);
+    return true;
+}
+
+}  // namespace
+
+void cue_pass_hover_damage(
+        const std::function<double(const CueKey&)>& weight_of,
+        std::vector<GuiRect>& damage) {
+    if (!cue_hover_regions(weight_of, /*write=*/false)) return;
+    const GuiRect lane = g_cue_pass_scratch.lane;
+    for (const std::pair<int, int>& r : g_cue_pass_scratch.regions)
+        damage.push_back(GuiRect{r.first, lane.y, r.second - r.first, lane.h});
+}
+
+void cue_pass_sync_hover(cairo_surface_t* surface, int origin_y,
+                         const std::function<double(const CueKey&)>& weight_of,
+                         std::vector<GuiRect>& damage) {
+    if (surface == nullptr) return;
+    if (!cue_hover_regions(weight_of, /*write=*/true)) return;
+    CuePassScratch& sc = g_cue_pass_scratch;
+    const std::vector<CueDraw>& cues = sc.cues;
+    const std::vector<double>&  lo   = sc.lo;
+    const std::vector<double>&  hi   = sc.hi;
+    const GuiRect lane  = sc.lane;
+    const int     x0    = sc.x0;
+    const double  reach = static_cast<double>(cue_chip_paint_reach_px());
 
     cairo_t* cr = cairo_create(surface);
     // CLIENT COORDINATES ON THE SURFACE, the rebuild's one translation
     // (FlagCache's head), so the direct road takes the context as the
     // rebuild's pass did.
     cairo_translate(cr, 0.0, -static_cast<double>(origin_y));
-    for (const std::pair<int, int>& r : regions) {
+    for (const std::pair<int, int>& r : sc.regions) {
         const int c0 = r.first;
         const int c1 = r.second;
         cairo_save(cr);

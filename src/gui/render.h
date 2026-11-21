@@ -400,8 +400,8 @@ struct TrimRange {
 // `key_dim_face` and its stretch of the ring `key_dim_border` — A DEAD LIT
 // KEY DIMS FACE AND DRAWING TOGETHER, the dimmed accent `lit_dim_fill`
 // under `text_on_lit_dim` (architect 2026-11-11, session 106; materials.h's THE KEY; under an
-// overlay too, session 107); a CUE'S inert label is the
-// palette's `inactive_cue` (the marker-lane paragraph); the settings page's inert GROUP
+// overlay too, session 107); a CUE'S inert label is the dim print
+// `text_dim` (render.cpp's cue_label_ink; the marker-lane paragraph); the settings page's inert GROUP
 // ROWS wear the dim print (`text_dim` (Default's 757575), paint_folder_overlay,
 // 2026-10-28); the STRUCK CLIP LAMP is its whole square in `key_dim_ink`
 // (the title bar block's THE STRIKE, 2026-11-05 night). Nothing else dims. (Windows' word emboss —
@@ -4849,18 +4849,20 @@ void render_playhead(GuiCanvasSink& sink,
 //     under the pen's real place on the painted item basis, the live
 //     domain's clamp) — back to its exact place by the playhead line's own
 //     expression on the plate basis (cursor_frame_exact_x), so after the tap
-//     the playhead's line stands on the very double this line stood on. At
-//     coarse zoom that is the pen's place to under a pixel; at deep zoom,
-//     where a frame is many px, the line steps by frames; past the song's end
-//     it stands where the clamp puts the playhead, on the song's last frame.
+//     the playhead's line stands on the very double this line stood on.
+//     Inside the song that is the pen's place to within half a frame — a
+//     frame is never wider than 1/20 px (kDeepestZoomMinFramesPerPx,
+//     app_state.h), so 1/40 px at most; past either end of the song (the
+//     framer leaves up to 5 % of the window empty on a side) it stands
+//     where the clamp puts the playhead, on the song's first or last frame.
 //     WITH THE BARREL HELD, THE ANCHOR'S PLACE: the zoom's seat at the pen's
 //     place (zoom_anchor_seat_at — the pen's real column clamped into the
 //     waveform's [0, w − 1], the song position under it on the live
 //     viewport, no frame taken and no song clamp) through the anchor stem's
 //     own place (strip_anchor_stem_x), so the white stem replaces the line
 //     in place when the zoom starts. The two places part by up to half a
-//     frame's width (the tap's whole frame) and, past the song's end, by the
-//     whole stretch past it (the anchor stands under the pen). When the
+//     frame's width (the tap's whole frame) and, past either end of the
+//     song, by the whole stretch past it (the anchor stands under the pen). When the
 //     picture moves under a still pen (FOLLOW's scroll, a key's zoom, a
 //     landing, a plate's publication) the line stays under the pen and its
 //     landing frame follows, with no event of the pen's.
@@ -4869,10 +4871,13 @@ void render_playhead(GuiCanvasSink& sink,
 //     the canvas's rows (scanner_invalidate_rect through
 //     Viewport::invalidate_hover_line), nothing above the canvas, and only
 //     where its place changed (GuiInputHandler::set_hover_line against the
-//     place last declared) — so a pen resting, moving inside one frame's
-//     span at deep zoom, or away from the plane costs nothing and the app
-//     presents nothing; while the pen moves in hover range a frame at the
-//     beat. Every edge that removes it (the leave, a contact, the latch's
+//     place last declared) — so a pen resting or away from the plane costs
+//     nothing and the app presents nothing; while the pen moves in hover
+//     range nearly every report that moves its real x moves the line (the
+//     Tap place where the x crosses a frame's edge, a frame being 1/20 px
+//     at most; the Anchor place with the x itself) and costs a frame at the
+//     beat (the cost accepted: architect 2026-11-21, send FF, "Cost is
+//     accepted"). Every edge that removes it (the leave, a contact, the latch's
 //     arm, a veil, a card, a load, a drag gone live, the zoom's seat, the
 //     pen onto a marker, the triangle, the trim bar or a key) damages its
 //     last painted cells the same way. THE OLD CELLS ARE AS PAINTED
@@ -5837,12 +5842,23 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
 // marker's hover, a fade of about nine frames an edge, several at once on a
 // glide across a dense lane; AppState::FaceFades' THE LANES' TWO FACES).
 // The pass's kept layout (CuePassScratch) is the surface's content, cue for
-// cue, each laid out with THE HOVER WEIGHT IT WAS PAINTED AT; these two
+// cue, each laid out with THE HOVER WEIGHT IT WAS PAINTED AT; these four
 // read and repair it without a rebuild:
 //   cue_pass_holds — whether the last pass laid out a cue of key `key` (a
 //     cue on the lane, as the surface shows it): the faces' settle drops a
 //     marker's record whose cue is no longer on the lane.
-//   cue_pass_sync_hover — EVERY LAID-OUT CUE WHOSE WEIGHT AS PAINTED IS NOT
+//   cue_pass_hovered_cues — how many laid-out cues the surface shows at a
+//     weight other than 0, kept beside the layout (no walk): the lanes'
+//     at-rest exit reads it (GuiPaintHandler::scan_lane_hovers).
+//   cue_pass_hover_damage — THE COMPARE, the clock's (run on every 5 ms
+//     tick): every laid-out cue whose weight as painted is not `weight_of`'s
+//     now has its OWN EXTENT appended to `damage` — the region
+//     cue_pass_sync_hover below would repaint for it, found the same way —
+//     and NOTHING IS PAINTED OR WRITTEN: the cue's weight as painted stays
+//     the surface's, so the damage invites the frame whose repaint, ahead of
+//     it, paints the weights of that moment.
+//   cue_pass_sync_hover — THE REPAINT, the frame's (run once ahead of each
+//     frame): EVERY LAID-OUT CUE WHOSE WEIGHT AS PAINTED IS NOT
 //     `weight_of`'s NOW IS REPAINTED INTO `surface` IN PLACE, and nothing
 //     else: each such cue's OWN EXTENT — its chip's painted reach round its
 //     exact place (cue_chip_paint_reach_px) and its label's ink as cut, the
@@ -5855,15 +5871,22 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
 //     A WHOLE REBUILD AT THOSE WEIGHTS LEAVES (a cue outside it lays no
 //     pixel there: its ink stays inside its own extent, the pass's own rule
 //     at cue_pass_changed_rects), and a hovered label is not raised over its
-//     neighbors. `surface` is the flag cache's, its row 0 client row
-//     `origin_y` (FlagCache's head, paint_handler.h). Each region is
-//     appended to `damage` in client coordinates — the lane's rows, the
-//     region's whole columns cut to the pass's: the marker's own painted
-//     extent and nothing else of the lanes. THE PREMISE: the surface holds
-//     the last pass's picture (the caller's: the rebuild's record stands
-//     and its band is the live one), whose lane, columns and lengths the
-//     scratch keeps beside the cues.
+//     neighbors; each repainted cue's weight as painted is then its weight
+//     now. `surface` is the flag cache's, its row 0 client row `origin_y`
+//     (FlagCache's head, paint_handler.h). Each region is appended to
+//     `damage` in client coordinates — the lane's rows, the region's whole
+//     columns cut to the pass's: the marker's own painted extent and nothing
+//     else of the lanes.
+// A CUE'S EXTENT IS ITS LAYOUT'S, NEVER ITS WEIGHT'S, so the compare's
+// rects are the repaint's on the same weights. THE PREMISE: the surface
+// holds the last pass's picture (the caller's: the rebuild's record stands
+// and its band is the live one), whose lane, columns and lengths the
+// scratch keeps beside the cues.
 bool cue_pass_holds(const CueKey& key);
+int  cue_pass_hovered_cues();
+void cue_pass_hover_damage(
+        const std::function<double(const CueKey&)>& weight_of,
+        std::vector<GuiRect>& damage);
 void cue_pass_sync_hover(cairo_surface_t* surface, int origin_y,
                          const std::function<double(const CueKey&)>& weight_of,
                          std::vector<GuiRect>& damage);

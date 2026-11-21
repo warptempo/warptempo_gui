@@ -365,7 +365,8 @@ const FlagHitRect* hit_test_flag_rect(const AppState& app, double mouse_x,
 }
 
 // THE LISTING (the contract at the declaration): FNV-1a over the `h`
-// view's five words, the top bit set.
+// view's six words — the walk source, the index, the local index, the
+// reading, the generation and the column — the top bit set.
 uint64_t marker_lane_listing(const AppState& app) {
     if (!app.history_mode.active)
         return static_cast<uint64_t>(

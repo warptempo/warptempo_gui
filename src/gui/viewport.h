@@ -863,13 +863,15 @@ struct Viewport {
     // scanner's pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule and the per-site table at
     // playhead_pixel_x, app_state.h). THE CALLERS ARE EXACTLY THE TWO
-    // PER-FRAME SCANNER SITES AND THE STANDING SCANNER'S DAMAGE BELOW
-    // (re-derived by grep 2026-11-16, send Q): main.cpp's tick heartbeat (the
-    // one place twice) and its pre-paint scanner advance (old, then new),
-    // both narrow BY NECESSITY at the frame's cadence and both inside a
-    // scope that reaches paint_handler; and invalidate_standing_scanner (the
-    // one place twice), the launch's, the stop's and the console's seek's,
-    // reaching the plate basis through plate_scanner_x_. IT SERVES THE
+    // PER-FRAME SCANNER SITES, THE STANDING SCANNER'S DAMAGE AND THE HOVER
+    // LINE'S DAMAGE BELOW (re-derived by grep 2026-11-21, send FF): main.cpp's
+    // tick heartbeat (the one place twice) and its pre-paint scanner advance
+    // (old, then new), both narrow BY NECESSITY at the frame's cadence and
+    // both inside a scope that reaches paint_handler;
+    // invalidate_standing_scanner (the one place twice), the launch's, the
+    // stop's and the console's seek's, reaching the plate basis through
+    // plate_scanner_x_; and invalidate_hover_line (its old and new places as
+    // painted and derived, or one of them alone). IT SERVES THE
     // SCANNER'S OWN EDGES — the per-frame advance, the launch's seed,
     // the stop's teardown, the seek's jump (its old place, then its new):
     // a move of the scanner's place by a move of the viewport or of the

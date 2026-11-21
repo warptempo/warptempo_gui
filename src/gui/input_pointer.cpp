@@ -5859,6 +5859,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
 // THE LAMPS CHANGE NO ANSWER: a tap under TRIM or ADD SEL is the same click
 // act (the sweeps are drags), ADD SEL forking only a press on a flag, which
 // acts either way.
+// ITS HITS READ THE STASHES AS PAINTED (the flag rects, the head as
+// painted), so where the picture carries a chip or the triangle under or
+// from under a still pen (FOLLOW's scroll), the frame that first shows it
+// there paints it at its old look and the next tick's walk turns it — one
+// frame, about 22 ms, as for a card newly painted over the pen.
 GuiInputHandler::PlainLanePress GuiInputHandler::plain_lane_press_at(
         const GuiPointerPlace& at) const {
     using Kind = PlainLanePress::Kind;
@@ -7428,7 +7433,8 @@ AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer(
 // (its hull, cut to the item). EMPTY where the face's stash is no longer its
 // own — whatever replaced that surface repainted it — and for the lanes' two
 // faces, whose damage is their comparator's (GuiPaintHandler::
-// sync_lane_hovers: a cue's own extent, the triangle's painted box).
+// damage_lane_hovers and sync_lane_hovers: a cue's own extent, the
+// triangle's painted box).
 GuiRect GuiInputHandler::face_extent(
         const AppState::FaceFades::Face& face) const {
     using Surface = AppState::FaceFades::Surface;
@@ -7865,10 +7871,12 @@ void GuiInputHandler::walk_trim_bar_hover() {
 }
 
 // THE SETTLE (the declaration): a standing part over a bar no press would
-// grab any more — a veil raised, a card over the place, the `h` view
-// entered, the stash gone cold, a load begun, a drag gone live — goes at
-// once, ahead of the frame that would paint it (the faces'
-// settle_face_fades runs this, from the pre-paint hook and the tick). AND
+// grab any more — a veil raised, the `h` view entered, the stash gone cold,
+// a load begun, a drag gone live — goes at once, ahead of the frame that
+// would paint it (the faces' settle_face_records runs this, from the
+// pre-paint hook's settle_face_fades and from the tick); a card over the
+// place goes the tick after the frame that first paints the card (its hit
+// reads the rects that frame publishes, notification_card_at). AND
 // A LIFT'S PENDING ANSWER (AppState::TrimBarHover's `lift_pending`) whose
 // frozen terms no longer hold (trim_bar_frozen_part_kept: the theme, a
 // contact, the pointer out besides the above) goes here too, ahead of the
@@ -7937,8 +7945,12 @@ void GuiInputHandler::walk_hover_line() {
 // differs from the place the last damage declared, the line's cells AS LAST
 // PAINTED (`painted_x`) and its new cells are damaged — the canvas's rows
 // alone (Viewport::invalidate_hover_line) — and the new place is declared.
-// The same place again damages nothing: a pen resting, or moving inside one
-// frame's span at deep zoom, invites no frame.
+// The same place again damages nothing: a pen resting, or away, invites no
+// frame. A pen moving in hover range moves the place on nearly every report
+// that moves its real x — the Tap place within half a frame of it, a frame
+// being 1/20 px at most (kDeepestZoomMinFramesPerPx), the Anchor place with
+// it — so each such report costs a frame at the beat (the cost accepted,
+// AppState::HoverLine's head).
 void GuiInputHandler::set_hover_line(AppState::HoverLine::Place place) {
     AppState::HoverLine& h = app.hover_line;
     h.place = place;
@@ -7974,11 +7986,29 @@ void GuiInputHandler::set_hover_line(AppState::HoverLine::Place place) {
 // has landed at rest and is not the hovered face goes, as a list row's; a
 // marker's goes too where no laid-out cue holds its key (cue_pass_holds:
 // deleted, moved, off the lane — no ghost, the rebuild that took the cue
-// away having painted without it). THEN THE LANES' COMPARATOR
-// (GuiPaintHandler::sync_lane_hovers), so a hover this settle cleared or a
-// record it dropped is painted, and damaged, in the frame that follows. And
-// the trim bar's hovered part, on its own rule.
+// away having painted without it). And the trim bar's hovered part, on its
+// own rule, and the hover line's walk. THE FRAME'S SETTLE
+// (settle_face_fades, the pre-paint hook's) then runs THE LANES' REPAINT
+// (GuiPaintHandler::sync_lane_hovers), so a hover this settle cleared, a
+// record it dropped and every step the clock stored since the last frame
+// are painted into the flag cache, and damaged, in the frame about to
+// paint — the cache's one repaint a frame; the clock's settle
+// (settle_face_records, from tick_face_fades) runs no repaint, its
+// changes compared and damaged at the clock's end (damage_lane_hovers).
+// WHY NO CUE STAYS LIT FOR A DROPPED RECORD on that road: a record dropped
+// AT REST has landed at Hover weight 0, and with no record the face's
+// weight is 0 (not the hovered face), so the drop moves no weight — the
+// cue is painted at 0 by the repaint the landing step's damage invited, or
+// was already; a record dropped because NO LAID-OUT CUE HOLDS ITS KEY names
+// no cue the cache shows (the rebuild that took the cue away painted the
+// whole surface without it), and the lanes' at-rest exit cannot skip a cue
+// still painted lit, its count (cue_pass_hovered_cues) holding it.
 void GuiInputHandler::settle_face_fades() {
+    settle_face_records();
+    paint_handler.sync_lane_hovers();
+}
+
+void GuiInputHandler::settle_face_records() {
     using FaceFades = AppState::FaceFades;
     using Surface   = FaceFades::Surface;
     FaceFades& h = app.face_fades;
@@ -8061,18 +8091,23 @@ void GuiInputHandler::settle_face_fades() {
     }
     if (!h.hovered.none() && !hover_face_live(h.hovered))
         set_hover_face(FaceFades::Face{});
-    paint_handler.sync_lane_hovers();
     settle_trim_bar_hover();
     // THE HOVER LINE'S SETTLE IS ITS WALK (AppState::HoverLine): no fade and
     // no frozen answer, so re-answering it ahead of the frame is its truth —
-    // a veil, a card, a load, a drag gone live or the zoom's seat that came
-    // with no pointer event takes it away in the frame that paints them.
+    // a veil, a load, a drag gone live or the zoom's seat that came with no
+    // pointer event takes it away in the frame that paints them. NOT A CARD:
+    // the card's hit (notification_card_at) reads the rects the painter
+    // publishes (`notifications.painted`), so the frame that first paints a
+    // card over the pen's place still draws the line, and the next tick's
+    // walk, on the published rect, takes it away — one frame, about 22 ms.
     walk_hover_line();
 }
 
 // THE CLOCK (the declaration; AppState::FaceFades' THE FRAMES). The walk
 // first — the stashes move under a resting pen (a relayout, a knob the
-// transport carries, a key repainted dead or lit) — then the settle, then
+// transport carries, a key repainted dead or lit) — then the settle's
+// records (settle_face_records: the frame's settle less the lanes'
+// repaint), then
 // each fading record's value at now: a fade a painter began takes now as
 // its start (its value its from, which that painter painted), a fade held at
 // a press's end waits for its retarget (FaceFades::Record::hold); A STEP THAT
@@ -8089,16 +8124,20 @@ void GuiInputHandler::settle_face_fades() {
 // inside a neighbor's rect). The surfaces: the top icon row's roster keys,
 // the bottom icon row's, the dialog stash's buttons, the keyboard's keys,
 // a list's rows (two at a hover edge, the pair the pen moved between),
-// the knob. THE LANES' TWO FACES DAMAGE NOTHING HERE: a step stores their
-// mix alone, and the lanes' comparator at the body's end
-// (GuiPaintHandler::sync_lane_hovers) repaints every cue whose weight moved
-// into the flag cache and damages each one's own extent, and the triangle's
-// painted box (AppState::FaceFades' THE LANES' TWO FACES). With no fade
-// running the body is the walk's few compares and one pass over the
-// records.
+// the knob. THE LANES' TWO FACES ARE NOT STEPPED INTO THE BATCHES: a step
+// stores their mix alone, and the lanes' compare at the body's end
+// (GuiPaintHandler::damage_lane_hovers) damages the own extent of every cue
+// the flag cache shows at a weight that is not its face's now, and the
+// triangle's painted box where its weight moved — COMPARE AND DAMAGE ONLY,
+// the keys' rule: the cue is repainted into the cache once, by the frame
+// that damage invites, at the weights of its own settle
+// (GuiPaintHandler::sync_lane_hovers, from settle_face_fades ahead of the
+// frame; AppState::FaceFades' THE LANES' TWO FACES). With no fade running
+// the body is the walk's few compares, one pass over the records, and the
+// lanes' one walk of them (their at-rest exit).
 void GuiInputHandler::tick_face_fades() {
     walk_hover_face();
-    settle_face_fades();
+    settle_face_records();
     using FaceFades = AppState::FaceFades;
     using Surface   = FaceFades::Surface;
     FaceFades& h = app.face_fades;
@@ -8135,7 +8174,7 @@ void GuiInputHandler::tick_face_fades() {
         }
         const FaceMix v = r.value_at(now);
         if (!(v == r.mix) && r.face.lane()) {
-            r.mix = v;   // painted and damaged by sync_lane_hovers, below
+            r.mix = v;   // damaged by damage_lane_hovers, below
         } else if (!(v == r.mix)) {
             r.mix = v;
             const GuiRect rect =
@@ -8158,7 +8197,7 @@ void GuiInputHandler::tick_face_fades() {
         for (int k = 0; k < b.n; ++k)
             viewport.invalidate_rect(b.rects[static_cast<std::size_t>(k)]);
     }
-    paint_handler.sync_lane_hovers();
+    paint_handler.damage_lane_hovers();
 }
 
 // THE CHROME PRESS'S ARM — the press half of act-at-release (architect

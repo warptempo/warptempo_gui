@@ -654,7 +654,8 @@ struct FlagCache {
     //     it out.
     //   `damage_scratch` — the rects a rebuild is about to declare, kept
     //     across rebuilds for its capacity; `hover_damage_scratch` the
-    //     lanes' comparator's (GuiPaintHandler::sync_lane_hovers) the same.
+    //     lanes' comparator's two roads' (GuiPaintHandler::damage_lane_hovers,
+    //     sync_lane_hovers) the same.
     bool                   layout_stands = false;
     std::vector<double>    stem_xs;
     std::vector<double>    stem_scratch;
@@ -1032,18 +1033,39 @@ struct GuiPaintHandler {
     //     read off a table of the few marker faces that are not at rest,
     //     refilled at each call (`lane_hover_weights_`). The one reader of
     //     the records for every cue painter: the rebuild's pass
-    //     (maybe_rebuild_flag_cache) and the comparator below.
-    //   sync_lane_hovers — THE ONE COMPARATOR: every cue the flag cache
-    //     shows at a weight that is not its face's now is repainted into the
-    //     cache in place (cue_pass_sync_hover: its own extent, never a
-    //     rebuild) and that extent damaged over the lane's rows; and where
-    //     the triangle's weight is not the one last declared
-    //     (`head_hover_declared_`), the triangle's painted box over the
-    //     ruler's rows (playhead_head_damage_rect) — nothing else. Run at
-    //     the end of the faces' clock and of their settle, so ahead of every
-    //     frame. Only on a cache whose layout stands (the rebuild's record):
-    //     a cache that does not is rebuilt whole, reading the weights, by the
-    //     next rebuild.
+    //     (maybe_rebuild_flag_cache) and the two roads below.
+    //   THE TWO ROADS OF ONE COMPARATOR — every cue the flag cache shows at
+    //   a weight that is not its face's now, its own extent over the lane's
+    //   rows; and where the triangle's weight is not the one last declared
+    //   (`head_hover_declared_`), the triangle's painted box over the ruler's
+    //   rows (playhead_head_damage_rect) — nothing else:
+    //   damage_lane_hovers — THE CLOCK'S, at the end of every 5 ms tick
+    //     (tick_face_fades): COMPARE AND DAMAGE ONLY (cue_pass_hover_damage)
+    //     — no cue repainted and no weight as painted written, so while a
+    //     cue's painted weight differs from its face's each tick declares
+    //     its extent again, the same rect, which the damage list merges by
+    //     containment; its cost a walk of the laid-out cues and one boxes'
+    //     layout, no paint. The damage invites the frame.
+    //   sync_lane_hovers — THE FRAME'S, at the end of the settle that runs
+    //     ahead of every frame (settle_face_fades from the pre-paint hook,
+    //     main.cpp, where a frame about to paint may still add damage:
+    //     GuiPlatform::paint_one_frame runs the hook before it reads the
+    //     damage list): those cues REPAINTED into the cache in place
+    //     (cue_pass_sync_hover: their own extents, never a rebuild) at the
+    //     weights of that moment and their extents damaged — ONE REPAINT OF
+    //     THE CACHE PER FRAME, so a frame shows every cue at the stored mix
+    //     of the moment its settle ran.
+    //   Both only on a cache whose layout stands (the rebuild's record): a
+    //   cache that does not is rebuilt whole, reading the weights, by the
+    //   next rebuild. BOTH RETURN AT ONCE FROM THE CUES' HALF AT REST
+    //   (scan_lane_hovers' `cues_rest`): no Marker record, no hovered
+    //   marker and no laid-out cue painted lit (cue_pass_hovered_cues) —
+    //   every weight is then 0 and every cue painted at 0 — so a resting app
+    //   walks neither the laid-out cues nor the records past the one walk
+    //   that also answers the triangle's weight.
+    //   scan_lane_hovers — that one walk of the records: whether the cues
+    //     rest (above) and the triangle's weight (hover_weight's own two
+    //     answers); damage_head_hover the triangle's compare, both roads'.
     //   playhead_head_damage_rect — the triangle's painted box: the columns
     //     [col − reach, col + reach) of its painted reach
     //     (cue_chip_paint_reach_px) round the playhead's column on the plate
@@ -1051,10 +1073,17 @@ struct GuiPaintHandler {
     //     cue_chip_h_px rows — paint_ruler_row's own arithmetic; empty where
     //     no head can paint.
     CueLaneHover cue_hover_of();
+    void         damage_lane_hovers();
     void         sync_lane_hovers();
     GuiRect      playhead_head_damage_rect() const;
 
 private:
+    struct LaneHoverScan {
+        bool   cues_rest = false;
+        double head      = 0.0;
+    };
+    LaneHoverScan scan_lane_hovers() const;
+    void          damage_head_hover(double head);
     std::vector<std::pair<CueKey, double>> lane_hover_weights_;
     double                                 head_hover_declared_ = 0.0;
     // THE DEBT (2026-10-13): set by owe_waveform_rebuild, cleared at the head

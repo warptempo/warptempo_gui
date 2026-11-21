@@ -7306,7 +7306,9 @@ struct AppState {
     // (walk_hover_face: which face the pen is on, under the gate), THE HOVER'S
     // SETTER (set_hover_face), THE PRESS'S RETARGET (press_face), THE CLOCK
     // (tick_face_fades, on the run loop's tick beside the tooltip's, its
-    // first half — settle_face_fades — alone ahead of every frame). THE LOOK
+    // first half — the settle, settle_face_records — run alone ahead of
+    // every frame too, there followed by the lanes' repaint:
+    // settle_face_fades). THE LOOK
     // is materials.h's THE KEY and THE HOVER; THE FACES THAT HOVER are
     // enumerated once, at the pen latch's inventory
     // (GuiInputHandler::pen_hot_latch_). THE TRIM BAR HOVERS TOO BUT IS NONE
@@ -7552,14 +7554,25 @@ struct AppState {
     //   (paint_cues, the rebuild reading each cue's weight through
     //   GuiPaintHandler::cue_hover_of) and the triangle the ruler's live
     //   paint; WHEREVER A WEIGHT AS SHOWN DIFFERS FROM ITS FACE'S NOW — a
-    //   clock step, a seat, a drop, a drop_all — THE ONE COMPARATOR
-    //   (GuiPaintHandler::sync_lane_hovers, run at the clock's end and the
-    //   settle's, ahead of every frame) repaints those cues into the cache
-    //   in place (cue_pass_sync_hover: their own extents, under the pass's
-    //   cuts, never a rebuild) and damages each one's own extent over the
-    //   lane's rows, or the triangle's painted box over the ruler's rows —
-    //   NOTHING ELSE OF THE LANES, NOTHING OF THE CANVAS. An edge is
-    //   ceil(200 / 22.2) + 1 = 10 steps at most; nothing at rest.
+    //   clock step, a seat, a drop, a drop_all — THE ONE COMPARATOR, ON THE
+    //   KEYS' FRAME RULE: AT THE CLOCK'S END (every 5 ms tick) it COMPARES
+    //   AND DAMAGES ONLY (GuiPaintHandler::damage_lane_hovers) — each such
+    //   cue's own extent over the lane's rows, the same rect each tick until
+    //   a frame paints, merged in the damage list — and AHEAD OF EVERY FRAME
+    //   (the frame's settle, settle_face_fades from the pre-paint hook) it
+    //   REPAINTS those cues into the cache in place at the weights of that
+    //   moment (GuiPaintHandler::sync_lane_hovers, cue_pass_sync_hover:
+    //   their own extents, under the pass's cuts, never a rebuild) and
+    //   damages the same extents; the triangle's painted box over the
+    //   ruler's rows is damaged on either road where its weight moved (its
+    //   painter reads the weight live) — NOTHING ELSE OF THE LANES, NOTHING
+    //   OF THE CANVAS. So a frame shows every cue at the stored mix of the
+    //   moment its settle ran, and THE CACHE IS REPAINTED ONCE PER SHOWN
+    //   FRAME: an edge (200 ms, nine beats of 2 / 90 s) is nine beats + 1 =
+    //   10 repaints at most, the landing's the last; nothing at rest,
+    //   where both roads return before walking the laid-out cues (no Marker
+    //   record, no hovered marker, no cue painted lit:
+    //   GuiPaintHandler::scan_lane_hovers).
     //   NOT ON A LIVE THEME: the walk's theme term hovers no lane face there,
     //   so nothing fades or is damaged.
     // THE LIST ROW'S HOVER (architect 2026-11-21; the look at
@@ -8053,8 +8066,12 @@ struct AppState {
     //     set_hover_line): the walk damages only where the place it derives
     //     now differs from this one — the old cells as painted and the new
     //     ones (Viewport::invalidate_hover_line) — so a pen resting, or
-    //     moving inside one frame's span at deep zoom, or away, damages
-    //     nothing and invites no frame; and a frame whose list is not rebuilt
+    //     away, damages nothing and invites no frame, while nearly every
+    //     hover report that moves the pen's real x moves the place (the Tap
+    //     place stands within half a frame of the pen inside the song, a
+    //     frame never wider than 1/20 px, kDeepestZoomMinFramesPerPx: 1/40
+    //     px at most) and costs a frame at the beat, the cost accepted
+    //     above; and a frame whose list is not rebuilt
     //     (an overlay emptying the canvas's paint area) is not asked for
     //     again and again.
     struct HoverLine {
@@ -20320,8 +20337,9 @@ const FlagHitRect* hit_test_flag_rect(const AppState& app, double mouse_x,
 // local walk's too), the reading, the visit's generation and the column
 // folded into one word with the top bit set, so no commit's listing is a column's
 // and two commits' are two (the prefetch's growing walk changes none of
-// them: the item at an index is the same commit). Read by the flag cache's
-// rebuild for its pass (maybe_rebuild_flag_cache).
+// them: the item at an index is the same commit). Read through
+// GuiPaintHandler::cue_hover_of alone: by the flag cache's rebuild for its
+// pass (maybe_rebuild_flag_cache) and by the lanes' comparator.
 uint64_t marker_lane_listing(const AppState& app);
 
 // WHICH CELL of that run the point landed on — the topmost rect's three

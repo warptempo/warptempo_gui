@@ -3926,9 +3926,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // question, open an overlay or close the keyboard, and that frame
         // paints before any tick, so the faces of a surface that left are
         // dropped here (whatever replaced them paints its looks at once) and
-        // the hovered slot goes where no press would act on its face
-        // (GuiInputHandler::settle_face_fades; a face's new look is its
-        // painter's to resolve, and the fade's step stays the tick's — a
+        // the hovered slot goes where no press would act on its face; AND
+        // THE LANES' CUES ARE REPAINTED INTO THE FLAG CACHE here, once a
+        // frame, at the weights of this moment, their extents damaged
+        // (GuiPaintHandler::sync_lane_hovers: the tick only compares and
+        // damages) (GuiInputHandler::settle_face_fades; a face's new look is
+        // its painter's to resolve, and the fade's step stays the tick's — a
         // frame is one stored value).
         input_handler.settle_face_fades();
 
