@@ -43,7 +43,7 @@
 // REGULAR FOR BODY TEXT — Body, Program, Label, Hint, Caption, and the
 // on-screen keyboard's caps (Keys; Regular since send AA's stage D2, the
 // design's §E and the approved Z_06, the Bold they wore before) — and THE
-// BOLD FOR THE TITLE BAR AND THE DIALOGS' TITLES AND HEADINGS (Bold) AND
+// BOLD FOR THE TITLE BAR AND THE LISTS' HEADINGS (Bold) AND
 // THE RULER'S DIGITS (Small), as GTK Arc sets them (xfwm's title, Thunar's
 // column and section headers bold, every other text regular).
 // (The printed legends under the keys, the Legend row, retired with the
@@ -97,8 +97,8 @@
 #include <iterator>
 #include <string_view>
 
-// THE USES (the head's table): the body (`Body`), the title bar, the
-// dialogs' window titles and the lists' group headings (`Bold`), the
+// THE USES (the head's table): the body (`Body`), the title bar and the
+// lists' group headings (`Bold`), the
 // ruler's digits (`Small`), the clocks, the tab's name and the
 // tooltip's name line (`Program`), the on-screen keyboard's caps (`Keys`),
 // the tooltip's hint line (`Hint`), the cues' labels with the lane's
@@ -132,10 +132,9 @@ struct GuiFaceSize {
     double      em_w = 0.0;
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
-    {0, 12.0},   // Body: the lists, the cards, the pages, the dialogs, the
-                 // status bar
+    {0, 12.0},   // Body: the lists, the cards, the pages, the status bar
     {1, 12.0},   // Bold: the title bar (the brand and its right group),
-                 // the dialogs' window titles, the lists' group headings
+                 // the lists' group headings
     {1, 10.0},   // Small: the ruler's digits
     {0, 12.0},   // Program: the clocks, the tab's name, the tooltip's name
     {0, 12.0},   // Keys: the on-screen keyboard's caps (the default of
