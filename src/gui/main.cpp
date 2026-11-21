@@ -1644,7 +1644,7 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // declared damage). No timeout, no hold. NOTHING WHILE THE ON-SCREEN
 // KEYBOARD STANDS: it covers the bar, whose painter yields under it
 // (paint_status_bar; onscreen_keyboard.h's placement block, architect
-// 2026-11-20, send EE), and its hide damages its whole surface, the bar
+// 2026-11-20), and its hide damages its whole surface, the bar
 // among it, so the line comes back current.
 void refresh_status_bar(AppState& app, GuiPlatform& gui) {
     if (onscreen_keyboard::stands(app)) return;

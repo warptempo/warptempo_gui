@@ -4097,20 +4097,6 @@ void GuiInputHandler::run_history_revert() {
     close_history_mode();
 }
 
-// The LINE editors of the value sub-page alone (the settings editor's buffer
-// in its three kinds, the settings value, the trim preset's name and the BPM
-// form's value) — the membership is AppState::dialog_editor_session's and
-// nothing here restates it. It answers
-// the sub-page's own questions (its entry's Tab); modality is
-// keyboard_modal_editor_active's since 2026-10-25, when the lane editors
-// became modals too. The readers and the record are at the declaration, in
-// input_handler.h.
-bool GuiInputHandler::modal_dialog_editor_active() const {
-    // The set is NAMED at AppState::dialog_editor_session, which hands back
-    // the live one's session id — one membership serving both questions.
-    return app.dialog_editor_session() != 0;
-}
-
 // Any text editor consuming printable keys — the settings prompt, the
 // top-strip flag editor in ANY of its
 // kinds (the FlagPayload editor takes typed letters too); the
@@ -4283,10 +4269,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // other unbound chord and drops right here, so it cannot cancel, commit,
 // paste or erase. The gate-level
 // carve-outs below are NOT editor consumption — they are gate policy layered
-// on top: bare Tab under any LINE editor of the value sub-page and under the
-// FLAG editor (where the editor has one, its autocomplete; silent otherwise
-// — the fork is route_modal_editor_key's, not this gate's), one predicate,
-// modal_editor_tab above, read here and by that route alike; and THE FLAG
+// on top: bare Tab under an editor whose kind has a completer, the SETTINGS
+// line editor and the FLAG editor (onscreen_keyboard::tab_key_live, the
+// keyboard's own grey, architect 2026-11-21; the completion itself is
+// route_modal_editor_key's), the key one predicate, modal_editor_tab above,
+// read here and by that route alike; and THE FLAG
 // EDITOR'S EXTRA KEYS, bare Up / Down and the bare pass key, wherever the
 // on-screen keyboard paints them live (onscreen_keyboard::key_live's two
 // facts; architect 2026-11-20 / 21), their acts the marker lane
@@ -4299,29 +4286,26 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // letting the window manager handle everything now … block all gestures
     // except the one escape, or anything that closes the modal"): the editor's
     // own keys — typing, its motion keys, Esc and Enter — the completion's
-    // Tab (a line editor's and the flag editor's) and the flag editor's live
-    // extra keys (UP, DOWN, the pass key) are the whole admitted set; every
-    // other chord is consumed, silently (on_key's gate).
+    // Tab (the settings editor's and the flag editor's) and the flag
+    // editor's live extra keys (UP, DOWN, the pass key) are the whole
+    // admitted set; every other chord is consumed, silently (on_key's gate).
     // The platform's close — Back — is the quit road under every modal
     // (GuiPrompt::request_close).
     const bool is_editor_key =
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
-    // THE COMPLETION'S TAB, admitted while any LINE editor of the value
-    // sub-page stands (2026-08-13): the one line editor that HAS a
-    // completion, SETTINGS (its value recall, the path), completes; under
-    // the trim preset's name and the BPM form's line the admitted Tab does
-    // nothing (route_modal_editor_key: a Tab that completes nothing is
-    // silent, architect 2026-11-20). AND UNDER THE FLAG EDITOR
-    // since 2026-11-20 / 21 (architect: "a" then Tab gives "a.0"):
-    // it completes a label reference (GuiFlagEditor::
-    // complete_label_reference). The iteration bound editor has nothing to
-    // complete, and its Tab drops here while it stands.
+    // THE COMPLETION'S TAB, admitted exactly where the on-screen keyboard
+    // paints its Tab live (onscreen_keyboard::tab_key_live, architect
+    // 2026-11-21): under an editor whose kind has a completer — the
+    // SETTINGS line editor (its value recall, the path; 2026-08-13) and THE
+    // FLAG EDITOR (a label reference, GuiFlagEditor::
+    // complete_label_reference; architect 2026-11-20 / 21: "a" then Tab
+    // gives "a.0"). Under the iteration bound editor, the trim preset's
+    // name and the BPM form's line, which have none, the key is greyed and
+    // its Tab drops here. An admitted Tab that completes nothing is silent
+    // (route_modal_editor_key, architect 2026-11-20).
     const bool is_completion_tab =
-        modal_editor_tab(key, mods) &&
-        (modal_dialog_editor_active() ||
-         onscreen_keyboard::lane_editor_stands(
-             app, text_editor::Kind::FlagPayload));
+        modal_editor_tab(key, mods) && onscreen_keyboard::tab_key_live(app);
     // THE FLAG EDITOR'S EXTRA KEYS (the head's carve-outs): bare, and live
     // exactly where the keyboard paints them live — so a greyed key's act
     // has no road even in principle.
@@ -5957,7 +5941,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // and the BPM form's line editor (all three on the settings editor's buffer),
 // and the marker lane's flag editor and iteration bound editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
-// admits only the editor's own keys, a line editor's Tab and the flag
+// admits only the editor's own keys, the settings editor's Tab and the flag
 // editor's Tab (and the flag editor's live extra keys, which are answered
 // ahead of this route, handle_top_flag_editor_key) — NO HATCH since
 // 2026-10-25, every other chord consumed at the gate — so a NotConsumed key
@@ -5969,7 +5953,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // `autocomplete` is the optional
 // bare-Tab hook, PASSED BY THE SETTINGS EDITOR AND THE FLAG EDITOR (the trim
 // preset's name, the BPM field and the iteration bound editor have no
-// vocabulary to complete and pass an empty hook).
+// vocabulary to complete and pass an empty hook, which no Tab reaches: the
+// gate drops it there, onscreen_keyboard::tab_key_live).
 //
 // THE ONE AUTOCOMPLETE MODEL — the authoritative statement: BARE TAB OFFERS
 // THE COMPLETION, AND A TAB THAT COMPLETES NOTHING IS SILENT (architect
@@ -5987,10 +5972,10 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 //   * Tab under the FLAG editor completes a label reference against the
 //     defined labels (GuiFlagEditor::complete_label_reference; architect
 //     2026-11-20 / 21).
-//   * Tab under an editor with NO hook (the trim preset's name, the BPM
-//     field) does nothing.
-//   * The ITERATION BOUND editor's Tab drops at the gate before this route
-//     sees it.
+//   * Tab under an editor with NO hook (the iteration bound editor, the
+//     trim preset's name, the BPM field) is greyed on the keyboard and
+//     drops at the gate before this route sees it (onscreen_keyboard::
+//     tab_key_live, architect 2026-11-21).
 // The key is one predicate, modal_editor_tab, read by this arm and by
 // modal_editor_key_blocked's admission alike: bare Tab, the on-screen
 // keyboard's Tab key (architect 2026-10-30).
@@ -8404,8 +8389,11 @@ void GuiInputHandler::render_player_delete(bool all) {
         folders.push_back(
             ov.rows[static_cast<size_t>(ov.highlight_row)].path);
     }
-    // A modal surface is opening over a possibly live transport: PAUSE it
-    // through the player's own pause, the load confirmation's opening step.
+    // THE QUESTION RISES OVER THE ROOT'S IDLE TRANSPORT: nothing is loaded at
+    // the root — Up unloads the item before it enters the root
+    // (GuiRenderPlayer::up), the player's open loads nothing, and the root
+    // lists folders alone — so the pause below, the load confirmation's
+    // opening step, finds nothing live and does nothing; a belt.
     if (app.render_player.transport == AppState::RenderPlayer::Transport::Live)
         render_player.toggle_pause();
     app.render_player.pending_delete = folders;
@@ -9038,18 +9026,18 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // (Kind::TrimPresetName, AppState::settings_editor), so the same roads reach
 // here — the on-screen keyboard's Enter and Esc —
 // and the KIND, read before the route (a close resets it), forks the route
-// and the return: no completion (a Tab does nothing), the name's commit
-// (commit_trim_preset_name), and on the close THE TRIM PRESETS LIST
+// and the return: no completion (Tab greyed, tab_key_live), the name's
+// commit (commit_trim_preset_name), and on the close THE TRIM PRESETS LIST
 // REOPENS (open_trim_presets) seated on the name the commit or Save As
 // left (trim_name_seat_), the settings page's return one content over; a refused
 // name leaves the editor standing and reopens nothing.
 // THE BPM FORM'S LINE EDITOR RIDES IT THE SAME WAY (architect 2026-10-29):
 // Kind::BpmField, read before the route like the name's, forks the route
-// and the return — no completion (a Tab does nothing), the field's commit
-// (GuiFlagEditor::commit_bpm_field), and on the close THE BPM FORM REOPENS
-// (open_bpm_form) seated on the field's row, the session's target, read
-// before the close resets it; a refused field leaves the editor standing
-// and reopens nothing. The BPM mode stands across the edit: the form's
+// and the return — no completion (Tab greyed, tab_key_live), the field's
+// commit (GuiFlagEditor::commit_bpm_field), and on the close THE BPM FORM
+// REOPENS (open_bpm_form) seated on the field's row, the session's target,
+// read before the close resets it; a refused field leaves the editor
+// standing and reopens nothing. The BPM mode stands across the edit: the form's
 // session is the form or this editor.
 bool GuiInputHandler::handle_settings_editor_key(GuiKey key,
                                                  GuiInputState mods) {

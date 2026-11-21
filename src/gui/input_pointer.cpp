@@ -3779,8 +3779,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
         onscreen_keyboard::key_at(app, page, at.rx, at.ry, def);
     if (hit < 0) return true;   // the band's ground off the grid: consumed
     // A GREYED KEY ARMS NOTHING (onscreen_keyboard::key_live, the one
-    // predicate its face reads; architect 2026-11-20 / 21: UP, DOWN
-    // and the pass key greyed where they mean nothing): consumed as the
+    // predicate its face reads; architect 2026-11-20 / 21: UP, DOWN, the
+    // pass key and Tab greyed where they mean nothing): consumed as the
     // band's ground is — no press face, no held key, no key-up owed.
     if (!onscreen_keyboard::key_live(app, def.role)) return true;
     // THE PRESS TURNS THE KEY'S FACE TOWARD THE ACCENT from its picture as
@@ -3844,9 +3844,9 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
         case Role::Backspace: keysym = GuiKeys::BackSpace; break;
         case Role::Enter:     keysym = GuiKeys::Return;    break;
         case Role::Escape:    keysym = GuiKeys::Escape;    break;
-        // A bare Tab, no modifier: the line editors complete on it (the
-        // one autocomplete model, route_modal_editor_key), silent where
-        // there is nothing to complete.
+        // A bare Tab, no modifier: the settings and flag editors complete
+        // on it (the one autocomplete model, route_modal_editor_key); under
+        // any other editor the key is greyed and never gets here (key_live).
         case Role::Tab:       keysym = GuiKeys::Tab;       break;
         // COPY AND PASTE ARE THE EDITORS' OWN CHORDS (architect 2026-10-29):
         // the letter's keysym with the key's own ctrl riding the event
@@ -7107,7 +7107,7 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //   KEYBOARD — the keyboard standing on the page the key's index names, the
 //     key not a lit lamp (Shift while latched, the page key on the symbols
 //     page: the painter's two) and not greyed (onscreen_keyboard::key_live:
-//     UP, DOWN and the pass key where they mean nothing, architect
+//     UP, DOWN, the pass key and Tab where they mean nothing, architect
 //     2026-11-20 / 21).
 //   KNOB — the stash as for a button, the scrub's item and its knob
 //     published, no drag armed, and the owner's claim taking a press.

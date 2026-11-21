@@ -2323,9 +2323,9 @@ struct GuiInputHandler {
 
     // True when ANY text editor is consuming printable keys — the settings
     // editor or the top-strip flag editor in ANY of
-    // its kinds (unlike modal_dialog_editor_active, which names the
-    // DIALOG-hosted surface — the settings editor's buffer in its three
-    // kinds — and omits
+    // its kinds (unlike AppState::dialog_editor_session, which names the
+    // value sub-page's line editor — the settings editor's buffer in its
+    // three kinds — and omits
     // the FlagPayload and IterBound kinds, both of which paint in the marker
     // lane). The platform's
     // key-repeat editor probe: the arm records it and a fire disarms when it
@@ -2841,16 +2841,18 @@ private:
     // editor's buffer), and the marker lane's flag editor (architect
     // 2026-07-28) and iteration bound editor. The modal contract is stated once
     // at the definition; it returns true for every key — NO HATCH since
-    // 2026-10-25: the on_key gate admits the editor's own keys and a line
-    // editor's Tab alone, so nothing reaches it to fall through.
+    // 2026-10-25: the on_key gate admits the editor's own keys and the
+    // completion's Tab alone, so nothing reaches it to fall through.
     // `autocomplete` is the ONLY OPTIONAL hook — the bare-Tab one, passed by
-    // the SETTINGS editor and returning whether it ADVANCED the
-    // buffer; the Tab is consumed either way, one that completes nothing
-    // silent (THE ONE AUTOCOMPLETE MODEL, architect 2026-08-13 / 2026-11-20,
-    // stated in full at the definition). The bpm, flag and trim preset's name
-    // editors have nothing to complete and pass an empty hook; for the flag editor bare
-    // Tab never arrives at all, the on_key gate swallowing it before this route
-    // sees it. Every OTHER hook is REQUIRED and called unmodified: commit and
+    // the SETTINGS editor and the FLAG editor and returning whether it
+    // ADVANCED the buffer; the Tab is consumed either way, one that completes
+    // nothing silent (THE ONE AUTOCOMPLETE MODEL, architect 2026-08-13 /
+    // 2026-11-20, stated in full at the definition). The BPM field, the trim
+    // preset's name and the iteration bound editor have nothing to complete
+    // and pass an empty hook; under them bare Tab never arrives at all, the
+    // keyboard's Tab greyed and the on_key gate dropping it
+    // (onscreen_keyboard::tab_key_live, architect 2026-11-21). Every OTHER
+    // hook is REQUIRED and called unmodified: commit and
     // cancel are the per-editor bodies, and `repaint` is the
     // editor's own damage for a text change — the line editors
     // pass `invalidate_dialog_editor_box` (the value sub-page's entry's box,
@@ -4466,8 +4468,9 @@ private:
     // keyboard"). (The press's owner is on_button_press's veil,
     // input_pointer.cpp.)
     // THE READERS, re-derived by grep 2026-10-25 — EVERY "a modal editor
-    // stands" question asks this, and the few that mean the DIALOG alone ask
-    // modal_dialog_editor_active below, each saying why at its site:
+    // stands" question asks this; a question about the value sub-page's line
+    // editor alone reads AppState::dialog_editor_session() != 0, saying why
+    // at its site:
     //   KEYS — on_key's editor gate (input_handler.cpp, with
     //     modal_editor_key_blocked: silent since 2026-10-25),
     //     history_load_in_place's guard, and the car's two roads onto the
@@ -4480,34 +4483,18 @@ private:
     //     and the touch road — the navigation's
     //     refusal (apply_touch_nav_update) and the armed sweep's
     //     (begin_touch_region), one predicate since 2026-10-25.
-    // PUBLIC for the car's gate (GuiCarTransport::admits).
-public:
-    bool keyboard_modal_editor_active() const;
-
-    // THE LINE EDITOR ALONE — the settings editor's buffer, in its three
-    // kinds (Kind::SettingsAssignment, TrimPresetName, BpmField), the editor
-    // that stands as THE VALUE SUB-PAGE in the modal family's box, its label
-    // and one entry (modal_box.h; paint_handler.cpp); the membership is
-    // AppState::dialog_editor_session, which names it once and hands back
-    // the live session id. It answers the questions only the sub-page has
-    // and nothing about modality, which is
-    // keyboard_modal_editor_active's (above). ITS ONE READER, re-derived by
-    // grep 2026-11-20: modal_editor_key_blocked's admission of the
-    // completion's Tab — a lane editor has nothing to complete.
-    // (Its pointer readers of 2026-08-29 — the press veil, the chrome lift's
-    // re-ask, the hover walk's veil, the touch navigation's refusal and the
-    // car's gate among them — widened to the one predicate above when the
-    // lane editors became modals, 2026-10-25.)
-    // THE RENDER PLAYER AND THE PICKER ARE IN NEITHER (2026-08-28): each is
+    // THE RENDER PLAYER AND THE PICKER ARE NOT IN IT (2026-08-28): each is
     // an OVERLAY, not a text editor, with its own predicate
     // (render_player_active, picker_active, folder_overlay_stands) and its
     // own router and veil.
-    // IT IS NOT A PLAYBACK-STOP PREDICATE and neither is the one above. The
-    // stop has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open,
-    // which every open site calls and which records the whole decision table
-    // (every editor's open stops, the lane editors' included, architect
-    // 2026-11-20; the dialog editors and the prompts likewise).
-    bool modal_dialog_editor_active() const;
+    // IT IS NOT A PLAYBACK-STOP PREDICATE. The stop has ONE owner,
+    // GuiPlaybackLifecycle::stop_playback_for_modal_open, which every open
+    // site calls and which records the whole decision table (every editor's
+    // open stops, the lane editors' included, architect 2026-11-20; the
+    // dialog editors and the prompts likewise).
+    // PUBLIC for the car's gate (GuiCarTransport::admits).
+public:
+    bool keyboard_modal_editor_active() const;
 private:
     // The editors' key gate, the sibling of read_only_key_blocked's allowlist
     // shape and input routing like it (it judges no data): true when
@@ -4552,10 +4539,10 @@ private:
     // prompt gate above it, a prompt outranking the
     // player). This predicate is what every one of those readers asks; it is
     // the mode bit and nothing else, named so the readers say what they mean.
-    // (Neither editor predicate — keyboard_modal_editor_active,
-    // modal_dialog_editor_active — includes it: the player is an OVERLAY,
-    // not a text editor, and the readers that ask about text — the editors'
-    // Tab admission, the repeat arms — must not see it.
+    // (The editor predicate, keyboard_modal_editor_active, does not include
+    // it: the player is an OVERLAY, not a text editor, and the readers that
+    // ask about text — the editors' Tab admission, the repeat arms — must not
+    // see it.
     // The PICKER is the same shape one mode over — picker_active, with its
     // own router and its own veil arm.)
     bool render_player_active() const { return app.render_player.active; }

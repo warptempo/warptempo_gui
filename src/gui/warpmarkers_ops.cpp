@@ -518,7 +518,7 @@ void GuiWarpMarkersOps::toggle_inherits() {
     // and leave a live selection standing under the view, its exit landing
     // nothing (close_history_mode); after such a visit this verb, like
     // DISABLE, leaves the playhead where it stands in source view
-    // (architect 2026-11-20, send DD: agreed). In
+    // (architect 2026-11-20: agreed). In
     // target view the focus's IMAGE moves with the map, and the tail below
     // re-lands it.
     const auto& mv_const = app.warpmarkers.markers();

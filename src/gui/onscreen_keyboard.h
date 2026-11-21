@@ -103,12 +103,15 @@
 // field) and, for the pass key, the iteration bound editor, a bound having
 // no tempo source to toggle; UP and DOWN stay live on the bound editor of
 // either column, the main page's Up / Down stepping an addressed bound cell
-// there (input_handler.cpp's Up / Down arm). ONE PREDICATE, key_live below,
-// read by the painter (paint_onscreen_keyboard), the press
-// (claim_onscreen_keyboard_press) and the hover (hover_face_live) alike, and
-// by the keyboard-modal gate's admission of the keys it lets through
-// (modal_editor_key_blocked). Tab is never greyed: it completes where an
-// editor has a completion and is silent elsewhere (route_modal_editor_key).
+// there (input_handler.cpp's Up / Down arm). TAB IS GREYED THE SAME WAY
+// where the standing editor's kind has no completer (architect 2026-11-21):
+// live under the flag editor and the settings value, greyed under the
+// iteration bound editor, Save As and a BPM field; where it is live, a Tab
+// that completes nothing is silent (route_modal_editor_key). ONE
+// PREDICATE, key_live below, read by the painter (paint_onscreen_keyboard),
+// the press (claim_onscreen_keyboard_press) and the hover (hover_face_live)
+// alike, and by the keyboard-modal gate's admission of the keys it lets
+// through (modal_editor_key_blocked).
 // WHAT IT DELIBERATELY HAS NOT GOT: no language switching (one layout), no
 // hide act (it leaves with the editor that raised it), no long-press
 // alternates (an act at the press precludes them), no third page and no
@@ -255,8 +258,8 @@ inline constexpr KeyDef kRow0[] = {
 
 // TAB (architect 2026-08-27, with the project model) leads row 1 on both
 // pages: it is what the product's line editors COMPLETE on (the one
-// autocomplete model, route_modal_editor_key), silent where there is
-// nothing to complete — a
+// autocomplete model, route_modal_editor_key), greyed under an editor whose
+// kind has no completer (tab_key_live, architect 2026-11-21) — a
 // BARE Tab, no modifier, on the same synthesize_key road as every other key
 // here. IT IS NOT THE OPEN PROJECT PICKER'S GLASS ROAD (2026-08-28): that
 // picker is field-less, no editor stands under it and so neither does the
@@ -640,20 +643,31 @@ inline const char* cap_word(const KeyDef& k, Page page) {
 
 // IS THE KEY LIVE — THE ONE PREDICATE OF THE EDITOR'S EXTRA KEYS' GREY (the
 // head's THE EDITOR'S EXTRA KEYS; architect 2026-11-20, "Number four.
-// Yes": UP, DOWN and the pass key "greyed where they mean nothing").
+// Yes": UP, DOWN and the pass key "greyed where they mean nothing"; Tab
+// with them, architect 2026-11-21, every button truthful).
 // Its readers: the painter (the disabled key), the press (a greyed key arms
 // nothing), the hover (a greyed key hovers nothing) and the keyboard-modal
-// gate's admission of the bare Up / Down / pass key (so no road but a live
-// key's reaches the editor's act). The editor it asks about is the one the
-// keyboard stands for: THE MARKER LANE'S, and no line editor standing (the
-// line editor's buffer outranks it in text_editor_session, and the two never
-// stand together).
+// gate's admission of the bare Up / Down / pass key and Tab (so no road but
+// a live key's reaches the editor's act). UP, DOWN AND THE PASS KEY ask
+// about THE MARKER LANE'S editor, and no line editor standing (the line
+// editor's buffer outranks it in text_editor_session, and the two never
+// stand together); TAB asks about whichever editor stands.
 //   * UP AND DOWN: the flag editor (FlagPayload — the tempo step on its
 //     text) and the iteration bound editor of either column (IterBound — the
 //     bound step on its text, as the main page's Up / Down step an addressed
 //     bound cell, input_handler.cpp's Up / Down arm);
 //   * THE PASS KEY: the flag editor alone — a bound has no tempo source to
 //     toggle;
+//   * TAB: exactly where the standing editor's KIND has a completer — the
+//     flag editor (its label reference, GuiFlagEditor::
+//     complete_label_reference) and the SETTINGS line editor
+//     (SettingsAssignment: its value recall and the path's, GuiSettingsEditor::
+//     autocomplete_value); greyed under the iteration bound editor, the trim
+//     preset's name and the BPM form's line, which have none
+//     (handle_top_flag_editor_key and handle_settings_editor_key pass those
+//     an empty hook). WHETHER A MATCH EXISTS IS NOT READ: under those two a
+//     Tab that completes nothing stays live and silent (architect
+//     2026-11-20, route_modal_editor_key's one autocomplete model);
 //   * EVERY OTHER KEY: always live (no other key here is ever greyed).
 // The answer is constant through one editor session (its kind is the
 // session's), so the grey moves only with the session, whose change repaints
@@ -671,17 +685,26 @@ inline bool step_keys_live(const AppState& a) {
 inline bool pass_key_live(const AppState& a) {
     return lane_editor_stands(a, text_editor::Kind::FlagPayload);
 }
+// The settings line editor's kind is the one handle_settings_editor_key's
+// switch hands the completer (its third arm: TrimPresetName and BpmField
+// pass none); the line editor stands while dialog_editor_session is live.
+inline bool tab_key_live(const AppState& a) {
+    return (a.dialog_editor_session() != 0 &&
+            a.settings_editor.kind ==
+                text_editor::Kind::SettingsAssignment) ||
+           lane_editor_stands(a, text_editor::Kind::FlagPayload);
+}
 inline bool key_live(const AppState& a, Role role) {
     switch (role) {
         case Role::Up:
         case Role::Down:       return step_keys_live(a);
         case Role::Pass:       return pass_key_live(a);
+        case Role::Tab:        return tab_key_live(a);
         case Role::Character:
         case Role::Shift:
         case Role::Backspace:
         case Role::Enter:
         case Role::Escape:
-        case Role::Tab:
         case Role::SymbolMode:
         case Role::Copy:
         case Role::Paste:

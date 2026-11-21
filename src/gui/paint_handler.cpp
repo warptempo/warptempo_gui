@@ -902,9 +902,9 @@ constexpr IconRowDef kIconRowButtons[] = {
     // ZOOM TO FIT (2026-08-12, the grand relayout, as Full Zoom Out; renamed
     // 2026-10-24 — the architect's live placement, "the rest in the icon row,
     // after the trim"): bare `0`, Shift+0 Frame the Trim on its shift press
-    // (2026-10-24), the command's pointer home (the
-    // Navigation dropdown that duplicated it was deleted 2026-08-15; the
-    // record is at kFilePopupItems, app_state.h). The step pair stands in
+    // (2026-10-24), the command's one pointer home (the press's act
+    // run_overview_command, the hold's run_span_framing_command, the trim
+    // bar's double tap exactly). The step pair stands in
     // front of it (above). WORKING-ZOOM CENTER (bare `c`) stood
     // behind it until 2026-09-29, when the architect moved it to the bottom
     // row (kTransportNudgePlayGroup since 2026-10-18) — one box and one 2px gap off
@@ -5787,9 +5787,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // TONE (the palette's `face`, the theme's `body_face`; send Z,
     // 2026-11-19), the lane the window's width over the status bar — laid
     // under the on-screen keyboard too, which covers it in the same pass
-    // (paint_keyboard_slot paints after this, opaque). The row's tenants are
-    // the
-    // program's (row 8, and the modal family's controls row — every
+    // (paint_keyboard_slot paints after this, opaque) — laid whole because
+    // the keyboard's height is a tuning key (`osk_key_h`): at a shorter
+    // keyboard part of the row's ground shows above it. The row's tenants
+    // are the program's (row 8, and the modal family's controls row — every
     // overlay's, modal_box.h, 2026-10-14), so this lane never changes for
     // them. The ground erases whatever render_background laid down, so the
     // strip does not depend on that erase happening to hold the same value.
@@ -5849,8 +5850,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
         // MARKER VERBS, the STEP-AND-WALK GROUP, the NUDGE-AND-PLAY GROUP
         // with Play, and the `h` view's Older / Newer in the nudge pair's
         // seats. Each is a tenant of this lane like every other member, and
-        // the overlay's row or the keyboard takes the lane whole: the block's one table of groups
-        // (kRow8Groups) and the stand-ins, every button on the row.
+        // the overlay's row or the keyboard takes the lane whole: the block's
+        // one table of groups (kRow8Groups) and the stand-ins, every button
+        // on the row.
         for (const std::span<const TransportRowDef> group : kRow8Groups) {
             for (const TransportRowDef& def : group) {
                 publish_button_face(cr, app, audio, playback, target_render,
@@ -7994,8 +7996,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // since 2026-11-08) and the page key while the symbols page stands, the two
 // lamps — AND A KEY UNDER PRESS (held BY SLOT, so the page key's own page
 // change keeps the face under the finger, same_slot) wear THE ACCENT `cue`
-// under the lit print `text_on_lit` (FFFFFF). A GREYED KEY — UP, DOWN or
-// the pass key where it means nothing (onscreen_keyboard::key_live; the
+// under the lit print `text_on_lit` (FFFFFF). A GREYED KEY — UP, DOWN, the
+// pass key or Tab where it means nothing (onscreen_keyboard::key_live; the
 // editor's extra keys, architect 2026-11-20 / 21: "Number four. Yes") —
 // wears Arc's disabled face `key_dim_face` under `key_dim_ink`, the
 // grid's lines round it unchanged (they are the grid's, shared with its
@@ -8030,9 +8032,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // like anywhere.
 void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
                                               const GuiRect& exposed) {
-    // (The slot's as-painted bit is written by paint_keyboard_slot, the
-    // dispatch that calls this — the keyboard shares its band with the folder
-    // overlay since 2026-08-28 and one bit describes the slot.)
+    // (The keyboard's as-painted bit, AppState::keyboard_painted_standing, is
+    // written by paint_keyboard_slot, the dispatch that calls this — the
+    // keyboard shares its band with the folder overlay, and each tenant has
+    // its own bit there, the overlay's overlay_painted_standing.)
     const bool    standing = onscreen_keyboard::stands(app);
     const GuiRect surf     = onscreen_keyboard::surface_rect(app);
     if (!standing) return;

@@ -197,8 +197,9 @@ constexpr double kViewportEdgeMarginFraction = 0.05;
 // THE MARGINED WINDOW — the window, in frames, that a span [lo, hi] of a live
 // domain `total` frames long fills with its margins (architect 2026-11-21:
 // "it really should just be a 5% maximum on either side ... Combined.";
-// "3 agree" — every caller of the framer's margin arm). THE RULE: AT MOST f = kViewportEdgeMarginFraction OF THE WINDOW OF
-// EMPTY SPACE ON EITHER SIDE OF THE SPAN, and a side that cannot show its
+// "3 agree" — every caller of the framer's margin arm). THE RULE: AT MOST
+// f = kViewportEdgeMarginFraction OF THE WINDOW OF EMPTY SPACE ON EITHER
+// SIDE OF THE SPAN, and a side that cannot show its
 // margin — the song's wall, L = lo frames left of the span, R = total − hi
 // right of it — HANDS NOTHING TO THE OTHER. The window is the one V that
 // solves
@@ -6051,9 +6052,10 @@ struct AppState {
         // the place's pixel answers it. IT IS THE KEY'S ONE HIT, PLAY'S
         // INCLUDED: the bottom left's timestamp presses nothing (architect
         // 2026-11-20: it is plain text at kBottomLeftPenW, render.h, so it is
-        // ground like the pipe and the tab's name beside it), so no press, hover or tooltip reaches PLAY from
-        // it. Every roster reader asks `contains`: the press, the lift, the
-        // tooltip's owner and the hover's walk.
+        // ground like the pipe and the tab's name beside it), so no press,
+        // hover or tooltip reaches PLAY from it. Every roster reader asks
+        // `contains`: the press, the lift, the tooltip's owner and the
+        // hover's walk.
         bool contains(const GuiPointerPlace& at) const {
             return point_on_key(rect, seam, at.x, at.y);
         }
@@ -6622,10 +6624,9 @@ struct AppState {
     // AppState::Picker.) The top-strip flag editor is deliberately not one in
     // either of its kinds — FlagPayload or IterBound, both of which paint in
     // the top strip.
-    // The predicate GuiInputHandler::modal_dialog_editor_active is this id
-    // being non-zero, and ITS declaration is the authoritative statement of
-    // what that predicate is FOR and who calls it; this is where the set is
-    // NAMED, so it cannot drift between the two.
+    // "A line editor of the value sub-page stands" is this id being
+    // non-zero, read as dialog_editor_session() != 0 at each site that asks
+    // it; this is where the set is NAMED, so no reader restates it.
     uint64_t dialog_editor_session() const {
         if (text_editor::is_active(settings_editor))
             return settings_editor.session;
@@ -8221,22 +8222,11 @@ struct AppState {
     // was shut out structurally at its toggle until it retired, 2026-10-21;
     // the Settings button is `;`'s chord, refused by the keyboard gate.)
     //
-    // THE FILE DROPDOWN OPENS IN HERE, so a popup and this mode DO stand
-    // together and the old "never together" invariant is retired to the Settings
-    // half. It costs the gates nothing: its one row is a CHORD dispatched
-    // through on_key, so the gates above answer per item exactly as they do
-    // for a redesigned button. (The ruling is the
-    // architect's 2026-08-08 one and it was made for the NAVIGATION menu, whose
-    // seven rows the gates answered per item the same way: zoom in / out /
-    // overview admitted by the allowlist, center-on-focus and the two marker
-    // steps claimed by history_mode_owns_key as re-expressions over the diff
-    // flags. ONE of its rows greyed instead of dispatching — "Walk both tabs",
-    // whose Ctrl+Shift+Tab was then the mode's reverse walk-source cycle rather
-    // than the A/B walk the label promised (the chord IS that march in the view
-    // since 2026-08-18, over the diff flags) — and that was the menus' only per-item
-    // disabled state ever. The menu is deleted whole as of 2026-08-15 and the
-    // predicate with it; File inherited the ruling by construction when it
-    // landed 2026-08-13, so what the ruling BUYS is unchanged.)
+    // NO POPUP STANDS IN HERE (the popups are gone): every act that reaches
+    // the view is a roster lift's chord or a press, so the two gates above
+    // are the whole answer, per chord and per press; the chords the view
+    // re-expresses over the diff flags are its own vocabulary
+    // (history_mode_owns_key).
     //
     // AND THE ROSTER WEARS THOSE REFUSALS (architect 2026-08-04): every
     // redesigned button whose act this mode consumes takes its row's DISABLED
@@ -9379,12 +9369,12 @@ struct AppState {
     // MEMBER (modal_box.h, ModalDialogOwner::Progress). EVERY BATCH — the grid
     // iterations and the BPM sweep — opens it AT THE RENDER PRESS: THE
     // PROGRESS PAGE (architect 2026-11-20; paint_handler.cpp's THE QUESTION
-    // PAGE AND THE PROGRESS PAGE) — the view one flat page, on it the sentence, the bar over the
-    // entries done and the count under it, and CANCEL ALONE, a word button
-    // where the bottom icon row's keys stand, the modal's one road; every
-    // key of the top icon row greyed and the status bar blank while it
-    // stands. The lines are `sentence()` and `count()` below, the count
-    // rewritten as each entry starts.
+    // PAGE AND THE PROGRESS PAGE) — the view one flat page, on it the
+    // sentence, the bar over the entries done and the count under it, and
+    // CANCEL ALONE, a word button where the bottom icon row's keys stand,
+    // the modal's one road; every key of the top icon row greyed and the
+    // status bar blank while it stands. The lines are `sentence()` and
+    // `count()` below, the count rewritten as each entry starts.
     //   `active`   it stands — from the press (GuiInputHandler::
     //              open_batch_progress: at the batch's first dispatch, or at
     //              the park when the batch waits out a killed render's drain)
@@ -10438,8 +10428,9 @@ inline bool score_viewer_stands(const AppState& a) {
 // (paint_folder_overlay), so no list row hovers (GuiInputHandler::
 // hover_face_live, hover_face_under_pointer, settle_face_fades); the modal
 // area is damaged whole (Viewport::invalidate_modal_dialog_area); and the
-// whole roster greys (roster_greyed_whole, below). THE PAGE NEVER STANDS WITH THE ON-SCREEN KEYBOARD — no road raises
-// one while an editor owns the keyboard: the close road takes every editor
+// whole roster greys (roster_greyed_whole, below). THE PAGE NEVER STANDS
+// WITH THE ON-SCREEN KEYBOARD — no road raises one while an editor owns the
+// keyboard: the close road takes every editor
 // down before its question rises (GuiPrompt::request_close); every other
 // raise is a roster key's lift, a chord or an overlay's own button, each
 // consumed by the editor's veil (keyboard_modal_editor_active:

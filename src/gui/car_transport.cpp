@@ -229,7 +229,7 @@ GuiMediaState GuiCarTransport::derive(ClockSide& side) const {
         // TRIM — in source view it runs to the song's end — and then each
         // push carries 0 BEFORE THE TRIM'S BEGIN AND THE FULL LENGTH AT ITS END
         // AND BEYOND: the clock keeps the loop's meaning (architect
-        // 2026-11-20, send DD, on the clock as built: "it only happens in
+        // 2026-11-20, on the clock as built: "it only happens in
         // source view but car is for target view").
         // THE CROSSING IS A PUSH (2026-11-20, send CC's second review,
         // finding A2): the side the cursor stands on — before the begin,

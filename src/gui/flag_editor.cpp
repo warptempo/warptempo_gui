@@ -164,12 +164,15 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // THE LAND IS A MOVEMENT OWNER: an open moves the playhead onto one
     // marker, which ends an A/B audition as every movement does (the rule at
     // Viewport::move_playhead_to, viewport.cpp). This one
-    // chokepoint covers every open and retarget (bare Return, the flag's
-    // double tap, `m`, a pointer retarget of the live editor); `m` re-derives
-    // NOTHING after it since
-    // 2026-07-30 (the extent owner died with the SPAN FORM). The same_target
-    // early return above skips both: the
-    // playhead is already there from the first open and nothing changed.
+    // chokepoint covers both open roads — EDIT (bare Return with the payload
+    // addressed, input_handler.cpp) and a marker's double tap
+    // (input_pointer.cpp's marker lane arm). NEITHER CAN REACH A STANDING
+    // EDITOR: while one stands the editors' veil swallows every press
+    // outside its field, another flag and every column-switching key
+    // included, and closes nothing (on_button_press's THE VEIL'S LAST WORD,
+    // input_pointer.cpp), and Return is its own commit — so the editor's
+    // marker and column stay fixed until its exit. The same_target return
+    // above and the discard below are belts for that.
     selection.set_single_selection(idx);
     land_playhead_on_marker(app, audio, viewport, idx);
 
@@ -329,9 +332,10 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     // THE COLUMN IS READ LIVE AND IT IS THE OPEN'S COLUMN: the view CANNOT
     // MOVE under an open session — every column-switching key is dropped at
     // the keyboard-modal gate while any editor stands, and every
-    // column-switching BUTTON acts at the LIFT whose own PRESS already closed
-    // this editor — so the session needs no stored column of its own. The
-    // session's `iter_hops` bit is not that column: it exists for
+    // column-switching BUTTON's press is swallowed by the editors' veil,
+    // which closes nothing (on_button_press's THE VEIL'S LAST WORD,
+    // input_pointer.cpp) — so the session needs no stored column of its
+    // own. The session's `iter_hops` bit is not that column: it exists for
     // text_editor.cpp alone, which selects the byte cap and cannot see the
     // app. (The column is W or P, the column axis's two letters.)
     if (app.active_markers_view == 'P') {

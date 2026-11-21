@@ -520,17 +520,17 @@ struct GuiPlaybackLifecycle {
     //     SESSION'S LOWER WALL — the trim's begin when the session started
     //     inside the trim, else the session's own start (a source-view play
     //     launched outside the trim never seeks onto ground it did not start
-    //     from; that fallback architect 2026-11-20, send DD: ruled as
-    //     built); FORWARD PAST THE WINDOW'S END IS A SILENT NO-OP — the play
-    //     runs on to its own end and the session keeps its once-through
-    //     window (architect 2026-11-20, send DD: ruled as built; an end
-    //     there would turn the next press into a Redo under a repeated
-    //     press, "I don't like to feel hurried"). UNDER A LIT RESTRICT a
-    //     restrictable play's own end is the painted window's right edge (the
-    //     pre-paint stop, main.cpp), so a forward landing past it is the same
-    //     silent no-op (architect 2026-11-20, send DD: ruled as built);
-    //     a back landing left of the window runs on into it, as a play does
-    //     after a pan carried the camera past it.
+    //     from; that fallback architect 2026-11-20: ruled as built);
+    //     FORWARD PAST THE WINDOW'S END IS A SILENT NO-OP — the play runs on
+    //     to its own end and the session keeps its once-through window
+    //     (architect 2026-11-20: ruled as built; an end there would turn the
+    //     next press into a Redo under a repeated press, "I don't like to
+    //     feel hurried"). UNDER A LIT RESTRICT a restrictable play's own end
+    //     is the painted window's right edge (the pre-paint stop, main.cpp),
+    //     so a forward landing past it is the same silent no-op (architect
+    //     2026-11-20: ruled as built); a back landing left of the window
+    //     runs on into it, as a play does after a pan carried the camera
+    //     past it.
     // A seek that cannot move — nothing playing (the natural end in flight
     // before the tick tears the scanner down), already at the back wall, a
     // degenerate or crossed trim, an unknown rate — is SILENT and writes
