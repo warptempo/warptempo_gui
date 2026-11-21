@@ -38,6 +38,7 @@ struct GuiThemeTones {
     uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face ((text_on_lit at 80 % over the accent at 75 % over the body tone) at 60 % over the body tone, theme_roles.h's DERIVED block); a word alone, read by key_ink
     uint32_t key_face;            // a key's and a word button's face at rest, the scrub's knob's fill (SurfaceBackground)
     uint32_t key_hover_face;      // that face under the hovering pen, the hover mix's far end: a key's, a word button's, an on-screen keyboard key's, the scrub's knob's fill (ButtonHoverBackground, our own role; arc_dark 505666, Arc's button:hover; a Live theme's SurfaceBackground, the key face itself: no hover)
+    uint32_t list_hover_face;     // a list row under the hovering pen: THE BUTTONS' HOVER STEP LAID ON THE LIST'S VIEW, ruler_face + (key_hover_face − key_face) per channel, clamped (theme_roles.h's DERIVED block; arc_dark 404552 + 0C0C0E = 4C5160; a Live theme's the view's own tone: no hover)
     uint32_t lit_dim_fill;        // a checked-but-disabled key's face: (the accent at 75 % over the body tone) at 60 % over the body tone, Arc's numbers
     uint32_t ruler_face;          // the ruler, Arc's entry's fill and the flag editor's (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the ruler face, the canvas)
@@ -147,7 +148,9 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // keeping Alert's E76942 as its own tone AND THE TWO HOVER TONES, each the
 // tone it moves from (send CC, 2026-11-20): a key's hover face 363636
 // (SurfaceBackground) and the pill's 696969 (ScrollbarInnerHandle), so the
-// reference row shows no hover.
+// reference row shows no hover AND THE LIST ROW'S HOVER 393939, the view's
+// own tone (the buttons' hover step 363636 − 363636 laid on the ruler
+// 393939; architect 2026-11-21, send EE), so no list row hovers either.
 // THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
 // 119): like every row of the list it holds the theme's own numbers,
 // and the install mixes its bright tones at the `bright_mix` key as it mixes
@@ -169,6 +172,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x2A221A, // text_on_lit_dim
     0x363636, // key_face
     0x363636, // key_hover_face
+    0x393939, // list_hover_face
     0x86623B, // lit_dim_fill
     0x393939, // ruler_face
     0x919191, // ruler_tick

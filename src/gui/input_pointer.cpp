@@ -3810,7 +3810,14 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 
 // THE MOTIONLESS LIFT'S FIRST HALF: the band moves, under every owner — the
 // picker has no field beside it (architect 2026-08-28), so the band IS what
-// Enter opens.
+// Enter opens. THE PRESS NEVER SCROLLS (architect 2026-11-21, send EE:
+// "Once I tap on something, it's okay if there's a little delay ... There
+// shouldn't be like an in-between frame"): both arms seat the highlight on
+// the tapped row and move the scroll not at all
+// (folder_overlay::seat_tapped_row) — the row is on screen by definition,
+// and the keep-visible walk and the head rule are the UP / DOWN walk's and
+// the open-time seats'. Nothing between the press and the act paints but
+// the press's own face, the accent on the pressed row.
 void GuiInputHandler::folder_overlay_highlight_row(int index) {
     switch (app.folder_overlay.owner) {
         case AppState::FolderOverlay::Owner::None:
@@ -3905,7 +3912,12 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // THE PRESS ONLY ARMS — a click activates, but the act rides the
     // MOTIONLESS LIFT because this same press may still become the band's
     // scroll drag (architect 2026-08-29; the row press is chrome, and past the
-    // drag gate it IS the drag).
+    // drag gate it IS the drag). THE PRESS NEVER SCROLLS (architect
+    // 2026-11-21, send EE): neither this arm nor its motionless lift moves
+    // the list — the lift's seat is folder_overlay::seat_tapped_row
+    // (folder_overlay_highlight_row) — so the one picture between the press
+    // and the act is the pressed row's accent below; only the drag past the
+    // gate scrolls.
     AppState::FolderOverlayPress& press = app.folder_overlay.press;
     press.armed           = true;
     press.row             = hit;
@@ -3997,7 +4009,10 @@ bool GuiInputHandler::finish_folder_overlay_release(
     // picker the row's project opens, refusals and all). THIS LIFT IS THE ONE
     // ROAD TO A ROW'S OPEN: no Enter reaches a row (folder_overlay.h's head).
     // The band moves first, so what the act runs on is what the user
-    // can see it named. A lift elsewhere is a consumed nothing, and so is a
+    // can see it named — onto the row where it stands, the list not
+    // scrolled (the press never scrolls, folder_overlay_highlight_row), and
+    // both halves in this one delivery, so no frame paints between them. A
+    // lift elsewhere is a consumed nothing, and so is a
     // lift on an INERT row (folder_overlay::row_is_inert, the settings page's
     // group rows, architect 2026-10-28, and its disabled `scale` and `bpm`
     // lines, 2026-10-29): neither half, the row being no choice.
@@ -6738,6 +6753,13 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //     page: the painter's two); no key there is ever disabled.
 //   KNOB — the stash as for a button, the scrub's item and its knob
 //     published, no drag armed, and the owner's claim taking a press.
+//   LIST ROW (architect 2026-11-21, send EE) — the press's own road:
+//     claim_folder_overlay_press under the modals' veil, so no question, no
+//     editor, no progress page; the list standing and painted (no question's
+//     page or progress page in its place, modal_page_stands), the face's
+//     listing the standing one; the row an acting one (not a Group heading,
+//     not a Disabled row: the lift's open refuses both) and NOT LIT — not
+//     the highlight, no press standing (a lit row is unchanged by hover).
 bool GuiInputHandler::hover_face_live(
         const AppState::FaceFades::Face& face) const {
     using Surface = AppState::FaceFades::Surface;
@@ -6811,6 +6833,20 @@ bool GuiInputHandler::hover_face_live(
                        score_scrub_takes_press();
             return false;
         }
+        case Surface::ListRow: {
+            if (app.prompt.active || keyboard_modal_editor_active() ||
+                app.batch_progress.active)
+                return false;
+            if (!folder_overlay::stands(app) || modal_page_stands(app))
+                return false;
+            const AppState::FolderOverlay& ov = app.folder_overlay;
+            if (face.dialog_session != ov.listing || face.seam) return false;
+            if (face.index < 0 ||
+                face.index >= static_cast<int>(ov.rows.size()))
+                return false;
+            if (folder_overlay::row_is_inert(ov, face.index)) return false;
+            return face.index != ov.highlight_row && !ov.press.armed;
+        }
     }
     return false;
 }
@@ -6819,11 +6855,14 @@ bool GuiInputHandler::hover_face_live(
 // order (on_button_press): A CARD is opaque to the pointer above every veil,
 // so none under one; THE ON-SCREEN KEYBOARD's surface is claimed whole, its
 // key the grid's (onscreen_keyboard::key_at: a shared line the key's left of
-// / above it); THE DIALOG STASH's buttons (modal_dialog_button_hit: the
-// painted box less its seam), then THE SCRUB'S KNOB, its disc where it is
-// painted (the published center, render_player_scrub_handle_hit); then THE
-// ROSTER, the chord table's keys, each BY THE PRESS'S OWN HIT
-// (RedesignButtonFace::contains, what arm_redesign_press and the lift ask):
+// / above it); THE LIST'S BAND, claimed whole while the list stands and is
+// painted, its row row_at's (claim_folder_overlay_press's own claim and
+// hit; architect 2026-11-21, send EE); THE DIALOG STASH's buttons
+// (modal_dialog_button_hit: the painted box less its seam), then THE SCRUB'S
+// KNOB, its disc where it is painted (the published center,
+// render_player_scrub_handle_hit); then THE ROSTER, the chord table's keys,
+// each BY THE PRESS'S OWN HIT (RedesignButtonFace::contains, what
+// arm_redesign_press and the lift ask):
 // its painted box less its seam — the bottom left's timestamp, a time label,
 // presses nothing, so by the gate ("a face hovers only where a press there
 // would act") the pen hovering it lights nothing (architect 2026-11-20, send
@@ -6841,6 +6880,16 @@ AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer() const {
         const int hit = onscreen_keyboard::key_at(
             app, app.onscreen_keyboard.page, at.rx, at.ry, def);
         if (hit >= 0) found = Face{Surface::Keyboard, hit};
+    } else if (folder_overlay::stands(app) && !modal_page_stands(app) &&
+               rect_contains(folder_overlay::surface_rect(app), at.x, at.y)) {
+        // THE LIST'S BAND, the press's own claim and hit
+        // (claim_folder_overlay_press: the surface opaque, the row row_at's —
+        // the head pad, the empty view under a short list and the box's lines
+        // no row, so no face).
+        const int hit = folder_overlay::row_at(app, at.rx, at.ry);
+        if (hit >= 0)
+            found = Face{Surface::ListRow, hit, AppState::ModalDialogOwner::None,
+                         app.folder_overlay.listing};
     } else {
         const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
         if (modal_dialog_stash_current()) {
@@ -6909,6 +6958,24 @@ GuiRect GuiInputHandler::face_extent(
             if (!stash_is_faces || dlg.scrub_thumb_x < 0.0) break;
             return scale_knob_move_rect(dlg.scrub, dlg.scrub_thumb_x,
                                         dlg.scrub_thumb_x);
+        case Surface::ListRow: {
+            // THE ROW'S WHOLE BOX, the view's whole width, cut to the view
+            // (the painter's clip): a hover edge damages its rows, never the
+            // list.
+            const AppState::FolderOverlay& ov = app.folder_overlay;
+            if (!folder_overlay::stands(app) ||
+                face.dialog_session != ov.listing || face.index < 0 ||
+                face.index >= static_cast<int>(ov.rows.size()))
+                break;
+            const GuiRect row  = hull(folder_overlay::row_rect(app, face.index));
+            const GuiRect view = folder_overlay::content_rect(app);
+            const int x0 = std::max(row.x, view.x);
+            const int y0 = std::max(row.y, view.y);
+            const int x1 = std::min(row.x + row.w, view.x + view.w);
+            const int y1 = std::min(row.y + row.h, view.y + view.h);
+            if (x1 <= x0 || y1 <= y0) break;
+            return GuiRect{x0, y0, x1 - x0, y1 - y0};
+        }
     }
     return GuiRect{0, 0, 0, 0};
 }
@@ -7024,6 +7091,7 @@ AppState::FaceFades::Face GuiInputHandler::seam_left_face(
         case Surface::None:
         case Surface::Keyboard:
         case Surface::Knob:
+        case Surface::ListRow:
             break;
     }
     return Face{};
@@ -7277,7 +7345,10 @@ void GuiInputHandler::settle_trim_bar_hover() {
 // its published box is empty (the key off the screen: the `h` view's Older /
 // Newer standing in for LEFT / RIGHT, the bottom icon row's keys while an
 // overlay's controls, a question's answers or the progress page's Cancel
-// stand there) — so
+// stand there), a list row's while its list stands no more, is hidden under
+// a question's page or the progress page, is another listing, or no longer
+// stands on the box it was painted on (a scroll moved it; architect
+// 2026-11-21, send EE) — so
 // whatever replaces them, or the key when it comes back, paints its looks at
 // once (AppState::FaceFades' WHAT DOES NOT FADE); nothing is damaged, the
 // surface that replaced them having been repainted. THE HOVERED SLOT GOES where no press would act on its face (it
@@ -7293,8 +7364,23 @@ void GuiInputHandler::settle_face_fades() {
         const uint64_t live_session = app.modal_dialog_live_session();
         const AppState::ModalDialogOwner live_owner =
             app.modal_dialog_live_owner();
+        const bool list_painted =
+            folder_overlay::stands(app) && !modal_page_stands(app);
         std::erase_if(h.records, [&](const FaceFades::Record& r) {
             switch (r.face.surface) {
+                case Surface::ListRow: {
+                    // A LIST ROW'S (AppState::FaceFades' THE LIST ROW'S
+                    // HOVER): gone with its list — not standing, hidden
+                    // under a page, or another listing — or off the box it
+                    // was painted on (a scroll moved it).
+                    const AppState::FolderOverlay& ov = app.folder_overlay;
+                    if (!list_painted || r.face.dialog_session != ov.listing ||
+                        r.face.index < 0 ||
+                        r.face.index >= static_cast<int>(ov.rows.size()))
+                        return true;
+                    return !(hull(folder_overlay::row_rect(
+                                 app, r.face.index)) == r.box);
+                }
                 case Surface::Keyboard:
                     return !kb_stands ||
                            r.face.index <
@@ -7342,6 +7428,7 @@ void GuiInputHandler::settle_face_fades() {
 // tap moves — a key, its twin, a radio pair — and a seam's columns lie
 // inside a neighbor's rect). The surfaces: the top icon row's roster keys,
 // the bottom icon row's, the dialog stash's buttons, the keyboard's keys,
+// a list's rows (two at a hover edge, the pair the pen moved between),
 // the knob. With no fade running the body is the walk's few compares and
 // one pass over the records.
 void GuiInputHandler::tick_face_fades() {
@@ -7356,7 +7443,7 @@ void GuiInputHandler::tick_face_fades() {
         std::array<GuiRect, kFaceStepRects> rects{};
         GuiRect                           all{0, 0, 0, 0};
     };
-    std::array<Batch, 5> batches{};
+    std::array<Batch, 6> batches{};
     const auto batch_of = [&](const FaceFades::Face& f) -> Batch& {
         switch (f.surface) {
             case Surface::Roster:
@@ -7366,6 +7453,7 @@ void GuiInputHandler::tick_face_fades() {
                                    : 0];
             case Surface::Dialog:   return batches[2];
             case Surface::Keyboard: return batches[3];
+            case Surface::ListRow:  return batches[5];
             case Surface::Knob:
             case Surface::None:     break;
         }
@@ -9141,7 +9229,8 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     // claim's own rank: a standing row arm follows the pointer (the band's
     // scroll drag once the gate is crossed) and owns the motion whole, and with no arm standing the
     // motion carries on below to the player's and the picker's own motion
-    // branches (the band's rows wear no hover face, architect 2026-10-02). A
+    // branches (a row's hover face is the walk's at this body's head,
+    // walk_hover_face; architect 2026-11-21, send EE). A
     // LOST BUTTON is the hard end: the arm drops and nothing commits, the
     // chrome arm's own rule.
     if (app.folder_overlay.press.armed) {

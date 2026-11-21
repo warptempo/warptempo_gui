@@ -429,7 +429,9 @@ struct GuiRenderPlayer {
     // overlay's other five contents drive the same mechanics through their own
     // damage): move the highlight by
     // `delta` rows, and seat it on `index` — the click's first half, the open
-    // being its second.
+    // being its second, the list not scrolled (folder_overlay::
+    // seat_tapped_row: the press never scrolls, architect 2026-11-21, send
+    // EE).
     void move_highlight(int delta);
     void set_highlight(int index);
     // The highlighted row's render entry — non-null exactly when the highlight

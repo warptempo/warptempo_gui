@@ -365,6 +365,17 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     // key face's own role is (arc_dark 505666, Arc's button:hover; a Live
     // theme's SurfaceBackground, the key face itself: no hover shows there).
     t.key_hover_face      = packed(opaque(roles["ButtonHoverBackground"]));
+    // THE LIST ROW'S HOVER (architect 2026-11-21, send EE; the head's
+    // DERIVED block): the buttons' own hover step — the hover face less the
+    // key face, per channel — laid on the list's view, the canvas's tone the
+    // view wears (ruler_face below), clamped. arc_dark 404552 + (505666 −
+    // 444A58) = 404552 + 0C0C0E = 4C5160; a theme whose hover face is its key
+    // face (every Live theme) gets the view's own tone back, no hover.
+    const Rgb hover_face = opaque(roles["ButtonHoverBackground"]);
+    t.list_hover_face     = packed(Rgb{
+        clamp_byte(canvas.r + (hover_face.r - face.r)),
+        clamp_byte(canvas.g + (hover_face.g - face.g)),
+        clamp_byte(canvas.b + (hover_face.b - face.b))});
     t.ruler_face          = packed(canvas);
     t.ruler_tick          = packed(tick_role);
     t.ruler_text          = packed(ruler_fg);

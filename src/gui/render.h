@@ -251,7 +251,10 @@ struct TrimRange {
 // TRIM BAR'S PART under the pen — the pill's body or an end's cap — wears
 // `trim_span_hover_face` at once, with no fade, and both caps show
 // (trim_bar_tones; AppState::TrimBarHover; send CC, 2026-11-20); the
-// lists' lit rows are a selection, not a button face, and do not hover.
+// lists' lit rows are a selection, not a button face, and do not hover —
+// A LIST'S RESTING ROW a tap would act on wears `list_hover_face` under
+// the pen, in at once and out over Arc's 150 ms row transition (architect
+// 2026-11-21, send EE; paint_handler.cpp's THE LIST VIEW).
 // THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 W outer corners,
 // send Z, 2026-11-19: Arc's button and entry, A BUTTON IS ARC'S BUTTON
 // below), their edges at exact coverage, as every mark placed by time is
@@ -466,7 +469,7 @@ struct GuiPalette {
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_text;      // COLOR_WINDOWTEXT
     GuiColor card_text;       // COLOR_INFOTEXT (a standing card's words and glyph; a normal card's are sidebar_text)
-    // THE FLAT LOOK'S TWENTY-SEVEN (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-EIGHT (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the clip lamp the lamp
     // arc's, the same night; the lit key's inert face 2026-11-11, session
@@ -475,8 +478,9 @@ struct GuiPalette {
     // sidebar and ruler texts, the disabled key's face and border; THE
     // POPUPS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
     // and the limiter lamp; THE PROGRESS TROUGH, stage D2; THE SCALE'S RIM,
-    // stage D3; THE TWO HOVER TONES, send CC, 2026-11-20).
-    GuiColor body_face;       // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
+    // stage D3; THE TWO HOVER TONES, send CC, 2026-11-20; THE LIST ROW'S
+    // HOVER, send EE, 2026-11-21).
+    GuiColor body_face;      // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
     GuiColor sidebar_text;    // the marker labels' ink on the Arc page, later the tooltip's and the cards' (SidebarForeground)
@@ -486,6 +490,7 @@ struct GuiPalette {
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
     GuiColor key_face;        // a key's face at rest; the two lamps at rest; the scrub's knob (paint_scale)
     GuiColor key_hover_face;  // that face under the hovering pen, the far end of the hover's mix (materials.h's THE HOVER: the keys, the word buttons, the on-screen keyboard's keys, the scrub's knob)
+    GuiColor list_hover_face; // a list row under the hovering pen, the far end of its mix: the buttons' hover step laid on the view (paint_list_view; architect 2026-11-21, send EE)
     GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
     GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h) and the flag editor's (render_flag_editor_box)
     GuiColor ruler_tick;      // the ruler's ticks

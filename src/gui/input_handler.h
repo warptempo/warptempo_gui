@@ -3337,7 +3337,22 @@ private:
     //     list's, the BPM form's, the picker's one word, a question's
     //     answers, the progress page's Cancel);
     //   * THE ON-SCREEN KEYBOARD'S KEYS;
-    //   * THE SCRUB'S KNOB, the render player's and the score viewer's.
+    //   * THE SCRUB'S KNOB, the render player's and the score viewer's;
+    //   * THE LIST ROW'S HOVER (architect 2026-11-21, send EE: "I'd like to
+    //     add hover, which I know is not canonical to Arc, but you know,
+    //     just the same color that I guess the buttons get on hover"): A
+    //     LIST'S RESTING ROW A TAP WOULD ACT ON — every list of the folder
+    //     overlay (the render player's, the project picker's, the settings
+    //     page's, a value list's, the trim presets', the BPM form's), never
+    //     a Group heading, a Disabled row, the head pad or the empty view
+    //     under a short list, never the lit row (the highlight, a row under
+    //     press), only while its list is the live surface (no question's
+    //     page, progress page or editor in its place) — wears
+    //     `list_hover_face` across the view's width, IN AT ONCE AND OUT
+    //     OVER ARC'S 150 ms ROW TRANSITION (not the buttons' 200 ms:
+    //     AppState::FaceFades' THE LIST ROW'S HOVER; the look at
+    //     paint_handler.cpp's THE LIST VIEW). A drag scroll (a contact down)
+    //     shows none, and after its lift this latch holds as for a key.
     //   THE TRIM BAR hovers too, NOT ONE OF THESE FADING FACES: its own
     //   walk and its own one-value state (walk_trim_bar_hover, run inside
     //   walk_hover_face; AppState::TrimBarHover; architect 2026-11-20, send
@@ -3368,8 +3383,7 @@ private:
     //   contact, no veil or card there, audio and no live drag, the theme
     //   and the bar's own terms), until the pen rearms or leaves; so the
     //   caps do not blink at the lift.
-    //   NOTHING ELSE LIGHTS BY HOVER: a list row has no hover face
-    //   (folder_overlay.h), nor an entry (NOISE's and its level line, the
+    //   NOTHING ELSE LIGHTS BY HOVER: no entry (NOISE's and its level line, the
     //   value sub-page's field), the title bar's two lamps, a cue or a chip
     //   (render.h's flag block), the time labels, the title bar; a
     //   notification card's hover banks its clock and paints nothing
@@ -3428,7 +3442,8 @@ private:
     //   the pen's hover does, and every first down ends that hover through
     //   its leave (end_pen_hover).
     // THE LATCH IS THE POINTER'S, NOT A SURFACE'S: it holds every hover
-    // face alike, the keys', the dialogs', the keyboard's and the knob's.
+    // face alike, the keys', the dialogs', the keyboard's, the knob's and the
+    // list rows'.
     // THE LIFT'S OWN PIXEL IS NOT KEPT (2026-10-08): the anchor is the
     // hover's, so the hook carries no coordinates and the latch none of
     // the contact's.

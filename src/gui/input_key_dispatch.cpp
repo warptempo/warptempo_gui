@@ -6583,6 +6583,9 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
 void GuiInputHandler::build_trim_presets_rows(int highlight) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov.rows.clear();
+    // A NEW LISTING (FolderOverlay::listing): the rows refilled are new
+    // faces, none of the last listing's fades carried onto them.
+    ov.listing = text_editor::next_session_id();
     for (const GuiTrimPreset& p : ov.trim_presets) {
         AppState::FolderOverlayRow row;
         row.kind = AppState::FolderOverlayRow::Kind::Plain;
@@ -7099,9 +7102,12 @@ void GuiInputHandler::history_load_in_place() {
 // stands, which is the whole of what a moved highlight touches, and under the
 // TRIM PRESETS LIST the controls row too, whose faces read the highlight
 // (trim_presets_button_enabled: the pair's walls, Save and Delete).
+// THE SEAT IS THE ROW TAP'S (its one caller, folder_overlay_highlight_row):
+// THE PRESS NEVER SCROLLS (architect 2026-11-21, send EE;
+// folder_overlay::seat_tapped_row), the walk alone keeping its row in view.
 void GuiInputHandler::picker_set_highlight(int index) {
     if (!app.picker.active) return;
-    if (folder_overlay::set_highlight(app, index)) {
+    if (folder_overlay::seat_tapped_row(app, index)) {
         viewport.invalidate_rect(folder_overlay::surface_rect(app));
         if (app.folder_overlay.owner ==
             AppState::FolderOverlay::Owner::TrimPresets)

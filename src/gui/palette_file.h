@@ -245,7 +245,10 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // DERIVED block): THE RULER'S DIGITS 9C9C9C, the text B5B5B5 at 80 % over
 // the ruler 393939; THE DISABLED KEY'S FACE 2E2E2E, the key face 363636 at
 // 55 % over the body tone 242424; ITS BORDER 272727, the well's border
-// 2A2A2A at 55 % over the body tone.
+// 2A2A2A at 55 % over the body tone. THE LIST ROW'S HOVER 393939 (architect
+// 2026-11-21, send EE; the DERIVED block): the ruler 393939 plus the
+// buttons' hover step, Default's 363636 − 363636, nothing — no row hovers
+// on the reference row, as no key does.
 // THE PLAYHEAD'S LINE
 // 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
 // to even (architect 2026-11-12, session 113; the DERIVED block). THE ENABLED
@@ -278,6 +281,7 @@ static_assert(kDefault.key_dim_border  == 0x272727);
 static_assert(kDefault.text_on_lit_dim == 0x2A221A);
 static_assert(kDefault.key_face        == 0x363636);
 static_assert(kDefault.key_hover_face  == 0x363636);
+static_assert(kDefault.list_hover_face == 0x393939);
 static_assert(kDefault.lit_dim_fill    == 0x86623B);
 static_assert(kDefault.ruler_face      == 0x393939);
 static_assert(kDefault.ruler_tick      == 0x919191);

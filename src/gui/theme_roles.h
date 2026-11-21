@@ -402,7 +402,8 @@
 //   (b − a) per channel, rounded half to even and clamped; "X at t over Y"
 //   is mix(Y, X, t)). The cue fill above and every tone below but the
 //   Arc page's three (the ruler's digits, the disabled key's face and
-//   border: no bright tone under them) are ONE BODY
+//   border) and the list row's hover (no bright tone under any of them)
+//   are ONE BODY
 //   (fill_dependent_tones, theme_roles.cpp) reading the row's own words, so
 //   the install recomputes them off the mixed bright tones (THE BRIGHT MIX,
 //   below) — the inert prints among them, over the mixed inert faces, the
@@ -431,6 +432,23 @@
 //                                     313441, the measured 313440 one level
 //                                     off — the formula taken). Its drawing is
 //                                     the key dim ink (COMPOSITED)
+//     list hover face        393939 = THE BUTTONS' HOVER STEP LAID ON THE
+//                                     LIST'S VIEW, ruler face + (key hover
+//                                     face − key face) per channel, clamped
+//                                     to [0, 255] (derive(), beside the three
+//                                     above: no bright tone under it): A LIST
+//                                     ROW UNDER THE HOVERING PEN (architect
+//                                     2026-11-21, send EE: "just the same
+//                                     color that I guess the buttons get on
+//                                     hover ... Maybe you want to tune it to
+//                                     the background that the list is on";
+//                                     not Arc's — its rows carry no hover —
+//                                     ours; paint_handler.cpp's THE LIST
+//                                     VIEW). arc_dark 404552 + (505666 −
+//                                     444A58 = 0C0C0E) -> 4C5160; on every
+//                                     Live theme the hover face is the key
+//                                     face, so the view's own tone: no row
+//                                     hovers, as no key does
 //     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
 //                                     EXACTLY HALF WAY to the head on every
 //                                     theme (architect 2026-11-12, session
@@ -532,7 +550,8 @@
 // the text, the dim text, the key dim ink, the title, sidebar and ruler
 // texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection's text, the cards' words, the tooltip's and the normal card's fills
 // (surfaces, not highlights), the faces — a key's hover face and the pill's
-// among them (send CC) — the lanes (the trim
+// among them (send CC), and a list row's hover face (send EE, 2026-11-21) —
+// the lanes (the trim
 // bar's trough and the well's lines among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,
 // the ruler's digits, the disabled key's face and border), the waveform's

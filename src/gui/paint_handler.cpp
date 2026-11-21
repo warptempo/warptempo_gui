@@ -8353,11 +8353,33 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            pressed row a selected one (the lighter press
 //                            row of 2026-11-05, Live's SelectionBackground
 //                            under SelectionForeground, retired with it)
-//   an INERT row          -> never lit: a Disabled row's name in `text_dim`
-//                            (7E838F), A GROUP HEADING Thunar's section
-//                            header in the text tone, Bold 12 W
-// NO HOVER FACE (architect 2026-10-02) AND NO FOCUS FRAME (architect
-// 2026-10-23): the lit row is the only sign.
+//   HOVERED               -> a resting row a tap would act on, under the
+//                            hovering pen (architect 2026-11-21, send EE:
+//                            "I'd like to add hover, which I know is not
+//                            canonical to Arc, but you know, just the same
+//                            color that I guess the buttons get on hover
+//                            ... Maybe you want to tune it to the
+//                            background that the list is on"): a flat fill
+//                            across the view's whole width, the lit bar's
+//                            span, in `list_hover_face` — THE BUTTONS' OWN
+//                            HOVER STEP LAID ON THE VIEW (theme_roles.h's
+//                            DERIVED block; arc_dark 4C5160 on 404552) —
+//                            the name, the drawing and their inks
+//                            unchanged; IN AT ONCE AND OUT OVER ARC'S
+//                            150 ms ROW TRANSITION, the fill the view's
+//                            tone and the hover tone mixed by the row's
+//                            stored mix (AppState::FaceFades' THE LIST
+//                            ROW'S HOVER: the gate, the fade, the damage —
+//                            the two rows' own boxes); the lit row (the
+//                            highlight, a pressed row) unchanged by it, and
+//                            no fill at rest, so the resting picture is
+//                            the one without the hover, byte for byte
+//   an INERT row          -> never lit, never hovered: a Disabled row's
+//                            name in `text_dim` (7E838F), A GROUP HEADING
+//                            Thunar's section header in the text tone, Bold
+//                            12 W
+// NO FOCUS FRAME (architect 2026-10-23): the lit row is the only sign of
+// the highlight.
 // THE ROW'S DRAWING AND NAME, ON THE PAGE MARGIN (architect 2026-11-20,
 // send EE; modal_box.h's THE PAGE MARGIN the rule's owner, its 12 W pen
 // kPageMarginPenW; the row and its drawing Thunar's at 9 pt, measured on
@@ -8367,8 +8389,11 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // the drawing's canvas. A list row's drawing — Folder on a folder or
 // project row, ViewMediaTrack, the double notes, on a wav row (SOURCE's
 // drawing, architect 2026-11-02, R14 (4) / R15 (Q4)) — is the set's whole
-// 16 W canvas (kListDrawingBoxW) at the pen across and +2 W down
-// (kListDrawingYW), in the TEXT TONE on every face (the drawing unchanged
+// 16 W canvas (kListDrawingBoxW) at the pen across and CENTERED IN THE LIST
+// ROW down, (row − canvas) / 2 = +4 W in the 24 W row (kListDrawingYW,
+// derived from folder_overlay::kListRowW, never a second authored number;
+// +2 W in Thunar's 20 W row until 2026-11-21), in the TEXT TONE on every
+// face (the drawing unchanged
 // under the highlight, as Thunar's), its name 3 W after the canvas
 // (kListDrawingGapW, Thunar's: the pen 12 + 16 + 3 = 31 W); the name
 // Regular 12 W (GuiFace::Body) at the margin's pen itself in a listing
@@ -8376,8 +8401,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // trim presets, the BPM form: "all lists that don't have the player's
 // icons hold an empty space for an icon that doesn't exist", architect
 // 2026-10-28 night), a heading's name Bold 12 W (GuiFace::Bold) at that
-// pen in every listing; each on its row's line-box baseline, +14 W of the
-// 20 and +16 W of the 24 (folder_overlay::row_face / row_baseline_px, the
+// pen in every listing; each on its row's line-box baseline, +16 W of the
+// 24 and +18 W of the 28 (folder_overlay::row_face / row_baseline_px, the
 // seat the head pad reads too). NOTHING STANDS CLOSER THAN THE SAME 12 W
 // TO THE VIEW'S RIGHT EDGE: a name and a heading are cut there on their
 // own mask. THE LIT ROW'S BAR KEEPS THE VIEW'S WHOLE WIDTH. Every length a
@@ -8389,7 +8414,10 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // row Load in place and the highlight pair act on) and the TRANSPORT'S
 // ITEM, which its row does not mark (architect 2026-10-23).
 static constexpr double kListDrawingBoxW = 16.0;
-static constexpr double kListDrawingYW   = 2.0;
+static constexpr double kListDrawingYW =
+    (folder_overlay::kListRowW - kListDrawingBoxW) / 2.0;
+static_assert(kListDrawingYW == static_cast<double>(static_cast<int>(kListDrawingYW)),
+              "the list row's drawing centered in its row, a whole W down");
 static constexpr double kListDrawingGapW = 3.0;
 
 // ONE LIST VIEW: the rows of `ov` in the band `band` under the scroll
@@ -8401,7 +8429,8 @@ static constexpr double kListDrawingGapW = 3.0;
 // row's kind alone.
 static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                             const AppState::FolderOverlay& ov,
-                            const GuiRect& band, double scroll) {
+                            const GuiRect& band, double scroll,
+                            AppState::FaceFades& fades) {
     if (band.w <= 0 || band.h <= 0) return;
     if (!rects_intersect(exposed, band)) return;
     cairo_save(cr);
@@ -8438,6 +8467,36 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                                  !press.scrolling && press.row == index;
             const bool lit = !inert && (index == ov.highlight_row || pressed);
             if (lit) paint_cell_rect(cr, r, pal.selected_fill);
+            // THE ROW'S HOVER AS PAINTED (the block above): an acting row is
+            // a face of two looks; a lit one is no fading face (its record
+            // dropped, so it comes back to rest at once), an unlit one asks
+            // its look — Hover where it is the hovered face — and paints its
+            // stored mix, the hover tone's weight over the view's tone.
+            if (!inert) {
+                const AppState::FaceFades::Face face{
+                    AppState::FaceFades::Surface::ListRow, index,
+                    AppState::ModalDialogOwner::None, ov.listing};
+                if (lit) {
+                    fades.drop(face);
+                } else {
+                    const FaceMix m = fades.face_as_painted(
+                        face, r_hull,
+                        fades.hovered == face ? FaceLook::Hover
+                                              : FaceLook::Rest,
+                        true);
+                    const double w = m[FaceLook::Hover];
+                    if (w > 0.0) {
+                        const cairo_antialias_t was = cairo_get_antialias(cr);
+                        cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
+                        cairo_rectangle(cr, r.x, r.y, r.w, r.h);
+                        set_stamp_tone_source(
+                            cr, StampTone(pal.ruler_face, pal.list_hover_face,
+                                          w));
+                        cairo_fill(cr);
+                        cairo_set_antialias(cr, was);
+                    }
+                }
+            }
             // THE ROW'S TEXT SEAT: its kind's face, its baseline the row's
             // real top plus the kind's depth (folder_overlay.h's one
             // definition, the head pad's too), and the right cut, the page
@@ -8448,7 +8507,7 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
             const double text_end = r.x + r.w - static_cast<double>(margin);
             if (row.kind == AppState::FolderOverlayRow::Kind::Group) {
                 // THE HEADING: Bold 12 W in the text tone on the rows' pen,
-                // its line-box baseline in the 24 W row.
+                // its line-box baseline in the heading's own row.
                 const text_shape::ShapedRun run =
                     text_shape::shape_text_run(font, row.name);
                 const text_raster::XSpan head_span{r.x, text_end};
@@ -8520,7 +8579,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     paint_modal_box(cr, app, GuiRect{0, 0, 0, 0}, palette().ruler_face);
     paint_list_view(cr, exposed, app.folder_overlay,
                     folder_overlay::content_rect(app),
-                    app.folder_overlay.scroll_px);
+                    app.folder_overlay.scroll_px, app.face_fades);
     cairo_restore(cr);
 }
 

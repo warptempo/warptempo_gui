@@ -2459,7 +2459,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // scrub drag, the notification cards' hover and THE HOVER FACE'S LEAVE
     // (AppState::FaceFades: the face the pen hovered FADES OUT from this
     // edge, as Arc's does when the pointer leaves the widget — a key's, a
-    // word button's, an on-screen keyboard key's, the scrub's knob's — and
+    // word button's, an on-screen keyboard key's, the scrub's knob's, a list
+    // row's (architect 2026-11-21, send EE) — and
     // the pen latch clears; architect 2026-11-18 / 2026-11-20, send CC,
     // reopening 2026-10-02's no hover face). The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract

@@ -177,6 +177,12 @@
 // ONE OWNER, AppState::FaceFades (app_state.h), whose head holds the gate —
 // a face hovers only where a press there would act — and the frames' rule;
 // every painter below takes the mixes as numbers.
+// A LIST'S RESTING ROW HOVERS TOO — OURS, NOT ARC'S (architect 2026-11-21,
+// send EE: "I'd like to add hover, which I know is not canonical to Arc"):
+// `list_hover_face`, the buttons' own hover step laid on the list's view
+// (theme_roles.h's DERIVED block), across the lit bar's width, in at once
+// and out over Arc's 150 ms `row` transition (paint_handler.cpp's THE LIST
+// VIEW; AppState::FaceFades' THE LIST ROW'S HOVER).
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and the

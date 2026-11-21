@@ -86,6 +86,9 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     AppState::RenderPlayer&  rp = app.render_player;
     ov.rows.clear();
+    // A NEW LISTING (AppState::FolderOverlay::listing): the rows refilled
+    // are new faces, none of the last listing's fades carried onto them.
+    ov.listing = text_editor::next_session_id();
 
     auto folder_row = [](const std::string& name,
                          const std::filesystem::path& path) {
@@ -419,7 +422,7 @@ void GuiRenderPlayer::move_highlight(int delta) {
 }
 
 void GuiRenderPlayer::set_highlight(int index) {
-    if (folder_overlay::set_highlight(app, index)) {
+    if (folder_overlay::seat_tapped_row(app, index)) {
         damage_band();
         damage_row();
         abandon_paused_resume_if_band_left_item();
@@ -797,11 +800,19 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // row. The listing is walked rather than asked for a row index because
     // item_index names the ITEM FOLDER's wav list, which is not this listing
     // when the two differ.
+    // A BAND ALREADY ON THE ITEM'S ROW IS LEFT WHERE IT STANDS, its scroll
+    // untouched: that is the user's own play — the row's tap, whose seat
+    // scrolled nothing (folder_overlay::seat_tapped_row: THE PRESS NEVER
+    // SCROLLS, architect 2026-11-21, send EE), or Play on the highlighted
+    // row — and a keep-visible scroll here would move the list under the
+    // pen after the tap. Only a band the transport moves (Next, Previous,
+    // the folder's ends, the auto-advance) is brought into view.
     if (item_changed) {
         for (size_t i = 0; i < app.folder_overlay.rows.size(); ++i) {
             const Row& r = app.folder_overlay.rows[i];
             if (r.kind == Row::Kind::Wav && r.path == rp.item) {
-                folder_overlay::set_highlight(app, static_cast<int>(i));
+                if (app.folder_overlay.highlight_row != static_cast<int>(i))
+                    folder_overlay::set_highlight(app, static_cast<int>(i));
                 break;
             }
         }

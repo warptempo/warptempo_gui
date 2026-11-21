@@ -7006,10 +7006,14 @@ struct AppState {
     // (both icon rows), the dialog stash's buttons (every controls row's
     // keys and word buttons, a question's answers and the progress page's
     // Cancel among them; a line editor's sub-page has none), the
-    // on-screen keyboard's keys — and the scrub's knob, each named by its
+    // on-screen keyboard's keys — and the scrub's knob, AND A LIST'S ACTING
+    // ROWS (the folder overlay's, architect 2026-11-21, send EE: "I'd like
+    // to add hover, which I know is not canonical to Arc"; THE LIST ROW'S
+    // HOVER below), each named by its
     // surface and its index there (a dialog button's and the knob's with the
-    // stash's owner and session, so a face never outlives the surface it was
-    // read from; a keyboard key's index names its page); AND THE SEAMS of a
+    // stash's owner and session, a list row's with its listing, so a face
+    // never outlives the surface it was read from; a keyboard key's index
+    // names its page); AND THE SEAMS of a
     // linked group, each named by the face on its right with `seam` set
     // (Arc's naming: the line is the right key's inset box-shadow, gtk3 CSS
     // line 292, and that face's box holds the seam's columns).
@@ -7163,8 +7167,31 @@ struct AppState {
     // when the modal leaves (rest 200, lit 50), each from the picture on
     // screen; no page paints a roster key's look at once for being under a
     // veil. Not faces at all:
-    // NOISE's entry and its level line, list rows, the title bar's lamps,
+    // NOISE's entry and its level line, the title bar's lamps,
     // the trim bar, the cards, the tooltips.
+    // THE LIST ROW'S HOVER (architect 2026-11-21, send EE; the look at
+    // paint_handler.cpp's THE LIST VIEW, the tone theme_roles.h's
+    // `list_hover_face`): a list row is a face of TWO LOOKS, Rest and Hover,
+    // on Arc's `row` transition — INTO HOVER AT ONCE, OUT OF IT 150 ms on
+    // the one curve (duration_ms, kRowFadeMs). A ROW HOVERS IFF A TAP ON IT
+    // WOULD ACT (hover_face_live's ListRow arm: the press's own hit, row_at
+    // — never the head pad or the empty view under a short list — on an
+    // acting row, not a Group heading or a Disabled row) AND ITS LIST IS THE
+    // LIVE SURFACE (the overlay standing, no question's page or progress
+    // page in its place, no editor, its listing the one the face names);
+    // THE LIT ROW — the highlight, a row under press — IS NO FADING FACE:
+    // it wears the selection pair at once, its record dropped by its
+    // painter, so it comes back to rest at once too (the list's press and
+    // highlight have no transition of their own here). WHAT DOES NOT FADE
+    // FOR A ROW: a row first shown (no record); A ROW AFTER A SCROLL — its
+    // box moved, so the settle drops its record and its next paint is its
+    // look at once; A ROW OF ANOTHER LISTING — every rebuild of the rows is
+    // a new listing (FolderOverlay::listing), and the settle drops every row
+    // record whose listing is not the standing one, or once the list stands
+    // no more or is hidden; every row after a relayout or a theme change
+    // (drop_all). A hover edge's damage is the two rows' own boxes
+    // (face_extent), never the list: the row reached one frame (the step
+    // that lands it), the row left ceil(150 / 22.2) + 1 = 8 frames at most.
     // THE FRAMES — NOTHING IS DAMAGED AT REST: while a face fades, every step
     // of the clock that moves its stored mix damages THAT FACE'S OWN PAINTED
     // EXTENT (face_extent: a roster key's painted box, a dialog button's box,
@@ -7184,18 +7211,23 @@ struct AppState {
     // box as their target and nothing else (AppState::RedesignTooltip).
     // THE BOUND: `records` is reserved kCapacity at construction and never
     // grows past it — every roster key, the largest keyboard page's keys,
-    // every dialog button and the knob, and a seam each beside a linked key,
-    // are a few hundred at most — so the clock and the painters allocate
+    // every dialog button and the knob, a seam each beside a linked key, and
+    // the rows one list view shows (a scrolled-away row's record dropped by
+    // the settle), are a few hundred at most — so the clock and the painters allocate
     // nothing per tick or frame; a face past the bound paints its look at
     // once.
     struct FaceFades {
-        enum class Surface : uint8_t { None, Roster, Dialog, Keyboard, Knob };
+        enum class Surface : uint8_t { None, Roster, Dialog, Keyboard, Knob,
+                                       ListRow };
         // ONE FACE: its surface and its index there — Roster the roster
         // index (RedesignButton), Dialog the index into modal_dialog.buttons
         // with the stash's owner and session, Keyboard the key's index
         // (onscreen_keyboard::key_index, which names its page), Knob index 0
-        // with the stash's owner and session — or, with `seam`, THE SEAM ON
-        // THAT FACE'S LEFT. Compared whole.
+        // with the stash's owner and session, ListRow the folder overlay's
+        // row index with ITS LISTING in `dialog_session`
+        // (FolderOverlay::listing: a rebuilt list is another listing, so its
+        // rows are new faces) — or, with `seam`, THE SEAM ON THAT FACE'S LEFT
+        // (no list row has one). Compared whole.
         struct Face {
             Surface          surface        = Surface::None;
             int              index          = -1;
@@ -7217,10 +7249,19 @@ struct AppState {
         // its y at the parameter where its x is the elapsed fraction (x is
         // monotone, so the parameter is found by bisection, to under one part
         // in 10^12).
+        // A LIST ROW IS ARC'S `row` (gtk3 CSS lines 1254 .. 1258:
+        // `row:not(:hover) { transition: all 150ms cubic-bezier(0.25, 0.46,
+        // 0.45, 0.94) }`, the hovered row carrying none): INTO HOVER AT ONCE
+        // (0 ms, the clock's next step), OUT OF IT kRowFadeMs on the same
+        // curve. A row only ever records Rest and Hover (a lit row is no
+        // fading face, paint_list_view).
         static constexpr int64_t kCheckedFadeMs = 50;
         static constexpr int64_t kFadeMs        = 200;
+        static constexpr int64_t kRowFadeMs     = 150;
         static int64_t duration_ms(Surface s, FaceLook destination) {
             if (s == Surface::Knob) return kFadeMs;
+            if (s == Surface::ListRow)
+                return destination == FaceLook::Hover ? 0 : kRowFadeMs;
             return face_look_checked(destination) ? kCheckedFadeMs : kFadeMs;
         }
         static double ease(double t) {
@@ -7392,6 +7433,13 @@ struct AppState {
         // EVERY RECORD DROPPED (the head's WHAT DOES NOT FADE): the next
         // paint of every face its look at once.
         void drop_all() { records.clear(); }
+        // ONE FACE'S RECORD DROPPED: a list row painted lit (the highlight,
+        // a row under press) is no fading face — its next unlit paint its
+        // look at once (paint_list_view).
+        void drop(const Face& face) {
+            std::erase_if(records,
+                          [&](const Record& r) { return r.face == face; });
+        }
     };
     FaceFades face_fades;
 
@@ -9525,6 +9573,14 @@ struct AppState {
         double             scroll_px     = 0.0;
         int                highlight_row = -1;
         FolderOverlayPress press;
+        // THE LISTING'S IDENTITY (architect 2026-11-21, send EE: the list
+        // rows' hover, AppState::FaceFades' THE LIST ROW'S HOVER): minted
+        // from the one session counter at every construction — every
+        // `= FolderOverlay{}` rebuild and close — and again by the two
+        // builders that refill `rows` in place (the trim presets' re-list,
+        // build_trim_presets_rows; the render player's, rebuild_rows), so
+        // a row of one listing is never a face of the next.
+        uint64_t           listing       = text_editor::next_session_id();
     };
     FolderOverlay folder_overlay;
 
