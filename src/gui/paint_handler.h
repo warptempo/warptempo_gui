@@ -94,7 +94,7 @@ std::string status_bar_text(AppState& app);
 // both strips flush with them since 2026-10-23.)
 
 // A LINE EDITOR'S ONE LABEL IS ITS VALUE'S NAME, over its entry on the
-// value sub-page (architect 2026-11-20, send EE; paint_handler.cpp's THE
+// value sub-page (architect 2026-11-20; paint_handler.cpp's THE
 // VALUE SUB-PAGE): the settings key, the BPM field's key, "Save As". (The
 // generic labels — the Settings editor's "Setting:", "pointless that far
 // away. just remove it", and the BPM editor's "BPM:", "drop" — went
@@ -384,7 +384,8 @@ struct WaveformCache {
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
 // foot) — the ruler lane, the marker lane and the foot line, 34 + 32 + 2 =
 // 68 device rows on the tablet at 200 % where the whole strip from row 0 is
-// 236 at key_height 28 (re-derived 2026-11-20, send EE). Every cue pixel is
+// 236 at key_height 28 (the icon rows' 7 W pads, architect 2026-11-20).
+// Every cue pixel is
 // inside the marker lane's rows BY THE PAINTER'S OWN CLIP, not by a bound on
 // the font: paint_cues (render.cpp) paints every label's text and strike
 // and every chip under ONE clip of the lane's rows over the waveform's
@@ -1307,7 +1308,7 @@ private:
     // bar too; the outer Cairo damage clip bounds the actual work. See the
     // definition for the basis contract.
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
-    // THE SELECTION STEM (architect 2026-11-05, his pick a2 of tmp/s42,
+    // THE SELECTION STEM (architect 2026-11-05, his pick a2 of session 42,
     // reversing 2026-11-04's coincidence stem) — the per-frame waveform
     // overlay: on every published entry, a SOLID ONE-W `cue_outline` line
     // down the canvas's whole height at the entry's exact place (render.h's
@@ -1386,11 +1387,11 @@ private:
     // THE PROGRESS PAGE, the box's view the page and their answers word
     // buttons on that row; and a line editor's VALUE SUB-PAGE, the box's
     // view the page, its label and one entry on it and no button (architect
-    // 2026-11-20, send EE); the
+    // 2026-11-20); the
     // bottom icon row's own painter yields the lane to it while an overlay
     // or a question's or the progress page stands
     // (modal_owns_bottom_row); everything it lays cut at the on-screen
-    // keyboard's top line while that stands (send EE). Painted from on_redraw
+    // keyboard's top line while that stands. Painted from on_redraw
     // right after the keyboard slot,
     // unconditionally: it publishes AppState::modal_dialog and
     // AppState::dialog_editor_text, the geometry the pointer path's veil,
@@ -1402,7 +1403,7 @@ private:
     // band across the program lanes on the window's last rows, its block of
     // keys seated in it, standing over the canvas's foot, the bottom icon row
     // and the status bar, nothing relaid (onscreen_keyboard.h's placement
-    // block, its inventory of what yields under it; send EE, 2026-11-20). It
+    // block, its inventory of what yields under it; architect 2026-11-20). It
     // paints AFTER every waveform pass and BEFORE the modal and the floating
     // surfaces: the flag editor in the marker lane and a line editor's
     // label and entry at the box's view's head stand above its top line,
@@ -1417,7 +1418,7 @@ private:
     // the outer Cairo clip would NOT elide, and a
     // narrow per-frame damage must not pay for them — the caret blink damages
     // the editor's box every half second above it (no play runs under an
-    // editor, every editor's open stopping it, architect 2026-11-20, send EE).
+    // editor, every editor's open stopping it, architect 2026-11-20).
     //
     // It publishes no geometry: the press router derives its rects from the
     // same walker this does, so there is no stash for a skipped run to strand.
@@ -1450,8 +1451,8 @@ private:
     // selection pair, all under the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
     // — and NOT PAINTED UNDER A QUESTION'S PAGE OR THE PROGRESS PAGE, either
-    // standing in the list's place (modal_page_stands; architect 2026-11-20,
-    // send EE) —
+    // standing in the list's place (modal_page_stands; architect
+    // 2026-11-20) —
     // and then on its own exposure per row, as the keyboard is. It publishes
     // no geometry: the press router walks the same row table through the same
     // walker (folder_overlay::for_each_row / row_at).

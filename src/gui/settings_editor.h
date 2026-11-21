@@ -26,7 +26,7 @@ struct GuiInputHandler;
 // editor ON THAT ROW'S KEY, ITS ENTRY PREFILLED WITH THE VALUE THE KEY HOLDS,
 // the caret at its end. It is the flag editor's primitive (text_editor::State,
 // kind-dispatched keyboard vocabulary, the whole text selected and a card on
-// a refusal) painted AS THE VALUE SUB-PAGE (architect 2026-11-20, send EE:
+// a refusal) painted AS THE VALUE SUB-PAGE (architect 2026-11-20:
 // "a subpage where if the user clicks on a value a single line text input is
 // shown ... on that page, the only controls are the osk's esc and enter";
 // paint_handler.cpp's THE VALUE SUB-PAGE, the owner): the box's view one
@@ -40,16 +40,15 @@ struct GuiInputHandler;
 // ONLY CONTROLS, the entry's text alone live beside them (a tap or a drag
 // seats the caret).
 // THE ENTRY IS ONE LINE AND A VALUE
-// LONGER THAN IT SCROLLS SIDEWAYS, GTK'S WAY (architect 2026-11-19, send AA,
-// reversing
-// 2026-10-14's "long lines can wrap": "The pen does have a good way to
+// LONGER THAN IT SCROLLS SIDEWAYS, GTK'S WAY (architect 2026-11-19, never a
+// wrapped line: "The pen does have a good way to
 // scroll, and those are the left and right arrows of the keyboard. That's
 // exactly why they're there."): the text cut at the entry's inner edges and
 // scrolled just enough to keep the caret in view, the keyboard's LEFT /
 // RIGHT and their hold-repeat the scroll's road, a tap seating the caret
 // through the offset (text_editor::State::view_offset_px).
 //
-// THE ENTRY HOLDS THE VALUE ALONE (architect 2026-11-19, send AA, asked
+// THE ENTRY HOLDS THE VALUE ALONE (architect 2026-11-19, asked
 // whether the key could no longer be retyped, the line's retyping being the
 // only typed road to the keys the page lists no editable row for: "One,
 // agree." — Z_06's "25", the BPM form's field's shape). The key is the
@@ -78,7 +77,7 @@ struct GuiInputHandler;
 // AUTOCOMPLETE MODEL (route_modal_editor_key, input_key_dispatch.cpp: a Tab
 // that advanced the buffer and one that did not are both consumed — a
 // second Tab, or a Tab that completes nothing, is silent, the sub-page
-// having no button to walk to; Tab shows no list, the popups being gone — THE LISTS
+// having no button to walk to; Tab shows no list — THE LISTS
 // are the settings page's keys and THE VALUE LISTS, a listed key's values in
 // the folder overlay (kSettingsValueListKeys below), opened by the page's
 // row for that key, never by Tab, a pick committing through this editor's
@@ -272,8 +271,8 @@ struct GuiInputHandler;
 // two as DISABLED rows, architect 2026-10-29, "bpm and scale should be
 // viewable but disabled. they are useful for notes", and they stay out of
 // this table, so the page's rows never offer them to the line editor;
-// kSettingsPagePieceKeys below; architect 2026-11-19, send AA, the line's
-// typed road to every key off this table retired); a key added to the
+// kSettingsPagePieceKeys below; architect 2026-11-19: the entry holds the
+// value alone, so no key off this table has a typed road); a key added to the
 // product's editable set joins this table by hand. A KEY SHOWN AND EDITED ON
 // THE MAIN PAGE GETS NO SETTINGS ROW (architect 2026-11-05 night, session
 // 49): the level, `noise_level`, is seen and set on the band's NOISE case
@@ -429,8 +428,8 @@ struct GuiSettingsEditor {
           playback_lifecycle(playback_lifecycle_),
           notifications(notifications_) {}
 
-    // THE ONE OPEN (the head, architect 2026-10-28; the value alone since
-    // 2026-11-19, send AA): the editor on `key`, an editable row's key that
+    // THE ONE OPEN (the head, architect 2026-10-28; the value alone,
+    // architect 2026-11-19): the editor on `key`, an editable row's key that
     // opens no value list (GuiInputHandler::settings_page_commit, its one
     // caller, after the page's close; asserted), its entry prefilled with
     // THE VALUE THE KEY HOLDS (setting_value, the writer's spelling), landed
@@ -439,7 +438,7 @@ struct GuiSettingsEditor {
     // selected. It RECORDS THE KEY (page_key, below).
     void open(const std::string& key);
     // THE OPEN'S KEY (architect 2026-10-28 night, the editor a sub-page of
-    // the settings page; 2026-11-19, send AA, the key the commit writes):
+    // the settings page; 2026-11-19, the key the commit writes):
     // recorded by open() and read by commit(), which composes the
     // assignment from it and the entry's value, and by the one return hook
     // (GuiInputHandler::handle_settings_editor_key), which reopens the page
@@ -506,10 +505,10 @@ struct GuiSettingsEditor {
     // IT RETURNS WHETHER THE BUFFER CHANGED, which is the ONE AUTOCOMPLETE
     // MODEL's whole question (architect 2026-08-13: "we should use one model
     // for all autocompletes" — Tab offers the completion and is silent when
-    // it did not advance, architect 2026-11-20, send EE; the rule is stated
-    // once at route_modal_editor_key's Tab arm, input_key_dispatch.cpp, and
-    // the typed `=` this completion rode for part of that first day is
-    // reverted with it). Every no-op answers false, so each is a Tab that
+    // it did not advance, architect 2026-11-20; the rule is stated once at
+    // route_modal_editor_key's Tab arm, input_key_dispatch.cpp, and the
+    // typed `=` this completion rode for part of that first day is reverted
+    // with it). Every no-op answers false, so each is a Tab that
     // does nothing.
     bool autocomplete_value();
 
@@ -525,10 +524,11 @@ struct GuiSettingsEditor {
     // (GuiInputHandler::value_list_commit) for `true_colors`, `theme`
     // (2026-11-05), `waveform_grow` (2026-10-31), `noise`,
     // `noise_crossfade_s` and `icons` (2026-11-17), each key reaching it by
-    // its one door since the line's key is its row's (architect 2026-11-19,
-    // send AA) — one body per key (the head's item 1). The key's grammar decides, a refusal printed and
-    // carded ("Settings edit rejected: <reason>"); a value the key already
-    // holds is the unchanged no-op, a stderr line and nothing written;
+    // its one door since the line's key is its row's (architect 2026-11-19)
+    // — one body per key (the head's item 1). The key's grammar decides, a
+    // refusal printed and carded ("Settings edit rejected: <reason>"); a
+    // value the key already holds is the unchanged no-op, a stderr line and
+    // nothing written;
     // otherwise the live struct takes it, the key's live apply runs and the
     // device config is written (persist_device_config: a failure cards, the
     // live value standing for the session), with a card on success for

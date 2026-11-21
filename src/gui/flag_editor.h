@@ -45,7 +45,7 @@ struct GuiFlagEditor {
     // (GuiOpRefusal, warpmarkers_ops.h).
     GuiNotifications&     notifications;
     // THE OPENS' STOP AND THE CHANGED WRITES' STOP. Every editor's open stops
-    // play through the modal-open stop (architect 2026-11-20, send EE: "play
+    // play through the modal-open stop (architect 2026-11-20: "play
     // should stop on editor open. i don't use that workflow and never have";
     // enter_text_edit and enter_iter_bound_edit, the decision table at
     // stop_playback_for_modal_open's declaration); a write that changes a
@@ -87,7 +87,7 @@ struct GuiFlagEditor {
     // WHOLE LINE, the payload the editor above opens on — tempo, scale,
     // labels — and never the position or the disabled bit, which stay each
     // marker's own. For every member of the live selection, in the store's
-    // order, `clipboard_text` replaces that line as select-all, paste and OK
+    // order, `clipboard_text` replaces that line as select-all, paste and Enter
     // in the marker's own editor would: through the one incoming filter and
     // the kind's byte cap (text_editor::replace_selection on a scratch
     // session) and through the commit's one judgment and write (the body
@@ -103,7 +103,7 @@ struct GuiFlagEditor {
     // clipboard read.
     void paste_payload_onto_selection(const std::string& clipboard_text);
 
-    // THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21, send EE: "I'd like
+    // THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21: "I'd like
     // to consider adding an up and down key so that we can also do tempo
     // step. And I'd like to make the pass button a toggle inherit, a true
     // toggle inherit. So both of those will be contingent upon a well-formed
@@ -121,9 +121,9 @@ struct GuiFlagEditor {
     // the rest; NOTHING IS COMMITTED (the keyboard's Enter commits the
     // rewritten text through the editor's own road, its Esc throws it away),
     // the store, its undo and the playhead untouched. THE KEYS READ THE TEXT
-    // AS IF IT WERE THE MARKER'S COMMITTED FLAG (architect 2026-11-20 / 21,
-    // send EE: "a true toggle inherit that works just like the one in the
-    // main window does"): each gives what committing the text and pressing
+    // AS IF IT WERE THE MARKER'S COMMITTED FLAG (architect 2026-11-20 / 21:
+    // "a true toggle inherit that works just like the one in the main
+    // window does"): each gives what committing the text and pressing
     // the main page's key would give, the tempo a `pass` text sounds at read
     // off the store with the row under edit replaced by the parsed text
     // (resolved_as_if_committed, flag_editor.cpp, where its construction,
@@ -191,12 +191,12 @@ struct GuiFlagEditor {
     // NOTHING TO COMPLETE IS SILENT — an empty text, no candidate, a text
     // already at the candidates' common run, a text that is no reference's
     // start (garbage, an owner, a definition): the one autocomplete model's
-    // rule (route_modal_editor_key, architect 2026-11-20, send EE). It needs
+    // rule (route_modal_editor_key, architect 2026-11-20). It needs
     // no well-formed string — a reference's start is never one — so it
     // cards nothing.
     bool complete_label_reference();
 
-    // THE ITERATION BOUND EDITOR'S ONE ENTRY (the seventh text_editor Kind,
+    // THE ITERATION BOUND EDITOR'S ONE ENTRY (text_editor::Kind::IterBound,
     // architect 2026-09-05: "each should be like a mini flag with its own
     // double-click" — its double tap, or EDIT on the addressed cell).
     // `column` is 'P' for the phase-reset store and anything
@@ -211,7 +211,7 @@ struct GuiFlagEditor {
     // `+0` on a blank bracket, the column deciding) fully selected.
     // A modal (keyboard, pointer and touch since 2026-10-25) whose open stops
     // play past its guards, as every editor's open does (architect
-    // 2026-11-20, send EE; stop_playback_for_modal_open). Read-only refuses
+    // 2026-11-20; stop_playback_for_modal_open). Read-only refuses
     // at the callers, as the flag editor's open does.
     void enter_iter_bound_edit(char column, int idx, MarkerCell side);
     // Commit the open bound session, ON THE LIVE COLUMN (which is the open's
@@ -236,8 +236,8 @@ struct GuiFlagEditor {
     // editor's buffer on a BpmField session (AppState::settings_editor,
     // `target` the field, GuiBpmField) judged and written onto the BPM
     // owner's field. THE BUFFER IS THE FIELD'S VALUE ALONE, the key the
-    // row's own (kBpmFieldKeys; architect 2026-11-19, send AA, the line
-    // editor's value under the field's label); an EMPTY value CLEARS the
+    // row's own (kBpmFieldKeys; architect 2026-11-19, the line editor's
+    // value under the field's label); an EMPTY value CLEARS the
     // field (zero, its unset sentinel); any other value is judged by THE
     // FIELD'S OWN READER (read_bpm_beats, read_bpm_tempo — warpmarkers.h). A
     // refusal leaves the editor standing, its value selected whole, one

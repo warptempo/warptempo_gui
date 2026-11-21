@@ -11,11 +11,11 @@
 // top, EVERY CARD IN THE STACK VISIBLE, UP TO kNotificationMaxLines lines of
 // the one sans.
 //
-// THE LOOK IS XFCE4-NOTIFYD'S BUBBLE UNDER ARC (architect 2026-11-19, send
-// Z: "Agree" to "normal cards the grey notifyd bubble, standing cards Arc's
-// red", and "good to build" on tmp/sendZ/VIEW/Z_07; DESIGN §6 / §9, built in
-// send AA's stage D1): A ROUNDED BOX (kNotificationRadiusW), NO BORDER, NO
-// SHADOW (notifyd draws none, measured), ITS FILL A CARRIED FILL AT ITS
+// THE LOOK IS XFCE4-NOTIFYD'S BUBBLE UNDER ARC (architect 2026-11-19:
+// "Agree" to "normal cards the grey notifyd bubble, standing cards Arc's
+// red", and "good to build" on the approved picture Z_07): A ROUNDED BOX
+// (kNotificationRadiusW), NO BORDER, NO SHADOW (notifyd draws none,
+// measured), ITS FILL A CARRIED FILL AT ITS
 // OPACITY OVER WHAT LIES UNDER IT (theme_roles.h's CARRIED block; the
 // canvas's pixels composited by the GPU, canvas_sink.h's THE TRANSPARENCY
 // INVARIANT) — A NORMAL (timed) CARD notifyd's grey `card_fill` (arc_dark
@@ -53,7 +53,7 @@
 // PROGRESS IS THE PROGRESS MODAL'S since 2026-10-14 (the progress page:
 // "Rendering...", the bar and "X of Y" in the modal family's box from the
 // Render press to the batch's terminal, AppState::BatchProgress), THE STATUS
-// BAR BLANK UNDER IT (architect 2026-11-20, send EE: the page says what the
+// BAR BLANK UNDER IT (architect 2026-11-20: the page says what the
 // sweep's own line, "Rendering N of M <label>...", would; status_bar_text);
 // on the main page the line is a single
 // render's "Rendering..." and a preview's "Updating..."; an
@@ -170,7 +170,7 @@
 //     "Edit rejected: …", "Range bound rejected: …", the flag editor's
 //     extra keys' "The flag is not well formed: …" / "The bound is not well
 //     formed: …" (UP, DOWN and the pass key on a text the commit's parse
-//     refuses, architect 2026-11-20 / 21, send EE; their kind refusals the
+//     refuses, architect 2026-11-20 / 21; their kind refusals the
 //     main page's step's own sentences, GuiFlagEditor::step_editor_text),
 //     and the BPM form's
 //     "BPM edit rejected: …" — its line's three (the row's key, the beats
@@ -804,9 +804,9 @@ inline std::string lowercase_initial(std::string_view s) {
 }
 
 // THE CARD'S WIDTH IS ITS CONTENT'S, UNDER THE CEILING BELOW AND NO FLOOR
-// (architect 2026-11-19, send AA: "agree" — RULINGS §8, each card its text's
-// width, notifyd's way, as the approved picture tmp/sendZ/VIEW/Z_07 drew the
-// struck card at its content's 363 device px): the box is the chrome plus the
+// (architect 2026-11-19: "agree" — each card its text's width, notifyd's
+// way, as the approved picture Z_07 drew the struck card at its content's
+// 363 device px): the box is the chrome plus the
 // whole sentence's shaped width, ceiled to the whole px that contains it
 // (paint_notifications), clamped only by notification_card_max_w_px. Two
 // sentences of different widths are two widths of card ("There is nothing to
@@ -874,10 +874,10 @@ inline constexpr int kNotificationMaxLines = 3;
 //     beside it, nothing reflows);
 //   THE RADIUS — 2 W at each corner (Arc's);
 //   THE SEAT — notifyd's `#define SPACE 16`, off the screen's top and right
-//     (his panel is at the bottom; measured on his desktop,
-//     tmp/sendY/NUMBERS_dialogs.md §11): the stack's first card's top 16 W
-//     under the window's first row and every card's right edge 16 W inside
-//     the window's last column (notification_stack_bound).
+//     (his panel is at the bottom; measured on his desktop): the stack's
+//     first card's top 16 W under the window's first row and every card's
+//     right edge 16 W inside the window's last column
+//     (notification_stack_bound).
 inline constexpr double kNotificationPadW       = 14.0;
 inline constexpr double kNotificationGlyphBoxW  = 16.0;
 inline constexpr double kNotificationRadiusW    = 2.0;
@@ -927,18 +927,18 @@ int notification_card_max_w_px(const AppState& a);
 // notification margin"; notifyd's SPACE 16 off the screen's top and right,
 // the block above) — DOWN TO THE PANEL'S PAD OF AIR (folder_overlay::pad_px,
 // one W) ABOVE THE BOTTOM ROW'S LANE, or above THE ON-SCREEN KEYBOARD'S TOP
-// LINE while it stands, whichever is higher (architect 2026-11-20, send EE:
-// the keyboard stands over the bottom icon row, onscreen_keyboard.h's
+// LINE while it stands, whichever is higher (architect 2026-11-20: the
+// keyboard stands over the bottom icon row, onscreen_keyboard.h's
 // placement block; the cards paint after it, so the room's foot is what
 // keeps a card off its keys). On the tablet: rows 32 .. 1307 (the bottom
 // icon row's first row 1310 less the 2-row pad; 32 .. 1045 under the
 // keyboard at his tuning, its top line on 1048, 32 .. 1095 at the defaults,
-// on 1098), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title bar and the top icon row paint
-// whole under a card, its .95 fill over them; a press on a card is the
-// card's (claim_notification_press ranks above every claim and veil), so a
-// key, the struck clip lamp's square or any chrome under it answers nothing
-// while it stands there, and no key under it starts a tooltip
-// (recompute_redesign_button_hover's under_card).
+// on 1098), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title
+// bar and the top icon row paint whole under a card, its .95 fill over
+// them; a press on a card is the card's (claim_notification_press ranks
+// above every claim and veil), so a key, the struck clip lamp's square or
+// any chrome under it answers nothing while it stands there, and no key
+// under it starts a tooltip (recompute_redesign_button_hover's under_card).
 // WORKED ON THE TABLET (2304 x 1440 at 200 %, key_height 28; the advances
 // MEASURED off fonts/LiberationSans-Regular.ttf at 24 px the product's way —
 // unhinted hmtx advances and the GPOS `kern` pairs, each to 1/64 px, which

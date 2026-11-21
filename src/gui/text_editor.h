@@ -44,8 +44,8 @@
 //     (Ctrl+C / Ctrl+V, the two keys' own ctrl), and since 2026-11-08
 //     (sessions 95 / 96) LEFT and RIGHT — the caret, and with the latched
 //     Shift the selection. (The keyboard's pass key, UP and DOWN are the
-//     marker lane editor's own whole-text acts since 2026-11-20 / 21, send
-//     EE, through this module's incoming filter but not its keymap —
+//     marker lane editor's own whole-text acts, architect 2026-11-20 / 21,
+//     through this module's incoming filter but not its keymap —
 //     GuiFlagEditor's step_editor_text and toggle_inherit_editor_text.)
 //     THE BARREL HAS NO ROAD ON ANY
 //     KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session 94): its
@@ -189,7 +189,7 @@ constexpr int kMaxPendingCharsIterHop = 2;
 // THE BPM FORM'S FIELDS (architect 2026-10-29), ONE CAP PER FIELD, the
 // session's `target` naming the field (GuiBpmField, warpmarkers.h — the
 // field's key and its reader there are the grammar's one owner). THE BUFFER
-// IS THE FIELD'S VALUE ALONE (architect 2026-11-19, send AA: "I agree with
+// IS THE FIELD'S VALUE ALONE (architect 2026-11-19: "I agree with
 // your recommendation" — the line editor shows the value under the field's
 // label, Z_06's shape), the key the row's own and never typed, so each cap
 // is its value's widest spelling:
@@ -225,9 +225,8 @@ constexpr int kMaxPendingCharsBpmField[3] = {
 // tight against. Sized for the free-text provenance fields (url, notes),
 // which are generous for a typical URL or note. The scalar keys are still
 // bounded by their commit-time validators, not by this cap. THE CAP BOUNDS
-// THE VALUE ALONE since the entry holds no key (architect 2026-11-19, send
-// AA: "One, agree."): 1024 bytes of value, where the `key=value` line it
-// bounded before left a value 1024 less its key and `=` (1018 for `notes`).
+// THE VALUE ALONE, the entry holding no key (architect 2026-11-19: "One,
+// agree."): 1024 bytes of value, never 1024 less a key and `=`.
 // No file reader caps a value's length, so a wider on-disk value still
 // loads, shows on the settings page's row and persists unchanged; the
 // editor's prefill of it, a growth past the cap through the one incoming
@@ -235,7 +234,7 @@ constexpr int kMaxPendingCharsBpmField[3] = {
 // and the entry opens empty.
 //
 // THE LINE EDITORS' ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY
-// (architect 2026-11-19, send AA: "The pen does have a good way to scroll,
+// (architect 2026-11-19: "The pen does have a good way to scroll,
 // and those are the left and right arrows of the keyboard. That's exactly
 // why they're there."), so a value as long as this cap travels through the
 // value sub-page's entry on `view_offset_px` below (paint_handler.cpp's THE
@@ -256,7 +255,7 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // canonical payload — tempo, scale, labels, never a bracket); the BPM
 // form's line editor uses BpmField (the value of one of the form's three
 // fields); the settings-prompt editor uses SettingsAssignment (the value of
-// the settings page row's key, the value alone since 2026-11-19, send AA:
+// the settings page row's key, the value alone, architect 2026-11-19:
 // "One, agree."; the key the open's, never typed); the trim preset's name
 // editor uses TrimPresetName (free
 // text, the name); and the ITERATION BOUND editor uses IterBound (the text of one of the two
@@ -275,7 +274,7 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // IterBound) share the flag editor's State and paint in the marker lane.
 // BpmField (architect 2026-10-29) is THE BPM FORM'S LINE EDITOR, a row's tap
 // on the form (GuiInputHandler::bpm_form_commit): opened prefilled with the
-// row's value (architect 2026-11-19, send AA), `target` the field
+// row's value (architect 2026-11-19), `target` the field
 // (GuiBpmField, warpmarkers.h), its commit
 // the field's (GuiFlagEditor::commit_bpm_field), its close returning to the
 // form; it retired the bracket line `<beats>@[<lo>,<hi>]` and the kind that
@@ -331,8 +330,10 @@ enum class Kind {
 // AppState::ModalDialogOwner (app_state.h), which is the modal surfaces' ONE
 // authoritative enumeration and where a new one is added: the PROMPT
 // (PromptState::present, app_state.h), the RENDER PLAYER
-// (GuiRenderPlayer::open) and the PICKER
-// (GuiInputHandler::open_project_picker).
+// (GuiRenderPlayer::open), the PICKER
+// (GuiInputHandler::open_project_picker), the PROGRESS PAGE
+// (GuiInputHandler::open_batch_progress) and the SCORE VIEWER
+// (GuiScoreViewer::open).
 // So the ids never collide across the classes and one integer compare answers
 // "is this published geometry the surface that owns input right now" (the
 // doctrine and the comparison's one owner are at
@@ -412,9 +413,9 @@ struct State {
     // edge.
     //
     // ITS PAINTER WRITES IT AND READS IT, ONE PER EDITOR STATE: the marker
-    // lane's (render_flag_editor_box) for the flag editor, and since
-    // 2026-11-19 (architect, send AA) the value sub-page's
-    // (paint_handler.cpp's paint_value_page) for the line editor,
+    // lane's (render_flag_editor_box) for the flag editor, and the value
+    // sub-page's (paint_handler.cpp's paint_value_page; architect
+    // 2026-11-19) for the line editor,
     // whose one-line entry scrolls sideways, GtkEntry's adjust_scroll: the
     // offset clamped to the run's own travel past the entry's inner width,
     // then moved only when the caret would leave that width, by just enough.
@@ -545,8 +546,8 @@ enum class KeyClass {
     NotEditorKey,   // not the editor's — the keyboard-modal gate drops it
     SessionKey,     // BARE Escape, Return — end the session, never repeat
     ChordKey,       // CTRL-EXACT C/V (Copy, Paste) — one-shot
-    // (InsertKey, the pass key typing `pass`, stood 2026-11-08 to 2026-11-20
-    // / 21: the key became the flag editor's Toggle Inherit, send EE.)
+    // (The pass key is no class of this module's: NotEditorKey, the flag
+    // editor's Toggle Inherit on its text, architect 2026-11-20 / 21.)
     // BackSpace, BARE, and LEFT / RIGHT, bare or SHIFT-ONLY (architect
     // 2026-11-08, sessions 95 / 96) — repeat. Any other modifier is
     // NotEditorKey.
@@ -589,8 +590,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods);
 // hands over rather than repeating the ladder (its own contribution is the
 // KeyAction::OverCapacity it returns when this refuses), and THE FLAG
 // EDITOR'S EXTRA KEYS' WHOLE-TEXT REWRITES (the tempo step, the Toggle
-// Inherit and the label reference's completion, architect 2026-11-20 / 21,
-// send EE; GuiFlagEditor, flag_editor.cpp). Its
+// Inherit and the label reference's completion, architect 2026-11-20 / 21;
+// GuiFlagEditor, flag_editor.cpp). Its
 // acceptance rule:
 //   - PRINTABLE ASCII (0x20..0x7e) passes.
 //   - WELL-FORMED MULTI-BYTE UTF-8 passes verbatim — the sequence's length

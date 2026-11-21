@@ -233,8 +233,8 @@ std::optional<std::string> recall_setting_value(const AppState& app,
 // (read_only_key_blocked's is_settings_page), which the iteration gate
 // inherits, and the band's Settings button — the chord's pointer spelling —
 // stays lit under both, so a locked ACTIVE tab keeps its road to the device
-// keys. The entry holds THE OPENED KEY'S VALUE ALONE (architect 2026-11-19,
-// send AA: "One, agree."): nothing typed names another key, so no key
+// keys. The entry holds THE OPENED KEY'S VALUE ALONE (architect 2026-11-19:
+// "One, agree."): nothing typed names another key, so no key
 // without an editable row — a tab's read-only bit, the view keys, the
 // per-tab band, the score's range and positions, `scale` and `bpm` — has a
 // road through this editor; each has its own lever (the head). THE ONE LOCK
@@ -791,7 +791,7 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. The key is the open's, one
-// of the line editor's rows (architect 2026-11-19, send AA), so the six
+// of the line editor's rows (architect 2026-11-19), so the six
 // listed keys' arms below are reached through the list's door alone.
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
@@ -1030,10 +1030,10 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // COMMIT — the live struct, then the one live act
     // (GuiInputHandler::apply_osk_key_size: the renderer's seat and the window
     // repainted at once, the box moving the keyboard's surface alone, which
-    // moves no lane) — and persisted, so NO CARD: the keyboard standing under this very
-    // editor is the answer. The page opens the line editor on each (no value
-    // list, 137 values no short domain); Tab on an empty entry recalls the
-    // writer's spelling (recall_gui_setting_value).
+    // moves no lane) — and persisted, so NO CARD: the keyboard standing
+    // under this very editor is the answer. The page opens the line editor
+    // on each (no value list, 137 values no short domain); Tab on an empty
+    // entry recalls the writer's spelling (recall_gui_setting_value).
     if (key == "osk_key_w" || key == "osk_key_h") {
         const std::optional<int> px = parse_osk_key_size(value);
         if (!px) return reject(kOskKeySizeGrammarReason);

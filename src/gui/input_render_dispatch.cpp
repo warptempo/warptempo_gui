@@ -669,7 +669,7 @@ void GuiInputHandler::set_batch_progress_index(int index) {
     if (!bp.active || bp.index == index) return;
     bp.index = index;
     // A STEP'S DAMAGE IS WHAT IT CHANGES — THE BAR'S ROWS THROUGH THE COUNT'S
-    // LINE, NOT THE PAGE (architect 2026-11-20, send EE; modal_box.h's
+    // LINE, NOT THE PAGE (architect 2026-11-20; modal_box.h's
     // ModalPageLines::step: the bar's rows through the count's line box
     // across the view, rows 203..252 on the tablet): the done part of the
     // bar and the count's digits are the two things a step moves, the
@@ -699,7 +699,7 @@ void GuiInputHandler::swap_batch_progress_for_player() {
     // (on_button_release's player branch takes -1 and dispatches nothing). A
     // press held anywhere else on the page armed nothing to drop: the veil
     // consumed it.
-    // ONLY THE PROGRESS PAGE'S OWN ARM (architect 2026-11-20, send EE): the
+    // ONLY THE PROGRESS PAGE'S OWN ARM (architect 2026-11-20): the
     // arm is a slot of the painted stash (AppState::modal_dialog_pressed), so
     // the stash's owner says whose button it names. UNDER A QUESTION STANDING
     // OVER THE PROGRESS PAGE the stash is the question's and the arm one of
@@ -869,7 +869,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                   batch_.next_index + 1, total,
                   batch_.label.c_str());
     // (ON SCREEN THE BATCH IS THE PROGRESS PAGE'S (architect 2026-10-14;
-    // 2026-11-20, send EE): its count above, the page in the view — and THE
+    // 2026-11-20): its count above, the page in the view — and THE
     // STATUS BAR IS BLANK UNDER IT, the page saying what this line would
     // (status_bar_text, paint_handler.cpp). The line is still written into
     // the slot at each dispatch and taken down at the terminal by the

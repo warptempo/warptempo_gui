@@ -802,7 +802,7 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // when the two differ.
     // THE ROW'S TAP IS THE ONE PLAY THAT SCROLLS NOTHING (`tapped`, passed
     // down from the row's lift through open_row; THE PRESS NEVER SCROLLS,
-    // architect 2026-11-21, send EE — the ruling bans a scroll at a row's tap
+    // architect 2026-11-21 — the ruling bans a scroll at a row's tap
     // and nowhere else): that lift has already seated the highlight on the
     // tapped row with the scroll untouched (folder_overlay::seat_tapped_row,
     // the row under the pen, partly cut or whole as the user left it), and a

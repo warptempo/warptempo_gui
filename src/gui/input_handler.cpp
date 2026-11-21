@@ -174,8 +174,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // THE MODAL PROMPT (in the modal family's box and controls row since
-    // 2026-10-14) OWNS INPUT WHILE ACTIVE, AND ITS BUTTONS ARE ITS ONE ROAD
+    // THE MODAL PROMPT (a full page, its answers word buttons where the
+    // bottom icon row's keys stand, architect 2026-11-20; modal_page_stands,
+    // app_state.h) OWNS INPUT WHILE ACTIVE, AND ITS BUTTONS ARE ITS ONE ROAD
     // (architect 2026-10-30: the roster and the on-screen keyboard are the two
     // producers of every key, and neither reaches a standing prompt — the
     // keyboard stands only under an editor, which every prompt's raise finds
@@ -260,8 +261,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // (architect 2026-07-28, which brought the last of them in) — only the keys
     // the editor itself consumes (typing, its motion keys, Esc and Enter),
     // a line editor's and the flag editor's Tab and the flag editor's live
-    // extra keys (UP, DOWN, the pass key; architect 2026-11-20 / 21, send EE)
-    // get through (modal_editor_key_blocked); everything
+    // extra keys (UP, DOWN, the pass key; architect 2026-11-20 / 21) get
+    // through (modal_editor_key_blocked); everything
     // else — playback, navigation, zoom, mode toggles, tab switches,
     // undo/redo, marker / trim chords, the Ctrl+Alt render chords, and since
     // 2026-10-25 Ctrl+S (NO HATCH) — drops HERE, SILENTLY, so no
@@ -274,7 +275,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // that takes the keyboard is a modal — keyboard_modal_editor_active's
     // declaration names every reader). The playback stop rides no predicate
     // at all: each modal surface spells its own at its open site, every
-    // editor's open included (architect 2026-11-20, send EE;
+    // editor's open included (architect 2026-11-20;
     // stop_playback_for_modal_open).
     if (keyboard_modal_editor_active() &&
         modal_editor_key_blocked(key, mods)) {
@@ -1183,9 +1184,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // the one command that reaches the whole song. DIGITS 1 TO 4
     // are the ABSOLUTE VIEW SELECTORS, one axis each (architect 2026-10-14;
     // their block is up beside the axis handlers they compose); 5..9 are
-    // unbound. CTRL+SHIFT+0 is RESET TRIM (architect 2026-10-24; Shift+0 from
-    // 2026-09-22; its arm is further down this body, where the trim bracket
-    // family stood).
+    // unbound. RESET TRIM is Shift+T, the PRESETS key's hold (architect
+    // 2026-11-08; is_trim_reset_key, its arm further down this body), and
+    // Ctrl+Shift+0 binds nothing.
     if (!ctrl && !alt && !shift && key == GuiKeys::Digit0) {
         run_overview_command();
         return;
@@ -2676,8 +2677,8 @@ std::optional<SpanFramingLanding> span_framing_landing(const AppState& app,
 
     if (hi < lo) std::swap(lo, hi);   // defensive; monotone callers keep order
     // THE MARGIN IS THE EDGE MARGIN, AT MOST A FRACTION OF THE WINDOW A SIDE
-    // (architect 2026-11-21, send EE: "it really should just be a 5% maximum
-    // on either side, not a minimum of 10%. Combined."): the window fitted is
+    // (architect 2026-11-21: "it really should just be a 5% maximum on
+    // either side ... Combined."): the window fitted is
     // the span's MARGINED WINDOW, edge_margined_window_frames (app_state.h,
     // the rule and its arithmetic beside kViewportEdgeMarginFraction, the
     // one geometry land_subject's fit test also reads), so a side on the
@@ -2869,11 +2870,12 @@ bool span_framing_would_act(const AppState& app, const GuiAudio& audio) {
 void GuiInputHandler::run_span_framing_command() {
     // THREE CALLERS (re-grepped 2026-11-21): Shift+0 (since 2026-10-24, Zoom
     // to Fit's long press), the trim bar's double tap (architect 2026-11-21,
-    // send EE, the bar's one framing gesture, no hold there meaning
-    // anything; TrimBarPressSeed; the live band's and the `h` view's arms,
-    // input_pointer.cpp) and a trim preset's apply. They ZOOM TO A SPAN, their own route beside bare `0`'s
-    // whole-piece toggle (run_overview_command) and `c`'s marker-jump working
-    // zoom. It only ever FRAMES a span,
+    // the bar's one framing gesture, no hold there meaning anything;
+    // TrimBarPressSeed; the live band's and the `h` view's arms,
+    // input_pointer.cpp) and a trim preset's apply. They ZOOM TO A SPAN,
+    // their own route beside bare `0`'s whole-piece toggle
+    // (run_overview_command) and `c`'s marker-jump working zoom. It only
+    // ever FRAMES a span,
     // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim
     // SUB-WINDOW, else the whole song (full zoom-out — which is also where the
     // FULL trim window lands, it being the whole song). The framing is

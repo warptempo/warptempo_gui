@@ -48,14 +48,14 @@
 // 140, `trim_bar_face` and `well_border`, and THE ARC PAGE'S SIX of
 // 2026-11-19, send Z: the body tone, the title bar's text, the sidebar
 // text, the ruler's digits and the disabled key's face and border; THE
-// SCALE'S RIM, send AA's stage D3; THE POPUPS' FOUR the same day, send AA's
+// SCALE'S RIM, send AA's stage D3; THE FLOATERS' FOUR the same day, send AA's
 // stage D1: the tooltip's,
 // the normal card's and the standing card's carried fills and the limiter
 // lamp; THE TWO HOVER TONES of send CC, 2026-11-20, `key_hover_face`
 // and `trim_span_hover_face` — the second the trim bar's hovered part,
 // render_trim_flags through trim_bar_tones; AND THE LIST ROW'S HOVER of
-// send EE, 2026-11-21, `list_hover_face`, paint_list_view), members since the theme
-// arc so every painter reads palette() —
+// 2026-11-21, `list_hover_face`, paint_list_view), members since the
+// theme arc so every painter reads palette() —
 // the values are no longer Windows' and no longer constants. A ROLE STANDS
 // IFF A PAINTER READS IT (the relief quartet, the field ground and the
 // clock pair retired 2026-11-02 with the overlays' flat pass). THE LIT KEY
@@ -84,7 +84,7 @@
 // with the captions; the seven unread ones, 2026-11-02, with the overlays'
 // rings; the cards' ground and ring, send AA's stage D1 — and the
 // twenty-eight flat-look tones, the two lamps, the lit key's inert face,
-// the trough, the well's frame, the Arc page's six, the popups' three
+// the trough, the well's frame, the Arc page's six, the floaters' three
 // carried fills, the progress trough, the scale's rim, the two hover
 // tones and the list row's hover among them). The
 // program's roles are the palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
@@ -99,7 +99,7 @@ struct GuiThemeRole {
     uint32_t GuiThemeTones::* tone;
 };
 inline constexpr GuiThemeRole kGuiThemeRoles[] = {
-    // THE CHROME'S EIGHT (Windows' element names).
+    // THE CHROME'S SIX (Windows' element names).
     {"ground",          &GuiPalette::ground,          &GuiThemeTones::ground},
     {"label",           &GuiPalette::label,           &GuiThemeTones::text},
     {"selected_fill",   &GuiPalette::selected_fill,   &GuiThemeTones::selection_fill},
@@ -110,13 +110,14 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // key, the lit key's inert face, the well's tones, the score viewer's
     // pane, the two lamps; THE PROGRESS TROUGH, send AA's stage D2,
     // 2026-11-19 — the progress bar's and the scrub's trough; THE SCALE'S
-    // RIM, send AA's stage D3, the scrub's knob; THE TWO HOVER TONES, send CC, 2026-11-20 — a key's
-    // face and the trim bar's pill under the hovering pen; THE LIST ROW'S
-    // HOVER, send EE, 2026-11-21 — Arc's row hover, 3 % white over the
-    // list's view; THE ARC PAGE'S SIX, architect 2026-11-19, send Z, theme_roles.h's head —
-    // the body tone, the title bar's text, the sidebar text, the ruler's
-    // digits, the disabled key's face and border; and THE POPUPS' FOUR, send
-    // AA's stage D1 the same day — the three carried fills, each the color
+    // RIM, send AA's stage D3, the scrub's knob; THE TWO HOVER TONES, send
+    // CC, 2026-11-20 — a key's face and the trim bar's pill under the
+    // hovering pen; THE LIST ROW'S HOVER, architect 2026-11-21 — Arc's row
+    // hover, 3 % white over the list's view; THE ARC PAGE'S SIX, architect
+    // 2026-11-19, send Z, theme_roles.h's head — the body tone, the title
+    // bar's text, the sidebar text, the ruler's digits, the disabled key's
+    // face and border; and THE FLOATERS' FOUR, send AA's stage D1 the same
+    // day — the three carried fills, each the color
     // of its row word, its opacity that word's top byte (tone_alpha,
     // render.h), and the limiter lamp, its own tone off Alert since the
     // cards left it).

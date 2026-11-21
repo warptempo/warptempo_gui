@@ -169,8 +169,8 @@ namespace {
 // at the element (render.h's line rule). The BOTTOM strip is THREE LANES,
 // from the window's foot inward: THE STATUS BAR (status_bar_lane_h_px(), its
 // line and 22 W, Thunar's; render.h's status bar block), THE BOTTOM ICON ROW
-// (bottom_row_h_px(), 7 W, the key, 7 W) — the clock in its flat time
-// field and the active tab's name beside it, and, packed against the right
+// (bottom_row_h_px(), 7 W, the key, 7 W) — the timestamp in plain text, a
+// text pipe and the active tab's name, and, packed against the right
 // edge, the COPY / PASTE duo, the two skips, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the step and
 // walk, the nudge and play with Play / Stop last, each a plain run of cases
@@ -182,8 +182,8 @@ namespace {
 // rows — the status bar, the bottom icon row and the view's foot — and the
 // table is laid on the window's height whether it stands or not
 // (onscreen_keyboard.h's placement block, the rule's owner; architect
-// 2026-11-20, send EE). ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect 2026-10-21:
-// strip_row_rect).
+// 2026-11-20). ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect
+// 2026-10-21: strip_row_rect).
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
 // (architect 2026-10-07 evening: the maximum height it carried — a render.h
@@ -229,7 +229,7 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD (re-derived from the lane table
-// 2026-11-20, send EE; every line one W, 2 device px on the tablet; the text
+// 2026-11-20; every line one W, 2 device px on the tablet; the text
 // 12 W, the ruler's 10 W; the device rows below the tablet's at 200 % and
 // key_height 28 — a tune moves the band's and the bottom icon row's case
 // rows and the canvas by their difference; key_width moves no row). Every
@@ -243,8 +243,8 @@ namespace {
 //   + THE TRIM LANE 28 (the line 140–141, the trough 142–165, the line
 //   166–167) + THE RULER LANE 34 (the ruler 168–199, the line 200–201) +
 //   THE MARKER LANE 32 (202–233) + THE FOOT LINE 2 (234–235) = 236 above
-//   (the ruler and the marker lane 16 W each since 2026-11-19, send AA; the
-//   icon rows' pads 7 W each side since 2026-11-20, send EE);
+//   (the ruler and the marker lane 16 W each, architect 2026-11-19; the
+//   icon rows' pads 7 W above and below, architect 2026-11-20);
 //   132 below (THE WELL'S FOOT 1308–1309, THE BOTTOM ICON ROW 1310–1393, its
 //   faces 1324–1379, THE STATUS BAR'S LINE 1394–1395 and THE BAR 1396–1439);
 //   leftover 1072: the waveform 1072 rows on 236–1307, both gaps 0; the
@@ -310,7 +310,7 @@ static void clamp_dims(int& w, int& h) {
 // clamps the window's own dims) and the row the on-screen keyboard stands on
 // (onscreen_keyboard::foot_y). The keyboard never shortens it: it stands
 // over the window's last rows and nothing is relaid for it
-// (onscreen_keyboard.h's placement block; architect 2026-11-20, send EE).
+// (onscreen_keyboard.h's placement block; architect 2026-11-20).
 int window_foot_y(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
@@ -383,7 +383,8 @@ int top_lane_height(int lane) {
 // well's lines). THE ORDER IS FIXED: no tenant of the row moves a lane — the
 // modal family's box and controls row stand over these rows (modal_box.h),
 // the box above the status bar, and the on-screen keyboard over all three
-// while it stands (onscreen_keyboard.h's placement block, send EE). GAP 2
+// while it stands (onscreen_keyboard.h's placement block; architect
+// 2026-11-20). GAP 2
 // sits ABOVE the three, in bottom_strip_h's total
 // rather than in a lane's inset, so lane 0 is flush with the window edge
 // like the top strip's own lane 0 (and gap 2 being 0, lane 2's top is the
@@ -421,7 +422,8 @@ int strip_total_h(bool top_strip) {
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
 // gui_scale 200 and key_height 28 the lanes leave 1440 − 236 − 132 = 1072
-// device rows (2026-11-20, send EE), the on-screen keyboard standing or not.
+// device rows (re-derived 2026-11-20), the on-screen keyboard standing or
+// not.
 // No color moves a lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -540,9 +542,10 @@ GuiRect waveform_area(const AppState& a) {
     // on this floor (one W is 10 device px there). (The host runs far below
     // it: the tablet at 200 % on its 1440-tall surface, where they take 368
     // at the default key and leave the waveform 1072, the stack record at the
-    // lane table above; re-derived 2026-11-20, send EE.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
-    // architect moves — it has now moved four times — and the lane set is one
-    // the redesign keeps adding to and taking from. If
+    // lane table above; re-derived 2026-11-20.) The guard does not rest on
+    // that arithmetic, because the ceiling is a vocabulary the architect
+    // moves — it has now moved four times — and the lane set is one the
+    // redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
     // A negative-height rect is a silent-wrong input to every consumer
     // that takes a width/height pair, which is exactly the class this project
@@ -732,12 +735,12 @@ GuiRect well_foot_area(const AppState& a) {
 
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
 // render.h's bottom-row block) — THE STRIP since the simple layout
-// (2026-10-22): Arc's pad 7 W, the key, the pad 7 W on the body tone (send
-// Z, 2026-11-19; symmetric since 2026-11-20, send EE), at the left one plain-text run — the timestamp,
-// a text pipe and the active tab's name (paint_handler.cpp's
-// bottom_left_run) — and, packed against the right edge, the COPY / PASTE
-// duo, the skips (Go to Start, Go to End; 2026-10-24), the
-// MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
+// (2026-10-22): Arc's pad 7 W, the key, the pad 7 W on the body tone
+// (architect 2026-11-19; 7 W above and below, architect 2026-11-20), at the
+// left one plain-text run — the timestamp, a text pipe and the active
+// tab's name (paint_handler.cpp's bottom_left_run) — and, packed against
+// the right edge, the COPY / PASTE duo, the skips (Go to Start, Go to End;
+// 2026-10-24), the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each one linked group,
@@ -765,7 +768,7 @@ GuiRect bottom_row_area(const AppState& a) {
 // row reads bottom_row_area), so the bar stays painted under them; the
 // on-screen keyboard alone covers it, and its painter yields while the
 // keyboard stands (onscreen_keyboard.h's placement block; architect
-// 2026-11-20, send EE).
+// 2026-11-20).
 GuiRect status_bar_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, kBottomStatusLane);
 }
@@ -1514,7 +1517,7 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // THE CLOCK'S RECT — the unified bottom row's timestamp cell as the
 // painter last drew it, the timestamp's own box at the lane's left
 // (AppState::clock_cell_rect, whose stash contract is at the field; the
-// specimen's advance by the line box since 2026-11-19, send AA,
+// specimen's advance by the line box, architect 2026-11-19,
 // bottom_left_clock_cell). Narrow by construction: on_redraw
 // clips to the damage region, so paint_bottom_strip runs but its buttons and
 // the text pipe and tab name right of the timestamp fall outside the clip
@@ -1532,9 +1535,9 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // whose rect is the lane WHOLE.
 //
 // THE CELL IS THE TIMESTAMP ALONE (architect 2026-10-18; the text pipe and
-// the active tab's name after it since 2026-11-19, send AA, outside the
-// cell, their pen the specimen's advance so they never move with the
-// digits). (The cell reserved one more cell for the dirty `*` until the mark
+// the active tab's name after it, architect 2026-11-19, outside the cell,
+// their pen the specimen's advance so they never move with the digits).
+// (The cell reserved one more cell for the dirty `*` until the mark
 // retired, architect 2026-10-05, Save's grey being the mark.)
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
@@ -1542,7 +1545,7 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // damages the window entire. THE MODAL STATE READS THE SAME ZERO (2026-08-13):
 // the row's painter zeroes the cell while it yields to the modal family's
 // row — an overlay standing, a question's page or the progress page (their
-// answers on the row, architect 2026-11-20, send EE; paint_handler.cpp's
+// answers on the row, architect 2026-11-20; paint_handler.cpp's
 // modal_owns_bottom_row) — so a
 // clock-moving route there widens to the lane instead of damaging a cell
 // that is not being painted (nothing plays under a question or the progress
@@ -1550,13 +1553,13 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 //
 // WHILE THE ON-SCREEN KEYBOARD STANDS THE RECT IS EMPTY: the keyboard covers
 // the row whole and the row yields under it (onscreen_keyboard.h's placement
-// block, the one inventory of what yields; architect 2026-11-20, send EE:
-// the row is inactive while the keyboard stands, so showing it is not
+// block, the one inventory of what yields; architect 2026-11-20: the row
+// is inactive while the keyboard stands, so showing it is not
 // helpful), so no clock-moving frame has a pixel to repaint there. A zero
 // rect is no damage (GuiPlatform::invalidate_region drops it), so a road
 // that counts on this damage to produce a frame presents nothing through it
 // while the keyboard stands. Each such road, under the keyboard (architect
-// 2026-11-20, send EE):
+// 2026-11-20):
 //   * THE TICK'S OFFSCREEN FALLBACK never runs there: it rides a project
 //     play, and every editor's open stops play
 //     (stop_playback_for_modal_open), so no scanner stands under the
@@ -2454,15 +2457,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
     // Pointer-leave drop. THIS BODY IS THE AUTHORITATIVE
     // EFFECT LIST for the hook — tooltip hide, the armed chrome press, the
-    // modal dialog's armed button, the popup's two
-    // item faces plus its press claim, the render player's row press and
-    // scrub drag, the notification cards' hover and THE HOVER FACE'S LEAVE
+    // modal dialog's armed button, a list's row press, the render player's
+    // and the score viewer's scrub drags, the notification cards' hover, the
+    // trim bar's leave stamp and THE HOVER FACE'S LEAVE
     // (AppState::FaceFades: the face the pen hovered FADES OUT from this
     // edge, as Arc's does when the pointer leaves the widget — a key's, a
     // word button's, an on-screen keyboard key's, the scrub's knob's, a list
-    // row's (architect 2026-11-21, send EE) — and
-    // the pen latch clears; architect 2026-11-18 / 2026-11-20, send CC,
-    // reopening 2026-10-02's no hover face). The platform-side
+    // row's (architect 2026-11-21) — and the pen latch clears; architect
+    // 2026-11-18 / 2026-11-20). The platform-side
     // sites name their OWN concern and point here rather than each keeping a list that can drift (the setter contract
     // and the member comment in input_core.h).
     // THE FIRES ARE THE PEN'S HOVER ENDING and a touch pointer
@@ -2548,19 +2550,20 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // — or a finger that has lifted, or a pen whose hover has ended — is
         // on no face, so the walk answers none (its gate reads the in-window
         // bit dropped above) and THE HOVERED FACE FADES OUT over Arc's
-        // 200 ms from the value it had reached, every fire alike. THE
-        // HOVER_EXIT BEFORE A TIP DOWN is one of them (input_core.h's THE
-        // POINTER LEAVE'S THREE FIRES): its fade-out runs a millisecond,
-        // under one painted level, before the DOWN's press arm turns the
-        // face toward the accent from there over Arc's 50 ms
-        // (GuiInputHandler::press_face; send DD, 2026-11-20) — nothing
-        // darkens for a frame. THE TRIM BAR'S
+        // 200 ms (a list row's 150 ms, Arc's row transition;
+        // AppState::FaceFades) from the value it had reached, every fire
+        // alike. THE HOVER_EXIT BEFORE A TIP DOWN is one of them
+        // (input_core.h's THE POINTER LEAVE'S THREE FIRES): its fade-out
+        // runs a millisecond, under one painted level, before the DOWN's
+        // press arm turns the face toward the accent from there over Arc's
+        // 50 ms (GuiInputHandler::press_face; architect 2026-11-20) —
+        // nothing darkens for a frame. THE TRIM BAR'S
         // HOVERED PART, which has no fade, is NOT cleared here: the leave
         // stamps it (stamp_trim_bar_leave) and the walk keeps it, damaging
         // nothing, until the tick drops it kTrimBarLeaveHoldMs on or a
         // press, a motion or a veil resolves it first (AppState::
-        // TrimBarHover's `leave_ms`; the hold KEPT, architect 2026-11-20,
-        // send DD), so the HOVER_EXIT before a DOWN on the bar shows no
+        // TrimBarHover's `leave_ms`; the hold kept, architect 2026-11-20),
+        // so the HOVER_EXIT before a DOWN on the bar shows no
         // bare pill between the hover look and the held look.
         input_handler.stamp_trim_bar_leave();
         input_handler.walk_hover_face();
@@ -2683,7 +2686,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // a modal, an overlay (the open's hold answers no: it withholds every
         // paint). THE RECT IS THE CLOCK'S OWN OWNER'S (clock_invalidate_rect):
         // the published cell, or the whole lane while the row has yielded to
-        // an overlay's row (the cell then reads zero); either way a rect on
+        // an overlay's row, a question's page or the progress page (the cell
+        // then reads zero); either way a rect on
         // screen, so
         // the present follows from the damage alone, whatever the forks below
         // paint there — but none while the on-screen keyboard stands over the
@@ -3024,13 +3028,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // (GuiInputHandler::tick_tooltip, whose body carries the damage rule).
         input_handler.tick_tooltip();
         // THE FACE FADES' CLOCK, the same shape (architect 2026-11-18 /
-        // 2026-11-20, sends CC and DD; AppState::FaceFades, the one owner of
+        // 2026-11-20; AppState::FaceFades, the one owner of
         // Arc's hover and of every face's fade): the walk, the settle (a
         // surface that left drops its faces), and each fade stepped to now —
         // a step that moves a face's stored mix damages that face's own
         // painted extent and nothing else (more than four faces of one
         // surface in a step, their union), so a frame is invited on every
-        // beat for the 50 or 200 ms a fade runs; with no fade running
+        // beat for the 50, 150 or 200 ms a fade runs; with no fade running
         // nothing is damaged (GuiInputHandler::tick_face_fades).
         input_handler.tick_face_fades();
 
@@ -3098,8 +3102,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // published — THE REPAINT DOES NOT JUMP THE KEY: it republishes
             // the bits and its painter, resolving the new look, begins the
             // key's fade from the picture on screen and paints that picture
-            // (AppState::FaceFades::as_painted; architect 2026-11-20, send
-            // DD), the fade's own steps damaging the key from the next tick
+            // (AppState::FaceFades::as_painted; architect 2026-11-20), the
+            // fade's own steps damaging the key from the next tick
             // (tick_face_fades) — and it is exactly the coverage publish_button_face
             // asks before it refreshes the key's stash, so the frame repaints
             // the key and republishes it and this walk finds no drift at the
@@ -3142,14 +3146,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             StripDrift row8;
             const uint64_t frame_now = paint_handler.frames_begun + 1;
             // A KEY UNDER THE ON-SCREEN KEYBOARD DRIFTS NOTHING (architect
-            // 2026-11-20, send EE; onscreen_keyboard.h's placement block):
+            // 2026-11-20; onscreen_keyboard.h's placement block):
             // while it stands it covers the bottom icon row whole, whose keys
             // publish empty rects and paint nothing (paint_bottom_strip's
             // yield), so a drift there — the whole row going dead at an
             // editor's open, PLAY's glyph turning back at the play that open
-            // stopped (every editor's open stops play, architect 2026-11-20,
-            // send EE), a render's landing greying or lighting a key — is no
-            // pixel of the screen's, and the strip fallback would repaint
+            // stopped (every editor's open stops play, architect
+            // 2026-11-20), a render's landing greying or lighting a key — is
+            // no pixel of the screen's, and the strip fallback would repaint
             // the keyboard's rows for a key nobody sees. Skipped, its record cleared; the
             // keyboard's hide damages its whole surface
             // (onscreen_keyboard::reconcile_slot_standing), the row among it,
@@ -3633,7 +3637,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // paint, on screen whenever an act can rest (no rest stands under the
         // on-screen keyboard, the one surface the row yields to: the clock's
         // owner, clock_invalidate_rect) — and its repaint during
-        // a rest changes no pixel (the field shows the resting cursor's
+        // a rest changes no pixel (the timestamp shows the resting cursor's
         // time). EVERY REST TAKES IT, the pair rests with the switch rest:
         // one rule rather than a threshold against one device's timer. It sits
         // AFTER fire_if_due: a rest that
@@ -3742,7 +3746,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // and on screen whenever a project play runs, so a paint is
             // produced: every surface that covers the bottom icon row, the
             // on-screen keyboard included, stopped play at its open (every
-            // editor's open stops it, architect 2026-11-20, send EE;
+            // editor's open stops it, architect 2026-11-20;
             // stop_playback_for_modal_open). Follow is untouched: no
             // viewport work is added here, and a following viewport keeps
             // the line onscreen so the fallback simply never fires.
@@ -3905,7 +3909,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // record, reconcile_slot_standing).
         onscreen_keyboard::reconcile_slot_standing(app, viewport);
         // AND NO FRAME FADES A FACE OF A SURFACE THAT LEFT, for the same
-        // reason (sends CC and DD, 2026-11-20; AppState::FaceFades' WHAT
+        // reason (architect 2026-11-20; AppState::FaceFades' WHAT
         // DOES NOT FADE): a key or a release of this pass can raise a
         // question, open an overlay or close the keyboard, and that frame
         // paints before any tick, so the faces of a surface that left are

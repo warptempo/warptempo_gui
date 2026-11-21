@@ -74,7 +74,7 @@
 // DRAW, the plain swap at GuiPlatform::present), but A FRAME IS ONLY
 // PRESENTED WHERE DAMAGE INVITES IT, so EVERY CHANGE A RECORD MAKES STILL
 // OWES DAMAGE ON ITS OLD AND NEW PIXELS, as every chrome pixel always has
-// (the damage contract; its audit of 2026-11-04 in tmp/s33/done2.md): the
+// (the damage contract, audited 2026-11-04): the
 // damage is what brings the change to the glass, and it narrows the
 // chrome's repaint and the texture's upload. AN UNDECLARED CHANGE waits
 // unseen for the next frame some other damage presents, and then shows
@@ -92,8 +92,9 @@
 // alone, design record §2) — OR, WHERE A FLOATING SURFACE STANDS, ANY
 // PREMULTIPLIED ALPHA (send AA's stage D1, 2026-11-19: Arc's tooltip, its
 // .95 fill, rounded corners and GTK's shadow, and notifyd's .95 cards — "if
-// we can do the transparency, we might as well"): cairo lays the floater over the cleared
-// zeros, so its texels are its own premultiplied color, and INSIDE THE
+// we can do the transparency, we might as well"): cairo lays the floater
+// over the cleared zeros, so its texels are its own premultiplied color, and
+// INSIDE THE
 // FLOATERS' HULLS (GuiCanvasDrawList::floaters below; send BB, 2026-11-19)
 // the texture's draw blends them source-over the canvas the list drew
 // (GuiGlCanvas::present_frame, kCanvasFragmentShader), an opaque texel
@@ -114,9 +115,8 @@
 // premultiplied alpha inside its hull (a card or the tooltip over the
 // viewer; a question over the viewer takes the box whole, its page opaque,
 // and the page hole is gone under it). The two tenants never stand
-// together, so the scissor,
-// the rect every upload leaves out but where a hull meets it, and the
-// hulls' blend are one rule for both.
+// together, so the scissor, the rect every upload leaves out but where a
+// hull meets it, and the hulls' blend are one rule for both.
 //
 // WHAT EACH RECORD WRITES, the rules the GPU's draw keeps: a rect writes its
 // word on its cells; the plate writes, per cell, the
@@ -308,14 +308,14 @@ inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
 // THE FLOATERS' HULLS (architect 2026-11-19, send BB: "ok to implement the
 // fix you suggested for the power draw by card"; the cost of a standing
 // floater confined to where it stands): ONE RECT A FAMILY — the cards'
-// stack and the tooltip, THE TWO FAMILIES (a question, the progress page and
-// a line editor's value sub-page are none: each stands on the modal family's box,
-// under which the canvas is not painted, modal_box.h's modal_box_stands, so
-// nothing of a modal floats over the canvas; architect 2026-11-20, send EE)
-// — in surface px, empty where the family paints nothing, every pixel the
-// family
-// may have standing in the backbuffer inside it (a hull, generous, never a
-// mask). WRITTEN BY THE PAINT HANDLER: emptied at the frame's first rect
+// stack and the tooltip, THE TWO FAMILIES (a question, the progress page
+// and a line editor's value sub-page are none: each stands on the modal
+// family's box, under which the canvas is not painted, modal_box.h's
+// modal_box_stands, so nothing of a modal floats over the canvas;
+// architect 2026-11-20) — in surface px, empty where the family paints
+// nothing, every pixel the family may have standing in the backbuffer
+// inside it (a hull, generous, never a mask). WRITTEN BY THE PAINT
+// HANDLER: emptied at the frame's first rect
 // (on_redraw's canvas block) and widened after each on_redraw run by what
 // the floaters published that run (GuiPaintHandler::widen_floater_hulls,
 // the rule). THE FAMILIES ARE KEPT APART, so a tooltip at the foot and a

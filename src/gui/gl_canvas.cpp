@@ -477,7 +477,7 @@ constexpr const char* kCanvasFragmentShader =
 //   (SurfaceFlinger's timestats), not argued here. The
 //   window and the level-indexed dilation schemes are modeled bit for bit
 //   in Python against the brief's forward model
-//   (tmp/grow/make_grow_mag.py's mask / morph / down at SS = 4) at every
+//   (the grow model's mask / morph / down at SS = 4) at every
 //   grow 0 .. 8, 2026-10-31, and are that text still; the fast paths, each
 //   a subset of the rule, change no result.
 //   * THE BLEND ARM (architect 2026-11-15, send O: THE TWO-PICTURE BLEND,
@@ -1511,7 +1511,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // the floaters' damage owners, and they lie in the last walk's hull). A
 // floater whose hull meets no part of the clip costs this walk nothing. THE
 // WHOLE RECT GOES UP when the clip differs from the last walk's (a keyboard
-// or a folder overlay came or went, and texels it uploaded now lie inside
+// or a modal box came or went, and texels it uploaded now lie inside
 // the clip) and at the first walk on a remade texture (no texel is known
 // yet). So every texel inside the clip is the backbuffer's: 0 where no
 // overlay stands. THE PROOF, a pixel p of the clip inside a damage rect and
@@ -1590,8 +1590,10 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // the window buffer it presents, on the beat's 22.2 ms (kFrameBeat,
 // platform_android.cpp).
 // THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
-// 2026-10-24): an empty clip — no list yet, or a paint area the folder
-// overlay emptied — leaves nothing out of any upload and draws no list.
+// 2026-10-24): an empty clip — no list yet, or a paint area the modal
+// family's box emptied (the folder overlay, a question's or the progress
+// page, a value sub-page) — leaves nothing out of any upload and draws no
+// list.
 // present_frame's and change_undescribed's one reading.
 void GuiGlCanvas::frame_clip(const GuiCanvasDrawList* list, int clip[4]) {
     clip[0] = clip[1] = clip[2] = clip[3] = 0;

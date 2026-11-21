@@ -80,7 +80,7 @@ bool parse_signed_hops(const std::string& v, int& out) {
 // THE TWO BOUND GRAMMARS' SENTENCES, each one composer for two readers: the
 // bound commit's refusal ("Range bound rejected: …") and the bound editor's
 // UP / DOWN on a text the grammar refuses ("The bound is not well formed:
-// …", step_editor_text; architect 2026-11-20 / 21, send EE).
+// …", step_editor_text; architect 2026-11-20 / 21).
 constexpr const char* kCentBoundGrammar =
     "a bound is a sign, one digit and two decimals, as +0.00";
 constexpr const char* kHopBoundGrammar =
@@ -137,7 +137,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
         return;
     }
 
-    // THE MODAL-OPEN STOP (architect 2026-11-20, send EE: "play should stop
+    // THE MODAL-OPEN STOP (architect 2026-11-20: "play should stop
     // on editor open. i don't use that workflow and never have";
     // GuiPlaybackLifecycle::stop_playback_for_modal_open owns the decision
     // table). Past every guard — the wrapper's and its callers' refusals, the
@@ -203,7 +203,7 @@ void GuiFlagEditor::enter_text_edit(int idx,
 // The two flag-editor open routes (bare Return — EDIT on glass — with the
 // payload addressed, and the flag box's double tap, architect 2026-11-21)
 // end here. THE OPEN STOPS PLAY, as every editor's open does
-// (architect 2026-11-20, send EE: "play should stop on editor open. i don't
+// (architect 2026-11-20: "play should stop on editor open. i don't
 // use that workflow and never have"): the stop is enter_text_edit's, past
 // the guards, through GuiPlaybackLifecycle::stop_playback_for_modal_open, the
 // one owner of the modal-open stop and its decision table, so nothing of the
@@ -270,7 +270,7 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
     // THE MODAL-OPEN STOP, past every guard above (the cell's eligibility,
     // the tie follower, the re-open on the live session's own cell) and
     // ahead of the land — the payload editor's open's (enter_text_edit;
-    // architect 2026-11-20, send EE, every editor's open stops play).
+    // architect 2026-11-20, every editor's open stops play).
     playback_lifecycle.stop_playback_for_modal_open();
 
     // The focus repaired, then single-selected and landed — the payload
@@ -597,7 +597,7 @@ struct PayloadCommit {
 
 // THE COMMIT'S PARSE, ONE BODY FOR ITS THREE READERS: the payload commit's
 // judgment below, and the flag editor's extra keys (architect 2026-11-20 /
-// 21, send EE), whose "well-formed string" is exactly the line this parse
+// 21), whose "well-formed string" is exactly the line this parse
 // admits — step_editor_text and toggle_inherit_editor_text, which card its
 // reason when it refuses. `row` is the marker the editor stands on (its
 // position and its disabled bit, the two fields the payload does not carry);
@@ -627,8 +627,8 @@ std::expected<GuiWarpMarker, std::string> parse_payload_line(
     return parsed;
 }
 
-// THE STORE AS IF THE TEXT WERE COMMITTED (architect 2026-11-20 / 21, send
-// EE: "a true toggle inherit that works just like the one in the main window
+// THE STORE AS IF THE TEXT WERE COMMITTED (architect 2026-11-20 / 21: "a
+// true toggle inherit that works just like the one in the main window
 // does"): the extra keys' one answer to "the tempo this marker sounds at" —
 // the store sliced (slice_to_warp_markers), the row under edit REPLACED BY
 // THE PARSED TEXT `parsed` (parse_payload_line's answer on that row), so a
@@ -931,8 +931,8 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // A COMMIT THAT CHANGES THE MARKER IS A MARKER MUTATION AND STOPS (architect
     // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
     // declaration): past the refusal above and ahead of the write, and only on
-    // a changed commit. The open already stopped play (architect 2026-11-20,
-    // send EE; stop_playback_for_modal_open's decision table) and nothing
+    // a changed commit. The open already stopped play (architect 2026-11-20;
+    // stop_playback_for_modal_open's decision table) and nothing
     // starts one under the editor, so this finds nothing to stop; it stays as
     // the keyboard stop rule's site on the changed write, the shape the label
     // paste's stop shares (paste_payload_onto_selection).
@@ -1039,7 +1039,7 @@ void GuiFlagEditor::paste_payload_onto_selection(
     payload_commit_tail(app.last_selected_marker);
 }
 
-// -- THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21, send EE) ----------
+// -- THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21) -------------------
 //
 // The three acts' contract, his words and the rules each follows are at the
 // declarations (flag_editor.h); the keys' seat and grey at
@@ -1404,7 +1404,7 @@ void GuiFlagEditor::commit_bpm_field() {
     const int owner = bpm_owner_index(app.warpmarkers.markers());
     const int field = app.settings_editor.target;
     // THE BUFFER IS THE FIELD'S VALUE, THE KEY THE ROW'S OWN (architect
-    // 2026-11-19, send AA): nothing typed can name another field.
+    // 2026-11-19): nothing typed can name another field.
     const std::string  key   = kBpmFieldKeys[field];
     const std::string& value = app.settings_editor.pending;
     auto reject = [&](const std::string& reason) {

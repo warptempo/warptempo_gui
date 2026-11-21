@@ -44,12 +44,13 @@
 // theme_roles.h's DERIVED block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-five words with its literal (the two hover tones of send CC,
-// 2026-11-20, a key's 363636 and the pill's 696969, each Default's own
-// number for the role it copies; the progress bar's trough of send AA's
-// stage D2, 2026-11-19, 242424, ScrollbarInnerTrack over the ground, a
-// Live theme's own number — and the scale's rim of stage D3, 2A2A2A, ClipBorder over the
-// ground —
+// forty-six words with its literal (the list row's hover of 2026-11-21,
+// 393939, the ruler's own tone on a theme whose keys hover nothing; the two
+// hover tones of send CC, 2026-11-20, a key's 363636 and the pill's 696969,
+// each Default's own number for the role it copies; the progress bar's
+// trough of send AA's stage D2, 2026-11-19, 242424, ScrollbarInnerTrack
+// over the ground, a Live theme's own number — and the scale's rim of stage
+// D3, 2A2A2A, ClipBorder over the ground —
 // the lamp arc's clip lamp the same night, the lit-but-inert key's face and
 // its glyph of 2026-11-11, and the enabled chip's fill of 2026-11-12, retold
 // 2026-11-13; the trough and the
@@ -99,7 +100,7 @@
 //   waveform_core    363636  THE CORE (architect 2026-11-04, mock f1), Live's
 //                            SurfaceBackground, THE KEY FACE, on every theme
 //                            (architect 2026-11-07, session 83, his pick i4
-//                            of tmp/s83 on real MAGNIFY-lit captures): the
+//                            on real MAGNIFY-lit captures): the
 //                            magnified picture's inner bar, a solid fill one
 //                            step under Default's 393939 canvas, the center
 //                            line's ink reading hard across it, ruled fine
@@ -126,7 +127,7 @@
 //                            no well painter reads `cue` itself (the head's
 //                            last paragraph)
 //   cue_fill         FFAD56  THE ENABLED MARKER'S FILL (architect
-//                            2026-11-05, his pick a2 of tmp/s42; THE ACCENT
+//                            2026-11-05, his pick a2; THE ACCENT
 //                            AGAIN since 2026-11-13, session 119: "we revert
 //                            the rule so that markers get accent color
 //                            instead of icon glyph color, and we simply tune
@@ -220,7 +221,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the forty-five words with its literal, so
+// 2026-11-01..05 — every one of the forty-six words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
@@ -246,7 +247,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // the ruler 393939; THE DISABLED KEY'S FACE 2E2E2E, the key face 363636 at
 // 55 % over the body tone 242424; ITS BORDER 272727, the well's border
 // 2A2A2A at 55 % over the body tone. THE LIST ROW'S HOVER 393939 (architect
-// 2026-11-21, send EE; the DERIVED block): the ruler 393939 itself, not
+// 2026-11-21; the DERIVED block): the ruler 393939 itself, not
 // Arc's 3 % white over it — Default's key hover face 363636 is its key face
 // 363636, so no row hovers on the reference row, as no key does.
 // THE PLAYHEAD'S LINE
@@ -262,7 +263,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // partner of the StandbySelectionBackground bar; 111111,
 // ControlContrastFrame, until then — our mispairing). THE MAGNIFY CORE
 // 363636 is Default's SurfaceBackground, the key face (architect 2026-11-07,
-// session 83, his pick i4 of tmp/s83; 1E1E1E, his pick of 2026-11-04 night
+// session 83, his pick i4; 1E1E1E, his pick of 2026-11-04 night
 // and ControlBackground's number, until then — render.h's THE CORE).
 namespace gui_default_theme_proof {
 inline constexpr GuiThemeTones kDefault = kGuiReferenceThemeTones;

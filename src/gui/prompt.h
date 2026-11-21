@@ -9,7 +9,7 @@
 #include "viewport.h"
 
 // Prompt state machine, extracted from main.cpp's inline lambdas. Owns the
-// unsaved-work dialog and the paste-confirm dialog, and ANSWERS
+// unsaved-work question and the paste-confirm question, and ANSWERS
 // the load confirmation (LOAD_IN_PLACE_CONFIRM — one prompt body over two subjects,
 // raised by GuiInputHandler::render_player_load_in_place in the player and by
 // GuiInputHandler::history_load_in_place in the `h` view, and answered back
@@ -146,8 +146,10 @@ struct GuiPrompt {
     //
     // WHAT SURVIVES THIS STRUCT ARE THE QUESTIONS ALONE — the unsaved-work
     // question with its save-failed rung, the phase reset paste's
-    // confirmation, the
-    // load confirmation and, since 2026-09-13, the revert confirmation — so EVERY
+    // confirmation, the load confirmation, the revert confirmation
+    // (2026-09-13) and the pull's, the render player's delete, the score
+    // viewer's reset and the trim presets' save and delete (DialogTrigger,
+    // app_state.h, the one list) — so EVERY
     // PROMPT IN THE PRODUCT IS NOW A QUESTION, which is the messaging split's
     // own rule read back into the type.
     //
@@ -156,11 +158,12 @@ struct GuiPrompt {
     // (GuiPrompt::request_close from main.cpp's set_on_close) on the
     // platform's clock, with no key and no gesture behind it. It is safe
     // because it CLEARS THE WAY IN ITS OWN BODY first — force-ending every
-    // live gesture through their release bodies, hiding the floating hint and
-    // closing the popup — so the honest rule is that nothing asynchronous
-    // raises a modal without doing that, rather than that nothing
-    // asynchronous raises one at all. THE SECOND, since 2026-10-14, is a
-    // batch's completion opening the RENDER PLAYER, and it raises no modal
+    // live gesture through their release bodies and hiding the floating hint
+    // (GuiInputHandler::on_window_close) — so the honest rule is that
+    // nothing asynchronous raises a modal without doing that, rather than
+    // that nothing asynchronous raises one at all. THE SECOND, since
+    // 2026-10-14, is a batch's completion opening the RENDER PLAYER, and it
+    // raises no modal
     // over the user's work: it REPLACES the progress modal that has stood
     // since the Render press (GuiInputHandler::swap_batch_progress_for_player),
     // and it clears the way the same way — the held press on that modal

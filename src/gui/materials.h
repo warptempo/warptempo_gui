@@ -33,8 +33,9 @@
 // TONE `body_face` — Default's 242424 too (a Live theme's SurfaceArea; our
 // own role WindowBackground; arc_dark 383C4A, Arc's $bg_color): both icon
 // rows and their pads, the gaps between keys, the status bar, the erase
-// (render_background), the on-screen keyboard's band, the modal family's
-// controls row and the dialogs' client. The well's lines — under the top icon row, the
+// (render_background), the on-screen keyboard's band and the modal family's
+// controls row (the pages wear the lists' view tone, `ruler_face`). The
+// well's lines — under the top icon row, the
 // trough, the ruler and the marker lane, the stereo divider, the well's
 // foot and the status bar's line — are `well_border`, each one W
 // (render.h's hairline_px). NO BAKE, NO GRAIN, NO GRADIENT, NO BEVEL, NO
@@ -95,11 +96,9 @@
 // painted-dead face). THE PRESS FOLLOWS THE PRESS ARM'S OWN "on"
 // (point_on_key below: the feint's inside bit, the key returning to rest
 // while the pointer is off it and pressing again when it slides back); EVERY
-// CHANGE OF A KEY'S STATE FADES AS ARC'S SHEET SAYS (architect 2026-11-20,
-// send DD, to the planner's "A press shows at once. Arc fades into the
-// pressed look over 50 ms and back over 200 ms; I kept the press and the
-// lit/dark change immediate": "i'd like to see arc-truthful version
-// instead") — INTO THE ACCENT, PRESSED OR LIT, OVER 50 ms (gtk3 CSS line
+// CHANGE OF A KEY'S STATE FADES AS ARC'S SHEET SAYS (architect 2026-11-20:
+// "i'd like to see arc-truthful version instead") — INTO THE ACCENT,
+// PRESSED OR LIT, OVER 50 ms (gtk3 CSS line
 // 138), OUT OF IT, INTO THE HOVER, INTO DISABLED, OVER 200 ms (line 126),
 // LIT AND INERT 50 ms as a checked look, each from the picture on screen,
 // the face, the ring, the seams, the print and the drawing on one clock
@@ -126,16 +125,16 @@
 // opener under a value sub-page (roster_face_page_owner), a standing
 // overlay's opener under its own question —
 // Arc's own disabled look the dead keys' one sign (redesign_button_enabled's
-// first arm, app_state.h, the owner; architect 2026-11-20, send EE). NOTHING
+// first arm, app_state.h, the owner; architect 2026-11-20). NOTHING
 // IS PRINTED UNDER A KEY (the legends retired 2026-11-18, send Z: "That's
 // from the hi-fi theme"); the tooltip names the act.
-// THE HOVER IS ARC'S (architect 2026-11-18, send Y: "I think we could
-// consider resurrecting the hover ... this is a low contrast theme, which
-// should support hovers. And actually, that'll help me, especially if the
-// icons size gets smaller"; "lets go arc truthful re: hoevers"; 2026-11-20,
-// send CC: "If they're from Canonical, from Arc, I'll just accept them ...
-// So I'm not going to mess with the fade" — reopening 2026-10-02's "ok to
-// drop it"): UNDER THE HOVERING PEN A RESTING KEY'S FACE IS `key_hover_face`
+// THE HOVER IS ARC'S (architect 2026-11-18: "I think we could consider
+// resurrecting the hover ... this is a low contrast theme, which should
+// support hovers. And actually, that'll help me, especially if the icons
+// size gets smaller"; "lets go arc truthful re: hoevers"; 2026-11-20: "If
+// they're from Canonical, from Arc, I'll just accept them ... So I'm not
+// going to mess with the fade"): UNDER THE HOVERING PEN A RESTING KEY'S
+// FACE IS `key_hover_face`
 // (Arc's button:hover background, arc_dark 505666 on the 444A58 face, gtk3
 // CSS line 136; our own role ButtonHoverBackground, a Live theme's key face
 // itself, so no hover shows there), THE BORDER, THE DRAWING AND THE WORD
@@ -178,7 +177,7 @@
 // a face hovers only where a press there would act — and the frames' rule;
 // every painter below takes the mixes as numbers.
 // A LIST'S RESTING ROW HOVERS TOO — ARC'S `row.activatable:hover` (architect
-// 2026-11-21, send EE: "I'd like to add hover"; its tone the same day: "I
+// 2026-11-21: "I'd like to add hover"; its tone the same day: "I
 // prefer to go more truthful. It just needs to be very subtle."):
 // `list_hover_face`, 3 % white over the list's view (theme_roles.h's DERIVED
 // block), across the lit bar's width, in at once
@@ -191,8 +190,9 @@
 // progress line, the sub-page's its focus line (Arc's entry:focus); THE
 // MARKER LANE'S EDITORS are GTK's in-place cell editor, the entry's fill in
 // a one-W accent border (render.h's EDITING paragraph); THE TIME FIELDS are
-// plain text since 2026-11-19 (send AA; paint_handler.cpp's THE TIME
-// FIELDS). THE ON-SCREEN KEYBOARD'S KEYS are one grid of Arc's button tones
+// plain text pressing nothing (architect 2026-11-19 / 2026-11-20;
+// paint_handler.cpp's THE TIME FIELDS). THE ON-SCREEN KEYBOARD'S KEYS are
+// one grid of Arc's button tones
 // with shared lines since send AA's stage D2 (paint_handler.cpp's
 // paint_onscreen_keyboard); THE SCRUB IS ARC'S SCALE — its trough
 // `scale_trough`, its played part the accent, its knob `key_face` in a
@@ -278,12 +278,12 @@
 // `trim_span_face`, the pill at rest, is Live's ScrollbarInnerHandle over
 // Desktop, the ruler's ticks Live's DetailViewRulerMarkings over the ruler
 // face, on every theme (architect 2026-11-07, session 82; theme_roles.h's
-// head). ITS STATES' TONES (architect 2026-11-20, send CC; the one table at
+// head). ITS STATES' TONES (architect 2026-11-20; the one table at
 // render.h's trim_bar_tones): the part under the hovering pen — the pill's
 // body or an end's cap — `trim_span_hover_face` (our ScrollbarSliderHover
 // over Desktop, Thunar's slider under the pointer), the part the bar's own
 // press holds and the end a TRIM sweep is moving `selected_fill` (Arc's
-// slider:active; the sweep an end held, architect 2026-11-20, send DD),
+// slider:active; the sweep an end held, architect 2026-11-20),
 // and every cap neither hovered, held nor moved by a sweep `text` (his "the
 // default text";
 // the caps, Kdenlive's and ours, have no tone of Arc's). No fade: they
@@ -354,9 +354,9 @@ inline constexpr KeyState key_state(bool checked, bool pressed, bool enabled) {
 }
 
 // A STAMP'S TONE: an authored color — or THE MIX OF AUTHORED COLORS AS
-// PAINTED (architect 2026-11-18 / 2026-11-20, send CC, Arc's hover fade;
-// 2026-11-20, send DD, every state's fade: "i'd like to see arc-truthful
-// version instead"; THE FACE'S FADE below): up to kMaxTerms colors, each
+// PAINTED (architect 2026-11-18 / 2026-11-20, Arc's hover fade;
+// 2026-11-20, every state's fade: "i'd like to see arc-truthful version
+// instead"; THE FACE'S FADE below): up to kMaxTerms colors, each
 // with its weight, taken per channel BETWEEN THE COLORS' OWN WORDS — the
 // bytes the stamp stores and blends in, each color converted for the window
 // first (cool_edit_paint.cpp's cue_fill_pixel) — the weighed sum ROUNDED
@@ -377,7 +377,7 @@ struct StampTone {
     int                             n = 0;
     StampTone() = default;
     StampTone(GuiColor c) { add(c, 1.0); }
-    // `t` of `b` over `a` (send CC's two-color mix).
+    // `t` of `b` over `a` (the hover's two-color mix).
     StampTone(GuiColor a, GuiColor b, double t) {
         add(a, 1.0 - std::clamp(t, 0.0, 1.0));
         add(b, std::clamp(t, 0.0, 1.0));
@@ -428,14 +428,15 @@ struct StampTone {
     }
 };
 
-// THE LOOKS A FACE SHOWS (architect 2026-11-20, send DD: "i'd like to see
+// THE LOOKS A FACE SHOWS (architect 2026-11-20: "i'd like to see
 // arc-truthful version instead"; AppState::FaceFades, app_state.h, the one
 // owner of every face's fade): Arc's button states as our painters resolve
 // them — REST, HOVER (a resting face under the hovering pen, Arc's
 // button:hover), LIT (checked, or pressed: Arc's `:active` and `:checked`
 // one look; a latched keyboard key; the knob held), DISABLED, LIT AND INERT.
 // face_look folds a key's state and its hover; the scrub's knob takes Rest,
-// Hover and Lit alone, the on-screen keyboard's keys the same. A SEAM'S LINE
+// Hover and Lit alone, the on-screen keyboard's keys those three and
+// Disabled (a greyed extra key, onscreen_keyboard::key_live). A SEAM'S LINE
 // takes two of them: Rest (no line) and Hover (Arc's inset line).
 enum class FaceLook : uint8_t { Rest, Hover, Lit, Disabled, LitInert };
 inline constexpr int kFaceLooks = 5;
@@ -622,9 +623,9 @@ inline int linked_key_seam_px(int i) {
 // between the border's rows, (3)'s tone mixed toward `well_border` by
 // `seam[i]`, the stored mix of the line between members i − 1 and i (index
 // 0 unread; an empty span is no line).
-// EACH MEMBER IS HANDED AS PAINTED (THE FACE'S FADE, architect 2026-11-20,
-// send DD: "i'd like to see arc-truthful version instead"; send CC's hover
-// before it): `faces[i]` member i's FaceMix, the weight of each look in its
+// EACH MEMBER IS HANDED AS PAINTED (THE FACE'S FADE, architect 2026-11-20:
+// "i'd like to see arc-truthful version instead"; the hover's fade the
+// same): `faces[i]` member i's FaceMix, the weight of each look in its
 // picture (AppState::FaceFades::as_painted, the one owner), so every tone
 // above is that mix of its look tones (mix_looks: the face key_face_tone,
 // the ring stretch key_ring_tone — the runs of (1) join where two members'
@@ -670,7 +671,8 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 
 // ARC'S ENTRY on `box` (architect 2026-11-19, send Z; DESIGN §3, the kit's
 // body_entry; G3 `entry`) — NOISE's case and the value sub-page's field (the
-// time fields plain text since 2026-11-19, send AA), ONE PAINTER: GTK's box order as the word
+// time fields plain text, architect 2026-11-19), ONE PAINTER: GTK's box
+// order as the word
 // button's — THE FILL on the padding box (`box` one border in, corners
 // key_inner_corner_px) in `ruler_face`, the canvas's tone (Arc's
 // $base_color, 404552 on arc_dark), THEN THE RING over it (the outer rounded

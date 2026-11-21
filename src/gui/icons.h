@@ -272,7 +272,7 @@ InkInBox ink_in_box(Icon icon, int box_px);
 void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
                 uint32_t color);
 
-// THE GLYPH IN A MIXED INK (architect 2026-11-20, send DD: a key's drawing
+// THE GLYPH IN A MIXED INK (architect 2026-11-20: a key's drawing
 // fades with its face, Arc's `transition: all` carrying `color`, the ink a
 // symbolic drawing is drawn in): THE SAME PLACE AND THE SAME CROPPED RASTER
 // AS draw_glyph's for `raster_color` (one of the mix's own inks, so the

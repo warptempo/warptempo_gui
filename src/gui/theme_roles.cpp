@@ -365,7 +365,7 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     // key face's own role is (arc_dark 505666, Arc's button:hover; a Live
     // theme's SurfaceBackground, the key face itself: no hover shows there).
     t.key_hover_face      = packed(opaque(roles["ButtonHoverBackground"]));
-    // THE LIST ROW'S HOVER (architect 2026-11-21, send EE; the head's
+    // THE LIST ROW'S HOVER (architect 2026-11-21; the head's
     // DERIVED block): ARC'S OWN, `row.activatable:hover`'s rgba(255, 255,
     // 255, 0.03) over the list's view, the canvas's tone the view wears
     // (ruler_face below) — 3 % white source-over, per channel c + 0.03 ·
@@ -375,9 +375,10 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     // pixman, the alpha 0.03 as 7 / 255) may read one level under it on two
     // channels (454A57, reasoned, not measured) — the formula taken. THE ONE
     // CONDITION: a theme whose hover face is its key face (every Live theme)
-    // hovers nothing (send CC / DD), so its row's hover tone is the view's own
-    // — no hover shows, as no key's does; the walk never hovers a row there
-    // either (installed_theme_hovers, input_pointer.cpp, the same compare).
+    // hovers nothing (architect 2026-11-20), so its row's hover tone is the
+    // view's own — no hover shows, as no key's does; the walk never hovers a
+    // row there either (installed_theme_hovers, input_pointer.cpp, the same
+    // compare).
     const Rgb hover_face = opaque(roles["ButtonHoverBackground"]);
     const bool theme_hovers = hover_face.r != face.r ||
                               hover_face.g != face.g ||

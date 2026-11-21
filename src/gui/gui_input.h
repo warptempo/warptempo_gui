@@ -73,11 +73,11 @@ namespace GuiKeys {
     // 96): no physical key, so no X11 name; it rides XK_Insert's code, the
     // editing block's one keysym nothing else here names. Its one meaning is
     // THE FLAG EDITOR'S TOGGLE INHERIT ON ITS TEXT (architect 2026-11-20 /
-    // 21, send EE: "a true toggle inherit"; handle_top_flag_editor_key,
-    // GuiFlagEditor::toggle_inherit_editor_text — it typed `pass` until
-    // then); nothing in the main dispatch binds it, so outside that editor
-    // it would be an unbound key — and the keyboard greys it everywhere else
-    // (onscreen_keyboard::key_live).
+    // 21: "a true toggle inherit"; handle_top_flag_editor_key,
+    // GuiFlagEditor::toggle_inherit_editor_text, which rewrites the text and
+    // commits nothing); nothing in the main dispatch binds it, so outside
+    // that editor it would be an unbound key — and the keyboard greys it
+    // everywhere else (onscreen_keyboard::key_live).
     constexpr GuiKey Pass       = 0xff63;
 }
 
@@ -89,10 +89,10 @@ namespace GuiKeys {
 // joined 2026-08-28 (its skips and Delete admit a modified press, and their
 // long press reaches it), and THE NOTIFICATION CARD'S LIFT, which joined
 // 2026-10-01 (a long press on any card dismisses every card) — one value and
-// one term. NO HOLD ON THE TRIM BAR MEANS ANYTHING (architect 2026-11-21,
-// send EE: "the double tap will be enough, and we can remove the long
-// press"): a still press there of any length is a tap, its double tap the
-// bar's framing gesture (TrimBarPressSeed, app_state.h), and the barrel's
+// one term. NO HOLD ON THE TRIM BAR MEANS ANYTHING (architect 2026-11-21:
+// "the double tap will be enough, and we can remove the long press"): a
+// still press there of any length is a tap, its double tap the bar's
+// framing gesture (TrimBarPressSeed, app_state.h), and the barrel's
 // press there reads no clock either (PendingClickAct, app_state.h).
 // It has NO VISUAL
 // ANNOUNCEMENT: the span is measured where the act runs (the lift) and
@@ -122,7 +122,7 @@ constexpr int kHoldDelayMs = 300;
 // AppState::RedesignTooltip.)
 // FOUR READERS:
 //   * THE DOUBLE TAP'S WINDOW (kDoubleClickMs, app_state.h; architect
-//     2026-11-21, send EE, "an even 600") — the interval a deliberate SECOND
+//     2026-11-21, "an even 600") — the interval a deliberate SECOND
 //     TAP has to arrive inside, on the three double-tap surfaces;
 //   * THE UNDO TAP-COALESCE WINDOW (kTapCoalesceMs, undo.h), since
 //     2026-08-28 — the interval a deliberate SECOND PRESS of the same
@@ -206,7 +206,8 @@ struct GuiInputState {
     // the burst by IDENTITY with no clock consulted, so a held key coalesces by
     // construction at any repeat delay. A PHYSICAL press takes the
     // other arm — since 2026-08-01 rapid manual taps of the same kind merge too,
-    // on a fixed 500 ms window plus a subject test, and presses beyond it stay
+    // on a fixed 600 ms window (kTapCoalesceMs, undo.h, the product's fixed
+    // beat) plus a subject test, and presses beyond it stay
     // separately undoable. The platform's
     // own consumed-edge sites read it so a burst never disarms itself.
     bool     synthesized_repeat  = false;

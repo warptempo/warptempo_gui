@@ -9,8 +9,8 @@
 #include <optional>
 
 // THE PROGRAM'S PAINTERS (architect 2026-10-09, "chrome means chrome, the
-// program is Cool Edit"; program_spec.h's head): the time field, the
-// cue's chip and the coverage stamp (the well's regions — the trim bar, the ruler, the marker
+// program is Cool Edit"; program_spec.h's head): the cue's chip and the
+// coverage stamp (the well's regions — the trim bar, the ruler, the marker
 // lane — are painted by render_trim_flags, paint_ruler_row and the flag
 // pass). The lengths are program_spec.h's and render.h's (each a rounded
 // part); the colors the installed theme's — the flat look's tones
@@ -110,11 +110,11 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // installed display transform): THE CHIP'S THREE LENGTHS, at the pass's
 // first chip (a pass of rects alone never reads them), and A COLOR'S WORD,
 // kept for the last sixteen colors the pass was handed — a lane's chips
-// alternate an outline and a fill, the enabled pair and the disabled pair
-// interleaved where both stand, so its hundreds of triangles convert four
-// colors once each; a linked group fading through its looks (every tone a
-// mix of up to five, materials.h's StampTone) converts each look's tones
-// once (send DD, 2026-11-20).
+// take one fill each, the enabled one's and the disabled one's interleaved
+// where both stand, so its hundreds of triangles convert two colors once
+// each; a linked group fading through its looks (every tone a mix of up to
+// five, materials.h's StampTone) converts each look's tones once (architect
+// 2026-11-20).
 // THE PASS: begin() takes the direct target once
 // (direct_pixel_target, render.h: the surface flushed, the clip's boxes
 // copied — a clip region's boxes are disjoint, so no pixel is blended twice
@@ -135,7 +135,7 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // StampTone);
 // THE ROUNDED RECT, the trim bar's pill
 // (render_trim_flags; architect 2026-11-17, session 140; IN THREE BANDS
-// with its caps, send DD 2026-11-20) and Arc's keys'
+// with its caps, architect 2026-11-20) and Arc's keys'
 // borders, faces and accents (materials.h's paint_linked_group, send Z,
 // 2026-11-19); THE ROUNDED RING, a word button's and an entry's border;
 // THE ROUNDED RECT CUT, NOISE's progress line (paint_entry); the
@@ -145,7 +145,7 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // (A STAMP'S TONE, StampTone — an authored color or the mix of several as
 // painted — is materials.h's, beside the faces' looks it mixes.)
 
-// THE INK OF A TONE OFF THE STAMP (architect 2026-11-20, send DD: a face's
+// THE INK OF A TONE OFF THE STAMP (architect 2026-11-20: a face's
 // print and drawing fade with it; materials.h's StampTone): the word
 // StampTone's rule makes of `tone` — each color converted for the window
 // (cue_fill_pixel), weighed, rounded once — and the context's source set to
@@ -161,7 +161,7 @@ public:
     void begin(cairo_t* cr);
     // THE RECT [x0, x1] x [y0, y1], real edges in the context's user space,
     // in `tone` (an authored color, the word cue_fill_pixel makes of it, or
-    // two colors' as-painted mix, StampTone): nothing where x1 <= x0 or
+    // several colors' as-painted mix, StampTone): nothing where x1 <= x0 or
     // y1 <= y0.
     void rect(double x0, double y0, double x1, double y1, StampTone tone);
     // THE ROUNDED RECT [x0, x1] x [y0, y1], real edges, its left corners
@@ -172,7 +172,7 @@ public:
     // nothing where x1 <= x0 or y1 <= y0.
     void rounded_rect(double x0, double y0, double x1, double y1, double rl,
                       double rr, StampTone tone);
-    // THE ROUNDED RECT IN THREE BANDS (architect 2026-11-20, send DD: the
+    // THE ROUNDED RECT IN THREE BANDS (architect 2026-11-20: the
     // trim bar's pill and its two caps, THE TRIM BAR'S CAPS AND GRABS,
     // render.h): rounded_rect's shape STAMPED ONCE, its columns cut by two
     // vertical lines `c0` <= `c1` into three regions — [x0, c0] in `t0`,
@@ -225,8 +225,8 @@ private:
                     Cov&& cov, Skip&& skip);
     // The color's word (cue_fill_pixel), from the pass's kept colors.
     uint32_t word_of(GuiColor color);
-    // A tone's word (StampTone's rule): its color's, or the two words'
-    // per-channel mix.
+    // A tone's word (StampTone's rule): its color's, or its colors' words'
+    // weighed per-channel mix.
     uint32_t word_of(const StampTone& tone);
     // The cairo road's source for a tone: the color through
     // set_palette_source, or the mixed word's own bytes.

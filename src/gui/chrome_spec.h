@@ -15,8 +15,8 @@
 // THE CHROME ENDS AT THE CAPTION (architect 2026-10-09 ~06:55, "chrome
 // means chrome, the program is Cool Edit"; the menu row under it removed
 // 2026-10-21, with its three pull-downs): the chrome is the caption, the
-// window frame, the cards, the prompts and the
-// dialogs with their fields and buttons, the scrub and the well's frame (the
+// window frame, the cards, the questions' pages and the sub-pages
+// with their entries and buttons, the scrub and the well's frame (the
 // canvas until the program's later parts take it); THE TOOLBAR BAND, ROW 8
 // AND THE CANVAS COLUMN'S LANES — the view bar, the ruler, the cues — ARE
 // THE PROGRAM'S, Cool Edit's (program_spec.h) — so no field here shapes a
@@ -60,8 +60,9 @@ struct ChromeSpec {
     // the popup lists' vertical bar's width from 2026-10-08 and the trim
     // lane's height and its caps' square 2026-10-08 to 2026-10-09 — left the
     // spec 2026-10-14 with the popup lists' scroll bar, its last reader.)
-    // THE PUSH BUTTON — the dialogs' word buttons (paint_handler.cpp's
-    // kModal* block): the box's height and the label's pads left and right.
+    // THE PUSH BUTTON — Windows 2000's box height and label pads left and
+    // right, read by no painter: the word buttons are Arc's text buttons on
+    // their own lengths (paint_handler.cpp's kWordButtonMinW block).
     double             push_button_box_px;
     double             push_button_pad_left_px;
     double             push_button_pad_right_px;

@@ -60,7 +60,7 @@ inline uint32_t blend_word(uint32_t d, uint32_t s, double a) {
 }
 
 // THE BLEND OF ONE PIXEL A SHAPE LAYS IN SEVERAL TONES (architect
-// 2026-11-20, send DD: the trim bar's pill and its two caps, ONE shape cut
+// 2026-11-20: the trim bar's pill and its two caps, ONE shape cut
 // into regions by vertical lines, each region its own tone): the opaque
 // source words s[i] laid over the target's word `d`, each at its own
 // coverage a[i] — the shape's exact area inside region i over the pixel,

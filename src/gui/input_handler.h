@@ -320,8 +320,8 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // and it is reached on every one-finger frame of the survivor's pan; (2) the
 // damage is owed at all because a clear can land on a frame that APPLIES
 // NOTHING and therefore rebuilds nothing — a survivor pan whose frame lands
-// under a modal state (a prompt, the progress modal, a drop-down, the folder
-// overlay, a dialog editor, a load: the body's per-frame refusal asks state
+// under a modal state (a prompt, the progress modal, the folder overlay, a
+// dialog editor, a load: the body's per-frame refusal asks state
 // alone, the gesture's surface decided once at its down, architect
 // 2026-10-16) is exactly that frame, and it is the case the clear's own
 // ordering rule already names (the clear leads apply_touch_nav_update's body,
@@ -480,7 +480,7 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // sync render). `margin` fits the span's MARGINED WINDOW — at most
 // kViewportEdgeMarginFraction of the WINDOW of empty space a side, a side on
 // the song's wall handing nothing to the other (edge_margined_window_frames,
-// app_state.h; architect 2026-11-21, send EE) — for the trim / group cases;
+// app_state.h; architect 2026-11-21) — for the trim / group cases;
 // the whole-song case passes margin=false. The fit level is fit_zoom_level's
 // ceil-to-sixteenths solve, and the centering formula places the bare span's
 // midpoint in the PAINTED window at that level (W·q_t, q_t on the
@@ -1187,8 +1187,9 @@ struct GuiInputHandler {
     // deleted with its resting form — the tablet's pen reaches the trim bar.)
     // THE BODY IS THE
     // CARVE-OUT'S ONE INVENTORY: the notification cards, the on-screen
-    // keyboard's surface (standing over the canvas's foot since send EE,
-    // 2026-11-20), the folder overlay's band and the score viewer's panel.
+    // keyboard's surface (standing over the window's last rows, the canvas's
+    // foot among them, architect 2026-11-20), the folder overlay's band and
+    // the score viewer's panel.
     // (The OPEN
     // MARKER-LANE EDITOR'S BOX had a clause from 2026-09-05 until the marker
     // lane left the zone on 2026-09-25; it paints in that lane, so it is off
@@ -1475,8 +1476,8 @@ struct GuiInputHandler {
 
     // -- ARC'S HOVER AND EVERY FACE'S FADE: THE BODIES OF THEIR ONE OWNER
     //    (the rule, the gate, the fades and the frames' cost at
-    //    AppState::FaceFades, app_state.h; architect 2026-11-18 / 2026-11-20,
-    //    sends CC and DD; definitions in input_pointer.cpp) ------------------
+    //    AppState::FaceFades, app_state.h; architect 2026-11-18 / 2026-11-20;
+    //    definitions in input_pointer.cpp) -----------------------------------
     // THE POINTER'S HALF OF THE GATE, AND THE ONE EVERY HOVER LOOK ASKS —
     // "may a hover face show for the pen where it is now?": the pen hovering
     // in the plane (AppState::pointer_in_window: every leave drops it, the
@@ -1490,7 +1491,7 @@ struct GuiInputHandler {
     // through the leave first), THE BARREL NOT HELD (pointer_barrel_held_,
     // the bit's one description: a press carrying the barrel is a consumed
     // no-op on every surface that hovers, so nothing hovers under it —
-    // architect 2026-11-20, send DD: "good") and THE PEN LATCH NOT
+    // architect 2026-11-20: "good") and THE PEN LATCH NOT
     // HOLDING (pen_hot_latch_holds: after a pen lift no face hovers until
     // the rearm distance or a leave). It names no surface: each surface's
     // own walk adds what a press there would meet (the faces' walk below;
@@ -1518,7 +1519,7 @@ struct GuiInputHandler {
     // pointer's place, never these.
     bool main_page_takes_press_at_pointer() const;
     // THE TRIM BAR'S HOVER (AppState::TrimBarHover, the rule; the look at
-    // render.h's trim_bar_tones; architect 2026-11-20, send CC). THE WALK —
+    // render.h's trim_bar_tones; architect 2026-11-20). THE WALK —
     // under the theme's term (the faces' own, walk_hover_face: a theme whose
     // keys show no hover shows none on the bar either, the held states'
     // caps unchanged) and trim_bar_takes_grab, the part under the pen under
@@ -1542,7 +1543,7 @@ struct GuiInputHandler {
     // pointer's half less the latch. The part under the pointer by the
     // press's own two hits (hit_test_trim_endcap, point_in_trim_bridge_span).
     // THE LEAVE'S HELD CLEAR (AppState::TrimBarHover's `leave_ms`, the rule;
-    // the 10 ms hold KEPT, architect 2026-11-20, send DD): the pointer-leave
+    // the 10 ms hold KEPT, architect 2026-11-20): the pointer-leave
     // hook stamps a standing part (stamp_trim_bar_leave) ahead of its walk,
     // and the walk keeps it for kTrimBarLeaveHoldMs while the pointer stays
     // out, no contact is down and trim_bar_part_terms_hold — the terms a
@@ -1559,7 +1560,7 @@ struct GuiInputHandler {
     TrimBarPart trim_bar_part_under_pointer() const;
     // THE WALK: the face the pen is on now, under both halves of the gate
     // and the theme's term (a theme whose hover face is its key face hovers
-    // nothing, seams included: architect 2026-11-20, send DD: agreed),
+    // nothing, seams included: architect 2026-11-20: agreed),
     // handed to the one setter. Run on every pointer
     // motion (on_motion's head, above every branch: a held button answers
     // none), on every tick (the stashes move with no pointer event), at the
@@ -1595,7 +1596,7 @@ struct GuiInputHandler {
     // two scrubs' claims on the knob.
     void press_face(const AppState::FaceFades::Face& face);
     // THE PRESS'S END (AppState::FaceFades' GTK'S RULE; architect
-    // 2026-11-20, send DD, "arc-truthful"): the face's running fade held at
+    // 2026-11-20, "arc-truthful"): the face's running fade held at
     // the value it has reached now (FaceFades::Record::hold), so a press
     // shorter than its fade goes back from where it got to, as GTK's does,
     // and a key its own act lit goes on toward lit from there. Called beside
@@ -2250,7 +2251,7 @@ struct GuiInputHandler {
 
     // THE MARKER CLICK ACT, AT THE PRESS (2026-08-17) — stop, the two-way
     // selection fork, the land, the PLAIN shape's
-    // double-tap consume-open (architect 2026-11-21, send EE; against the
+    // double-tap consume-open (architect 2026-11-21; against the
     // press-time candidate snapshot, its gates read live, the open EDIT's own
     // two opens), and the plain arm of PendingMarkerPress for
     // the drag the press may become and the seed its motionless release owes
@@ -2291,7 +2292,7 @@ struct GuiInputHandler {
     void run_pending_click_act(PendingClickAct press);
 
     // The empty marker lane's double-tap marker CREATE (architect
-    // 2026-11-21, send EE), run at the SECOND PRESS from the lane's consume
+    // 2026-11-21), run at the SECOND PRESS from the lane's consume
     // in on_button_press: THE DROP at the tapped place — the copy-previous
     // drop in W, the lead-in reset in P, the same two bodies bare `s` and the
     // Drop key run, the drop's own rules all theirs (the warp coincidence
@@ -2342,7 +2343,7 @@ struct GuiInputHandler {
     // probe lambda calls it. NOTHING REPEATS UNDER A PROMPT, THE PROGRESS
     // PAGE OR AN OVERLAY, and under an editor only its motion and typing
     // keys and the marker lane editor's live UP / DOWN (the main page's
-    // UP / DOWN hold; architect 2026-11-20 / 21, send EE) — a Tab and the
+    // UP / DOWN hold; architect 2026-11-20 / 21) — a Tab and the
     // pass key are one-shot.
     bool repeat_eligible(GuiKey key, GuiInputState mods) const;
 
@@ -2503,7 +2504,7 @@ private:
     // close_batch_progress: the CANCELLED and SHORT terminals' close, and the
     //   parked batch's cancel — the state reset and a whole-window damage,
     //   as a prompt's answer takes, which brings the lanes, the canvas and
-    //   row 8 back from under the box.
+    //   the bottom icon row back from under the page.
     // swap_batch_progress_for_player: the COMPLETE terminal's swap — THE
     //   PROGRESS PAGE'S HELD PRESS DROPS FIRST (the pointer arm on its
     //   Cancel, released as a no-op, so no lift lands on the player; the arm
@@ -2877,11 +2878,11 @@ private:
     // keyboard-modal, and the IterBound editor since 2026-09-05 — they
     // differ only in their commit/cancel bodies and the flag editor's Tab
     // completion. AHEAD OF THE ROUTE it answers THE EDITOR'S EXTRA KEYS
-    // (architect 2026-11-20 / 21, send EE): bare Up / Down step the text,
+    // (architect 2026-11-20 / 21): bare Up / Down step the text,
     // the bare pass key toggles the flag editor's text between owner and
     // pass, each rewriting the text and committing nothing (GuiFlagEditor's
-    // step_editor_text / toggle_inherit_editor_text). There is no longer a
-    // tail that cancels an edit to let an
+    // step_editor_text / toggle_inherit_editor_text). No tail cancels an
+    // edit to let an
     // unmatched key through: the gate means no unmatched key arrives.
     bool handle_top_flag_editor_key(GuiKey key, GuiInputState mods);
 
@@ -2889,7 +2890,7 @@ private:
     // route_modal_editor_key, passing GuiSettingsEditor::autocomplete_value as
     // the bare-Tab hook: the value completion is Tab's under the one
     // autocomplete model (architect 2026-08-13; a Tab that did not advance
-    // is silent since 2026-11-20, send EE; the typed-`=` trigger it wore for
+    // is silent since 2026-11-20; the typed-`=` trigger it wore for
     // part of that first day is reverted with the ruling). It is also THE
     // EDITOR'S ONE
     // RETURN HOOK (architect 2026-10-28 night): an editor the key closed —
@@ -2960,15 +2961,15 @@ private:
     //       order and its own membership, project_model.h: the enumeration
     //       already drops every name the device config cannot carry) filtered
     //       here by the model (resolve_project), so a row that would refuse at
-    //       Enter is not a row: an invalid folder simply does not show
+    //       its open is not a row: an invalid folder simply does not show
     //       (architect 2026-08-28). Never
     //       kept fresh (a project that appears or vanishes while the picker
     //       stands shows at the next open), no `..` row and no folder inside
     //       a project — a project is a leaf here. The band opens on the
     //       CURRENT project's row, centered in the band
     //       (folder_overlay::scroll_row_centered, 2026-10-26).
-    //     open_project_commit: THE OPEN ACT on row `index` — a click on the
-    //       row and Enter on the highlight both reach it, one body. The
+    //     open_project_commit: THE OPEN ACT on row `index` — the row's tap,
+    //       its one road (no Enter reaches a row). The
     //       row's name goes through the project model (resolve_project); the
     //       project already open is a consumed no-op that CLOSES the picker;
     //       then the STRICT SIDECAR DRY-RUN (source_load_dry_run,
@@ -3019,8 +3020,8 @@ private:
     //       (scroll_row_centered) — a value list's or the line editor's
     //       return seating the key it showed; with no seat key — `;` and the
     //       Settings key — the FIRST KEY ROW, at the top (that clamp).
-    //     settings_page_commit: THE OPEN ACT on row `index` — a tap, a click
-    //       or Enter: on the row of a key with a value list
+    //     settings_page_commit: THE OPEN ACT on row `index` — the row's tap,
+    //       its one road: on the row of a key with a value list
     //       (settings_key_has_value_list, settings_editor.h) THAT KEY'S VALUE
     //       LIST is swapped in, in place, under the same picker session
     //       (build_value_list_rows), a sub-page returning here; on every
@@ -3053,12 +3054,13 @@ private:
     //       the key's value as written, `on`, `4`; the key recorded on the overlay (`value_key`); the band
     //       opens on the LIVE value's row, centered in the band
     //       (folder_overlay::scroll_row_centered, 2026-10-26).
-    //     value_list_commit: THE OPEN ACT on row `index` — a tap, a click
-    //       or Enter: the row's value committed through the typed line's one
-    //       body (GuiSettingsEditor::apply_device_setting — the grammar, the
-    //       live apply, the write, its failure card the typed road's), then
-    //       return_to_settings_page — no card on success, the change being
-    //       the answer; the live row commits nothing and returns the same.
+    //     value_list_commit: THE OPEN ACT on row `index` — the row's tap,
+    //       its one road: the row's value committed through the typed
+    //       line's one body (GuiSettingsEditor::apply_device_setting — the
+    //       grammar, the live apply, the write, its failure card the typed
+    //       road's), then return_to_settings_page — no card on success, the
+    //       change being the answer; the live row commits nothing and returns
+    //       the same.
     //     return_to_settings_page: THE LIST'S RETURN, one body for its two
     //       roads — Cancel and the commit's tail: the page's rows
     //       rebuilt under the SAME picker session (no new session, no modal
@@ -3167,12 +3169,12 @@ private:
     //       refused open here would leave the mode resting without its form.
     //     build_bpm_form_rows: the rows from the owner's three fields
     //       (bpm_field_text, warpmarkers.h), the highlight seated on `seat`.
-    //     bpm_form_commit: THE OPEN ACT on row `index` — a tap, a click or
-    //       Enter: the form closes (close_picker, the mode STANDING — the
+    //     bpm_form_commit: THE OPEN ACT on row `index` — the row's tap, its
+    //       one road: the form closes (close_picker, the mode STANDING — the
     //       overlay and the on-screen keyboard never both stand) and THE
     //       LINE EDITOR opens PREFILLED with the row's VALUE, the key its
-    //       sub-page's label (architect 2026-11-19, send AA; 2026-11-20,
-    //       send EE), the caret at its end, on the line editor's buffer
+    //       sub-page's label (architect 2026-11-19 and 2026-11-20), the
+    //       caret at its end, on the line editor's buffer
     //       (text_editor::Kind::BpmField, `target` the field). Its commit is
     //       GuiFlagEditor::commit_bpm_field; its Enter and Esc return to the
     //       form seated on that row (handle_settings_editor_key's hook).
@@ -3247,9 +3249,9 @@ private:
     // no-second-road doctrine's stated exception for the Open prompt
     // (2026-08-28, one afternoon: GLASS NEEDS A ROAD THAT IS NOT TYPING) is
     // SPENT rather than kept — the list is now the only road on both
-    // backends, and a row's click and Enter are one act on it. THE VALUE
-    // LIST IS A SECOND ROAD ONTO ITS KEY BY RULING (architect 2026-10-25,
-    // 2026-10-28 night for its keys): the typed `key=`
+    // backends, and a row's tap is its one act (no Enter reaches a row).
+    // THE VALUE LIST IS A SECOND ROAD ONTO ITS KEY BY RULING (architect
+    // 2026-10-25, 2026-10-28 night for its keys): the typed `key=`
     // line and its Tab completion stand unchanged, and both roads commit
     // through the one body (GuiSettingsEditor::apply_device_setting), so
     // they cannot drift. THE SETTINGS PAGE IS NO SECOND ROAD: its rows open
@@ -3303,7 +3305,7 @@ private:
     // the commit worker; a load that fails never reaches a reopen). A clean
     // session reopens with no
     // question; a dirty one is asked "Discard unsaved changes and reload?",
-    // OK / Cancel with OK focused, as the load confirmation is
+    // OK / Cancel, as the load confirmation is
     // (GuiPrompt::request_close). A running
     // render is killed by the teardown's worker join, as the picker's reopen
     // kills one. Legal on a read-only tab, under the iteration lock and in the
@@ -3352,21 +3354,22 @@ private:
     // FROM THE LIFT ON, the new state right after the tap (architect
     // 2026-10-07: "withholding the color change until the pen moves away
     // makes it too slow"; the going itself Arc's 200 ms fade out of the
-    // accent, or nothing where the act lit the key, architect 2026-11-20,
-    // send DD; AppState::FaceFades), and nothing else lights, until the pen
+    // accent, or nothing where the act lit the key, architect 2026-11-20;
+    // AppState::FaceFades), and nothing else lights, until the pen
     // has moved the rearm distance from its first hover report, or left and
     // come back.
     // THE INVENTORY — EVERY FACE THE PRODUCT LIGHTS BY HOVER, ITS ONE
-    // STATEMENT (re-derived 2026-11-20, send CC, Arc's hover; every other
-    // site points here). Each wears Arc's hover face, faded in and out over
+    // STATEMENT (re-derived 2026-11-21 against AppState::FaceFades' five
+    // surfaces, Arc's hover; every other site points here). Each but the list
+    // row (its own terms, below) wears Arc's hover face, faded in and out over
     // Arc's 200 ms, while the pen hovers it AT REST — enabled, not lit, not
     // pressed, not dead under a veil, the barrel not held (the look
     // materials.h's THE HOVER; the state, the gate, the fade and the damage
     // AppState::FaceFades, one owner; the walk walk_hover_face):
     //   * THE KEYS OF BOTH ICON ROWS — the roster's linked buttons, each
     //     chord key's box (NOISE's entry is no key; the bottom left's
-    //     timestamp presses nothing and lights nothing, architect
-    //     2026-11-20, send DD: "it no longer carries button look"), each
+    //     timestamp is plain text, presses nothing and lights nothing,
+    //     architect 2026-11-20), each
     //     group's seams with them (AppState::FaceFades' THE SEAMS);
     //   * THE DIALOG STASH'S BUTTONS — every controls row's keys and word
     //     buttons (the render player's, the score viewer's, the trim presets
@@ -3374,7 +3377,7 @@ private:
     //     answers, the progress page's Cancel);
     //   * THE ON-SCREEN KEYBOARD'S KEYS;
     //   * THE SCRUB'S KNOB, the render player's and the score viewer's;
-    //   * THE LIST ROW'S HOVER (architect 2026-11-21, send EE: "I'd like to
+    //   * THE LIST ROW'S HOVER (architect 2026-11-21: "I'd like to
     //     add hover"; Arc's own `row.activatable:hover`, 3 % white, the same
     //     day: "I prefer to go more truthful. It just needs to be very
     //     subtle."): A
@@ -3392,8 +3395,8 @@ private:
     //     shows none, and after its lift this latch holds as for a key.
     //   THE TRIM BAR hovers too, NOT ONE OF THESE FADING FACES: its own
     //   walk and its own one-value state (walk_trim_bar_hover, run inside
-    //   walk_hover_face; AppState::TrimBarHover; architect 2026-11-20, send
-    //   CC), on the main page's form of the same gate
+    //   walk_hover_face; AppState::TrimBarHover; architect 2026-11-20), on
+    //   the main page's form of the same gate
     //   (hover_admitted_on_main_page) plus the bar's own terms (its stash,
     //   not the `h` view, not the barrel) and the faces' theme term, AT
     //   ONCE, WITH NO FADE (Arc's scrollbar slider has no transition): the
@@ -3443,7 +3446,7 @@ private:
     // fade-out as every leave does, and a millisecond of Arc's 200 ms is
     // under one painted level; the DOWN's press arm then turns the face
     // toward the accent from the value it holds over Arc's 50 ms
-    // (press_face; send DD, 2026-11-20), with no dip. The trim
+    // (press_face; architect 2026-11-20), with no dip. The trim
     // bar, with no fade, holds its hovered part across that leave instead
     // (AppState::TrimBarHover's `leave_ms`).
     // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
@@ -3505,10 +3508,10 @@ private:
     //     hovers (the band's modifier gate chrome_band_modifiers_refused,
     //     the on-screen keyboard's claim, both scrubs' claims, every dialog
     //     arm: "a barrel press on a key is a consumed no-op", architect
-    //     2026-11-08; architect 2026-11-20, send DD: "good").
+    //     2026-11-08; architect 2026-11-20: "good").
     //   * THE TRIM BAR'S (trim_bar_takes_grab): with the barrel held a
     //     press on the bar is the bound-set click, not the grab, so the bar
-    //     shows no hover and no caps (architect 2026-11-20, send CC) — its
+    //     shows no hover and no caps (architect 2026-11-20) — its
     //     own term, which its frozen answer under the pen latch and its
     //     leave's held clear (AppState::TrimBarHover's `leave_ms`) re-ask.
     // THE BIT IS THE LAST MOTION'S, NOT THE BUTTON'S, and lags it in one
@@ -3557,7 +3560,7 @@ private:
     // (architect 2026-11-05): the 12 Windows px of 2026-10-02 times 1.5, so
     // the tablet's 36 device px stand (the drift numbers above are device
     // px). The blink was measured on the roster's hot face of 2026-10-06,
-    // the hover face Arc's hover brings back (send CC, 2026-11-20).
+    // the hover face Arc's hover brings back (architect 2026-11-20).
     static constexpr double kPenHotRearmPx = 18.0;
 
     // THE PUBLISH CHORD'S ACT — Ctrl+Shift+S, the `h` view's alone, the
@@ -4150,7 +4153,7 @@ private:
     // the whole window's damage, the true-colors act's shape. NO RELAYOUT:
     // the box moves the keyboard's surface alone, which stands over the app
     // and moves no lane (onscreen_keyboard.h's placement block; architect
-    // 2026-11-20, send EE) — the canvas's clip follows it on its own
+    // 2026-11-20) — the canvas's clip follows it on its own
     // (waveform_paint_area, the GL canvas's upload rule) and every rect of
     // the app's is unchanged. The settings editor's `osk_key_w=` and
     // `osk_key_h=` commits are the sole callers, each passing the live
@@ -4443,14 +4446,14 @@ private:
     // platform name). Such a modal ADMITS ITS OWN VOCABULARY ALONE: its
     // typed characters, Backspace, Esc and Enter, a line editor's and the
     // flag editor's Tab, the flag editor's live extra keys (UP, DOWN, the
-    // pass key; architect 2026-11-20 / 21, send EE)
+    // pass key; architect 2026-11-20 / 21)
     // — and its FIELD'S TEXT for the pointer; every other key, press
     // and touch gesture is consumed, silently, and the on-screen keyboard
     // it raises greys the whole roster behind it, a lit key lit and inert —
     // the main page's, or under a value sub-page the opener of the list it
     // was opened from
     // (redesign_button_enabled's record of the classes and its first arm,
-    // architect 2026-11-20, send EE; roster_face_page_owner). PAINT ALONE:
+    // architect 2026-11-20; roster_face_page_owner). PAINT ALONE:
     // this predicate's veil is what keeps every key dead. The way out is Esc (cancel) and Enter
     // (commit) alone — the on-screen keyboard's own two keys (its Esc lower
     // right since 2026-10-29), the sub-page carrying no button. A PRESS
@@ -4503,7 +4506,7 @@ public:
     // stop has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open,
     // which every open site calls and which records the whole decision table
     // (every editor's open stops, the lane editors' included, architect
-    // 2026-11-20, send EE; the dialog editors and the prompts likewise).
+    // 2026-11-20; the dialog editors and the prompts likewise).
     bool modal_dialog_editor_active() const;
 private:
     // The editors' key gate, the sibling of read_only_key_blocked's allowlist
@@ -4513,7 +4516,7 @@ private:
     // five kinds), a line editor's and the flag editor's Tab, and the flag
     // editor's extra keys where the on-screen keyboard paints them live (bare
     // Up / Down, the bare pass key; onscreen_keyboard::key_live, architect
-    // 2026-11-20 / 21, send EE) — NO HATCH since 2026-10-25, Ctrl+S
+    // 2026-11-20 / 21) — NO HATCH since 2026-10-25, Ctrl+S
     // consumed like every other chord. ONE CONSEQUENCE, ACCEPTED:
     // Ctrl+Z is not admitted, so typing inside an editor has NO UNDO — the
     // gap these editors have always had, which is also why a refused

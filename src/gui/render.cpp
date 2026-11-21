@@ -406,7 +406,7 @@ void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
 // part, the same pill cut at the knob's center, in the accent; the knob's
 // disc — at rest `key_face` inside a one-W `scale_slider_border` rim,
 // hovered its fill `key_hover_face`, held the whole disc the accent — AS
-// PAINTED, `knob` its FaceMix (Rest, Hover and Lit; send DD, 2026-11-20):
+// PAINTED, `knob` its FaceMix (Rest, Hover and Lit; architect 2026-11-20):
 // the fill and the rim each the mix of their looks' tones (the stamp's
 // tone); the knob wholly held is the one accent disc, byte for byte the
 // held picture of before.
@@ -1037,7 +1037,7 @@ GuiRectF trim_endcap_rect(bool is_begin, int strip_x,
 
 TrimBarTones trim_bar_tones(const TrimBarLook& look) {
     // THE ONE TABLE (the declaration, render.h), first match; a sweep's
-    // moving end is an end held (architect 2026-11-20, send DD).
+    // moving end is an end held (architect 2026-11-20).
     const GuiPalette& p = palette();
     TrimBarTones t;
     t.body = p.trim_span_face;
@@ -1168,7 +1168,7 @@ void render_trim_flags(cairo_t* cr,
     // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
     //
     // THE CAPS (render.h's THE TRIM BAR'S CAPS AND GRABS; architect
-    // 2026-11-20, sends CC and DD) ARE THE PILL'S OWN ENDS: where the look
+    // 2026-11-20) ARE THE PILL'S OWN ENDS: where the look
     // shows them the pill is stamped ONCE in three regions cut by two
     // vertical lines (CoverageStampPass::rounded_rect_bands) — the end's cap
     // from the right tip `cap_w` in (the pill's radius plus the straight
@@ -1177,7 +1177,7 @@ void render_trim_flags(cairo_t* cr,
     // first (the end's over the begin's, "like the flags do"), the body
     // between, empty where the caps meet — so both caps stand at every
     // length, the pill's short forms included. On the tablet the cap is
-    // 10 x 12 device px, rows 150 .. 161, its line 16 px inside its bound.
+    // 10 x 12 device px, rows 148 .. 159, its line 16 px inside its bound.
     // EXACT: every pixel is the pill's exact coverage, its tone each
     // region's weighed by the pill's exact area in that region's part of
     // the pixel, laid and rounded once — through a round end as through the
@@ -1617,7 +1617,7 @@ struct FlagFace {
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
-// diff flags (architect 2026-11-05, his pick a2 of tmp/s42 on real captures:
+// diff flags (architect 2026-11-05, his pick a2 of session 42 on real captures:
 // THE STEM IS THE SELECTION'S, reversing 2026-11-04's coincidence stem —
 // "dropped, along with the rest of cool edit stuff except a few details like
 // the triangle playhead"; 2026-10-26 ~15:10–15:30, THE STRIKE: "It's very

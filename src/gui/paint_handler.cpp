@@ -103,9 +103,10 @@
 // the prompt's text-plus-labels line became a message + real buttons. The
 // one-run prefix+pending shaping died with it, the pending run shaping alone
 // and the published click-to-caret geometry (AppState::DialogEditorText) the
-// editor's own. Since send EE a prompt is a full page, its answers on row
-// 8's rows (modal_owns_bottom_row), and a line editor a sub-page of its own
-// (THE VALUE SUB-PAGE below), its answers the on-screen keyboard's.)
+// editor's own. A prompt is a full page (architect 2026-11-20), its answers
+// on the bottom icon row's rows (modal_owns_bottom_row), and a line editor a
+// sub-page of its own (THE VALUE SUB-PAGE below), its answers the on-screen
+// keyboard's.)
 
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
 
@@ -358,8 +359,8 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect);
 // (redesign_button_pressed_face, gated on the painted enabled bit: a key can
 // go dead under a held press), its LOOK that state with the hover (a resting
 // member that is AppState::FaceFades::hovered is Hover; face_look) — EACH
-// MEMBER AND EACH SEAM AS PAINTED (architect 2026-11-20, send DD: "i'd like
-// to see arc-truthful version instead"; AppState::FaceFades, the one owner):
+// MEMBER AND EACH SEAM AS PAINTED (architect 2026-11-20: "i'd like to see
+// arc-truthful version instead"; AppState::FaceFades, the one owner):
 // the member's FaceMix and the seam's line by face_as_painted /
 // seam_as_painted off the looks this run resolved, which begin the fade of a
 // member whose look moved (a lit or dark edge, a greying — a modal's among
@@ -432,7 +433,8 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 // (architect 2026-11-17, send U: "Negative INF on the noise slider should
 // not have a disabled color because it's still enabled"). DISABLED
 // (`enabled` false — no folder or a failed load, and the roster's blanket
-// greys: a load, an overlay, the on-screen keyboard standing, send EE): THE
+// greys: a load, an overlay, the on-screen keyboard standing, a question's
+// page or the progress page; roster_greyed_whole, architect 2026-11-20): THE
 // NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry, the
 // kit's; the mix per channel of the installed words, rounded) and NO LINE.
 // The run shaped through the memo (memoized_run: a few dozen spellings).
@@ -541,7 +543,7 @@ void paint_key_glyph(cairo_t* cr, const GuiRectF& key, icons::Icon icon,
     icons::draw_glyph(cr, icon, bx + fit.left, by + fit.top, fit.ink_px, tone);
     cairo_restore(cr);
 }
-// THE DRAWING IN ITS INK AS PAINTED (architect 2026-11-20, send DD; THE
+// THE DRAWING IN ITS INK AS PAINTED (architect 2026-11-20; THE
 // FACE'S FADE, AppState::FaceFades): `ink` the face's mix of its looks' inks
 // (key_ink_tone, materials.h). A plain ink is the word road above, byte
 // for byte; a mixed one the same seat and size through the mask road
@@ -1401,8 +1403,8 @@ static std::string history_walk_line(AppState& app) {
 // open text editor, the flag editor's among them) the bar keeps fields 1
 // and 3 and DROPS FIELD 2 (his "agree").
 // WHILE A BATCH'S PROGRESS STANDS THE BAR IS BLANK (architect 2026-11-20,
-// send EE, to "blank the status bar while the progress page stands":
-// "agree"): the string is empty for as long as AppState::batch_progress is
+// to "blank the status bar while the progress page stands": "agree"): the
+// string is empty for as long as AppState::batch_progress is
 // active — the progress page says what the batch's process line would
 // ("Rendering 3 of 11 ..."), so the bar under it does not say it twice —
 // WHATEVER STANDS OVER THE PROGRESS PAGE, a question raised over it
@@ -1778,8 +1780,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 0, at the window's top; row 4 of the
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the title
-    // bar, Arc's pad, the cases, the pad on the body tone (send Z,
-    // 2026-11-19; 7 W each side, send EE), the left members in
+    // bar, Arc's pad, the cases, the pad on the body tone (architect
+    // 2026-11-19; 7 W each side, architect 2026-11-20), the left members in
     // THREE RUNS and the right five in ONE — TWENTY-SEVEN members outside the
     // `h` view and EIGHTEEN inside it (2026-10-29, the Restrict lamp behind
     // Follow, hidden in the view), RE-COUNTED off the roster enum, the
@@ -1836,7 +1838,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     //   352 + 12 + 772 + 12 + 352 + 12 + 78 = 1590,
     // from column 12: OPEN .. RENDER 12..363, IN .. FLATTEN 376..1147,
     // PLAYER .. TIPS 1160..1511, NOISE 1524..1601 — the kit's seats
-    // (tmp/sendZ/mocks/build_log_mock4.txt) — 338 px of ground before the
+    // (the mock kit's build log) — 338 px of ground before the
     // history opener; inside the view three groups of 4, 6 and 2 (Open, Save,
     // Revert, Load in Place | Zoom In, Zoom Out, Zoom to Fit, the lamp,
     // Cumulative, Session | Play Renders, Enable Tooltips) and NOISE,
@@ -1880,7 +1882,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // CHECKED, the live fact its chord flips (redesign_button_selected), one
     // look (Arc's `:active` and `:checked`; the radio keys' purple retired
     // 2026-11-19, send Z), and AT REST UNDER THE HOVERING PEN Arc's hover
-    // face (send CC, 2026-11-20; paint_roster_group's hover span, the rule
+    // face (architect 2026-11-20; paint_roster_group's hover span, the rule
     // AppState::FaceFades's); THE LEVEL CASE its own painter
     // (paint_level_case: Arc's entry, the level its progress line, never lit,
     // never pressed, never hovered). The pointer walk finds the tooltip's
@@ -2099,7 +2101,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // buttons at the bottom right):
 //
 //   THE TIMESTAMP, PLAIN TEXT, "  |  " AND THE ACTIVE TAB'S NAME, one run
-//   from 14 W (send AA, 2026-11-19; bottom_left_run below; the face and
+//   from 14 W (architect 2026-11-19; bottom_left_run below; the face and
 //   the fixed width at THE TIME FIELDS' block);
 //
 //   and, PACKED AGAINST THE RIGHT INSET, five groups, each one linked group (send Z), the run
@@ -2175,9 +2177,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // height): the program's key (70 x key_height, 2026-11-04 night) — read from
 // the band's own accessors (render.h's program block) so the rows cannot
 // drift apart — on THE ROW'S OWN GROUND, Arc's pad above the case and the
-// same pad below it (send Z, 2026-11-19; 7 W each side since 2026-11-20,
-// send EE; Cool Edit's row 8 under its dock
-// bar, 4 W above and 5 below, 2026-10-09 to then). (Row 8's kdenlive
+// same pad below it (7 W each side, architect 2026-11-20; render.h's ARC'S
+// TOOLBAR PADS). (Row 8's kdenlive
 // transport metrics, its 26-px boxes and
 // its ruled separators; Explorer's flat case with WordPad's air and the
 // etched separators, 2026-10-06 to 2026-10-09 — git history.)
@@ -2455,8 +2456,8 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 
 // THE TIME FIELDS — THE BOTTOM ICON ROW'S TIMESTAMP, THE RENDER PLAYER'S
 // POSITION AND LENGTH AND THE SCORE VIEWER'S PAIR — PLAIN TEXT, NO ENTRY
-// (architect 2026-11-19, send AA, RULINGS §8 / §9, his pick C 2 of Z_10:
-// the timestamp "probably doesn't need to be ... in its own input box. It
+// (architect 2026-11-19, RULINGS §8 / §9, his pick C 2 of Z_10: the
+// timestamp "probably doesn't need to be ... in its own input box. It
 // looks a little awkward now"; the overlays' clocks unboxed the same way):
 // THE DIGITS IN THE PROGRAM FACE (Regular 12 W, 24 device px on the tablet;
 // gui_font.h's table), THE TEXT TONE `text` (M13, 2026-11-02), on the
@@ -2478,8 +2479,8 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // tablet, session 40) — so every digit slot is one advance and the colon
 // and the point stand still as the time runs.
 //
-// EVERY TIME LABEL PRESSES NOTHING (architect 2026-11-20, send DD: "it no
-// longer carries button look"): the bottom left's timestamp is ground like
+// EVERY TIME LABEL PRESSES NOTHING (architect 2026-11-20: "it no longer
+// carries button look"): the bottom left's timestamp is ground like
 // the pipe and the name (RedesignButtonFace::contains, PLAY's box its one
 // hit), and the overlays' times stand outside the scrub's item and every
 // key's box, publishing only their damage rect (ModalDialogGeometry::clock).
@@ -2753,8 +2754,8 @@ static void row8_block_walk(bool history, const Row8Block& b,
     }
 }
 
-// THE BOTTOM ICON ROW'S LEFT RUN (architect 2026-11-19, send AA, RULINGS
-// §9 / §10 and the brief's §T; his picks C 2 of Z_10 and "tabs next to the
+// THE BOTTOM ICON ROW'S LEFT RUN (architect 2026-11-19, RULINGS §9 / §10
+// and the brief's §T; his picks C 2 of Z_10 and "tabs next to the
 // bottom left timestamp, but we separate them with a pipe. So non-bold for
 // the timestamp, pipe, and then tab A or tab B"): ONE REGULAR 12 W RUN
 // (GuiFace::Program) in the text tone — THE TIMESTAMP (kerning off, THE
@@ -2771,7 +2772,7 @@ static void row8_block_walk(bool history, const Row8Block& b,
 // pipe and the name never move as the digits run. THE TIMESTAMP'S OWN BOX
 // (`time_box`): the specimen's advance from the pen by the line box's rows,
 // real edges — the damage cell's ground (a box of no press: the run presses
-// nothing, architect 2026-11-20, send DD). The row's painter's one layout.
+// nothing, architect 2026-11-20). The row's painter's one layout.
 struct BottomLeftRun {
     double   pen      = 0.0;   // the timestamp's pen
     double   pipe_pen = 0.0;   // the "  |  <name>" run's pen
@@ -2890,8 +2891,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // right seat (bottom_row_seats' cases_right, 2292, 6 W inside the
     // panel's right edge) — the groups on x 764..905, 918..1059, 1072..1633,
     // 1646..1927 and 1940..2291 (Play 2220..2291), the kit's seats
-    // (tmp/sendZ/mocks/build_log.txt); the left run from x 28 (kBottomLeftPenW,
-    // send AA): the timestamp's advance 106.77 px (the 53.4-W advance of
+    // (the mock kit's build log); the left run from x 28 (kBottomLeftPenW):
+    // the timestamp's advance 106.77 px (the 53.4-W advance of
     // "00:00.000" in the Regular 12 W, kerning off), its cell x 27..135, the
     // text pipe's run "  |  Tab B" from x 134.77, about 97 px. IN THE `h`
     // VIEW (the hide, 2026-10-07; Play, Open Text Editor, Toggle Value Drag,
@@ -2917,8 +2918,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // over the clock, the block is what shows, whole and opaque, and nothing
     // of the left run comes through. The press agrees by
     // construction: the whole left run — the timestamp, the pipe and the
-    // name — is pointer-inert ground (the timestamp since architect
-    // 2026-11-20, send DD: "it no longer carries button look"), and the
+    // name — is pointer-inert ground (the timestamp by architect
+    // 2026-11-20: "it no longer carries button look"), and the
     // press resolves against the keys' published rects alone
     // (claim_button_row_press, input_pointer.cpp). Every repaint of the clock
     // is this body run whole under the damage clip (the clock cell's rect,
@@ -2945,7 +2946,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                   GuiRect{});
 
     // THE BOTTOM LEFT: THE TIMESTAMP, A TEXT PIPE AND THE TAB'S NAME AS ONE
-    // RUN, NO ENTRY (architect 2026-11-19, send AA; the seats and their
+    // RUN, NO ENTRY (architect 2026-11-19; the seats and their
     // rules at bottom_left_run above), in THE PROGRAM FACE (Regular 12 W),
     // the text tone, inside the save/restore this body already opened. The
     // render player's two fields share its face and its metrics
@@ -2954,15 +2955,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     {
         const GuiFont font = gui_font(GuiFace::Program);
         const BottomLeftRun run = bottom_left_run(app, lane);
-        // THE LEFT RUN PRESSES NOTHING (architect 2026-11-20, send DD: "it
-        // no longer carries button look"): the timestamp is plain text since
-        // send AA, a time label, so it is ground like the pipe and the name —
-        // no press, no hover, no tooltip; PLAY is pressed from its own box
-        // alone (RedesignButtonFace::contains). The pipe and the name are
-        // pointer-inert ground too (no press target: the TAB key keeps its
-        // walk, LOCK the lock's one road; RULINGS §10). The digits are never
-        // greyed. The render player's and the score viewer's time labels
-        // share the face and press nothing either.
+        // THE LEFT RUN PRESSES NOTHING (architect 2026-11-20: "it no longer
+        // carries button look"): the timestamp is plain text (architect
+        // 2026-11-19), a time label, so it is ground like the pipe and the
+        // name — no press, no hover, no tooltip; PLAY is pressed from its
+        // own box alone (RedesignButtonFace::contains). The pipe and the
+        // name are pointer-inert ground too (no press target: the TAB key
+        // keeps its walk, LOCK the lock's one road; RULINGS §10). The digits
+        // are never greyed. The render player's and the score viewer's time
+        // labels share the face and press nothing either.
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // main.cpp — the stash contract is at the field): THE TIMESTAMP'S
@@ -3006,9 +3007,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // PAGE'S ANSWERS, so the run is hidden while the render player, the
         // picker or the score viewer stands or a question's page or the
         // progress page does (modal_owns_bottom_row), and hidden under the
-        // on-screen keyboard, which every editor raises over the row (send
-        // EE, paint_bottom_strip's yield); the status bar under the row
-        // stays but under the keyboard (paint_status_bar).
+        // on-screen keyboard, which every editor raises over the row
+        // (architect 2026-11-20, paint_bottom_strip's yield); the status bar
+        // under the row stands but under the keyboard (paint_status_bar).
         // WITH NO PIECE THERE IS NO TIMESTAMP AND NO NAME (architect
         // 2026-10-27, the open's hold's one frame, platform.h's head: no tab
         // of no piece is named; no_audio_to_dispatch_on), so no pipe.
@@ -3083,7 +3084,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 // frame its lane is exposed on, under every overlay and modal — BUT NOT
 // WHILE THE ON-SCREEN KEYBOARD STANDS, which covers the lane whole: the
 // painter yields, nothing painted and no record written (architect
-// 2026-11-20, send EE: "The status bar should just be obscured by the OSK";
+// 2026-11-20: "The status bar should just be obscured by the OSK";
 // onscreen_keyboard.h's placement block), its comparator silent with it,
 // and the keyboard's hide damages its whole surface, the lane among it, so
 // the bar comes back current. ITS AS-PAINTED RECORD
@@ -3171,7 +3172,7 @@ void paint_floating_box(cairo_t* cr, const GuiRect& r, double radius,
 }
 
 // GTK 3.24'S BOX BLUR, transcribed (gtkcairoblur.c — blur_xspan, blur_rows,
-// flip_buffer, _boxblur; the fetched copy tmp/sendZ/mock3/src_fetch/): one
+// flip_buffer, _boxblur, read in GTK's own fetched source): one
 // pass of width `d` over a row of `n` bytes, the window ending `offset`
 // past each output (d / 2 for odd d, (d − shift) / 2 for even), zeros
 // outside the row, each output (sum + d / 2) / d in integers.
@@ -3447,8 +3448,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    // ARC'S TOOLTIP (architect 2026-11-19, send Z, his "good to build" on
-    // tmp/sendZ/VIEW/Z_07; render.h's THE TOOLTIP IS ARC'S, the rule and its
+    // ARC'S TOOLTIP (architect 2026-11-19, his "good to build" on the
+    // picture Z_07; render.h's THE TOOLTIP IS ARC'S, the rule and its
     // numbers): THE LINES Regular 12 W — the name line in GuiFace::Program,
     // the hint line in GuiFace::Hint, both 12 W Regular — BOTH IN
     // `sidebar_text` (Arc's tooltip label, BAC3CF; the hint line the same
@@ -5182,9 +5183,9 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // NO WAVEFORM STEMS (architect 2026-08-01): the view bar is the trim
     // window's WHOLE RESTING display — the sweep's transient canvas
     // highlight the one exception (paint_sweep_highlight, 2026-11-12).
-    // THE BAR'S STATE (architect 2026-11-19 / 2026-11-20, send CC): the
-    // part under the hovering pen, the part the bar's own press holds and
-    // the end a TRIM sweep that wrote is moving (send DD, 2026-11-20), read
+    // THE BAR'S STATE (architect 2026-11-19 / 2026-11-20): the part under
+    // the hovering pen, the part the bar's own press holds and the end a
+    // TRIM sweep that wrote is moving (architect 2026-11-20), read
     // off their records (trim_bar_look,
     // app_state.h, every edge's damage there); the tones and the caps are
     // the one table's (trim_bar_tones, render.h). THE LOOK IS ASKED AFTER
@@ -5207,7 +5208,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
-// THE SELECTION STEM (architect 2026-11-05, his pick a2 of tmp/s42,
+// THE SELECTION STEM (architect 2026-11-05, his pick a2 of session 42,
 // reversing 2026-11-04's coincidence stem — "dropped, along with the rest
 // of cool edit stuff except a few details like the triangle playhead"; the
 // full contract at the declaration): on EVERY published entry — every
@@ -5665,8 +5666,8 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // -- THE BOTTOM ROW'S MODAL STATE ----------------------------------------
 //
 // THE BOTTOM ICON ROW IS THE PAGE'S THAT STANDS IN THE VIEW (modal_box.h, the
-// one owner of the family's shape; architect 2026-11-19, send BB; the two
-// pages 2026-11-20, send EE; the rule at modal_owns_bottom_row below): an
+// one owner of the family's shape; architect 2026-11-19; the two pages
+// 2026-11-20; the rule at modal_owns_bottom_row below): an
 // overlay's controls row stands on the row's rows under the family's box
 // while an overlay stands, A QUESTION'S ANSWERS AND THE PROGRESS PAGE'S
 // CANCEL stand there while one of those pages does (THE QUESTION PAGE AND
@@ -5677,8 +5678,8 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // so this is emphatically not the scrapped second-toplevel model
 // (closed_questions.md carries that do-not-re-propose). WHILE AN OVERLAY OR
 // A PAGE STANDS, OR THE ON-SCREEN KEYBOARD STANDS OVER THE ROW (every
-// editor; send EE, onscreen_keyboard.h's placement block), THE ROW YIELDS
-// WHOLE: all TWENTY-ONE buttons — the COPY /
+// editor; architect 2026-11-20, onscreen_keyboard.h's placement block),
+// THE ROW YIELDS WHOLE: all TWENTY-ONE buttons — the COPY /
 // PASTE duo's two, the skips' two, the VERB GROUP'S EIGHT, the
 // step-and-walk group's four and the nudge-and-play group's five — and the
 // left run (the timestamp, the pipe and the tab's name) stand down, nothing
@@ -5694,11 +5695,11 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // paint.
 
 // "THE ROW BELONGS TO THE MODAL FAMILY" — THE BOTTOM ICON ROW IS THE PAGE'S
-// THAT STANDS IN THE VIEW (architect 2026-11-19, send BB: "actually windows
-// like score and player need the bottom row, and so thy might as well keep
-// the status bar, which sets the precedent that overlays keep them"; his "i
+// THAT STANDS IN THE VIEW (architect 2026-11-19: "actually windows like
+// score and player need the bottom row, and so thy might as well keep the
+// status bar, which sets the precedent that overlays keep them"; his "i
 // take your recommends for all": one rule for both icon rows; the two pages
-// architect 2026-11-20, send EE). The row is the family's EXACTLY WHEN:
+// architect 2026-11-20). The row is the family's EXACTLY WHEN:
 //   * A QUESTION'S PAGE OR THE PROGRESS PAGE STANDS (modal_page_stands,
 //     app_state.h), over the main page, the `h` view or an overlay alike:
 //     the row is the page's ANSWERS — Arc's word buttons flush right, the
@@ -5713,11 +5714,12 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // Then paint_modal_dialog paints that row on the row's rows — and the top
 // icon row lights the same page's opener (roster_face_page_owner,
 // app_state.h), greyed whole under a page, the opener lit and inert
-// (redesign_button_enabled's first arm, send EE). AND UNDER EVERY EDITOR THE
-// ROW IS NOBODY'S: the on-screen keyboard stands over it (architect
-// 2026-11-20, send EE: "the bottom row remains inactive. So simply showing
-// it isn't helpful"; "on that page, the only controls are the osk's esc and
-// enter"; onscreen_keyboard.h's placement block), so the row yields under
+// (roster_greyed_whole, redesign_button_enabled's first arm; architect
+// 2026-11-20). AND UNDER EVERY EDITOR THE ROW IS NOBODY'S: the on-screen
+// keyboard stands over it (architect 2026-11-20: "the bottom row remains
+// inactive. So simply showing it isn't helpful"; "on that page, the only
+// controls are the osk's esc and enter"; onscreen_keyboard.h's placement
+// block), so the row yields under
 // the flag editor and under a line editor's sub-page alike
 // (paint_bottom_strip: the lane's ground laid and nothing on it, no key,
 // timestamp or word — the keyboard covering it, a strip of that ground
@@ -5756,7 +5758,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE ROW HAS A MODAL STATE since 2026-08-13, in which those tenants
     // stand down and the modal family's controls row takes the row — while
     // an overlay, a question's page or the progress page stands (2026-10-14;
-    // send BB 2026-11-19; send EE 2026-11-20; the ruling and the fork are
+    // architect 2026-11-19 and 2026-11-20; the ruling and the fork are
     // at modal_owns_bottom_row, just above; the modal's own layout is
     // paint_modal_dialog's) — and with the chain gone
     // there is nothing left on the lane to negotiate with, which is what
@@ -5832,12 +5834,12 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // this row is measured from a button stash at all, the status chain having
     // taken its right anchor to the tab row with it.
     // AND THE ROW YIELDS WHILE THE ON-SCREEN KEYBOARD STANDS (2026-10-10, ON
-    // SCREEN IS AS PAINTED; architect 2026-11-20, send EE: "the bottom row
-    // remains inactive. So simply showing it isn't helpful"): the keyboard
+    // SCREEN IS AS PAINTED; architect 2026-11-20: "the bottom row remains
+    // inactive. So simply showing it isn't helpful"): the keyboard
     // stands over this row and the status bar (onscreen_keyboard.h's
     // placement block) — an editor's answers are the keyboard's Enter and
     // Esc, the flag editor's case too, the one editor that raises the
-    // keyboard with no dialog — so the row holds nothing: the ground above
+    // keyboard with no sub-page — so the row holds nothing: the ground above
     // is laid and covered by the keyboard in the same pass, and a key nothing
     // shows must not hover, wear a tooltip or answer a press (the zero
     // rects), nor its clock tick damage anything (the zero cell; the clock's
@@ -5905,8 +5907,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // controls on the bottom icon row's rows, the outermost boxes 6 W inside
 // the panel (modal_controls_seats). THE TWO PAGES STAND THE SAME WAY, the
 // view their page and the row their answers (THE QUESTION PAGE AND THE
-// PROGRESS PAGE, the owner block at this body's plan; architect 2026-11-20,
-// send EE):
+// PROGRESS PAGE, the owner block at this body's plan; architect
+// 2026-11-20):
 //   A PROMPT — its question one line of plain Regular 12 W on the view, its
 //   answers Arc's word buttons on the controls row, each its PLAIN WORD
 //   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete"), the
@@ -5917,10 +5919,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   THE PROGRESS PAGE (AppState::BatchProgress) — its sentence, the bar
 //   over the entries done, the count, and Cancel alone on the controls row,
 //   unfocused as a prompt's buttons are.
-// A LINE EDITOR IS A SUB-PAGE OF ITS OWN (architect 2026-11-20, send EE; THE
-// VALUE SUB-PAGE above, paint_value_page): the view one flat page with the
+// A LINE EDITOR IS A SUB-PAGE OF ITS OWN (architect 2026-11-20; THE VALUE
+// SUB-PAGE above, paint_value_page): the view one flat page with the
 // value's label and Arc's focused entry alone on it, ONE LINE that SCROLLS
-// SIDEWAYS, GTK's way (architect 2026-11-19, send AA: "The pen does have a
+// SIDEWAYS, GTK's way (architect 2026-11-19: "The pen does have a
 // good way to scroll, and those are the left and right arrows of the
 // keyboard. That's exactly why they're there."), NO BUTTON — the on-screen
 // keyboard, over the view's foot and the bottom icon row (the box and the
@@ -5954,8 +5956,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // NO BUTTON HAS A FOCUS (no key reaches a surface with buttons: the
 // on-screen keyboard stands only under an editor, and an editor has none).
 // AT REST UNDER THE HOVERING PEN EACH WEARS ARC'S
-// HOVER FACE (send CC, 2026-11-20), AND EVERY CHANGE OF ITS STATE FADES AS
-// ARC'S SHEET SAYS (send DD, 2026-11-20; the rule AppState::FaceFades's,
+// HOVER FACE (architect 2026-11-20), AND EVERY CHANGE OF ITS STATE FADES AS
+// ARC'S SHEET SAYS (architect 2026-11-20; the rule AppState::FaceFades's,
 // each button painted as it stands on screen). (Windows' push buttons, 2026-10-02 to
 // 2026-10-22, are git history.)
 //
@@ -6157,7 +6159,7 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
     cairo_restore(cr);
 }
 
-// -- THE VALUE SUB-PAGE (architect 2026-11-20, send EE) ----------------------
+// -- THE VALUE SUB-PAGE (architect 2026-11-20) -------------------------------
 //
 // A VALUE'S EDITOR IS A SUB-PAGE — THE RULE'S ONE OWNER (his words: "the
 // settings page and presets page would then have a subpage where if the user
@@ -6205,7 +6207,7 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 // rows 203..258 (1128 x 28 W), its text's pen x 42, its inner width
 // 42..2261.
 // THE ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY (architect
-// 2026-11-19, send AA: "The pen does have a good way to scroll, and those
+// 2026-11-19: "The pen does have a good way to scroll, and those
 // are the left and right arrows of the keyboard. That's exactly why they're
 // there."): the text cut at the entry's INNER EDGES (its border and 8 W
 // pads, kEntryPenW in from each side) and drawn through THE SCROLL OFFSET,
@@ -6728,8 +6730,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         reset_modal_dialog_face_state(app);
     }
 
-    // THE MODAL'S SURFACE (architect 2026-10-14, modal_box.h; send AA's
-    // stage D2, 2026-11-19; send EE, 2026-11-20): THE OVERLAYS' controls
+    // THE MODAL'S SURFACE (architect 2026-10-14, modal_box.h; 2026-11-19;
+    // 2026-11-20): THE OVERLAYS' controls
     // stand on THE CONTROLS ROW — the bottom icon row's rows under the box,
     // on the row's own ground, which paint_bottom_strip lays on every frame
     // class — and their lists are the folder overlay's painter's. A QUESTION
@@ -6741,11 +6743,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // on-screen keyboard its one control. THE BOX this body paints
     // (paint_modal_box): THE THREE PAGES' — the view in the lists' tone
     // whatever stood there, under a sub-page the on-screen keyboard over its
-    // foot (modal_box.h's head; the cut below, send EE) — and THE SCORE
+    // foot (modal_box.h's head; the cut below) — and THE SCORE
     // VIEWER'S (since 2026-10-26), its page the interior.
     //
     // THE CONTROLS ROW IS THE PAGE'S THAT STANDS IN THE VIEW (architect
-    // 2026-11-19, send BB: "windows like score and player need the bottom
+    // 2026-11-19: "windows like score and player need the bottom
     // row, and so thy might as well keep the status bar, which sets the
     // precedent that overlays keep them"; his "i take your recommends for
     // all"; the rule's one owner modal_owns_bottom_row): THIS BODY PAINTS IT
@@ -6773,7 +6775,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const bool    row_score    = score_up;
     // THE ON-SCREEN KEYBOARD, standing over every line editor's sub-page on
     // the window's last rows (onscreen_keyboard.h's placement block,
-    // architect 2026-11-20, send EE): everything this body lays is cut at
+    // architect 2026-11-20): everything this body lays is cut at
     // its top line (the clip below), the keyboard painted before this body
     // (on_redraw's order) and so never covered by it.
     const GuiRect kb_surf = onscreen_keyboard::stands(app)
@@ -6929,8 +6931,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         int         x            = 0;
     };
     std::vector<DialogButtonPlan> plan;
-    // -- THE QUESTION PAGE AND THE PROGRESS PAGE (architect 2026-11-20, send
-    //    EE — THE RULE'S ONE OWNER; his words: "we shuold remove the popups
+    // -- THE QUESTION PAGE AND THE PROGRESS PAGE (architect 2026-11-20 —
+    //    THE RULE'S ONE OWNER; his words: "we shuold remove the popups
     //    - it seems those come from gnome and xfce just inherited them (the
     //    oversized text is the clue). instead, the old prompt eg 'do you
     //    want to revert and drop changes?' should come back."; "yes,
@@ -7351,7 +7353,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // the trough carries the knob at rest; GuiInputHandler::hold_face). AT
     // REST UNDER THE HOVERING PEN its fill Arc's hover face; EVERY CHANGE OF
     // ITS LOOK FADES 200 ms, the held accent included (gtk3 CSS lines
-    // 1144 .. 1150; send DD, 2026-11-20), the knob painted
+    // 1144 .. 1150; architect 2026-11-20), the knob painted
     // as it stands on screen (AppState::FaceFades::face_as_painted, asked of
     // this row's own owner and session; render.h's scrub block). (A scrub's
     // row is never painted under a page: the player's and
@@ -7749,11 +7751,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // cancel, it gets that square drawn around it. Let's get rid of that";
     // no key reaches a row of buttons): the lit look under a standing press
     // is the only sign. AT
-    // REST UNDER THE HOVERING PEN ARC'S HOVER FACE (send CC, 2026-11-20;
+    // REST UNDER THE HOVERING PEN ARC'S HOVER FACE (architect 2026-11-20;
     // materials.h's THE HOVER): a resting button that is the hovered face
     // of this row's own owner and session is Hover (face_look). EACH
     // BUTTON AND EACH LINKED KEY'S LEFT SEAM IS PAINTED AS IT STANDS ON
-    // SCREEN (send DD, 2026-11-20: "i'd like to see arc-truthful version
+    // SCREEN (architect 2026-11-20: "i'd like to see arc-truthful version
     // instead"; AppState::FaceFades, the one owner of the hover's walk and
     // gate and of every fade and its damage; the pointer walk here,
     // update_modal_dialog_hover, drives the tooltip and the press's inside
@@ -7965,7 +7967,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // onscreen_keyboard.h, which this body reads and never restates.
 //
 // THE KEYS ARE ONE GRID OF ARC'S BUTTON TONES WITH SHARED LINES (architect,
-// his K2 ruling; send Z, his approval of tmp/sendZ/VIEW/Z_06; send AA's
+// his K2 ruling; his approval of the picture Z_06; send AA's
 // stage D2, 2026-11-19; the design's §E, the mock kit's keyboard the
 // reference): the surface's TOP LINE `well_border` (Thunar's pane line
 // parting the keyboard from what stands above) over THE BAND on the body
@@ -7994,17 +7996,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // change keeps the face under the finger, same_slot) wear THE ACCENT `cue`
 // under the lit print `text_on_lit` (FFFFFF). A GREYED KEY — UP, DOWN or
 // the pass key where it means nothing (onscreen_keyboard::key_live; the
-// editor's extra keys, architect 2026-11-20 / 21, send EE: "Number four.
-// Yes") — wears Arc's disabled face `key_dim_face` under `key_dim_ink`, the
+// editor's extra keys, architect 2026-11-20 / 21: "Number four. Yes") —
+// wears Arc's disabled face `key_dim_face` under `key_dim_ink`, the
 // grid's lines round it unchanged (they are the grid's, shared with its
 // neighbors), and is never lit, pressed or hovered (its press arms nothing).
 // UNDER THE HOVERING PEN A RESTING KEY'S FACE IS ARC'S HOVER FACE (architect
-// 2026-11-20, send CC, on the keyboard's keys: "Four, yes."; materials.h's
+// 2026-11-20, on the keyboard's keys: "Four, yes."; materials.h's
 // THE HOVER), the face alone — the grid wears its lines always — the cap
 // unchanged; a lit key is unchanged. EVERY CHANGE AMONG THE FOUR LOOKS
 // FADES AS ARC'S SHEET SAYS, the face and the cap's ink on one clock — a
 // press or a latch 50 ms into the accent, a lift, an unlatch, a hover or a
-// greying 200 ms (architect 2026-11-20, send DD; AppState::FaceFades, the
+// greying 200 ms (architect 2026-11-20; AppState::FaceFades, the
 // one owner; each key painted as it stands, face_as_painted); a cap's
 // letter, shifted or not, changes at once, and the keyboard appearing or
 // turning its page paints its keys at once — a greyed key greyed from its
@@ -8107,7 +8109,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
              page == onscreen_keyboard::Page::Symbols);
         return pressed || latched;
     };
-    // EACH KEY AS PAINTED (send DD, 2026-11-20: "i'd like to see
+    // EACH KEY AS PAINTED (architect 2026-11-20: "i'd like to see
     // arc-truthful version instead"; AppState::FaceFades, the one owner):
     // its look — Lit pressed or latched, Hover the hovered face, else Rest —
     // and its FaceMix off face_as_painted on the key's hull, the fade of a
@@ -8233,8 +8235,8 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // frame the comparator's own damage produces; every other frame leaves it
     // alone and the drift survives to be repaired. (The player's open and
     // close damage the whole window, so their first frame always covers.)
-    // THE BAND IS EACH TENANT'S OWN, ONE BIT A TENANT (2026-08-28; one bit a
-    // tenant since architect 2026-11-20, send EE — AppState::
+    // THE BAND IS EACH TENANT'S OWN, ONE BIT A TENANT (2026-08-28; the
+    // keyboard's own bit architect 2026-11-20 — AppState::
     // keyboard_painted_standing): THE KEYBOARD'S is its surface, a fact of
     // the window's foot alone, the same rect on the show and the hide — held
     // whole by its edges' own damage (onscreen_keyboard::edge_damage_rect,
@@ -8291,7 +8293,7 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 // The shape and every rect are modal_box.h's: THE BOX'S TWO OUTER ROWS —
 // the line under the top icon row and the line over the bottom icon row
 // (under the on-screen keyboard while it stands, paint_modal_dialog's cut,
-// send EE) — in the
+// architect 2026-11-20) — in the
 // well's line tone `well_border` (Arc's $borders_color, Thunar's pane
 // border; send AA's stage D2), and the interior ONE FLAT FILL in `pane`:
 // THE VIEW's tone (`ruler_face`, Arc's $base_color) for the lists and the
@@ -8349,10 +8351,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay.
 //
-// THE VIEW IS THUNAR'S DETAILS LIST UNDER ARC (architect 2026-11-19, send Z:
-// "use tunar", his approval of tmp/sendZ/VIEW/Z_04; send AA's stage D2; the
-// design tmp/sendY/P2_design_overlays.md §B at 12 W text, the mock kit's
-// list_row / group_heading / list_view the reference): THE VIEW the
+// THE VIEW IS THUNAR'S DETAILS LIST UNDER ARC (architect 2026-11-19: "use
+// tunar", his approval of the picture Z_04; the design at 12 W text, the
+// mock kit's list_row / group_heading / list_view the reference): THE VIEW the
 // canvas's tone (`ruler_face`, Arc's $base_color 404552) between the box's
 // two lines (paint_modal_box), edge to edge, NO SCROLLBAR, no row
 // separator; the rows on folder_overlay.h's heights, and the faces:
@@ -8367,8 +8368,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            row of 2026-11-05, Live's SelectionBackground
 //                            under SelectionForeground, retired with it)
 //   HOVERED               -> a resting row a tap would act on, under the
-//                            hovering pen (architect 2026-11-21, send EE:
-//                            "I'd like to add hover"; its tone the same
+//                            hovering pen (architect 2026-11-21: "I'd
+//                            like to add hover"; its tone the same
 //                            day: "I prefer to go more truthful. It just
 //                            needs to be very subtle."): a flat fill
 //                            across the view's whole width, the lit bar's
@@ -8393,8 +8394,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            12 W
 // NO FOCUS FRAME (architect 2026-10-23): the lit row is the only sign of
 // the highlight.
-// THE ROW'S DRAWING AND NAME, ON THE PAGE MARGIN (architect 2026-11-20,
-// send EE; modal_box.h's THE PAGE MARGIN the rule's owner, its 12 W pen
+// THE ROW'S DRAWING AND NAME, ON THE PAGE MARGIN (architect 2026-11-20;
+// modal_box.h's THE PAGE MARGIN the rule's owner, its 12 W pen
 // kPageMarginPenW; the row and its drawing Thunar's at 9 pt, measured on
 // his shot): EVERY ROW'S FIRST THING STANDS AT THE MARGIN'S PEN, 12 W from
 // the view's left edge — a plain row's name, A GROUP HEADING'S NAME ON THE
@@ -8405,8 +8406,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // 16 W canvas (kListDrawingBoxW) at the pen across and CENTERED IN THE LIST
 // ROW down, (row − canvas) / 2 = +4 W in the 24 W row (kListDrawingYW,
 // derived from folder_overlay::kListRowW, never a second authored number;
-// +2 W in Thunar's 20 W row until 2026-11-21), in the TEXT TONE on every
-// face (the drawing unchanged
+// architect 2026-11-21), in the TEXT TONE on every face (the drawing unchanged
 // under the highlight, as Thunar's), its name 3 W after the canvas
 // (kListDrawingGapW, Thunar's: the pen 12 + 16 + 3 = 31 W); the name
 // Regular 12 W (GuiFace::Body) at the margin's pen itself in a listing
@@ -8572,8 +8572,8 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
 void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
     if (!folder_overlay::stands(app)) return;
     // UNDER A QUESTION'S PAGE OR THE PROGRESS PAGE THE LIST IS NOT PAINTED
-    // (architect 2026-11-20, send EE; paint_modal_dialog's THE QUESTION PAGE
-    // AND THE PROGRESS PAGE; modal_page_stands the one predicate): the page
+    // (architect 2026-11-20; paint_modal_dialog's THE QUESTION PAGE AND THE
+    // PROGRESS PAGE; modal_page_stands the one predicate): the page
     // stands in place of the overlay's view — the box and the page's lines
     // are paint_modal_dialog's, laid after this slot — and the
     // overlay stays open underneath, its rows, highlight and scroll
@@ -8652,7 +8652,8 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // top icon row, notifyd's seat since send BB, notification_stack_bound),
 // the tooltip (under a top-row key's face, above every other owner's,
 // tooltip_box_rect). (The on-screen
-// keyboard stands over the app's last rows, nothing relaid (send EE), the
+// keyboard stands over the app's last rows, nothing relaid (architect
+// 2026-11-20), the
 // clock's row yielding under it, and the folder overlay and the modal family's box at
 // the view bar's top row, directly under the band (modal_box.h,
 // 2026-10-14) — a question's page and the progress page in it, their
@@ -8883,7 +8884,7 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
 // text tone; and whether the row yields, when the cell is not the clock's at
 // all (modal_owns_bottom_row: an overlay's row, or a question's or the
 // progress page's answers; or the on-screen
-// keyboard standing over the row, architect 2026-11-20, send EE,
+// keyboard standing over the row, architect 2026-11-20,
 // onscreen_keyboard.h's placement block).
 GuiClockFingerprint GuiPaintHandler::clock_fingerprint() {
     GuiClockFingerprint fp;
@@ -9287,8 +9288,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     invalidate_notification_stack, the tooltip's hide and words
     //     damage — and so cleared). Nothing
     //     else in a frame writes inside the area: THE PAINTERS OVER THE
-    //     WELL, re-derived from the passes below (2026-10-14; 2026-11-20,
-    //     send EE), are the cards (paint_notifications) and the
+    //     WELL, re-derived from the passes below (2026-10-14; 2026-11-20),
+    //     are the cards (paint_notifications) and the
     //     tooltip (paint_shift_tooltip) — the two floater families, each
     //     inside its hull (the pull-downs one more until
     //     2026-10-21); the keyboard (paint_keyboard_slot) paints over the
@@ -9545,7 +9546,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      since 2026-08-28, one tenant at a time), whose opaque ground
         //      covers the waveform area's lower part, the well's foot, the
         //      bottom icon row and the status bar (the keyboard, on the
-        //      window's last rows, nothing relaid, send EE, 2026-11-20 — so
+        //      window's last rows, nothing relaid, architect 2026-11-20 — so
         //      of step 3 the bottom row's and the status bar's tenants yield
         //      under it) or
         //      EVERYTHING FROM THE VIEW BAR'S TOP ROW TO ROW 8'S TOP (the
@@ -9575,8 +9576,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      down, which the waveform's painted rect leaves out, the score
         //      viewer's interior CLEARED there, the GPU's page hole,
         //      2026-10-27; the controls row — the standing overlay's, live,
-        //      or a page's answers (send BB, 2026-11-19; send EE,
-        //      2026-11-20), none under a value sub-page), then
+        //      or a page's answers (architect 2026-11-19 / 2026-11-20),
+        //      none under a value sub-page), then
         //      the flag editor's box, then THE
         //      NOTIFICATION CARDS (paint_notifications, 2026-08-29 — the
         //      top-right stack, above every lane, the keyboard slot and the
@@ -9645,7 +9646,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // with its own opaque ground — the MODAL FAMILY'S PANEL since 2026-10-14
     // (the view bar's top row down to the controls row, modal_box.h) — and
     // the keyboard OVERLAYS the canvas's foot, the well's foot, the bottom
-    // icon row and the status bar on the window's last rows (send EE,
+    // icon row and the status bar on the window's last rows (architect
     // 2026-11-20), so the slot must follow every pass that paints there
     // (the top button rows, the plate, the
     // trim, the ruler, the flags, the stems, the scanner, the anchor) and

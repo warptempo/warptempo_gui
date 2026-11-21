@@ -134,7 +134,7 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
 // declaration (viewport.h); the rows above it are owed a check
 // (damage_window_top_rows). THE AREA WHOLE, the on-screen keyboard standing
 // or not: no play runs under an editor (every editor's open stops it,
-// architect 2026-11-20, send EE; stop_playback_for_modal_open), so no
+// architect 2026-11-20; stop_playback_for_modal_open), so no
 // per-frame damage — a FOLLOW scroll, a loop wrap — reaches here while the
 // keyboard covers the area's foot, and a rare one that did would repaint
 // the keyboard's own rows over it, no pixel wrong.
@@ -168,7 +168,7 @@ void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1) {
 // lane table's, on the window's foot. NONE WHILE THE ON-SCREEN KEYBOARD
 // STANDS: it covers the bar, whose painter yields under it, and its hide
 // damages its whole surface, the bar among it (onscreen_keyboard.h's
-// placement block; architect 2026-11-20, send EE).
+// placement block; architect 2026-11-20).
 void Viewport::invalidate_status_bar_area() {
     if (onscreen_keyboard::stands(app)) return;
     const GuiRect t = status_bar_area(app);
@@ -180,7 +180,7 @@ void Viewport::invalidate_status_bar_area() {
 // covers the row, whose painter yields under it (the name painted nowhere),
 // and its hide damages its whole surface, the row among it, so the name
 // comes back current (onscreen_keyboard.h's placement block; architect
-// 2026-11-20, send EE) — the status bar's rule above.
+// 2026-11-20) — the status bar's rule above.
 void Viewport::invalidate_tab_name_area() {
     if (onscreen_keyboard::stands(app)) return;
     const GuiRect t = bottom_row_area(app);
@@ -202,7 +202,7 @@ void Viewport::invalidate_tab_name_area() {
 // page's open and close, each a whole-window damage at its own site. Caller
 // inventory at the declaration.
 // A QUESTION, THE PROGRESS PAGE AND A LINE EDITOR'S VALUE SUB-PAGE ARE FULL
-// PAGES IN THE MODAL FAMILY'S BOX (architect 2026-11-20, send EE;
+// PAGES IN THE MODAL FAMILY'S BOX (architect 2026-11-20;
 // paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE and THE VALUE
 // SUB-PAGE) — so while one of them stands, OR WHILE THE LAST PAINT DREW ONE
 // (the stash's owner, which a closer reads before any paint: its surface is
@@ -212,8 +212,8 @@ void Viewport::invalidate_tab_name_area() {
 // a close erases the page and brings the lanes, the canvas and the bottom
 // icon row back. A line editor's close takes the keyboard with it, whose
 // hide damages its own surface — the box's foot, the bottom icon row and
-// the status bar it covered (onscreen_keyboard::reconcile_slot_standing,
-// send EE). Under the render player and
+// the status bar it covered (onscreen_keyboard::reconcile_slot_standing).
+// Under the render player and
 // the picker the controls row is the lane's own rows, and their
 // list's damage is the folder overlay's.
 void Viewport::invalidate_modal_dialog_area() {
@@ -323,8 +323,8 @@ void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
 // scanner_invalidate_rect, main.cpp). Both stand on the area's rows, so
 // they touch exactly when their column intervals overlap or abut. Every
 // caller rides a standing scanner, and none stands while the on-screen
-// keyboard does (every editor's open stops play, architect 2026-11-20, send
-// EE), so the rows are the area's whole.
+// keyboard does (every editor's open stops play, architect 2026-11-20), so
+// the rows are the area's whole.
 void Viewport::invalidate_scanner_line(double old_x, double new_x) {
     const GuiRect area  = waveform_area(app);
     const GuiRect r_old = scanner_invalidate_rect(area, old_x);
@@ -1615,7 +1615,7 @@ void Viewport::follow_scanner() {
 //   * CANNOT FIT: the range's MARGINED WINDOW (edge_margined_window_frames,
 //     app_state.h: the span plus at most the edge margin of empty space a
 //     side, a side on the song's wall showing what exists there; architect
-//     2026-11-21, send EE) exceeds the PAINTED window at the live zoom
+//     2026-11-21) exceeds the PAINTED window at the live zoom
 //     (samples_visible, W·q on the sixteenth-frame grid to the nearest
 //     frame — the span the centring below places the subject in and the
 //     geometry fit_zoom_level solves in) — the very window the span

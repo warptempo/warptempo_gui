@@ -31,9 +31,9 @@ namespace {
 // by a SECOND DOWN (the pinch). So no tick samples the window and a slow
 // start is simply a pan that has not crossed yet.
 //
-// THE FIELD'S VOCABULARY (architect 2026-11-08, session 95, retiring
-// 2026-09-05's double tap): a TAP seats the caret, a DRAG moves it, and
-// NOTHING ELSE — no double tap, no hold meaning, no handles and no toolbar,
+// THE FIELD'S VOCABULARY (architect 2026-11-08, session 95): a TAP seats
+// the caret, a DRAG moves it, and NOTHING ELSE — no double tap (the field
+// is none of DoubleClickSurface's), no hold meaning, no handles and no toolbar,
 // the selection the on-screen keyboard's alone (begin_touch_caret_drag's
 // declaration, input_handler.h). A resting contact there stays Pending and
 // its lift is the ordinary tap burst.
@@ -216,8 +216,8 @@ void GuiInputCore::maybe_fire_repeat() {
     // IS BUILT ON IT (Undo::coalesce_gesture): a burst carrying this bit merges
     // with NO clock test at all, which is the arm that must work at any
     // platform repeat delay. (A physical press takes the other arm of the
-    // hybrid — the fixed 500 ms tap window — and this bit is exactly what
-    // separates the two.)
+    // hybrid — the fixed 600 ms tap window, kTapCoalesceMs — and this bit
+    // is exactly what separates the two.)
     // THE BIT HAS TWO PRODUCERS, one per held surface: THIS SITE for a held KEY,
     // and GuiInputHandler::tick_chrome_press_repeat (input_pointer.cpp) for a
     // held BUTTON — the chord table's `repeats` rows (the four cardinal arrow
@@ -480,10 +480,11 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     (2026-08-29): an edge back-swipe that began on a bottom-row button
     //     toggled playback or authored on its way out of the app, the clean
     //     release it used to deliver speaking for a lift that never happened.
-    //     AND THE ARMS THE CHROME / MODAL / MENU SURFACES HOLD ARE
+    //     AND THE ARMS THE CHROME / MODAL / LIST SURFACES HOLD ARE
     //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below:
-    //     the GUI ends its release-time claims — the chrome
-    //     press, the modal's armed button, the popup's item claim — at exactly
+    //     the GUI ends its release-time claims — the chrome press, the
+    //     modal's armed button, the on-screen keyboard's held key, a list
+    //     row's press, the scrubs' drags — at exactly
     //     this edge, an unheld motion while one stands
     //     (clear_release_time_press_arms, at on_motion's top). That is a
     //     correction of what this comment used to say: those claims are NOT

@@ -151,7 +151,7 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // reference row shows no hover AND THE LIST ROW'S HOVER 393939, the view's
 // own tone (a theme whose key hover face 363636 is its key face 363636
 // hovers nothing, so not Arc's 3 % white but the ruler 393939; architect
-// 2026-11-21, send EE), so no list row hovers either.
+// 2026-11-21), so no list row hovers either.
 // THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
 // 119): like every row of the list it holds the theme's own numbers,
 // and the install mixes its bright tones at the `bright_mix` key as it mixes

@@ -92,8 +92,8 @@
 //     hovered face's 200 ms fade-out (Arc's hover, AppState::FaceFades), a
 //     millisecond of which is under one painted level, and the DOWN's press
 //     arm then turns the face toward the accent from the value it holds,
-//     over Arc's 50 ms (GuiInputHandler::press_face; architect 2026-11-20,
-//     send DD) — GTK's own sequence, `:hover` lost then `:active` gained,
+//     over Arc's 50 ms (GuiInputHandler::press_face; architect
+//     2026-11-20) — GTK's own sequence, `:hover` lost then `:active` gained,
 //     with no dip. Everything else the
 //     leave does it does here too: the tooltip goes at once as on leaving
 //     any tool (architect 2026-10-06), the in-window bit drops, the press
@@ -102,7 +102,7 @@
 // the trim bar's hovered part, which has no fade to hide that gap behind:
 // the leave stamps it and the tick drops it 10 ms on, unless a press, a
 // motion or a veil resolves it first (AppState::TrimBarHover's `leave_ms`;
-// the 10 ms hold KEPT, architect 2026-11-20, send DD).
+// the 10 ms hold, architect 2026-11-20).
 
 // THE PRODUCT'S ONE FRACTIONAL COORDINATE -> PIXEL CONVERSION (architect
 // 2026-08-25). A SCREEN PIXEL x COVERS [x, x+1), so a surface coordinate names
@@ -121,10 +121,10 @@
 // every whole-edged hit test — the keys, the rows' walls, the cards, the
 // lanes — keeps reading the ints and loses nothing. A box on a mark's real
 // edges (a cue's chip and label, the ruler's head, the trim's grab zones, a
-// scrub's thumb, a time field, the on-screen keyboard's faces, a list's
-// scrolled row) and every conversion of a pointer place into content (a
-// frame, a level, a fraction of a scrub, a scroll offset) read the real
-// place, never this pixel.
+// scrub's thumb, the on-screen keyboard's faces, a list's scrolled row)
+// and every conversion of a pointer place into content (a frame, a level,
+// a fraction of a scrub, a scroll offset) read the real place, never this
+// pixel.
 //
 // NEAREST-POINT ROUNDING STAYS THE RULE FOR POINTS ON A GRID and is untouched
 // by this: authored frames, lattice columns and sample indices are POINTS,
@@ -511,13 +511,13 @@ public:
     //   * editor_field(at): THE EDITOR-FIELD QUERY (2026-09-05) — does this
     //     point lie in the ACTIVE EDITOR'S FIELD (GuiTouchEditorField,
     //     gui_input.h — Field or Outside alone, the answer's contract; no
-    //     editor-text double-click candidate is asked since 2026-11-08,
-    //     touch_point_in_editor_field)? Asked ONCE, at the FIRST
-    //     finger's down, beside the pan-zone query, captured beside the
-    //     down point and cleared with them. It reads the field rect the
-    //     GUI's own press claim reads — the marker lane's unrolled flag box
-    //     or the value sub-page's entry, in the modal family's box's
-    //     view, whichever editor is open — so the platform
+    //     editor-text double-click candidate is asked, the field's
+    //     vocabulary below, touch_point_in_editor_field)? Asked ONCE, at
+    //     the FIRST finger's down, beside the pan-zone query, captured
+    //     beside the down point and cleared with them. It reads the field
+    //     rect the GUI's own press claim reads — the marker lane's unrolled
+    //     flag box or the value sub-page's entry, in the modal family's
+    //     box's view, whichever editor is open — so the platform
     //     keeps no memory of taps and no second spelling of the field. It
     //     forks TWO things. (1) The window's SLOP CROSSING resolves to the
     //     CARET DRAG (below) — the field is off the pan zone, which is the
@@ -527,7 +527,7 @@ public:
     //     OPENS A WINDOW where the pointer would otherwise land on contact, a
     //     window with no deadline (input_core.cpp's constants block): the
     //     architect's field vocabulary is a tap and a drag (2026-11-08,
-    //     session 95, the double tap retired) and carries NO hold meaning,
+    //     session 95: no double tap in the field) and carries NO hold meaning,
     //     so nothing there may be decided by a duration — a motionless
     //     contact stays Pending however long it rests and its LIFT is the
     //     ordinary tap burst, the press seating the caret, while a contact

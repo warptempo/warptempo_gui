@@ -999,8 +999,9 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     edge_margined_window_frames, app_state.h) cannot fit the window at
     //     the current zoom, the owner writes nothing and the span framer
     //     ZOOMS OUT until it does and centres it, the walls resting it
-    //     (frame_span_into_view with margin, input_handler.cpp), never in — the land and this
-    //     camera one body, land_and_frame_active_markers (input_handler.cpp),
+    //     (frame_span_into_view with margin, input_handler.cpp), never in —
+    //     the land and this camera one body, land_and_frame_active_markers
+    //     (input_handler.cpp),
     //     which the phase-reset pastes' landing shares (architect 2026-11-17,
     //     send U);
     //   * NO MARKER (a removal, or an entry that touched nothing in this

@@ -97,15 +97,13 @@
 // covers paint and are covered. THE VIEW'S EDGE IS THE BAND'S ONE EDGE; the
 // FIRST ROW STANDS UNDER THE LIST'S HEAD PAD, which seats its capitals on
 // THE PAGE MARGIN's top and scrolls with the rows (head_pad_px below;
-// architect 2026-11-20, send EE), no header above it (the folder-name
+// architect 2026-11-20), no header above it (the folder-name
 // header that stood above the player's list 2026-10-10 to 2026-10-14 is
 // removed, content_rect's note).
-// The architect's ruling (2026-08-28):
-// "the overlay sits in the on-screen keyboard's place above the bottom strip,
-// replacing the keyboard there" — on glass the keyboard would occupy that
-// space, and no use of the panel needs typing. So THE OVERLAY AND THE
-// KEYBOARD NEVER BOTH STAND, structurally rather than by a gate term: the
-// panel's owners are modes that are not editors (the record is at
+// The architect's ruling (2026-08-28): no use of the panel needs typing.
+// So THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND, structurally rather
+// than by a gate term: the panel's owners are modes that are not editors
+// (the record is at
 // onscreen_keyboard::stands). Unlike the keyboard the panel holds
 // VARIABLE-LENGTH content and
 // SCROLLS when a listing outgrows the band — the band's own drag, and the
@@ -116,7 +114,7 @@
 // listing's ends allow (scroll_row_centered, architect 2026-10-26); every
 // later walk moves the offset by the least amount (scroll_row_into_view);
 // A TAP ON A ROW MOVES IT NOT AT ALL (seat_tapped_row, architect
-// 2026-11-21, send EE).
+// 2026-11-21).
 //
 // THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S (architect
 // 2026-08-28, the row then the icon row's button; Windows' list row since
@@ -136,25 +134,22 @@
 //     2026-09-02, the icon row's foot from 2026-09-09 and the view bar's top
 //     row since 2026-10-14. The content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
-//   * THE ROW IS THUNAR'S DETAILS ROW, GIVEN AIR (architect 2026-11-19, send
-//     Z: "use tunar"; send AA's stage D2; the heights ours since 2026-11-21,
-//     send EE): 24 W, a group heading 28 W, edge to edge, no gap (kListRowW
-//     and kListHeadingW below) — Thunar's 20 W of send AA, Windows' list row of
-//     2026-10-02 (26 W and one W apart on the unit) before it, the icon
-//     row's BUTTON from 2026-08-28 before that ("we've gone for the button
-//     analogy"). A
+//   * THE ROW IS THUNAR'S DETAILS ROW, GIVEN AIR (architect 2026-11-19:
+//     "use tunar"; the two heights ours, architect 2026-11-21): a row 24 W,
+//     a group heading 28 W, edge to edge, no gap (kListRowW and
+//     kListHeadingW below, where Thunar's own and the air are told). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
 //     ("project and file names will be short"), the painter cutting it THE
-//     PAGE MARGIN inside the view's right edge (modal_box.h, 12 W; send
-//     EE, 2026-11-20). (The AV Sync Stats panel's text rows stood at a
+//     PAGE MARGIN inside the view's right edge (modal_box.h, 12 W; architect
+//     2026-11-20). (The AV Sync Stats panel's text rows stood at a
 //     monospace line's pitch, the row geometry's one fork, from 2026-09-03
 //     until the panel's deletion on 2026-09-30.)
 // The panel's own authored numbers are the two row heights below; the head
 // pad is derived (head_pad_px), the margin's two numbers modal_box.h's.
 //
-// THE FACES ARE THUNAR'S LIST UNDER ARC (architect 2026-11-19, send Z, his
-// approval of tmp/sendZ/VIEW/Z_04; send AA's stage D2; the ladder at the
-// painter, paint_list_view): the box's interior is THE VIEW, the canvas's
+// THE FACES ARE THUNAR'S LIST UNDER ARC (architect 2026-11-19, his approval
+// of the picture Z_04; the ladder at the painter, paint_list_view): the
+// box's interior is THE VIEW, the canvas's
 // tone (`ruler_face`, Arc's $base_color 404552), a surface you pick from,
 // a line above and below it and no frame. IT COVERS EVERY CONTENT, this one
 // widget being every list in the product (the player's folders and wavs,
@@ -164,8 +159,8 @@
 // resting row paints no fill at all, and the highlighted row — and the row
 // under a press, the same look (Thunar is single-click) — is a flat fill in
 // the theme's selection pair across the view's whole width. A ROW A TAP
-// WOULD ACT ON HOVERS under the pen (architect 2026-11-21, send EE: "I'd
-// like to add hover"): across the same width, `list_hover_face`, ARC'S OWN
+// WOULD ACT ON HOVERS under the pen (architect 2026-11-21: "I'd like to
+// add hover"): across the same width, `list_hover_face`, ARC'S OWN
 // `row.activatable:hover`, 3 % white over the view's tone (the same day: "I
 // prefer to go more truthful. It just needs to be very subtle.";
 // theme_roles.h's DERIVED block), in at once
@@ -181,8 +176,8 @@
 // the same press may become the band's scroll drag, so the row's identity is
 // not certain at the press — and A MOTIONLESS LIFT HIGHLIGHTS THE ROW AND
 // THEN OPENS IT, the highlight seated where the row stands and the list
-// not scrolled (seat_tapped_row, architect 2026-11-21, send EE: the press
-// never scrolls). A CLICK ACTIVATES (architect 2026-08-29): Plasma's
+// not scrolled (seat_tapped_row, architect 2026-11-21: the press never
+// scrolls). A CLICK ACTIVATES (architect 2026-08-29): Plasma's
 // single-click, which he runs, and GNOME's touch agree. The arm's whole state is
 // AppState::FolderOverlayPress; a shift or ctrl press on a row is a consumed
 // no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
@@ -190,7 +185,8 @@
 // under the PLAYER an open enters a folder or plays a wav; under
 // the PROJECT PICKER it reopens the row's project; under the SETTINGS PAGE
 // it closes the page and opens the settings editor on the row's key, its
-// entry the key's value (2026-11-19, send AA), whose Enter and Esc reopen
+// entry the key's value alone (architect 2026-11-19; the value sub-page,
+// architect 2026-11-20), whose Enter and Esc reopen
 // the page on that row (2026-10-28 night,
 // GuiInputHandler::handle_settings_editor_key), or on the row of a key with
 // a value list swaps that list in (settings_page_commit, 2026-10-28); under
@@ -204,7 +200,8 @@
 // 2026-11-19, send CC: "On selecting a trim preset, the overlay should
 // close."); under
 // the BPM FORM it opens the line editor prefilled
-// on the row's line, the form closing until the editor's return
+// with the row's value, its line past the `=`, the form closing until the
+// editor's return
 // (bpm_form_commit, 2026-10-29). AN
 // INERT ROW HAS NO OPEN and no
 // highlight: its motionless lift is a consumed nothing
@@ -232,14 +229,14 @@ namespace folder_overlay {
 // -- The geometry ------------------------------------------------------------
 //
 // THE ROW IS THUNAR'S DETAILS ROW AT 9 pt, GIVEN AIR (architect 2026-11-19,
-// send Z, "use tunar", his approval of tmp/sendZ/VIEW/Z_04; send AA's stage
-// D2; the design tmp/sendY/P2_design_overlays.md §B at 12 W text, the mock
-// kit's list_row / group_heading the reference; THE TWO HEIGHTS OURS since
-// 2026-11-21, send EE, below): the panel owns the two row
-// heights, the row's face and baseline (row_face, row_baseline_px) and the
-// head pad derived from them (head_pad_px); the row's drawing and its pens
-// stand at the painter's own constants (paint_handler.cpp's THE LIST VIEW,
-// kListDrawing*) on THE PAGE MARGIN (modal_box.h).
+// "use tunar", his approval of the picture Z_04; the overlays' design, its
+// §B, at 12 W text, the mock kit's list_row / group_heading the reference;
+// THE TWO HEIGHTS OURS, architect 2026-11-21, below): the panel owns the
+// two row heights, the row's face and baseline (row_face,
+// row_baseline_px) and the head pad derived from them (head_pad_px); the
+// row's drawing and its pens stand at the painter's own constants
+// (paint_handler.cpp's THE LIST VIEW, kListDrawing*) on THE PAGE MARGIN
+// (modal_box.h).
 
 // THE CARDS' FOOT MARGIN (notifications.cpp, its one reader since
 // 2026-10-23): ONE W, the line rule's hairline_px (render.h: 2 device px on
@@ -247,7 +244,7 @@ namespace folder_overlay {
 // they stand edge to edge across the view under the head pad (below).
 inline int pad_px()               { return hairline_px(); }
 
-// THE TWO ROW HEIGHTS — OURS, architect 2026-11-21 (send EE: "the lists
+// THE TWO ROW HEIGHTS — OURS, architect 2026-11-21 ("the lists
 // look too crowded ... Whenever there's like a single entry text box, that
 // looks good ... We don't have to make the list height that tall, but you
 // know, I think a little more than what we have now would be good"): A
@@ -257,11 +254,11 @@ inline int pad_px()               { return hairline_px(); }
 // and below — and A GROUP HEADING ROW kListHeadingW = 28 W (56 device px),
 // the same 4 W over a row (7 + 14 + 7). Each ONE NAMED NUMBER, so his glass
 // moves it in one line; each through scaled_px, rounded at the element,
-// floored at one. (Thunar's own, measured on his shot at 9 pt, stood from
-// send Z / send AA's stage D2 to send EE: the row 20 W, 3 + 14 + 3, and its
-// side-pane section header 24 W, 5 + 14 + 5.) EVERYTHING ELSE OF THE LIST
-// FOLLOWS FROM THESE TWO: the baseline (row_baseline_px), the head pad
-// (head_pad_px), the content's height and so the scroll ceiling, every
+// floored at one. (Thunar's own, measured on his shot at 9 pt: the row
+// 20 W, 3 + 14 + 3, and its side-pane section header 24 W, 5 + 14 + 5 —
+// ours each 4 W taller, 2 W more air above and below.) EVERYTHING ELSE OF
+// THE LIST FOLLOWS FROM THESE TWO: the baseline (row_baseline_px), the
+// head pad (head_pad_px), the content's height and so the scroll ceiling, every
 // row's rect and so the walks, the centering, the hit test and the damage,
 // and the row's drawing, centered in the list row (paint_handler.cpp's
 // kListDrawingYW). THE ROWS STAND
@@ -272,8 +269,7 @@ inline int pad_px()               { return hairline_px(); }
 // folders and wavs, the project picker, the settings page, its value lists,
 // the trim presets, the BPM form — the heading the Group rows' (the
 // settings page's DEVICE / PIECE, `theme`'s three groups, the BPM form's
-// one); every other kind a list row. (The 26 W row of 2026-11-04 night,
-// one W apart and one W inside the pane, retired with send AA's stage D2.)
+// one); every other kind a list row.
 inline constexpr double kListRowW     = 24.0;
 inline constexpr double kListHeadingW = 28.0;
 inline int list_row_height_px()     { return scaled_px(kListRowW, 1); }
@@ -314,7 +310,7 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
                              : kListRowW));
 }
 
-// THE HEAD PAD (architect 2026-11-20, send EE; THE PAGE MARGIN's top,
+// THE HEAD PAD (architect 2026-11-20; THE PAGE MARGIN's top,
 // modal_box.h, the rule's owner: "the ink stands 13 W from the view's top
 // and from its left; the list's head pad follows its first row's kind" —
 // "1 agree" / "2 agree"): A PAD OF CONTENT OVER THE FIRST ROW that puts THE
@@ -338,7 +334,7 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
 // (gui_font_bundled.cpp's head), so the painted capitals' first row stands
 // at the margin exactly. ON THE TABLET (200 %; the cap band 16.51 px of the
 // 24-px em in both files, 17 rows as hinted; the view's top row 142, the
-// margin row 168; the rows of send EE, 2026-11-21):
+// margin row 168; the rows of 2026-11-21, 24 W and 28 W):
 //   a list row first (the picker, the player, the trim presets, a value
 //     list without groups): the caps 32 − 16.51 = 15.49 px deep, the pad
 //     26 − 15.49 = 10.51 -> 11 px; the first row 153..200, its baseline 185,
@@ -572,7 +568,7 @@ inline bool row_heads_listing(const AppState::FolderOverlay& ov, int index) {
 // offset `scroll`, clamped onto the listing's walls there: the offset the
 // keyboard row walk's "keep the focused row visible" writes (below).
 // THE ROW THAT HEADS THE LISTING SHOWS WITH THE LISTING'S HEAD (architect
-// 2026-11-20, send EE, the head pad's rule: bringing the first row into
+// 2026-11-20, the head pad's rule: bringing the first row into
 // view shows the pad too): for row_heads_listing's row the answer is SCROLL
 // 0 — the head pad and whatever heading stands over the row in view with
 // it, the list as it rests — wherever the row stands whole in the band at
@@ -698,7 +694,7 @@ inline bool set_highlight(AppState& a, int index) {
     return changed;
 }
 
-// THE PRESS NEVER SCROLLS (architect 2026-11-21, send EE: "Once I tap on
+// THE PRESS NEVER SCROLLS (architect 2026-11-21: "Once I tap on
 // something, it's okay if there's a little delay ... There shouldn't be like
 // an in-between frame"): THE TAP'S SEAT — the highlight onto row `index`,
 // the row the pointer pressed and lifted on, AND THE SCROLL NOT MOVED AT

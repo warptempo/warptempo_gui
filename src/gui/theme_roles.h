@@ -209,7 +209,7 @@
 //                                     A key's lit look REFUSED for it:
 //                                     "clip indicator is not a button"
 //   OUR OWN (no Live role; the Arc page, architect 2026-11-18 / 2026-11-19,
-//   send Z — tmp/sendZ/DESIGN.md's THE TONES). Live's themes paint one
+//   send Z — the design's THE TONES). Live's themes paint one
 //   ground and one text tone where Arc parts the title bar from the body
 //   under it and prints the title and the sidebar in tones of their own, so
 //   no Live role can be read for them: these three are ours, named for what
@@ -259,7 +259,7 @@
 //   role the tone moves from, so NO HOVER SHOWS ON A LIVE THEME — and where
 //   the key's hover tone is the key face itself no face hovers at all, the
 //   linked groups' seams included (GuiInputHandler::walk_hover_face's theme
-//   term — architect 2026-11-20, send DD: agreed):
+//   term — architect 2026-11-20: agreed):
 //     key hover face         363636 = ButtonHoverBackground, read flat as the
 //                                     key face's role is (arc_dark 505666,
 //                                     Arc's button:hover, gtk3 CSS line 136,
@@ -284,7 +284,7 @@
 //   NEITHER IS A BRIGHT TONE: a surface's own face, never mixed toward the
 //   ground (THE BRIGHT MIX below).
 //   CARRIED (our own three fills, send AA's stage D1, architect 2026-11-19 —
-//   DESIGN §6 / §9, his "good to build" on tmp/sendZ/VIEW/Z_07 and "if we
+//   DESIGN §6 / §9, his "good to build" on the mock Z_07 and "if we
 //   can do the transparency, we might as well"): a fill PAINTED OVER
 //   WHATEVER LIES UNDER IT — the chrome, the lanes, the canvas — so no
 //   surface is known to composite it over at the derivation: ITS ALPHA IS
@@ -321,7 +321,7 @@
 //   ROLE-NAMED, continued:
 //     core                   363636 = SurfaceBackground, THE KEY FACE, on
 //                                     every theme (architect 2026-11-07,
-//                                     session 83, his pick i4 of tmp/s83 on
+//                                     session 83, his pick i4 of the mocks on
 //                                     real MAGNIFY-lit captures, Default and
 //                                     Immaterial judged: a lighter core from a
 //                                     tone the palette already holds, no AA
@@ -438,7 +438,7 @@
 //                                     0.03 · (255 − c) rounded (derive(),
 //                                     beside the three above: no bright tone
 //                                     under it): A LIST ROW UNDER THE HOVERING
-//                                     PEN (architect 2026-11-21, send EE: "I'd
+//                                     PEN (architect 2026-11-21: "I'd
 //                                     like to add hover"; its tone Arc's own
 //                                     `row.activatable:hover`, gtk3.0-arc-
 //                                     dark.css line 1258, the same day: "I
@@ -453,7 +453,8 @@
 //                                     measured) — the formula taken. ONE
 //                                     CONDITION: a theme whose key hover face
 //                                     is its key face (every Live theme)
-//                                     hovers nothing (send CC / DD), so there
+//                                     hovers nothing (architect 2026-11-20),
+//                                     so there
 //                                     the view's own tone: no row hovers, as
 //                                     no key does
 //     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
@@ -557,7 +558,7 @@
 // the text, the dim text, the key dim ink, the title, sidebar and ruler
 // texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection's text, the cards' words, the tooltip's and the normal card's fills
 // (surfaces, not highlights), the faces — a key's hover face and the pill's
-// among them (send CC), and a list row's hover face (send EE, 2026-11-21) —
+// among them (send CC), and a list row's hover face (architect 2026-11-21) —
 // the lanes (the trim
 // bar's trough and the well's lines among them, 2026-11-17), the Arc page's
 // tones (2026-11-19: the body tone, the title bar's text, the sidebar text,

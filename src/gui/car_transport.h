@@ -111,14 +111,14 @@ struct GuiInputHandler;
 // hook's fork), while the folder overlay stands (the Open project
 // picker — the player is forked ahead at the hook, so its owner tag never
 // reaches this test), while THE SCORE VIEWER stands (2026-10-26: its open
-// stopped playback and nothing plays under it), under ANY EDITOR (keyboard_modal_editor_active, the
-// one predicate for a keyboard-taking modal: the dialog line editor (the
-// settings line, the trim preset's name, the BPM form's line) and, since
-// 2026-10-25, the flag and iteration bound editors — a
-// modal admits its own vocabulary alone; every editor's open stops play,
-// architect 2026-11-20, send EE, stop_playback_for_modal_open, so nothing of
-// the project's sounds under one for a Pause, a Stop or a focus loss to
-// end) and in the `h` history view
+// stopped playback and nothing plays under it), under ANY EDITOR
+// (keyboard_modal_editor_active, the one predicate for a keyboard-taking
+// modal: the dialog line editor (the settings line, the trim preset's name,
+// the BPM form's line) and, since 2026-10-25, the flag and iteration bound
+// editors — a modal admits its own vocabulary alone; every editor's open
+// stops play, architect 2026-11-20, stop_playback_for_modal_open, so
+// nothing of the project's sounds under one for a Pause, a Stop or a focus
+// loss to end) and in the `h` history view
 // (playback is removed from the view whole and bare Space is consumed
 // there).
 //

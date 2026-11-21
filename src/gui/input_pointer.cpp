@@ -49,7 +49,7 @@
 namespace {
 
 // monotonic_ms() (the press-driven CLOCK_MONOTONIC ms time base for the
-// double tap and the holds) is now the shared reader declared in app_state.h — one owner, no
+// double tap and the holds) is the shared reader declared in app_state.h — one owner, no
 // per-TU clock copy.
 
 // THE PRESS CLAIM'S HALF OF THE BUTTON ROSTER (the roster itself is
@@ -832,7 +832,7 @@ static_assert(std::size(kToolbarChords) + kLevelCaseCount ==
 // IS GONE: it existed because an accidentally opened settings editor on GLASS,
 // with no physical keyboard, was an exit-less state — the Quit button did
 // nothing — and the modal itself now answers that: every editor stands
-// under the on-screen keyboard, whose Esc and Enter are its way out and
+// with the on-screen keyboard, whose Esc and Enter are its way out and
 // whose claim ranks above the veil. Quit's button had already left the
 // roster, so the membership had derived down to SAVE alone;
 // the whole mechanism goes rather than surviving for one convenience chord.
@@ -862,7 +862,7 @@ static_assert(std::size(kToolbarChords) + kLevelCaseCount ==
 // that row's first paint, or a member the overflow hides whole) contains no
 // point, which is the correct answer. The key's box is its one hit, PLAY's
 // included: the bottom left's timestamp presses nothing (architect
-// 2026-11-20, send DD; RedesignButtonFace::contains).
+// 2026-11-20; RedesignButtonFace::contains).
 // IT TAKES THE PLACE (GuiPointerPlace; architect 2026-11-15, the no-grid arc):
 // the key's whole face reads its pixel.
 bool redesign_button_hit(const AppState& app, RedesignButton id,
@@ -1063,7 +1063,7 @@ struct ActiveEditorText {
     const std::vector<double>* byte_x = nullptr;
     // true = the LINE editor's entry on the value sub-page (settings,
     // which also hosts the trim preset's name and the BPM form's field;
-    // architect 2026-11-20, send EE); false = the top-strip
+    // architect 2026-11-20); false = the top-strip
     // flag editor. Selects the repaint owner. Both editors are one line, so
     // `text_left` (each painter's origin, its scroll offset folded in) is
     // the whole of where the text stands.
@@ -2594,7 +2594,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(
     // the zone agrees with it.
     if (notification_card_at(app, x, y) != 0) return false;
     // AND IT YIELDS WHOLE UNDER A QUESTION'S PAGE AND THE PROGRESS PAGE
-    // (architect 2026-11-20, send EE): the page takes the view, the waveform
+    // (architect 2026-11-20): the page takes the view, the waveform
     // not painted under it (the modal family's box stands, so
     // point_on_nav_surface below would answer no too — the term states the
     // rule at its own rank, ahead of the surface test). Every finger
@@ -2623,7 +2623,7 @@ bool GuiInputHandler::touch_point_in_pan_zone(
     // (every editor a pure modal, architect 2026-10-29, on_button_press's
     // veil).)
     // AND IT YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-08-27; architect
-    // 2026-11-20, send EE: the keyboard stands over the view's foot, nothing
+    // 2026-11-20: the keyboard stands over the view's foot, nothing
     // relaid — onscreen_keyboard.h's placement block), for the flag box
     // carve-out's reason exactly: the keyboard paints over the canvas's lower
     // part, and a finger landing on a key inside a pan zone would become the
@@ -2869,7 +2869,7 @@ int GuiInputHandler::modal_dialog_button_hit(int x, int y) const {
 // THE DIALOG BUTTONS' POINTER WALK, run on every motion under a standing
 // dialog. It answers two readers — the armed button's inside bit and this
 // surface's tooltip wait (the tail). THE BUTTONS' HOVER FACE IS NOT THIS
-// WALK'S (send CC, 2026-11-20): every surface's hover face has one walk,
+// WALK'S (architect 2026-11-20): every surface's hover face has one walk,
 // walk_hover_face, under its own gate (AppState::FaceFades).
 //
 // AN ARMED BUTTON — THE FEINT (architect 2026-08-13): "if the user feints —
@@ -3332,7 +3332,7 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     }
     // (A LINE EDITOR'S SUB-PAGE PUBLISHES NO BUTTON: its commit and its
     // cancel are the on-screen keyboard's Enter and Esc, architect
-    // 2026-11-20, send EE.)
+    // 2026-11-20.)
     return false;
 }
 
@@ -3358,7 +3358,7 @@ static bool double_tap_at(const DoubleClickCandidate& dc,
 }
 
 // DOES A MARKER CELL CARRY A DOUBLE-TAP ACT ON THE ACTIVE COLUMN — NO DOUBLE
-// TAP WHERE THERE IS NO DOUBLE-TAP ACT (architect 2026-11-21, send EE; the
+// TAP WHERE THERE IS NO DOUBLE-TAP ACT (architect 2026-11-21; the
 // family at DoubleClickSurface, app_state.h): every cell does but A PHASE
 // RESET'S PAYLOAD, which authors no line and has no editor (EDIT's own
 // fork), so a pair of taps there is two plain taps — the second selects,
@@ -3439,7 +3439,7 @@ void GuiInputHandler::run_marker_plain_select(int hit, MarkerCell cell) {
 // it.)
 // It runs the stop, the two-way selection fork, the
 // land and — plain only — the double tap's consume-open (architect
-// 2026-11-21, send EE), and then ARMS the pending for the two things that
+// 2026-11-21), and then ARMS the pending for the two things that
 // genuinely belong to a later edge: the reposition DRAG a plain press may
 // become (the crossing begins it; its gates live there) and the double tap's
 // SEED only a motionless release may write.
@@ -3549,7 +3549,7 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
     // Turning the mode off restores both in the same press.
     if (toggle) return;
     // THE PLAIN ARM'S DOUBLE-TAP CONSUME, AT THIS PRESS (architect
-    // 2026-11-21, send EE: "double tap the flag to open it"): a candidate for
+    // 2026-11-21: "double tap the flag to open it"): a candidate for
     // the SAME index within the window and the slack opens the addressed
     // cell's editor, exactly as EDIT (bare Return) does on the focused marker
     // — the fork above already single-selected it, landed the playhead on it
@@ -3557,7 +3557,7 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
     // (enter_top_flag_edit / enter_iter_bound_edit), so the double tap's open
     // takes every editor's open as EDIT's does — THE MODAL-OPEN STOP
     // (stop_playback_for_modal_open, inside the opens; architect 2026-11-20,
-    // send EE, "play should stop on editor open"), the cell editor on the
+    // "play should stop on editor open"), the cell editor on the
     // lane's line box, the on-screen keyboard over the page's foot. THE
     // GATES ARE READ LIVE AT THIS PRESS and refuse SILENTLY — the gesture
     // class's own answer, the one place this road parts from EDIT, whose
@@ -3735,7 +3735,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     // THE CLAIM IS THE WHOLE SURFACE (onscreen_keyboard::claim_rect): its
     // top line, the band's pads, the ground beside the block and the grid
     // — the canvas's foot, the bottom icon row and the status bar under it
-    // answer nothing (onscreen_keyboard.h's placement block, send EE).
+    // answer nothing (onscreen_keyboard.h's placement block, architect
+    // 2026-11-20).
     // CONSUMED FROM HERE, whatever it lands on — the surface is opaque to
     // the pointer.
     if (!rect_contains(onscreen_keyboard::claim_rect(app), x, y)) return false;
@@ -3778,7 +3779,7 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
         onscreen_keyboard::key_at(app, page, at.rx, at.ry, def);
     if (hit < 0) return true;   // the band's ground off the grid: consumed
     // A GREYED KEY ARMS NOTHING (onscreen_keyboard::key_live, the one
-    // predicate its face reads; architect 2026-11-20 / 21, send EE: UP, DOWN
+    // predicate its face reads; architect 2026-11-20 / 21: UP, DOWN
     // and the pass key greyed where they mean nothing): consumed as the
     // band's ground is — no press face, no held key, no key-up owed.
     if (!onscreen_keyboard::key_live(app, def.role)) return true;
@@ -3879,7 +3880,7 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
             break;
         // THE PASS KEY, UP AND DOWN ARE KEYS ON THE ONE ROAD (the pass key
         // architect 2026-11-08, sessions 95 / 96; its act and UP / DOWN
-        // 2026-11-20 / 21, send EE): each synthesizes its own bare keysym —
+        // 2026-11-20 / 21): each synthesizes its own bare keysym —
         // GuiKeys::Pass, Up, Down — and THE MARKER LANE'S EDITOR answers it
         // by rewriting its text (handle_top_flag_editor_key: the Toggle
         // Inherit, the tempo or bound step), so it meets the same modal gate
@@ -3979,7 +3980,7 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
 
 // THE MOTIONLESS LIFT'S FIRST HALF: the band moves, under every owner — the
 // picker has no field beside it (architect 2026-08-28), so the band IS what
-// Enter opens. THE PRESS NEVER SCROLLS (architect 2026-11-21, send EE:
+// Enter opens. THE PRESS NEVER SCROLLS (architect 2026-11-21:
 // "Once I tap on something, it's okay if there's a little delay ... There
 // shouldn't be like an in-between frame"): both arms seat the highlight on
 // the tapped row and move the scroll not at all
@@ -4061,7 +4062,7 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // own button (strict modifier validation's answer, and the roster's
     // shift-hold is elsewhere). A PRESS ON NO ROW ARMS NOTHING, ONE RULE FOR
     // EVERY SUCH POINT — the list's head pad over its first row
-    // (folder_overlay::head_pad_px; architect 2026-11-20, send EE), the
+    // (folder_overlay::head_pad_px; architect 2026-11-20), the
     // empty view under a short listing's last row and the box's two lines:
     // no highlight, no open and no scroll drag (the drag is a row press
     // past its gate). The claim is this SURFACE rect (the modal family's
@@ -4084,7 +4085,7 @@ bool GuiInputHandler::claim_folder_overlay_press(
     // MOTIONLESS LIFT because this same press may still become the band's
     // scroll drag (architect 2026-08-29; the row press is chrome, and past the
     // drag gate it IS the drag). THE PRESS NEVER SCROLLS (architect
-    // 2026-11-21, send EE): neither this arm nor its motionless lift moves
+    // 2026-11-21): neither this arm nor its motionless lift moves
     // the list — the lift's seat is folder_overlay::seat_tapped_row
     // (folder_overlay_highlight_row) — so the one picture between the press
     // and the act is the pressed row's accent below; only the drag past the
@@ -4820,7 +4821,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // then re-seeds its own fresh candidate at a motionless RELEASE (only the
     // release knows the press stayed a tap).
     // THE GRAB SURFACES' SEEDS ARE SPLIT ACROSS THE TWO EDGES (the marker's,
-    // and the trim bar's by the marker's rule since 2026-11-21, send EE),
+    // and the trim bar's by the marker's rule, architect 2026-11-21),
     // which is unusual enough to state here: the press consumes against this
     // snapshot (it is gone by the release), while the seed written at the
     // lift carries the PRESS's place with the RELEASE's stamp — the place
@@ -4906,7 +4907,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // one such route — leaves Discard and Cancel rects whose keys ARE live in
     // the new set, on the very seats the new question's answers take (the
     // word buttons stand on the bottom icon row's fixed seats, architect
-    // 2026-11-20, send EE): a press there would answer destructively
+    // 2026-11-20): a press there would answer destructively
     // against a question that had not been painted.
     // The veil is unchanged either way — the press is
     // still consumed by the `return` below, it just arms nothing.
@@ -5084,7 +5085,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // The keyboard has NO HATCH either since 2026-10-25: Ctrl+S is consumed
     // at the editors' key gate like every other chord
     // (modal_editor_key_blocked).)
-    // NO EDITOR HAS A BUTTON TO CLAIM HERE (architect 2026-11-20, send EE:
+    // NO EDITOR HAS A BUTTON TO CLAIM HERE (architect 2026-11-20:
     // "on that page, the only controls are the osk's esc and enter"): a line
     // editor's sub-page publishes its entry alone.
 
@@ -5128,8 +5129,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
 
     // THE VEIL'S LAST WORD: any editor still standing here swallows the
     // press — every button, every modifier, every surface: the band (its
-    // keys dead behind it and greyed, redesign_button_enabled's keyboard
-    // arm) and row 8 (under the on-screen keyboard, publishing no rect),
+    // keys dead behind it and greyed, redesign_button_enabled's first
+    // arm, roster_greyed_whole) and row 8 (under the on-screen keyboard,
+    // publishing no rect),
     // the view bar, the ruler,
     // the marker lane (no press on another flag), the waveform (no pan,
     // scrub, placement, marker or strip drag) — and CLOSES NOTHING. It asks
@@ -5220,8 +5222,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // no clicks either, and took none away with it) — and the active tab's
     // name beside the clock (2026-10-22) is that same inert ground, a text
     // with no rect of its own to test. THE TIMESTAMP IS THAT SAME INERT
-    // GROUND (architect 2026-11-20, send DD: "it no longer carries button
-    // look"; RedesignButtonFace::contains). ABOVE it stand
+    // GROUND (architect 2026-11-20: plain text with no button look;
+    // RedesignButtonFace::contains). ABOVE it stand
     // the well's foot (inert chrome, the frame's bottom line) and
     // GAP 2's blank window ground — outside every band here and falling
     // through to the tail's consumed nothing, the ground as window ground by
@@ -5236,8 +5238,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     const GuiRect top  = top_strip_area(app);
     // The waveform BAND is the navigation surface, point_on_nav_surface
     // exactly — the canvas's interior where the waveform is painted
-    // (2026-10-09; the keyboard's surface carved out, 2026-10-10 and again
-    // since send EE, 2026-11-20): the column's margins beside it are the
+    // (2026-10-09; the keyboard's surface carved out, 2026-10-10, over the
+    // view's foot, architect 2026-11-20): the column's margins beside it are the
     // program's panel, and a press there falls to the tail's consumed
     // nothing. `area` stays the coordinate origin.
     const bool inside_waveform = point_on_nav_surface(app, x, y);
@@ -5595,7 +5597,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // A PLAIN TRIM-BAR TAP THAT NEVER BECOMES A DRAG IS A
                 // CONSUMED NOTHING (architect 2026-07-30) but for the double
                 // tap's seed its lift writes, however long it was held (the
-                // bar has no long press, architect 2026-11-21, send EE); a
+                // bar has no long press, architect 2026-11-21); a
                 // second tap inside the window frames the trim at its press.
                 // The tap's entire act was
                 // PUBLISHING the trim window as a region highlight, and that
@@ -5608,8 +5610,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // and the trim-mutation stop at its FIRST ACCEPTED bound change
                 // (input_trim.cpp), which is where a trim commit actually happens.
                 //
-                // THE DOUBLE TAP FRAMES THE TRIM (architect 2026-11-21, send
-                // EE; TrimBarPressSeed, the contract; the window's owner at
+                // THE DOUBLE TAP FRAMES THE TRIM (architect 2026-11-21;
+                // TrimBarPressSeed, the contract; the window's owner at
                 // kDoubleClickMs, app_state.h): run_span_framing_command on
                 // the whole band — endcaps, body and bare trough alike, since
                 // it frames rather than grabs — its test the one the `h`
@@ -5655,7 +5657,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // of 2026-08-15 is inverted). ONE act owner,
                 // run_marker_click_act: the stop, the selection fork, the
                 // land and the plain arm's double-tap open (architect
-                // 2026-11-21, send EE), which otherwise
+                // 2026-11-21), which otherwise
                 // arms the pending that becomes the reposition drag past
                 // the threshold. The drag's gates (the lock; the home view
                 // through the value-drag posture) live at the crossing, never here: a
@@ -5681,8 +5683,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                     // parity placement of 2026-07-23 before that). Plain by
                     // construction here: a ctrl press returned in its claim
                     // above. TWO acts:
-                    // A DOUBLE TAP's second press (architect 2026-11-21, send
-                    // EE; the window at kDoubleClickMs, app_state.h) creates a
+                    // A DOUBLE TAP's second press (architect 2026-11-21; the
+                    // window at kDoubleClickMs, app_state.h) creates a
                     // marker at the tapped place, SELECTS it and LANDS the
                     // playhead on it — THE DROP, the same bodies bare `s` and
                     // the Drop key run (create_marker_at_empty_lane: the drop
@@ -5940,7 +5942,7 @@ void GuiInputHandler::commit_region_sweep() {
     const bool wrote = app.region_drag.wrote_trim;
     // THE SWEPT LOOK — the moving end's cap in `selected_fill`, both caps
     // showing — ENDS WITH A SWEEP THAT WROTE (trim_bar_look's `swept`,
-    // app_state.h; architect 2026-11-20, send DD): its edge damages the
+    // app_state.h; architect 2026-11-20): its edge damages the
     // trim lane here, whatever the commit tail below damages.
     if (wrote && !app.region_drag.select)
         viewport.invalidate_rect(top_trim_row_area(app));
@@ -6138,8 +6140,8 @@ void GuiInputHandler::place_playhead_at_click_column(double click_rel_x,
 }
 
 void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
-    // The empty marker lane's double tap (architect 2026-11-21, send EE: the
-    // third of the three he brought back), AT THE SECOND PRESS — a
+    // The empty marker lane's double tap (architect 2026-11-21: the
+    // third of the three double taps), AT THE SECOND PRESS — a
     // recognized second press acts immediately; its one caller is the lane's
     // consume in on_button_press, which passes the press's real place and
     // arms nothing after the create.
@@ -6387,8 +6389,8 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     }
     // F2.1: a release ending an editor-text caret drag ends it before the
     // modal swallow below. IT SEEDS NO DOUBLE-CLICK (architect 2026-11-08,
-    // session 95: the field's double tap is retired; a tap and a drag are
-    // its whole vocabulary).
+    // session 95: the field has no double tap; a tap and a drag are its
+    // whole vocabulary).
     if (app.editor_text_drag.active) {
         finalize_editor_text_drag();
         return;
@@ -6396,7 +6398,7 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     if (text_editor::is_active(app.settings_editor)) return;
 
     // THE TRIM BAR'S DOUBLE TAP'S SEED, resolved here for every release
-    // (architect 2026-11-21, send EE; the contract at TrimBarPressSeed,
+    // (architect 2026-11-21; the contract at TrimBarPressSeed,
     // app_state.h). THE BAR HAS NO LONG PRESS: no clock is read, so a press
     // held for any length lifts as a tap. THE SEED FOLLOWS THE MARKER'S RULE
     // (PendingMarkerPress's seed, below): a lift that never became a drag is
@@ -6473,7 +6475,7 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // it held is recorded for the pen latch's frozen answer, which keeps it
     // as hovered, where the pen lifted on it, until the pen rearms or
     // leaves (AppState::TrimBarHover's
-    // `lifted`; architect 2026-11-20, send CC — a finger's lift arms no
+    // `lifted`; architect 2026-11-20 — a finger's lift arms no
     // latch, and its leave drops the record). Read before the arms end the
     // records it is read off.
     if (app.trim_drag.active || app.pending_trim_drag.active)
@@ -6684,7 +6686,7 @@ void GuiInputHandler::finalize_active_drags() {
 // painted button, its column read off the painted face
 // (tooltip_column_rect, render.h). (THE KEYS' HOVER FACE has its own walk,
 // walk_hover_face below — every surface's, under the press's own gate:
-// AppState::FaceFades, send CC, 2026-11-20.)
+// AppState::FaceFades, architect 2026-11-20.)
 void GuiInputHandler::arm_pen_hot_latch() {
     // Armed and unanchored (the rule at pen_hot_latch_): the hook fires after
     // the lift's own delivery, whose restore motion walked the hover
@@ -6698,7 +6700,7 @@ void GuiInputHandler::arm_pen_hot_latch() {
     // accent, AppState::FaceFades). The roster's tooltip walk runs again
     // beside it, as it always did at the arm.
     // THE TRIM BAR'S FROZEN ANSWER (AppState::TrimBarHover; architect
-    // 2026-11-20, send CC: no blink of the caps at the lift): the part the
+    // 2026-11-20: no blink of the caps at the lift): the part the
     // bar's own grab held at this lift — `lifted`, written by that release
     // — is to read as hovered ONLY WHERE THE PEN LIFTED ON IT, ON THE
     // PICTURE THE NEXT PAINT SHOWS: the lift's delivery ran the drag's last
@@ -6806,7 +6808,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // session 87; tooltip_column_rect, render.h): the key's box less the
         // seam its left neighbor owns — the hit box itself since send Z's
         // linked groups; the bottom left's timestamp is no key's (architect
-        // 2026-11-20, send DD). The column goes to the writer with the owner
+        // 2026-11-20). The column goes to the writer with the owner
         // (the bypass chain measures from it at the leave). The columns of a
         // group tile, so the walk's first hit is the only one.
         if (modal_veil || under_card) continue;
@@ -7028,7 +7030,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 }
 
 // -- ARC'S HOVER AND EVERY FACE'S FADE: THE BODIES OF THEIR ONE OWNER
-//    (architect 2026-11-18 / 2026-11-20, sends CC and DD). The rule — which
+//    (architect 2026-11-18 / 2026-11-20). The rule — which
 //    faces hover, the gate, Arc's transitions on every state, what does not
 //    fade and the frames' cost — is at AppState::FaceFades (app_state.h),
 //    the look at materials.h's THE KEY and THE HOVER, the contracts at the
@@ -7106,10 +7108,10 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //     key not a lit lamp (Shift while latched, the page key on the symbols
 //     page: the painter's two) and not greyed (onscreen_keyboard::key_live:
 //     UP, DOWN and the pass key where they mean nothing, architect
-//     2026-11-20 / 21, send EE).
+//     2026-11-20 / 21).
 //   KNOB — the stash as for a button, the scrub's item and its knob
 //     published, no drag armed, and the owner's claim taking a press.
-//   LIST ROW (architect 2026-11-21, send EE) — the press's own road:
+//   LIST ROW (architect 2026-11-21) — the press's own road:
 //     claim_folder_overlay_press under the modals' veil, so no question, no
 //     editor, no progress page; the list standing and painted (no question's
 //     page or progress page in its place, modal_page_stands), the face's
@@ -7215,7 +7217,7 @@ bool GuiInputHandler::hover_face_live(
 // key the grid's (onscreen_keyboard::key_at: a shared line the key's left of
 // / above it); THE LIST'S BAND, claimed whole while the list stands and is
 // painted, its row row_at's (claim_folder_overlay_press's own claim and
-// hit; architect 2026-11-21, send EE); THE DIALOG STASH's buttons
+// hit; architect 2026-11-21); THE DIALOG STASH's buttons
 // (modal_dialog_button_hit: the painted box less its seam), then THE SCRUB'S
 // KNOB, its disc where it is painted (the published center,
 // render_player_scrub_handle_hit); then THE ROSTER, the chord table's keys,
@@ -7223,8 +7225,8 @@ bool GuiInputHandler::hover_face_live(
 // arm_redesign_press and the lift ask):
 // its painted box less its seam — the bottom left's timestamp, a time label,
 // presses nothing, so by the gate ("a face hovers only where a press there
-// would act") the pen hovering it lights nothing (architect 2026-11-20, send
-// DD: "it no longer carries button look"). The surfaces are disjoint; the
+// would act") the pen hovering it lights nothing (architect 2026-11-20:
+// plain text with no button look). The surfaces are disjoint; the
 // face found answers only where it is live (hover_face_live).
 AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer() const {
     using Face    = AppState::FaceFades::Face;
@@ -7343,18 +7345,20 @@ GuiRect GuiInputHandler::face_extent(
 // nothing — the clock's next step does (tick_face_fades), so every damage
 // is one step's:
 //   * THE FACE THE PEN HAS LEFT goes toward rest from its picture as
-//     painted, over the whole 200 ms (the head's reading of GTK) — where it
+//     painted, over the whole 200 ms (the head's reading of GTK; a list
+//     row over its 150 ms, FaceFades::duration_ms) — where it
 //     is still a face a press would act on and its record still targets the
 //     hover; a face gone lit, disabled or dead under a veil is its painter's
 //     to retarget (it resolves the look its bits now give, the next frame
 //     that paints it), so this sends it toward no look its state does not
 //     give;
 //   * THE FACE THE PEN IS NOW ON goes toward the hover face the same way,
-//     from its picture as painted, where its record targets rest;
+//     from its picture as painted, where its record targets rest (a list
+//     row into hover at once, architect 2026-11-21);
 //   * THEN THE SEAMS beside both, each toward the target their two faces'
 //     targets now give (retarget_seams_beside) — AND THE ONE BETWEEN THE
 //     TWO, where they are neighbors, NOT AT ALL: its target is the line on
-//     both sides of the change, so it holds what it shows (send CC's D1;
+//     both sides of the change, so it holds what it shows (GTK's own;
 //     AppState::FaceFades' THE SEAMS). Both faces are retargeted before any
 //     seam, so that seam never sees the left face at rest and the right not
 //     yet hovered.
@@ -7561,7 +7565,7 @@ bool installed_theme_hovers() {
 
 // THE WALK (the declaration): none unless the theme's term holds — on a
 // Live theme no face hovers, the seams included, so no hover fades or is
-// damaged there (architect 2026-11-20, send DD: agreed; a press, a lit edge
+// damaged there (architect 2026-11-20: agreed; a press, a lit edge
 // and a greying fade on every theme, AppState::FaceFades) — and the
 // pointer's gate admits one; else the live face under the pen.
 void GuiInputHandler::walk_hover_face() {
@@ -7578,7 +7582,7 @@ void GuiInputHandler::walk_hover_face() {
 
 // -- THE TRIM BAR'S HOVER (AppState::TrimBarHover, the rule; the look and
 //    the one table at render.h's trim_bar_tones; architect 2026-11-19 /
-//    2026-11-20, send CC) ----------------------------------------------------
+//    2026-11-20) ----------------------------------------------------------
 
 // "WOULD A PRESS ON THE BAR ARM A GRAB NOW?" past the main page's refusals
 // (main_page_takes_press_at_pointer, which the walk asks through the gate):
@@ -7611,7 +7615,7 @@ bool GuiInputHandler::trim_bar_part_terms_hold() const {
 }
 
 // THE LEAVE'S STAMP (the declaration; AppState::TrimBarHover's `leave_ms`,
-// the 10 ms hold KEPT, architect 2026-11-20, send DD): the pointer-leave
+// the 10 ms hold, architect 2026-11-20): the pointer-leave
 // hook calls it ahead of its walk; a standing part is stamped, so the walk
 // that follows keeps it for kTrimBarLeaveHoldMs instead of clearing it.
 // No part standing, nothing to hold and nothing stamped.
@@ -7712,7 +7716,7 @@ void GuiInputHandler::settle_trim_bar_hover() {
 // stand there), a list row's while its list stands no more, is hidden under
 // a question's page or the progress page, is another listing, or no longer
 // stands on the box it was painted on (a scroll moved it; architect
-// 2026-11-21, send EE) — so
+// 2026-11-21) — so
 // whatever replaces them, or the key when it comes back, paints its looks at
 // once (AppState::FaceFades' WHAT DOES NOT FADE); nothing is damaged, the
 // surface that replaced them having been repainted. A LIST ROW'S RECORD
@@ -8737,8 +8741,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 // (both halves — the view has no scrub since playback left it whole,
 // 2026-08-05) and nothing else, and on it plain drag = the grab-pan,
 // motionless plain click = THE MODE'S LAND at the column (deferred to the
-// release like everywhere else), the touch hold = the view-local region
-// former. The RULER and the MARKER lane's empty
+// release like everywhere else), and the waveform takes no hold (2026-11-07,
+// live or here). The RULER and the MARKER lane's empty
 // stretches are PLACEMENT SURFACES in here as outside (architect 2026-09-25,
 // the lanes leaving the navigation surface): a motionless
 // plain click lands the playhead through the mode's land, and every
@@ -8770,8 +8774,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 //     2026-09-25), so their motionless clicks land the playhead and a drag
 //     there does nothing but the ruler's head drag.
 //   * a DOUBLE TAP anywhere on the TRIM BAR band FRAMES THE TRIM SPAN
-//     (TrimBarPressSeed; architect 2026-11-21, send EE, the bar's long press
-//     removed) — the span that band is displaying, the tab's own window in
+//     (TrimBarPressSeed; architect 2026-11-21: the bar has no long press)
+//     — the span that band is displaying, the tab's own window in
 //     here as everywhere else since 2026-08-18 — through the LIVE band's own
 //     framing owner (run_span_framing_command): the second press here (the
 //     one test the live band asks, double_tap_at), the first tap seeded at
@@ -8822,8 +8826,8 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 // seeded in here — the mode's pending never sets seed_empty_lane — so the
 // create cannot fire; authoring), the trim bar's WRITING routes (the endcap
 // and bridge drags and the ctrl bound-set click, none of which the framing
-// gestures above touch — they are the band's held press and its second tap,
-// exactly as outside), and every ctrl press that is not the claim above.
+// gesture above touches — it is the band's second tap alone, exactly as
+// outside), and every ctrl press that is not the claim above.
 bool GuiInputHandler::handle_history_mode_press(
         const GuiPointerPlace& at, GuiInputState mods,
         const DoubleClickCandidate& dc_at_press) {
@@ -8889,7 +8893,7 @@ bool GuiInputHandler::handle_history_mode_press(
         }
     }
     // THE TRIM BAR'S DOUBLE TAP FRAMES THE TRIM SPAN — THE ORDINARY ACT
-    // (architect 2026-11-21, send EE, the bar's one framing gesture; since
+    // (architect 2026-11-21, the bar's one framing gesture; since
     // 2026-08-18, the
     // diff-span substitution's deletion, the bar shows the tab's real trim
     // window in here, so the gesture that reads "zoom to what the bar shows"
@@ -9647,7 +9651,7 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     // scroll drag once the gate is crossed) and owns the motion whole, and with no arm standing the
     // motion carries on below to the player's and the picker's own motion
     // branches (a row's hover face is the walk's at this body's head,
-    // walk_hover_face; architect 2026-11-21, send EE). A
+    // walk_hover_face; architect 2026-11-21). A
     // LOST BUTTON is the hard end: the arm drops and nothing commits, the
     // chrome arm's own rule.
     if (app.folder_overlay.press.armed) {
@@ -9740,7 +9744,7 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         // (the lane editors fell through to the surface under them until
         // then, its hover cues and gestures, their presses not veiled): no
         // editor publishes a button to walk (a line editor's sub-page its
-        // entry alone, architect 2026-11-20, send EE), so the roster walk
+        // entry alone, architect 2026-11-20), so the roster walk
         // alone, whose veil term refuses the whole roster — no roster hint
         // starts under the pointer, and a hint standing on the surface the
         // editor replaced is taken down there (its dead-owner arm).
@@ -9828,7 +9832,7 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     }
     // THE TRIM BAR'S PRESS RECORD ENDS AT THE GRAB GATE (TrimBarPressSeed,
     // app_state.h; the marker's rule for the double tap's first tap,
-    // architect 2026-11-21, send EE): a motion whose real travel from the
+    // architect 2026-11-21): a motion whose real travel from the
     // press reaches grab_moved_threshold_px — the gate the pill's drag and a
     // flag's drag begin at — drops the record, so a press that moved that far
     // and came back seeds nothing at its lift, as a flag's pending that
@@ -10113,7 +10117,9 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         // IT — the branches above all returned — which is consistent and
         // harmless: a gesture that ends over a button re-resolves on the next
         // motion, and a press cannot reach one mid-gesture anyway.
-        // The redesigned rows' hover is the ONLY hover left: the marker hover
+        // The redesigned rows' tooltip walk is the tail's ONLY hover (the
+        // faces' hover, the trim bar's with it, is walk_hover_face's at this
+        // body's head, AppState::FaceFades): the marker hover
         // popup and its whole recompute machinery died with the marker-text lane
         // (row 5), so the no-gesture tail has nothing else to resolve. With no
         // menu up a hover opens nothing. (The cue's hover tooltip, 2026-11-09,

@@ -6,10 +6,11 @@
 // caption and the window frame (none since 2026-10-24, the tablet's window
 // the whole panel; the menu row under the caption until 2026-10-21), the
 // pull-downs, the cards, the
-// prompts, the project picker's and the Settings dialogs with their fields
-// and buttons — each chrome's own (chrome_spec.h). THE PROGRAM is COOL EDIT PRO
-// 2.1'S EDIT VIEW FROM THE TOOLBAR DOWN, THE SAME UNDER EVERY CHROME
-// (windows-2000 today, Windows XP's to come). This header is the one owner of the
+// questions' pages, the project picker and the Settings page with their
+// entries and word buttons — each chrome's own (chrome_spec.h). THE
+// PROGRAM is COOL EDIT PRO 2.1'S EDIT VIEW FROM THE TOOLBAR DOWN, THE SAME
+// UNDER EVERY CHROME (windows-2000 today, Windows XP's to come). This
+// header is the one owner of the
 // program's lengths, in Windows px, read by the lane table (main.cpp), the
 // accessors (render.h's program block) and the painters (cool_edit_paint.h);
 // it holds no color (the palette's constants, palette_file.h, and the flat
@@ -47,7 +48,8 @@
 // stereo divider between them — and the well's foot; then THE BOTTOM ICON
 // ROW, 7 W, the case, 7 W; then THE STATUS BAR, its line and 22 W, on the
 // window's foot, the on-screen keyboard standing over the last ones while
-// it stands (send EE, onscreen_keyboard.h's placement block). The keys'
+// it stands, the app never relaid for it (architect 2026-11-20,
+// onscreen_keyboard.h's placement block). The keys'
 // outermost faces stand 6 W inside the panel
 // (render.h's kEdgeInsetW and THE EDGE RULE at well_columns). (The band's
 // head and foot lines and its panes, the tab strip under it, the column's
@@ -88,10 +90,10 @@ struct ProgramSpec {
     // (THE STRIPS' RUN GAP AND PADS are render.h's: the `run_gap` tuning
     // key, the toolbar pads, the panel's inset kEdgeInsetW — THE EDGE RULE
     // at well_columns, the strips' seats paint_handler.cpp's icon_row_seats
-    // and bottom_row_seats. THE TIME FIELDS are plain text since send AA
-    // (2026-11-19), the overlays' slots paint_handler.cpp's (kEntryPadsW,
-    // kEntryPenW), the bottom icon row's left run's pen render.h's
-    // kBottomLeftPenW.)
+    // and bottom_row_seats. THE TIME FIELDS are plain text (architect
+    // 2026-11-19), the overlays' slots paint_handler.cpp's time_label_w_px
+    // (the specimen's advance rounded up to a whole W), the bottom icon
+    // row's left run's pen render.h's kBottomLeftPenW.)
 
     // -- THE WELL (THE CANVAS COLUMN) -----------------------------------------
     // (THE WELL'S SIDE MARGIN, 12 W round the frame of 2026-11-17, retired

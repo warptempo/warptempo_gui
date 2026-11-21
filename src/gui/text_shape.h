@@ -205,11 +205,13 @@ void show_shaped_run_within(cairo_t* cr, const ShapedRun& run, double x,
 // ink — and a seat that aligns ink to an edge aligns it exactly.
 //
 // ITS CONSUMERS: THE TITLE BAR (render.h's title bar block): the right group's
-// runs and its battery cell spaced off each other's ink; and THE
-// TIME FIELDS' CELL (architect 2026-11-05, paint_handler.cpp's kTimeShape
-// block): the cell is the whole hull of the widest-digit specimen's ink
-// and every time field's run stands so that ink is centered in it exactly.
-// Every other
+// runs and its battery cell spaced off each other's ink, the percent's first
+// ink the lamps' seat; and THE TIMESTAMP'S DAMAGE CELL (paint_handler.cpp's
+// bottom_left_clock_cell, off time_field_metrics): the widest-digit
+// specimen's advance united with its ink's real edges, so an ink that
+// overhangs the pen still lies inside the damage. The time fields themselves
+// stand at their pens, each slot the specimen's advance (paint_handler.cpp's
+// kTimeShape block). Every other
 // layout wants a reserved CELL, which is `width_px`'s job.
 double ink_left_px(const ShapedRun& run);
 // A RUN'S LAST INK, in pixels from the run's pen origin to the real right
@@ -218,10 +220,10 @@ double ink_left_px(const ShapedRun& run);
 // TITLE BAR'S RIGHT GROUP (render.h's title bar block): the clock run's last
 // ink 8 W inside the panel's right edge (paint_handler.cpp's
 // logo_legend_layout, which reads ink_left_px for the percent's first ink
-// column — the lamps' seat); and THE TIME FIELDS' CELL
-// (architect 2026-11-05, kTimeShape's block): the cell's width is the
-// whole hull of the widest-digit specimen's ink width, the ink centered in
-// it exactly, so its pads read equal on both sides.
+// column — the lamps' seat); and THE TIMESTAMP'S DAMAGE CELL
+// (paint_handler.cpp's bottom_left_clock_cell): the widest-digit specimen's
+// advance united with its ink's real edges, so an ink that runs past the
+// advance still lies inside the damage.
 double ink_right_px(const ShapedRun& run);
 
 // THE BYTE ADDRESS OF A SHAPED RUN: `byte_count + 1` pen offsets, in pixels

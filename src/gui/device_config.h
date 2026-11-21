@@ -1310,7 +1310,7 @@ inline std::optional<int> parse_run_gap(std::string_view v) {
 // initializers, overwritten by gui_main's startup seeding before the first
 // layout; THE FIRST-RUN VALUES ARE THE DEFAULTS FILE'S (THE FIRST-RUN
 // VALUES above, 2026-11-09). Theirs are the FLAGS sheet's key box, 24 W
-// wide and 30 tall, 48 x 60 device px on the tablet (tmp/kbmock's
+// wide and 30 tall, 48 x 60 device px on the tablet (the keyboard mock's
 // generator), the template's until 2026-11-09; the range runs from half that width to
 // well past the height, wide enough for him to try a key wider than tall,
 // and its top keeps the widest row (thirteen units) inside the tablet's

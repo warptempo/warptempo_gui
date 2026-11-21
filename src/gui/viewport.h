@@ -720,9 +720,9 @@ struct Viewport {
     void invalidate_modal_dialog_area();
     // A STANDING LINE EDITOR'S EDIT (2026-10-14): THE VALUE SUB-PAGE'S
     // ENTRY'S BOX (modal_box.h's modal_page_lines, `entry`; architect
-    // 2026-11-19, send AA: the entry one line that scrolls sideways;
-    // 2026-11-20, send EE: the entry a fact of the view, never moving or
-    // growing with the text, so the rect is the geometry's own and needs no
+    // 2026-11-19: the entry one line that scrolls sideways; architect
+    // 2026-11-20: the entry a fact of the view, never moving or growing
+    // with the text, so the rect is the geometry's own and needs no
     // painted stash); never the family's whole area. WHY: under a box the
     // GL canvas's clip is empty and every
     // damage rect uploads whole (GuiGlCanvas::present_frame), so the

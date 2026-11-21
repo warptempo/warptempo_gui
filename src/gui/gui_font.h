@@ -21,10 +21,10 @@
 // DIGITS, 10 W (20 device px; Arc's `font-size: smaller`, 12 / 1.2: "the
 // ruler, we should make the ruler font small still"). No other size on the
 // main page. THE PROGRESS PAGE'S COUNT TAKES GTK'S "small" (send AA's stage
-// D2, 2026-11-19): CAPTION 10 W (Pango's "small", 12 / 1.2). (A question's
-// and the progress page's sentence are plain Body text since send EE,
-// architect 2026-11-20: GTK's "large" was the popup's — "the oversized text
-// is the clue".)
+// D2, 2026-11-19): CAPTION 10 W (Pango's "small", 12 / 1.2). A question's
+// and the progress page's sentence are plain Body text, no larger face
+// (architect 2026-11-20: GTK's "large" is a popup's — "the oversized text
+// is the clue").
 // THE USES: BODY 12 (the lists, the cards, a question's and the progress
 // page's sentence, the value sub-page's label and entry, the word buttons,
 // the NOISE number, the status bar), PROGRAM 12 (the
@@ -125,8 +125,9 @@ inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
 // THE PIXEL TABLE (the head): per use, in GuiFace's order, the file it is
 // drawn from and its em in W (one W = one px at 100 %, 2 device px on the
 // tablet at 200 %; render.h's scaled_px): 12 W everywhere but the ruler's
-// 10, the Regular for body text, the Bold for the title bar, the ruler and
-// the keyboard's caps (architect 2026-11-18 / 2026-11-19, send Z).
+// 10 and the progress page's count, the Regular for body text and the
+// keyboard's caps, the Bold for the title bar, the lists' headings and the
+// ruler (architect 2026-11-18 / 2026-11-19, send Z).
 struct GuiFaceSize {
     std::size_t file = 0;
     double      em_w = 0.0;

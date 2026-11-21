@@ -22,8 +22,8 @@
 // `5` AND `6` ON THE WINDOW'S CENTER (architect 2026-11-08, block_x_px) in a
 // band that runs the window's width ON THE WINDOW'S LAST ROWS, one line of
 // its own above it, STANDING OVER THE STATUS BAR, THE BOTTOM ICON ROW AND
-// THE VIEW'S FOOT, NOTHING RELAID (architect 2026-11-20, send EE; the
-// placement block below) — its two pads the bottom icon row's own and no
+// THE VIEW'S FOOT, NOTHING RELAID (architect 2026-11-20; the placement
+// block below) — its two pads the bottom icon row's own and no
 // height floor (pad_top_px / pad_foot_px), on the body tone, nothing beside
 // the block. It stands while ANY
 // OF THE TEXT EDITORS stands, on a backend that asks for one, and it
@@ -50,7 +50,7 @@
 // a held Ctrl+C or Ctrl+V does, the editor's chord keys being one-shot
 // (repeat_eligible's editor arm). SO ARE LEFT, RIGHT, UP, DOWN AND THE PASS
 // KEY (LEFT / RIGHT / the pass key architect 2026-11-08, sessions 95 / 96;
-// UP / DOWN and the pass key's act 2026-11-20 / 21, send EE): LEFT and RIGHT
+// UP / DOWN and the pass key's act architect 2026-11-20 / 21): LEFT and RIGHT
 // synthesize the editors' Left / Right, carrying the latched Shift as the
 // key event's own shift (the selection's extend, text_editor::handle_key's
 // caret arm), and repeat while held; UP and DOWN synthesize bare Up / Down
@@ -69,22 +69,22 @@
 // memory; and the core's repeat needs the press edge). That is the modality
 // ruling's own split read straight — ICONS ARE UP, HOTKEYS ARE DOWN
 // (GuiInputHandler::on_key) — with these keys on the hotkey side; no editor
-// carries a button of its own (architect 2026-11-20, send EE: this
-// keyboard's Enter and Esc are every editor's answers).
+// carries a button of its own (architect 2026-11-20: this keyboard's Enter
+// and Esc are every editor's answers).
 // A key held down repeats through the core's key repeat, on the platform's
 // advertised cadence.
 //
 // WHAT IT HAS (architect 2026-11-08, sessions 95 / 96): LEFT and RIGHT, the
 // caret keys; A PASS KEY, A TRUE TOGGLE INHERIT ON THE FLAG EDITOR'S TEXT
-// since 2026-11-20 / 21 (send EE; `pass` typed whole until then); UP AND
-// DOWN, THE TEMPO STEP ON THAT TEXT (2026-11-20 / 21, send EE; THE EDITOR'S
-// EXTRA KEYS below); A STICKY SHIFT, a latch (a press lights it, a second
-// puts it out; lit, the letters type capital and LEFT / RIGHT extend the
+// (architect 2026-11-20 / 21); UP AND DOWN, THE TEMPO STEP ON THAT TEXT
+// (architect 2026-11-20 / 21; THE EDITOR'S EXTRA KEYS below); A STICKY
+// SHIFT, a latch (a press lights it, a second puts it out; lit, the
+// letters type capital and LEFT / RIGHT extend the
 // selection — THE SELECTION'S ONE ROAD); and GLYPHS, the `icons` set's, on the function keys that act on the text
 // (Tab, Bksp, Enter, Copy, Paste, LEFT, RIGHT, UP, DOWN, the pass key;
 // cap_word).
 //
-// THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21, send EE: "I'd like to
+// THE EDITOR'S EXTRA KEYS (architect 2026-11-20 / 21: "I'd like to
 // consider adding an up and down key so that we can also do tempo step. And
 // I'd like to make the pass button a toggle inherit, a true toggle inherit.
 // So both of those will be contingent upon a well-formed string being in
@@ -146,7 +146,7 @@ namespace onscreen_keyboard {
 //
 // THE TWO PAGES (architect 2026-10-29, on the sheets kb_f_flags and
 // kb_g_symbols_repeated; rows 0 to 3 re-laid 2026-11-08, sessions 95 / 96;
-// UP and DOWN joined 2026-11-20 / 21, send EE).
+// UP and DOWN architect 2026-11-20 / 21).
 // Rows counted from 0 at the top; widths in units
 // (one standard key), every row LEFT-ALIGNED on the block's left edge — no
 // centering of a short row, and since 2026-11-08 no stagger (row 2's
@@ -169,13 +169,14 @@ namespace onscreen_keyboard {
 // digits); the PASS KEY took row 2's old one-unit inset; LEFT and RIGHT
 // stand at row 3's tail, quarters 44..48 and 48..52, flush over Enter.
 // UP AND DOWN, A THIRTEENTH COLUMN ON ROWS 1 AND 2 (architect 2026-11-20 /
-// 21, send EE, the ruled mock DD_01: "UP on the q row, DOWN on the a row"):
+// 21, the ruled mock DD_01: "UP on the q row, DOWN on the a row"):
 // quarters 48..52 of the q row and the a row, the grid's right column
 // standing over RIGHT, so rows 1 to 4 are the block's thirteen units and row
 // 0 alone its twelve — the grid's outline closing round them (the painter's
-// convex corners: the top right corner moves from row 0's `-` to UP's top
-// right, the step between them square). The block stays thirteen units, so
-// its seat (block_x_px) and every other key stand where they stood.
+// convex corners: row 0's `-` ends a unit short of UP's top right corner,
+// the step between them square). The block is rows 3 and 4's thirteen
+// units, which the column fills without widening it, so its seat
+// (block_x_px) and every other key read no term of UP's or DOWN's.
 // NOTHING MOVES BETWEEN THE PAGES (architect 2026-10-29: "I prefer that
 // things not move around"): the symbols page is the flags page with its 26
 // LETTER SLOTS re-lettered — exactly the 26 printable ASCII symbols the flags
@@ -208,22 +209,22 @@ enum class Role : uint8_t {
     Left,          // GuiKeys::Left, carrying the latch's shift when lit
     Right,         // GuiKeys::Right, the same
     Pass,          // GuiKeys::Pass — the flag editor's Toggle Inherit on its
-                   // text (2026-11-20 / 21, send EE; `pass` typed until then)
+                   // text (architect 2026-11-20 / 21)
     Up,            // GuiKeys::Up, bare — the editor's tempo step up
-                   // (2026-11-20 / 21, send EE)
+                   // (architect 2026-11-20 / 21)
     Down,          // GuiKeys::Down, bare — its step down
 };
 
 // WIDTHS ARE AUTHORED IN QUARTER-UNITS (one standard key, 1u, is 4), so the
 // half and quarter widths of the table are whole numbers; the geometry turns
 // a quarter into device px (for_each_key). THE BLOCK IS THE WIDEST ROW,
-// thirteen units (rows 1 to 4 since UP and DOWN, 2026-11-20 / 21; rows 3
-// and 4 before).
+// thirteen units (rows 1 to 4, rows 1 and 2 with UP and DOWN's column,
+// architect 2026-11-20 / 21).
 inline constexpr int kQuartersPerUnit = 4;
 inline constexpr int kBlockQuarters   = 13 * kQuartersPerUnit;
 inline constexpr int kRowCount        = 5;
-// The most keys a row holds (rows 1 and 2's thirteen since UP and DOWN,
-// 2026-11-20 / 21; twelve from 2026-11-08); the index arithmetic below
+// The most keys a row holds (rows 1 and 2's thirteen, UP and DOWN closing
+// them, architect 2026-11-20 / 21); the index arithmetic below
 // reserves this many slots per row so a key's index is a pure function of
 // where it sits.
 inline constexpr int kMaxRowKeys      = 13;
@@ -258,12 +259,12 @@ inline constexpr KeyDef kRow0[] = {
 // nothing to complete — a
 // BARE Tab, no modifier, on the same synthesize_key road as every other key
 // here. IT IS NOT THE OPEN PROJECT PICKER'S GLASS ROAD (2026-08-28): that
-// picker is field-less and stands in this band, so the keyboard does not
-// paint there at all and the gesture is the Open Project button, tap the
-// project's row. What the key serves is the settings editor's completions,
-// its value recall and the path's, and since 2026-11-20 / 21 (architect,
-// send EE: "a" then Tab gives "a.0") the flag editor's LABEL REFERENCE
-// completion (GuiFlagEditor::complete_label_reference).
+// picker is field-less, no editor stands under it and so neither does the
+// keyboard (stands' record), and the gesture is the Open Project button,
+// tap the project's row. What the key serves is the settings editor's
+// completions, its value recall and the path's, and the flag editor's
+// LABEL REFERENCE completion (architect 2026-11-20 / 21: "a" then Tab
+// gives "a.0"; GuiFlagEditor::complete_label_reference).
 inline constexpr KeyDef kFlagsRow1[] = {
     {Role::Tab},
     {Role::Character, U'q'}, {Role::Character, U'w'}, {Role::Character, U'e'},
@@ -274,8 +275,8 @@ inline constexpr KeyDef kFlagsRow1[] = {
 };
 // THE PASS KEY leads row 2 on both pages (architect 2026-11-08, sessions
 // 95 / 96), in what was the row's one-unit inset. UP closes row 1 and DOWN
-// row 2 on both pages, the thirteenth column (architect 2026-11-20 / 21,
-// send EE; the table's head).
+// row 2 on both pages, the thirteenth column (architect 2026-11-20 / 21;
+// the table's head).
 inline constexpr KeyDef kFlagsRow2[] = {
     {Role::Pass},
     {Role::Character, U'a'}, {Role::Character, U's'}, {Role::Character, U'd'},
@@ -442,8 +443,8 @@ inline constexpr uint32_t kStableCodeBase = 1;
 // base above — and deliberately not the keysym: the pages put different
 // characters on one slot, so only the place is unique per key. Codes run from
 // kStableCodeBase to kStableCodeBase + kPageCount*kRowCount*kMaxRowKeys - 1,
-// which is 1..130 since UP and DOWN made a row of thirteen (2026-11-20 /
-// 21; 1..120 before).
+// which is 1..130 (2 pages x 5 rows x 13 slots, rows 1 and 2 closed by UP
+// and DOWN, architect 2026-11-20 / 21).
 inline constexpr uint32_t key_index(Page page, int row, int col) {
     return kStableCodeBase + static_cast<uint32_t>(
         ((detail::page_number(page) * kRowCount) + row) * kMaxRowKeys + col);
@@ -530,9 +531,9 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // its X), Enter `key-enter` (KeyEnter), Copy and Paste row 8's EditCopy /
 // EditPaste, LEFT and RIGHT the chevrons GoPrevious / GoNext, the pass key
 // the INHERIT key's InsertLink (redesign_button_icon's IconMarkerInherit
-// arm: the same act, Toggle Inherit, since 2026-11-20 / 21), UP and DOWN the
-// main page's UP / DOWN keys' GoUp / GoDown (redesign_button_icon's
-// TransportUp / TransportDown arms: the same act, the tempo step; send EE).
+// arm: the same act, Toggle Inherit, architect 2026-11-20 / 21), UP and
+// DOWN the main page's UP / DOWN keys' GoUp / GoDown (redesign_button_icon's
+// TransportUp / TransportDown arms: the same act, the tempo step).
 // AT THE PROGRAM KEYS' ONE SIZE,
 // centered on the face (paint_key_glyph, paint_handler.cpp — the one owner
 // of the size, the set's 16 W canvas since send Z, 2026-11-19, never of
@@ -638,8 +639,8 @@ inline const char* cap_word(const KeyDef& k, Page page) {
 }
 
 // IS THE KEY LIVE — THE ONE PREDICATE OF THE EDITOR'S EXTRA KEYS' GREY (the
-// head's THE EDITOR'S EXTRA KEYS; architect 2026-11-20, send EE, "Number
-// four. Yes": UP, DOWN and the pass key "greyed where they mean nothing").
+// head's THE EDITOR'S EXTRA KEYS; architect 2026-11-20, "Number four.
+// Yes": UP, DOWN and the pass key "greyed where they mean nothing").
 // Its readers: the painter (the disabled key), the press (a greyed key arms
 // nothing), the hover (a greyed key hovers nothing) and the keyboard-modal
 // gate's admission of the bare Up / Down / pass key (so no road but a live
@@ -789,8 +790,8 @@ inline double block_x_px(const GuiRect& band) {
     return center - gap_c;
 }
 
-// THE BAND'S TWO PADS — THE BOTTOM ICON ROW'S OWN (architect 2026-11-19,
-// send BB: "arc would place no min height and just apply a sensible minimum
+// THE BAND'S TWO PADS — THE BOTTOM ICON ROW'S OWN (architect 2026-11-19:
+// "arc would place no min height and just apply a sensible minimum
 // vertical padding. i do like the osk key dimensions and overall layout"):
 // the band is its pads and the grid, NO HEIGHT FLOOR — no minimum height
 // and no line of the canvas it must reach. THE PADS ARE THUNAR'S TOOLBAR
@@ -798,8 +799,8 @@ inline double block_x_px(const GuiRect& band) {
 // PADS): kToolbarPadW, 7 W, between the
 // keyboard's top line and the grid's upper outer line (pad_top_px) and
 // again between the grid's lower outer line and the window's last row
-// (pad_foot_px) — SYMMETRIC as the row's own (architect 2026-11-20, send
-// EE) and READ FROM THE SAME ACCESSOR THE BOTTOM ICON ROW'S LAYOUT READS
+// (pad_foot_px) — SYMMETRIC as the row's own (architect 2026-11-20) and
+// READ FROM THE SAME ACCESSOR THE BOTTOM ICON ROW'S LAYOUT READS
 // (toolbar_pad_px, strip_h_px), a whole W through scaled_px.
 // THE BAND IS WHOLE PIXELS and so is every key row: the pads, the five key
 // rows, the four gaps and the grid's two outer lines (key_gap_px each) are
@@ -835,7 +836,7 @@ inline int key_rows_h_px() {
 // clamped window height (main.cpp's window_foot_y), the one height the lane
 // table is laid on too — the keyboard stands over the status bar, the bottom
 // icon row and the view's foot there, nothing relaid (the placement block
-// below; architect 2026-11-20, send EE).
+// below; architect 2026-11-20).
 inline int foot_y(const AppState& a) { return window_foot_y(a); }
 // THE KEYBOARD'S TOP LINE (the design's Z_06: the keyboard parted from
 // what stands above by Thunar's pane line): ONE W of `well_border`
@@ -908,27 +909,26 @@ inline bool stands(const AppState& a) {
 // band's width the lanes' (bottom_row_area's x and width, the window's) —
 // AND STANDS ON THE WINDOW'S LAST ROWS OVER THE STATUS BAR, THE BOTTOM ICON
 // ROW AND THE VIEW'S FOOT — THE APP IS NEVER RELAID FOR IT (architect
-// 2026-11-20, send EE, reversing 2026-11-19's keyboard below the app: "the
-// waveform and the bottom row don't move such that the on-screen keyboard
-// sits on top of them and essentially the bottom row is not visible ... I
-// think it's better than what we have because the bottom row remains
-// inactive. So simply showing it isn't helpful. And same with the status
-// bar. The status bar should just be obscured by the OSK."; "the osk should
-// essentially stop all other activity and become the only active element
-// when it's onscreen"; "i agree that simpler is better"). THIS IS THE RULE'S
-// ONE OWNER: the lane table is laid on the window's height whether the
-// keyboard stands or not (main.cpp's window_foot_y), so its coming and going
-// moves no lane, changes no rect of the app's and re-renders no plate — the
-// waveform area, and with it every field of the plate's fingerprint, stand
-// still; its own show and hide are paid by its surface alone (the slot
-// comparator, reconcile_slot_standing below). WHAT YIELDS UNDER IT, the one
-// inventory:
+// 2026-11-20: "the waveform and the bottom row don't move such that the
+// on-screen keyboard sits on top of them and essentially the bottom row is
+// not visible ... I think it's better than what we have because the bottom
+// row remains inactive. So simply showing it isn't helpful. And same with
+// the status bar. The status bar should just be obscured by the OSK."; "the
+// osk should essentially stop all other activity and become the only active
+// element when it's onscreen"; "i agree that simpler is better"). THIS IS
+// THE RULE'S ONE OWNER: the lane table is laid on the window's height
+// whether the keyboard stands or not (main.cpp's window_foot_y), so its
+// coming and going moves no lane, changes no rect of the app's and
+// re-renders no plate — the waveform area, and with it every field of the
+// plate's fingerprint, stand still; its own show and hide are paid by its
+// surface alone (the slot comparator, reconcile_slot_standing below). WHAT
+// YIELDS UNDER IT, the one inventory:
 //   * THE CANVAS: its painted rect stops at the surface's top line
 //     (waveform_paint_area below — the GL canvas's clip, the navigation
 //     surface's extent and so the touch pan zone's), the layout's waveform
 //     area, its damage and the plate untouched — NOTHING PLAYS UNDER THE
-//     KEYBOARD (every editor's open stops play, architect 2026-11-20, send
-//     EE; stop_playback_for_modal_open), so no scanner or FOLLOW frame
+//     KEYBOARD (every editor's open stops play, architect 2026-11-20;
+//     stop_playback_for_modal_open), so no scanner or FOLLOW frame
 //     damages the canvas's rows under it;
 //   * THE BOTTOM ICON ROW (paint_bottom_strip): its keys, the timestamp and
 //     the tab name stand down and publish zero rects and a zero clock cell,
@@ -950,23 +950,23 @@ inline bool stands(const AppState& a) {
 // Where a keyboard tuned short stands under the two yielding lanes' top (the
 // in-range extremes, edge_damage_rect's record), their rows above it show
 // the body ground alone, no key, line or word: accepted (architect
-// 2026-11-20, send EE), the edges' damage covering those rows.
+// 2026-11-20), the edges' damage covering those rows.
 // Nothing under the surface answers a press, a hover, a hold, a tooltip's
 // dwell or the pan: the keyboard's claim is the whole surface and ranks
 // above every gate but the cards' (claim_rect; the press router, the hover
 // walk, the pan zone), the waveform's painted rect stops above it, the bottom
 // icon row publishes no rect, and the editor's veil holds everything else —
 // THE KEYBOARD THE ONE LIVE ELEMENT, the top icon row above it greyed whole
-// so the dead keys look dead (redesign_button_enabled's first arm,
-// app_state.h, the owner; architect 2026-11-20, send EE).
+// so the dead keys look dead (roster_greyed_whole, read by
+// redesign_button_enabled's first arm, app_state.h; architect 2026-11-20).
 // ONE LINE OF ITS OWN OVER IT (top_line_px, `well_border`: Thunar's pane
 // line parting the keyboard from what stands above; architect 2026-11-19,
-// send Z, his approval of tmp/sendZ/VIEW/Z_06), THE BOTTOM ICON ROW'S TWO
-// PADS ROUND THE GRID AND NO HEIGHT FLOOR (pad_top_px / pad_foot_px, send
-// BB); THE BLOCK OF KEYS STANDS ON ITS SEAT, THE `5` | `6` GAP ON THE
-// WINDOW'S CENTER (architect 2026-11-08, block_x_px), the band's body tone
-// beside it and nothing else there. ITS KEYS ARE ONE GRID OF ARC'S BUTTON
-// TONES WITH SHARED LINES (his K2 ruling; the design's §E;
+// his approval of the picture Z_06), THE BOTTOM ICON ROW'S TWO PADS ROUND
+// THE GRID AND NO HEIGHT FLOOR (pad_top_px / pad_foot_px, architect
+// 2026-11-19); THE BLOCK OF KEYS STANDS ON ITS SEAT, THE `5` | `6` GAP ON
+// THE WINDOW'S CENTER (architect 2026-11-08, block_x_px), the band's body
+// tone beside it and nothing else there. ITS KEYS ARE ONE GRID OF ARC'S
+// BUTTON TONES WITH SHARED LINES (his K2 ruling; the design's §E;
 // paint_onscreen_keyboard). Under a line editor the modal family's box
 // stands down to the bottom icon row, its view the value sub-page, the
 // keyboard over the box's foot, the page's label and entry at the view's
@@ -1033,7 +1033,7 @@ inline GuiRect claim_rect(const AppState& a) {
 // layout that its standing never moves), which hold every pixel it paints and every pixel its
 // show covers or yields and its hide gives back — the canvas's foot, the
 // well's foot, the bottom icon row and the status bar (the placement block;
-// architect 2026-11-20, send EE: no relayout pays it);
+// architect 2026-11-20: no relayout pays it);
 // THE FOLDER OVERLAY'S IS THE WHOLE AREA THE MODAL FAMILY TAKES — its box
 // and the controls row under it (modal_area_rect, modal_box.h, 2026-10-14),
 // which contains every pixel it paints in every content (this function).
@@ -1047,7 +1047,7 @@ inline GuiRect slot_damage_rect(const AppState& a) {
     return modal_area_rect(a);
 }
 
-// THE KEYBOARD'S EDGE DAMAGE (architect 2026-11-20, send EE): its surface
+// THE KEYBOARD'S EDGE DAMAGE (architect 2026-11-20): its surface
 // united with the two lanes whose painters yield while it stands — the
 // bottom icon row (bottom_row_area) and the status bar (status_bar_area, its
 // line over the bar its lane's first rows) — so the show blanks and the hide
@@ -1140,8 +1140,8 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // Esc and Enter, the flag editor's, an editor swapped for the overlay it
 // returns to in one pass — moves this comparison, and nothing else has to
 // remember the surface. NO RELAYOUT, NO WHOLE-WINDOW DAMAGE AND NO FADE
-// DROP IS OWED FOR THE KEYBOARD (architect 2026-11-20, send EE; the
-// placement block): it moves no lane, so its surface and the lanes that
+// DROP IS OWED FOR THE KEYBOARD (architect 2026-11-20; the placement
+// block): it moves no lane, so its surface and the lanes that
 // yield under it (edge_damage_rect) hold the whole of what its edge changes
 // on screen — the keys arriving, or the canvas's foot, the well's foot, the
 // bottom icon row and the status bar coming back — and
@@ -1332,8 +1332,9 @@ inline void for_each_grid_row(const AppState& a, Page page, Fn&& fn) {
 // its bottom line; the ground the ring's rounded corners leave counts with
 // its key, as a main-page group's box does. WHERE NO KEY STANDS ABOVE A LINE
 // — a wider row's top line past a narrower row's end (rows 1 to 4 are 52
-// quarters since UP and DOWN, 2026-11-20 / 21, row 0 48: the line over
-// row 1's UP key) — THE LINE IS THE KEY BELOW's, the ring of its own row.
+// quarters, UP and DOWN closing rows 1 and 2, architect 2026-11-20 / 21,
+// row 0 48: the line over row 1's UP key) — THE LINE IS THE KEY BELOW's,
+// the ring of its own row.
 // So the keys tile the grid's outer
 // rects with no shared point (half-open, THE POINTER'S REAL PLACE against
 // real edges, architect 2026-11-15, the no-grid arc), and a press on the
@@ -1352,7 +1353,7 @@ inline void for_each_grid_row(const AppState& a, Page page, Fn&& fn) {
 //   ring's top line, row 1's from 1138; the line over UP, x [1503, 1553) on
 //   y [1136, 1138), is UP's (its hit x [1503, 1553), y [1136, 1210)); the
 //   line over RIGHT, y [1280, 1282), is DOWN's, the row above standing a key
-//   there now.
+//   there.
 inline int key_at(const AppState& a, Page page, double x, double y,
                   KeyDef& out_def) {
     const double gap = static_cast<double>(key_gap_px());

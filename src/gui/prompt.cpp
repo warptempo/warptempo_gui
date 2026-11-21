@@ -79,9 +79,11 @@ void GuiPrompt::open_revert_confirm() {
 // the target-view entry gate, refuses SILENTLY the way the load road always
 // did, one stderr line and nothing on screen, because its refusals are
 // unreachable from program-written input. THE PRODUCT'S PROMPTS ARE THE
-// QUESTIONS ALONE now: the unsaved-work question with its save-failed rung,
-// the phase reset paste's confirmation, the load confirmation and the revert
-// confirmation.)
+// QUESTIONS ALONE: the unsaved-work question with its save-failed rung,
+// the phase reset paste's confirmation, the load confirmation, the revert
+// confirmation, the pull's confirmation, the render player's delete, the
+// score viewer's reset and the trim presets' save and delete — DialogTrigger,
+// app_state.h, the one list.)
 
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the

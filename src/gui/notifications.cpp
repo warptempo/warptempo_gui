@@ -74,7 +74,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // foot is the panel's own pad, folder_overlay::pad_px (architect
     // 2026-08-30; one W) above the bottom icon row's lane, OR ABOVE THE
     // ON-SCREEN KEYBOARD'S TOP LINE WHILE IT STANDS, whichever is higher
-    // (architect 2026-11-20, send EE: the keyboard stands over the bottom
+    // (architect 2026-11-20: the keyboard stands over the bottom
     // icon row, onscreen_keyboard.h's placement block) — the cards paint
     // after the keyboard, so a card never stands on its keys. The
     // card's INTERNAL padding is a different concept — notifyd's, the box's

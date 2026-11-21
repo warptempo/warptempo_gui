@@ -63,7 +63,7 @@
 //     press means nothing to the BARREL'S bound set (the S Pen's side button
 //     being the Ctrl bit, a tap with it held is the click); no hold on the
 //     bar means anything, plain or barrel, the PLAIN press's double tap
-//     framing the trim (architect 2026-11-21, send EE; TrimBarPressSeed,
+//     alone framing the trim (architect 2026-11-21; TrimBarPressSeed,
 //     app_state.h).
 //   THE TYPED AND LOADED ROUTES (the settings editor's `trim_*=` commits, and
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
@@ -1117,7 +1117,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // the frame there only from a grab left of the end's own place (g < 0).
     // EACH ZONE REACHES 2 W PAST ITS BOUND AND 12 W INTO THE SPAN
     // (trim_endcap_rect; render.h's THE TRIM BAR'S CAPS AND GRABS, architect
-    // 2026-11-20, send CC: 4 and 24 device px on the tablet), and g is the
+    // 2026-11-20: 4 and 24 device px on the tablet), and g is the
     // press less the bound's PLACE — a begin's place is its bound, an end's
     // place its column's left edge and its bound that column's right edge,
     // one px on. AN END's zone is [place + 1 − 24, place + 1 + 4), so g runs
@@ -1325,8 +1325,9 @@ void GuiInputHandler::commit_trim_drag() {
 // of the end the end) — a trim one frame wide included, which widens to
 // the left by a click left of it and to the right by a click right of it.
 // NO LONG PRESS MEANS ANYTHING TO THE BARREL'S BOUND SET: the verdict reads
-// no clock (nor does the bar's PLAIN press, whose double tap frames the
-// trim, architect 2026-11-21, send EE; TrimBarPressSeed, app_state.h).
+// no clock (nor does a hold mean anything to the bar's PLAIN press, whose
+// double tap alone frames the trim, architect 2026-11-21; TrimBarPressSeed,
+// app_state.h).
 //
 // THREE CONSUMED NO-OPS, ALL SILENT — nothing writes, nothing deselects,
 // nothing stops, the caller arms no drag, no card — asked in this order.
@@ -1555,8 +1556,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
 // CROSSING above (a PRESS until 2026-08-15, when the set moved to the lift),
 // which arms the same single-bound pending on the bound it has just written.
 // The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
-// a bound is grabbed ONLY by its top-strip ENDCAP — the trim lane's arrow
-// button at that end of the thumb (architect 2026-10-03) — or by the bar's
+// a bound is grabbed ONLY on the trim bar (architect 2026-10-03), by its
+// END'S GRAB ZONE round the cap at that end of the pill (render.h's THE
+// TRIM BAR'S CAPS AND GRABS, architect 2026-11-20) — or by the bar's
 // inter-cap bridge span (the bound's own mark was already the unambiguous handle),
 // leaving the waveform purely
 // region/playhead. Arms a PendingTrimDrag rather than beginning the drag
@@ -1580,9 +1582,10 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
 // internal returns this function once carried had already been deleted in
 // 2026-08-02 as unreachable; nothing replaced them, and nothing should.
 // The two arms:
-//   CAP HIT: a press in an end's zone — its drawn cap and 4 W of air either
-//     side, from 2 W outside the bound to 12 W inside it (render.h's THE
-//     TRIM BAR'S CAPS AND GRABS, architect 2026-11-20, send CC), the zone as
+//   CAP HIT: a press in an end's zone — a 6 W core from 1 W outside the
+//     pill's tip to the cap's cut line, and 4 W of air either side of it,
+//     from 2 W outside the bound to 12 W inside it (render.h's THE TRIM
+//     BAR'S CAPS AND GRABS, architect 2026-11-20), the zone as
 //     published and no tolerance (hit_test_trim_endcap, itself y-gated to the
 //     trim bar lane) — arms that bound's single drag.
 //   BRIDGE: else, a press on the bar's inter-cap span (point_in_trim_bridge_span,
@@ -1651,9 +1654,9 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     app.pending_trim_drag.press_x  = press_x;
     app.pending_trim_drag.press_y  = press_y;
     // THE BAR TAKES ITS HELD LOOK AT THE PRESS (architect 2026-11-17,
-    // session 140, ruling 4: Arc's slider:active, `selected_fill`; since
-    // 2026-11-20, send CC, on the part held — the body, or that end's cap
-    // with both caps showing: trim_bar_look, app_state.h, and render.h's
+    // session 140, ruling 4: Arc's slider:active, `selected_fill`, on the
+    // part held — the body, or that end's cap — with both caps showing,
+    // architect 2026-11-20: trim_bar_look, app_state.h, and render.h's
     // trim_bar_tones): every arm — an end's grab or the
     // body — damages the lane now, and the look stands through the crossing
     // into the drag until the gesture's end damages it again —

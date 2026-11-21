@@ -255,8 +255,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // ZOOM TO FIT AND ITS SHIFTED FORM, FRAME THE TRIM (2026-10-24): both are
     // the camera — the whole piece and back, the trim's span — writing no
     // store, so both are admitted (the trim bar's double tap, the frame's
-    // pointer twin, is read-only-legal too). The ctrl-shifted form,
-    // Reset Trim, is admitted below on its own reason (is_trim_maximize).
+    // pointer twin, is read-only-legal too). Reset Trim (Shift+T, the
+    // PRESETS key's hold) is admitted below on its own reason
+    // (is_trim_maximize).
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt) ||
         is_trim_frame_key(key, mods);
@@ -985,7 +986,8 @@ void GuiInputHandler::run_iter_tie_toggle() {
 //   * on_history_prefetch_ready — THE ONE CLOSER THAT IS NOT A USER ACT
 //     (2026-08-09): a scan that finishes FAILED while the view stands ends the
 //     visit, the view's premise being that this session knows the piece's
-//     history. It is also the one closer that can fire with a POPUP up (below);
+//     history. It is also the one closer that can fire with a QUESTION'S PAGE
+//     up (below);
 //   * run_history_commit — the Save-and-Commit act, once its save has landed;
 //   * run_history_revert — bare `v`, which rewrites the state the now side was
 //     measured against and so must not leave the lane describing it;
@@ -4187,14 +4189,14 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         // route_modal_editor_key's, above handle_key in that route, not the
         // editor's own keymap), under a line editor and the flag editor
         // alike. SO IS THE PASS KEY, the flag editor's Toggle Inherit on its
-        // text (architect 2026-11-20 / 21, send EE), as the main page's
+        // text (architect 2026-11-20 / 21), as the main page's
         // Toggle Inherit is.
         //
         // AND UP / DOWN REPEAT under the marker lane's editor wherever they
         // are live (onscreen_keyboard::step_keys_live, the keys' one
         // predicate: the flag editor's tempo step and the bound editor's
         // bound step on the text, handle_top_flag_editor_key; architect
-        // 2026-11-20 / 21, send EE) — the main page's UP / DOWN keys' own
+        // 2026-11-20 / 21) — the main page's UP / DOWN keys' own
         // hold (the arms below), bare alone.
         if ((key == GuiKeys::Up || key == GuiKeys::Down) && !mods.ctrl &&
             !mods.alt && !mods.shift)
@@ -4287,7 +4289,7 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // modal_editor_tab above, read here and by that route alike; and THE FLAG
 // EDITOR'S EXTRA KEYS, bare Up / Down and the bare pass key, wherever the
 // on-screen keyboard paints them live (onscreen_keyboard::key_live's two
-// facts; architect 2026-11-20 / 21, send EE), their acts the marker lane
+// facts; architect 2026-11-20 / 21), their acts the marker lane
 // editor's own (handle_top_flag_editor_key). Admitted keys
 // flow into the editor routing unchanged; no chord outside the editor's
 // keys and those carve-outs reaches the editors' routes at all.
@@ -4310,8 +4312,8 @@ bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
     // completion, SETTINGS (its value recall, the path), completes; under
     // the trim preset's name and the BPM form's line the admitted Tab does
     // nothing (route_modal_editor_key: a Tab that completes nothing is
-    // silent, architect 2026-11-20, send EE). AND UNDER THE FLAG EDITOR
-    // since 2026-11-20 / 21 (architect, send EE: "a" then Tab gives "a.0"):
+    // silent, architect 2026-11-20). AND UNDER THE FLAG EDITOR
+    // since 2026-11-20 / 21 (architect: "a" then Tab gives "a.0"):
     // it completes a label reference (GuiFlagEditor::
     // complete_label_reference). The iteration bound editor has nothing to
     // complete, and its Tab drops here while it stands.
@@ -5971,7 +5973,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 //
 // THE ONE AUTOCOMPLETE MODEL — the authoritative statement: BARE TAB OFFERS
 // THE COMPLETION, AND A TAB THAT COMPLETES NOTHING IS SILENT (architect
-// 2026-11-20, send EE: a line editor's sub-page has no button — "on that
+// 2026-11-20: a line editor's sub-page has no button — "on that
 // page, the only controls are the osk's esc and enter" — so a Tab has
 // nowhere to walk). The completion reports whether it ADVANCED THE BUFFER; either way
 // the key is consumed here and never reaches the editor's keymap. THERE IS
@@ -5984,7 +5986,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 //     entry, a folder in `projects_path`).
 //   * Tab under the FLAG editor completes a label reference against the
 //     defined labels (GuiFlagEditor::complete_label_reference; architect
-//     2026-11-20 / 21, send EE).
+//     2026-11-20 / 21).
 //   * Tab under an editor with NO hook (the trim preset's name, the BPM
 //     field) does nothing.
 //   * The ITERATION BOUND editor's Tab drops at the gate before this route
@@ -6299,9 +6301,10 @@ void GuiInputHandler::open_project_commit(int index) {
     // 2026-10-25, the render player's precedent made one rule for the
     // overlays: an overlay stays standing under its own question, Cancel
     // returning to it, OK ending it — the classes' record at
-    // redesign_button_enabled's head): the prompt paints the modal box over
-    // the list and owns the keyboard and the pointer ahead of the picker's
-    // router and veil, and its Cancel finds the picker as it stood, its
+    // redesign_button_enabled's head): the question's page takes the view in
+    // place of the list (architect 2026-11-20) and owns the keyboard and the
+    // pointer ahead of the picker's router and veil, and its Cancel finds
+    // the picker as it stood, its
     // highlight and its scroll untouched. (The pick closed the picker before
     // asking from 2026-08-28 until then.) THE PICKER ENDS WITH ITS SESSION
     // WHEN THE REOPEN IS CERTAIN: a clean tab's immediate completion or the
@@ -6425,8 +6428,8 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
     viewport.invalidate_all();
 }
 
-// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
-// press-and-lift) and Enter on the highlight, one body. AN INERT ROW OPENS
+// THE OPEN ACT on row `index` — the row's tap (the overlay's own
+// press-and-lift), its one road (no Enter reaches a row). AN INERT ROW OPENS
 // NOTHING (its lift never reaches here and the highlight never stands on
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
 // first `=` (a key carries none). On the row of a key with a value list
@@ -6441,11 +6444,12 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // sub-page whose commit and Cancel return to this page
 // (return_to_settings_page). On every other row THE PAGE
 // CLOSES (close_picker — the overlay and the on-screen keyboard never both
-// stand, and the editor is a modal in the same box) AND THE SETTINGS EDITOR
+// stand, and the editor is a modal whose sub-page takes the page's place)
+// AND THE SETTINGS EDITOR
 // OPENS ON THE ROW'S KEY, ITS ENTRY THE VALUE THE KEY HOLDS, the caret at its
-// end (GuiSettingsEditor::open; architect 2026-11-19, send AA: "One,
+// end (GuiSettingsEditor::open; architect 2026-11-19: "One,
 // agree." — the value alone, the key the sub-page's label), THE VALUE
-// SUB-PAGE (architect 2026-11-20, send EE; paint_handler.cpp): the on-screen
+// SUB-PAGE (architect 2026-11-20; paint_handler.cpp): the on-screen
 // keyboard's Enter and Esc reopen this page on the row's key
 // (handle_settings_editor_key, architect 2026-10-28 night).
 void GuiInputHandler::settings_page_commit(int index) {
@@ -6531,8 +6535,8 @@ void GuiInputHandler::build_value_list_rows(const std::string& key) {
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
 }
 
-// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
-// press-and-lift) and Enter on the highlight, one body: THE ROW'S VALUE IS
+// THE OPEN ACT on row `index` — the row's tap (the overlay's own
+// press-and-lift), its one road (no Enter reaches a row): THE ROW'S VALUE IS
 // COMMITTED AT ONCE through the device keys' one body for the listed key
 // (GuiSettingsEditor::apply_device_setting — the grammar, the live apply,
 // the device-config write, and a failure carding as the line editor's; the
@@ -6945,12 +6949,12 @@ void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
 }
 
-// THE OPEN ACT on row `index` — a tap or click on the row (the overlay's own
-// press-and-lift) and Enter on the highlight, one body: THE FORM CLOSES
+// THE OPEN ACT on row `index` — the row's tap (the overlay's own
+// press-and-lift), its one road (no Enter reaches a row): THE FORM CLOSES
 // (close_picker, the mode standing) AND THE LINE EDITOR OPENS PREFILLED WITH
 // THE ROW'S VALUE as painted — its line past the first `=`, the key the
-// sub-page's label (architect 2026-11-19, send AA: the value alone
-// under the field's label; the sub-page 2026-11-20, send EE) — the caret at its end, the
+// sub-page's label (architect 2026-11-19: the value alone under the
+// field's label; the sub-page 2026-11-20) — the caret at its end, the
 // settings editor's open (GuiSettingsEditor::open): an empty session, then
 // the value through the one incoming filter, silent on capacity (the text is
 // the product's own recall, within its field's cap by the reader's own
@@ -7141,7 +7145,7 @@ void GuiInputHandler::history_load_in_place() {
 // TRIM PRESETS LIST the controls row too, whose faces read the highlight
 // (trim_presets_button_enabled: the pair's walls, Save and Delete).
 // THE SEAT IS THE ROW TAP'S (its one caller, folder_overlay_highlight_row):
-// THE PRESS NEVER SCROLLS (architect 2026-11-21, send EE;
+// THE PRESS NEVER SCROLLS (architect 2026-11-21;
 // folder_overlay::seat_tapped_row), the walk alone keeping its row in view.
 void GuiInputHandler::picker_set_highlight(int index) {
     if (!app.picker.active) return;
@@ -7163,12 +7167,6 @@ void GuiInputHandler::picker_move_highlight(int delta) {
     }
 }
 
-// THE ONE CLOSE BODY (the caller inventory is at the
-// declaration). THE OVERLAY LEAVES WITH THE PICKER: the reset restores
-// Owner::None, which IS the band's standing predicate answering false. The
-// damage is the whole window, as the open's is — the band's pixels sit over
-// the waveform, the modal row goes back to its tenants and the roster's grey
-// lifts with them.
 // THE VALUE SUB-PAGE'S TWO WORDS (AppState::value_page, the contract
 // there): the label's name and the standing list's owner tag — written by
 // the three openers of a line editor just before their close_picker.
@@ -7177,6 +7175,12 @@ void GuiInputHandler::seat_value_page(std::string name) {
     app.value_page.name   = std::move(name);
 }
 
+// THE ONE CLOSE BODY (the caller inventory is at the
+// declaration). THE OVERLAY LEAVES WITH THE PICKER: the reset restores
+// Owner::None, which IS the band's standing predicate answering false. The
+// damage is the whole window, as the open's is — the band's pixels sit over
+// the waveform, the modal row goes back to its tenants and the roster's grey
+// lifts with them.
 void GuiInputHandler::close_picker() {
     if (!app.picker.active) return;
     app.picker         = AppState::Picker{};
@@ -7506,7 +7510,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // PRESSED IN, which the lock then holds still — IN TARGET VIEW, crossing
     // there first when pressed in source (2026-09-13). The
     // editor-active branch above already swallows any
-    // keystroke while a popup edit is in flight, so this code only
+    // keystroke while an editor stands, so this code only
     // runs with no active editor. Toggling repaints the top strip
     // so the bound cells appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
@@ -8959,7 +8963,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // NO HATCH since 2026-10-25, every other chord consumed at the gate.
 //
 // THE EDITOR'S EXTRA KEYS ARE ANSWERED HERE, AHEAD OF THE ROUTE (architect
-// 2026-11-20 / 21, send EE; onscreen_keyboard.h's THE EDITOR'S EXTRA KEYS):
+// 2026-11-20 / 21; onscreen_keyboard.h's THE EDITOR'S EXTRA KEYS):
 // bare UP / DOWN step the text — the tempo step on the flag editor's, the
 // bound step on the bound editor's (GuiFlagEditor::step_editor_text) — and
 // the bare pass key toggles the flag editor's text between owner and pass
@@ -9019,7 +9023,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // line editor a sub-page of the page, as the value lists are), and THIS IS
 // ITS ONE HOOK: every road that closes the editor without leaving the
 // program passes through this route — the on-screen keyboard's Enter and
-// Esc, the sub-page's only controls (architect 2026-11-20, send EE) — so an
+// Esc, the sub-page's only controls (architect 2026-11-20) — so an
 // editor standing before the key and gone after it is Enter applied, Enter
 // unchanged or Esc, and the page reopens through its own open road
 // (open_settings_page: its guards, a fresh session, its modal stop a no-op

@@ -248,7 +248,7 @@ struct GuiPlaybackLifecycle {
     //     load in place's self-guard) that stop is the act's. NOT in the
     //     class: the SESSION-ONLY ITERATION STATE — the bound cells' step, drag
     //     and typed commit, the tie toggle, the mode's wipe — and the BPM
-    //     dialog's owner fields. None of them is a map input or a render
+    //     form's owner fields. None of them is a map input or a render
     //     input, so none changes what plays (the bracket feeds the grid
     //     iterations' own sidecars alone, AppState::iteration_mode_enabled),
     //     and they stand outside the undo domain for that same reason.
@@ -311,11 +311,11 @@ struct GuiPlaybackLifecycle {
     // sites (the color picker's open was another 2026-10-07..14): THE LANE
     // EDITORS' TWO OPENS (flag_editor.cpp: GuiFlagEditor::enter_text_edit,
     // the flag editor's one open chokepoint, and enter_iter_bound_edit, the
-    // iteration bound editor's; architect 2026-11-20, send EE); in
-    // input_key_dispatch.cpp THE TRIM PRESETS LIST (open_trim_presets), its
-    // Save As name editor (trim_presets_save_as) and the BPM form's line
-    // editor (bpm_form_commit), each a dialog editor opened over a closed
-    // picker; THE
+    // iteration bound editor's; architect 2026-11-20); in
+    // input_key_dispatch.cpp THE TRIM PRESETS LIST (open_trim_presets), and
+    // its Save As name editor (trim_presets_save_as) and the BPM form's line
+    // editor (bpm_form_commit), each of those two a dialog editor opened
+    // over a closed picker; THE
     // PROGRESS MODAL's open (GuiInputHandler::open_batch_progress,
     // input_render_dispatch.cpp, 2026-10-14, the batch's Render press);
     // GuiSettingsEditor::open (settings_editor.cpp); in
@@ -393,7 +393,7 @@ struct GuiPlaybackLifecycle {
     //     project's audition ends), all standing in the modal family's box —
     //     STOP.
     //   * THE LANE EDITORS' OPEN — the flag editor in every kind and the
-    //     iteration bound editor — STOPS TOO (architect 2026-11-20, send EE:
+    //     iteration bound editor — STOPS TOO (architect 2026-11-20:
     //     "play should stop on editor open. i don't use that workflow and
     //     never have"): EVERY EDITOR'S OPEN STOPS, so nothing of the
     //     project's plays while the on-screen keyboard stands — PLAY and the

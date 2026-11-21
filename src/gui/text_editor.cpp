@@ -281,10 +281,9 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // characters, Backspace, Enter, Esc, Copy and Paste (the two keys
     // carrying their own ctrl), and since 2026-11-08 (sessions 95 / 96) LEFT
     // and RIGHT (bare, or carrying the latched Shift). The keyboard's pass
-    // key, UP and DOWN are NOT this module's (architect 2026-11-20 / 21,
-    // send EE: they rewrite the marker lane editor's whole text, its own
-    // acts, handle_top_flag_editor_key; the pass key typed `pass` here
-    // 2026-11-08 to then), so they classify NotEditorKey and the
+    // key, UP and DOWN are NOT this module's (architect 2026-11-20 / 21:
+    // they rewrite the marker lane editor's whole text, its own acts,
+    // handle_top_flag_editor_key), so they classify NotEditorKey and the
     // keyboard-modal gate admits them on its own terms. THE
     // BARREL HAS NO ROAD ON ANY KEY, THE KEYBOARD'S INCLUDED (architect
     // 2026-11-08, session 94: claim_onscreen_keyboard_press consumes a press

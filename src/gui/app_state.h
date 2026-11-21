@@ -195,10 +195,9 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 constexpr double kViewportEdgeMarginFraction = 0.05;
 
 // THE MARGINED WINDOW — the window, in frames, that a span [lo, hi] of a live
-// domain `total` frames long fills with its margins (architect 2026-11-21,
-// send EE: "it really should just be a 5% maximum on either side, not a
-// minimum of 10%. Combined."; "3 agree" — every caller of the framer's margin
-// arm). THE RULE: AT MOST f = kViewportEdgeMarginFraction OF THE WINDOW OF
+// domain `total` frames long fills with its margins (architect 2026-11-21:
+// "it really should just be a 5% maximum on either side ... Combined.";
+// "3 agree" — every caller of the framer's margin arm). THE RULE: AT MOST f = kViewportEdgeMarginFraction OF THE WINDOW OF
 // EMPTY SPACE ON EITHER SIDE OF THE SPAN, and a side that cannot show its
 // margin — the song's wall, L = lo frames left of the span, R = total − hi
 // right of it — HANDS NOTHING TO THE OTHER. The window is the one V that
@@ -951,7 +950,7 @@ struct RegionDragState {
     // commit tail, so no render triggers behind it.
     // (`moved` is the TRIM arm lamp's: a sweep that moved puts it out.)
     bool    wrote_trim   = false;
-    // WHICH BOUND THE PEN IS MOVING (architect 2026-11-20, send DD: "it
+    // WHICH BOUND THE PEN IS MOVING (architect 2026-11-20: "it
     // should look like the end endcap is being dragged b/c effectively that
     // is what it is"): set at every ACCEPTED write by the write's own order
     // (write_trim_from_sweep: begin the lesser of the anchor and the frame
@@ -1247,9 +1246,9 @@ enum class PendingClickKind {
 // (platform_android.cpp), so a tap with the button held is the click. THE
 // BARREL'S PRESS READS NO CLOCK (2026-11-10): the record carries no stamp
 // and the verdict is the same however long the press was held (the begin
-// for a tap and the end for a press held past the hold delay, 2026-10-27,
-// "doesn't work very well"); no hold on the trim bar means anything,
-// plain or barrel (architect 2026-11-21, send EE, TrimBarPressSeed). A
+// for a tap and the end for a press held past the hold delay "doesn't work
+// very well", 2026-10-27); no hold on the trim bar means anything,
+// plain or barrel (architect 2026-11-21, TrimBarPressSeed). A
 // crossing sets and then drags the bound the set moved. The one owner of
 // the verdict is GuiInputHandler::trim_bound_click (input_trim.cpp).
 //
@@ -1667,7 +1666,7 @@ struct TouchNavZoomState {
 // Restore and Close on the app's own title bar, 2026-10-05 — went
 // 2026-10-24 with the caption.)
 
-// THE DOUBLE TAP'S SURFACES (architect 2026-11-21, send EE: the ruling, the
+// THE DOUBLE TAP'S SURFACES (architect 2026-11-21: the ruling, the
 // window and the slack at kDoubleClickMs below, the rule's owner). The tag
 // is what keeps the three surfaces from cross-firing: a candidate seeded on
 // one surface can only be consumed by a press on the SAME surface (a marker
@@ -1703,7 +1702,7 @@ enum class DoubleClickSurface {
 // refusal refuses the drag that press would otherwise arm too, so the
 // consume costs no gesture (run_marker_click_act's THE SILENT REFUSALS; the
 // lane arms no drag at all). NO DOUBLE TAP WHERE THERE IS NO DOUBLE-TAP ACT
-// (architect 2026-11-21, send EE): A PHASE RESET'S FLAG BOX — no editor, and
+// (architect 2026-11-21): A PHASE RESET'S FLAG BOX — no editor, and
 // a drag there acts — is no double-tap cell, seeding and consuming nothing
 // (marker_cell_double_taps, input_pointer.cpp), so two taps there are two
 // plain taps. THE INVENTORY, re-grepped 2026-11-21 — every consume of a
@@ -1724,12 +1723,12 @@ enum class DoubleClickSurface {
 //                 the whole song) — the act FIT's long press (Shift+0) runs,
 //                 in every state, the `h` view and a locked tab included,
 //                 framing being navigation; THE BAR'S ONE FRAMING GESTURE
-//                 (architect 2026-11-21, send EE: its long press removed,
-//                 "the double tap will be enough"). Target unused. THE FIRST
+//                 (architect 2026-11-21: the bar has no long press, "the
+//                 double tap will be enough"). Target unused. THE FIRST
 //                 TAP is the consumed nothing a trim-bar tap is (its pending
 //                 cap / bridge drag disarmed at the lift), held for any
 //                 length; ITS SEED FOLLOWS THE MARKER'S RULE (architect
-//                 2026-11-21, send EE): any lift whose press never crossed
+//                 2026-11-21): any lift whose press never crossed
 //                 the grab gate and went no trim drag live seeds, wherever
 //                 inside that gate it lifts, at the PRESS's place, stamped at
 //                 the lift (TrimBarPressSeed's resolver, on_button_release).
@@ -1806,11 +1805,11 @@ struct DoubleClickCandidate {
     MarkerCell cell = MarkerCell::Payload;
 };
 
-// THE TRIM BAR'S DOUBLE TAP FRAMES THE TRIM (architect 2026-11-21, send EE;
+// THE TRIM BAR'S DOUBLE TAP FRAMES THE TRIM (architect 2026-11-21;
 // DoubleClickSurface::TrimBar): run_span_framing_command, the act FIT's long
 // press (Shift+0) runs — a proper trim sub-window, else the whole song;
 // silent where that is already framed, the framer's own idempotence. THE
-// BAR HAS NO LONG PRESS (architect 2026-11-21, send EE: "the double tap will
+// BAR HAS NO LONG PRESS (architect 2026-11-21: "the double tap will
 // be enough, and we can remove the long press"): a still press of any length,
 // lifted, is the same tap as a quick one. This record is THE DOUBLE TAP'S
 // FIRST HALF, written at the press because only the LIFT can tell a tap from
@@ -1827,7 +1826,7 @@ struct DoubleClickCandidate {
 // a locked tab and in the `h` view too, framing being navigation. The
 // barrel's press arms no record: its bound set reads no clock
 // (PendingClickAct).
-// THE SEED'S RULE IS THE MARKER'S (architect 2026-11-21, send EE, "2
+// THE SEED'S RULE IS THE MARKER'S (architect 2026-11-21, "2
 // agree"; PendingMarkerPress's seed, on_button_release): ANY LIFT THAT NEVER
 // BECAME A DRAG IS A DOUBLE TAP'S FIRST TAP. The record survives to the lift
 // only while the pointer's REAL travel (real_travel_px) from the press stays
@@ -2437,7 +2436,7 @@ enum class RedesignButton {
     // modifier and does not repeat.
     IconTooltips,
     // THE LEVEL CASE, NOISE (architect 2026-11-05, session 46, his "yes" on
-    // mock s46_m1 of tmp/s46), the band's third run's LAST — its own entry
+    // mock s46_m1), the band's third run's LAST — its own entry
     // a run gap after the run's linked group since 2026-11-19 — directly
     // after the tooltip lamp, in the NOISE lamp's seat (bare `w`, 2026-10-28 to
     // 2026-11-05, RETIRED with its chord and its raindrop glyph): the
@@ -2756,7 +2755,7 @@ enum class RedesignButton {
     // four-play sequence (redesign_button_shift_admits owns the
     // membership; the act is GuiAbAudition, ab_audition.h).
     // ITS BOX IS ITS ONE HIT: the bottom left's timestamp beside it presses
-    // nothing (architect 2026-11-20, send DD; RedesignButtonFace::contains).
+    // nothing (architect 2026-11-20; RedesignButtonFace::contains).
     TransportPlayStop,
     // GO TO START / GO TO END (architect 2026-10-24, back on row 8 after
     // their removal of 2026-10-12): bare Home / End, the trim bounds' jump
@@ -2869,7 +2868,7 @@ enum class RedesignButton {
     // addressed. WHY IT EXISTS (his reason, 2026-10-09): THE GLASS HAS NO
     // ENTER KEY off the on-screen keyboard, which stands only while an editor
     // does, so with no editor open the tablet's other road to an editor on a
-    // marker is the double tap on its flag (architect 2026-11-21, send EE;
+    // marker is the double tap on its flag (architect 2026-11-21;
     // DoubleClickSurface::Marker), which opens the same editors on the cell
     // its first tap addressed. (The Edit Flag button, the same chord on a
     // button, stood 2026-08-27 to 2026-09-29 and was deleted for the double
@@ -3412,8 +3411,7 @@ inline constexpr bool redesign_button_opens_icon_run(RedesignButton b) {
 // `true_colors` (device_config.h). The rows' record is git history.)
 
 // THE DOUBLE TAP — ITS WINDOW AND ITS SLACK, AND THE RULE'S OWNER (architect
-// 2026-11-21, send EE, reversing 2026-11-18's "no double tap exists in the
-// product": "I'd like to reverse the no double tap decision. ... One is
+// 2026-11-21: "One is
 // double tap the flag to open it. Number 2 is the trim. Double tap the trim
 // to frame it." — the third, which he forgot, the empty marker lane's
 // create; of the window: "I think we had it tuned to the same as my labwc
@@ -3486,7 +3484,7 @@ constexpr int     kDoubleClickSlackPx = 9;
 // crossed the grab gate, wherever inside it the lift is, at the PRESS
 // place, and the second press is measured against this slack from it (the
 // flag's since 2026-11-08; the trim bar's by the same rule, architect
-// 2026-11-21, send EE; TrimBarPressSeed). Only the empty lane's seed needs a
+// 2026-11-21; TrimBarPressSeed). Only the empty lane's seed needs a
 // lift inside this slack, its drag gate. Floor 1: a zero
 // slack would demand a pixel-exact second press and starve the double tap
 // outright.
@@ -3511,7 +3509,7 @@ inline int double_click_slack_px() {
 // same ChromePress stamp on its Card arm), where the shifted act is
 // dismissing EVERY card. Same hold, same term, same reason: the pointer
 // carries no shift (architect 2026-10-30). It is the product's one hold (no
-// hold on the trim bar means anything, architect 2026-11-21, send EE;
+// hold on the trim bar means anything, architect 2026-11-21;
 // TrimBarPressSeed).
 //
 // IT READS THE HOLD DELAY (kHoldDelayMs, gui_input.h — 300 ms, architect
@@ -3676,14 +3674,14 @@ inline double real_travel_px(double x0, double y0, double x1, double y1) {
 //     RESOLVES the arm outright, running the set and handing over to the
 //     endcap drag above on the same event;
 //   * TrimBarPressSeed — the trim bar's press record, its framing double
-//     tap's first half (architect 2026-11-21, send EE): travel reaching the
+//     tap's first half (architect 2026-11-21): travel reaching the
 //     gate (`>=`) drops the record, so a press that moved that far and came
 //     back seeds nothing at its lift — the marker's rule, a lift that never
 //     became a drag being a first tap.
 // THE TRIM BAR IS ONE SURFACE WITH ONE GATE, so the set, the drag it hands
 // to and the double tap's first tap all read the same distance — the flag's
-// too, so a marker and the bar share one slop (architect 2026-11-21, send
-// EE: "what is the slop on the drag? Is it the same as on the markers? If
+// too, so a marker and the bar share one slop (architect 2026-11-21:
+// "what is the slop on the drag? Is it the same as on the markers? If
 // not, it should be").
 // EVERY GATE MEASURES REAL TRAVEL (architect 2026-11-15, the no-grid arc):
 // the press's real place against the pointer's real place
@@ -3807,7 +3805,7 @@ enum class DialogTrigger {
 };
 
 // In-window modal prompt state. When `active` is true, THE QUESTION STANDS
-// AS A FULL PAGE (architect 2026-11-20, send EE: "we shuold remove the
+// AS A FULL PAGE (architect 2026-11-20: "we shuold remove the
 // popups ... instead, the old prompt eg 'do you want to revert and drop
 // changes?' should come back"; paint_handler.cpp's THE QUESTION PAGE AND
 // THE PROGRESS PAGE, the owner): the view — the modal family's box's
@@ -4567,9 +4565,9 @@ struct GuiUpperRowsFingerprint {
     bool operator==(const GuiUpperRowsFingerprint&) const = default;
 };
 // Row 8's clock cell (paint_bottom_row_buttons_and_clock): the cell as
-// published, the timestamp it shows, and whether the row yields (to an
-// overlay's row, paint_handler.cpp's modal_owns_bottom_row), the cell's
-// ground and field being the globals'.
+// published, the timestamp it shows, and whether the row yields (to a
+// page's answers or an overlay's controls row, paint_handler.cpp's
+// modal_owns_bottom_row), the cell's ground and ink being the globals'.
 struct GuiClockFingerprint {
     GuiChromeGlobalsFingerprint globals;
     GuiRect     cell{0, 0, 0, 0};
@@ -5600,7 +5598,7 @@ struct AppState {
     bool          value_drag_lamp = false;
 
     // THE STEM IS THE SELECTION'S, THE PLAYHEAD THE FOCUS'S (architect
-    // 2026-11-05, his pick a2 of tmp/s42, reversing 2026-11-04's
+    // 2026-11-05, his pick a2, reversing 2026-11-04's
     // coincidence stem; "only 1 playhead onscreen ever"): every selected
     // marker, enabled or disabled (architect 2026-11-11, session 106), wears
     // a solid one-W `cue_outline` stem down the canvas over the playhead's
@@ -5974,9 +5972,9 @@ struct AppState {
     // correct pre-display state: an empty rect contains no point, so neither a
     // tooltip nor a press can fire before the button has been shown.
     //
-    // NO HOVER AND NO FADE IS STORED HERE: a key's hover face (Arc's, send
-    // CC, 2026-11-20) and every fade of its picture (send DD, 2026-11-20)
-    // are AppState::FaceFades's, whose walk reads the press's
+    // NO HOVER AND NO FADE IS STORED HERE: a key's hover face (Arc's,
+    // architect 2026-11-20) and every fade of its picture (Arc's sheet,
+    // architect 2026-11-20) are AppState::FaceFades's, whose walk reads the press's
     // own hit (`contains`: `rect` less `seam`) and the
     // two painted bits below, and whose seams read `rect` and `seam` for
     // the two boxes that share a seam column. The tooltip's pointer walk
@@ -6052,9 +6050,8 @@ struct AppState {
         // predicate, point_on_key's linked form — a whole box, so
         // the place's pixel answers it. IT IS THE KEY'S ONE HIT, PLAY'S
         // INCLUDED: the bottom left's timestamp presses nothing (architect
-        // 2026-11-20, send DD: "it no longer carries button look" — plain
-        // text since send AA, so it is ground like the pipe and the tab's
-        // name beside it), so no press, hover or tooltip reaches PLAY from
+        // 2026-11-20: it is plain text at kBottomLeftPenW, render.h, so it is
+        // ground like the pipe and the tab's name beside it), so no press, hover or tooltip reaches PLAY from
         // it. Every roster reader asks `contains`: the press, the lift, the
         // tooltip's owner and the hover's walk.
         bool contains(const GuiPointerPlace& at) const {
@@ -6151,12 +6148,13 @@ struct AppState {
     // THE TRIM BAR'S PAINTER STASH (architect 2026-09-24, strictly
     // as-painted) — the flag stash's doctrine carried to the lane under it.
     // GuiPaintHandler::paint_trim publishes, through render_trim_flags, the
-    // two endcaps and the bridge interval it last DREW (the shape and its
-    // fields are TrimBarHit's, render.h), and hit_test_trim_endcap and
+    // two ends' grab zones and the bridge interval of the bar it last DREW
+    // (the shape and its fields are TrimBarHit's, render.h; the zones
+    // render.h's THE TRIM BAR'S CAPS AND GRABS), and hit_test_trim_endcap and
     // point_in_trim_bridge_span read this and nothing else for geometry, so
     // the router answers what is on screen: after a trim
-    // write a press before the repaint grabs the caps it can see, never the
-    // bounds the store already holds. The painter still derives the caps
+    // write a press before the repaint grabs the bar it can see, never the
+    // bounds the store already holds. The painter still derives the zones
     // through the shared owner chain (displayed_trim_ms → trim_bound_column →
     // trim_endcap_rect / trim_bridge_gap) on the item basis; what the hit
     // gave up is running that chain a second time. Written only by a paint
@@ -6210,7 +6208,7 @@ struct AppState {
     // entry's box.
     //
     // THE ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY (architect
-    // 2026-11-19, send AA; the rule at paint_value_page's head):
+    // 2026-11-19; the rule at paint_value_page's head):
     // `origin_x` is the window x byte 0 paints at, THROUGH THE SCROLL OFFSET
     // (text_editor::State::view_offset_px), so byte i paints at origin_x +
     // byte_x[i]; `byte_x` holds pending.size()+1 pen offsets of the ONE shaped
@@ -6232,7 +6230,7 @@ struct AppState {
 
     // THE MODAL SURFACE'S PAINTED GEOMETRY. A QUESTION AND THE PROGRESS PAGE
     // ARE FULL PAGES — the view the page, their answers word buttons on the
-    // family's controls row (architect 2026-11-20, send EE; paint_handler.cpp's
+    // family's controls row (architect 2026-11-20; paint_handler.cpp's
     // THE QUESTION PAGE AND THE PROGRESS PAGE); a line editor is A SUB-PAGE
     // — the view the page, its label and one entry on it, no button, the
     // on-screen keyboard its one control (the same ruling;
@@ -6352,7 +6350,7 @@ struct AppState {
     // THE FIFTH OWNER IS THE PROGRESS MODAL since 2026-10-14
     // (AppState::BatchProgress): THE PROGRESS PAGE — a batch's sentence, bar
     // and count on the view with Cancel alone on the controls row (architect
-    // 2026-11-20, send EE). Ranked directly UNDER THE
+    // 2026-11-20). Ranked directly UNDER THE
     // PROMPT (a WM close can raise the unsaved-work question over a running
     // batch) and above the other three, none of which stands beside it: the
     // player's and the picker's openers are unreachable under its router and
@@ -6493,8 +6491,8 @@ struct AppState {
     // button's act returns to it, the opener and Close leave it applying
     // nothing; the list has no scrub, so it keeps its leave button,
     // architect 2026-11-11, session 107). No Apply: a row's tap is the act,
-    // and it closes the list (trim_presets_apply; architect 2026-11-19, send
-    // CC). The acts are the input handler's
+    // and it closes the list (trim_presets_apply; architect 2026-11-19).
+    // The acts are the input handler's
     // (trim_presets_save, trim_presets_save_as, trim_presets_delete,
     // close_picker); the faces trim_presets_button_enabled's.
     enum class TrimPresetsButtonAct {
@@ -6546,7 +6544,7 @@ struct AppState {
         // progress page's and the other picker contents' buttons are always
         // live while their surface stands.
         bool        enabled      = true;
-        // THE LIT BIT AS PAINTED (send CC, 2026-11-20): the row's one
+        // THE LIT BIT AS PAINTED (2026-11-20): the row's one
         // checked key, the render player's Repeat One, published as its
         // face was painted (the enabled bit's carry under a clip that
         // missed the key; false on every other button). Its readers are
@@ -6747,11 +6745,10 @@ struct AppState {
     };
     OnscreenKeyboard onscreen_keyboard;
 
-    // THE KEYBOARD SLOT'S AS-PAINTED BITS, ONE A TENANT (2026-08-27 as the
-    // keyboard's own; 2026-08-28 the slot's; one bit a tenant since
-    // architect 2026-11-20, send EE, when the keyboard's edges went back to
-    // its own surface — the two tenants' damage rects differ, and an editor
-    // swapped for the overlay it returns to in one pass moves both): does
+    // THE KEYBOARD SLOT'S AS-PAINTED BITS, ONE A TENANT (architect
+    // 2026-11-20: the keyboard's edges are its own surface's, over the
+    // window's last rows, so the two tenants' damage rects differ, and an
+    // editor swapped for the overlay it returns to in one pass moves both): does
     // THE ON-SCREEN KEYBOARD stand as of the last frame that painted its
     // whole surface, and does THE FOLDER OVERLAY stand as of the last frame
     // that painted its whole band? The slot comparator (onscreen_keyboard::
@@ -6760,7 +6757,8 @@ struct AppState {
     // surface appears and disappears with facts that damage no pixel of its
     // own band, so the drift between a bit and the live answer is what pays
     // for that tenant's show/hide repaint, its own rect
-    // (onscreen_keyboard::slot_damage_rect's block). ONE WRITER, the slot's
+    // (onscreen_keyboard::edge_damage_rect for the keyboard, slot_damage_rect
+    // for the overlay). ONE WRITER, the slot's
     // paint dispatch (GuiPaintHandler::paint_keyboard_slot), which stamps
     // each only on a rect that fully covers THAT TENANT'S BAND — the
     // keyboard's surface (a fact of the window's foot alone, standing or
@@ -6804,7 +6802,7 @@ struct AppState {
     // looks like a hover — a passive focus with the hover. And then when they
     // release it, it goes into being a passive focus." (NO FOCUS IS KEPT OR
     // PAINTED: no key reaches a surface with buttons, architect 2026-11-02 /
-    // 2026-11-20, send EE; the arm's survival is what the ruling leaves.)
+    // 2026-11-20; the arm's survival is what the ruling leaves.)
     // So the arm is one index for the life of the hold and
     // `modal_dialog_press_inside` below is the pointer's answer about it
     // (the release re-hits the button at the lift's own coordinates,
@@ -6854,15 +6852,13 @@ struct AppState {
     // NO BUTTON OF THE FAMILY HAS A KEYBOARD FOCUS OR A KEYBOARD PRESS ARM:
     // the on-screen keyboard, the one key producer, stands only under an
     // editor, and a line editor's sub-page has no button (architect
-    // 2026-11-20, send EE) — so the pointer's arm above is the family's one.
+    // 2026-11-20) — so the pointer's arm above is the family's one.
 
-    // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
-    // when the timestamp moved off the status line into the transport row's
-    // centre; the row unification merged that row and the status line into
-    // the one bottom row a day later; the cell sits at the row's left since
-    // 2026-09-29; since 2026-11-19, send AA, plain text at kBottomLeftPenW,
-    // no entry, the cell the timestamp's own box — the specimen's advance by
-    // the line box, bottom_left_clock_cell). It is a PAINTER
+    // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (the
+    // timestamp at the bottom row's left, plain text at kBottomLeftPenW that
+    // presses nothing, architect 2026-11-20; the cell the timestamp's own
+    // box — the specimen's advance by the line box, bottom_left_clock_cell).
+    // It is a PAINTER
     // STASH in the roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
     // a SHAPED specimen's advance and ink in the live face (time_field_metrics,
@@ -7297,18 +7293,13 @@ struct AppState {
 
     // THE FACE FADES — ARC'S TRANSITIONS ON EVERY STANDING FACE: WHICH FACE
     // THE PEN HOVERS, EVERY FACE'S PICTURE AS PAINTED, ITS FADE'S CLOCK AND
-    // ITS DAMAGE, ONE OWNER FOR EVERY SURFACE (architect 2026-11-20, send DD,
-    // after testing send CC's hover on the tablet, to the planner's "A press
-    // shows at once. Arc fades into the pressed look over 50 ms and back over
-    // 200 ms; I kept the press and the lit/dark change immediate": "i'd like
-    // to see arc-truthful version instead"; send CC's hover before it,
-    // architect 2026-11-18, send Y: "I think we could consider resurrecting
-    // the hover ... this is a low contrast theme, which should support
-    // hovers"; "lets go arc truthful re: hoevers"; 2026-11-20, send CC: "If
-    // they're from Canonical, from Arc, I'll just accept them. That rule has
-    // worked very well. ... So I'm not going to mess with the fade"; the
-    // on-screen keyboard's keys: "Four, yes." — reopening 2026-10-02's "hover
-    // is awkward with pen and sometimes flickers, ok to drop it").
+    // ITS DAMAGE, ONE OWNER FOR EVERY SURFACE (architect 2026-11-20: Arc's
+    // fades on the press and the lit change as on the hover, "i'd like to see
+    // arc-truthful version"; the hover, architect 2026-11-18: "this is a low
+    // contrast theme, which should support hovers"; "lets go arc truthful re:
+    // hoevers"; 2026-11-20: "If they're from Canonical, from Arc, I'll just
+    // accept them. That rule has worked very well. ... So I'm not going to
+    // mess with the fade"; the on-screen keyboard's keys: "Four, yes.").
     // THIS STRUCT IS THE STATE; its bodies are GuiInputHandler's
     // (input_pointer.cpp) and the painters' one call, as_painted: THE WALK
     // (walk_hover_face: which face the pen is on, under the gate), THE HOVER'S
@@ -7327,7 +7318,7 @@ struct AppState {
     // keys and word buttons, a question's answers and the progress page's
     // Cancel among them; a line editor's sub-page has none), the
     // on-screen keyboard's keys — and the scrub's knob, AND A LIST'S ACTING
-    // ROWS (the folder overlay's, architect 2026-11-21, send EE: "I'd like
+    // ROWS (the folder overlay's, architect 2026-11-21: "I'd like
     // to add hover"; Arc's `row.activatable:hover`; THE LIST ROW'S HOVER
     // below), each named by its
     // surface and its index there (a dialog button's and the knob's with the
@@ -7389,7 +7380,7 @@ struct AppState {
     // reads no clock: kPendingStart), and the frame that found the edge
     // paints the picture that was on screen, so no frame ever paints a face
     // ahead of its fade: the frame that is the first to paint a face in a
-    // new state agrees with the fade (send CC's E2 lesson). THE INPUT STARTS
+    // new state agrees with the fade. THE INPUT STARTS
     // THE FADES IT CAUSES AT ITS OWN INSTANT, the same retarget with a real
     // start — the hover's setter, and the press's down on a live key
     // (press_face: every arm that takes a face) — so the 50 ms of a press
@@ -7410,7 +7401,7 @@ struct AppState {
     //     carrying the barrel as a no-op — the band's modifier gate, the
     //     keyboard's claim, both scrubs, every dialog arm — so under a held
     //     barrel no press there would act and no face hovers: architect
-    //     2026-11-20, send DD: "good"; the bit, and when it lags
+    //     2026-11-20; the bit, and when it lags
     //     the button, at GuiInputHandler::pointer_barrel_held_), and the pen
     //     latch not holding (after a pen lift no face hovers until the pen
     //     has moved the rearm distance or left and come back);
@@ -7423,12 +7414,12 @@ struct AppState {
     //     own) — found by the press's own hit (a roster key's box less its
     //     seam, RedesignButtonFace::contains — the bottom left's timestamp, a
     //     time label, presses nothing and so hovers nothing, architect
-    //     2026-11-20, send DD: "it no longer carries button look"; a dialog
+    //     2026-11-20; a dialog
     //     button's box less its seam, the keyboard's key_at, the knob's disc
     //     as painted), under no card. AND THE THEME'S: where the installed
     //     theme's hover face is its key face (every Live theme, the own
     //     roles' rule) no face hovers at all, THE SEAMS INCLUDED (architect
-    //     2026-11-20, send DD: agreed) — the
+    //     2026-11-20) — the
     //     press, lit and greyed tones exist on every theme, so THOSE FADE ON
     //     EVERY THEME (the fade is behavior, the tones the theme's).
     // EVERY LEAVE FADES OUT, as Arc's does when the pointer leaves the
@@ -7456,20 +7447,20 @@ struct AppState {
     // the seams beside the faces they move at the same instant
     // (GuiInputHandler::retarget_seams_beside), so no frame paints a key in
     // a new state beside a stale seam. A SLIDE FROM A KEY TO ITS NEIGHBOR
-    // LEAVES THE SEAM BETWEEN THEM UNTOUCHED (send CC's D1, GTK's own: its
+    // LEAVES THE SEAM BETWEEN THEM UNTOUCHED (GTK's own: its
     // target is the line on both sides of the change, so it holds the border
     // tone, or goes on rising on its own original 200 ms), while the face the
     // pen left starts down from its stored mix and the face it reached up
-    // from its own. (The send-CC choice that a seam lands at once with a key
-    // that lands at once is reversed with the press: beside a pressed key
-    // the line goes as Arc's lines say, at the fade's own pace.)
+    // from its own. (Beside a pressed key the line goes as Arc's lines say,
+    // at the fade's own pace, as the key's own face does.)
     // WHAT DOES NOT FADE — GTK starts no transition for a new widget: A FACE
     // PAINTED FOR THE FIRST TIME OR RE-LAID paints its look at once (no record,
     // or its box not the record's: a dialog, an overlay's row, the keyboard
     // appearing or changing its page, a relayout); THE WHOLE LIST IS DROPPED
-    // on a relayout and on a theme, icon set, bright mix or True Colors
-    // commit (GuiInputHandler::relayout_window, apply_theme, apply_icons,
-    // apply_true_colors: drop_all), so every face paints its look at once;
+    // on a relayout and on a theme, icon set, bright mix, True Colors or
+    // on-screen keyboard key size commit (GuiInputHandler::relayout_window,
+    // apply_theme, apply_icons, apply_true_colors, apply_osk_key_size:
+    // drop_all), so every face paints its look at once;
     // A SURFACE THAT LEAVES drops its faces (settle_face_fades: the keyboard
     // gone or on another page, a dialog stash's owner or session no longer
     // the live one, a roster key whose published box is empty — off the
@@ -7479,7 +7470,7 @@ struct AppState {
     // to the page's answers, its keys publish empty boxes and are not
     // painted, so they come back at once when the page leaves. THE TOP
     // ICON ROW IS THE SAME STANDING ROW UNDER EVERY MODAL (architect
-    // 2026-11-20, send EE): it stands before, under and after an editor, a
+    // 2026-11-20): it stands before, under and after an editor, a
     // question and the progress page, each of which greys its whole roster
     // (redesign_button_enabled's first arm, roster_greyed_whole), so its
     // keys are standing keys whose state changes and fade as Arc's sheet
@@ -7489,7 +7480,7 @@ struct AppState {
     // veil. Not faces at all:
     // NOISE's entry and its level line, the title bar's lamps,
     // the trim bar, the cards, the tooltips.
-    // THE LIST ROW'S HOVER (architect 2026-11-21, send EE; the look at
+    // THE LIST ROW'S HOVER (architect 2026-11-21; the look at
     // paint_handler.cpp's THE LIST VIEW, the tone theme_roles.h's
     // `list_hover_face`, Arc's own 3 % white over the view, the same day:
     // "I prefer to go more truthful. It just needs to be very subtle."): a
@@ -7538,7 +7529,7 @@ struct AppState {
     // the fade lands; the landing step is the last damage, and a landed face
     // costs nothing. AN EDGE IS ceil(duration / 22.2 ms) + 1 FRAMES OF ITS
     // FACE'S OWN RECT, 3 or 4 for 50 ms, 9 or 10 for 200 ms; an overlay
-    // greying both icon rows is that many frames of each greying key's rect
+    // greying the top icon row is that many frames of each greying key's rect
     // (the comparator's strip fallback for the first). A fade whose from is
     // already its target's picture lands at once, so a hover begun and taken
     // back in one delivery (the pen lift's restore motion and the latch's
@@ -7794,7 +7785,7 @@ struct AppState {
     FaceFades face_fades;
 
     // THE TRIM BAR'S HOVER — THE PART OF THE BAR THE HOVERING PEN IS OVER
-    // (architect 2026-11-19 / 2026-11-20, send CC: "The end caps would appear
+    // (architect 2026-11-19 / 2026-11-20: "The end caps would appear
     // when hovering the body ... when you're hovering the end caps, the body
     // loses the hover"; the look and the one table at render.h's
     // trim_bar_tones). NOT ONE OF FaceFades' FACES: the bar does not fade
@@ -7802,8 +7793,9 @@ struct AppState {
     // clock, no mix and no list — its state is this one value, beside the
     // faces' and under the same gate. Its bodies are GuiInputHandler's
     // (input_pointer.cpp): THE WALK, walk_trim_bar_hover — run inside
-    // walk_hover_face, so it has the faces' four callers (on_motion's head,
-    // the tick, the pen latch's arm, the pointer-leave hook) — and its
+    // walk_hover_face, so it has the faces' five callers (on_motion's head,
+    // on_button_press's walk, the tick, the pen latch's arm, the
+    // pointer-leave hook) — and its
     // settle beside settle_face_fades, ahead of every frame.
     //   `part` the part under the pen as the press reads it (an end's grab
     //     zone or the bridge, TrimBarHit), under the gate
@@ -7827,7 +7819,7 @@ struct AppState {
     //     nothing on the bar lights until the rearm (input_handler.h's pen
     //     latch inventory).
     //   `lift_pending`, `lift_rx` / `lift_ry` THE LIFT'S ANSWER WAITS FOR
-    //     THE PICTURE IT IS FOR (send CC's review A, F1, 2026-11-20): the
+    //     THE PICTURE IT IS FOR (2026-11-20): the
     //     lift's delivery runs the drag's last motion (the bound moved), the
     //     release, the restore motion and the latch's arm with no paint
     //     between, so the stash the press's hits read (TrimBarHit) still
@@ -7856,8 +7848,8 @@ struct AppState {
     //     (clear_pen_hot_latch); every release's head. `lifted` is cleared
     //     with it, so nothing lingers. A finger's lift never arms the latch,
     //     and its leave clears `lifted`.
-    //   `leave_ms` THE LEAVE'S HELD CLEAR (the 10 ms hold KEPT, architect
-    //     2026-11-20, send DD): the pen's HOVER_EXIT comes about a millisecond
+    //   `leave_ms` THE LEAVE'S HELD CLEAR (the 10 ms hold, architect
+    //     2026-11-20): the pen's HOVER_EXIT comes about a millisecond
     //     ahead of its tip DOWN, in a delivery of its own (input_core.h's
     //     THE POINTER LEAVE'S THREE FIRES), and a part cleared at that leave
     //     would let a frame painted in the gap show the bare pill between
@@ -7913,7 +7905,7 @@ struct AppState {
     //     group never leaves one. The same column on every
     //     tooltip-bearing key surface — the band (the level case among it),
     //     row 8 (the timestamp beside it no owner's: it presses nothing,
-    //     architect 2026-11-20, send DD), the
+    //     architect 2026-11-20), the
     //     dialogs' and overlays' controls rows. The presses ask the same box
     //     (point_on_key's linked form).
     //     A CUE'S TARGET IS ITS PRESS TARGET (2026-11-09): the marker lane's
@@ -7925,7 +7917,8 @@ struct AppState {
     //     resting pointer (a relayout, a surface closing under it) is an
     //     arrival like any other.
     //   * THE SHOW: the wait ripening shows its column's hint, the box SEATED
-    //     OFF ITS OWNER'S FACE ALONE — above it, its left edge on the face's,
+    //     OFF ITS OWNER'S FACE ALONE — under a top-row key, above every other
+    //     face, its left edge on the face's,
     //     one W between (architect 2026-11-07, sessions 90 and 91;
     //     tooltip_box_rect, app_state.h, the placement's one statement) — so
     //     wherever the pen came onto the column, and however fast, the box
@@ -9087,12 +9080,12 @@ struct AppState {
     // keys while active).
     // THE LINE EDITOR'S ONE BUFFER, THREE KINDS:
     // Kind::SettingsAssignment, the settings editor's value for the row's
-    // key, the value alone (architect 2026-11-19, send AA; the key the
+    // key, the value alone (architect 2026-11-19; the key the
     // open's, GuiSettingsEditor::open / page_key);
     // Kind::TrimPresetName, the trim preset's name (2026-10-28 night, the
     // trim presets list's Save As, GuiInputHandler::trim_presets_save_as);
     // and Kind::BpmField, one field of the BPM form, its value alone
-    // (architect 2026-10-29; the value alone since 2026-11-19, send AA;
+    // (architect 2026-10-29; the value alone 2026-11-19;
     // GuiInputHandler::bpm_form_commit, `target` the field) — the settings
     // editor's shape and every road it rides (the paint, the blink, the
     // caret's click, the on-screen keyboard, the modal gate), the kind
@@ -9115,7 +9108,7 @@ struct AppState {
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened on the row's key, PREFILLED with its value
-    // (2026-11-19, send AA), once
+    // (2026-11-19), once
     // the page has closed — or, on the row of a key with a value list, that
     // list swapped in under the same session); and the VALUE LIST
     // (2026-10-28 night for `true_colors`,
@@ -9129,7 +9122,7 @@ struct AppState {
     // and THE TRIM PRESETS LIST (architect 2026-10-28 night: the TRIM key
     // and bare `t`; the piece's named trim windows, a row's tap applying its
     // pair to the active tab's trim and closing the list (architect
-    // 2026-11-19, send CC), the player's
+    // 2026-11-19), the player's
     // controls row — the highlight pair, Save, Save As, Delete, Close);
     // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
     // the sweep's ladder; one inert group row and the three `key=value`
@@ -9385,9 +9378,8 @@ struct AppState {
     // on his progress mock) — THE MODAL FAMILY'S FIFTH
     // MEMBER (modal_box.h, ModalDialogOwner::Progress). EVERY BATCH — the grid
     // iterations and the BPM sweep — opens it AT THE RENDER PRESS: THE
-    // PROGRESS PAGE (architect 2026-11-20, send EE: "yes, progress window
-    // can go back"; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS
-    // PAGE) — the view one flat page, on it the sentence, the bar over the
+    // PROGRESS PAGE (architect 2026-11-20; paint_handler.cpp's THE QUESTION
+    // PAGE AND THE PROGRESS PAGE) — the view one flat page, on it the sentence, the bar over the
     // entries done and the count under it, and CANCEL ALONE, a word button
     // where the bottom icon row's keys stand, the modal's one road; every
     // key of the top icon row greyed and the status bar blank while it
@@ -9410,8 +9402,8 @@ struct AppState {
     // under the existing "Rendered N of M" card. A cancel while the batch is
     // still PARKED closes it at the cancel (GuiInputHandler::
     // cancel_batch_progress): the parked batch is disarmed and never runs.
-    // WHILE IT STANDS THE STATUS BAR IS BLANK (architect 2026-11-20, send
-    // EE: "agree" — the page says what the batch's process line would;
+    // WHILE IT STANDS THE STATUS BAR IS BLANK (architect 2026-11-20: the
+    // page says what the batch's process line would;
     // status_bar_text, paint_handler.cpp), a question raised over it
     // included.
     struct BatchProgress {
@@ -9423,8 +9415,8 @@ struct AppState {
         // product spells every ellipsis it paints: three periods, as
         // "Updating..." and the flag truncation's "..." are.
         // THE PROGRESS PAGE'S TWO LINES (Thunar's progress dialog's: the
-        // operation over the bar and its count under it; send AA's stage
-        // D2, 2026-11-19): THE SENTENCE the batch's operation, "Rendering...", the
+        // operation over the bar and its count under it, 2026-11-19):
+        // THE SENTENCE the batch's operation, "Rendering...", the
         // single render's own word with its ellipsis, and THE COUNT the
         // entry rendering of the batch, "3 of 11" — his sentence of
         // 2026-10-14, "Rendering 3 of 11...", parted across the two lines
@@ -9754,15 +9746,15 @@ struct AppState {
     //                 Backspace), under the project picker reopens the row's
     //                 project, under the settings page opens the settings
     //                 editor on the row's key, prefilled with its value
-    //                 (whose OK and
-    //                 Cancel reopen the page on that row) or swaps in the
+    //                 (whose Enter and
+    //                 Esc reopen the page on that row) or swaps in the
     //                 key's value list (settings_page_commit), and under the
     //                 value list commits the row's value to the listed key,
     //                 then returns to the page (value_list_commit), and
     //                 under the trim presets list applies the row's preset
     //                 to the active tab's trim, frames it and closes the
     //                 list (trim_presets_apply; the close architect
-    //                 2026-11-19, send CC), and under the BPM form opens
+    //                 2026-11-19), and under the BPM form opens
     //                 the line editor prefilled with the row's value
     //                 (whose Enter and Esc reopen the form on that row,
     //                 bpm_form_commit); the lift's
@@ -9922,7 +9914,7 @@ struct AppState {
         double             scroll_px     = 0.0;
         int                highlight_row = -1;
         FolderOverlayPress press;
-        // THE LISTING'S IDENTITY (architect 2026-11-21, send EE: the list
+        // THE LISTING'S IDENTITY (architect 2026-11-21: the list
         // rows' hover, AppState::FaceFades' THE LIST ROW'S HOVER): minted
         // from the one session counter at every construction — every
         // `= FolderOverlay{}` rebuild and close — and again by the two
@@ -9933,12 +9925,12 @@ struct AppState {
     };
     FolderOverlay folder_overlay;
 
-    // THE VALUE SUB-PAGE'S TWO WORDS OF STATE (architect 2026-11-20, send
-    // EE; paint_handler.cpp's THE VALUE SUB-PAGE). THE THREE OPENERS OF A
+    // THE VALUE SUB-PAGE'S TWO WORDS OF STATE (architect 2026-11-20;
+    // paint_handler.cpp's THE VALUE SUB-PAGE). THE THREE OPENERS OF A
     // LINE EDITOR — the settings page's row
     // (GuiInputHandler::settings_page_commit), the trim presets list's Save
     // As (trim_presets_save_as) and the BPM form's row (bpm_form_commit) —
-    // each close the list as they always did (the overlay and the keyboard
+    // each close the list (the overlay and the keyboard
     // never both stand) and write here, first (seat_value_page), what the
     // sub-page shows that the editor's buffer does not hold:
     //   `name`    THE LABEL'S TEXT, the painter adding the colon: the row's
@@ -10322,8 +10314,7 @@ struct AppState {
 // DOES THE FOLDER OVERLAY STAND? THE ONE PREDICATE, and the reason the panel
 // cannot be half-standing: the band exists exactly while it has an OWNER.
 // Every site that asks reads this one answer, and THIS IS THE INVENTORY —
-// SIXTEEN READERS since 2026-10-21 (eighteen re-derived by grep 2026-09-25 (it read THIRTEEN from
-// 2026-09-03 and had gone stale by four, the fifth arriving that day)); no
+// FIFTEEN READERS, re-grepped 2026-11-21; no
 // other file states a count of its own. `::` marks a read through
 // folder_overlay::stands (the panel's own name for it, forwarding to this),
 // the rest read this directly:
@@ -10334,8 +10325,11 @@ struct AppState {
 //   claim_folder_overlay_press — the row press claim (::, input_pointer.cpp)
 //   clear_folder_overlay_press — the press clear's damage (::, input_pointer.cpp)
 //   touch_point_in_pan_zone — the touch pan zone's carve-out (::, input_pointer.cpp)
-//   run_project's activation hook — the window-activation damage (::, main.cpp)
-//   run_project's run loop — the keyboard slot's reconcile (::, main.cpp)
+//   reconcile_slot_standing — the slot's comparator, the overlay's show
+//     and hide (::, onscreen_keyboard.h)
+//   hover_face_live, hover_face_under_pointer, face_extent and
+//     settle_face_fades — the list rows' hover (::, input_pointer.cpp;
+//     AppState::FaceFades' THE LIST ROW'S HOVER)
 //   apply_touch_nav_update — the two-finger navigation body's refusal: the
 //     band takes no pan and no pinch under any content (input_pointer.cpp)
 //   recompute_redesign_button_hover — the roster walk's tail: a DIALOG
@@ -10371,7 +10365,7 @@ inline bool folder_overlay_stands(const AppState& a) {
 // lifted through the veil (finish_chrome_press_release's head) — the tooltip
 // lamp the one other roster key an overlay leaves live
 // (overlay_admits_button, below); false with nothing standing.
-// ON A GIVEN OWNER TAG (send BB, 2026-11-19): the same answer for `owner`,
+// ON A GIVEN OWNER TAG (2026-11-19): the same answer for `owner`,
 // the standing overlay's or the list a value sub-page was opened from
 // (roster_face_page_owner, below — the openers' lit bit alone reads that
 // form);
@@ -10406,11 +10400,11 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
 // value_page's `opener`, written by the editor's three openers just before
 // their close_picker, read only while the editor stands): the settings page
 // under a settings value, the trim presets list under Save As, the BPM form
-// under its field (architect 2026-11-19, send BB; the sub-page 2026-11-20,
-// send EE). ONE READER, the roster's face: redesign_button_selected's
+// under its field (architect 2026-11-19; the sub-page 2026-11-20).
+// ONE READER, the roster's face: redesign_button_selected's
 // openers, so the list's opener stays lit under its sub-page — and, the
 // on-screen keyboard standing over every editor, the whole roster greyed
-// (redesign_button_enabled's first arm, architect 2026-11-20, send EE),
+// (redesign_button_enabled's first arm, architect 2026-11-20),
 // that opener wears the lit-and-inert look (SETUP under a settings value,
 // PRESETS under Save As, BPM under the BPM field). PAINT ALONE: every key
 // stays dead under the editor's veil (no press, hover, tooltip or chord
@@ -10432,17 +10426,19 @@ inline bool score_viewer_stands(const AppState& a) {
     return a.score_viewer.active;
 }
 
-// DOES A QUESTION'S PAGE OR THE PROGRESS PAGE STAND? (architect 2026-11-20,
-// send EE; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE) —
+// DOES A QUESTION'S PAGE OR THE PROGRESS PAGE STAND? (architect 2026-11-20;
+// paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE) —
 // THE ONE PREDICATE: a prompt up or a batch's progress standing, each a
 // full page over whatever stands — the main page, the `h` view or an
-// overlay, which stays open under it. Its readers are the page's four
+// overlay, which stays open under it. Its readers are the page's
 // consequences, each at its owner: the modal family's box stands, so the
 // waveform is not painted (modal_box_stands, modal_box.h); the bottom icon
 // row yields to the page's answers (paint_handler.cpp's
 // modal_owns_bottom_row); the folder overlay's list is not painted
-// (paint_folder_overlay); and the whole roster greys (roster_greyed_whole,
-// below). THE PAGE NEVER STANDS WITH THE ON-SCREEN KEYBOARD — no road raises
+// (paint_folder_overlay), so no list row hovers (GuiInputHandler::
+// hover_face_live, hover_face_under_pointer, settle_face_fades); the modal
+// area is damaged whole (Viewport::invalidate_modal_dialog_area); and the
+// whole roster greys (roster_greyed_whole, below). THE PAGE NEVER STANDS WITH THE ON-SCREEN KEYBOARD — no road raises
 // one while an editor owns the keyboard: the close road takes every editor
 // down before its question rises (GuiPrompt::request_close); every other
 // raise is a roster key's lift, a chord or an overlay's own button, each
@@ -10483,10 +10479,10 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // declines it, and the PROGRESS MODAL's Cancel cancels the render (A LINE
 // EDITOR, where a typed line is pending, CARRIES NO WORD AT ALL: its
 // sub-page has no button, its commit and its cancel the on-screen
-// keyboard's Enter and Esc — architect 2026-11-20, send EE). CLOSE leaves a surface that asked
+// keyboard's Enter and Esc — architect 2026-11-20). CLOSE leaves a surface that asked
 // nothing — the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER,
 // THE TRIM PRESETS LIST (its buttons' acts return to it; a row's tap, the
-// apply, closes it, architect 2026-11-19, send CC) and THE SCORE VIEWER.
+// apply, closes it, architect 2026-11-19) and THE SCORE VIEWER.
 // AN OVERLAY WITH A SCRUB LEAVES BY ITS LIT OPENER ALONE; EVERY OTHER
 // OVERLAY KEEPS ITS LEAVE BUTTON (architect 2026-11-11, session 107: "overlays
 // that have a scrub shouldn't get a close ... the scrub overlays have a lot
@@ -11019,7 +11015,7 @@ bool render_player_button_enabled(const AppState& a,
 // picker_move_highlight under the list, the Reset Trim arm under it
 // (route_picker_key), the re-lists' whole-window damage); a row's tap
 // (trim_presets_apply) closes the list, the row with it (architect
-// 2026-11-19, send CC).
+// 2026-11-19).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act);
 
@@ -11361,14 +11357,14 @@ GuiRect status_bar_area(const AppState& a);
 // THE WINDOW'S FOOT (the rule at its definition, main.cpp): the clamped
 // window height, the one height the lane table is laid on and the row the
 // on-screen keyboard stands on (onscreen_keyboard::foot_y), the keyboard
-// moving no lane (architect 2026-11-20, send EE).
+// moving no lane (architect 2026-11-20).
 int window_foot_y(const AppState& a);
 
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
 // laid over the window's foot, 2026-10-10 to 2026-10-14 — IS GONE with the
-// overlay: a prompt and a line editor are full pages in the modal family's
-// box since send EE, modal_box.h.)
+// overlay: a question is a full page and a line editor a sub-page in the
+// modal family's box, architect 2026-11-20, modal_box.h.)
 
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT LIES IN (architect 2026-11-07,
 // session 90, his "1 yes 2 yes 3 a 4 agree", and session 91 on his glass:
@@ -11443,7 +11439,7 @@ GuiRect tooltip_damage_band(const AppState& a);
 // folder overlay stands in the modal family's box since 2026-10-14
 // (modal_box.h, its one owner), and the on-screen keyboard's band stands on
 // the window's last rows over the app, nothing relaid (onscreen_keyboard.h's
-// placement block, send EE, 2026-11-20). The two still never both stand —
+// placement block, architect 2026-11-20). The two never both stand —
 // the overlay's owners are not editors, the record at
 // onscreen_keyboard::stands — and each pays its own show and hide in the
 // slot's comparator, onscreen_keyboard::reconcile_slot_standing.)
@@ -12157,7 +12153,7 @@ const char* tempo_cent_step_kind_refusal(const AppState& a,
 // index form's second test, which that form asks after its label-ref test):
 // in target view an enabled member of a coincident run, kCoincidentCollapse
 // StepCard, else nullptr. Its second reader is THE FLAG EDITOR'S UP / DOWN
-// (architect 2026-11-20 / 21, send EE; GuiFlagEditor::step_editor_text),
+// (architect 2026-11-20 / 21; GuiFlagEditor::step_editor_text),
 // which asks the label-ref test of the TEXT it steps — not of the store's
 // row — and this one of the store's row, the coincidence being a fact of
 // the marker's committed place.
@@ -12170,7 +12166,7 @@ const char* tempo_cent_step_coincident_refusal_for(const AppState& a,
 // refuses it in both views. THREE READERS: the kind refusal's index form
 // (warpmarkers_ops.cpp), and through it the act's card and the Up / Down
 // face; and THE FLAG EDITOR'S UP / DOWN on a text that is a reference
-// (architect 2026-11-20 / 21, send EE; GuiFlagEditor::step_editor_text).
+// (architect 2026-11-20 / 21; GuiFlagEditor::step_editor_text).
 inline constexpr const char* kLabelRefHasNoTempoCard =
     "A label reference has no tempo of its own";
 
@@ -12456,7 +12452,7 @@ inline IterBoundWindow iter_bound_tie_window(
 // would put the walk in three places.
 //
 // THE `_from` FORM TAKES THE START AS AN ARGUMENT, the walls the store's:
-// THE BOUND EDITOR'S UP / DOWN (architect 2026-11-20 / 21, send EE;
+// THE BOUND EDITOR'S UP / DOWN (architect 2026-11-20 / 21;
 // GuiFlagEditor::step_editor_text) step the bound the field's text holds,
 // which is not yet the store's, against the same tie window and the same
 // committed partner the step and the commit read. The store form is the
@@ -12601,7 +12597,7 @@ inline PhaseHopWindow phase_iter_bound_tie_window(const AppState& app,
 // stays the order, the pair being kept ordered by the partner clamp.
 // THE `_from` FORM TAKES THE START AS AN ARGUMENT, the warp twin's
 // (iter_bound_step_landing_from: the bound editor's UP / DOWN on its text,
-// architect 2026-11-20 / 21, send EE).
+// architect 2026-11-20 / 21).
 inline int phase_iter_bound_step_landing_from(const AppState& app,
                                               const GuiAudio& audio, int idx,
                                               MarkerCell side, int start,
@@ -16163,7 +16159,7 @@ inline bool playback_launch_playable(const AppState& a,
 //     derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-// THE MODAL GATE IS THE BODY'S FIRST ARM (architect 2026-11-20, send EE):
+// THE MODAL GATE IS THE BODY'S FIRST ARM (architect 2026-11-20):
 // under every editor and under a question's page and the progress page THE
 // WHOLE ROSTER GREYS — roster_greyed_whole the one predicate, the rule and
 // his words at the arm. The veil already swallows every PRESS there at the
@@ -16426,7 +16422,7 @@ inline bool history_view_open_refused_by_publishing(const AppState& a) {
 bool phase_reset_paste_actionable(const AppState& app, const GuiAudio& audio);
 
 // IS THE WHOLE ROSTER GREYED — THE PAGES ON WHICH EVERY ROSTER KEY IS DEAD
-// AND LOOKS IT (architect 2026-11-20, send EE; the rule and its words at its
+// AND LOOKS IT (architect 2026-11-20; the rule and its words at its
 // one reader, redesign_button_enabled's first arm), UNDER EVERY MODAL:
 //   * WHILE THE ON-SCREEN KEYBOARD STANDS, one of the editors owning it —
 //     the term onscreen_keyboard::stands asks, AppState::text_editor_session,
@@ -16459,7 +16455,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // MODAL are MODAL: they take focus and control by definition, so what
     // they cover — the toolbar — is dead behind their veil, AND UNDER EVERY
     // ONE OF THEM THE WHOLE ROSTER GREYS (the first arm below, architect
-    // 2026-11-20, send EE: the dead keys look dead): a question's page and
+    // 2026-11-20: the dead keys look dead): a question's page and
     // the progress page (modal_page_stands), and EVERY EDITOR — the three
     // line editors of the value sub-page, and since 2026-10-25 the lane editors, the flag
     // editor and the iteration bound editor (architect: "acts that need a
@@ -16469,15 +16465,16 @@ inline bool redesign_button_enabled(const AppState& a,
     // predicate, input_handler.h). This is the one record of the rule.
     //
     // THE THREE CLASSES (architect 2026-10-25): THE MODALS above; THE
-    // OVERLAYS, the render player and the picker's five contents (the
+    // OVERLAYS, the render player, the picker's five contents (the
     // project picker, the settings page and the value list it swaps in, the
-    // trim presets list and the BPM form), which end at a pick, a row's open
-    // or a load and also leave on THEIR OPENER KEY — Play Renders, Open
-    // Project, Settings (the page's and the value list's both), Presets and
-    // BPM — and every overlay without a scrub on its leave button too, the
-    // project picker's and the BPM form's Cancel, the settings page's and the
-    // trim presets list's Close (the render player, which has a scrub, leaving
-    // by its opener alone: the rule at kModalCancelLabel, architect
+    // trim presets list and the BPM form) and the score viewer, which end at
+    // a pick, a row's open or a load and also leave on THEIR OPENER KEY —
+    // Play Renders, Open Project, Settings (the page's and the value list's
+    // both), Presets, BPM and Score — and every overlay without a scrub on
+    // its leave button too, the project picker's, the value list's and the
+    // BPM form's Cancel, the settings page's and the trim presets list's
+    // Close (the render player and the score viewer, which have a scrub,
+    // leaving by their opener alone: the rule at kModalCancelLabel, architect
     // 2026-11-11, session 107; the opener's tooltip naming the leave act
     // there, overlay_leave_word), the openers lit and live under them (the overlay arm
     // below, redesign_button_selected), the rest of the roster grey but the
@@ -16496,8 +16493,8 @@ inline bool redesign_button_enabled(const AppState& a,
     // in place and folder delete, the picker's reopen and revert, the trim
     // presets list's save and delete, the score viewer's reset — the
     // question's page takes the view and the controls row IN PLACE OF the
-    // overlay's list (or page) and its own controls (architect 2026-11-20,
-    // send EE), owns the pointer ahead of its router and its veil, and the
+    // overlay's list (or page) and its own controls (architect
+    // 2026-11-20), owns the pointer ahead of its router and its veil, and the
     // overlay stays open under it, untouched; ITS OPENER KEY STAYS LIT AND
     // GREYS WITH THE REST OF THE ROSTER, lit and inert (the first arm
     // below), its press swallowed by the prompt's veil; Cancel returns to
@@ -16509,7 +16506,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // (THE THREE MENU ANCHORS answered first here, from menu_anchor_live,
     // until the menu row's removal, 2026-10-21.)
     // UNDER A MODAL ONLY THE MODAL IS LIVE, AND EVERY ROSTER KEY LOOKS DEAD
-    // — THE RULE'S ONE OWNER (architect 2026-11-20, send EE: "the osk should
+    // — THE RULE'S ONE OWNER (architect 2026-11-20: "the osk should
     // essentially stop all other activity and become the only active element
     // when it's onscreen"; "i agree that simpler is better. i just want to
     // make sure the dead buttons are somehow communicated"; on the greyed
@@ -16848,11 +16845,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // which touched no render (the twin rule); the twin went with the
         // panel on 2026-09-30, and the face reads the plain act alone. The
         // per-tick roster comparator (main.cpp) carries the run's start and
-        // end onto the face. EXCEPT UNDER THE PROGRESS MODAL (2026-10-25):
-        // a batch's run opens that modal, and nothing behind a modal changes
-        // face — dead and ungreyed, the classes' record at this predicate's
-        // head — so the run's grey answers only where no progress modal
-        // stands (a single render's run).
+        // end onto the face. EXCEPT UNDER THE PROGRESS PAGE (2026-10-25):
+        // a batch's run opens that page, under which the first arm has
+        // already greyed the whole roster (roster_greyed_whole, architect
+        // 2026-11-20), so this arm's grey answers only where no progress
+        // page stands (a single render's run).
         case RedesignButton::IconListen:
             return !load_in_place_render_blocked(a) ||
                    a.batch_progress.active;
@@ -18031,10 +18028,10 @@ inline bool redesign_button_enabled(const AppState& a,
 // overlay leaves live, wear their live looks. A MODAL lights no key behind
 // it and puts none out: the bits are the page's it rose over — under a
 // value sub-page the list it was opened from, whose opener stays lit (the
-// openers' arm below, roster_face_page_owner; send BB, 2026-11-19) — and under every
+// openers' arm below, roster_face_page_owner; architect 2026-11-19) — and under every
 // editor, the on-screen keyboard standing, and under a question's page or
 // the progress page, the whole roster greyed
-// (redesign_button_enabled's first arm, send EE, 2026-11-20), each lit
+// (redesign_button_enabled's first arm, architect 2026-11-20), each lit
 // key wears the lit-and-inert look by the same one rule — a standing
 // overlay's opener under its own question among them. Three readers: the painter
 // (which stashes what it painted), main.cpp's staleness comparator and the band's fingerprint
@@ -18237,12 +18234,12 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // until that day.) The five picker contents share the picker's bit,
         // so the tag says whose key is lit (is_folder_overlay_opener) — THE
         // TAG OF THE PAGE WHOSE OPENER THE ROSTER LIGHTS
-        // (roster_face_page_owner; architect 2026-11-19, send BB): the
+        // (roster_face_page_owner; architect 2026-11-19): the
         // standing overlay's, or under a value sub-page the list it was
         // opened from, so SETTINGS stays lit under a settings value, PRESETS
         // under Save As and BPM under the BPM field — lit and inert there, the
         // whole roster greyed while the keyboard stands
-        // (redesign_button_enabled's first arm, send EE).
+        // (redesign_button_enabled's first arm, architect 2026-11-20).
         case RedesignButton::IconListen:
         case RedesignButton::OpenProject:
         case RedesignButton::IconSettings:
@@ -20142,7 +20139,7 @@ enum class TrimHit { None, Begin, End };
 // repaint grabs the zone on screen. Each bound's hit is its GRAB ZONE over
 // the trim lane's whole rows, reaching a little past the bound and further
 // into the span, the two split at the midpoint between the bounds where
-// they would overlap (architect 2026-11-20, send CC; the arithmetic's one
+// they would overlap (architect 2026-11-20; the arithmetic's one
 // owner is trim_endcap_rect and render.h's THE TRIM BAR'S CAPS AND GRABS,
 // the numbers there), the ONE rect owner render_trim_flags publishes from.
 // THE HIT RECT IS THE ZONE, with no tolerance, and the two never overlap.
@@ -20532,8 +20529,8 @@ SweepHighlightChange sweep_highlight_change(
     const SweepHighlightColumns& after);
 
 // THE TRIM BAR'S LOOK — what its painter reads (render_trim_flags; the one
-// table at render.h's trim_bar_tones; architect 2026-11-19 / 2026-11-20,
-// send CC): `held` the part the bar's own press holds — the pair's body
+// table at render.h's trim_bar_tones; architect 2026-11-19 /
+// 2026-11-20): `held` the part the bar's own press holds — the pair's body
 // for the bridge's arm, else the end it took (pending_trim_drag before the
 // crossing, trim_drag after it, `both` / `is_begin` the same in either),
 // from the press that arms it to the lift, a pen or a finger alike —
@@ -20543,7 +20540,7 @@ SweepHighlightChange sweep_highlight_change(
 // the begin while it stands left of it (region_drag.moving_begin, the
 // sweep's write's own order) — the two roads that move the span, which
 // wear Arc's slider:active, the sweep's on its moving end's cap AS AN END
-// HELD (architect 2026-11-20, send DD: "it should look like the end endcap
+// HELD (architect 2026-11-20: "it should look like the end endcap
 // is being dragged b/c effectively that is what it is"), at the lift the
 // bar back to the hover's answer (the pen over the waveform: the pill
 // alone) — and `hovered` the part under the hovering pen

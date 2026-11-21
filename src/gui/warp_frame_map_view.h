@@ -20,7 +20,8 @@
 // `error_out` is non-null the failure's message (the parser's own string) is
 // written there, empty on success — the cache below stores it so the
 // target-view validity gate can distinguish "empty because invalid" from
-// never-built and kick the user back to source view with the popup. Callers
+// never-built and keep the view in source, the refusal one stderr line and
+// nothing on screen (validate_target_view_entry, input_handler.h). Callers
 // in target view route this through render_flags / the trim painters so hit-test
 // math and paint stay in sync.
 // EVERY BUILD IS LOUD: the `quiet` parameter that forwarded into

@@ -2341,7 +2341,7 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
                 input_.touch_capability_lost();
                 // AND A HOVERING PEN LEAVES WITH IT: no HOVER_EXIT is owed to
                 // a window that lost focus, so the pointer's leave (the
-                // tooltip's wait, the popup's item face — the activation hook above
+                // tooltip's wait, the hover face — the activation hook above
                 // has already taken a standing tooltip box down, focus loss
                 // being its hard end) is delivered here, and the pen's Ctrl
                 // bit drops.
@@ -2405,7 +2405,7 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
         // is where the gesture is complete and where the platform's own
         // convention puts it; DOWN repeats ride the consume and fire nothing.
         // Firing here is safe under drain_looper's "nothing may block" rule:
-        // the callback raises a bottom-row prompt or requests an exit and
+        // the callback raises a question's page or requests an exit and
         // returns — it waits on nothing, exactly as the motion path's GUI
         // hooks below do not.
         //
@@ -2674,15 +2674,15 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // it clicked.
             // AND NO FACE HOVERS UNTIL MOTION after such a lift (architect
             // 2026-10-07, the roster's hot face; every hover face
-            // 2026-10-09, Arc's since send CC, 2026-11-20): the UP arm arms
+            // 2026-10-09, Arc's look architect 2026-11-20): the UP arm arms
             // the GUI's latch (set_pen_lift_hook; the rule at
             // GuiInputHandler::pen_hot_latch_).
             //
             // A HOVER ABOVE THE GUI'S PLANE IS NOT A POINTER (architect
             // 2026-09-27: every pen hover effect acts only within the plane,
             // pen_report_in_plane): it takes the EXIT's arm whole — a
-            // standing hover ENDS through the core's leave (the roster's
-            // outline, the tooltip's wait and
+            // standing hover ENDS through the core's leave (the hover
+            // face, the tooltip's wait and
             // a standing tooltip box all go — the leave hook's own list,
             // main.cpp; end_pen_hover) and the Ctrl bit drops — and no
             // enter or motion is delivered. Back within the plane (at or

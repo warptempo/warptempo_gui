@@ -62,10 +62,11 @@ void remap_marker_indices_after_reorder(AppState& app,
 
 // hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
 // references are now explicit arguments. There is no grab tolerance left:
-// the trim grabs are the view bar's span's end zones since 2026-10-09 (the
-// painted arrow buttons from 2026-10-03), each its drawn cap and 4 W of air
-// on either side since 2026-11-20 (send CC: an authored zone, not a
-// tolerance round a target), and the marker surfaces (the cues'
+// the trim grabs are the trim bar's span's end zones since 2026-10-09 (the
+// painted arrow buttons from 2026-10-03), each from 2 W outside its bound
+// to 12 W inside it, a narrow trim's two split at the midpoint (architect
+// 2026-11-20: an authored zone, not a tolerance round a target; render.h's
+// THE TRIM BAR'S CAPS AND GRABS), and the marker surfaces (the cues'
 // triangles and labels) hit on their painted rects, neither with a halo. Both families read a PAINTER'S STASH: the flag
 // lane's (AppState::flag_hit_rects) and, since 2026-09-24, the trim lane's
 // (AppState::trim_bar_hit).
@@ -231,7 +232,7 @@ TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
     // The two rects never overlap — each zone reaches 2 W past its bound and
     // 12 W into the span, and where the two inside reaches would cross they
     // split at the midpoint between the bounds (trim_endcap_rect; render.h's
-    // THE TRIM BAR'S CAPS AND GRABS, architect 2026-11-20, send CC) — so the
+    // THE TRIM BAR'S CAPS AND GRABS, architect 2026-11-20) — so the
     // order of the two tests decides nothing. The bar's hover asks this same
     // test of the same stash (GuiInputHandler::trim_bar_part_under_pointer),
     // so the part that lights is the part a press there takes.

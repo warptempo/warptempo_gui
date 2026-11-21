@@ -169,7 +169,7 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // there; Play on the controls row brings it into view if it was dragged out)
 // and needs no membership list — BUT THE ROW'S TAP, whose lift has already
 // seated the band on the tapped row and whose play seats nothing and scrolls
-// nothing (THE PRESS NEVER SCROLLS, architect 2026-11-21, send EE; play_wav's
+// nothing (THE PRESS NEVER SCROLLS, architect 2026-11-21; play_wav's
 // `tapped`). A USER'S OWN HIGHLIGHT MOVES ARE
 // UNTOUCHED — nothing here fights the band back onto the item, which is why
 // THE SEAT IS GATED ON THE CHANGE and not run at every call: the REPEAT ONE
@@ -436,8 +436,7 @@ struct GuiRenderPlayer {
     // damage): move the highlight by
     // `delta` rows, and seat it on `index` — the click's first half, the open
     // being its second, the list not scrolled (folder_overlay::
-    // seat_tapped_row: the press never scrolls, architect 2026-11-21, send
-    // EE).
+    // seat_tapped_row: the press never scrolls, architect 2026-11-21).
     void move_highlight(int delta);
     void set_highlight(int index);
     // The highlighted row's render entry — non-null exactly when the highlight

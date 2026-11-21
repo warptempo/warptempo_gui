@@ -10,24 +10,24 @@
 // and the BPM form it swaps in) and THE SCORE VIEWER (since 2026-10-26,
 // score_viewer.h, its page the box's interior); and for THE THREE PAGES, a
 // QUESTION'S, THE PROGRESS PAGE and THE VALUE SUB-PAGE, a line editor's
-// (architect 2026-11-20, send EE; below).
+// (architect 2026-11-20; below).
 //
 // (INTERFACE VERSUS MODAL, architect 2026-10-14: the player and the picker
 // stand in the box but are interface, so what they leave dead greys; the
 // prompts, the progress modal and every editor are modal, and under each of
-// them the whole roster greys (send EE) — the rule recorded at
-// redesign_button_enabled's head, app_state.h.)
+// them the whole roster greys (roster_greyed_whole, architect 2026-11-20) —
+// the rule recorded at redesign_button_enabled's head, app_state.h.)
 //
-// THE BOX TAKES THE VIEW (architect 2026-11-18 / 2026-11-19, send Z;
-// tmp/sendY/P2_design_overlays.md §A): the title bar and the top icon row
+// THE BOX TAKES THE VIEW (architect 2026-11-18 / 2026-11-19, the overlays'
+// design, its §A): the title bar and the top icon row
 // above it stay as the main window paints them, the top icon row wearing
 // the face of the page in the view (under an overlay that page's, its opener
 // lit; under a question, the progress page or a value sub-page every key
 // greyed, a lit one — the overlay's opener, or the opener of the list the
 // sub-page was opened from — lit and inert: roster_face_page_owner,
 // redesign_button_enabled's first arm, app_state.h). Across, it runs the
-// panel's width (render.h's well_columns, edge to edge since send Z). Top to
-// bottom:
+// panel's width (render.h's well_columns, edge to edge, architect
+// 2026-11-19). Top to bottom:
 //   1. THE BOX — its first rows THE LINE UNDER THE TOP ICON ROW (the trim
 //      lane's first rows), its last THE LINE OVER THE BOTTOM ICON ROW (the
 //      well's foot), both in the line tone `well_border`, and between them
@@ -41,9 +41,9 @@
 //      render.h's icon_case_w_px / icon_case_h_px), the pad 7 W
 //      (strip_h_px) — on the body tone, its outermost BOXES 6 W INSIDE THE
 //      PANEL (render.h's kEdgeInsetW; materials.h's THE KEY). THE ROW IS
-//      THE PAGE'S THAT STANDS IN THE VIEW (architect 2026-11-19, send BB,
-//      his "i take your recommends for all"; the two pages 2026-11-20, send
-//      EE): the overlay's own controls while an overlay stands, A
+//      THE PAGE'S THAT STANDS IN THE VIEW (architect 2026-11-19, his "i
+//      take your recommends for all"; the two pages architect 2026-11-20):
+//      the overlay's own controls while an overlay stands, A
 //      QUESTION'S ANSWERS AND THE PROGRESS PAGE'S CANCEL, Arc's word buttons
 //      flush right, while one of those pages stands, in place of whatever
 //      row stood there (no timestamp, no tab name, no key, none of an
@@ -64,8 +64,8 @@
 // face's columns 12–83 and its last 2220–2291; the status bar 1394–1439
 // under it.
 //
-// A QUESTION AND THE PROGRESS PAGE ARE FULL PAGES (architect 2026-11-20,
-// send EE: "we shuold remove the popups - it seems those come from gnome and
+// A QUESTION AND THE PROGRESS PAGE ARE FULL PAGES (architect 2026-11-20:
+// "we shuold remove the popups - it seems those come from gnome and
 // xfce just inherited them (the oversized text is the clue). instead, the
 // old prompt eg 'do you want to revert and drop changes?' should come
 // back."; "yes, progress window can go back."): while one stands
@@ -81,7 +81,7 @@
 // The painter and the rule's owner: paint_handler.cpp's THE QUESTION PAGE
 // AND THE PROGRESS PAGE.
 //
-// A VALUE'S EDITOR IS A SUB-PAGE (architect 2026-11-20, send EE: "a subpage
+// A VALUE'S EDITOR IS A SUB-PAGE (architect 2026-11-20: "a subpage
 // where if the user clicks on a value a single line text input is shown ...
 // on that page, the only controls are the osk's esc and enter"; the popups
 // removed, "it seems those come from gnome and xfce just inherited them"):
@@ -94,7 +94,7 @@
 // the rule's owner: paint_handler.cpp's THE VALUE SUB-PAGE.
 //
 // THE ON-SCREEN KEYBOARD STANDS OVER THE PAGE, AND NOTHING IS RELAID FOR IT
-// (architect 2026-11-20, send EE; the rule's one owner onscreen_keyboard.h's
+// (architect 2026-11-20; the rule's one owner onscreen_keyboard.h's
 // placement block): every rect below is the lane table's and takes no
 // keyboard term. Under a value sub-page THE BOX KEEPS ITS WHOLE VIEW, the
 // keyboard over the view's foot, the bottom icon row and the status bar,
@@ -120,8 +120,8 @@
 
 // DOES ANY MEMBER'S BOX STAND — the folder overlay's, THE SCORE VIEWER'S
 // (2026-10-26; score_viewer.h: the page in the interior, paint_modal_dialog's
-// score branch), A QUESTION'S OR THE PROGRESS PAGE (architect 2026-11-20,
-// send EE; modal_page_stands, app_state.h: the view is the page) or THE
+// score branch), A QUESTION'S OR THE PROGRESS PAGE (architect 2026-11-20;
+// modal_page_stands, app_state.h: the view is the page) or THE
 // VALUE SUB-PAGE, which stands exactly while a line editor of the settings
 // editor's buffer does (AppState::dialog_editor_session, the membership's
 // one owner; the same ruling). The waveform's painted rect is empty while
@@ -173,7 +173,7 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
     return GuiRect{box.x, box.y + lw, box.w, box.h - 2 * lw};
 }
 
-// THE PAGE MARGIN (architect 2026-11-20, send EE: "i think we just need a
+// THE PAGE MARGIN (architect 2026-11-20: "i think we just need a
 // little more top and left margin spacing for the other windows, but it
 // should come from arc xfce app not just invented. the lists (picker,
 // player, presets) would then inherit the spacing so as to make it uniform.
@@ -217,7 +217,7 @@ inline int page_margin_cap_top_px() { return scaled_px(kPageMarginCapTopW); }
 inline int page_label_gap_px()      { return scaled_px(kPageLabelGapW); }
 
 // THE PAD OVER A PAGE'S FIRST LINE — THE CAP-TOP ARITHMETIC'S ONE DEFINITION
-// (architect 2026-11-20, send EE; THE PAGE MARGIN's top): the whole device
+// (architect 2026-11-20; THE PAGE MARGIN's top): the whole device
 // px from the view's top to the top of the first line's BOX — a list's first
 // row, a page's first line box — that put THAT LINE'S CAP TOP
 // kPageMarginCapTopW under the view's top: the margin less the cap top's
@@ -239,7 +239,7 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 }
 
 // THE THREE PAGES' LINES — A QUESTION'S PAGE, THE PROGRESS PAGE AND THE
-// VALUE SUB-PAGE, ONE GEOMETRY (architect 2026-11-20, send EE; on the mocks:
+// VALUE SUB-PAGE, ONE GEOMETRY (architect 2026-11-20; on the mocks:
 // the question page TOP-ALIGNED, "progress good", "settings prefer
 // toplaigned"; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE
 // and THE VALUE SUB-PAGE the painters and the rules' owners). In the view
@@ -344,8 +344,9 @@ inline GuiRect modal_panel_rect(const AppState& a) {
 // THE WHOLE AREA A MODAL TAKES: the box and the controls row under it (the
 // on-screen keyboard is its own surface, its damage its own,
 // onscreen_keyboard::slot_damage_rect's block).
-// The slot's show and hide damage (onscreen_keyboard::slot_damage_rect) and
-// the closers' (Viewport::invalidate_modal_dialog_area).
+// The folder overlay's show and hide damage
+// (onscreen_keyboard::slot_damage_rect) and the closers'
+// (Viewport::invalidate_modal_dialog_area).
 inline GuiRect modal_area_rect(const AppState& a) {
     const GuiRect panel = modal_panel_rect(a);
     const GuiRect row   = modal_controls_row_rect(a);

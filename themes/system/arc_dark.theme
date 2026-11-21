@@ -71,7 +71,7 @@
 #                                       the trim bar's pill under the hovering pen
 # OUR OWN FILLS, CARRYING THEIR ALPHA (the 8-digit word's last byte reaches the painter, the box painted at it over
 # whatever lies under; src/gui/theme_roles.h's CARRIED block), send AA's stage D1, 2026-11-19 (DESIGN §6 / §9, his
-# "good to build" on tmp/sendZ/VIEW/Z_07); .95 is the byte F2 (242.25 rounded, .949):
+# "good to build" on the mock Z_07); .95 is the byte F2 (242.25 rounded, .949):
 #   TooltipBackground           4B5162F2 $osd_bg_color, rgba(75, 81, 98, .95) (G3:1430): the tooltip's box
 #   CardBackground              353945F2 xfce4-notifyd's bubble under Arc ($dark_sidebar_bg at .95): a normal (timed) card
 #   CardStandingBackground      F04A50F2 $destructive_color, button.destructive-action (G3:216), at .95: a standing

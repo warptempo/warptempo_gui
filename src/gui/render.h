@@ -242,20 +242,20 @@ struct TrimRange {
 // and `text_on_lit_dim` over a lit-but-inert key's (architect 2026-11-11,
 // session 106).
 // STILL OPAQUE. A BUTTON'S HOVER FACE IS ARC'S (architect 2026-11-18 /
-// 2026-11-20, send CC, reopening 2026-10-02's no hover face): `key_hover_face`
-// over a resting key, word button, on-screen keyboard key and the scrub's
+// 2026-11-20): `key_hover_face` over a resting key, word button, on-screen
+// keyboard key and the scrub's
 // knob under the hovering pen, mixed in and out over Arc's 200 ms, and
 // every other change of a button's state faded as Arc's sheet says (50 ms
-// into a pressed or lit look, 200 ms into any other; send DD, 2026-11-20 —
+// into a pressed or lit look, 200 ms into any other; architect 2026-11-20 —
 // materials.h's THE HOVER; AppState::FaceFades, the one owner); THE
 // TRIM BAR'S PART under the pen — the pill's body or an end's cap — wears
 // `trim_span_hover_face` at once, with no fade, and both caps show
-// (trim_bar_tones; AppState::TrimBarHover; send CC, 2026-11-20); the
+// (trim_bar_tones; AppState::TrimBarHover; architect 2026-11-20); the
 // lists' lit rows are a selection, not a button face, and do not hover —
 // A LIST'S RESTING ROW a tap would act on wears `list_hover_face` under
 // the pen, Arc's `row.activatable:hover` (3 % white over the view), in at
-// once and out over Arc's 150 ms row transition (architect 2026-11-21, send
-// EE; paint_handler.cpp's THE LIST VIEW).
+// once and out over Arc's 150 ms row transition (architect 2026-11-21;
+// paint_handler.cpp's THE LIST VIEW).
 // THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 W outer corners,
 // send Z, 2026-11-19: Arc's button and entry, A BUTTON IS ARC'S BUTTON
 // below), their edges at exact coverage, as every mark placed by time is
@@ -307,8 +307,7 @@ struct TrimRange {
 //                 2026-10-14) — every chrome button face (the band, row 8, the canvas
 //                 column's lanes and the modal family's panel margins are the
 //                 program's panel since 2026-10-09, below);
-//   label         chrome text and glyphs, a prompt's question and the
-//                 progress modal's sentence in the modal family's box;
+//   label         chrome text and glyphs;
 //   selected pair the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
@@ -323,7 +322,10 @@ struct TrimRange {
 //   field_text    the dialog editors' line on the modal family's pane, the
 //                 caret its text (architect 2026-10-03); THE LIST — the
 //                 folder overlay's resting names on the pane (architect
-//                 2026-10-06, paint_folder_overlay) — and THE FLAG EDITOR'S
+//                 2026-10-06, paint_folder_overlay) — a question's line and
+//                 the progress page's sentence and count on the same view
+//                 in the lists' rows' tone (paint_modal_page; architect
+//                 2026-11-20), and THE FLAG EDITOR'S
 //                 text and caret (architect 2026-10-09; EDITING, below);
 //   card_text     a standing notification card's words and glyph (THE
 //                 FLOATING SURFACES, below; the cards' ground and ring
@@ -360,7 +362,7 @@ struct TrimRange {
 //                 rows, the status bar and the erase) is the theme's body
 //                 tone `body_face` (send Z, 2026-11-19), no palette role.
 // THE FLOATING SURFACES — ARC'S TOOLTIP AND NOTIFYD'S CARDS (architect
-// 2026-11-19, send Z: his "good to build" on tmp/sendZ/VIEW/Z_07, "if we
+// 2026-11-19, send Z: his "good to build" on the picture Z_07, "if we
 // can do the transparency, we might as well"; built in send AA's stage D1),
 // each its own look on the one rounded box (paint_floating_box,
 // paint_handler.cpp: no border, no ring), ITS FILL A CARRIED FILL PAINTED
@@ -477,10 +479,10 @@ struct GuiPalette {
     // 106; the trough and the well's lines 2026-11-17; THE ARC PAGE'S SIX
     // 2026-11-19, send Z, theme_roles.h's head: the body tone, the title,
     // sidebar and ruler texts, the disabled key's face and border; THE
-    // POPUPS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
+    // FLOATERS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
     // and the limiter lamp; THE PROGRESS TROUGH, stage D2; THE SCALE'S RIM,
-    // stage D3; THE TWO HOVER TONES, send CC, 2026-11-20; THE LIST ROW'S
-    // HOVER, send EE, 2026-11-21).
+    // stage D3; THE TWO HOVER TONES 2026-11-20; THE LIST ROW'S HOVER
+    // 2026-11-21).
     GuiColor body_face;      // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
@@ -491,7 +493,7 @@ struct GuiPalette {
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
     GuiColor key_face;        // a key's face at rest; the two lamps at rest; the scrub's knob (paint_scale)
     GuiColor key_hover_face;  // that face under the hovering pen, the far end of the hover's mix (materials.h's THE HOVER: the keys, the word buttons, the on-screen keyboard's keys, the scrub's knob)
-    GuiColor list_hover_face; // a list row under the hovering pen, the far end of its mix: Arc's row hover, 3 % white over the view (paint_list_view; architect 2026-11-21, send EE)
+    GuiColor list_hover_face; // a list row under the hovering pen, the far end of its mix: Arc's row hover, 3 % white over the view (paint_list_view; architect 2026-11-21)
     GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
     GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h) and the flag editor's (render_flag_editor_box)
     GuiColor ruler_tick;      // the ruler's ticks
@@ -528,8 +530,9 @@ struct GuiPalette {
     GuiColor scanner;
     // THE PROGRAM'S PANEL (architect 2026-10-09, Cool Edit's canvas
     // grammar): the ground of everything under the title bar — both icon
-    // rows, the status bar, the erase, the modal pane's and the keyboard's
-    // ground — THE BODY TONE `body_face` since 2026-11-19 (architect
+    // rows, the status bar, the erase, the modal family's controls row's
+    // and the keyboard's ground (the modal family's view wears `ruler_face`,
+    // paint_modal_box) — THE BODY TONE `body_face` since 2026-11-19 (architect
     // 2026-11-18, send Z: the title tone "would only apply to the top line,
     // the title bar"; the title bar alone paints `ground`, paint_title_bar).
     GuiColor face;
@@ -703,7 +706,7 @@ void install_true_colors(bool on);
 // well's line under the trough, across the panel's width.
 // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "I thought we agreed
 // no dots on the trim bar"). THE BAR'S STATES AND ITS TWO CAPS (architect
-// 2026-11-19 / 2026-11-20, send CC; THE TRIM BAR'S CAPS AND GRABS in the
+// 2026-11-19 / 2026-11-20; THE TRIM BAR'S CAPS AND GRABS in the
 // lanes block below, the one table at trim_bar_tones): at rest the pill
 // alone in `trim_span_face` (ScrollbarInnerHandle, Arc's slider), as Arc
 // and Kdenlive draw it; under the hovering pen, the bar's own press or a
@@ -711,7 +714,7 @@ void install_true_colors(bool on);
 // cut by one vertical line, ours — and the part under the pen or the press
 // in Thunar's hover tone `trim_span_hover_face` or Arc's slider:active
 // `selected_fill`, a TRIM sweep's moving end wearing `selected_fill` as a
-// held end does (architect 2026-11-20, send DD: "it should look like the
+// held end does (architect 2026-11-20: "it should look like the
 // end endcap is being dragged b/c effectively that is what it is";
 // trim_bar_look, app_state.h). The lane's grabs are the
 // span's two ends and its body (TrimBarHit, below) over the lane's whole
@@ -852,7 +855,7 @@ void install_true_colors(bool on);
 // whole height (waveform_line_px;
 // paint_marker_stems and its head segment, paint_marker_stem_heads;
 // architect 2026-11-04, mock j1, "3 yes"): THE SELECTION STEM (architect
-// 2026-11-05, his pick a2 of tmp/s42, reversing 2026-11-04's coincidence
+// 2026-11-05, his pick a2 of session 42, reversing 2026-11-04's coincidence
 // stem: "dropped, along with the rest of cool edit stuff except a few
 // details like the triangle playhead"). NO OTHER STEM (Live paints none at
 // rest). No box round the label.
@@ -1263,7 +1266,7 @@ int  run_gap_w();
 // like a phone … chiclets, taller than wide"): the live box IN W
 // (scaled_px's axis), read by onscreen_keyboard.h's geometry and nothing
 // else (osk_key_h moving the band's height and so the surface's top, which
-// stands over the app and moves no lane, send EE, 2026-11-20 — the band's
+// stands over the app and moves no lane, architect 2026-11-20 — the band's
 // pads the bottom icon row's own, onscreen_keyboard::pad_top_px /
 // pad_foot_px, 2026-11-19). The key_height
 // seat's shape exactly — file-scope state in render.cpp,
@@ -1578,7 +1581,7 @@ constexpr int kMinWindowHeightPx = 480;
 //     nothing, the first tick of a play seeds and tests nothing, not playing
 //     tests nothing (a lamp lit at the stop keeps its hold out).
 //     THE STRIKE (architect 2026-11-05 night, session 49: "(6) YES — the
-//     strike + the tap"; its paint session 52, his pick m1 of tmp/s52: "the
+//     strike + the tap"; its paint session 52, his pick m1 there: "the
 //     whole dot should turn that color. The whole square"): WHILE THE DEVICE
 //     CANNOT SOUND, THE CLIP LAMP'S WHOLE SQUARE IN `key_dim_ink` (the
 //     disabled key's glyph tone, Default 5D5D5D — "a lighter gray like a
@@ -1679,11 +1682,10 @@ inline int title_bar_h_px() {
 // editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
 // re-authored) — IS GONE with the field, architect 2026-10-14: a line
 // editor's line stands in Arc's entry on its value sub-page
-// (paint_handler.cpp's THE VALUE SUB-PAGE; architect 2026-11-20, send EE).
-// THE TIME FIELDS were never this field: row 8's clock and the render
-// player's position and length are Cool Edit's dark field, its height and
-// its pad program_spec.h's own, the pad 5 W since 2026-10-10, equal to this
-// field's then.)
+// (paint_handler.cpp's THE VALUE SUB-PAGE; architect 2026-11-20).
+// THE TIME FIELDS are no field at all: the bottom icon row's timestamp and
+// the overlays' times are plain text (paint_handler.cpp's THE TIME FIELDS;
+// architect 2026-11-19 / 2026-11-20).)
 
 // (THE RELIEF LINE — relief_line_px, ONE WINDOWS PX, scaled, the width of
 // every line of Windows' DrawEdge grammar from 2026-10-02 — RETIRED
@@ -1742,12 +1744,12 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // from the trim lane's first row to the well's foot and the controls row on
 // the bottom icon row's rows; a question and the progress modal are full
 // pages in that box, their answers on its controls row (architect
-// 2026-11-20, send EE; paint_handler.cpp's THE QUESTION PAGE AND THE
-// PROGRESS PAGE), and a line editor is a sub-page of its own in the
-// box's view (paint_handler.cpp's THE VALUE SUB-PAGE); the on-screen keyboard stands on the window's last
-// rows across the lanes, over the status bar, the bottom icon row and the
-// view's foot, nothing relaid (onscreen_keyboard.h's placement block; send
-// EE, 2026-11-20).
+// 2026-11-20; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS
+// PAGE), and a line editor is a sub-page of its own in the box's view
+// (paint_handler.cpp's THE VALUE SUB-PAGE); the on-screen keyboard stands
+// on the window's last rows across the lanes, over the status bar, the
+// bottom icon row and the view's foot, nothing relaid (onscreen_keyboard.h's
+// placement block; architect 2026-11-20).
 
 // THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 0,
 // at the surface's top since 2026-10-24 (architect 2026-10-09: the program is Cool
@@ -1783,16 +1785,15 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // THE BAND — THE TITLE BAR AND THE TOP ICON ROW (architect 2026-11-18 /
 // 2026-11-19, send Z; DESIGN §1): THE TITLE BAR (title_bar_h_px, its block
 // above), then ARC'S TOOLBAR, ONE PAD ON BOTH SIDES OF THE FACES —
-// kToolbarPadW, 7 W above them and 7 W below (architect 2026-11-20, send EE:
+// kToolbarPadW, 7 W above them and 7 W below (architect 2026-11-20:
 // symmetric on his word, the bottom icon row the same; ARC'S TOOLBAR PADS
 // below). At key_height 28: 28 + 7 + 28 + 7 = 70 W, 140 device rows on the
 // tablet at 200 % (the title bar 0 .. 55, the pad 56 .. 69, the faces 70 ..
 // 125, the pad 126 .. 139), on the body tone, no line between the title
 // bar and the row (a tone change only), the trim lane's first row the line
-// under it. (The band's pads off the on-screen keyboard's key height had
-// no reader left here; the keyboard's band reads the bottom icon row's
-// pad since 2026-11-19, send BB, onscreen_keyboard.h's pad_top_px /
-// pad_foot_px.) Its runs are paint_icon_row's
+// under it. (The on-screen keyboard's band reads the same pad,
+// onscreen_keyboard.h's pad_top_px / pad_foot_px.) Its runs are
+// paint_icon_row's
 // walk (icon_row_seats: each run one linked group, the run gap of ground
 // between two groups, program_run_gap_px). The hit target is the painted
 // box (point_on_key, materials.h); the ground round the groups, between
@@ -1835,16 +1836,16 @@ inline int key_gap_px() {
 // ARC'S TOOLBAR PADS (architect 2026-11-18 / 2026-11-19, send Z; DESIGN
 // §1; the band paragraph above): kToolbarPadW, 7 W, ON BOTH SIDES OF THE
 // FACES IN BOTH ICON ROWS — above and below the top row's, above and below
-// the bottom row's (architect 2026-11-20, send EE: "we dont' want to be
+// the bottom row's (architect 2026-11-20: "we dont' want to be
 // injecitng an asymmetry where there doesnt have to be one"; Arc's toolbar
 // as Thunar and Mousepad draw it stands 8 W on one side and 7 W on the
 // other, a 1-px quirk given up for the symmetric 7 / 7). Through scaled_px,
 // floored at one device px: 14 device px on the tablet at 200 %. THE
 // ON-SCREEN KEYBOARD, standing over the bottom icon row and the status bar
 // on the window's last rows, wears the same pad above and below its grid
-// (onscreen_keyboard.h's pad_top_px / pad_foot_px, send BB). His reason for room under the bottom
-// row: "my hand isn't naturally at the very edge of the screen" — the
-// status bar stands under it (status_bar_lane_h_px).
+// (onscreen_keyboard.h's pad_top_px / pad_foot_px). His reason for room
+// under the bottom row: "my hand isn't naturally at the very edge of the
+// screen" — the status bar stands under it (status_bar_lane_h_px).
 inline constexpr double kToolbarPadW = 7.0;
 inline int toolbar_pad_px() {
     return scaled_px(kToolbarPadW, 1);
@@ -1940,11 +1941,11 @@ inline int program_run_gap_px() {
 //     at rest) — THE WHOLE DISC THE ACCENT, no rim (Arc's slider:active);
 //     UNDER THE HOVERING PEN, at rest, ITS FILL `key_hover_face` inside the
 //     unchanged rim (Arc's scale slider:hover, 505666, measured on his
-//     desktop; architect 2026-11-18 / 2026-11-20, send CC); EVERY CHANGE
+//     desktop; architect 2026-11-18 / 2026-11-20); EVERY CHANGE
 //     AMONG THE THREE — rest, hover, held — FADES OVER ARC'S 200 ms, the
 //     fill and the rim (gtk3 CSS lines 1144 .. 1150: `transition: all 200ms
-//     ...; transition-property: background, border`, no 50 ms line; send DD,
-//     2026-11-20) — the gate and the frames AppState::FaceFades's
+//     ...; transition-property: background, border`, no 50 ms line;
+//     architect 2026-11-20) — the gate and the frames AppState::FaceFades's
 //     (app_state.h), the knob's picture handed to paint_scale as a FaceMix,
 //     the knob's hit the press's own
 //     (scale_knob_hit, on the disc as painted), its damage the disc's hull
@@ -2438,7 +2439,7 @@ WellColumns well_columns(const AppState& a);
 // Authored pixel geometry of THE BOTTOM ICON ROW — THE UNIFIED BOTTOM ROW,
 // the lane rows 8 and 9 merged into (architect-ruled 2026-08-12): one
 // plain-text run at the left — the timestamp, a text pipe and the active
-// tab's name (architect 2026-11-19, send AA; paint_handler.cpp's
+// tab's name (architect 2026-11-19; paint_handler.cpp's
 // bottom_left_run) — and the COPY / PASTE duo, the skips (Go to Start, Go
 // to End), the MARKER-VERB GROUP, the step and
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
@@ -2449,9 +2450,9 @@ WellColumns well_columns(const AppState& a);
 // membership), all one lane over the status bar.
 //
 // THE ROW IS THE STRIP (architect 2026-10-22, the simple layout; Arc's pads
-// since 2026-11-19, send Z): THE PAD (7 W), the program's key (the
+// 2026-11-19): THE PAD (7 W), the program's key (the
 // band's own, read from its accessors above so the rows cannot drift
-// apart), THE PAD AGAIN (7 W; symmetric since 2026-11-20, send EE) —
+// apart), THE PAD AGAIN (7 W, symmetric, architect 2026-11-20) —
 // strip_h_px, at key_height 28 42 W, 84 device rows on the tablet at 200 %
 // (14 + 56 + 14) — on the body tone, no
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
@@ -2462,11 +2463,12 @@ WellColumns well_columns(const AppState& a);
 // CONTROLS ROW (modal_box.h); UNDER A QUESTION'S PAGE OR THE PROGRESS PAGE
 // THE ROWS HOLD THE PAGE'S ANSWERS, Arc's word buttons flush right, and
 // nothing else — no timestamp, no tab name, no key, none of an overlay's
-// controls (architect 2026-11-20, send EE; paint_handler.cpp's
+// controls (architect 2026-11-20; paint_handler.cpp's
 // modal_owns_bottom_row); UNDER EVERY EDITOR THE ON-SCREEN KEYBOARD STANDS
 // OVER THE ROWS and the row yields (onscreen_keyboard.h's placement block,
-// send EE, 2026-11-20); under each of them the top icon row greyed whole
-// above it (redesign_button_enabled's first arm, app_state.h).
+// architect 2026-11-20); under each of them the top icon row greyed whole
+// above it (roster_greyed_whole, redesign_button_enabled's first arm,
+// app_state.h).
 inline int bottom_row_h_px() {
     return strip_h_px();
 }
@@ -2494,17 +2496,18 @@ inline int bottom_row_h_px() {
 // its damage: paint_status_bar and status_bar_text (paint_handler.cpp).
 // INERT CHROME: no hit, no tooltip, no gesture. It stands under every
 // overlay and modal (the controls row above it reading bottom_row_area;
-// architect 2026-11-19, send BB: overlays keep the bottom icon row and the
+// architect 2026-11-19: overlays keep the bottom icon row and the
 // status bar, "which sets the precedent that overlays keep them"), on the
 // window's foot, COVERED BY THE ON-SCREEN KEYBOARD under every editor, its
-// painter yielding there (architect 2026-11-20, send EE: "The status bar
+// painter yielding there (architect 2026-11-20: "The status bar
 // should just be obscured by the OSK"; onscreen_keyboard.h's placement
 // block).
 inline constexpr double kStatusBarPadW = 4.0;
 inline constexpr double kStatusBarPenW = 14.0;
-// THE BOTTOM ICON ROW'S LEFT RUN'S PEN (architect 2026-11-19, send AA,
-// RULINGS §10: "And then we put the timestamp line at 14W"): the timestamp,
-// its text pipe and the tab's name, plain text, from 14 W inside the
+// THE BOTTOM ICON ROW'S LEFT RUN'S PEN (architect 2026-11-19, RULINGS §10:
+// "And then we put the timestamp line at 14W"): the timestamp, its text
+// pipe and the tab's name, plain text pressing nothing (architect
+// 2026-11-20), from 14 W inside the
 // panel's left edge (28 device px on the tablet), the status bar's column
 // (paint_handler.cpp's bottom_left_run).
 inline constexpr double kBottomLeftPenW = 14.0;
@@ -2927,11 +2930,11 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     return label + 2.0 * cell;
 }
 
-// THE TRIM BAR'S CAPS AND GRABS (architect 2026-11-19 / 2026-11-20, sends
-// CC and DD). THE CAP is after Kdenlive's zoom bar, NOT ARC'S, ruled on the
+// THE TRIM BAR'S CAPS AND GRABS (architect 2026-11-19 / 2026-11-20). THE
+// CAP is after Kdenlive's zoom bar, NOT ARC'S, ruled on the
 // mock CC_14 ("a little half circle in each end cap ... the visual of it
 // would give me something to aim at with the pen"; "I would want to be
-// symmetrical") and re-ruled on glass (architect 2026-11-20, send DD: "i'd
+// symmetrical") and re-ruled on glass (architect 2026-11-20: "i'd
 // like to see the encaps radius be the same as the scrollbar's actual end
 // radius but keeping the straight elongtated part of th eendcap"; his
 // words of 2026-11-19: "it should be the same size as the scroll bar
@@ -2954,7 +2957,7 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 //     6 x 8 (the radius 4 px, the straight run's 2.5 rounded to 2), the
 //     tip 3.5 and the cut 9.5.
 //   BOTH CAPS AT EVERY LENGTH, THE END'S OVER THE BEGIN'S (architect
-//     2026-11-20, send DD: "shuold show both,wit the end one being on top
+//     2026-11-20: "shuold show both,wit the end one being on top
 //     like the flags do" — a later flag's label covers an earlier one's):
 //     wherever the look shows caps (trim_bar_tones), both stand, at any
 //     length of the pill, down to its short forms (a disc of its height,
@@ -2968,15 +2971,14 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 //   THE GRABS — each end's ZONE over the trim lane's whole rows, from 2 W
 //     OUTSIDE THE BOUND (trim_grab_outside_px, 4 device px on the tablet) to
 //     12 W INSIDE IT (trim_grab_inside_px, 24 device px): 14 W wide, 28
-//     device px. THE ZONE IS NO LONGER THE CAP WITH THE SAME AIR EACH SIDE:
+//     device px. THE ZONE IS NOT THE CAP WITH THE SAME AIR EACH SIDE:
 //     against the cap as drawn its air is 5 W outside the tip and 4 W
-//     inside the cut line. It keeps the zone he tested on glass and ruled
-//     "good" (architect 2026-11-20, send DD), the one send CC built around
-//     its cap of 2026-11-19 — so it is authored as that zone's own numbers,
+//     inside the cut line. It is the zone he tested on glass and ruled
+//     "good" (architect 2026-11-20), authored as that zone's own numbers,
 //     A CORE kTrimGrabCoreW (6 W) wide whose outer edge stands
 //     kTrimGrabCoreLeadW (1 W) outside the pill's tip, and kTrimGrabAirW
-//     (4 W) of air on each side of the core — the same rounded terms in the
-//     same order as the zone he tested, so its device px are unchanged at
+//     (4 W) of air on each side of the core — the tested zone's rounded
+//     terms in its order, so its device px are the tested zone's at
 //     every gui_scale (100 %: 2 and 12; 125 %: 2.5 and 15.5; 200 %: 4 and
 //     24). The core's inner edge is the cap's cut line wherever the pill's
 //     radius and the straight run round whole (100 %, 200 %); at 125 % it
@@ -3053,7 +3055,7 @@ inline int tooltip_damage_h_px() {
 }
 
 // THE TOOLTIP IS ARC'S (architect 2026-11-19, send Z, his "good to build" on
-// tmp/sendZ/VIEW/Z_07 and "if we can do the transparency, we might as well";
+// the picture Z_07 and "if we can do the transparency, we might as well";
 // DESIGN §6 / §9, built in send AA's stage D1): Arc-Dark's `tooltip`
 // (G3:1428-1436) — ITS BOX THE CARRIED FILL `tooltip_fill` (Arc's
 // $osd_bg_color, rgba(75, 81, 98, .95)) AT ITS OPACITY OVER WHAT LIES UNDER
@@ -3074,9 +3076,9 @@ inline int tooltip_radius_px() { return scaled_px(kTooltipRadiusW, 0); }
 // ARC'S TOOLTIP SHADOW (G3:1528, `tooltip.csd decoration { box-shadow: 0 1px
 // 3px 1px rgba(0,0,0,.25) }`; his settings leave show_popup_shadow off, so
 // the CSS shadow is the one drawn) AS GTK 3.24 DRAWS AN OUTSET BOX-SHADOW
-// (gtkcssshadowvalue.c's paint_box over gtkcairoblur.c; the fetched copies
-// tmp/sendZ/mock3/src_fetch/, reproduced to the byte on his shots by the mock
-// kit, tmp/sendZ/mocks/scripts/arc_kit_z3.py): THE BOX MOVED DOWN
+// (gtkcssshadowvalue.c's paint_box over gtkcairoblur.c, read in GTK's own
+// fetched source and reproduced to the byte on his shots by the mock kit):
+// THE BOX MOVED DOWN
 // kTooltipShadowOffsetW AND GROWN kTooltipShadowSpreadW on every side, its
 // corner radius the box's plus the spread (3 W), filled into an 8-bit mask
 // and BLURRED BY THREE BOX PASSES kTooltipShadowBoxW wide — GTK's
@@ -3536,8 +3538,8 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). On the tablet at 200 % and
 // key_height 28 (its default since send Z) the canvas is 1072 rows,
-// 236-1307 (main.cpp's lane table, re-derived 2026-11-20, send EE: the
-// icon rows' pads 7 W each side): the upper well's band 535 rows
+// 236-1307 (main.cpp's lane table, the icon rows' pads 7 W each side,
+// architect 2026-11-20): the upper well's band 535 rows
 // (236-770), the divider rows 771-772 (one W), the lower well's band 535
 // rows (773-1307) and NO SPARE ROW (1072 less the divider's 2 is even; an
 // odd remainder would be the canvas's last row, ONE CHANNEL'S BAND below).
@@ -4251,7 +4253,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // 2026-09-27) — THE GROWN INNER SHAPE (the inner bars of all columns with
 // their contour, dilated by the `waveform_grow` key) FILLED SOLID in the
 // `waveform_core` role, LIVE'S SurfaceBackground, THE KEY FACE, on every
-// theme (architect 2026-11-07, session 83, his pick i4 of tmp/s83 on real
+// theme (architect 2026-11-07, session 83, his pick i4 of that session on real
 // MAGNIFY-lit captures, Default and Immaterial judged; the one owner
 // theme_roles.h's DERIVATION): his ask a lighter core from a tone the palette
 // already holds, with no antialiasing halo — the candidates mocked the ground
@@ -4266,9 +4268,9 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // compressed bar, because f1's dummy inner was a smooth band a third of
 // the plate's height and one level over the ink needs a large contiguous
 // area to register; 1C1C1C, three levels, ruled in session 33 on mocks
-// m1..m7 of tmp/s33 (core_tones.py, the real capture recolored one tone
+// m1..m7 of that session (core_tones.py, the real capture recolored one tone
 // each: "1c works"), where 1D1D1D was declined for not being a Live tone;
-// 1E1E1E, five levels, his pick i1 of tmp/s38 that night on the real lit
+// 1E1E1E, five levels, his pick i1 of session 38 that night on the real lit
 // capture, read from Live's ControlBackground on every theme 2026-11-06
 // (session 80: his pick was that role's number on Default) until the key
 // face replaced it. The core lies over
@@ -4846,7 +4848,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // LEFT edge, exclusive (x + 1 − inside), x each bound's exact place
 // (TrimBoundColumn::x) and `inside` a zone's inside reach
 // (trim_grab_inside_px, 12 W, 24 device px on the tablet; architect
-// 2026-11-20, send CC), whether the zone is on screen, part on it or
+// 2026-11-20), whether the zone is on screen, part on it or
 // wholly past an edge. In the NARROW case, where the two inside reaches
 // cross and trim_endcap_rect splits the zones at the midpoint, hi is under
 // lo and the gap is empty; a window wholly off one side is
@@ -4912,8 +4914,8 @@ double displayed_trim_ms(int64_t frame,
                          const std::vector<WarpFrameMapSegment>* map);
 
 // The ONE trim GRAB screen-rect owner (named for the endcaps the grabs were
-// until 2026-10-09; the view bar's span's two END ZONES since, around the
-// two caps drawn since 2026-11-20 — THE TRIM BAR'S CAPS AND GRABS): the
+// until 2026-10-09; the view bar's span's two END ZONES since, around its
+// two caps — THE TRIM BAR'S CAPS AND GRABS): the
 // anchoring rule lives here, run by the painter (render_trim_flags), which
 // publishes each zone, clipped to the lane, for the hit test
 // (hit_test_trim_endcap reads TrimBarHit, below) and the bar's hover walk
@@ -4929,10 +4931,10 @@ double displayed_trim_ms(int64_t frame,
 // the box's end, and a begin on the named start a fraction of a px left of
 // the strip has its bound at 0. EACH ZONE REACHES `outside`
 // (trim_grab_outside_px, 2 W) PAST ITS BOUND AND `inside`
-// (trim_grab_inside_px, 12 W) INTO THE SPAN (architect 2026-11-20, send
-// CC): the begin's [B_b − outside, B_b + inside), the end's
+// (trim_grab_inside_px, 12 W) INTO THE SPAN (architect 2026-11-20): the
+// begin's [B_b − outside, B_b + inside), the end's
 // [B_e − inside, B_e + outside).
-// THE NARROW CASE (architect 2026-10-03; the split 2026-11-20, send CC):
+// THE NARROW CASE (architect 2026-10-03; the split 2026-11-20):
 // when the grabs' span B_e − B_b is under two inside reaches — the places
 // read wherever they stand, on screen or off (architect 2026-10-05) — the
 // two inside reaches cross, and THE ZONES SPLIT AT THE MIDPOINT BETWEEN THE
@@ -4990,7 +4992,7 @@ struct TrimBarHit {
 };
 
 // THE TRIM BAR'S STATES — THE ONE TABLE (architect 2026-11-19 / 2026-11-20,
-// send CC, his words on the mocks: "at rest, the scroll bar should probably
+// his words on the mocks: "at rest, the scroll bar should probably
 // be just as it is today. That's what Kden Live does. ... the body of the
 // bar, would turn ... the darker color that Thunar does, and then when it's
 // being dragged, it would turn blue. The end caps would appear when hovering
@@ -4999,7 +5001,7 @@ struct TrimBarHit {
 // not hovered. And when you're hovering the end caps, the body loses the
 // hover."; "When the body is being dragged, the caps should not turn blue.
 // They should stay there. Unhovered, unclicked color, the default text. And
-// yes, this is a deviation from ARC, but it's accepted."; send DD, the
+// yes, this is a deviation from ARC, but it's accepted."; 2026-11-20, the
 // sweep: "trim gesture from icon doens't draw endcaps but it should - it
 // should look like the end endcap is being dragged b/c effectively that is
 // what it is"). A PART of the bar is an end (its grab zone, the cap's) or
@@ -5021,15 +5023,15 @@ struct TrimBarHit {
 //   held end, or the
 //   swept end ........ THAT CAP `selected_fill`, the body at rest, the
 //                      other cap `text` — the sweep IS an end held
-//                      (architect 2026-11-20, send DD)
+//                      (architect 2026-11-20)
 //   hovered body ..... the body `trim_span_hover_face`, BOTH CAPS `text`
 //   hovered end ...... THAT CAP `trim_span_hover_face`, the body at rest,
 //                      the other cap `text`
 //   none ............. the body at rest (`trim_span_face`), NO CAPS — the
 //                      bar as Arc and Kdenlive draw it.
 // WHEREVER CAPS SHOW, BOTH STAND, AT EVERY LENGTH OF THE PILL, the end's
-// over the begin's (THE TRIM BAR'S CAPS AND GRABS; architect 2026-11-20,
-// send DD): the table is of the look alone.
+// over the begin's (THE TRIM BAR'S CAPS AND GRABS; architect 2026-11-20):
+// the table is of the look alone.
 // NO FADE: Arc's `scrollbar slider` carries no transition (arc-theme's
 // `gtk-3.0/gtk-dark.css` as built, its `scrollbar slider` rules, lines
 // 956 .. 960; the 300 ms transition at line 934 is the `scrollbar` trough
@@ -5139,7 +5141,7 @@ struct FlagLaneRects {
 // the stem read) paints THE SELECTION STEM — a
 // solid one-W `cue_outline` line down
 // the canvas's whole height — on every entry (architect 2026-11-05, his
-// pick a2 of tmp/s42, reversing 2026-11-04's coincidence stem), so the
+// pick a2 of session 42, reversing 2026-11-04's coincidence stem), so the
 // stem and its chip can never disagree about a place. The flag PAINTERS
 // are the only producers — the two live columns', and the `h` view's diff
 // lane, which replaces them wholesale while the mode stands. An UNSELECTED
@@ -5427,7 +5429,7 @@ struct FlagEditorBox {
 // (a run's width rounded down to a whole column, which would otherwise clip
 // the caret's reserved column at end-of-text); the glyph-by-glyph travel its
 // minimal-travel rule describes is the value sub-page's entry's, whose box is
-// fixed (paint_handler.cpp's THE VALUE SUB-PAGE; architect 2026-11-19, send AA).
+// fixed (paint_handler.cpp's THE VALUE SUB-PAGE; architect 2026-11-19).
 // LEFT / RIGHT navigate exactly like any one-line field.
 //
 // Takes AppState by NON-CONST reference, alone among the renderers here, and

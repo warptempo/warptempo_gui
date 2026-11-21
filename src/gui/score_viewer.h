@@ -773,9 +773,10 @@ struct GuiScoreViewer {
     // each refused, silently, where its key is grey.
     void set_start();
     void set_end();
-    // RESET: raises its question (DialogTrigger::SCORE_RESET_CONFIRM, Cancel
-    // focused — the head), pausing a live soundtrack first, where its key is
-    // live; confirm_reset is the question's OK.
+    // RESET: raises its question (DialogTrigger::SCORE_RESET_CONFIRM, OK /
+    // Cancel, only OK's own press resetting — the head), pausing a live
+    // soundtrack first, where its key is live; confirm_reset is the
+    // question's OK.
     void raise_reset();
     void confirm_reset();
 

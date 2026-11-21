@@ -165,7 +165,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
 
 // The one owner of the modal-open stop. See the declaration for the decision
 // table (every modal surface's open stops, the lane editors' included,
-// architect 2026-11-20, send EE) and for the refusal-gating rule every caller
+// architect 2026-11-20) and for the refusal-gating rule every caller
 // observes. Pure delegation by design:
 // a modal open needs exactly the gesture stop's teardown and nothing more, so
 // this stays a name for a rule rather than a second mechanism.
