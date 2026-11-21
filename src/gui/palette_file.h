@@ -44,13 +44,11 @@
 // theme_roles.h's DERIVED block), and THE ENABLED CHIP'S FILL,
 // the accent FFAD56 (2026-11-13, session 119) — the
 // static_asserts at the foot are that proof in the build, every one of the
-// forty-seven words with its literal (the two hover tones of send CC,
+// forty-five words with its literal (the two hover tones of send CC,
 // 2026-11-20, a key's 363636 and the pill's 696969, each Default's own
-// number for the role it copies; the dialogs' three of send AA's stage
-// D2, 2026-11-19: the window's frame edge 111111, ControlContrastFrame; its
-// title bar's highlight row and the progress bar's trough 242424,
-// SurfaceArea and ScrollbarInnerTrack over the ground, a Live theme's own
-// numbers — and the scale's rim of stage D3, 2A2A2A, ClipBorder over the
+// number for the role it copies; the progress bar's trough of send AA's
+// stage D2, 2026-11-19, 242424, ScrollbarInnerTrack over the ground, a
+// Live theme's own number — and the scale's rim of stage D3, 2A2A2A, ClipBorder over the
 // ground —
 // the lamp arc's clip lamp the same night, the lit-but-inert key's face and
 // its glyph of 2026-11-11, and the enabled chip's fill of 2026-11-12, retold
@@ -222,7 +220,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 
 // THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
 // (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the forty-seven words with its literal, so
+// 2026-11-01..05 — every one of the forty-five words with its literal, so
 // an edit that moved one of them is a build failure here. The row is Live's
 // Default file through the one derivation (theme_roles.h's head), which the
 // loader runs for every theme file (the proof of 2026-11-06, on the tablet;
@@ -292,8 +290,6 @@ static_assert(kDefault.well_border     == 0x2A2A2A);
 static_assert(kDefault.selection_fill  == 0x637E86);
 static_assert(kDefault.selection_text  == 0x070707);
 static_assert(kDefault.score_pane_face == 0x191919);
-static_assert(kDefault.frame_edge      == 0x111111);
-static_assert(kDefault.title_highlight == 0x242424);
 static_assert(kDefault.scale_trough    == 0x242424);
 static_assert(kDefault.scale_slider_border == 0x2A2A2A);
 static_assert(kDefault.tooltip_fill    == 0xFF363636);

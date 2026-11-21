@@ -14,7 +14,7 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — PLUS ELEVEN ROLES OF OUR OWN (THE
+// own role names, never a derived tone — PLUS TEN ROLES OF OUR OWN (THE
 // FORMAT, below), and the derivation, this file's, turns each into a row of
 // GuiThemeTones at the launch's read.
 //
@@ -26,10 +26,10 @@
 // of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
 // flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
 // the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
-// AND OUR OWN ELEVEN, WindowBackground, TitleForeground and
+// AND OUR OWN TEN, WindowBackground, TitleForeground and
 // SidebarForeground, the three fills TooltipBackground, CardBackground and
-// CardStandingBackground, TitleHighlight and ScaleTrough (send AA's
-// stage D2), ScaleSliderBorder (send AA's stage D3) and the two hover tones
+// CardStandingBackground, ScaleTrough (send AA's stage D2),
+// ScaleSliderBorder (send AA's stage D3) and the two hover tones
 // ButtonHoverBackground and ScrollbarSliderHover (send CC), kOwnThemeRoles:
 // no Live role names them),
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
@@ -59,8 +59,8 @@
 // and our own six of 2026-11-19 (each file's own SurfaceArea and
 // ControlForeground copied, the ROLE-NAMED block's OUR OWN, and its own
 // SurfaceBackground and Alert for the three fills, the CARRIED block; and
-// our own two of send AA's stage D2, each file's own SurfaceArea and
-// ScrollbarInnerTrack copied, and of stage D3, its own ClipBorder, the
+// our own one of send AA's stage D2, each file's own ScrollbarInnerTrack
+// copied, and of stage D3, its own ClipBorder, the
 // ROLE-NAMED block's OUR OWN; and our own two of send CC, 2026-11-20, each
 // file's own SurfaceBackground and ScrollbarInnerHandle copied, ARC'S HOVER
 // below; each header line the record; the converter
@@ -236,15 +236,9 @@
 //                                     stage B, the tooltip's words and a
 //                                     normal card's words and glyph since
 //                                     send AA's stage D1
-//   AND TWO MORE OF OUR OWN FOR THE DIALOGS (send AA's stage D2, 2026-11-19:
-//   xfwm's window round the line editor, paint_handler.cpp's THE DIALOG
-//   WINDOW, and GTK's progress bar, the progress page's),
-//   each file but Arc's its own nearest value, so no Live theme sees them:
-//     title highlight        242424 = TitleHighlight (arc_dark 353B48,
-//                                     xfwm4's assets.svg): the window's
-//                                     title bar's second row; a Live
-//                                     theme's SurfaceArea, the title tone
-//                                     itself
+//   AND ONE MORE OF OUR OWN FOR THE PROGRESS BAR (send AA's stage D2,
+//   2026-11-19: GTK's progress bar, the progress page's), each file but
+//   Arc's its own nearest value, so no Live theme sees it:
 //     scale trough           242424 = ScaleTrough over the ground (arc_dark
 //                                     2D303B, Arc's progress and scale
 //                                     trough): the progress page's bar and
@@ -289,8 +283,6 @@
 //                                     on the bar at all
 //   NEITHER IS A BRIGHT TONE: a surface's own face, never mixed toward the
 //   ground (THE BRIGHT MIX below).
-//   and the window's FRAME EDGE, no role of its own: = ControlContrastFrame
-//   (111111; arc_dark 21252B, xfwm's frame edge), the cue outline's role.
 //   CARRIED (our own three fills, send AA's stage D1, architect 2026-11-19 —
 //   DESIGN §6 / §9, his "good to build" on tmp/sendZ/VIEW/Z_07 and "if we
 //   can do the transparency, we might as well"): a fill PAINTED OVER

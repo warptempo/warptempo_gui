@@ -23,7 +23,7 @@ namespace {
 // THE ROLE TABLE: the roles a theme file holds, each exactly once — EXACTLY
 // THE ROLES A TONE READS (the head's DERIVATION), Live's names, the one
 // nested role flattened to `StandardVuMeter/Maximum` (the head's THE
-// FORMAT), and last OUR OWN ELEVEN (kOwnThemeRoles below). The converter
+// FORMAT), and last OUR OWN TEN (kOwnThemeRoles below). The converter
 // (tools/themes/ask_to_theme.py) reads the names out of this initializer,
 // so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
 // when it joined (StandbySelectionForeground 2026-11-06;
@@ -38,8 +38,7 @@ namespace {
 // kOwnThemeRoles below), and TooltipBackground, CardBackground and
 // CardStandingBackground, OUR OWN THREE FILLS CARRYING THEIR ALPHA, the same
 // day (send AA's stage D1: Arc's tooltip and notifyd's two bubbles), and
-// TitleHighlight and ScaleTrough, OUR OWN TWO MORE, the same day (send AA's
-// stage D2: xfwm's title bar's highlight row, the dialogs' frame, and Arc's
+// ScaleTrough, OUR OWN ONE MORE, the same day (send AA's stage D2: Arc's
 // progress / scale trough), and ScaleSliderBorder, the same day (send AA's
 // stage D3: the rim of Arc's scale's knob, the scrub), and
 // ButtonHoverBackground and ScrollbarSliderHover, OUR OWN TWO FOR ARC'S HOVER
@@ -58,7 +57,7 @@ constexpr std::string_view kThemeRoles[] = {
     "ScrollbarInnerTrack", "ClipBorder",
     "WindowBackground", "TitleForeground", "SidebarForeground",
     "TooltipBackground", "CardBackground", "CardStandingBackground",
-    "TitleHighlight", "ScaleTrough", "ScaleSliderBorder",
+    "ScaleTrough", "ScaleSliderBorder",
     "ButtonHoverBackground", "ScrollbarSliderHover",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
@@ -94,7 +93,6 @@ constexpr OwnThemeRole kOwnThemeRoles[] = {
     {"TooltipBackground", "SurfaceBackground"},
     {"CardBackground",    "Alert"},
     {"CardStandingBackground", "Alert"},
-    {"TitleHighlight",    "SurfaceArea"},
     {"ScaleTrough",       "ScrollbarInnerTrack"},
     {"ScaleSliderBorder", "ClipBorder"},
     {"ButtonHoverBackground", "SurfaceBackground"},
@@ -378,17 +376,10 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.selection_fill      = packed(standby);
     t.selection_text      = packed(standby_text);
     t.score_pane_face     = packed(ink);
-    // THE DIALOG WINDOW'S FRAME (send AA's stage D2, 2026-11-19: xfwm's
-    // frame round the line editor, paint_handler.cpp's paint_xfwm_frame):
-    // its edge ControlContrastFrame
-    // (arc_dark 21252B, xfwm's assets.svg), its title bar's highlight row
-    // our own TitleHighlight (353B48; a Live theme's SurfaceArea, the title
-    // tone, so the row is not seen there); AND ARC'S PROGRESS / SCALE TROUGH
-    // our own ScaleTrough over the ground (2D303B; a Live theme's
+    // ARC'S PROGRESS / SCALE TROUGH (send AA's stage D2, 2026-11-19): our
+    // own ScaleTrough over the ground (2D303B; a Live theme's
     // ScrollbarInnerTrack, so its trim trough's tone), the progress page's
-    // bar.
-    t.frame_edge          = packed(contrast);
-    t.title_highlight     = packed(opaque(roles["TitleHighlight"]));
+    // bar and the scrub's trough.
     t.scale_trough        = packed(over(rgba(roles["ScaleTrough"]), ground_a));
     // ARC'S SLIDER BORDER (send AA's stage D3, 2026-11-19: the scrub's knob,
     // render.h's scrub block): our own ScaleSliderBorder over the ground

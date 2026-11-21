@@ -56,10 +56,7 @@
 #   TitleForeground             AFB8C5  xfwm4's title text on the title bar
 #   SidebarForeground           BAC3CF  $dark_sidebar_fg: the marker labels' ink, the tooltip's words, a normal card's
 #                                       words and glyph
-# OUR OWN TWO MORE, send AA's stage D2, 2026-11-19 (THE DIALOGS: xfwm's window round a question, the line editor
-# and the progress dialog; GTK's progress bar):
-#   TitleHighlight              353B48  xfwm4's frame (assets.svg): the title bar's second row, the highlight under
-#                                       the frame's edge (ControlContrastFrame 21252B the edge itself)
+# OUR OWN ONE MORE, send AA's stage D2, 2026-11-19 (GTK's progress bar):
 #   ScaleTrough                 2D303B  Arc's progress / scale trough (G3's progressbar trough, $_trough_bg_color):
 #                                       the progress dialog's bar and the scrub's trough
 # OUR OWN ONE MORE, send AA's stage D3, 2026-11-19 (Arc's scale, the scrub; GTK's scale slider):
@@ -108,7 +105,6 @@ SidebarForeground=BAC3CF
 TooltipBackground=4B5162F2
 CardBackground=353945F2
 CardStandingBackground=F04A50F2
-TitleHighlight=353B48
 ScaleTrough=2D303B
 ScaleSliderBorder=262933
 ButtonHoverBackground=505666

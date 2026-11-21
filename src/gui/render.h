@@ -466,7 +466,7 @@ struct GuiPalette {
     GuiColor selected_text;   // COLOR_HIGHLIGHTTEXT
     GuiColor field_text;      // COLOR_WINDOWTEXT
     GuiColor card_text;       // COLOR_INFOTEXT (a standing card's words and glyph; a normal card's are sidebar_text)
-    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
+    // THE FLAT LOOK'S TWENTY-SEVEN (materials.h's head owns each rule;
     // members since the theme arc, 2026-11-05, their numbers the installed
     // theme's — Default's quoted at materials.h; the clip lamp the lamp
     // arc's, the same night; the lit key's inert face 2026-11-11, session
@@ -474,7 +474,7 @@ struct GuiPalette {
     // 2026-11-19, send Z, theme_roles.h's head: the body tone, the title,
     // sidebar and ruler texts, the disabled key's face and border; THE
     // POPUPS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
-    // and the limiter lamp; THE DIALOGS' THREE, stage D2; THE SCALE'S RIM,
+    // and the limiter lamp; THE PROGRESS TROUGH, stage D2; THE SCALE'S RIM,
     // stage D3; THE TWO HOVER TONES, send CC, 2026-11-20).
     GuiColor body_face;       // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
@@ -496,8 +496,6 @@ struct GuiPalette {
     GuiColor trim_span_hover_face; // the trim bar's part under the hovering pen, the pill's body or an end's cap (ScrollbarSliderHover; trim_bar_tones)
     GuiColor well_border;     // THE WELL'S LINES, the stereo divider and the status bar's line (paint_well_frame_rows, render_waveform_divider, paint_status_bar); the keys', word buttons' and entries' rings
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
-    GuiColor frame_edge;      // the dialog window's frame edge (xfwm's)
-    GuiColor title_highlight; // the dialog window's title bar's second row
     GuiColor scale_trough;    // the progress page's bar's trough and the scrub's (paint_scale)
     GuiColor scale_slider_border; // the scrub's knob's rim at rest (paint_scale)
     // THE THREE CARRIED FILLS (send AA's stage D1, theme_roles.h's CARRIED

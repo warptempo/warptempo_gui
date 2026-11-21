@@ -40,7 +40,7 @@
 // six are Windows' own element names (ButtonFace, ButtonText, Hilight /
 // HilightText, WindowText and InfoText; InfoWindow and the cards' ring left
 // with the cards' orange, send AA's stage D1, 2026-11-19), the chrome's
-// painters written against them; the TWENTY-NINE after them
+// painters written against them; the TWENTY-SEVEN after them
 // are the flat look's tones (materials.h's head, 2026-11-01..05: the
 // look's own, the lamp arc's clip lamp of 2026-11-05 night, the lit key's
 // inert face of 2026-11-11, session 106, `lit_dim_fill`, the trough and
@@ -78,13 +78,13 @@
 // (display_transform.h's head).
 
 // THE ROLE TABLE — THE ONE ENUMERATION OF THE CHROME'S ROLES (architect
-// 2026-10-04), in GuiPalette's order: the chrome's thirty-five (the six
+// 2026-10-04), in GuiPalette's order: the chrome's thirty-three (the six
 // of 2026-10-04's eight left — the caption's six, 2026-10-05..10-21, left
 // with the captions; the seven unread ones, 2026-11-02, with the overlays'
 // rings; the cards' ground and ring, send AA's stage D1 — and the
-// twenty-nine flat-look tones, the two lamps, the lit key's inert face,
+// twenty-seven flat-look tones, the two lamps, the lit key's inert face,
 // the trough, the well's frame, the Arc page's six, the popups' three
-// carried fills, the dialogs' three, the scale's rim and the two hover
+// carried fills, the progress trough, the scale's rim and the two hover
 // tones among them). The
 // program's roles are the palette's own table (kGuiPaletteRoles, palette_file.h). install_palette
 // (render.cpp) walks it, filling each member off its tone, and
@@ -105,12 +105,11 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"selected_text",   &GuiPalette::selected_text,   &GuiThemeTones::selection_text},
     {"field_text",      &GuiPalette::field_text,      &GuiThemeTones::text},
     {"card_text",       &GuiPalette::card_text,       &GuiThemeTones::card_ink},
-    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head: the text tones, the
+    // THE FLAT LOOK'S TWENTY-SEVEN (materials.h's head: the text tones, the
     // key, the lit key's inert face, the well's tones, the score viewer's
-    // pane, the two lamps; THE DIALOGS' THREE, send AA's stage D2,
-    // 2026-11-19 — the window's frame edge, its title bar's highlight row
-    // and the progress bar's trough; THE SCALE'S RIM, send AA's stage D3,
-    // the scrub's knob; THE TWO HOVER TONES, send CC, 2026-11-20 — a key's
+    // pane, the two lamps; THE PROGRESS TROUGH, send AA's stage D2,
+    // 2026-11-19 — the progress bar's and the scrub's trough; THE SCALE'S
+    // RIM, send AA's stage D3, the scrub's knob; THE TWO HOVER TONES, send CC, 2026-11-20 — a key's
     // face and the trim bar's pill under the hovering pen; THE
     // ARC PAGE'S SIX, architect 2026-11-19, send Z, theme_roles.h's head —
     // the body tone, the title bar's text, the sidebar text, the ruler's
@@ -139,8 +138,6 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     {"trim_span_hover_face", &GuiPalette::trim_span_hover_face, &GuiThemeTones::trim_span_hover_face},
     {"well_border",     &GuiPalette::well_border,     &GuiThemeTones::well_border},
     {"score_pane_face", &GuiPalette::score_pane_face, &GuiThemeTones::score_pane_face},
-    {"frame_edge",      &GuiPalette::frame_edge,      &GuiThemeTones::frame_edge},
-    {"title_highlight", &GuiPalette::title_highlight, &GuiThemeTones::title_highlight},
     {"scale_trough",    &GuiPalette::scale_trough,    &GuiThemeTones::scale_trough},
     {"scale_slider_border", &GuiPalette::scale_slider_border, &GuiThemeTones::scale_slider_border},
     {"tooltip_fill",    &GuiPalette::tooltip_fill,    &GuiThemeTones::tooltip_fill},
