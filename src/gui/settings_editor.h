@@ -26,24 +26,22 @@ struct GuiInputHandler;
 // editor ON THAT ROW'S KEY, ITS ENTRY PREFILLED WITH THE VALUE THE KEY HOLDS,
 // the caret at its end. It is the flag editor's primitive (text_editor::State,
 // kind-dispatched keyboard vocabulary, the whole text selected and a card on
-// a refusal) painted AS THUNAR'S RENAME DIALOG in xfwm's window (send AA's
-// stage D2, 2026-11-19; paint_handler.cpp's THE DIALOG WINDOW: the value in
-// Arc's focused entry, Cancel and OK its window's own buttons, the window
-// titled the row's key with the key and a colon its label — Z_06's words;
-// the label of 2026-10-14, "Setting:", was removed as "pointless that far
-// away"), centered in the box's view, the page it was opened from standing
-// under it there (AppState::dialog_backdrop), all dead: the top icon row
-// greyed whole, SETUP lit and inert (redesign_button_enabled's first arm,
-// roster_face_page_owner, app_state.h; send EE, 2026-11-20), the on-screen
+// a refusal) painted AS THE VALUE SUB-PAGE (architect 2026-11-20, send EE:
+// "a subpage where if the user clicks on a value a single line text input is
+// shown ... on that page, the only controls are the osk's esc and enter";
+// paint_handler.cpp's THE VALUE SUB-PAGE, the owner): the box's view one
+// flat page, on it the row's key and a colon as the label and under it the
+// value in Arc's focused entry across the view, NOTHING ELSE — no title, no
+// frame, no button, no list behind — the top icon row greyed whole, SETUP
+// lit and inert (redesign_button_enabled's first arm,
+// roster_face_page_owner, app_state.h), the on-screen
 // keyboard over the view's foot, the bottom icon row and the status bar
-// (onscreen_keyboard.h's placement block, send EE).
-// THE
-// WINDOW IS Z_06's AND NEVER GROWS WITH THE TEXT (architect 2026-11-19, send
-// AA: "large enough that ... the title ... doesn't get ridiculous, but not
-// so large that the majority of the keys, which are tiny, don't look like
-// they're sitting in a big empty space"): 308 W, its entry 276 W, wider only
-// for a title that would not fit its bar. THE ENTRY IS ONE LINE AND A VALUE
-// LONGER THAN IT SCROLLS SIDEWAYS, GTK'S WAY (the same ruling, reversing
+// (onscreen_keyboard.h's placement block), ITS ENTER AND ITS ESC THE PAGE'S
+// ONLY CONTROLS, the entry's text alone live beside them (a tap or a drag
+// seats the caret).
+// THE ENTRY IS ONE LINE AND A VALUE
+// LONGER THAN IT SCROLLS SIDEWAYS, GTK'S WAY (architect 2026-11-19, send AA,
+// reversing
 // 2026-10-14's "long lines can wrap": "The pen does have a good way to
 // scroll, and those are the left and right arrows of the keyboard. That's
 // exactly why they're there."): the text cut at the entry's inner edges and
@@ -55,7 +53,7 @@ struct GuiInputHandler;
 // whether the key could no longer be retyped, the line's retyping being the
 // only typed road to the keys the page lists no editable row for: "One,
 // agree." — Z_06's "25", the BPM form's field's shape). The key is the
-// open's (page_key) and nothing typed changes it; OK or Enter COMPOSES the
+// open's (page_key) and nothing typed changes it; Enter COMPOSES the
 // assignment from that key and the entry's value — its surrounding
 // whitespace trimmed, a `=` or a space inside it kept (a url's `?v=`, a
 // notes line) — and commits it through the key's own road below. So the
@@ -65,7 +63,7 @@ struct GuiInputHandler;
 // written by its own lever (the padlock key, the view keys and Ctrl+Tab, the
 // gestures, Reset Trim, the score viewer's START / END and its pages, the
 // BPM form and the loads), the per-tab keys his "I won't set it manually"
-// (2026-10-28). Esc or Cancel closes it, and EITHER WAY THE PAGE COMES BACK,
+// (2026-10-28). Esc closes it uncommitted, and EITHER WAY THE PAGE COMES BACK,
 // seated on the row the editor was opened from (architect 2026-10-28 night:
 // "otherwise it's assumed I am editing one key only" — the editor a sub-page
 // of the page, as the value lists are;
@@ -78,9 +76,9 @@ struct GuiInputHandler;
 //
 // TAB COMPLETES, IN TWO STAGES, on the open's key, under the ONE
 // AUTOCOMPLETE MODEL (route_modal_editor_key, input_key_dispatch.cpp: a Tab
-// that advanced the buffer is consumed, one that did not walks the dialog's
-// focus ring onto OK and Cancel — so a second Tab, or a Tab that completes
-// nothing, is the walk; Tab shows no list, the popups being gone — THE LISTS
+// that advanced the buffer and one that did not are both consumed — a
+// second Tab, or a Tab that completes nothing, is silent, the sub-page
+// having no button to walk to; Tab shows no list, the popups being gone — THE LISTS
 // are the settings page's keys and THE VALUE LISTS, a listed key's values in
 // the folder overlay (kSettingsValueListKeys below), opened by the page's
 // row for that key, never by Tab, a pick committing through this editor's
@@ -507,11 +505,12 @@ struct GuiSettingsEditor {
     //
     // IT RETURNS WHETHER THE BUFFER CHANGED, which is the ONE AUTOCOMPLETE
     // MODEL's whole question (architect 2026-08-13: "we should use one model
-    // for all autocompletes" — Tab offers the completion first and walks the
-    // modal's focus ring when it did not advance; the rule is stated once at
-    // route_modal_editor_key's Tab arm, input_key_dispatch.cpp, and the typed
-    // `=` this completion rode for part of that day is reverted with it). Every
-    // no-op answers false, so each is a Tab that walks.
+    // for all autocompletes" — Tab offers the completion and is silent when
+    // it did not advance, architect 2026-11-20, send EE; the rule is stated
+    // once at route_modal_editor_key's Tab arm, input_key_dispatch.cpp, and
+    // the typed `=` this completion rode for part of that first day is
+    // reverted with it). Every no-op answers false, so each is a Tab that
+    // does nothing.
     bool autocomplete_value();
 
     // THE DEVICE KEYS' COMMIT — ONE BODY, TWO DOORS (architect 2026-10-25,

@@ -202,8 +202,7 @@ struct GuiInputState {
     // construction at any repeat delay. A PHYSICAL press takes the
     // other arm — since 2026-08-01 rapid manual taps of the same kind merge too,
     // on a fixed 500 ms window plus a subject test, and presses beyond it stay
-    // separately undoable. The modal focus ring's Enter/Space arm consumes a
-    // repeat outright (a press-and-lift act fires once), and the platform's
+    // separately undoable. The platform's
     // own consumed-edge sites read it so a burst never disarms itself.
     bool     synthesized_repeat  = false;
 };

@@ -26,14 +26,14 @@
 // architect 2026-11-20: GTK's "large" was the popup's — "the oversized text
 // is the clue".)
 // THE USES: BODY 12 (the lists, the cards, a question's and the progress
-// page's sentence, the dialog editor's words and entry,
+// page's sentence, the value sub-page's label and entry, the word buttons,
 // the NOISE number, the status bar), PROGRAM 12 (the
 // clocks — the bottom icon row's timestamp and the render player's two
 // time labels — the tab's name and the tooltip's name line), LABEL 12 (the cues'
 // labels and the lane's editors, the history lane's labels with them),
 // HINT 12 (the tooltip's hint line), BOLD 12 (THE TITLE BAR: the brand and
-// its right group, render.h's title bar block; the dialogs' window titles
-// and the lists' group headings, send AA's stage D2), SMALL 10 (the ruler's
+// its right group, render.h's title bar block; the lists' group headings,
+// send AA's stage D2), SMALL 10 (the ruler's
 // digits), KEYS 12 (the on-screen keyboard's caps — the default of the
 // one LIVE size, the `osk_font_px` tuning key's, GuiFont below) and
 // CAPTION 10 (the progress page's count, above). The rows
@@ -112,14 +112,14 @@ inline constexpr std::size_t kGuiFaceCount = 8;
 // initializer, so a file added here is packed with no second list; the
 // backend hands the bytes in in this order, and a use names its file by its
 // index here — the Regular read by the body text and the keyboard's caps,
-// the Bold by the title bar, the dialogs' titles, the lists'
+// the Bold by the title bar, the lists'
 // headings and the ruler's digits (the head). Both
 // are TrueType
 // (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "LiberationSans-Regular.ttf", // 0: the body text
-    "LiberationSans-Bold.ttf",    // 1: the title bar, the ruler, the dialogs
+    "LiberationSans-Bold.ttf",    // 1: the title bar, the ruler, the headings
 };
 
 // THE PIXEL TABLE (the head): per use, in GuiFace's order, the file it is

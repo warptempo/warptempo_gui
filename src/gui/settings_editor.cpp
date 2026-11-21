@@ -56,7 +56,7 @@ std::string trim_ws(const std::string& s) {
 // left on, because the completer appends at the ENTRY'S end — a value that does
 // not end where the buffer ends has nothing to append to, and letting the
 // trailing bytes stay in the tail is what makes such a Tab match no name and
-// walk the ring instead of writing the completion past the gap.
+// do nothing instead of writing the completion past the gap.
 std::string ltrim_ws(const std::string& s) {
     size_t a = 0;
     while (a < s.size() &&
@@ -133,7 +133,7 @@ std::vector<std::string> folder_names(const std::filesystem::path& dir,
         // `.config` and a `.cache`, and with an empty tail those join the
         // match set and drag the common prefix to nothing, so the Tab that
         // most naturally asks "what is here" would advance by zero characters
-        // and walk the focus ring instead. A tail beginning with `.` says the
+        // and do nothing. A tail beginning with `.` says the
         // hidden names are the ones wanted and lets them all through.
         if (!name.empty() && name[0] == '.' &&
             (tail.empty() || tail[0] != '.')) continue;
@@ -145,7 +145,7 @@ std::vector<std::string> folder_names(const std::filesystem::path& dir,
 }
 
 // THE FOLDER-NAME MATCH — the path completer's advance over that listing:
-// a Tab that completes nothing walks the ring (the one autocomplete model).
+// a Tab that completes nothing is silent (the one autocomplete model).
 // The answer is the matches' count and the ADVANCE past `tail`, their longest
 // common prefix on a codepoint boundary less the tail (empty when the
 // boundary cut took it to the tail or below: the matches diverge inside one
@@ -444,7 +444,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
         const GuiScoreViewerValue& v = **sv;
         // THE FOLDER: the commit READS IT, the load's own road
         // (score_pages.h's three outcomes), so a typed path is the score on
-        // screen at the OK — the SCORE key lit or grey by the next frame. A
+        // screen at the Enter — the SCORE key lit or grey by the next frame. A
         // MALFORMED pages.txt refuses here with the reader's own reason, the
         // editor's immediate courtesy (the load would take it as no score
         // and one stderr line); an ABSENT folder commits, the key grey and a
@@ -781,7 +781,7 @@ void GuiSettingsEditor::commit() {
 // `font` had arms here 2026-10-09..10-12; each left
 // with its key, and an `icons` arm of another meaning, the icon set, joined
 // 2026-11-17; `waveform`, the color presets' key, 2026-10-14..11-01.) The
-// commit is the line editor's OK or Enter for the keys whose row opens it,
+// commit is the line editor's Enter for the keys whose row opens it,
 // and a list row's tap for the six keys with a value list
 // (kSettingsValueListKeys, settings_editor.h), whose rows open the list and
 // never the line editor — ONE BODY BEHIND BOTH DOORS (apply_device_setting
@@ -846,7 +846,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // TRUE COLORS (architect 2026-10-21, the Settings popup's "True Colors"
     // command row made a key): one of the two words under its one owner
     // (parse_true_colors, device_config.h), APPLIED LIVE AT THE COMMIT, which
-    // is the OK's (or Enter's) or the value list's row tap, through
+    // is the line editor's Enter or the value list's row tap, through
     // the toggle's own apply shape (GuiInputHandler::apply_true_colors — the
     // switch's bit, the icon rasters, the plate or the flag cache, the whole
     // window), so NO CARD: the colors on screen are the
@@ -868,7 +868,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // the list as the launch read it; a slug no row bears, which the value list
     // never names, refused with kThemeGrammarReason, device_config.h: the
     // reader's shape test is not this commit's, architect 2026-11-06), APPLIED
-    // LIVE AT THE COMMIT, which is the OK's (or Enter's) or the value list's
+    // LIVE AT THE COMMIT, which is the line editor's Enter or the value list's
     // row tap, through the theme's own apply shape
     // (GuiInputHandler::apply_theme — the palette reinstalled off the row at
     // the live `bright_mix`, the icon rasters, the plate or the flag cache, the
@@ -1173,7 +1173,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // THE ICON SET (architect 2026-11-14, session 123: its own key, not the
     // theme's; 2026-11-17, session 140: his set Papirus): one of the two words
     // under its one owner (parse_icons, device_config.h), APPLIED LIVE AT THE
-    // COMMIT, which is the OK's (or Enter's) or the value list's row tap,
+    // COMMIT, which is the line editor's Enter or the value list's row tap,
     // through the set's one live act (GuiInputHandler::apply_icons — the set
     // chosen, the icon rasters dropped, the whole window), so NO CARD: the
     // glyphs on screen are the answer; a failed write keeps the live value for
@@ -1268,8 +1268,8 @@ bool GuiSettingsEditor::complete_path_value(const std::string& value) {
 
 // Returns whether the buffer CHANGED — the one autocomplete model's question
 // (the rule is stated at route_modal_editor_key's Tab arm,
-// input_key_dispatch.cpp): true consumes the Tab that ran it, false lets that
-// Tab walk the modal's focus ring. Every refusal below answers false.
+// input_key_dispatch.cpp): the Tab that ran it is consumed either way, a
+// false answer a Tab that did nothing. Every refusal below answers false.
 bool GuiSettingsEditor::autocomplete_value() {
     if (!text_editor::is_active(app.settings_editor)) return false;
     const std::string pending = app.settings_editor.pending;

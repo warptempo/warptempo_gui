@@ -192,49 +192,41 @@ void Viewport::invalidate_tab_name_area() {
 // has stood in the row since 2026-08-13, and the row's own tenants come back
 // on a close). No cell arithmetic: the rects below are the modal family's own
 // geometry, the lane alone covering only what keeps to the row, which a
-// page's and a dialog editor's box does not (below) — the stash's owner the
-// one published bit read, and only to say whether a box stood last frame.
-// A STANDING DIALOG EDITOR'S EDITS do not come through here either: they
-// take the box's interior alone (invalidate_dialog_editor_box, below).
+// page's box does not (below) — the stash's owner the one published bit
+// read, and only to say whether a box stood last frame.
+// A STANDING LINE EDITOR'S EDITS do not come through here either: they
+// take the entry's box alone (invalidate_dialog_editor_box, below).
 // The OPENERS do not come through here — nothing is
 // painted before a surface's first paint, so they invalidate the whole
 // window — nor do a question's raise, replacement and leave or the progress
 // page's open and close, each a whole-window damage at its own site. Caller
 // inventory at the declaration.
-// A QUESTION AND THE PROGRESS PAGE ARE FULL PAGES IN THE MODAL FAMILY'S BOX
-// (architect 2026-11-20, send EE; paint_handler.cpp's THE QUESTION PAGE AND
-// THE PROGRESS PAGE) and A DIALOG EDITOR IS A DIALOG IN XFWM'S WINDOW
-// standing in the box's view (send AA's stage D2, 2026-11-19;
-// paint_handler.cpp's THE DIALOG WINDOW) — so while one of them stands, OR
-// WHILE THE LAST PAINT DREW ONE (the stash's owner, which a
-// closer reads before any paint: its surface is gone from the state but not
-// yet from the screen), the damage is the lane UNITED WITH THE MODAL
-// FAMILY'S WHOLE AREA (modal_area_rect — the line under the top icon row to
-// the bottom icon row's foot: the page whole, and the editor's room) AND,
-// FOR A DIALOG EDITOR, THE WINDOW'S PAINTED EXTENT as last published (the
-// window and its shadow's reach, ModalDialogGeometry::box), so a close
-// erases the window and its shadow and brings the lanes, the canvas and the
-// bottom icon row back. A
-// dialog editor's close takes the keyboard with it, whose hide damages its
-// own surface — the box's foot, the bottom icon row and the status bar it
-// covered (onscreen_keyboard::reconcile_slot_standing, send EE). Under the render
-// player and
+// A QUESTION, THE PROGRESS PAGE AND A LINE EDITOR'S VALUE SUB-PAGE ARE FULL
+// PAGES IN THE MODAL FAMILY'S BOX (architect 2026-11-20, send EE;
+// paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE and THE VALUE
+// SUB-PAGE) — so while one of them stands, OR WHILE THE LAST PAINT DREW ONE
+// (the stash's owner, which a closer reads before any paint: its surface is
+// gone from the state but not yet from the screen), the damage is the lane
+// UNITED WITH THE MODAL FAMILY'S WHOLE AREA (modal_area_rect — the line
+// under the top icon row to the bottom icon row's foot: the page whole), so
+// a close erases the page and brings the lanes, the canvas and the bottom
+// icon row back. A line editor's close takes the keyboard with it, whose
+// hide damages its own surface — the box's foot, the bottom icon row and
+// the status bar it covered (onscreen_keyboard::reconcile_slot_standing,
+// send EE). Under the render player and
 // the picker the controls row is the lane's own rows, and their
 // list's damage is the folder overlay's.
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
     const AppState::ModalDialogOwner painted = app.modal_dialog.owner;
-    if (modal_page_stands(app) || modal_box_dialog_stands(app) ||
+    if (modal_page_stands(app) || app.dialog_editor_session() != 0 ||
         score_viewer_stands(app) ||
         painted == AppState::ModalDialogOwner::Prompt ||
         painted == AppState::ModalDialogOwner::Editor ||
         painted == AppState::ModalDialogOwner::Progress ||
         painted == AppState::ModalDialogOwner::Score)
         invalidate_rect(modal_area_rect(app));
-    if (app.modal_dialog.valid &&
-        painted == AppState::ModalDialogOwner::Editor)
-        invalidate_rect(app.modal_dialog.box);
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
     // published rect and the band every seat of it lies in
     // (tooltip_damage_band), which holds the recomposed box whole.
@@ -246,26 +238,16 @@ void Viewport::invalidate_modal_dialog_area() {
     }
 }
 
-// A STANDING DIALOG EDITOR'S EDIT — THE ENTRY'S BOX as the editor's window
-// last published it (ModalDialogGeometry::field, the stash naming this
-// editor's session): the one-line entry holds everything an edit, a scroll
-// step or the caret's blink changes, and the window never moves or grows
-// with the text (architect 2026-11-19, send AA). Before the session's first
-// paint — whose open damaged the whole window — the box's view, the room the
-// window is centered in (the lane table's, ending over the bottom icon row,
-// the on-screen keyboard over its foot), grown by the window's
-// shadow's reach (modal_box.h's xfwm_shadow_rect), every pixel the window
-// can lay down. The rule and the
-// caller inventory at the declaration, viewport.h.
+// A STANDING LINE EDITOR'S EDIT — THE VALUE SUB-PAGE'S ENTRY'S BOX
+// (modal_box.h's modal_page_lines, `entry`): the one-line entry holds
+// everything an edit, a scroll step or the caret's blink changes, and it is
+// A FACT OF THE VIEW ALONE — the same rect whatever the text and whichever
+// of the three line editors stands, before its first paint and after — so
+// this asks the geometry and reads no stash (the rect the painter publishes
+// as ModalDialogGeometry::field is this one). The rule and the caller
+// inventory at the declaration, viewport.h.
 void Viewport::invalidate_dialog_editor_box() {
-    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    if (dlg.valid && dlg.owner == AppState::ModalDialogOwner::Editor &&
-        dlg.session == app.settings_editor.session && dlg.field.w > 0 &&
-        dlg.field.h > 0) {
-        invalidate_rect(dlg.field);
-        return;
-    }
-    invalidate_rect(xfwm_shadow_rect(modal_box_interior_rect(app)));
+    invalidate_rect(modal_page_lines(app).entry);
 }
 
 // THE NOTIFICATION STACK'S DAMAGE — the one bound of the cards that

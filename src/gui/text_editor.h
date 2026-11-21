@@ -39,8 +39,8 @@
 //     `cursor_pos` and `selection_anchor` are boundaries by construction and
 //     no operation can split a character.
 //   - THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30, its
-//     one producer): its characters, Backspace, Enter, Esc, Tab (the dialog
-//     ring's and the completion's, upstream of this module), Copy and Paste
+//     one producer): its characters, Backspace, Enter, Esc, Tab (the
+//     completion's, upstream of this module), Copy and Paste
 //     (Ctrl+C / Ctrl+V, the two keys' own ctrl), and since 2026-11-08
 //     (sessions 95 / 96) LEFT and RIGHT — the caret, and with the latched
 //     Shift the selection — and the pass key. THE BARREL HAS NO ROAD ON ANY
@@ -229,12 +229,12 @@ constexpr int kMaxPendingCharsBpmField[3] = {
 // filter, is refused silently (the recall's rule, GuiSettingsEditor::open)
 // and the entry opens empty.
 //
-// THE DIALOG EDITORS' ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY
+// THE LINE EDITORS' ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY
 // (architect 2026-11-19, send AA: "The pen does have a good way to scroll,
 // and those are the left and right arrows of the keyboard. That's exactly
 // why they're there."), so a value as long as this cap travels through the
-// 276 W entry on `view_offset_px` below (paint_handler.cpp's THE DIALOG
-// WINDOW, the editor arm).
+// value sub-page's entry on `view_offset_px` below (paint_handler.cpp's THE
+// VALUE SUB-PAGE).
 constexpr int kMaxPendingCharsSettings = 1024;
 // THE TRIM PRESET'S NAME (architect 2026-10-28 night). A POLICY CEILING like
 // the settings value's — a name is free text with no widest spelling — sized
@@ -263,7 +263,8 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // the same open, the same modal contract and the same commit route, differing
 // only in what the bytes mean, exactly as the side bit differs in which bound
 // they name. THERE ARE FIVE KINDS AND THREE OF THEM ARE
-// DIALOG EDITORS (SettingsAssignment, TrimPresetName, BpmField), ALL THREE
+// THE LINE EDITORS OF THE VALUE SUB-PAGE, "the dialog editors" in the names
+// (SettingsAssignment, TrimPresetName, BpmField), ALL THREE
 // ON THE SETTINGS EDITOR'S BUFFER (AppState::settings_editor) since the BPM
 // form, architect 2026-10-29; the two top-strip kinds (FlagPayload,
 // IterBound) share the flag editor's State and paint in the marker lane.
@@ -277,9 +278,9 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // 2026-10-28 night) is THE TRIM PRESET'S NAME EDITOR, the trim presets list's
 // Save As (GuiInputHandler::trim_presets_save_as, which Save's press on an
 // empty list runs too): it rides the settings
-// editor's State (AppState::settings_editor, the dialog line editor's one
-// buffer), the settings editor's shape — the box its edit control, OK and
-// Cancel, the on-screen keyboard on the glass — opened empty, its commit the
+// editor's State (AppState::settings_editor, the line editor's one
+// buffer), the settings editor's shape — the value sub-page's entry, the
+// on-screen keyboard's Enter and Esc — opened empty, its commit the
 // name's (trim_preset_name_refusal, trim_presets_file.h). (The color picker's
 // one field — its hex field and its name ask, two kinds — stood
 // 2026-10-07..14 and left with the picker. A fifth,
@@ -300,9 +301,9 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // LIST of the editors, and EVERY ONE IS A MODAL since 2026-10-25: the
 // modality predicate (GuiInputHandler::keyboard_modal_editor_active) reads
 // AppState::text_editor_session, which covers all five kinds;
-// AppState::dialog_editor_session names the three DIALOG kinds
+// AppState::dialog_editor_session names the three LINE kinds
 // (SettingsAssignment, TrimPresetName and BpmField, all on the settings
-// editor's buffer) for the questions only a dialog has.
+// editor's buffer) for the questions only the value sub-page has.
 enum class Kind {
     FlagPayload,
     SettingsAssignment,
@@ -406,8 +407,8 @@ struct State {
     //
     // ITS PAINTER WRITES IT AND READS IT, ONE PER EDITOR STATE: the marker
     // lane's (render_flag_editor_box) for the flag editor, and since
-    // 2026-11-19 (architect, send AA) the dialog window's editor arm
-    // (paint_handler.cpp's THE DIALOG WINDOW) for the dialog line editor,
+    // 2026-11-19 (architect, send AA) the value sub-page's
+    // (paint_handler.cpp's paint_value_page) for the line editor,
     // whose one-line entry scrolls sideways, GtkEntry's adjust_scroll: the
     // offset clamped to the run's own travel past the entry's inner width,
     // then moved only when the caret would leave that width, by just enough.
@@ -629,10 +630,8 @@ bool cursor_visible_now(const State& s);
 void touch_blink(State& s);
 
 // RESTART THE BLINK PHASE ALONE, the caret unmoved — for the callers that
-// move nothing: the modal dialog's focus ring walking
-// back onto the FIELD (2026-08-13), the field taking the focus back at a
-// press, a finger's caret drag ending where its last frame seated the caret,
-// and an insert the capacity refused. Each restarts the phase so the caret
+// move nothing: a finger's caret drag ending where its last frame seated the
+// caret, and an insert the capacity refused. Each restarts the phase so the caret
 // shows at once rather than possibly landing in the dark half of a period it
 // kept running through.
 void restart_blink(State& s);

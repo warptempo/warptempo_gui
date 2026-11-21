@@ -666,8 +666,8 @@ inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
 // line on the folder overlay's BpmForm content and its own commit on the
 // dialog line editor (text_editor::Kind::BpmField, whose session's `target`
 // is the field's index here; the editor holds the field's value alone, the
-// key its window's title and label, architect 2026-11-19, send AA). The keys
-// are the rows' spellings and the one table the rows, the editor's title
+// key its sub-page's label, architect 2026-11-19, send AA). The keys
+// are the rows' spellings and the one table the rows, the editor's label
 // and the commit's sentence read.
 enum class GuiBpmField { Beats = 0, Low = 1, High = 2 };
 inline constexpr int kBpmFieldCount = 3;

@@ -4092,11 +4092,11 @@ void GuiInputHandler::run_history_revert() {
     close_history_mode();
 }
 
-// The DIALOG editors alone (the settings editor's buffer in its three kinds,
-// the settings value, the trim preset's name and the BPM form's value) — the
-// membership is AppState::dialog_editor_session's and nothing here restates
-// it. It answers
-// a dialog's own questions (its field, its buttons, its ring); modality is
+// The LINE editors of the value sub-page alone (the settings editor's buffer
+// in its three kinds, the settings value, the trim preset's name and the BPM
+// form's value) — the membership is AppState::dialog_editor_session's and
+// nothing here restates it. It answers
+// the sub-page's own questions (its entry's Tab); modality is
 // keyboard_modal_editor_active's since 2026-10-25, when the lane editors
 // became modals too. The readers and the record are at the declaration, in
 // input_handler.h.
@@ -4130,15 +4130,13 @@ bool GuiInputHandler::keyboard_modal_editor_active() const {
 
 namespace {
 
-// THE MODAL FOCUS RING'S WALK KEY — the ONE predicate four sites read (the
-// keyboard-modal gate's admission, the ring's own walk, the completion arm
-// and repeat_eligible's ring arm just below), so the spelling cannot drift
-// apart the way hand-kept lists would. BARE TAB EXACTLY, the forward walk
-// (architect 2026-10-30: the on-screen keyboard's Tab key, its one producer,
-// carries no shift — the latched Shift rides LEFT and RIGHT alone, since
-// 2026-11-08 — so the reverse walk had no producer and went; Ctrl+Tab is the
-// tab-cycle family's, never this ring's).
-bool modal_ring_tab(GuiKey key, GuiInputState mods) {
+// A LINE EDITOR'S COMPLETION KEY — the ONE predicate its two sites read (the
+// keyboard-modal gate's admission and the completion arm,
+// route_modal_editor_key), so the spelling cannot drift apart. BARE TAB
+// EXACTLY (architect 2026-10-30: the on-screen keyboard's Tab key, its one
+// producer, carries no shift — the latched Shift rides LEFT and RIGHT alone,
+// since 2026-11-08; Ctrl+Tab is the tab-cycle family's, never an editor's).
+bool modal_editor_tab(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Tab && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
@@ -4166,40 +4164,9 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         app.render_player.active || app.picker.active ||
         app.score_viewer.active)
         return false;
-    // THE MODAL FOCUS RING'S TAB WALK REPEATS (architect 2026-08-13, at his
-    // live test: "a held tab does not key repeat. It should"), and it is the
-    // ONE thing that repeats on a modal surface. It is a continuous step
-    // gesture in exactly the sense the marker cycle is — walk the stops
-    // quickly — read from the one predicate the gate, the walk and the
-    // completion arm share rather than re-spelled here.
-    //
-    // THE ONE SURFACE IS THE DIALOG EDITOR (field plus buttons), the one ring
-    // a key reaches (architect 2026-10-30: no key arrives under a prompt). The
-    // top-strip flag editor publishes no dialog and so has no ring; its Tab
-    // drops at modal_editor_key_blocked before anything could act on it, and
-    // it is deliberately absent here.
-    //
-    // A REPEATING WALK IS COHERENT WITH THE ONE AUTOCOMPLETE MODEL
-    // (route_modal_editor_key): the first fire in a field with a live
-    // completion completes and is consumed, and no later fire can complete
-    // again — the buffer is already AT its completion, so the advancement test
-    // answers false and every subsequent fire walks. The completion cannot
-    // fire repeatedly under a hold for that reason alone; nothing here has to
-    // suppress it.
-    if (modal_dialog_editor_active() && modal_ring_tab(key, mods))
-        return true;
-    // AND THE WALK IS THE ONLY THING THAT REPEATS ONCE THE FOCUS IS ON A BUTTON
-    // (2026-08-13): from there no key reaches the field at all
-    // (route_modal_editor_key's wall), so there is nothing left that a hold
-    // could usefully continue — and the two that DO act there, bare Enter and
-    // bare Space, are a press-and-hold whose act is at the physical release
-    // (AppState::modal_dialog_key_pressed). A repeat could only re-press or
-    // re-fire them, which is exactly what must not happen. One arm covers both
-    // and everything else, derived from the wall rather than listing keys —
-    // through the wall's own reading of the focus (modal_dialog_focus_live),
-    // so the two cannot disagree about where the keyboard is.
-    if (modal_dialog_editor_active() && modal_dialog_focus_live() >= 0)
-        return false;
+    // (A LINE EDITOR'S TAB DOES NOT REPEAT: a completion that advanced
+    // leaves a buffer AT its completion, so a second fire could advance
+    // nothing; the Tab family classifies NotEditorKey below.)
     if (any_text_editor_active()) {
         // Only the editor's motion/edit keys — Backspace and, since
         // 2026-11-08 (sessions 95 / 96), LEFT / RIGHT bare or carrying the
@@ -4212,12 +4179,11 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
         // does not repeat, which falls out of the classifier rather than being
         // spelled here. This consumes the one editor-key owner.
         //
-        // THE TAB FAMILY NEVER REACHES THIS ARM: it classifies NotEditorKey
-        // (handle_key never consumes a Tab — the ring and the completions are
+        // THE TAB FAMILY IS ONE-SHOT HERE: it classifies NotEditorKey
+        // (handle_key never consumes a Tab — the completions are
         // route_modal_editor_key's, above handle_key in that route, not the
-        // editor's own keymap), and a DIALOG editor's ring already answered it
-        // in the arm above this one. What falls through to here is a Tab under
-        // the FLAG editor, which has no ring and does not repeat.
+        // editor's own keymap), under a line editor and the flag editor
+        // alike.
         const auto kc = text_editor::classify_key(key, mods);
         return kc == text_editor::KeyClass::MotionEditKey ||
                kc == text_editor::KeyClass::PrintableKey;
@@ -4300,38 +4266,37 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // other unbound chord and drops right here, so it cannot cancel, commit,
 // paste or erase. The gate-level
 // carve-out below is NOT editor consumption — it is gate policy layered on
-// top: bare Tab under any DIALOG editor (the focus ring's step and, where the
-// editor has one, its autocomplete — the fork is route_modal_editor_key's,
-// not this gate's), one predicate, modal_ring_tab above, read here and by the
-// ring alike. Admitted keys flow into the editor routing unchanged; no chord
-// outside the editor's keys and the ring reaches route_modal_editor_key at
-// all.
+// top: bare Tab under any LINE editor of the value sub-page (where the
+// editor has one, its autocomplete; silent otherwise — the fork is
+// route_modal_editor_key's, not this gate's), one predicate,
+// modal_editor_tab above, read here and by that route alike. Admitted keys
+// flow into the editor routing unchanged; no chord outside the editor's
+// keys and that Tab reaches route_modal_editor_key at all.
 bool GuiInputHandler::modal_editor_key_blocked(GuiKey key,
                                                GuiInputState mods) {
     // NO HATCH (architect 2026-10-25: "we can even block Ctrl+Q — we are
     // letting the window manager handle everything now … block all gestures
     // except the one escape, or anything that closes the modal"): the editor's
-    // own keys — typing, its motion keys, Esc and Enter — and a dialog's
-    // ring are the whole admitted set; every other chord is consumed,
-    // silently (on_key's gate).
+    // own keys — typing, its motion keys, Esc and Enter — and a line
+    // editor's Tab are the whole admitted set; every other chord is
+    // consumed, silently (on_key's gate).
     // The platform's close — Back — is the quit road under every modal
     // (GuiPrompt::request_close).
     const bool is_editor_key =
         (text_editor::classify_key(key, mods) !=
          text_editor::KeyClass::NotEditorKey);
-    // THE RING'S TAB, admitted while any DIALOG editor stands (2026-08-13):
-    // the one editor that HAS a completion, SETTINGS (its value recall),
-    // keeps it as its first meaning, while the trim preset's name and the
-    // BPM form's line let it walk the ring from the first press
-    // (route_modal_editor_key owns which of the two a given Tab is, under the
-    // one autocomplete model). The top-strip FLAG editor is deliberately
-    // outside it: it is not a dialog, publishes no buttons, and so has no
-    // ring for Tab to walk — its Tab still drops here while it stands.
-    // THE DIALOG ALONE IS MEANT here (modal_dialog_editor_active, never the
-    // wider predicate): the ring is a dialog's own.
-    const bool is_dialog_focus_tab =
-        (modal_dialog_editor_active() && modal_ring_tab(key, mods));
-    return !(is_editor_key || is_dialog_focus_tab);
+    // THE COMPLETION'S TAB, admitted while any LINE editor of the value
+    // sub-page stands (2026-08-13): the one editor that HAS a completion,
+    // SETTINGS (its value recall, the path), completes; under the trim
+    // preset's name and the BPM form's line the admitted Tab does nothing
+    // (route_modal_editor_key: a Tab that completes nothing is silent,
+    // architect 2026-11-20, send EE). The top-strip FLAG editor is
+    // deliberately outside it: it has no vocabulary to complete, and its
+    // Tab drops here while it stands. THE LINE EDITORS ALONE ARE MEANT here
+    // (modal_dialog_editor_active, never the wider predicate).
+    const bool is_line_editor_tab =
+        (modal_dialog_editor_active() && modal_editor_tab(key, mods));
+    return !(is_editor_key || is_line_editor_tab);
 }
 
 // The render cancel as a callable body, the RENDER key's Cancel face's act
@@ -5952,181 +5917,12 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
     return true;
 }
 
-// THE MODAL DIALOG'S KEYBOARD FOCUS RING (architect 2026-08-13, part D of the
-// modal-button ruling: the FACE is kdenlive-sampled, the NAVIGATION his own
-// derivation — kdenlive's dialogs have no text boxes, so there was nothing to
-// copy for the field's half). THE DIALOG EDITORS' RING, read by
-// route_modal_editor_key below and by nothing else (architect 2026-10-30: the
-// on-screen keyboard is the one producer of a key under a modal surface, and
-// it stands only under an editor — a prompt, the progress modal and the
-// overlays take their buttons alone); the state, the two meanings of -1 and
-// the reset rule are at AppState::modal_dialog_focus.
-//
-//   TAB      cycles every stop: the FIELD is a stop, so one field and two
-//            buttons is three stops, wrapping. AN EDITOR WITH AN
-//            AUTOCOMPLETE GETS FIRST REFUSAL on the field's Tab, upstream of
-//            this route — a completion that ADVANCED consumes the key and this
-//            route is never called, one that did not hands it straight here.
-//            The whole model is stated once at route_modal_editor_key's Tab
-//            arm; nothing about it is decided in this body.
-//   ENTER /  PRESS THE FOCUSED BUTTON DOWN and commit it AT THE KEY'S RELEASE
-//   SPACE    (architect 2026-08-13, from kdenlive: "pressing Enter when a
-//            button has focus pushes down the button. It doesn't automatically
-//            commit the action... we move the playhead when the user lifts up
-//            the mouse key, so we should do that here as well"). The press arms
-//            and paints; on_key_release runs the act through the one shared
-//            dispatch. Both keys are BARE-EXACT, and both mean the button only
-//            while the focus IS on a button: with the focus in the FIELD
-//            neither reaches this route at all, so Enter keeps its commit and
-//            Space still types a space.
-//
-// THE WALK ASSIGNS THE ACTIVE STRENGTH, and it is the strength's ONE producer:
-// every landing on a button here is a deliberate keyboard step, which is the
-// definition of active focus (AppState::modal_dialog_focus_active). Landing
-// back on the FIELD carries no strength and clears it.
-//
-// EVERY SHAPE IS BARE-EXACT: the modifier guard below refuses every modified
-// key (Ctrl+Tab is the tab-cycle family's, never this ring's).
-// THE STASH'S IDENTITY GATES IT like the press claim — the stash is the
-// painter's publication and may only SELECT; the surface that owns input
-// DECIDES (modal_dialog_stash_current, the one comparison). A flag editor
-// publishes no dialog at all, so its ring is empty by construction and every
-// shape here declines.
-bool GuiInputHandler::route_modal_dialog_focus_key(GuiKey key,
-                                                   GuiInputState mods) {
-    const bool tab = modal_ring_tab(key, mods);
-    if (!tab && (mods.ctrl || mods.shift || mods.alt)) return false;
-    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    if (!dlg.valid || dlg.buttons.empty()) return false;
-    if (!modal_dialog_stash_current()) return false;
-    const int n = static_cast<int>(dlg.buttons.size());
-    const int at = (app.modal_dialog_focus >= 0 &&
-                    app.modal_dialog_focus < n) ? app.modal_dialog_focus : -1;
-
-    int next = at;
-    if (tab) {
-        // The field is the stop at -1: field -> first button -> ... -> last
-        // button -> field.
-        if (at < 0)            next = 0;
-        else if (at + 1 < n)   next = at + 1;
-        else                   next = -1;
-    } else if (key == GuiKeys::Return || key == GuiKeys::Space) {
-        // THE BUTTON'S KEYBOARD PRESS. With no button focused this is not the
-        // ring's key at all: the field keeps Enter's commit and Space's
-        // typed character, and both fall through untouched.
-        if (at < 0) return false;
-        // A GREYED BUTTON'S KEYBOARD PRESS IS A CONSUMED NOTHING (architect
-        // 2026-08-30) — the roster's rule on this surface: no arm, no
-        // card (the grey is the message). Reachable only
-        // when the face changed under a parked focus — the walk below skips
-        // greyed stops. The bit is the painted one, the claim (architect
-        // 2026-09-24, strictly as-painted); a face painted live dispatches
-        // at the release and its act answers for itself.
-        if (!dlg.buttons[static_cast<size_t>(at)].enabled) return true;
-        // A SYNTHESIZED REPEAT IS CONSUMED AND CHANGES NOTHING — the act
-        // happens once, at the physical release. repeat_eligible refuses to
-        // ARM these two while the focus is on a button, so this arm should see
-        // no repeats at all; it is here because the eligibility argument is
-        // about a state that could in principle be entered with a hold already
-        // armed, and "fires once" should be true by construction rather than
-        // by that argument.
-        if (mods.synthesized_repeat) return true;
-        // THE ARM: the focused key wears its press face while it stands
-        // (paint_modal_dialog's row; the press arc, architect 2026-11-05),
-        // so an edge damages that key's face (invalidate_modal_press_face,
-        // 2026-11-16), and the face an earlier arm left pressed with it.
-        if (app.modal_dialog_key_pressed != at ||
-            app.modal_dialog_key_pressed_key != key) {
-            if (app.modal_dialog_key_pressed >= 0 &&
-                app.modal_dialog_key_pressed != at)
-                invalidate_modal_press_face(app.modal_dialog_key_pressed);
-            app.modal_dialog_key_pressed     = at;
-            app.modal_dialog_key_pressed_key = key;
-            invalidate_modal_press_face(at);
-            // THE KEYBOARD'S ARM TURNS THE FACE TOWARD THE ACCENT as the
-            // pointer's does, from its picture as painted over Arc's 50 ms
-            // from now (AppState::FaceFades' GTK'S RULE).
-            press_face({AppState::FaceFades::Surface::Dialog, at,
-                        app.modal_dialog.owner, app.modal_dialog.session});
-        }
-        return true;
-    } else {
-        return false;
-    }
-
-    // THE RING SKIPS A GREYED BUTTON (architect 2026-08-30: the ring
-    // consumes what the face refuses): a Tab walk that lands on a disabled
-    // button advances again, by its own wrap rule, until an enabled stop. The
-    // field is always a stop, so the walk terminates; the guard bounds it
-    // against the impossible all-disabled ring anyway. The bit read is the
-    // STASH'S — the walk only SELECTS a focus, and the press it leads to
-    // claims on the same painted bit.
-    int guard = 0;
-    while (next >= 0 &&
-           !dlg.buttons[static_cast<size_t>(next)].enabled &&
-           guard++ <= n) {
-        if (next + 1 < n) ++next;
-        else              next = -1;
-    }
-
-    // LEAVING THE BUTTON CANCELS A HELD ENTER OR SPACE (2026-08-14), the
-    // rule's first site and the reason it exists: the arm names the button the
-    // focus was on, and the user has visibly left it. Without this the release
-    // still committed the OLD button — focus OK, hold Space, Tab onto Cancel,
-    // release, and OK fired. The rule, the resulting
-    // armed == focused invariant and how it differs from the pointer's FEINT
-    // are at AppState::modal_dialog_key_pressed. It reads the INDEX alone: a
-    // one-button ring whose walk lands back where it started has left nothing,
-    // and only the focus's STRENGTH changed there.
-    const bool left_the_button = next != app.modal_dialog_focus;
-    if (left_the_button ||
-        app.modal_dialog_focus_active != (next >= 0)) {
-        if (left_the_button) clear_modal_dialog_key_press();
-        app.modal_dialog_focus = next;
-        // Landing on a button by a deliberate walk IS the active strength;
-        // landing back on an editor's field carries none.
-        app.modal_dialog_focus_active = next >= 0;
-        viewport.invalidate_rect(dlg.box);
-    }
-    return true;
-}
-
-// THE KEYBOARD PRESS ARM'S RELEASE — the act, at the lift (the ruling and the
-// arm are at AppState::modal_dialog_key_pressed). Called from on_key_release
-// for every delivered key release, above every other gate: this arm belongs to
-// a modal surface that owns input, so nothing may rank above it, and a release
-// that matches nothing costs one integer compare.
-//
-// IT MATCHES ON THE KEY, so releasing the other of the two keys resolves
-// nothing, and it re-asks the dialog's own gates through the SHARED DISPATCH
-// (dispatch_modal_dialog_button) rather than a third copy of them: if the
-// dialog changed under the hold — the owner moved, the prompt was replaced —
-// the act does not fire. The painter has usually dropped the arm outright on
-// those same edges; this is the second wall, exactly as the pointer's release
-// is.
-// MODIFIERS AT THE RELEASE ARE NOT RE-READ, the pointer release's own rule (it
-// takes the platform's modifier state and names it unused): the PRESS is what
-// is bare-exact, and a shift tapped mid-hold does not turn a committed press
-// into something else.
-void GuiInputHandler::on_key_release(GuiKey key) {
-    const int armed = app.modal_dialog_key_pressed;
-    if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
-    app.modal_dialog_key_pressed     = -1;
-    app.modal_dialog_key_pressed_key = 0;
-    // The press face's un-press (2026-11-05), the key's own face, its fade
-    // held where it stands (hold_face).
-    invalidate_modal_press_face(armed);
-    hold_face({AppState::FaceFades::Surface::Dialog, armed,
-               app.modal_dialog.owner, app.modal_dialog.session});
-    dispatch_modal_dialog_button(armed);
-}
-
 // Shared key route for EVERY keyboard-modal editor — all five
 // text_editor::Kind kinds: the settings editor, the trim preset's name editor
 // and the BPM form's line editor (all three on the settings editor's buffer),
 // and the marker lane's flag editor and iteration bound editor.
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
-// admits only the editor's own keys and a dialog's ring — NO HATCH since
+// admits only the editor's own keys and a line editor's Tab — NO HATCH since
 // 2026-10-25, every other chord consumed at the gate — so a NotConsumed key
 // here is swallowed and this route answers true for every key. The
 // platform's close (Back) still tears the editor down uncommitted on the close
@@ -6134,44 +5930,36 @@ void GuiInputHandler::on_key_release(GuiKey key) {
 // swallows every roster press since 2026-10-25, so the on-screen keyboard is
 // the one producer of the keys this route sees.
 // `autocomplete` is the optional
-// bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the bpm and flag editors
-// have no vocabulary to complete and pass an empty hook).
+// bare-Tab hook, PASSED BY THE SETTINGS EDITOR (the trim preset's name, the
+// BPM field and the flag editors have no vocabulary to complete and pass an
+// empty hook).
 //
-// THE ONE AUTOCOMPLETE MODEL — the authoritative statement, architect
-// 2026-08-13: "how about first tab autocompletes, second tab (or tab on a
-// non-matching string, i.e. a string that does not autocomplete) moves focus?
-// And we revert the settings editor to that model also — we should use one
-// model for all autocompletes."
-//
-// BARE TAB WITH THE FOCUS IN THE FIELD OFFERS THE COMPLETION FIRST, AND THE
-// COMPLETION'S OWN ANSWER DECIDES: it reports whether it ADVANCED THE BUFFER —
-// advanced, and the key is consumed; did not, and the key falls through to the
-// focus ring. "Second Tab" and "Tab on a string that completes to nothing" ARE
-// THE SAME CONDITION and need no state to tell apart: after a successful
-// completion the next Tab cannot advance (the settings editor's entry is no
-// longer empty), so it walks by that one test. THERE IS NO PRESS COUNTER, NO TIMER
-// AND NO "last key was Tab" BIT anywhere in this model, deliberately — wanting
-// one means the rule has been mis-derived.
-//
-// THE ORDERING, in full:
-//   * Tab with the focus ON A BUTTON walks the ring — a button has no field to
-//     complete, so the hook is not even offered (the test is
-//     modal_dialog_focus < 0, and -1 IS the field on an editor dialog;
-//     AppState::modal_dialog_focus owns that meaning).
-//   * Tab with the focus IN THE FIELD offers the completion, then walks.
-//   * Tab in a dialog editor with NO hook (BPM) walks at once.
-//   * The top-strip FLAG editor is not a dialog: it publishes no buttons, has
-//     no ring, and its Tab drops at that gate before this route sees it.
-// The walk key is one predicate, modal_ring_tab, read by this arm, the ring
-// and modal_editor_key_blocked's admission alike: bare Tab, the on-screen
+// THE ONE AUTOCOMPLETE MODEL — the authoritative statement: BARE TAB OFFERS
+// THE COMPLETION, AND A TAB THAT COMPLETES NOTHING IS SILENT (architect
+// 2026-11-20, send EE: a line editor's sub-page has no button — "on that
+// page, the only controls are the osk's esc and enter" — so a Tab has
+// nowhere to walk). The completion reports whether it ADVANCED THE BUFFER; either way
+// the key is consumed here and never reaches the editor's keymap. THERE IS
+// NO PRESS COUNTER, NO TIMER AND NO "last key was Tab" BIT anywhere in this
+// model: after a successful completion the next Tab cannot advance (the
+// settings editor's entry is no longer empty; a path stands at its common
+// prefix), and does nothing.
+//   * Tab under the SETTINGS editor offers its completion
+//     (GuiSettingsEditor::autocomplete_value: the held value onto an empty
+//     entry, a folder in `projects_path`).
+//   * Tab under an editor with NO hook (the trim preset's name, the BPM
+//     field) does nothing.
+//   * The top-strip FLAG editor's Tab drops at the gate before this route
+//     sees it.
+// The key is one predicate, modal_editor_tab, read by this arm and by
+// modal_editor_key_blocked's admission alike: bare Tab, the on-screen
 // keyboard's Tab key (architect 2026-10-30).
 //
-// EVERYTHING ELSE THE RING TOOK: Enter and Space change meaning ONLY while
-// the focus is on a BUTTON, so every key's behaviour with the focus in the
-// field is the editor's own.
+// EVERY OTHER KEY IS THE EDITOR'S OWN (text_editor::handle_key): Enter the
+// commit, Esc the cancel, the rest the buffer's.
 // `repaint` is the caller's text-change damage and is REQUIRED — unlike
-// `autocomplete` it is called unconditionally, with no emptiness test: the two
-// dialog surfaces pass invalidate_dialog_editor_box (the entry's box, all
+// `autocomplete` it is called unconditionally, with no emptiness test: the
+// line editors pass invalidate_dialog_editor_box (the entry's box, all
 // an edit can change — the rule at its declaration, viewport.h), the
 // top-strip flag editor invalidate_top_strip. Commit and cancel own their own
 // invalidations.
@@ -6181,54 +5969,12 @@ bool GuiInputHandler::route_modal_editor_key(
         const std::function<void()>& commit,
         const std::function<void()>& cancel,
         const std::function<void()>& repaint) {
-    const bool ctrl  = mods.ctrl;
-    const bool shift = mods.shift;
-    const bool alt   = mods.alt;
-    // THE FIELD'S FIRST REFUSAL ON THE TAB (the one autocomplete model
-    // above): offered only with the focus in the field, and consuming the key
-    // only when it advanced the buffer. A false answer falls into the ring
-    // below, which is where a second Tab, an unknown key and an ambiguous
-    // prefix all land.
-    if (autocomplete && modal_ring_tab(key, mods) &&
-        modal_dialog_focus_live() < 0 && autocomplete()) {
+    // THE TAB (the one autocomplete model above): the completion offered
+    // where the editor has one, the key consumed whether or not it advanced
+    // the buffer — a Tab that completes nothing is silent.
+    if (modal_editor_tab(key, mods)) {
+        if (autocomplete) (void)autocomplete();
         return true;
-    }
-    if (route_modal_dialog_focus_key(key, mods)) {
-        // THE CARET RESTARTS WHEN THE RING WALKS BACK ONTO THE FIELD: the blink
-        // keeps its own clock, and the field's caret stops painting while the
-        // focus is on a button, so a field re-focused mid-period could
-        // otherwise show nothing for up to half a second. The ring's one
-        // caller, with the editor already in hand. The caret did not move
-        // (restart_blink, the blink alone).
-        if (app.modal_dialog_focus < 0) text_editor::restart_blink(ed);
-        return true;
-    }
-    // NO KEY REACHES THE FIELD WHILE THE FOCUS IS ON A BUTTON (architect
-    // 2026-08-13, at his live test: "hit Tab twice more to reach Cancel, then
-    // press Space. I expect Cancel to be pressed, but instead a space character
-    // is added to the text field even though the text field has now lost
-    // focus"). Not typing, not motion, not editing: the buffer and the
-    // selection are preserved untouched and the keys simply do not arrive,
-    // which is what focus MEANS on the other surfaces this product has.
-    // Anything the ring above did not claim is a CONSUMED NO-OP here — EXCEPT
-    // bare Esc, which abandons the edit from anywhere in the dialog, a button
-    // included, as it does from the field: spelled here because this wall
-    // stands ABOVE the editor's own keymap. NO HATCH (2026-10-25): a modal
-    // admits its own vocabulary alone, and the platform's close is the quit
-    // road.
-    // (The FLAG editor cannot be in this branch: it publishes no dialog, so its
-    // ring is empty and the live focus is structurally -1 while it stands.)
-    // IT READS THE LIVE FOCUS, never the raw index (modal_dialog_focus_live,
-    // input_handler.h): in the one dispatch batch between an editor's open and
-    // its first paint the raw index still names the PREVIOUS dialog's buttons,
-    // and a wall keyed on it would swallow the new editor's first keystrokes
-    // at a field the user is looking at and typing into.
-    if (modal_dialog_focus_live() >= 0) {
-        if (!ctrl && !shift && !alt && key == GuiKeys::Escape) {
-            cancel();
-            return true;
-        }
-        return true;       // modal: swallow, and the field never sees it
     }
     const auto action = text_editor::handle_key(ed, key, mods);
     if (action == text_editor::KeyAction::CommitRequested) {
@@ -6660,9 +6406,10 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // stand, and the editor is a modal in the same box) AND THE SETTINGS EDITOR
 // OPENS ON THE ROW'S KEY, ITS ENTRY THE VALUE THE KEY HOLDS, the caret at its
 // end (GuiSettingsEditor::open; architect 2026-11-19, send AA: "One,
-// agree." — the value alone, Z_06's "25", the key the window's title and
-// label), a sub-page too: its OK and Cancel reopen this page on the row's
-// key (handle_settings_editor_key, architect 2026-10-28 night).
+// agree." — the value alone, the key the sub-page's label), THE VALUE
+// SUB-PAGE (architect 2026-11-20, send EE; paint_handler.cpp): the on-screen
+// keyboard's Enter and Esc reopen this page on the row's key
+// (handle_settings_editor_key, architect 2026-10-28 night).
 void GuiInputHandler::settings_page_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -6678,9 +6425,9 @@ void GuiInputHandler::settings_page_commit(int index) {
         viewport.invalidate_all();
         return;
     }
-    // THE EDITOR'S BACKDROP AND TITLE (AppState::dialog_backdrop): the page
-    // as it stands, under the editor's window, and the row's key.
-    open_dialog_backdrop(key);
+    // THE SUB-PAGE'S LABEL AND ITS LIST'S OPENER (AppState::value_page):
+    // the row's key, and the settings page.
+    seat_value_page(key);
     close_picker();
     settings_editor.open(key);
 }
@@ -6916,9 +6663,9 @@ void GuiInputHandler::trim_presets_save_as() {
             ? ov.trim_presets[static_cast<std::size_t>(h)].name
             : std::string();
     trim_name_presets_ = ov.trim_presets;
-    // THE EDITOR'S BACKDROP AND TITLE (AppState::dialog_backdrop): the list
-    // under the editor's window, and the button's word.
-    open_dialog_backdrop("Save As");
+    // THE SUB-PAGE'S LABEL AND ITS LIST'S OPENER (AppState::value_page):
+    // the act's own name, the button's word, and the trim presets list.
+    seat_value_page("Save As");
     close_picker();
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
@@ -7082,13 +6829,8 @@ bool GuiInputHandler::persist_trim_presets(
 // THE LIST'S ROW FACES (the contract is at the declaration, app_state.h).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act) {
-    return trim_presets_button_enabled(a, a.folder_overlay, act);
-}
-
-bool trim_presets_button_enabled(const AppState& a,
-                                 const AppState::FolderOverlay& ov,
-                                 AppState::TrimPresetsButtonAct act) {
     using Act = AppState::TrimPresetsButtonAct;
+    const AppState::FolderOverlay& ov = a.folder_overlay;
     const int h = ov.highlight_row;
     const bool seated =
         h >= 0 && h < static_cast<int>(ov.trim_presets.size());
@@ -7166,8 +6908,8 @@ void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
 // press-and-lift) and Enter on the highlight, one body: THE FORM CLOSES
 // (close_picker, the mode standing) AND THE LINE EDITOR OPENS PREFILLED WITH
 // THE ROW'S VALUE as painted — its line past the first `=`, the key the
-// window's title and label (architect 2026-11-19, send AA: the value alone
-// under the field's label, Z_06's shape) — the caret at its end, the
+// sub-page's label (architect 2026-11-19, send AA: the value alone
+// under the field's label; the sub-page 2026-11-20, send EE) — the caret at its end, the
 // settings editor's open (GuiSettingsEditor::open): an empty session, then
 // the value through the one incoming filter, silent on capacity (the text is
 // the product's own recall, within its field's cap by the reader's own
@@ -7185,9 +6927,9 @@ void GuiInputHandler::bpm_form_commit(int index) {
     const std::string line =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
     const std::size_t eq = line.find('=');
-    // THE EDITOR'S BACKDROP AND TITLE (AppState::dialog_backdrop): the form
-    // under the editor's window, and the row's key.
-    open_dialog_backdrop(line.substr(0, eq));
+    // THE SUB-PAGE'S LABEL AND ITS LIST'S OPENER (AppState::value_page):
+    // the row's key, and the BPM form.
+    seat_value_page(line.substr(0, eq));
     close_picker();
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
@@ -7383,14 +7125,12 @@ void GuiInputHandler::picker_move_highlight(int delta) {
 // damage is the whole window, as the open's is — the band's pixels sit over
 // the waveform, the modal row goes back to its tenants and the roster's grey
 // lifts with them.
-// THE DIALOG EDITOR'S BACKDROP (AppState::dialog_backdrop, the contract
-// there): the standing list copied as it stands, its press dropped, and the
-// window's title — written by the three openers of a dialog editor just
-// before their close_picker.
-void GuiInputHandler::open_dialog_backdrop(std::string title) {
-    app.dialog_backdrop.page       = app.folder_overlay;
-    app.dialog_backdrop.page.press = AppState::FolderOverlayPress{};
-    app.dialog_backdrop.title      = std::move(title);
+// THE VALUE SUB-PAGE'S TWO WORDS (AppState::value_page, the contract
+// there): the label's name and the standing list's owner tag — written by
+// the three openers of a line editor just before their close_picker.
+void GuiInputHandler::seat_value_page(std::string name) {
+    app.value_page.opener = app.folder_overlay.owner;
+    app.value_page.name   = std::move(name);
 }
 
 void GuiInputHandler::close_picker() {
@@ -9173,8 +8913,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // commits the flag's own payload and the IterBound editor commits its bound,
 // both drawing in the TOP strip. Neither passes a bare-Tab hook, having no
 // vocabulary to complete, and a bare Tab never reaches this route at all —
-// the on_key gate swallows it, a flag editor publishing no dialog and so no
-// ring (route_modal_editor_key). Esc / Enter are the session's only exits:
+// the on_key gate swallows it (modal_editor_key_blocked). Esc / Enter are
+// the session's only exits:
 // NO HATCH since 2026-10-25, every other chord consumed at the gate.
 bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
                                                  GuiInputState mods) {
@@ -9206,23 +8946,20 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // THE VALUE COMPLETION IS BARE TAB'S, under the one autocomplete model stated
 // at route_modal_editor_key (architect 2026-08-13: "we should use one model for
 // all autocompletes"). An `=` is an ordinary character, and this route says
-// nothing about it. Tab offers the completion first and walks the focus ring
-// when it did not advance the buffer, so the completion's own refusals (the
-// head of settings_editor.h: a non-empty entry on any key but the path key,
-// a path prefix with no match or already at its common prefix, an empty
-// value recalled onto an empty entry — the first Tab on an emptied entry
-// recalls the value, the second steps) are exactly the Tabs that step.
+// nothing about it. Tab offers the completion and is silent when it did not
+// advance the buffer, so the completion's own refusals (the head of
+// settings_editor.h: a non-empty entry on any key but the path key, a path
+// prefix with no match or already at its common prefix, an empty value
+// recalled onto an empty entry) are exactly the Tabs that do nothing.
 //
 // THE EDITOR'S CLOSE RETURNS TO THE SETTINGS PAGE (architect 2026-10-28
 // night, "1 yes": "otherwise it's assumed I am editing one key only" — the
 // line editor a sub-page of the page, as the value lists are), and THIS IS
 // ITS ONE HOOK: every road that closes the editor without leaving the
-// program passes through this route — Enter and Esc in the field, the OK and
-// Cancel buttons' lifts and the ring's Enter / Space on them
-// (dispatch_modal_dialog_editor_act synthesizes the field's Return or Esc
-// here), the on-screen keyboard's Enter and Esc caps — so an editor standing
-// before the key and gone after it is OK applied, OK unchanged, Cancel or
-// Esc, and the page reopens through its own open road
+// program passes through this route — the on-screen keyboard's Enter and
+// Esc, the sub-page's only controls (architect 2026-11-20, send EE) — so an
+// editor standing before the key and gone after it is Enter applied, Enter
+// unchanged or Esc, and the page reopens through its own open road
 // (open_settings_page: its guards, a fresh session, its modal stop a no-op
 // with playback already stopped for the editor), seated on the row the
 // editor was opened from (GuiSettingsEditor::page_key — the open's key, the
@@ -9231,18 +8968,18 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // the editor down through close_modal_editors_no_commit, the picker already
 // closed for the quit): a quit reopens no page.
 // THE TRIM PRESET'S NAME EDITOR RIDES THIS ROUTE AND THIS HOOK (architect
-// 2026-10-28 night): the dialog line editor's buffer carries its kind
+// 2026-10-28 night): the line editor's buffer carries its kind
 // (Kind::TrimPresetName, AppState::settings_editor), so the same roads reach
-// here — Enter, Esc, OK, Cancel, the ring and the on-screen keyboard's caps —
+// here — the on-screen keyboard's Enter and Esc —
 // and the KIND, read before the route (a close resets it), forks the route
-// and the return: no completion (a Tab walks the ring), the name's commit
+// and the return: no completion (a Tab does nothing), the name's commit
 // (commit_trim_preset_name), and on the close THE TRIM PRESETS LIST
 // REOPENS (open_trim_presets) seated on the name the commit or Save As
 // left (trim_name_seat_), the settings page's return one content over; a refused
 // name leaves the editor standing and reopens nothing.
 // THE BPM FORM'S LINE EDITOR RIDES IT THE SAME WAY (architect 2026-10-29):
 // Kind::BpmField, read before the route like the name's, forks the route
-// and the return — no completion (a Tab walks the ring), the field's commit
+// and the return — no completion (a Tab does nothing), the field's commit
 // (GuiFlagEditor::commit_bpm_field), and on the close THE BPM FORM REOPENS
 // (open_bpm_form) seated on the field's row, the session's target, read
 // before the close resets it; a refused field leaves the editor standing

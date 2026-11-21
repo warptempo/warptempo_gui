@@ -307,7 +307,7 @@ inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
 // fix you suggested for the power draw by card"; the cost of a standing
 // floater confined to where it stands): ONE RECT A FAMILY — the cards'
 // stack and the tooltip, THE TWO FAMILIES (a question, the progress page and
-// a dialog editor's window are none: each stands on the modal family's box,
+// a line editor's value sub-page are none: each stands on the modal family's box,
 // under which the canvas is not painted, modal_box.h's modal_box_stands, so
 // nothing of a modal floats over the canvas; architect 2026-11-20, send EE)
 // — in surface px, empty where the family paints nothing, every pixel the

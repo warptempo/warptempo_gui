@@ -68,13 +68,8 @@ void GuiInputCore::key_event(GuiKey key, uint32_t stable_code, bool pressed,
         if (stable_code == repeat_keycode_) {
             repeat_key_ = 0;
         }
-        // THE APPLICATION-SIDE KEY RELEASE (2026-08-13). It exists for exactly
-        // one consumer — the modal dialog's keyboard press-and-hold, whose act
-        // is at the lift — and it is delivered for the same key identity the
-        // press carried, carrying no modifier state at all (the reasoning is
-        // at set_on_key_release, input_core.h). A key this GUI has no use for
-        // arrives as 0 and is not a delivery.
-        if (key != 0 && on_key_release_) on_key_release_(key);
+        // A RELEASE DELIVERS NOTHING to the application: no key acts at its
+        // lift (set_on_key's note, input_core.h).
         return;
     }
 
@@ -1294,7 +1289,6 @@ void GuiInputCore::forget_touch_state() {
 // ---------------------------------------------------------------------------
 
 void GuiInputCore::set_on_key(KeyCallback cb)                    { on_key_ = std::move(cb); }
-void GuiInputCore::set_on_key_release(KeyReleaseCallback cb)     { on_key_release_ = std::move(cb); }
 void GuiInputCore::set_on_button_press(ButtonCallback cb)        { on_button_press_ = std::move(cb); }
 void GuiInputCore::set_on_button_release(ButtonCallback cb)      { on_button_release_ = std::move(cb); }
 void GuiInputCore::set_on_motion(MotionCallback cb)              { on_motion_ = std::move(cb); }

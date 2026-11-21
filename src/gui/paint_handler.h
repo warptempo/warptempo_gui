@@ -93,11 +93,13 @@ std::string status_bar_text(AppState& app);
 // are the well's first and last columns, render.h's well_columns,
 // both strips flush with them since 2026-10-23.)
 
-// NO DIALOG EDITOR CARRIES A LABEL (2026-10-14): the Settings editor's
-// "Setting:" ("pointless that far away. just remove it") and the BPM editor's
-// "BPM:" ("drop") are both removed; the box shows its line alone. (Each
-// dialog editor's label stood at the bottom row's left pad beside its inset
-// field 2026-08-12 to 2026-10-14, the bottom-strip prefixes from row 7
+// A LINE EDITOR'S ONE LABEL IS ITS VALUE'S NAME, over its entry on the
+// value sub-page (architect 2026-11-20, send EE; paint_handler.cpp's THE
+// VALUE SUB-PAGE): the settings key, the BPM field's key, "Save As". (The
+// generic labels — the Settings editor's "Setting:", "pointless that far
+// away. just remove it", and the BPM editor's "BPM:", "drop" — went
+// 2026-10-14; each stood at the bottom row's left pad beside its inset
+// field 2026-08-12 to then, the bottom-strip prefixes from row 7
 // before; the `h` view's commit-title editor's "Commit:" beside them
 // 2026-08-07 to 2026-10-10.)
 // The OPEN PROJECT prompt's label (Open Project, 2026-08-27) — ONE WAY TO SHOW
@@ -1380,23 +1382,21 @@ private:
     void paint_sweep_highlight(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): the overlays' controls on the modal family's
-    // controls row (modal_box.h, 2026-10-14) — live, or a dialog editor's
-    // backdrop's, paint-only (send BB, 2026-11-19); A QUESTION'S PAGE AND
+    // controls row (modal_box.h, 2026-10-14); A QUESTION'S PAGE AND
     // THE PROGRESS PAGE, the box's view the page and their answers word
-    // buttons on that row (architect 2026-11-20, send EE); and a dialog
-    // editor in xfwm's window in the box's view (send AA's stage D2); the
+    // buttons on that row; and a line editor's VALUE SUB-PAGE, the box's
+    // view the page, its label and one entry on it and no button (architect
+    // 2026-11-20, send EE); the
     // bottom icon row's own painter yields the lane to it while an overlay
-    // or a page stands
+    // or a question's or the progress page stands
     // (modal_owns_bottom_row); everything it lays cut at the on-screen
-    // keyboard's top line while that stands (send EE). `exposed` the damage
-    // rect the frame paints (the
-    // dialog editor's backdrop culls its rows by it). Painted from on_redraw
+    // keyboard's top line while that stands (send EE). Painted from on_redraw
     // right after the keyboard slot,
     // unconditionally: it publishes AppState::modal_dialog and
     // AppState::dialog_editor_text, the geometry the pointer path's veil,
     // button claims and click-to-caret read. The full design record is at the
     // definition.
-    void paint_modal_dialog(cairo_t* cr, const GuiRect& exposed);
+    void paint_modal_dialog(cairo_t* cr);
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — its
     // band across the program lanes on the window's last rows, its block of
@@ -1404,8 +1404,9 @@ private:
     // and the status bar, nothing relaid (onscreen_keyboard.h's placement
     // block, its inventory of what yields under it; send EE, 2026-11-20). It
     // paints AFTER every waveform pass and BEFORE the modal and the floating
-    // surfaces: the flag editor in the marker lane and a dialog editor's
-    // window in the box's view stand above its top line, the box cut there.
+    // surfaces: the flag editor in the marker lane and a line editor's
+    // label and entry at the box's view's head stand above its top line,
+    // the box cut there.
     //
     // GATED WHOLE ON onscreen_keyboard::stands (onscreen_keyboard.h — the
     // layout table, the geometry and the two lamps all live there): this body

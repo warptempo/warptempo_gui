@@ -181,14 +181,6 @@ uint64_t gui_monotonic_us();
 class GuiInputCore {
 public:
     using KeyCallback          = std::function<void(GuiKey key, GuiInputState mods)>;
-    // A KEY RELEASE, carrying the key alone (2026-08-13). Key releases were
-    // platform-internal until the modal dialog's buttons grew a keyboard
-    // press-and-hold whose act is at the LIFT; the application needs the edge
-    // and needs nothing else from it, so this callback deliberately hands over
-    // no modifier state — the PRESS is what is modifier-exact and a release's
-    // modifiers never select the act, as on_button_release's `mods` says of
-    // the pointer (its one reader is the tooltip's held bit).
-    using KeyReleaseCallback   = std::function<void(GuiKey key)>;
     // The pointer deliveries carry THE PLACE, the real position beside its
     // containing pixel (GuiPointerPlace, above).
     using ButtonCallback       = std::function<void(const GuiPointerPlace& at, GuiInputState mods)>;
@@ -327,12 +319,10 @@ public:
 
     // -- The consumer's side of the seam -----------------------------------
 
+    // A KEY'S PRESS, the one key edge the application is handed: a release
+    // is the core's own (it ends the held key's repeat) and delivers
+    // nothing, no key acting at its lift.
     void set_on_key(KeyCallback cb);
-    // THE KEY RELEASE HOOK (2026-08-13). It fires for the SAME key identity the
-    // press delivered — the same keysym lookup, the same ASCII case-fold — and
-    // carries no modifier state: a release binds nothing on its own, it can
-    // only RESOLVE an arm an already-delivered press created. Null-safe.
-    void set_on_key_release(KeyReleaseCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
     void set_on_motion(MotionCallback cb);
@@ -525,13 +515,13 @@ public:
     //     finger's down, beside the pan-zone query, captured beside the
     //     down point and cleared with them. It reads the field rect the
     //     GUI's own press claim reads — the marker lane's unrolled flag box
-    //     or the dialog editor's edit control, the modal family's box's
-    //     interior (2026-10-14), whichever editor is open — so the platform
+    //     or the value sub-page's entry, in the modal family's box's
+    //     view, whichever editor is open — so the platform
     //     keeps no memory of taps and no second spelling of the field. It
     //     forks TWO things. (1) The window's SLOP CROSSING resolves to the
     //     CARET DRAG (below) — the field is off the pan zone, which is the
     //     waveform alone on the GUI's answer (the marker lane's box lies
-    //     outside it, and the box empties it while a dialog editor stands),
+    //     outside it, and the box empties it while a line editor stands),
     //     so no pan and no sweep can be meant there. (2) A Field answer
     //     OPENS A WINDOW where the pointer would otherwise land on contact, a
     //     window with no deadline (input_core.cpp's constants block): the
@@ -1120,7 +1110,6 @@ private:
 
     // -- Callbacks --
     KeyCallback          on_key_;
-    KeyReleaseCallback   on_key_release_;
     ButtonCallback       on_button_press_;
     ButtonCallback       on_button_release_;
     MotionCallback       on_motion_;

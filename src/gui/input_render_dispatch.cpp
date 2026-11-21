@@ -694,15 +694,13 @@ void GuiInputHandler::close_batch_progress() {
 
 void GuiInputHandler::swap_batch_progress_for_player() {
     // THE HELD PRESS DROPS FIRST, CLEANLY (architect 2026-10-14): a pointer
-    // press armed on Cancel and a keyboard press held on its ring focus are
-    // both released here as no-ops, so the lift that follows finds no arm
-    // under the player (on_button_release's player branch takes -1 and
-    // dispatches nothing) and the key's release none (on_key_release). A
+    // press armed on Cancel is released here as a no-op, so the lift that
+    // follows finds no arm under the player (on_button_release's player
+    // branch takes -1 and dispatches nothing). A
     // press held anywhere else on the modal armed nothing to drop: the veil
     // consumed it.
     app.modal_dialog_pressed      = -1;
     app.modal_dialog_press_ms     = 0;
-    clear_modal_dialog_key_press();
     hide_shift_tooltip();
     close_batch_progress();
     // THE RENDER PLAYER ON THE NEW FOLDER: open() enters the newest batch

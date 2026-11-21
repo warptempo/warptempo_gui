@@ -1542,8 +1542,8 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // damages the window entire. THE MODAL STATE READS THE SAME ZERO (2026-08-13):
 // the row's painter zeroes the cell while it yields to the modal family's
 // row — an overlay standing, a question's page or the progress page (their
-// answers on the row, architect 2026-11-20, send EE), or a dialog editor
-// over its backdrop (paint_handler.cpp's modal_owns_bottom_row) — so a
+// answers on the row, architect 2026-11-20, send EE; paint_handler.cpp's
+// modal_owns_bottom_row) — so a
 // clock-moving route there widens to the lane instead of damaging a cell
 // that is not being painted (nothing plays under a question or the progress
 // page: each raise stops playback).
@@ -2331,17 +2331,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.on_key(key, mods);
     });
 
-    // THE KEY RELEASE, this product's one act-on-lift keyboard edge: bare Enter
-    // or bare Space on a focused modal dialog button commits it here (the
-    // contract is at GuiInputHandler::on_key_release). Every other release
-    // resolves nothing.
-    gui.set_on_key_release([&](GuiKey key) {
-        input_handler.on_key_release(key);
-    });
-
     // THE CAR'S BUTTONS: each command the platform drained is ACTED ON
     // DIRECTLY — the car is its own interface and nothing here is a key, no
-    // chord is synthesized and no modal ring is touched (the contract at
+    // chord is synthesized (the contract at
     // GuiRenderPlayer::on_media_command and at car_transport.h).
     //
     // THE FORK ON THE PLAYER'S MODE BIT IS THE ONE PARTITION OF THE HEAD UNIT
@@ -3526,17 +3518,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate
         // the top strip when it flips. Cheap: top_strip is small.
-        //
-        // A DIALOG EDITOR WHOSE FIELD HAS LOST THE FOCUS RUNS NO BLINK
-        // (2026-08-13, the same ruling that stopped the caret PAINTING there —
-        // "the blinking caret, the I-beam, continues to blink in the text field
-        // even though it has lost focus"). One term, the ring's own -1, so the
-        // tick and the painter cannot disagree about whether there is a caret;
-        // without it the loop would keep waking twice a second to damage a lane
-        // whose caret nobody draws. THE TOP-STRIP FLAG EDITOR IS OUTSIDE IT and
-        // must be: it is not a dialog, it has no ring, and the focus index it
-        // would be reading belongs to whatever dialog is up over it.
-        const bool dialog_field_focused = app.modal_dialog_focus < 0;
         if (text_editor::is_active(app.top_flag_editor)) {
             const bool now_visible =
                 text_editor::cursor_visible_now(app.top_flag_editor);
@@ -3545,12 +3526,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 invalidate_top_strip();
             }
         }
-        // Same shape for the settings prompt (a dialog editor); a dialog
-        // editor's caret damages the entry's box alone, where it paints
+        // Same shape for the line editor of the value sub-page, whose entry
+        // holds the focus for as long as it stands (the caret always
+        // shown): its caret damages the entry's box alone, where it paints
         // (Viewport::invalidate_dialog_editor_box, the edits' one owner).
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =
-                dialog_field_focused &&
                 text_editor::cursor_visible_now(app.settings_editor);
             if (now_visible != app.settings_editor_blink_last) {
                 app.settings_editor_blink_last = now_visible;

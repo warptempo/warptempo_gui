@@ -122,8 +122,8 @@
 // KEYBOARD STANDS (every editor) AND WHILE A QUESTION'S PAGE OR THE PROGRESS
 // PAGE STANDS — EVERY ROSTER KEY IS DEAD AND LOOKS IT, the same rule: each
 // wears the disabled look, a lit one the lit and inert look — the main
-// page's lit view pair under the flag editor or a question, the backdrop
-// page's opener under a dialog editor (roster_face_page_owner), a standing
+// page's lit view pair under the flag editor or a question, its list's
+// opener under a value sub-page (roster_face_page_owner), a standing
 // overlay's opener under its own question —
 // Arc's own disabled look the dead keys' one sign (redesign_button_enabled's
 // first arm, app_state.h, the owner; architect 2026-11-20, send EE). NOTHING
@@ -140,7 +140,7 @@
 // CSS line 136; our own role ButtonHoverBackground, a Live theme's key face
 // itself, so no hover shows there), THE BORDER, THE DRAWING AND THE WORD
 // UNCHANGED — on a key of both icon rows and of the controls rows, a word
-// button (a question's answers and a dialog editor's among them), an
+// button (a question's answers among them), an
 // on-screen keyboard key, and the scrub's
 // knob's fill inside its unchanged rim (Arc's scale slider:hover). IN A
 // LINKED GROUP THE SEAM COLUMN ON EACH SIDE OF THE HOVERING KEY WEARS THE
@@ -179,9 +179,9 @@
 // every painter below takes the mixes as numbers.
 // THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
-// the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and a
-// dialog editor's field are Arc's entry (paint_entry), NOISE's level its
-// progress line, a dialog editor's its focus line (send AA's stage D2); THE
+// the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and the
+// value sub-page's field are Arc's entry (paint_entry), NOISE's level its
+// progress line, the sub-page's its focus line (Arc's entry:focus); THE
 // MARKER LANE'S EDITORS are GTK's in-place cell editor, the entry's fill in
 // a one-W accent border (render.h's EDITING paragraph); THE TIME FIELDS are
 // plain text since 2026-11-19 (send AA; paint_handler.cpp's THE TIME
@@ -262,7 +262,7 @@
 // ruler's face the canvas's). Where a theme makes the lane, the trough, the lines or the dim
 // text coincide with the ground, that is Live's own number — ACCEPTED, not
 // a bug, no backstop (architect 2026-11-05).
-// ARC'S ENTRY (NOISE's case, a dialog editor's field; paint_entry below):
+// ARC'S ENTRY (NOISE's case, the value sub-page's field; paint_entry below):
 // the ruler's — the canvas's — tone in a one-W `well_border` ring; the
 // marker lane's cell editor the same fill in the accent's square border.
 //
@@ -662,7 +662,7 @@ void paint_linked_group(cairo_t* cr, int x, int y,
 void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 
 // ARC'S ENTRY on `box` (architect 2026-11-19, send Z; DESIGN §3, the kit's
-// body_entry; G3 `entry`) — NOISE's case and a dialog editor's field (the
+// body_entry; G3 `entry`) — NOISE's case and the value sub-page's field (the
 // time fields plain text since 2026-11-19, send AA), ONE PAINTER: GTK's box order as the word
 // button's — THE FILL on the padding box (`box` one border in, corners
 // key_inner_corner_px) in `ruler_face`, the canvas's tone (Arc's
@@ -672,14 +672,24 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 // padding box (its own inner corners) CUT to its last kEntryProgressW (2 W)
 // rows and to its first t of its width, in the accent `cue` — so the line's
 // left end follows the inner corner's arc and its right end stands at its
-// real x. FOCUSED (`focused`; send AA's stage D2, 2026-11-19: a dialog
-// editor's entry while its field holds the focus — the kit's body_entry
-// focused, Arc's entry:focus) AN INNER ONE-W LINE OF THE ACCENT `cue` on all
-// four sides inside the ring: the padding box in the accent, the fill one W
-// further in over it (its corners one W less). Every edge at exact coverage
-// over the ground the caller laid; one stamp pass, nothing drawn inside it;
-// the text is the caller's.
+// real x. FOCUSED (`focused`; send AA's stage D2, 2026-11-19: the value
+// sub-page's entry, which holds the focus for as long as it stands — the
+// kit's body_entry focused, Arc's entry:focus) AN INNER ONE-W LINE OF THE
+// ACCENT `cue` on all four sides inside the ring: the padding box in the
+// accent, the fill one W further in over it (its corners one W less). Every
+// edge at exact coverage over the ground the caller laid; one stamp pass,
+// nothing drawn inside it; the text is the caller's.
+// ITS OWN LENGTHS, ARC'S (G3 `entry`: min-height 28 px, padding 8 px inside
+// a 1 px border; every Arc px one W): kEntryHeightW (28 W) THE HEIGHT OF AN
+// ENTRY THAT STANDS ON NO KEY ROW — the value sub-page's (modal_box.h's
+// modal_page_lines; NOISE's, on the top icon row, is the key's height, 28 W
+// at the default) — and kEntryPenW (9 W) ITS TEXT'S PEN inside its left
+// edge, the border and the pad, the same 9 W kept clear inside its right
+// edge (a text is cut at the two inner edges); the baseline by the line-box
+// rule in the entry's height (+18 W of the 28).
 inline constexpr double kEntryProgressW = 2.0;
+inline constexpr double kEntryHeightW   = 28.0;
+inline constexpr double kEntryPenW      = 9.0;
 void paint_entry(cairo_t* cr, const GuiRect& box,
                  std::optional<double> progress = std::nullopt,
                  bool focused = false);

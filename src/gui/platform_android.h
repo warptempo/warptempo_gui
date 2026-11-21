@@ -66,7 +66,6 @@ public:
     // consumer that holds this class needs no second include (contracts at
     // GuiInputCore, input_core.h).
     using KeyCallback          = GuiInputCore::KeyCallback;
-    using KeyReleaseCallback   = GuiInputCore::KeyReleaseCallback;
     using ButtonCallback       = GuiInputCore::ButtonCallback;
     using MotionCallback       = GuiInputCore::MotionCallback;
     using CloseCallback        = std::function<void()>;
@@ -304,8 +303,6 @@ public:
     void set_on_redraw(RedrawCallback cb);
     void set_on_resize(ResizeCallback cb);
     void set_on_key(KeyCallback cb);
-    // Contract at GuiInputCore::set_on_key_release, input_core.h.
-    void set_on_key_release(KeyReleaseCallback cb);
     void set_on_button_press(ButtonCallback cb);
     void set_on_button_release(ButtonCallback cb);
     void set_on_motion(MotionCallback cb);

@@ -179,7 +179,7 @@
 // under the PLAYER an open enters a folder or plays a wav; under
 // the PROJECT PICKER it reopens the row's project; under the SETTINGS PAGE
 // it closes the page and opens the settings editor on the row's key, its
-// entry the key's value (2026-11-19, send AA), whose OK and Cancel reopen
+// entry the key's value (2026-11-19, send AA), whose Enter and Esc reopen
 // the page on that row (2026-10-28 night,
 // GuiInputHandler::handle_settings_editor_key), or on the row of a key with
 // a value list swaps that list in (settings_page_commit, 2026-10-28); under
@@ -326,8 +326,7 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
 // scrolled content): the content's height counts it (content_height_px),
 // the one walk starts under it (for_each_row), so the scroll ceiling, every
 // row's rect, the keep-visible walks, the centering, the painter and the
-// hit test follow from this one definition, on the standing overlay and on
-// a dialog editor's backdrop alike (both walk their own row table). IT
+// hit test follow from this one definition. IT
 // PRESSES NOTHING: it lies in no row's rect, so row_at answers -1 on it —
 // a press there is claimed by the band and arms nothing, no highlight, no
 // open and no scroll drag, exactly as a press on the empty view under a
@@ -467,9 +466,8 @@ inline void clamp_scroll(AppState& a) {
 // router asks it with the pointer's real place, and a damage site takes its
 // hull (render.h). It may lie partly or wholly outside the band; the painter
 // clips and the hit test asks the band first. THE VIEW'S FORM (below) walks
-// the standing overlay in its own band; the dialog editor's backdrop walks
-// the page it was opened from in the box's view, the room its window is
-// centered in (paint_handler.cpp's paint_list_view).
+// the standing overlay in its own band, as its painter does
+// (paint_handler.cpp's paint_list_view).
 template <class Fn>
 inline void for_each_row(const AppState::FolderOverlay& ov,
                          const GuiRect& band, double scroll, Fn&& fn) {
@@ -547,9 +545,7 @@ inline bool row_heads_listing(const AppState::FolderOverlay& ov, int index) {
 
 // THE LEAST MOVE THAT SHOWS ROW `index` WHOLE in the band `band`, from the
 // offset `scroll`, clamped onto the listing's walls there: the offset the
-// keyboard row walk's "keep the focused row visible" writes (below). (The
-// dialog editor's backdrop paints its page at the page's own scroll,
-// paint_modal_dialog; architect 2026-11-20, send EE.)
+// keyboard row walk's "keep the focused row visible" writes (below).
 // THE ROW THAT HEADS THE LISTING SHOWS WITH THE LISTING'S HEAD (architect
 // 2026-11-20, send EE, the head pad's rule: bringing the first row into
 // view shows the pad too): for row_heads_listing's row the answer is SCROLL
@@ -639,10 +635,7 @@ inline bool scroll_row_centered(AppState& a, int index) {
 // (finish_folder_overlay_release). Its press still arms, the same press
 // being the band's scroll drag; the painter keeps it unlit
 // (paint_folder_overlay). False outside the listing.
-// ON A GIVEN PAGE (send BB, 2026-11-19): the same answer over `ov`, the
-// standing overlay's or a dialog editor's backdrop (AppState::
-// dialog_backdrop), whose controls row paint_modal_dialog paints from the
-// page the editor was opened from.
+// ON A GIVEN PAGE: the same answer over `ov`, the standing overlay's.
 inline bool row_is_inert(const AppState::FolderOverlay& ov, int index) {
     const int n = static_cast<int>(ov.rows.size());
     if (index < 0 || index >= n) return false;

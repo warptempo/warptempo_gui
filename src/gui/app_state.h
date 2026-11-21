@@ -3518,8 +3518,9 @@ enum class DialogTrigger {
 // A PROMPT IS ANSWERED BY ITS BUTTONS ALONE (architect 2026-10-30): no Enter,
 // Space or Esc reaches it, so no answer is a key's, and A PROMPT HAS NO FOCUS
 // (architect 2026-11-02: "focus is for kbd no? we use pen or fingers only
-// now" — the dialog family's focus, AppState::modal_dialog_focus, is the
-// dialog editors' alone, the on-screen keyboard's). Two facts shape it:
+// now" — no button of the modal family has one: the on-screen keyboard
+// stands only under an editor, and an editor's page has no button). Two
+// facts shape it:
 //   (i)  CANCEL STANDS LAST — the non-destructive answer, in the same seat
 //        on every prompt, the right end of the flush-right row (Windows' OK /
 //        Cancel order). Every answer table below puts Cancel's '\x1b' last
@@ -5879,15 +5880,16 @@ struct AppState {
     // modal).
     FlagEditorBox flag_editor_box;
 
-    // THE OPEN DIALOG EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
-    // geometry contract for the dialog line editor in its three kinds (the
-    // load and commit-title editors stood among them until 2026-08-28 and
-    // 2026-10-10), which paint THEIR TEXT IN ARC'S ENTRY in Thunar's rename
-    // dialog (paint_handler.cpp's THE DIALOG WINDOW). The press region is the
-    // published field rect, modal_dialog.field, the entry's box.
+    // THE OPEN LINE EDITOR'S TEXT GEOMETRY — the painter-publishes-shaped-
+    // geometry contract for the line editor of the settings editor's buffer
+    // in its three kinds (the load and commit-title editors stood among them
+    // until 2026-08-28 and 2026-10-10), which paint THEIR TEXT IN ARC'S ENTRY
+    // on the value sub-page (paint_handler.cpp's THE VALUE SUB-PAGE). The
+    // press region is the published field rect, modal_dialog.field, the
+    // entry's box.
     //
     // THE ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY (architect
-    // 2026-11-19, send AA; the rule at paint_dialog_window's editor arm):
+    // 2026-11-19, send AA; the rule at paint_value_page's head):
     // `origin_x` is the window x byte 0 paints at, THROUGH THE SCROLL OFFSET
     // (text_editor::State::view_offset_px), so byte i paints at origin_x +
     // byte_x[i]; `byte_x` holds pending.size()+1 pen offsets of the ONE shaped
@@ -5896,11 +5898,10 @@ struct AppState {
     // one click-to-byte rule) — a hidden byte included, which the next paint
     // scrolls into view — so the click, the F2.1 caret drag and the finger's
     // caret drag walk the text the painter drew.
-    // Written by paint_modal_dialog: zeroed at the top of every run, filled by
-    // whichever editor the dialog actually paints. That makes it a statement
-    // about what is ON SCREEN — an editor the dialog's precedence hides (a
-    // prompt is up) publishes nothing and takes no clicks, which is the
-    // correct answer.
+    // Written by paint_modal_dialog: zeroed at the top of every run, filled
+    // by the sub-page it actually paints. That makes it a statement about
+    // what is ON SCREEN — an editor not yet painted publishes nothing and
+    // takes no clicks, which is the correct answer.
     struct DialogEditorText {
         bool                valid    = false;
         double              origin_x = 0.0;
@@ -5911,9 +5912,10 @@ struct AppState {
     // THE MODAL SURFACE'S PAINTED GEOMETRY. A QUESTION AND THE PROGRESS PAGE
     // ARE FULL PAGES — the view the page, their answers word buttons on the
     // family's controls row (architect 2026-11-20, send EE; paint_handler.cpp's
-    // THE QUESTION PAGE AND THE PROGRESS PAGE); the dialog editor paints as
-    // a DIALOG WINDOW centered in the modal family's room
-    // (paint_dialog_window, paint_handler.cpp's THE DIALOG WINDOW); the
+    // THE QUESTION PAGE AND THE PROGRESS PAGE); a line editor is A SUB-PAGE
+    // — the view the page, its label and one entry on it, no button, the
+    // on-screen keyboard its one control (the same ruling;
+    // paint_handler.cpp's THE VALUE SUB-PAGE); the
     // render player, the picker and the score viewer stand on the family's
     // controls row (modal_box.h): while a page or an overlay stands the
     // bottom icon row's tenants stand down whole. This is the
@@ -5923,26 +5925,23 @@ struct AppState {
     // `box` is the modal's whole SURFACE — the controls row under the render
     // player and the picker; the modal family's whole area (modal_area_rect,
     // modal_box.h: the box and the controls row under it) under the score
-    // viewer, a question and the progress page; and under a dialog editor
-    // THE DIALOG'S WINDOW AND ITS SHADOW'S REACH (xfwm_shadow_rect,
-    // modal_box.h; paint_dialog_window) — DAMAGE'S FALLBACK, read where no
-    // narrower rect is known (a press face with no stash index, a dialog
-    // editor's focus move); `field` is the editor's entry, its
-    // box border included (zero for prompts) — the click-to-caret /
-    // text-drag claim region and a standing editor's edit damage
+    // viewer and the three pages — DAMAGE'S FALLBACK, read where no
+    // narrower rect is known (a press face with no stash index); `field` is
+    // the value sub-page's entry, its box border included (zero under every
+    // other owner) — the click-to-caret / text-drag claim region and a
+    // standing editor's edit damage
     // (Viewport::invalidate_dialog_editor_box); `buttons` are the answer
-    // buttons in painted order.
+    // buttons in painted order, NONE UNDER A LINE EDITOR (its answers are
+    // the on-screen keyboard's Enter and Esc).
     //
     // A BUTTON CARRIES ITS DISPATCH, not a label: for a PROMPT,
     // `response_key` is the PromptAnswer dispatch char the click activates
-    // (validated against the LIVE answers at dispatch); for an EDITOR,
-    // `editor_ok` selects the session's own Enter (true) or Esc (false),
-    // dispatched through the editor's one key route — button-is-its-chord.
+    // (validated against the LIVE answers at dispatch); an overlay's row
+    // its act (the four vocabularies below).
     // `tooltip` is the button's word, the act's name and nothing else
     // (architect 2026-10-10), stashed because the WORD is the half the pointer
-    // path cannot see: the prompt's labels are its tables' and the editors'
-    // two are literals. Every dialog button has one, so membership needs no
-    // test beyond the index.
+    // path cannot see: the prompt's labels are its tables'. Every dialog
+    // button has one, so membership needs no test beyond the index.
     //
     // PUBLISHED GEOMETRY MAY ONLY SELECT; LIVE STATE DECIDES (the doctrine,
     // recorded here once, 2026-08-13). The icon roster always obeyed it —
@@ -5963,20 +5962,21 @@ struct AppState {
     // ModalDialogButton::enabled), the per-tick comparator keeping it true.
     //
     // THE PAINTER IS THE ONE WRITER of both identity fields (`owner` Prompt on
-    // the prompt branch, Editor on the editor branch, None in the no-dialog
-    // reset arm beside the rest of the stash; `session` the id of whichever
-    // surface it drew), and THE COMPARISON HAS ONE OWNER —
-    // GuiInputHandler::modal_dialog_stash_current, read by the two press
-    // claims, by the focus ring's route, and by the shared act
+    // the prompt branch, Editor on the value sub-page's, None in the
+    // no-dialog reset arm beside the rest of the stash; `session` the id of
+    // whichever surface it drew), and THE COMPARISON HAS ONE OWNER —
+    // GuiInputHandler::modal_dialog_stash_current, read by the press
+    // claims, the hover's gate and the shared act
     // (dispatch_modal_dialog_button), each refusing a stash that does not name
     // the surface owning input as a consumed no-op. THE FIELD CLAIM NEEDS NO
-    // TERM and deliberately has none: a prompt publishes a zero field and
-    // leaves DialogEditorText.valid false, so the claim's own two tests
-    // already answer the cross-class case — and the one case they do not, a
-    // stale EDITOR field rect in the batch before the editor that replaced it
-    // paints, DECIDES NOTHING: it places a caret in the live buffer, one
-    // visible byte position out at worst, with no act behind it. The identity
-    // gate is for the claims that ACT.
+    // TERM and deliberately has none: every other owner publishes a zero
+    // field and leaves DialogEditorText.valid false, so the claim's own two
+    // tests already answer the cross-class case — and the one case they do
+    // not, a stale EDITOR field rect in the batch before the editor that
+    // replaced it paints, DECIDES NOTHING: it places a caret in the live
+    // buffer, one visible byte position out at worst, with no act behind it
+    // (and the entry's box is the same rect for every line editor, a fact of
+    // the view). The identity gate is for the claims that ACT.
     //
     // THE TAG IS THE CLASS AND THE SESSION IS THE IDENTITY (the session joined
     // 2026-08-14, closing the gap that the tag alone cannot tell
@@ -5984,10 +5984,9 @@ struct AppState {
     // exactly: TWO DIALOG EDITORS ARE NEVER LIVE TOGETHER — every opener
     // refuses while another editor owns the keyboard — but a CLOSE AND AN OPEN
     // FIT IN ONE DISPATCH BATCH (Esc closes one editor, the next key opens
-    // another, no paint in between), and across that edge every face
-    // index, both arms and the whole published geometry still carried an
-    // `Editor` tag that matched the NEW session. A held Enter released into
-    // that state dispatched the old editor's OK at an unseen dialog. THE
+    // another, no paint in between), and across that edge the whole
+    // published geometry still carries an `Editor` tag that matches the NEW
+    // session's class. THE
     // SESSION ID IS WHAT MAKES THE DIFFERENCE SAFE: one raise, one id, so the
     // stash a dead session published can never be read as the live one's, and
     // the painter's face-state reset — keyed on the session now — makes
@@ -6131,12 +6130,9 @@ struct AppState {
         None, Home, PlayPause, NextTrack, RepeatOne, HighlightDown,
         HighlightUp, Up, LoadInPlace, Delete
     };
-    // THE OK BIT IS THE EDITOR DIALOGS' ALONE again (2026-08-29): it is that
-    // session's own Enter / Esc. The picker shared it for a day, its OK being
-    // the open act on the highlight, and lost the button rather than the bit
-    // when a click on a row became the open — its row is Cancel, so
-    // dispatch_modal_dialog_button's picker arm reads no bit at all and forks
-    // on the LIVE owner as it always did.
+    // (THE PICKER'S ROW IS ITS LEAVE WORD ALONE since 2026-08-29, a click on
+    // a row being the open: dispatch_modal_dialog_button's picker arm reads
+    // no bit and forks on the LIVE owner.)
     // THE SCORE VIEWER'S BUTTONS (architect 2026-10-26), its dispatch
     // vocabulary beside the player's, on its two faces: RESET, START and END
     // at the row's left; then, flush right (the transport's side
@@ -6206,7 +6202,6 @@ struct AppState {
         // The hit test's one question (point_on_key's linked form).
         bool hit(int x, int y) const { return point_on_key(rect, seam, x, y); }
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
-        bool        editor_ok    = false;  // editor dialogs; OK vs Cancel
         PlayerButtonAct player_act = PlayerButtonAct::None;  // the player's
         ScoreButtonAct  score_act  = ScoreButtonAct::None;   // the score viewer's
         TrimPresetsButtonAct trim_act = TrimPresetsButtonAct::None;  // the trim list's
@@ -6216,8 +6211,8 @@ struct AppState {
         // as the rects are, from render_player_button_enabled (whose
         // declaration holds the arms and the reader inventory). THE CLAIM
         // READS THIS BIT (architect 2026-09-24, strictly as-painted): the
-        // press claim's consume, the ring walk's skip, the ring's Enter/Space
-        // arm and the painter's disabled rung all read it, and the dispatch
+        // press claim's consume and the painter's disabled rung read it, and
+        // the dispatch
         // re-asks no live predicate — a face painted live dispatches and its
         // act answers for itself. The per-tick comparator (main.cpp) holds
         // it against the live predicate and repaints the row on drift. THE
@@ -6226,9 +6221,9 @@ struct AppState {
         // does THE TRIM PRESETS LIST'S (2026-10-28 night), from
         // trim_presets_button_enabled, and THE BPM FORM'S (2026-10-29), from
         // bpm_form_button_enabled — the picker's two contents with a
-        // stateful row. Every other owner's builder leaves it true — a prompt's, the other
-        // picker contents' and an editor's buttons are always live while
-        // their dialog stands.
+        // stateful row. Every other owner's builder leaves it true — a prompt's, the
+        // progress page's and the other picker contents' buttons are always
+        // live while their surface stands.
         bool        enabled      = true;
         // THE LIT BIT AS PAINTED (send CC, 2026-11-20): the row's one
         // checked key, the render player's Repeat One, published as its
@@ -6293,8 +6288,10 @@ struct AppState {
     };
     ModalDialogGeometry modal_dialog;
 
-    // THE ONE ACTIVE DIALOG EDITOR'S SESSION ID, or 0 when none stands — and
-    // THE AUTHORITATIVE MEMBERSHIP of the DIALOG-HOSTED editors: ONE BUFFER
+    // THE ONE ACTIVE LINE EDITOR'S SESSION ID, or 0 when none stands — and
+    // THE AUTHORITATIVE MEMBERSHIP of the editors that stand as THE VALUE
+    // SUB-PAGE (paint_handler.cpp; "the dialog editors" in the names here,
+    // the modal surface's family name): ONE BUFFER
     // since the BPM form (architect 2026-10-29), the settings editor's, which
     // carries the settings line, the trim preset's name (Kind::TrimPresetName,
     // 2026-10-28 night) and the BPM form's line (Kind::BpmField). (The bpm
@@ -6463,7 +6460,8 @@ struct AppState {
     // dialog button is not a roster member, so the two index spaces would have
     // to be sentinel-encoded into one field, and the two STATES overlap in
     // time. Neither surface can arm under the other — the veil swallows every
-    // press outside the dialog's own field and buttons, with no exception
+    // press outside the modal's own buttons (a line editor's sub-page has
+    // none: its entry's text alone), with no exception
     // since 2026-08-13 (on_button_press, input_pointer.cpp), so no roster
     // press lands while a dialog stands — but a dialog raised MID-HOLD
     // stands over a roster arm taken before it, which is why the
@@ -6483,12 +6481,9 @@ struct AppState {
     // up — then that button receives the passive focus as well. And while the
     // button is being held, but away from the button's hit area, the button
     // looks like a hover — a passive focus with the hover. And then when they
-    // release it, it goes into being a passive focus."
-    // THE FOCUS MOVES AT THE PRESS (architect 2026-10-03, "as few exceptions
-    // as possible to the Windows 95 rule; mostly cosmetic since I don't press
-    // Tab and Space"): a press on a dialog button gives it the PASSIVE focus
-    // there and then, as Windows does, rather than at the leave edge as the
-    // feint first had it (arm_modal_dialog_press, the one site).
+    // release it, it goes into being a passive focus." (NO FOCUS IS KEPT OR
+    // PAINTED: no key reaches a surface with buttons, architect 2026-11-02 /
+    // 2026-11-20, send EE; the arm's survival is what the ruling leaves.)
     // So the arm is one index for the life of the hold and
     // `modal_dialog_press_inside` below is the pointer's answer about it
     // (the release re-hits the button at the lift's own coordinates,
@@ -6497,19 +6492,16 @@ struct AppState {
     //                                    look since 2026-11-19 (materials.h's
     //                                    key_state);
     //                                    the release COMMITS
-    //   pointer OFF it                -> the button rests (the passive
-    //                                    focus the press gave it, unpainted
-    //                                    since 2026-10-23); the release
-    //                                    commits NOTHING and leaves the
-    //                                    button PASSIVELY FOCUSED
+    //   pointer OFF it                -> the button rests; the release
+    //                                    commits NOTHING
     // Sliding back on presses the key again and a release there DOES
     // commit — the arm never died, so there is nothing to re-arm. The reason
     // is in the ruling itself: a button still engaged while held away must
     // be able to light again, and a dead arm could not.
     //
     // Its edges: the press claims write it through arm_modal_dialog_press
-    // (on_button_press's two dialog gates and the player's and the picker's
-    // veils, input_pointer.cpp), which also assigns the focus; the release
+    // (on_button_press's prompt and progress gates and the player's, the
+    // picker's and the score viewer's veils, input_pointer.cpp); the release
     // claims read and clear it, the hover walk keeps it and rewrites
     // `press_inside` instead (update_modal_dialog_hover),
     // clear_modal_dialog_press drops it
@@ -6538,131 +6530,10 @@ struct AppState {
     // same claim.
     int64_t modal_dialog_press_ms = 0;
 
-    // THE KEYBOARD FOCUS RING (architect 2026-08-13, part D of the modal
-    // button ruling — kdenlive-sampled face, the navigation his own
-    // derivation): the index into modal_dialog.buttons the keyboard is on, or
-    // -1, THE FIELD, a real ring stop and where every editor opens (the user
-    // is there to type, which is also what keeps the editors' keyboard
-    // contract byte-identical). THE DIALOG EDITORS' ALONE: the on-screen
-    // keyboard, the one key producer under a modal since 2026-10-30, stands
-    // only under an editor, so A PROMPT, THE PROGRESS MODAL AND THE OVERLAYS
-    // HAVE NO FOCUS (architect 2026-11-02: "focus is for kbd no? we use pen
-    // or fingers only now"). The pointer press's write
-    // (arm_modal_dialog_press) is the one road shared by every surface's
-    // buttons, and off an editor nothing reads what it wrote.
-    //
-    // THE RING (architect 2026-10-30): bare Tab cycles every stop including
-    // the field, and bare
-    // Enter / bare Space PRESS the focused button down for the act at their
-    // release (modal_dialog_key_pressed, below). The one route is
-    // route_modal_dialog_focus_key (input_key_dispatch.cpp), read by
-    // route_modal_editor_key. ONE THING RANKS ABOVE the ring's Tab: an editor
-    // whose FIELD has an autocomplete offers that completion first and reaches
-    // the ring only when it did not advance the buffer — the one autocomplete
-    // model, stated at route_modal_editor_key's Tab arm, which is also what
-    // makes -1 a stop Tab can always leave.
-    //
-    // IT RESETS STRUCTURALLY, in paint_modal_dialog and nowhere else: with the
-    // stash when no dialog stands, and ON ANY CHANGE OF THE STASH'S SESSION —
-    // ONE test since 2026-08-14, covering every edge the three tests before it
-    // named separately (prompt over editor, editor after prompt, a prompt
-    // REPLACING a prompt at the save-failed rung) plus the one they missed,
-    // EDITOR AFTER EDITOR: two dialog editors are never live together, but a
-    // close and an open fit in one dispatch batch, and an owner tag cannot see
-    // that (the full statement is at ModalDialogOwner).
-    //
-    // ON AN EDITOR DIALOG THE FIELD TAKES IT BACK (architect 2026-10-02): a
-    // press on the field, a finger's caret drag in it and the editor act's
-    // own dispatch each return it to -1 through the one owner,
-    // GuiInputHandler::return_modal_focus_to_field (input_pointer.cpp), so a
-    // button that took it by a press gives it back with the caret. THE
-    // FIELD'S FOCUS IS PAINTED since send AA's stage D2 (2026-11-19, the
-    // design's §E: Arc's entry:focus): the entry's inner one-W accent line,
-    // with the caret, while this is -1 (paint_dialog_window); a button's
-    // focus wears nothing (NO FOCUS LOOK on a button, architect 2026-10-23).
-    //
-    // AND THE INDEX IS ONLY MEANINGFUL WHILE THE STASH IS CURRENT, because it
-    // names a slot in the painter's published button list. Between a raise and
-    // its first paint it names the PREVIOUS surface's buttons, which is one
-    // dispatch batch wide and reachable by a queued burst — so the keyboard
-    // reads it through modal_dialog_focus_live (input_handler.h), never raw.
-    // The raw field is the PAINTER'S and the TICK'S to read: the painter has
-    // just reset it, and the blink tick is a frame-cadence cosmetic.
-    int modal_dialog_focus = -1;
-
-    // THE FOCUS'S STRENGTH (architect 2026-08-13, from kdenlive): PASSIVE
-    // (false) or ACTIVE (true). Meaningless while modal_dialog_focus is -1 and
-    // reset with it; the two are read as one fact.
-    //
-    // BOTH STRENGTHS ACT — Enter and Space press the focused button whichever
-    // it wears. What separates them is HOW THE FOCUS WAS ACQUIRED and what
-    // the button then looks like:
-    //   PASSIVE is ASSIGNED, never walked onto. ONE producer: a POINTER
-    //   PRESS on a button (architect 2026-10-03, Windows' rule:
-    //   arm_modal_dialog_press, at the press; the rule is at
-    //   modal_dialog_pressed). A press's assignment REPLACES whatever focus
-    //   the dialog had, of either strength.
-    //   ACTIVE is reached only by a DELIBERATE KEYBOARD WALK — the on-screen
-    //   keyboard's bare Tab (architect 2026-10-30) — so its one producer is
-    //   route_modal_dialog_focus_key's walk, which sets it on every landing.
-    //   There is NO route back down to passive except a new passive
-    //   assignment.
-    // An EDITOR dialog opens with focus in the FIELD and no button focused at
-    // all, so it opens with neither strength — unchanged.
-    bool modal_dialog_focus_active = false;
-
-    // THE KEYBOARD'S OWN PRESS ARM — the button bare Enter or bare Space is
-    // holding down, or -1 (architect 2026-08-13, from kdenlive: "pressing
-    // Enter when a button has focus pushes down the button. It doesn't
-    // automatically commit the action... we move the playhead when the user
-    // lifts up the mouse key, so we should do that here as well"). It is the
-    // POINTER ARM'S TWIN and deliberately a separate index: they die on
-    // different edges, and one field would have to encode both.
-    //
-    // THE ACT IS AT THE PHYSICAL RELEASE, which is the only reason this state
-    // exists: the press dispatches nothing (and paints the focused key's
-    // press face for as long as it stands, the press arc 2026-11-05 —
-    // paint_modal_dialog's row), and the
-    // release of THAT SAME KEY runs the act through the one shared dispatch
-    // (dispatch_modal_dialog_button, input_pointer.cpp, which re-asks the
-    // painted gate and the stash's identity exactly as the pointer's release
-    // does).
-    // `modal_dialog_key_pressed_key` is what the release matches on, so
-    // releasing the OTHER of the two keys — Enter pressed, Space released —
-    // resolves nothing.
-    //
-    // IT CANNOT FIRE TWICE UNDER A HOLD, by two independent facts: the key
-    // never arms platform repeat while the focus is on a button
-    // (repeat_eligible's own arm), and the press body refuses a delivery
-    // carrying GuiInputState::synthesized_repeat outright — so even a repeat
-    // armed before the focus moved cannot re-press or re-fire.
-    //
-    // MOVING THE FOCUS CANCELS THE ARM (2026-08-14, closing the
-    // defect that a Tab mid-hold left the arm on the button the user had
-    // visibly left: focus OK, hold Space, Tab onto Cancel, release — and OK
-    // committed). SO WHILE THIS IS >= 0 IT EQUALS modal_dialog_focus, an
-    // invariant every reader may lean on: the release cannot commit a
-    // button that is no longer focused. Its three cancel sites are the three
-    // routes that move the focus at all — the ring's walk, the pointer
-    // PRESS's passive assignment (arm_modal_dialog_press, 2026-10-03), and
-    // the editor act's return of the focus to the field — each calling the
-    // one owner, clear_modal_dialog_key_press.
-    // IT IS THE POINTER ARM'S RULE IN THE KEYBOARD'S OWN TERMS rather than a
-    // copy of it, and the difference is the two inputs' own: the pointer can
-    // slide off and back onto the button, so its arm
-    // survives the whole hold and the release away simply commits nothing (the
-    // FEINT, at modal_dialog_pressed); the keyboard has nowhere to be but on
-    // the focused button and cannot re-press a key that is already down, so
-    // leaving cancels outright. Same verdict on both surfaces — nothing
-    // commits a button the user has left — reached by each input's own shape.
-    //
-    // Its edges: the ring's press arms write it; on_key_release reads and
-    // clears it; the three focus moves above cancel it; the painter drops it
-    // with the rest of the face state on every edge that changes the dialog.
-    // Every write damages the pressed button's face (the press face,
-    // 2026-11-05; GuiInputHandler::invalidate_modal_press_face, 2026-11-16).
-    int    modal_dialog_key_pressed     = -1;
-    GuiKey modal_dialog_key_pressed_key = 0;
+    // NO BUTTON OF THE FAMILY HAS A KEYBOARD FOCUS OR A KEYBOARD PRESS ARM:
+    // the on-screen keyboard, the one key producer, stands only under an
+    // editor, and a line editor's sub-page has no button (architect
+    // 2026-11-20, send EE) — so the pointer's arm above is the family's one.
 
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (2026-08-11,
     // when the timestamp moved off the status line into the transport row's
@@ -6852,8 +6723,8 @@ struct AppState {
     // only place a long press can be known (the Card kind below);
     // (3) THE KEYBOARD — a chord dispatches at
     // its key's press (button-is-its-chord names WHAT a button runs, not
-    // WHEN), the modal ring's Enter/Space press-and-lift being the one
-    // keyboard act-at-release; key commands at the release were tried
+    // WHEN), no key acting at its release; key commands at the release were
+    // tried
     // 2026-08-16 and returned the same evening (closed_questions.md); (4) the
     // CONTENT surfaces — waveform, ruler, marker lane, trim bar — keep their
     // own press / lift vocabularies under the timing doctrine at
@@ -7133,7 +7004,7 @@ struct AppState {
     // THE FACES: every Arc button the product paints — the roster's keys
     // (both icon rows), the dialog stash's buttons (every controls row's
     // keys and word buttons, a question's answers and the progress page's
-    // Cancel among them, and the dialog editor's window's two), the
+    // Cancel among them; a line editor's sub-page has none), the
     // on-screen keyboard's keys — and the scrub's knob, each named by its
     // surface and its index there (a dialog button's and the knob's with the
     // stash's owner and session, so a face never outlives the surface it was
@@ -7281,8 +7152,7 @@ struct AppState {
     // it, or of the key when it comes back, at once — THE BOTTOM ICON ROW'S
     // KEYS UNDER A QUESTION OR THE PROGRESS PAGE among them: the row yields
     // to the page's answers, its keys publish empty boxes and are not
-    // painted, so they come back at once when the page leaves — and a
-    // dialog editor's backdrop row under its window makes no record. THE TOP
+    // painted, so they come back at once when the page leaves. THE TOP
     // ICON ROW IS THE SAME STANDING ROW UNDER EVERY MODAL (architect
     // 2026-11-20, send EE): it stands before, under and after an editor, a
     // question and the progress page, each of which greys its whole roster
@@ -8811,12 +8681,13 @@ struct AppState {
     // invalidate the top strip without redundant repaints.
     bool top_flag_editor_blink_last = false;
 
-    // THE DIALOG LINE EDITOR — a dialog window's entry (paint_dialog_window),
-    // opened from a row of the settings page, the trim presets list or the
-    // BPM form; separate from top_flag_editor so the two paint regions stay
-    // independent (the in-practice mutual exclusion comes from the flag
-    // editor swallowing all keys while active).
-    // THE DIALOG LINE EDITOR'S ONE BUFFER, THREE KINDS:
+    // THE LINE EDITOR — the value sub-page's entry (paint_handler.cpp's
+    // paint_value_page), opened from a row of the settings page, the trim
+    // presets list's Save As or a row of the BPM form; separate from
+    // top_flag_editor so the two paint regions stay independent (the
+    // in-practice mutual exclusion comes from the flag editor swallowing all
+    // keys while active).
+    // THE LINE EDITOR'S ONE BUFFER, THREE KINDS:
     // Kind::SettingsAssignment, the settings editor's value for the row's
     // key, the value alone (architect 2026-11-19, send AA; the key the
     // open's, GuiSettingsEditor::open / page_key);
@@ -8897,7 +8768,7 @@ struct AppState {
     // value list, `t` under the trim presets list, Ctrl+B under the BPM form
     // — the exit road, the same-project no-op, Save As's name editor ahead
     // of its open and the page's and the form's row opens ahead of their
-    // editor all pass through it — the editor's OK and Cancel reopening the
+    // editor all pass through it — the editor's Enter and Esc reopening the
     // page, the trim list or the form, handle_settings_editor_key; every
     // road that LEAVES the BPM form takes the BPM mode down with it
     // (close_bpm_form, and the exit road's close_modal_editors_no_commit) — but under a
@@ -9495,7 +9366,7 @@ struct AppState {
     //                 list (trim_presets_apply; the close architect
     //                 2026-11-19, send CC), and under the BPM form opens
     //                 the line editor prefilled with the row's value
-    //                 (whose OK and Cancel reopen the form on that row,
+    //                 (whose Enter and Esc reopen the form on that row,
     //                 bpm_form_commit); the lift's
     //                 highlight is every owner's alike (a picker's band IS
     //                 its whole state — there is no field to feed), an inert
@@ -9656,43 +9527,33 @@ struct AppState {
     };
     FolderOverlay folder_overlay;
 
-    // THE DIALOG EDITOR'S BACKDROP AND ITS WINDOW'S TITLE (send AA's stage
-    // D2, 2026-11-19; the architect's approved tmp/sendZ/VIEW/Z_06: the line
-    // editor over the settings page). THE THREE OPENERS OF A DIALOG EDITOR
-    // — the settings page's row (GuiInputHandler::settings_page_commit), the
-    // trim presets list's Save As (trim_presets_save_as) and the BPM form's
-    // row (bpm_form_commit) — each close the list as they always did (the
-    // overlay and the keyboard never both stand) and write here, first, THE
-    // PAGE AS IT STOOD (`page`: its rows, its highlight and its scroll, the
-    // press dropped) and THE TITLE the editor's window wears (`title`: the
-    // row's key — the line's text before its `=` — or "Save As", the button's
-    // word). paint_modal_dialog paints `page` in the box's view, cut at the
-    // on-screen keyboard's top line (the keyboard over the view's foot,
-    // onscreen_keyboard.h's placement block, send EE), ITS CONTROLS ROW —
-    // the row of the page behind (architect 2026-11-19, send BB; the trim
-    // presets list's enabled bits off this page and the live trim,
-    // trim_presets_button_enabled's page form; the BPM form's off the live
-    // markers; the settings page's Close) — YIELDING UNDER THE KEYBOARD,
-    // which covers the bottom icon row while every dialog editor stands
-    // (architect 2026-11-20, send EE), and its window's title and label
-    // off `title` while a dialog editor stands, and reads neither otherwise;
-    // and THE ROSTER'S LIT BIT reads `page.owner` there
-    // (roster_face_page_owner: the page behind's opener lit, architect
-    // 2026-11-19, send BB — and inert, the whole roster greyed while the
-    // keyboard stands, redesign_button_enabled's first arm, architect
-    // 2026-11-20, send EE). The next
-    // opener overwrites both. Nothing writes the page, the trim or
-    // the markers under the editor's veil, so the row shows the bits the list
-    // showed at the open.
-    // Paint alone: nothing presses the backdrop (the editor's veil), and the
-    // page the editor's OK or Cancel returns to is rebuilt as before
-    // (GuiInputHandler::return_to_settings_page, open_bpm_form, the trim
-    // list's reopen).
-    struct DialogBackdrop {
-        FolderOverlay page;
-        std::string   title;
+    // THE VALUE SUB-PAGE'S TWO WORDS OF STATE (architect 2026-11-20, send
+    // EE; paint_handler.cpp's THE VALUE SUB-PAGE). THE THREE OPENERS OF A
+    // LINE EDITOR — the settings page's row
+    // (GuiInputHandler::settings_page_commit), the trim presets list's Save
+    // As (trim_presets_save_as) and the BPM form's row (bpm_form_commit) —
+    // each close the list as they always did (the overlay and the keyboard
+    // never both stand) and write here, first (seat_value_page), what the
+    // sub-page shows that the editor's buffer does not hold:
+    //   `name`    THE LABEL'S TEXT, the painter adding the colon: the row's
+    //             key — the line's text before its `=` — or, for the trim
+    //             preset's name, the act's own name, "Save As";
+    //   `opener`  THE LIST THE PAGE WAS OPENED FROM, its owner tag: the
+    //             roster's lit bit reads it (roster_face_page_owner), so
+    //             that list's opener key stays lit — and inert, the whole
+    //             roster greyed while the keyboard stands
+    //             (redesign_button_enabled's first arm).
+    // Read only while a line editor stands; the next opener overwrites
+    // both. PAINT ALONE: the list the editor's Enter or Esc returns to is
+    // rebuilt by the editor's key route from the route's own seats
+    // (GuiInputHandler::handle_settings_editor_key: the settings page on the
+    // open's key, the trim presets list on the name, the BPM form on the
+    // field), none of them read from here.
+    struct ValuePage {
+        FolderOverlay::Owner opener = FolderOverlay::Owner::None;
+        std::string          name;
     };
-    DialogBackdrop dialog_backdrop;
+    ValuePage value_page;
 
     // -- THE RENDER PLAYER'S WHOLE STATE (2026-08-28) -----------------------
     //
@@ -10105,7 +9966,7 @@ inline bool folder_overlay_stands(const AppState& a) {
 // lamp the one other roster key an overlay leaves live
 // (overlay_admits_button, below); false with nothing standing.
 // ON A GIVEN OWNER TAG (send BB, 2026-11-19): the same answer for `owner`,
-// the standing overlay's or the page behind a dialog editor
+// the standing overlay's or the list a value sub-page was opened from
 // (roster_face_page_owner, below — the openers' lit bit alone reads that
 // form);
 // the AppState form, the live overlay's tag, is every input road's.
@@ -10133,28 +9994,26 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
 }
 
 // THE OVERLAY PAGE WHOSE OPENER THE ROSTER LIGHTS — THE STANDING FOLDER
-// OVERLAY'S, or, while a dialog editor stands (AppState::dialog_editor_session
-// — the overlay then down, closed at the editor's open), THE BACKDROP PAGE'S
-// (AppState::dialog_backdrop, written by the editor's three openers just
-// before their close_picker, read only while the editor stands): the settings
-// page under the settings line, the trim presets list under Save As, the BPM
-// form under its field (architect 2026-11-19, send BB: under a dialog editor
-// the window shows the page it was opened from — the backdrop's rows in the
-// editor's room, paint_modal_dialog, paint_handler.cpp, cut at the on-screen
-// keyboard's top line, the bottom icon row under the keyboard). ONE READER,
-// the roster's face: redesign_button_selected's openers, so the page's opener
-// stays lit under its editor — and, the on-screen keyboard standing over
-// every editor, the whole roster greyed (redesign_button_enabled's keyboard
-// arm, architect 2026-11-20, send EE), that opener wears the lit-and-inert
-// look (SETUP under the settings line, PRESETS under Save As, BPM under the
-// BPM field). PAINT ALONE: every key stays dead under the editor's veil (no
-// press, hover, tooltip or chord reaches one, keyboard_modal_editor_active),
-// and the input predicates — is_overlay_opener, overlay_admits_button,
-// overlay_leave_word — read the live overlay, none standing there. None with
-// neither standing.
+// OVERLAY'S, or, while a line editor's sub-page stands
+// (AppState::dialog_editor_session — the overlay then down, closed at the
+// editor's open), THE LIST THE SUB-PAGE WAS OPENED FROM (AppState::
+// value_page's `opener`, written by the editor's three openers just before
+// their close_picker, read only while the editor stands): the settings page
+// under a settings value, the trim presets list under Save As, the BPM form
+// under its field (architect 2026-11-19, send BB; the sub-page 2026-11-20,
+// send EE). ONE READER, the roster's face: redesign_button_selected's
+// openers, so the list's opener stays lit under its sub-page — and, the
+// on-screen keyboard standing over every editor, the whole roster greyed
+// (redesign_button_enabled's first arm, architect 2026-11-20, send EE),
+// that opener wears the lit-and-inert look (SETUP under a settings value,
+// PRESETS under Save As, BPM under the BPM field). PAINT ALONE: every key
+// stays dead under the editor's veil (no press, hover, tooltip or chord
+// reaches one, keyboard_modal_editor_active), and the input predicates —
+// is_overlay_opener, overlay_admits_button, overlay_leave_word — read the
+// live overlay, none standing there. None with neither standing.
 inline AppState::FolderOverlay::Owner roster_face_page_owner(
     const AppState& a) {
-    if (a.dialog_editor_session() != 0) return a.dialog_backdrop.page.owner;
+    if (a.dialog_editor_session() != 0) return a.value_page.opener;
     return a.folder_overlay.owner;
 }
 
@@ -10215,9 +10074,10 @@ inline bool is_overlay_opener(const AppState& a, RedesignButton b) {
 // 2026-10-28 night, "agree all"). CANCEL leaves a question unanswered: the
 // PROJECT PICKER, the VALUE LIST and THE BPM FORM (2026-10-29, its RENDER
 // the answer, its Cancel the mode's end) ask for a choice and Cancel
-// declines it, and the PROGRESS MODAL's Cancel cancels the render (OK AND
-// CANCEL belong to the EDITORS, where a typed line is pending; their OK is
-// paint_handler.cpp's kModalOkLabel). CLOSE leaves a surface that asked
+// declines it, and the PROGRESS MODAL's Cancel cancels the render (A LINE
+// EDITOR, where a typed line is pending, CARRIES NO WORD AT ALL: its
+// sub-page has no button, its commit and its cancel the on-screen
+// keyboard's Enter and Esc — architect 2026-11-20, send EE). CLOSE leaves a surface that asked
 // nothing — the SETTINGS PAGE, whose rows pend nothing, the RENDER PLAYER,
 // THE TRIM PRESETS LIST (its buttons' acts return to it; a row's tap, the
 // apply, closes it, architect 2026-11-19, send CC) and THE SCORE VIEWER.
@@ -10261,9 +10121,10 @@ inline constexpr const char* kModalCloseLabel  = "Close";
 //   the TRIM PRESETS LIST (PRESETS)       Close, its row's last word
 //   the BPM FORM (BPM)                    Cancel, its controls row's word
 //   the SCORE VIEWER (SCORE)              Close
-// A dialog editor (the settings line, Save As, the BPM field) is a modal
+// A line editor (a settings value, Save As, the BPM field) is a modal
 // that closed its overlay: this answers nullptr there, the live tag being
-// None, though the opener stands lit and inert on the page behind's tag
+// None, though the opener stands lit and inert on the tag of the list its
+// sub-page was opened from
 // (roster_face_page_owner), and no tooltip shows under the editor's veil to
 // carry a word (tooltip_dwell_suppressed). nullptr with nothing standing; the
 // score viewer answers first, is_overlay_opener's order.
@@ -10701,8 +10562,8 @@ int render_player_highlight_act_row(const AppState& a);
 // bit per frame beside the rects) and main.cpp's per-tick comparator, which
 // holds the published bit against this live predicate and damages the
 // bottom row on drift. THE CLAIM READS THE PUBLISHED BIT (architect
-// 2026-09-24, strictly as-painted): the press claim, the ring walk and the
-// ring's Enter/Space arm read ModalDialogButton::enabled, and the dispatch
+// 2026-09-24, strictly as-painted): the press claim reads
+// ModalDialogButton::enabled, and the dispatch
 // (dispatch_modal_dialog_button) re-asks nothing — a face painted live
 // dispatches and its act answers for itself, carding where its key cards and
 // silent where its silence is ruled. THE KEYS DO NOT READ IT: every act's own refusal cards (or keeps its ruled
@@ -10746,7 +10607,7 @@ bool render_player_button_enabled(const AppState& a,
 // (the Delete key's card).
 // ITS READERS are the player's: the plan builder
 // (paint_modal_dialog, publishing the bit as painted) and main.cpp's
-// per-tick comparator, the press, the ring and the dispatch reading the
+// per-tick comparator, the press and the dispatch reading the
 // published bit. Its edges are the highlight's and the trim's, both moved by
 // the list's own acts, which damage the row (picker_set_highlight and
 // picker_move_highlight under the list, the Reset Trim arm under it
@@ -10754,16 +10615,6 @@ bool render_player_button_enabled(const AppState& a,
 // (trim_presets_apply) closes the list, the row with it (architect
 // 2026-11-19, send CC).
 bool trim_presets_button_enabled(const AppState& a,
-                                 AppState::TrimPresetsButtonAct act);
-// THE SAME ANSWER OVER A GIVEN PAGE (send BB, 2026-11-19): `page` the list
-// the row stands for — the standing folder overlay (the form above), or a
-// dialog editor's backdrop (AppState::dialog_backdrop), whose controls row
-// paint_modal_dialog paints under Save As from the page as it stood at the
-// editor's open. The trim it compares is the live one; the page and the
-// trim are both frozen while the editor stands (nothing writes either under
-// the editor's veil), so the bits are the ones the list showed.
-bool trim_presets_button_enabled(const AppState& a,
-                                 const AppState::FolderOverlay& page,
                                  AppState::TrimPresetsButtonAct act);
 
 // THE BPM FORM'S CONTROLS ROW FACES (architect 2026-10-29), THE TRUTHFUL
@@ -10775,10 +10626,9 @@ bool trim_presets_button_enabled(const AppState& a,
 // bracket gate is NOT a term (GuiFlagEditor::bpm_sweep_bracket_admits): it
 // runs at the press and refuses with its card, a refusal not being a no-op.
 // Defined beside the form's acts (input_key_dispatch.cpp); RENDER's body asks
-// it too, for its roads that are not the painted face (Enter on a focused
-// button reads the published bit; the body states the rule). ITS READERS are
+// it too (the body states the rule). ITS READERS are
 // the trim row's: the plan builder (paint_modal_dialog, publishing the bit
-// as painted) and main.cpp's per-tick comparator, the press, the ring and the
+// as painted) and main.cpp's per-tick comparator, the press and the
 // dispatch reading the published bit. Its edges are the field commits, each
 // returning to a freshly built form (whole-window damage).
 bool bpm_form_button_enabled(const AppState& a,
@@ -11111,9 +10961,8 @@ int window_foot_y(const AppState& a);
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
 // laid over the window's foot, 2026-10-10 to 2026-10-14 — IS GONE with the
-// overlay: a prompt is a full page in the modal family's box since send EE
-// and a dialog editor a dialog in xfwm's window in that box's room,
-// modal_box.h.)
+// overlay: a prompt and a line editor are full pages in the modal family's
+// box since send EE, modal_box.h.)
 
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT LIES IN (architect 2026-11-07,
 // session 90, his "1 yes 2 yes 3 a 4 agree", and session 91 on his glass:
@@ -13542,13 +13391,13 @@ std::pair<long long, long long> compute_trim_samples(
 //   Viewport::invalidate_clock_area, whose declaration carries the caller
 //   inventory (viewport.h).
 //
-//   IT WIDENS TO THE WHOLE LANE WHILE AN OVERLAY'S ROW HOLDS IT, by
-//   construction rather than by a test of its own: the row yields whole to
-//   the overlay's controls row (an overlay standing, or a dialog editor over
-//   its backdrop), so its painter publishes no clock cell, and a zero cell is
-//   already this owner's honest widening. Under a question, the progress
-//   dialog or the flag editor over the main page the cell is published (send
-//   BB, the rule at the definition, main.cpp).
+//   IT WIDENS TO THE WHOLE LANE WHILE AN OVERLAY'S ROW OR A PAGE'S ANSWERS
+//   HOLD IT, by construction rather than by a test of its own: the row
+//   yields whole (an overlay, a question's page or the progress page
+//   standing), so its painter publishes no clock cell, and a zero cell is
+//   already this owner's honest widening; under the on-screen keyboard —
+//   every editor — it answers an empty rect (the rule at the definition,
+//   main.cpp).
 //
 // THE ROW'S OTHER TENANTS NEED NO RECT FUNCTION. The transport buttons on
 // the left and the arrow cluster flush at the right are the button tenants:
@@ -16152,7 +16001,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // ONE OF THEM THE WHOLE ROSTER GREYS (the first arm below, architect
     // 2026-11-20, send EE: the dead keys look dead): a question's page and
     // the progress page (modal_page_stands), and EVERY EDITOR — the three
-    // dialog editors, and since 2026-10-25 the lane editors, the flag
+    // line editors of the value sub-page, and since 2026-10-25 the lane editors, the flag
     // editor and the iteration bound editor (architect: "acts that need a
     // keyboard — shouldn't they just be modals?") — which owns the on-screen
     // keyboard. An act that takes the keyboard is a modal, and a modal
@@ -16208,13 +16057,14 @@ inline bool redesign_button_enabled(const AppState& a,
     // "agree"). While an editor owns the on-screen keyboard, or a question's
     // page or the progress page stands (roster_greyed_whole: the flag editor
     // in either kind, the iteration bound editor among them, the three
-    // dialog editors; modal_page_stands) this answers FALSE FOR EVERY ROSTER
-    // KEY, NO EXCEPTION — the tooltip lamp, the level case NOISE, a dialog
-    // editor's backdrop opener and a standing overlay's opener under its own
+    // line editors; modal_page_stands) this answers FALSE FOR EVERY ROSTER
+    // KEY, NO EXCEPTION — the tooltip lamp, the level case NOISE, the opener
+    // of the list a value sub-page was opened from and a standing overlay's
+    // opener under its own
     // question included — so every key of the top icon row wears Arc's
     // greyed look, a lit one its lit-and-inert look (its lit bit
     // redesign_button_selected's, which asks nothing of the modals: TARGET /
-    // PHASE on the main page, the backdrop's opener under a dialog editor,
+    // PHASE on the main page, its list's opener under a value sub-page,
     // roster_face_page_owner, the overlay's opener under its question), and
     // NOISE its disabled entry (paint_level_case); nothing else is added, no
     // tone and no look of its own (materials.h's THE KEY). The bottom icon
@@ -17719,9 +17569,9 @@ inline bool redesign_button_enabled(const AppState& a,
 // as a key dead on a locked tab or under grid iterations does: ONE RULE for a
 // dead checked key everywhere. The opener and the tooltip lamp, the keys an
 // overlay leaves live, wear their live looks. A MODAL lights no key behind
-// it and puts none out: the bits are the page behind's — under a dialog
-// editor the page it was opened from, whose opener stays lit (the openers'
-// arm below, roster_face_page_owner; send BB, 2026-11-19) — and under every
+// it and puts none out: the bits are the page's it rose over — under a
+// value sub-page the list it was opened from, whose opener stays lit (the
+// openers' arm below, roster_face_page_owner; send BB, 2026-11-19) — and under every
 // editor, the on-screen keyboard standing, and under a question's page or
 // the progress page, the whole roster greyed
 // (redesign_button_enabled's first arm, send EE, 2026-11-20), each lit
@@ -17928,9 +17778,9 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // so the tag says whose key is lit (is_folder_overlay_opener) — THE
         // TAG OF THE PAGE WHOSE OPENER THE ROSTER LIGHTS
         // (roster_face_page_owner; architect 2026-11-19, send BB): the
-        // standing overlay's, or under a dialog editor the page it was opened
-        // from, so SETTINGS stays lit under the settings line, PRESETS under
-        // Save As and BPM under the BPM field — lit and inert there, the
+        // standing overlay's, or under a value sub-page the list it was
+        // opened from, so SETTINGS stays lit under a settings value, PRESETS
+        // under Save As and BPM under the BPM field — lit and inert there, the
         // whole roster greyed while the keyboard stands
         // (redesign_button_enabled's first arm, send EE).
         case RedesignButton::IconListen:

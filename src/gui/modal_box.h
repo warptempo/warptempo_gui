@@ -8,9 +8,9 @@
 // player and the project picker (the folder overlay's contents,
 // folder_overlay.h, with the settings page, the value list, the trim presets
 // and the BPM form it swaps in) and THE SCORE VIEWER (since 2026-10-26,
-// score_viewer.h, its page the box's interior); for THE TWO PAGES, a
-// QUESTION'S and THE PROGRESS PAGE (architect 2026-11-20, send EE; below);
-// and, as THE ROOM its window is centered in, for a DIALOG EDITOR (below).
+// score_viewer.h, its page the box's interior); and for THE THREE PAGES, a
+// QUESTION'S, THE PROGRESS PAGE and THE VALUE SUB-PAGE, a line editor's
+// (architect 2026-11-20, send EE; below).
 //
 // (INTERFACE VERSUS MODAL, architect 2026-10-14: the player and the picker
 // stand in the box but are interface, so what they leave dead greys; the
@@ -21,20 +21,21 @@
 // THE BOX TAKES THE VIEW (architect 2026-11-18 / 2026-11-19, send Z;
 // tmp/sendY/P2_design_overlays.md §A): the title bar and the top icon row
 // above it stay as the main window paints them, the top icon row wearing
-// the face of the page behind (under an overlay that page's, its opener
-// lit; under a question, the progress page or a dialog editor every key
-// greyed, a lit one — the overlay's or the backdrop's opener among them —
-// lit and inert: roster_face_page_owner, redesign_button_enabled's first
-// arm, app_state.h). Across, it runs the panel's
-// width (render.h's well_columns, edge to edge since send Z). Top to bottom:
+// the face of the page in the view (under an overlay that page's, its opener
+// lit; under a question, the progress page or a value sub-page every key
+// greyed, a lit one — the overlay's opener, or the opener of the list the
+// sub-page was opened from — lit and inert: roster_face_page_owner,
+// redesign_button_enabled's first arm, app_state.h). Across, it runs the
+// panel's width (render.h's well_columns, edge to edge since send Z). Top to
+// bottom:
 //   1. THE BOX — its first rows THE LINE UNDER THE TOP ICON ROW (the trim
 //      lane's first rows), its last THE LINE OVER THE BOTTOM ICON ROW (the
 //      well's foot), both in the line tone `well_border`, and between them
 //      THE VIEW, the box's interior, one flat fill — the canvas's tone
-//      `ruler_face` (Arc's $base_color, Thunar's list view) for the lists,
-//      the two pages and the dialog editor's room, the score viewer's
-//      `score_pane_face` its one exception (below); no frame, no ring, no
-//      shadow (paint_modal_box, paint_handler.cpp);
+//      `ruler_face` (Arc's $base_color, Thunar's list view) for the lists
+//      and the three pages, the score viewer's `score_pane_face` its one
+//      exception (below); no frame, no ring, no shadow (paint_modal_box,
+//      paint_handler.cpp);
 //   2. directly under it THE CONTROLS ROW, THE BOTTOM ICON ROW'S OWN ROWS —
 //      the pad 7 W, the key (key_width wide and key_height tall,
 //      render.h's icon_case_w_px / icon_case_h_px), the pad 7 W
@@ -42,15 +43,15 @@
 //      PANEL (render.h's kEdgeInsetW; materials.h's THE KEY). THE ROW IS
 //      THE PAGE'S THAT STANDS IN THE VIEW (architect 2026-11-19, send BB,
 //      his "i take your recommends for all"; the two pages 2026-11-20, send
-//      EE): the overlay's own controls while an overlay stands — or a
-//      dialog editor's backdrop — A QUESTION'S ANSWERS AND THE PROGRESS
-//      PAGE'S CANCEL, Arc's word buttons flush right, while one of those
-//      pages stands, in place of whatever row stood there (no timestamp, no
-//      tab name, no key, none of an overlay's controls), and the main
-//      page's keys and timestamp otherwise (paint_handler.cpp's
-//      modal_owns_bottom_row); UNDER EVERY EDITOR THE ON-SCREEN KEYBOARD
-//      STANDS OVER IT and it yields (below), the answers the window's
-//      buttons and the keyboard's Enter / Esc;
+//      EE): the overlay's own controls while an overlay stands, A
+//      QUESTION'S ANSWERS AND THE PROGRESS PAGE'S CANCEL, Arc's word buttons
+//      flush right, while one of those pages stands, in place of whatever
+//      row stood there (no timestamp, no tab name, no key, none of an
+//      overlay's controls), and the main page's keys and timestamp otherwise
+//      (paint_handler.cpp's modal_owns_bottom_row); UNDER EVERY EDITOR — THE
+//      VALUE SUB-PAGE'S AMONG THEM — THE ROW IS NOBODY'S: the on-screen
+//      keyboard stands over it and it yields (below), the answers the
+//      keyboard's Enter and Esc alone;
 //   3. under both, THE STATUS BAR on the window's foot (render.h's status
 //      bar block: it keeps its process line under an overlay and a question
 //      and drops its selection count; BLANK while a batch's progress stands,
@@ -80,38 +81,35 @@
 // The painter and the rule's owner: paint_handler.cpp's THE QUESTION PAGE
 // AND THE PROGRESS PAGE.
 //
-// A DIALOG EDITOR IS XFWM'S WINDOW, CENTERED IN THE VIEW (architect
-// 2026-11-19, send Z, tmp/sendZ/RULINGS.md §5; his "keep" on Z_08's true
-// shadow; send AA's stage D2) — Thunar's rename dialog in a window of
-// xfwm's frame (the 28 W title bar, 4 W borders) with xfwm's own frame
-// shadow under it (below). The window, its client and its seats are
-// paint_handler.cpp's (paint_modal_dialog, THE DIALOG WINDOW); they take no
-// rect of this file but the view.
+// A VALUE'S EDITOR IS A SUB-PAGE (architect 2026-11-20, send EE: "a subpage
+// where if the user clicks on a value a single line text input is shown ...
+// on that page, the only controls are the osk's esc and enter"; the popups
+// removed, "it seems those come from gnome and xfce just inherited them"):
+// while one of the three line editors stands (the settings editor's buffer:
+// a settings value, the trim preset's name, a BPM field —
+// AppState::dialog_editor_session) THE BOX STANDS and THE VIEW IS ONE FLAT
+// PAGE in the lists' tone with THE LABEL AND ONE ARC ENTRY alone on it,
+// top-aligned ON THE PAGE MARGIN (below; modal_page_lines' `entry`): no
+// title bar, no frame, no shadow, no button, no list behind. The painter and
+// the rule's owner: paint_handler.cpp's THE VALUE SUB-PAGE.
 //
 // THE ON-SCREEN KEYBOARD STANDS OVER THE PAGE, AND NOTHING IS RELAID FOR IT
 // (architect 2026-11-20, send EE; the rule's one owner onscreen_keyboard.h's
 // placement block): every rect below is the lane table's and takes no
-// keyboard term. With a dialog editor standing THE BOX KEEPS ITS WHOLE VIEW,
-// the page the editor was opened from painted in it as it was left (the
-// dialog editor's backdrop, AppState::dialog_backdrop), the keyboard over
-// the view's foot, the bottom icon row and the status bar, and what the box
-// lays cut at the keyboard's top line (paint_modal_dialog); THE EDITOR'S
-// WINDOW IS CENTERED IN THE WHOLE VIEW. On
-// the tablet at key_height 28: the view y 142..1307 (1166 rows); the
-// rename window 308 W wide, its client 300 x 112 W (224 device rows), with
-// the 28 W title bar and the 4 W foot border 288 rows, centered at y
-// 581..868, x 844..1459 (Save As, its label row gone, 250 rows at
-// 600..849), xfwm's shadow reaching row 904 — clear of the keyboard's top
-// line at his tuning (osk_key_w 24, osk_key_h 35: the keyboard 1048–1439,
-// the view's visible part 142..1047) and at the defaults (osk_key_h 30:
-// 1098–1439); a keyboard tuned tall enough to reach the window cuts it
-// there, its claim answering the presses (paint_modal_dialog's cut).
+// keyboard term. Under a value sub-page THE BOX KEEPS ITS WHOLE VIEW, the
+// keyboard over the view's foot, the bottom icon row and the status bar,
+// and what the box lays cut at the keyboard's top line (paint_modal_dialog).
+// On the tablet at key_height 28: the view y 142..1307 (1166 rows), the
+// label's line box rows 163..190 and the entry rows 203..258 — far above
+// the keyboard's top line at his tuning (osk_key_w 24, osk_key_h 35: the
+// keyboard 1048–1439, the view's visible part 142..1047), at the defaults
+// (osk_key_h 30: 1098–1439) and at the tallest keyboard the keys' range
+// allows (osk_key_h 80: five 160-row key rows, its top line near row 600).
 //
-// Geometry here, every rect a fact that asks no standing, and the box's two
-// standing predicates beside it (modal_box_dialog_stands, modal_box_stands);
-// the painter is paint_modal_box (paint_handler.cpp), and every paint site
-// and every hit site of a member reads these rects (on screen is as
-// painted).
+// Geometry here, every rect a fact that asks no standing, and the box's
+// standing predicate beside it (modal_box_stands); the painter is
+// paint_modal_box (paint_handler.cpp), and every paint site and every hit
+// site of a member reads these rects (on screen is as painted).
 #include "app_state.h"
 #include "materials.h"      // the flat look's rules
 #include "render.h"         // palette(): `ruler_face`, `score_pane_face`
@@ -120,22 +118,17 @@
 #include <cmath>
 #include <cstdint>
 
-// THE BOX STANDS AS A DIALOG EDITOR'S ROOM (send AA's stage D2, 2026-11-19):
-// while A DIALOG EDITOR stands (AppState::dialog_editor_session's set, the
-// settings editor's buffer in its three kinds).
-inline bool modal_box_dialog_stands(const AppState& a) {
-    return a.dialog_editor_session() != 0;
-}
-
-// DOES ANY MEMBER'S BOX STAND — the folder overlay's, a dialog editor's
-// room, THE SCORE VIEWER'S (2026-10-26; score_viewer.h: the page in the
-// interior, paint_modal_dialog's score branch) or A QUESTION'S OR THE
-// PROGRESS PAGE (architect 2026-11-20, send EE; modal_page_stands,
-// app_state.h: the view is the page). The waveform's painted rect is empty
-// while it does (onscreen_keyboard::waveform_paint_area): the box covers the
+// DOES ANY MEMBER'S BOX STAND — the folder overlay's, THE SCORE VIEWER'S
+// (2026-10-26; score_viewer.h: the page in the interior, paint_modal_dialog's
+// score branch), A QUESTION'S OR THE PROGRESS PAGE (architect 2026-11-20,
+// send EE; modal_page_stands, app_state.h: the view is the page) or THE
+// VALUE SUB-PAGE, which stands exactly while a line editor of the settings
+// editor's buffer does (AppState::dialog_editor_session, the membership's
+// one owner; the same ruling). The waveform's painted rect is empty while
+// it does (onscreen_keyboard::waveform_paint_area): the box covers the
 // canvas column whole, so nothing of a modal floats over the canvas.
 inline bool modal_box_stands(const AppState& a) {
-    return folder_overlay_stands(a) || modal_box_dialog_stands(a) ||
+    return folder_overlay_stands(a) || a.dialog_editor_session() != 0 ||
            score_viewer_stands(a) || modal_page_stands(a);
 }
 
@@ -170,9 +163,9 @@ inline GuiRect modal_box_rect(const AppState& a) {
 // the tablet at 200 %, 1 at 100 %; those rows the box's lines), across the
 // panel's own columns, 0 .. 2303 on the tablet — the lists' rows stand
 // across it edge to edge under their head pad (folder_overlay.h; THE PAGE
-// MARGIN below), the score viewer's page in it, and a
-// dialog editor's window centered in it (the room; y 142..1307, the
-// keyboard over its foot while it stands, the head's rows).
+// MARGIN below), the score viewer's page in it, and the three pages' lines
+// on it (y 142..1307; under a value sub-page the keyboard over its foot,
+// the head's rows).
 inline GuiRect modal_box_interior_rect(const AppState& a) {
     const GuiRect box = modal_box_rect(a);
     const int     lw  = hairline_px();
@@ -206,15 +199,16 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
 //                            between a heading and its control (his "1
 //                            agree" on "a label to its control 6 W"): the
 //                            progress page's sentence to its bar and the bar
-//                            to its count.
+//                            to its count, and the value sub-page's label to
+//                            its entry.
 // Each a whole W through scaled_px, rounded at the element (24, 26 and 12
 // device px on the tablet at 200 %). A FILL ACROSS THE VIEW KEEPS THE VIEW'S
 // WHOLE WIDTH (a list's lit row, x 0..2303 on the tablet): the margin seats
 // ink, not faces. ITS READERS: the lists — the pad over a list's first row
 // that seats its caps (folder_overlay.h's head_pad_px), the rows' pens and
-// their right cut (paint_handler.cpp's THE LIST VIEW) — and the two pages, a
-// question's and the progress page (modal_page_lines below). The score
-// viewer's page is a picture on its mat and takes none.
+// their right cut (paint_handler.cpp's THE LIST VIEW) — and the three pages,
+// a question's, the progress page and the value sub-page (modal_page_lines
+// below). The score viewer's page is a picture on its mat and takes none.
 inline constexpr double kPageMarginPenW    = 12.0;
 inline constexpr double kPageMarginCapTopW = 13.0;
 inline constexpr double kPageLabelGapW     = 6.0;
@@ -236,7 +230,7 @@ inline int page_label_gap_px()      { return scaled_px(kPageLabelGapW); }
 // first row stands at the margin exactly and the line under the pad stands
 // on a whole baseline (the reasoning in full at its first reader,
 // folder_overlay.h's head_pad_px). Its two readers: a list's head pad and
-// the two pages' first line (modal_page_lines).
+// the three pages' first line (modal_page_lines).
 inline int page_margin_head_pad_px(const GuiFont& face,
                                    double baseline_depth_px) {
     return static_cast<int>(std::nearbyint(
@@ -244,12 +238,14 @@ inline int page_margin_head_pad_px(const GuiFont& face,
         (baseline_depth_px - gui_font_cap_px(face))));
 }
 
-// THE TWO PAGES' LINES — A QUESTION'S PAGE AND THE PROGRESS PAGE, ONE
-// GEOMETRY (architect 2026-11-20, send EE; on the mocks: the question page
-// TOP-ALIGNED, "progress good"; paint_handler.cpp's THE QUESTION PAGE AND
-// THE PROGRESS PAGE the painter and the rule's owner). In the view
+// THE THREE PAGES' LINES — A QUESTION'S PAGE, THE PROGRESS PAGE AND THE
+// VALUE SUB-PAGE, ONE GEOMETRY (architect 2026-11-20, send EE; on the mocks:
+// the question page TOP-ALIGNED, "progress good", "settings prefer
+// toplaigned"; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE
+// and THE VALUE SUB-PAGE the painters and the rules' owners). In the view
 // (modal_box_interior_rect), every length THE PAGE MARGIN's:
-//   THE SENTENCE — a question, or the progress page's "Rendering..." — one
+//   THE SENTENCE — a question, the progress page's "Rendering...", or the
+//     value sub-page's LABEL (the value's name and a colon) — one
 //     line of Regular 12 W (GuiFace::Body, the lists' rows' face), its PEN
 //     kPageMarginPenW from the view's left, its line box (the face's 14 W,
 //     gui_font_line_box_w) under the head pad that seats ITS CAP TOP
@@ -260,12 +256,18 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 //     kPageProgressBarW (6 W) tall, ITS TOP kPageLabelGapW UNDER THE
 //     SENTENCE'S LINE BOX;
 //   THE COUNT ("3 of 11"; Regular 10 W, GuiFace::Caption, GTK's "small") at
-//     the same pen, ITS LINE BOX (13 W) kPageLabelGapW UNDER THE BAR.
+//     the same pen, ITS LINE BOX (13 W) kPageLabelGapW UNDER THE BAR;
+//   THE ENTRY (the value sub-page's; Arc's, materials.h's paint_entry) from
+//     the pen's column to the right cut — 12 W inside the view's left edge
+//     to 12 W inside its right — kEntryHeightW (28 W, Arc's) tall, ITS TOP
+//     kPageLabelGapW UNDER THE LABEL'S LINE BOX: a fact of the view alone,
+//     whatever the text, so the entry never moves or grows with an edit.
 // ON THE TABLET (200 %; the view x 0..2303, y 142..1307): the pen x 24, the
 // cut x 2280; the head pad 26 − (22 − 16.51) = 20.51 -> 21 px, so the
 // sentence's line box rows 163..190, its baseline 185, the painted caps'
 // first row 168; the bar x 24..2279, rows 203..214; the count's line box
-// rows 227..252, its baseline 247.
+// rows 227..252, its baseline 247; the entry x 24..2279, rows 203..258
+// (1128 x 28 W), its text's pen x 42 (kEntryPenW).
 // `sentence_line` and `count_line` are the two texts' line boxes' rows
 // across the view's whole width (every row their ink can stand on: the
 // painter's exposure test). `step` IS WHAT A PROGRESS STEP CHANGES: the
@@ -284,6 +286,7 @@ struct ModalPageLines {
     double  count_baseline    = 0.0;
     GuiRect count_line{0, 0, 0, 0};
     GuiRect step{0, 0, 0, 0};
+    GuiRect entry{0, 0, 0, 0};
 };
 inline ModalPageLines modal_page_lines(const AppState& a) {
     ModalPageLines l;
@@ -311,6 +314,8 @@ inline ModalPageLines modal_page_lines(const AppState& a) {
     l.count_line = GuiRect{l.view.x, count_top, l.view.w, scaled_px(cb.line())};
     l.step = GuiRect{l.view.x, bar_y, l.view.w,
                      count_top + l.count_line.h - bar_y};
+    l.entry = GuiRect{l.pen_x, bar_y, std::max(0, l.text_end_x - l.pen_x),
+                      scaled_px(kEntryHeightW)};
     return l;
 }
 
@@ -350,39 +355,5 @@ inline GuiRect modal_area_rect(const AppState& a) {
     return GuiRect{row.x, y0, row.w, std::max(0, y1 - y0)};
 }
 
-// XFWM'S FRAME SHADOW'S GEOMETRY (send AA's stage D2, 2026-11-19; the
-// dialogs' window, paint_handler.cpp's THE DIALOG WINDOW, owns the rule and
-// the paint): SHADOW_RADIUS kXfwmShadowRadiusW (12 W, xfwm4's compositor.c),
-// the window's rect grown kXfwmShadowDeltaYW (his shadow_delta_y, −3 W:
-// grown 3 W upward). Here, beside the box, because the damage reads the
-// reach too (Viewport::invalidate_dialog_editor_box: the room grown by it,
-// before an editor's first paint).
-inline constexpr double kXfwmShadowRadiusW = 12.0;
-inline constexpr double kXfwmShadowDeltaYW = -3.0;
-// THE SHADOW'S LENGTHS in device px: r (SHADOW_RADIUS), the kernel's size
-// (make_gaussian_map's), the vertical delta and the mask's origin off the
-// window's (SHADOW_OFFSET + the delta, C's integer division).
-struct XfwmShadowLengths {
-    int r = 0, size = 0, delta_y = 0, dx = 0, dy = 0;
-};
-inline XfwmShadowLengths xfwm_shadow_lengths() {
-    XfwmShadowLengths l;
-    l.r       = scaled_px(kXfwmShadowRadiusW, 1);
-    l.size    = (static_cast<int>(std::ceil(static_cast<double>(l.r) * 3.0)) + 1) & ~1;
-    l.delta_y = scaled_px(kXfwmShadowDeltaYW);
-    const int off = (-3 * l.r) / 2;
-    l.dx = off;
-    l.dy = off + l.delta_y;
-    return l;
-}
-// THE MASK'S RECT for the window `win`: make_shadow's swidth x sheight at
-// the shadow's origin — every pixel the shadow may touch.
-inline GuiRect xfwm_shadow_rect(const GuiRect& win) {
-    const XfwmShadowLengths l = xfwm_shadow_lengths();
-    return GuiRect{win.x + l.dx, win.y + l.dy, win.w + l.size,
-                   win.h + l.size - l.delta_y};
-}
-
 // (The lists' rows stand edge to edge across the view, their text on THE
-// PAGE MARGIN above, the two pages' lines on it too, and a dialog editor's
-// text in its own window, paint_handler.cpp's THE DIALOG WINDOW.)
+// PAGE MARGIN above, and the three pages' lines on it too.)

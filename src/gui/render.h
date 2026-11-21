@@ -1673,9 +1673,9 @@ inline int title_bar_h_px() {
 // Windows' 14-dialog-unit edit box with its text 5 W in from its outer edge,
 // the one shape of every text field of the modal dialogs, the choice
 // editor's combo at its seat, from 2026-10-02 (the laptop pixel's 31 and 7
-// re-authored) — IS GONE with the field, architect 2026-10-14: a dialog
-// editor's line stands in Arc's entry in its rename dialog since send AA's
-// stage D2, 2026-11-19 (paint_handler.cpp's THE DIALOG WINDOW).
+// re-authored) — IS GONE with the field, architect 2026-10-14: a line
+// editor's line stands in Arc's entry on its value sub-page
+// (paint_handler.cpp's THE VALUE SUB-PAGE; architect 2026-11-20, send EE).
 // THE TIME FIELDS were never this field: row 8's clock and the render
 // player's position and length are Cool Edit's dark field, its height and
 // its pad program_spec.h's own, the pad 5 W since 2026-10-10, equal to this
@@ -1699,11 +1699,10 @@ inline int title_bar_h_px() {
 // trough, the ruler and the marker lane, the stereo divider and the well's
 // foot; THE WELL'S EDGES below), the status bar's line, the modal box's
 // two line rows and the on-screen keyboard's top line and its grid's lines
-// (modal_box.h, onscreen_keyboard.h), the dialog window's frame edge and its
-// title bar's highlight row (paint_handler.cpp's THE DIALOG WINDOW), the
+// (modal_box.h, onscreen_keyboard.h), the
 // focused entry's accent line, the flag editor's border, the scrub's knob's
-// rim, the dialog editors' and the flag editor's carets (paint_modal_dialog,
-// render.cpp's flag editor and paint_scale) — AND
+// rim, the line editors' and the flag editor's carets (paint_handler.cpp's
+// paint_value_page, render.cpp's flag editor and paint_scale) — AND
 // EVERY LINE ON THE CANVAS, waveform_line_px below being this one (the
 // grid, the center lines, the stems, the cursor, the scanner, the anchor,
 // the lead-in ring, the ruler's ticks; the lit
@@ -1740,8 +1739,8 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // the bottom icon row's rows; a question and the progress modal are full
 // pages in that box, their answers on its controls row (architect
 // 2026-11-20, send EE; paint_handler.cpp's THE QUESTION PAGE AND THE
-// PROGRESS PAGE), and a dialog editor is a dialog in xfwm's window in the
-// box's view (paint_handler.cpp's THE DIALOG WINDOW); the on-screen keyboard stands on the window's last
+// PROGRESS PAGE), and a line editor is a sub-page of its own in the
+// box's view (paint_handler.cpp's THE VALUE SUB-PAGE); the on-screen keyboard stands on the window's last
 // rows across the lanes, over the status bar, the bottom icon row and the
 // view's foot, nothing relaid (onscreen_keyboard.h's placement block; send
 // EE, 2026-11-20).
@@ -5423,8 +5422,8 @@ struct FlagEditorBox {
 // State::view_offset_px survives on this surface for the sub-pixel case alone
 // (a run's width rounded down to a whole column, which would otherwise clip
 // the caret's reserved column at end-of-text); the glyph-by-glyph travel its
-// minimal-travel rule describes is the DIALOG entry's, whose box is fixed
-// (paint_handler.cpp's THE DIALOG WINDOW; architect 2026-11-19, send AA).
+// minimal-travel rule describes is the value sub-page's entry's, whose box is
+// fixed (paint_handler.cpp's THE VALUE SUB-PAGE; architect 2026-11-19, send AA).
 // LEFT / RIGHT navigate exactly like any one-line field.
 //
 // Takes AppState by NON-CONST reference, alone among the renderers here, and

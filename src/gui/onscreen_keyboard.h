@@ -28,7 +28,7 @@
 // the block. It stands while ANY
 // OF THE TEXT EDITORS stands, on a backend that asks for one, and it
 // REPLACES NOTHING: the flag editor keeps painting in the marker lane, a
-// dialog editor keeps its window centered in the box's view (modal_box.h).
+// line editor's label and entry at the head of the box's view (modal_box.h).
 // THERE IS NO SECOND TEXT BUFFER — the live editor's own
 // text_editor::State is the only text state in the product, exactly as it was
 // before this surface existed.
@@ -64,9 +64,9 @@
 // TIMING: KEYS ARE HOTKEYS AND ACT AT THE PRESS (architect: phone muscle
 // memory; and the core's repeat needs the press edge). That is the modality
 // ruling's own split read straight — ICONS ARE UP, HOTKEYS ARE DOWN
-// (GuiInputHandler::on_key) — with these keys on the hotkey side and the
-// editors' own
-// BUTTONS (a dialog's OK and Cancel) still chrome, still acting at the lift.
+// (GuiInputHandler::on_key) — with these keys on the hotkey side; no editor
+// carries a button of its own (architect 2026-11-20, send EE: this
+// keyboard's Enter and Esc are every editor's answers).
 // A key held down repeats through the core's key repeat, on the platform's
 // advertised cadence.
 //
@@ -205,15 +205,15 @@ inline constexpr KeyDef kRow0[] = {
 };
 
 // TAB (architect 2026-08-27, with the project model) leads row 1 on both
-// pages: it is what the product's prompts COMPLETE on (the one autocomplete
-// model, route_modal_editor_key) and what walks a dialog's focus ring — a
+// pages: it is what the product's line editors COMPLETE on (the one
+// autocomplete model, route_modal_editor_key), silent where there is
+// nothing to complete — a
 // BARE Tab, no modifier, on the same synthesize_key road as every other key
 // here. IT IS NOT THE OPEN PROJECT PICKER'S GLASS ROAD (2026-08-28): that
 // picker is field-less and stands in this band, so the keyboard does not
 // paint there at all and the gesture is the Open Project button, tap the
-// project's row. What the key serves is every prompt a finger can raise —
-// the settings editor's value recall and the ring walk on the dialogs that
-// publish buttons.
+// project's row. What the key serves is the settings editor's completions,
+// its value recall and the path's.
 inline constexpr KeyDef kFlagsRow1[] = {
     {Role::Tab},
     {Role::Character, U'q'}, {Role::Character, U'w'}, {Role::Character, U'e'},
@@ -819,16 +819,15 @@ inline bool stands(const AppState& a) {
 //     (clock_invalidate_rect, main.cpp; GuiClockFingerprint::yields), the
 //     tab name's damage silent (Viewport::invalidate_tab_name_area) and the
 //     tick's face comparator skipping its keys (main.cpp's walk); under
-//     a dialog editor the backdrop page's controls row
-//     (paint_handler.cpp's modal_owns_bottom_row, paint_modal_dialog) yields
-//     with it;
+//     a line editor's value sub-page no controls row is painted either
+//     (paint_handler.cpp's THE VALUE SUB-PAGE);
 //   * THE STATUS BAR (paint_status_bar): nothing painted, its comparator and
 //     its writers' damage silent (refresh_status_bar, main.cpp;
 //     Viewport::invalidate_status_bar_area);
-//   * WHAT A DIALOG EDITOR'S WINDOW STANDS OVER — the box and the backdrop
-//     page's list in its view: cut at the surface's top line
-//     (paint_modal_dialog's clip), the window itself centered in the whole
-//     view and clearing the surface (modal_box.h's head);
+//   * THE BOX UNDER A LINE EDITOR'S VALUE SUB-PAGE — its view's fill and
+//     its foot line: cut at the surface's top line (paint_modal_dialog's
+//     clip), the page's label and entry at the view's head, far above the
+//     surface (modal_box.h's head);
 //   * THE CARDS' ROOM (notification_stack_bound): its foot above the
 //     surface's top line.
 // Where a keyboard tuned short stands under the two yielding lanes' top (the
@@ -851,12 +850,13 @@ inline bool stands(const AppState& a) {
 // WINDOW'S CENTER (architect 2026-11-08, block_x_px), the band's body tone
 // beside it and nothing else there. ITS KEYS ARE ONE GRID OF ARC'S BUTTON
 // TONES WITH SHARED LINES (his K2 ruling; the design's §E;
-// paint_onscreen_keyboard). Under a dialog editor the modal family's box
-// stands over the page behind down to the bottom icon row, the keyboard
-// over the box's foot, the editor's window centered in the whole view
-// (modal_box.h's head); under the flag editor, the one editor with no
-// dialog, the main page stands under it, its canvas cut at the surface's
-// top line. UNDER AN OVERLAY THE KEYBOARD NEVER STANDS (stands' record).
+// paint_onscreen_keyboard). Under a line editor the modal family's box
+// stands down to the bottom icon row, its view the value sub-page, the
+// keyboard over the box's foot, the page's label and entry at the view's
+// head (modal_box.h's head); under the flag editor, the one editor with no
+// page of its own, the main page stands under it, its canvas cut at the
+// surface's top line. UNDER AN OVERLAY THE KEYBOARD NEVER STANDS (stands'
+// record).
 // (THE TASKBARS, 2026-10-10 to 2026-10-14 — architect, "they're analogous to
 // the taskbar … they sit on top of the design": the keyboard and the dialog
 // laid over the window's foot at its whole width, one raised Hilight line
@@ -869,7 +869,7 @@ inline bool stands(const AppState& a) {
 //     (the pads' arithmetic above) — over the status bar 1394..1439, the
 //     bottom icon row 1310..1393, the well's foot 1308..1309 and the
 //     canvas's foot 1048..1307, THE CANVAS VISIBLE 236..1047 (812 of its
-//     1072 rows); under a dialog editor over the view's foot, the view
+//     1072 rows); under a line editor over the view's foot, the view
 //     142..1307 visible 142..1047; AT THE DEFAULTS (osk_key_h 30) the
 //     surface 1098..1439, its first key row's top 1116, the canvas visible
 //     236..1097 (862 rows). Every lane at its rows of the window with no
@@ -1019,7 +1019,7 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // THAT TENANT'S DAMAGE RECT (slot_damage_rect's block: the keyboard's
 // edge_damage_rect, the overlay's modal area). THIS IS THE ONE PLACE THE KEYBOARD'S
 // SHOW AND HIDE ARE PAID, whatever opened or closed its editor: standing is
-// derived (stands, above), so every road — the dialog editors' OK, Cancel,
+// derived (stands, above), so every road — the line editors'
 // Esc and Enter, the flag editor's, an editor swapped for the overlay it
 // returns to in one pass — moves this comparison, and nothing else has to
 // remember the surface. NO RELAYOUT, NO WHOLE-WINDOW DAMAGE AND NO FADE
@@ -1069,7 +1069,7 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 
 // THE WAVEFORM'S PAINTED RECT — waveform_area minus what stands over it: THE
 // MODAL FAMILY'S BOX (the folder overlay's, a question's page, the progress
-// page, a dialog editor's room or the
+// page, a line editor's value sub-page or the
 // score viewer's — modal_box_stands, modal_box.h) or THE KEYBOARD alone (the
 // flag editor's; the placement block) — and the ONE OWNER of the rule that
 // THE WAVEFORM IS NOT PAINTED WHERE THOSE PAINT. IT SUBTRACTS THE STANDING
@@ -1078,7 +1078,7 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // down since 2026-10-14, modal_box.h, whatever its content) and the
 // keyboard's is its surface, so a rect borrowed from the other would either
 // hide waveform nothing paints over or leave the panel painting where the
-// waveform still runs. (Under a dialog editor both stand, and the box, which
+// waveform still runs. (Under a line editor both stand, and the box, which
 // starts above the waveform, empties it whole.)
 //
 // Every one of those grounds is fully opaque and every waveform pass runs

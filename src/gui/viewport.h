@@ -667,16 +667,16 @@ struct Viewport {
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole), WITH THE
     // MODAL FAMILY'S WHOLE AREA while a question's page, the progress page
-    // or a dialog editor stands or was last painted (2026-10-14, modal_box.h
-    // — the box over the canvas column and its controls row; the definition
-    // says why). ITS CALLERS,
-    // re-greped 2026-10-14, are the DIALOG EDITOR's closers plus the
+    // or a line editor's value sub-page stands or was last painted
+    // (2026-10-14, modal_box.h — the box over the canvas column and its
+    // controls row; the definition says why). ITS CALLERS,
+    // re-greped 2026-10-14, are the LINE EDITORS' closers plus the
     // RENDER PLAYER's three, the player being the row's third owner (A
     // STANDING EDITOR'S EDITS — typing, the completions, the caret blink, a
-    // refusal, the pointer's text drag — take the box's interior alone since
+    // refusal, the pointer's text drag — take the entry's box alone since
     // 2026-10-14, invalidate_dialog_editor_box below):
     //
-    //   * THE CLOSERS — every commit / abandon that deactivates a dialog
+    //   * THE CLOSERS — every commit / abandon that deactivates a line
     //     editor (settings_editor's applied / unchanged / exit_no_commit,
     //     and flag_editor's BPM field commit and exit_bpm_mode), and the settings
     //     editor's prefill, part of its open.
@@ -695,9 +695,7 @@ struct Viewport {
     // damages the whole window (prompt.cpp), which is what a surface with no
     // published rect before its first paint owes; their CLOSERS that come
     // through here take the family's area by the stash's painted owner. The
-    // rect is the lane whole and the family's area, and — while the last paint
-    // drew a dialog editor — its window's stashed box too (the window and
-    // its shadow's reach), so a CLOSER that
+    // rect is the lane whole and the family's area, so a CLOSER that
     // runs between paints still erases what the last frame drew and the
     // row's own tenants come back with it.
     //
@@ -719,32 +717,29 @@ struct Viewport {
     // for the hint changes no row damage carries (the previous-track window's
     // edge under a playing item, which only the clock's cell damages).
     void invalidate_modal_dialog_area();
-    // A STANDING DIALOG EDITOR'S EDIT (2026-10-14): THE ENTRY'S BOX as last
-    // published (ModalDialogGeometry::field; architect 2026-11-19, send AA:
-    // the entry one line that scrolls sideways, the window never growing
-    // with the text), the room grown by the window's shadow's reach
-    // (modal_box.h's xfwm_shadow_rect of the box's interior, the lane
-    // table's) before the session's
-    // first paint; never the family's whole area. WHY: under a box the GL canvas's clip is empty and every
+    // A STANDING LINE EDITOR'S EDIT (2026-10-14): THE VALUE SUB-PAGE'S
+    // ENTRY'S BOX (modal_box.h's modal_page_lines, `entry`; architect
+    // 2026-11-19, send AA: the entry one line that scrolls sideways;
+    // 2026-11-20, send EE: the entry a fact of the view, never moving or
+    // growing with the text, so the rect is the geometry's own and needs no
+    // painted stash); never the family's whole area. WHY: under a box the
+    // GL canvas's clip is empty and every
     // damage rect uploads whole (GuiGlCanvas::present_frame), so the
     // family's area on every keystroke was ~11.8 MB on the tablet, sustained
-    // under key repeat. WHAT AN EDIT CAN CHANGE, re-derived from the painters:
+    // under key repeat; the entry is 2256 x 56 px there. WHAT AN EDIT CAN
+    // CHANGE, re-derived from the painter:
     // the text, its scroll offset, the selection and the caret, all inside
-    // the entry (paint_dialog_window's editor arm: the text cut at the
+    // the entry (paint_value_page: the text cut at the
     // entry's inner edges, the caret at its padding box). Nothing outside it
-    // moves with an edit: the window's Cancel and OK never grey or relabel,
-    // their hints with them; a refusal's or a full field's card damages its own
-    // stack (GuiNotifications::notify); every move of the focus damages the
-    // stash's box itself (route_modal_dialog_focus_key,
-    // return_modal_focus_to_field, arm_modal_dialog_press) — the entry's
-    // focus line among what it covers — and a button's press and lift its
-    // face (invalidate_modal_press_face); the on-screen keyboard's keys and
+    // moves with an edit: the label is the open's; a refusal's or a full
+    // field's card damages its own
+    // stack (GuiNotifications::notify); the on-screen keyboard's keys and
     // lamps damage their own band.
     // THE OPEN, THE CLOSE, the keyboard's show and hide and every geometry
     // change keep their whole damage. ITS CALLERS
-    // (re-greped 2026-11-19): TYPING, the on-screen keyboard's LEFT / RIGHT
+    // (re-greped 2026-11-20): TYPING, the on-screen keyboard's LEFT / RIGHT
     // (the scroll's road) and the completions — route_modal_editor_key's
-    // `repaint` argument from the dialog editor key handler's three kinds
+    // `repaint` argument from the line editor key handler's three kinds
     // (input_key_dispatch) and the settings editor's completers
     // (settings_editor); THE CARET BLINK — main.cpp's per-tick
     // transitions; THE REFUSAL — every refused commit in settings_editor,
