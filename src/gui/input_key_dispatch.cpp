@@ -6113,8 +6113,11 @@ void GuiInputHandler::on_key_release(GuiKey key) {
     if (armed < 0 || app.modal_dialog_key_pressed_key != key) return;
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
-    // The press face's un-press (2026-11-05), the key's own face.
+    // The press face's un-press (2026-11-05), the key's own face, its fade
+    // held where it stands (hold_face).
     invalidate_modal_press_face(armed);
+    hold_face({AppState::FaceFades::Surface::Dialog, armed,
+               app.modal_dialog.owner, app.modal_dialog.session});
     dispatch_modal_dialog_button(armed);
 }
 

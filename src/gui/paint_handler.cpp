@@ -7364,10 +7364,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
                            app.render_player.active;
     // THE PICKER, the fourth owner (2026-08-28): the same rank as the player,
     // the two never live together (each opener refuses under the other) and
-    // neither live beside an editor. THIS IS ONE OF THE THREE PLACES THE
-    // RANKING IS SPELLED (AppState::modal_dialog_live_session and
-    // modal_dialog_stash_current are the others) and they must agree or the
-    // owner-tag doctrine breaks.
+    // neither live beside an editor. THIS IS ONE OF THE TWO PLACES THE
+    // RANKING IS SPELLED (AppState::modal_dialog_live_session with
+    // modal_dialog_live_owner beside it is the other) and they must agree or
+    // the owner-tag doctrine breaks.
     const bool picker_up = !prompt_up && !progress_up && !player_up &&
                            app.picker.active;
     // THE SCORE VIEWER, the sixth owner (2026-10-26): the lower ranks' rank,
@@ -7936,11 +7936,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // `thumb_x_of()` answers once the item is published (architect
     // 2026-11-15, the no-grid arc: the knob at its position's exact place,
     // render.h's scrub block). `thumb_pressed`: the owner's drag holds the
-    // knob (its ScrubDrag armed on_thumb), the whole disc the accent from
-    // the grab to the lift (paint_scale; a press on the trough carries the
-    // knob at rest). AT REST UNDER THE HOVERING PEN its fill Arc's hover
-    // face; EVERY CHANGE OF ITS LOOK FADES 200 ms, the held accent included
-    // (gtk3 CSS lines 1144 .. 1150; send DD, 2026-11-20), the knob painted
+    // knob (its ScrubDrag armed on_thumb), its look Lit from the grab to the
+    // lift — the whole disc fading toward the accent from the grab, and at
+    // the lift back from the value it had reached (paint_scale; a press on
+    // the trough carries the knob at rest; GuiInputHandler::hold_face). AT
+    // REST UNDER THE HOVERING PEN its fill Arc's hover face; EVERY CHANGE OF
+    // ITS LOOK FADES 200 ms, the held accent included (gtk3 CSS lines
+    // 1144 .. 1150; send DD, 2026-11-20), the knob painted
     // as it stands on screen (AppState::FaceFades::face_as_painted, asked of
     // this row's own owner and session; render.h's scrub block) — no
     // record under a dialog, where the row is paint-only.

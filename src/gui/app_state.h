@@ -6321,10 +6321,10 @@ struct AppState {
     // THE RENDER PLAYER AND THE PICKER ARE THE LOWER RANKS (2026-08-28):
     // under the prompt, beside the editors — no two of the three can stand
     // together, so the order among them is free, and the two mode bits are
-    // asked first only because each is cheaper than the is_active tests. THIS IS ONE OF THE THREE PLACES
-    // THE RANKING IS SPELLED and they must agree (paint_modal_dialog's `*_up`
-    // fork and modal_dialog_stash_current's live ladder are the others), or the
-    // owner-tag doctrine above breaks.
+    // asked first only because each is cheaper than the is_active tests. THIS
+    // AND modal_dialog_live_owner BELOW ARE ONE OF THE TWO PLACES THE RANKING
+    // IS SPELLED (paint_modal_dialog's `*_up` fork is the other) and they must
+    // agree, or the owner-tag doctrine above breaks.
     // THE PROGRESS MODAL (2026-10-14) ranks directly under the prompt, above
     // the three lower ranks (ModalDialogOwner's fifth-owner block). THE
     // SCORE VIEWER (2026-10-26) joins the lower ranks, never standing beside
@@ -6337,6 +6337,20 @@ struct AppState {
         if (picker.active) return picker.session;
         if (score_viewer.active) return score_viewer.session;
         return dialog_editor_session();
+    }
+    // THE CLASS OF THE SURFACE THAT OWNS INPUT RIGHT NOW, on the same ladder
+    // as modal_dialog_live_session above, rung for rung (Editor where no
+    // higher owner stands, whether or not an editor does — the session is
+    // what says a modal stands). Read by every site that compares a stash's
+    // owner tag with the live one: GuiInputHandler::modal_dialog_stash_current
+    // and the faces' settle (GuiInputHandler::settle_face_fades).
+    ModalDialogOwner modal_dialog_live_owner() const {
+        if (prompt.active) return ModalDialogOwner::Prompt;
+        if (batch_progress.active) return ModalDialogOwner::Progress;
+        if (render_player.active) return ModalDialogOwner::Player;
+        if (picker.active) return ModalDialogOwner::Picker;
+        if (score_viewer.active) return ModalDialogOwner::Score;
+        return ModalDialogOwner::Editor;
     }
 
     // THE LIVE TEXT EDITOR'S SESSION ID across ALL FIVE editor kinds, 0 when
@@ -7156,7 +7170,12 @@ struct AppState {
     // VALUE REACHED AND RUNS THE DESTINATION'S WHOLE DURATION (GTK starts a
     // new transition from the current value and never shortens a reversed
     // one), so a tap shorter than 50 ms shows the part of the press it
-    // reached and goes back from there. `all` is every tone of the face — the
+    // reached and goes back from there: EVERY PRESS'S END HOLDS THE FADE at
+    // the value reached at that instant (GuiInputHandler::hold_face — the
+    // roster's lift and cancels, its feint, a dialog button's lift, feint,
+    // cancel and key release, the keyboard key's release, the knob's
+    // release), and the painter's retarget of the lift's damage runs from
+    // there; a key its own act lit goes on toward lit. `all` is every tone of the face — the
     // fill, the ring, THE PRINT AND THE DRAWING'S INK (`color`; a symbolic
     // drawing is drawn in it) — on the one clock; a discrete property (a
     // stateful key's drawing, a keyboard cap's letter) takes its end value at
@@ -7237,7 +7256,8 @@ struct AppState {
     // HOVER AND NEITHER IS CHECKED (Lit or LitInert: `:not(:checked)
     // :not(:active)` of both keys in line 292, `button:checked +
     // button:hover { box-shadow: none }` in line 296; a disabled neighbor
-    // forbids nothing), ITS DURATION THE RIGHT KEY'S DESTINATION'S (the
+    // forbids nothing, line 292's own rule — LINE 294's resting half-alpha
+    // line beside a disabled member is not built), ITS DURATION THE RIGHT KEY'S DESTINATION'S (the
     // line is the right key's own box-shadow, so its transition is that
     // key's new style's: 50 ms where the right key goes lit, 200 ms
     // otherwise — the left key's press turns its right seam's line out over
@@ -7263,11 +7283,13 @@ struct AppState {
     // apply_true_colors: drop_all), so every face paints its look at once;
     // A SURFACE THAT LEAVES drops its faces (settle_face_fades: the keyboard
     // gone or on another page, a dialog stash's owner or session no longer
-    // the live one), the next paint of whatever replaces it at once; THE
-    // VEIL'S DEAD PAGE: a roster key painted under a modal's veil (a
-    // question, a dialog editor, the progress dialog) paints its look at
-    // once, and at once again when the veil leaves (the record's `veiled`),
-    // and a controls row under a dialog makes no record. Not faces at all:
+    // the live one, a roster key whose published box is empty — off the
+    // screen — with the seam it names), the next paint of whatever replaces
+    // it, or of the key when it comes back, at once; THE VEIL'S DEAD PAGE: a
+    // roster key painted under a modal's veil (a question, a dialog editor,
+    // the progress dialog) paints its look at once at every paint while the
+    // veil stands, and at once again when the veil leaves (the record's
+    // `veiled`), and a controls row under a dialog makes no record. Not faces at all:
     // NOISE's entry and its level line, list rows, the title bar's lamps,
     // the trim bar, the cards, the tooltips.
     // THE FRAMES — NOTHING IS DAMAGED AT REST: while a face fades, every step
@@ -7344,7 +7366,10 @@ struct AppState {
             return curve(0.46, 0.94, 0.5 * (lo + hi));
         }
         // A seam's look (the head's THE SEAMS): the line while either face
-        // hovers and neither is checked.
+        // hovers and neither is checked. A disabled neighbor forbids nothing:
+        // that is Arc's line 292's rule (its `:not(:checked) :not(:active)`
+        // names no `:disabled`); line 294's resting half-alpha line beside a
+        // disabled member is not built, so no seam is drawn at rest.
         static FaceLook seam_target(FaceLook left, FaceLook right) {
             return (left == FaceLook::Hover || right == FaceLook::Hover) &&
                            !face_look_checked(left) &&
@@ -7362,6 +7387,10 @@ struct AppState {
             FaceLook target      = FaceLook::Rest;
             bool     veiled      = false;
             bool     fading      = false;
+            // HELD AT A PRESS'S END (hold): the fade stands still at the
+            // value it had reached — the clock skips it — until the next
+            // retarget, its painter's or the input's, says where it goes.
+            bool     held        = false;
             int64_t  start_ms    = 0;
             int64_t  duration_ms = 0;
             FaceMix  from{};
@@ -7370,8 +7399,12 @@ struct AppState {
             // `look` over `duration` from `start` — nothing where the target
             // stands already (a property whose target did not change keeps
             // its transition), and a landing at once where the stored mix is
-            // the look's own picture.
+            // the look's own picture. A held fade is released either way: to
+            // its new look from the value it was held at, or, its look
+            // unchanged (a key its own act lit), on toward that look from
+            // there, the clock's next step its start.
             void retarget(FaceLook look, int64_t duration, int64_t start) {
+                held = false;
                 if (look == target) return;
                 target = look;
                 if (mix == FaceMix::of(look)) {
@@ -7401,6 +7434,23 @@ struct AppState {
                     v.w[i] = from.w[i] + (to.w[i] - from.w[i]) * e;
                 return v;
             }
+            // THE PRESS'S END (the head's GTK'S RULE): a running fade is
+            // stored at its value at `now_ms` and held there, its target
+            // kept, so the picture the lift's damage paints next is the one
+            // the press had reached and the painter's retarget starts from
+            // it (GuiInputHandler::hold_face). A fade that has reached its
+            // target lands.
+            void hold(int64_t now_ms) {
+                if (!fading) return;
+                mix = value_at(now_ms);
+                if (mix == FaceMix::of(target)) {
+                    fading = false;
+                    return;
+                }
+                from     = mix;
+                start_ms = kPendingStart;
+                held     = true;
+            }
         };
         static constexpr std::size_t kCapacity = 512;
         FaceFades() { records.reserve(kCapacity); }
@@ -7423,8 +7473,8 @@ struct AppState {
         // `box` this run, `veiled` under a modal's veil, `exposed` where this
         // run's clip meets the box. A face the clip misses changes nothing
         // (its stored mix, or the look itself with no record); a face with no
-        // record, re-laid (another box) or across a veil's edge paints its
-        // look at once, recorded; a face whose look moved begins its fade
+        // record, re-laid (another box), under a standing veil or across a
+        // veil's edge paints its look at once, recorded; a face whose look moved begins its fade
         // from its stored mix, its start the clock's next step, and paints
         // that stored mix; else its stored mix.
         FaceMix as_painted(const Face& face, const GuiRect& box, FaceLook look,
@@ -7441,7 +7491,7 @@ struct AppState {
                                              .mix    = FaceMix::of(look)});
                 return FaceMix::of(look);
             }
-            if (!(r->box == box) || r->veiled != veiled) {
+            if (veiled || !(r->box == box) || r->veiled != veiled) {
                 *r = Record{.face   = face,
                             .box    = box,
                             .target = look,

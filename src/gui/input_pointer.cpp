@@ -2870,6 +2870,10 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
     if (app.modal_dialog_press_inside != inside) {
         app.modal_dialog_press_inside  = inside;
         invalidate_modal_press_face(armed);
+        // The feint out holds the press's fade where it stands (hold_face).
+        if (!inside && armed >= 0)
+            hold_face({AppState::FaceFades::Surface::Dialog, armed,
+                       app.modal_dialog.owner, app.modal_dialog.session});
     }
     // AND IT OWNS THIS SURFACE'S TOOLTIP WAIT (2026-08-13, when the modal
     // buttons took hints): the same writer
@@ -2933,6 +2937,9 @@ void GuiInputHandler::update_modal_dialog_hover(int x, int y) {
 void GuiInputHandler::clear_modal_dialog_press() {
     if (app.modal_dialog_pressed < 0) return;
     const int armed = app.modal_dialog_pressed;
+    if (app.modal_dialog_press_inside)
+        hold_face({AppState::FaceFades::Surface::Dialog, armed,
+                   app.modal_dialog.owner, app.modal_dialog.session});
     app.modal_dialog_pressed      = -1;
     app.modal_dialog_press_inside = false;
     app.modal_dialog_press_ms     = 0;
@@ -2981,6 +2988,8 @@ void GuiInputHandler::clear_modal_dialog_key_press() {
     app.modal_dialog_key_pressed     = -1;
     app.modal_dialog_key_pressed_key = 0;
     invalidate_modal_press_face(armed);
+    hold_face({AppState::FaceFades::Surface::Dialog, armed,
+               app.modal_dialog.owner, app.modal_dialog.session});
 }
 
 // A dialog button's PRESS: arm the index, painting and dispatching nothing.
@@ -3091,6 +3100,11 @@ bool GuiInputHandler::modal_dialog_press_shifted() const {
 int GuiInputHandler::take_modal_dialog_release(int x, int y) {
     const int armed = app.modal_dialog_pressed;
     if (armed < 0) return -1;
+    // The lift holds the press's fade where it stands (hold_face), where the
+    // face still showed the press.
+    if (app.modal_dialog_press_inside)
+        hold_face({AppState::FaceFades::Surface::Dialog, armed,
+                   app.modal_dialog.owner, app.modal_dialog.session});
     app.modal_dialog_pressed      = -1;
     app.modal_dialog_press_inside = false;
     // The arm's shifted-twin stamp dies with it (the verdict is read BEFORE
@@ -3117,21 +3131,10 @@ int GuiInputHandler::take_modal_dialog_release(int x, int y) {
 bool GuiInputHandler::modal_dialog_stash_current() const {
     const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
     if (!dlg.valid || dlg.session == 0) return false;
-    // THE LIVE OWNER'S CLASS, in the painter's own precedence (prompt over
-    // the progress modal over player over picker over editor —
-    // paint_modal_dialog's fork; the progress modal stands beside none of
-    // the lower three, ModalDialogOwner's block; the two
-    // list owners never stand together and neither stands beside an editor,
-    // so their order is free). THIS IS ONE
-    // OF THE THREE PLACES THE RANKING IS SPELLED and they must agree.
-    const AppState::ModalDialogOwner live =
-        app.prompt.active         ? AppState::ModalDialogOwner::Prompt
-      : app.batch_progress.active ? AppState::ModalDialogOwner::Progress
-      : app.render_player.active  ? AppState::ModalDialogOwner::Player
-      : app.picker.active         ? AppState::ModalDialogOwner::Picker
-      : app.score_viewer.active   ? AppState::ModalDialogOwner::Score
-                                  : AppState::ModalDialogOwner::Editor;
-    if (dlg.owner != live) return false;
+    // THE LIVE OWNER'S CLASS, in the painter's own precedence
+    // (AppState::modal_dialog_live_owner, the ranking's one spelling beside
+    // the live session's).
+    if (dlg.owner != app.modal_dialog_live_owner()) return false;
     return dlg.session == app.modal_dialog_live_session();
 }
 
@@ -3885,6 +3888,8 @@ bool GuiInputHandler::finish_onscreen_keyboard_release() {
     if (onscreen_keyboard::stands(app)) {
         viewport.invalidate_rect(onscreen_keyboard::key_rect(
             app, onscreen_keyboard::page_of_key_index(held), held));
+        // The press's fade held where it stands (hold_face).
+        hold_face({AppState::FaceFades::Surface::Keyboard, held});
     }
 
     // The owed key-up. A lamp key synthesized nothing and owes nothing; every
@@ -4442,6 +4447,10 @@ bool GuiInputHandler::finish_player_scrub_release(double x) {
     AppState::RenderPlayer::ScrubDrag& drag = app.render_player.scrub;
     if (!drag.armed) return false;
     const AppState::RenderPlayer::ScrubDrag ended = drag;
+    // The knob's held fade stops where it stands (hold_face).
+    if (drag.on_thumb)
+        hold_face({AppState::FaceFades::Surface::Knob, 0,
+                   app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -4490,6 +4499,10 @@ void GuiInputHandler::clear_player_scrub_drag() {
     // nothing resumed — a live item the press paused stays PAUSED where the
     // press left it, the key reading PLAY, and the clock's position field
     // returns from the drop's time to the item's position (its rect damaged).
+    // The knob's held fade stops where it stands (hold_face).
+    if (drag.on_thumb)
+        hold_face({AppState::FaceFades::Surface::Knob, 0,
+                   app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -4630,6 +4643,10 @@ bool GuiInputHandler::finish_score_scrub_release() {
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     if (!drag.armed) return false;
     const AppState::ScoreViewer::ScrubDrag ended = drag;
+    // The knob's held fade stops where it stands (hold_face).
+    if (drag.on_thumb)
+        hold_face({AppState::FaceFades::Surface::Knob, 0,
+                   app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::ScoreViewer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -4690,6 +4707,10 @@ void GuiInputHandler::clear_score_scrub_drag() {
     // PAUSED where the press left it, the key reading PLAY, its page the one
     // the press found.
     const AppState::ScoreViewer::ScrubDrag ended = drag;
+    // The knob's held fade stops where it stands (hold_face).
+    if (drag.on_thumb)
+        hold_face({AppState::FaceFades::Surface::Knob, 0,
+                   app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::ScoreViewer::ScrubDrag{};
     if (score_viewer != nullptr) score_viewer->display_page(ended.press_page);
     const GuiRect track = app.modal_dialog.scrub;
@@ -6622,6 +6643,11 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         if (inside != app.chrome_press.inside) {
             app.chrome_press.inside = inside;
             invalidate_roster_press_face(app.chrome_press.index);
+            // The feint out ends the press's look: its fade held where it
+            // stands (hold_face), the painter turning it back from there.
+            if (!inside)
+                hold_face({AppState::FaceFades::Surface::Roster,
+                           app.chrome_press.index});
         }
     }
 
@@ -7108,6 +7134,12 @@ void GuiInputHandler::press_face(const AppState::FaceFades::Face& face) {
     retarget_seams_beside(face, now);
 }
 
+// THE PRESS'S END (the declaration): the face's fade held where it stands.
+void GuiInputHandler::hold_face(const AppState::FaceFades::Face& face) {
+    AppState::FaceFades::Record* r = app.face_fades.find(face);
+    if (r != nullptr) r->hold(monotonic_ms());
+}
+
 // -- THE SEAMS (the declarations' block, input_handler.h; the rule at
 //    AppState::FaceFades' THE SEAMS) -----------------------------------------
 
@@ -7407,10 +7439,13 @@ void GuiInputHandler::settle_trim_bar_hover() {
 // DROPPED — a keyboard key's while the keyboard stands no more or stands on
 // another page, a dialog button's and the knob's while their stash's owner
 // and session are not the live surface's (AppState::modal_dialog_live_session
-// and the owners' ladder, modal_dialog_stash_current's) — so whatever
-// replaces them paints its looks at once (AppState::FaceFades' WHAT DOES NOT
-// FADE); nothing is damaged, the surface that replaced them having been
-// repainted. THE HOVERED SLOT GOES where no press would act on its face (it
+// and modal_dialog_live_owner), a roster key's, and the seam it names, while
+// its published box is empty (the key off the screen: the `h` view's Older /
+// Newer standing in for LEFT / RIGHT, the bottom icon row's keys while an
+// overlay's controls stand there) — so
+// whatever replaces them, or the key when it comes back, paints its looks at
+// once (AppState::FaceFades' WHAT DOES NOT FADE); nothing is damaged, the
+// surface that replaced them having been repainted. THE HOVERED SLOT GOES where no press would act on its face (it
 // went lit or disabled, a veil rose, its surface left), so the next walk
 // re-answers; its record is its painter's to retarget. And the trim bar's
 // hovered part, on its own rule.
@@ -7422,12 +7457,7 @@ void GuiInputHandler::settle_face_fades() {
         const bool kb_stands = onscreen_keyboard::stands(app);
         const uint64_t live_session = app.modal_dialog_live_session();
         const AppState::ModalDialogOwner live_owner =
-            app.prompt.active         ? AppState::ModalDialogOwner::Prompt
-          : app.batch_progress.active ? AppState::ModalDialogOwner::Progress
-          : app.render_player.active  ? AppState::ModalDialogOwner::Player
-          : app.picker.active         ? AppState::ModalDialogOwner::Picker
-          : app.score_viewer.active   ? AppState::ModalDialogOwner::Score
-                                      : AppState::ModalDialogOwner::Editor;
+            app.modal_dialog_live_owner();
         std::erase_if(h.records, [&](const FaceFades::Record& r) {
             switch (r.face.surface) {
                 case Surface::Keyboard:
@@ -7443,8 +7473,13 @@ void GuiInputHandler::settle_face_fades() {
                            r.face.dialog_owner != live_owner;
                 case Surface::None:
                     return true;
-                case Surface::Roster:
-                    break;
+                case Surface::Roster: {
+                    const GuiRect& box =
+                        app.redesign_buttons[static_cast<std::size_t>(
+                                                 r.face.index)]
+                            .rect;
+                    return box.w <= 0 || box.h <= 0;
+                }
             }
             return false;
         });
@@ -7458,7 +7493,8 @@ void GuiInputHandler::settle_face_fades() {
 // first — the stashes move under a resting pen (a relayout, a knob the
 // transport carries, a key repainted dead or lit) — then the settle, then
 // each fading record's value at now: a fade a painter began takes now as
-// its start (its value its from, which that painter painted); A STEP THAT
+// its start (its value its from, which that painter painted), a fade held at
+// a press's end waits for its retarget (FaceFades::Record::hold); A STEP THAT
 // MOVES THE STORED MIX DAMAGES THE FACE'S OWN EXTENT, or the seam's own
 // columns, so a frame is invited on every beat while the fade runs and the
 // painters of that frame read the one value this step stored; the step
@@ -7502,7 +7538,7 @@ void GuiInputHandler::tick_face_fades() {
     };
     const int64_t now = monotonic_ms();
     for (FaceFades::Record& r : h.records) {
-        if (!r.fading) continue;
+        if (!r.fading || r.held) continue;
         if (r.start_ms == FaceFades::kPendingStart) {
             r.start_ms = now;
             continue;
@@ -7698,8 +7734,10 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
     }
     // A ROSTER ARM'S ERASE (2026-11-05): a face painted pressed — the arm
     // inside its key — is un-pressed by the same damage the arm paid.
-    if (arm.kind == AppState::ChromePress::Kind::Roster && arm.inside)
+    if (arm.kind == AppState::ChromePress::Kind::Roster && arm.inside) {
         invalidate_roster_press_face(arm.index);
+        hold_face({AppState::FaceFades::Surface::Roster, arm.index});
+    }
     // A LEVEL ARM'S END (2026-11-05, the sliders; AppState::ChromePress's
     // Level kind): EVERY ROAD OUT OF THE ARM COMES THROUGH HERE — the lift,
     // the button-lost and the pointer-leave clears — and every one of them

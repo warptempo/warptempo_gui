@@ -1947,7 +1947,8 @@ inline int program_run_gap_px() {
 //     (app_state.h), the knob's picture handed to paint_scale as a FaceMix,
 //     the knob's hit the press's own
 //     (scale_knob_hit, on the disc as painted), its damage the disc's hull
-//     at the published center. No glyph, no lit state. AT ITS POSITION'S EXACT PLACE (the
+//     at the published center. No glyph; its one lit state is the held
+//     look (FaceLook::Lit, the accent disc). AT ITS POSITION'S EXACT PLACE (the
 //     no-grid rule, hull above): its center the real x of its frame or page
 //     (the owners' mappings, render_player_scrub_x_of, score_scrub_x_of /
 //     _of_frame), painted at exact coverage through the coverage stamp's
@@ -2934,8 +2935,11 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // itself, not as jutting out from it"):
 //   THE CAP IS THE PILL'S OWN END, CUT BY ONE VERTICAL LINE: from the pill's
 //     tip inward, its round end (the pill's own radius, half its height —
-//     3 W) and kTrimCapStraightW (2 W) of its straight run — trim_cap_w_px,
-//     5 W wide, the pill's own 6 W tall: NOTHING OF A CAP STANDS OUTSIDE
+//     3 W) and kTrimCapStraightW (2 W) of its straight run — 5 W wide, the
+//     pill's own 6 W tall, its one computation render_trim_flags' `cap_w`
+//     (render.cpp), off the pill's height as drawn (the pill's rows clamped
+//     to the trough's, which never binds: the 12 W trough holds the 6 W pill
+//     at every scale), so the cap's round end is the drawn pill's own: NOTHING OF A CAP STANDS OUTSIDE
 //     THE PILL. Its outer edge is the pill's tip, the seat inside its bound
 //     (THE SLIDER'S BOX AND ITS CORE, above), its cut line the seat + 5 W
 //     inside it — the begin's off the begin's place, the end's the mirror
@@ -2996,10 +3000,6 @@ inline double trim_pill_seat_px() {
 }
 inline int trim_cap_straight_px() {
     return scaled_px(kTrimCapStraightW, 1);
-}
-inline double trim_cap_w_px() {
-    return static_cast<double>(trim_pill_h_px()) / 2.0 +
-           static_cast<double>(trim_cap_straight_px());
 }
 // The grab core's outer edge off its bound: the pill's tip less the lead.
 inline double trim_grab_core_outer_px() {

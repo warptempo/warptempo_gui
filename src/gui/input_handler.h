@@ -1602,6 +1602,17 @@ struct GuiInputHandler {
     // button (input_key_dispatch.cpp), the on-screen keyboard's press, the
     // two scrubs' claims on the knob.
     void press_face(const AppState::FaceFades::Face& face);
+    // THE PRESS'S END (AppState::FaceFades' GTK'S RULE; architect
+    // 2026-11-20, send DD, "arc-truthful"): the face's running fade held at
+    // the value it has reached now (FaceFades::Record::hold), so a press
+    // shorter than its fade goes back from where it got to, as GTK's does,
+    // and a key its own act lit goes on toward lit from there. Called beside
+    // the end's own damage, only where the face was showing the press: the
+    // roster arm's end inside its key (take_chrome_press) and its feint out
+    // (on_motion's walk), a dialog button's feint out, lift, clear and
+    // keyboard release and cancel, the on-screen keyboard key's release, the
+    // knob's release and clear.
+    void hold_face(const AppState::FaceFades::Face& face);
     // THE SEAMS' BODIES (AppState::FaceFades' THE SEAMS; a seam is named by
     // the face on its right):
     //   seam_left_face — THE FACE ON THE SEAM'S LEFT, the other of the two
