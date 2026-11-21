@@ -432,23 +432,24 @@
 //                                     313441, the measured 313440 one level
 //                                     off — the formula taken). Its drawing is
 //                                     the key dim ink (COMPOSITED)
-//     list hover face        393939 = THE BUTTONS' HOVER STEP LAID ON THE
-//                                     LIST'S VIEW, ruler face + (key hover
-//                                     face − key face) per channel, clamped
-//                                     to [0, 255] (derive(), beside the three
-//                                     above: no bright tone under it): A LIST
-//                                     ROW UNDER THE HOVERING PEN (architect
-//                                     2026-11-21, send EE: "just the same
-//                                     color that I guess the buttons get on
-//                                     hover ... Maybe you want to tune it to
-//                                     the background that the list is on";
-//                                     not Arc's — its rows carry no hover —
-//                                     ours; paint_handler.cpp's THE LIST
-//                                     VIEW). arc_dark 404552 + (505666 −
-//                                     444A58 = 0C0C0E) -> 4C5160; on every
-//                                     Live theme the hover face is the key
-//                                     face, so the view's own tone: no row
-//                                     hovers, as no key does
+//     list hover face        393939 = ARC'S ROW HOVER, 3 % WHITE OVER THE
+//                                     LIST'S VIEW, rgba(255, 255, 255, 0.03)
+//                                     over the ruler face, per channel c +
+//                                     0.03 · (255 − c) rounded (derive(),
+//                                     beside the three above: no bright tone
+//                                     under it): A LIST ROW UNDER THE HOVERING
+//                                     PEN (architect 2026-11-21, send EE: "I'd
+//                                     like to add hover"; its tone Arc's own
+//                                     `row.activatable:hover`, gtk3.0-arc-
+//                                     dark.css line 1258, the same day: "I
+//                                     prefer to go more truthful. It just
+//                                     needs to be very subtle."; paint_
+//                                     handler.cpp's THE LIST VIEW). arc_dark
+//                                     404552 -> 464B57. ONE CONDITION: a theme
+//                                     whose key hover face is its key face
+//                                     (every Live theme) hovers nothing (send
+//                                     CC / DD), so there the view's own tone:
+//                                     no row hovers, as no key does
 //     playhead line          81E1EA = FFFFFF + 0.5 · (head − FFFFFF), white
 //                                     EXACTLY HALF WAY to the head on every
 //                                     theme (architect 2026-11-12, session

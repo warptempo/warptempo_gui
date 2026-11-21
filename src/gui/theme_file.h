@@ -112,7 +112,7 @@ inline constexpr GuiThemeRole kGuiThemeRoles[] = {
     // 2026-11-19 — the progress bar's and the scrub's trough; THE SCALE'S
     // RIM, send AA's stage D3, the scrub's knob; THE TWO HOVER TONES, send CC, 2026-11-20 — a key's
     // face and the trim bar's pill under the hovering pen; THE LIST ROW'S
-    // HOVER, send EE, 2026-11-21 — the buttons' hover step laid on the
+    // HOVER, send EE, 2026-11-21 — Arc's row hover, 3 % white over the
     // list's view; THE ARC PAGE'S SIX, architect 2026-11-19, send Z, theme_roles.h's head —
     // the body tone, the title bar's text, the sidebar text, the ruler's
     // digits, the disabled key's face and border; and THE POPUPS' FOUR, send

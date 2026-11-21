@@ -7269,8 +7269,8 @@ struct AppState {
     // Cancel among them; a line editor's sub-page has none), the
     // on-screen keyboard's keys — and the scrub's knob, AND A LIST'S ACTING
     // ROWS (the folder overlay's, architect 2026-11-21, send EE: "I'd like
-    // to add hover, which I know is not canonical to Arc"; THE LIST ROW'S
-    // HOVER below), each named by its
+    // to add hover"; Arc's `row.activatable:hover`; THE LIST ROW'S HOVER
+    // below), each named by its
     // surface and its index there (a dialog button's and the knob's with the
     // stash's owner and session, a list row's with its listing, so a face
     // never outlives the surface it was read from; a keyboard key's index
@@ -7432,7 +7432,9 @@ struct AppState {
     // the trim bar, the cards, the tooltips.
     // THE LIST ROW'S HOVER (architect 2026-11-21, send EE; the look at
     // paint_handler.cpp's THE LIST VIEW, the tone theme_roles.h's
-    // `list_hover_face`): a list row is a face of TWO LOOKS, Rest and Hover,
+    // `list_hover_face`, Arc's own 3 % white over the view, the same day:
+    // "I prefer to go more truthful. It just needs to be very subtle."): a
+    // list row is a face of TWO LOOKS, Rest and Hover,
     // on Arc's `row` transition — INTO HOVER AT ONCE, OUT OF IT 150 ms on
     // the one curve (duration_ms, kRowFadeMs). A ROW HOVERS IFF A TAP ON IT
     // WOULD ACT (hover_face_live's ListRow arm: the press's own hit, row_at

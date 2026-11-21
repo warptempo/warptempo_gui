@@ -253,8 +253,9 @@ struct TrimRange {
 // (trim_bar_tones; AppState::TrimBarHover; send CC, 2026-11-20); the
 // lists' lit rows are a selection, not a button face, and do not hover —
 // A LIST'S RESTING ROW a tap would act on wears `list_hover_face` under
-// the pen, in at once and out over Arc's 150 ms row transition (architect
-// 2026-11-21, send EE; paint_handler.cpp's THE LIST VIEW).
+// the pen, Arc's `row.activatable:hover` (3 % white over the view), in at
+// once and out over Arc's 150 ms row transition (architect 2026-11-21, send
+// EE; paint_handler.cpp's THE LIST VIEW).
 // THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 W outer corners,
 // send Z, 2026-11-19: Arc's button and entry, A BUTTON IS ARC'S BUTTON
 // below), their edges at exact coverage, as every mark placed by time is
@@ -490,7 +491,7 @@ struct GuiPalette {
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
     GuiColor key_face;        // a key's face at rest; the two lamps at rest; the scrub's knob (paint_scale)
     GuiColor key_hover_face;  // that face under the hovering pen, the far end of the hover's mix (materials.h's THE HOVER: the keys, the word buttons, the on-screen keyboard's keys, the scrub's knob)
-    GuiColor list_hover_face; // a list row under the hovering pen, the far end of its mix: the buttons' hover step laid on the view (paint_list_view; architect 2026-11-21, send EE)
+    GuiColor list_hover_face; // a list row under the hovering pen, the far end of its mix: Arc's row hover, 3 % white over the view (paint_list_view; architect 2026-11-21, send EE)
     GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
     GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h) and the flag editor's (render_flag_editor_box)
     GuiColor ruler_tick;      // the ruler's ticks

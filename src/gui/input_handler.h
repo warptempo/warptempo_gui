@@ -3374,8 +3374,9 @@ private:
     //   * THE ON-SCREEN KEYBOARD'S KEYS;
     //   * THE SCRUB'S KNOB, the render player's and the score viewer's;
     //   * THE LIST ROW'S HOVER (architect 2026-11-21, send EE: "I'd like to
-    //     add hover, which I know is not canonical to Arc, but you know,
-    //     just the same color that I guess the buttons get on hover"): A
+    //     add hover"; Arc's own `row.activatable:hover`, 3 % white, the same
+    //     day: "I prefer to go more truthful. It just needs to be very
+    //     subtle."): A
     //     LIST'S RESTING ROW A TAP WOULD ACT ON — every list of the folder
     //     overlay (the render player's, the project picker's, the settings
     //     page's, a value list's, the trim presets', the BPM form's), never

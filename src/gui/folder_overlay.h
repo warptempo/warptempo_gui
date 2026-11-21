@@ -165,10 +165,10 @@
 // under a press, the same look (Thunar is single-click) — is a flat fill in
 // the theme's selection pair across the view's whole width. A ROW A TAP
 // WOULD ACT ON HOVERS under the pen (architect 2026-11-21, send EE: "I'd
-// like to add hover ... just the same color that I guess the buttons get on
-// hover ... Maybe you want to tune it to the background that the list is
-// on"): across the same width, `list_hover_face`, the buttons' own hover
-// step laid on the view's tone (theme_roles.h's DERIVED block), in at once
+// like to add hover"): across the same width, `list_hover_face`, ARC'S OWN
+// `row.activatable:hover`, 3 % white over the view's tone (the same day: "I
+// prefer to go more truthful. It just needs to be very subtle.";
+// theme_roles.h's DERIVED block), in at once
 // and out over Arc's row transition (the look at paint_handler.cpp's THE
 // LIST VIEW; the state, the gate and the fade AppState::FaceFades; the
 // inventory at GuiInputHandler::pen_hot_latch_),

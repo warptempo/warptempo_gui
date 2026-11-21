@@ -8369,15 +8369,14 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            under SelectionForeground, retired with it)
 //   HOVERED               -> a resting row a tap would act on, under the
 //                            hovering pen (architect 2026-11-21, send EE:
-//                            "I'd like to add hover, which I know is not
-//                            canonical to Arc, but you know, just the same
-//                            color that I guess the buttons get on hover
-//                            ... Maybe you want to tune it to the
-//                            background that the list is on"): a flat fill
+//                            "I'd like to add hover"; its tone the same
+//                            day: "I prefer to go more truthful. It just
+//                            needs to be very subtle."): a flat fill
 //                            across the view's whole width, the lit bar's
-//                            span, in `list_hover_face` — THE BUTTONS' OWN
-//                            HOVER STEP LAID ON THE VIEW (theme_roles.h's
-//                            DERIVED block; arc_dark 4C5160 on 404552) —
+//                            span, in `list_hover_face` — ARC'S OWN
+//                            `row.activatable:hover`, 3 % WHITE OVER THE
+//                            VIEW (theme_roles.h's DERIVED block; arc_dark
+//                            464B57 on 404552) —
 //                            the name, the drawing and their inks
 //                            unchanged; IN AT ONCE AND OUT OVER ARC'S
 //                            150 ms ROW TRANSITION, the fill the view's

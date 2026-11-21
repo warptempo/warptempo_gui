@@ -366,16 +366,22 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     // theme's SurfaceBackground, the key face itself: no hover shows there).
     t.key_hover_face      = packed(opaque(roles["ButtonHoverBackground"]));
     // THE LIST ROW'S HOVER (architect 2026-11-21, send EE; the head's
-    // DERIVED block): the buttons' own hover step — the hover face less the
-    // key face, per channel — laid on the list's view, the canvas's tone the
-    // view wears (ruler_face below), clamped. arc_dark 404552 + (505666 −
-    // 444A58) = 404552 + 0C0C0E = 4C5160; a theme whose hover face is its key
-    // face (every Live theme) gets the view's own tone back, no hover.
+    // DERIVED block): ARC'S OWN, `row.activatable:hover`'s rgba(255, 255,
+    // 255, 0.03) over the list's view, the canvas's tone the view wears
+    // (ruler_face below) — 3 % white source-over, per channel c + 0.03 ·
+    // (255 − c) rounded, as GTK composites it ("I prefer to go more truthful.
+    // It just needs to be very subtle."): arc_dark 404552 -> 464B57. THE ONE
+    // CONDITION: a theme whose hover face is its key face (every Live theme)
+    // hovers nothing (send CC / DD), so its row's hover tone is the view's own
+    // — no hover shows, as no key's does; the walk never hovers a row there
+    // either (installed_theme_hovers, input_pointer.cpp, the same compare).
     const Rgb hover_face = opaque(roles["ButtonHoverBackground"]);
-    t.list_hover_face     = packed(Rgb{
-        clamp_byte(canvas.r + (hover_face.r - face.r)),
-        clamp_byte(canvas.g + (hover_face.g - face.g)),
-        clamp_byte(canvas.b + (hover_face.b - face.b))});
+    const bool theme_hovers = hover_face.r != face.r ||
+                              hover_face.g != face.g ||
+                              hover_face.b != face.b;
+    t.list_hover_face     = packed(theme_hovers
+                                       ? over(Rgba{255, 255, 255, 0.03}, canvas_a)
+                                       : canvas);
     t.ruler_face          = packed(canvas);
     t.ruler_tick          = packed(tick_role);
     t.ruler_text          = packed(ruler_fg);
