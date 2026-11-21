@@ -5933,7 +5933,8 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // ANYWHERE ELSE consumes the arm and dispatches nothing (a prompt has no
     // focus, architect 2026-11-02, so nothing else is left behind). The gates the act re-asks (the painted bit, the stash's
     // identity, and the live response set) all live in the one shared dispatch
-    // body, which the keyboard's own release shares; the painter drops the arm
+    // body (dispatch_modal_dialog_button, every release arm's); the painter
+    // drops the arm
     // on those same edges, so the body is the second wall rather than the only
     // one. The veil still swallows every release either way — a CHROME arm
     // taken above dies here undispatched, which is the veil's answer.
@@ -6538,31 +6539,32 @@ void GuiInputHandler::recompute_redesign_button_hover() {
     // surface is gone or replaced, and leaves a DIALOG wait whose surface
     // stands and still wears the stash that armed it: the modal's own walk
     // (update_modal_dialog_hover) owns that surface's wait. A DIALOG SURFACE
-    // IS LIVE exactly where on_motion runs that walk, re-derived by grep
-    // 2026-10-25: the prompt, the editor dialogs and the progress modal (the
-    // veil's terms — a lane editor among them publishes no dialog, so a
-    // dialog owner has no surface to outlive there) and the folder overlay's
-    // two owners (the player and the picker — folder_overlay_stands). The
-    // progress modal joined 2026-10-25: without it the walk hard-ended its
-    // Cancel's wait on every motion, so that hint never showed. The liveness test reads the LIVE
+    // IS LIVE exactly where on_motion runs that walk: under the prompt and
+    // the progress modal (two of the veil's terms; its third, the editors,
+    // publishes no button — a line editor's sub-page its entry alone, a
+    // lane editor no dialog — so a dialog owner has no surface to outlive
+    // there and the stamp test below ends one carried in), the folder
+    // overlay's owners (the player and the picker — folder_overlay_stands)
+    // and the score viewer. Without the progress modal's term the walk would
+    // hard-end its Cancel's wait on every motion and that hint would never
+    // show. The liveness test reads the LIVE
     // surfaces, never the painted stash, so the frame a dialog closes on is
     // the frame this walk takes its hint down, whatever road closed it — the
-    // two that carry no input event of their own (a modal button dispatched
-    // by a KEY RELEASE, and the history prefetch's failure cancelling the
-    // load-in-place prompt from a worker) included. A closed or replaced
+    // one that carries no input event of its own (the history prefetch's
+    // failure cancelling the load-in-place prompt from a worker) included.
+    // A closed or replaced
     // surface is not a graze, so it is a hard end, not the grace.
     // AND THE OWNER MUST STILL NAME THE STASH THAT ARMED IT: a Dialog owner
     // whose stamp (AppState::RedesignTooltip) differs from the live stash's
     // owner and session is dead too. Liveness alone cannot see a surface
-    // REPLACED under the pointer, and exactly one such road exists: the
-    // load-in-place prompt standing over the render player, closed by a key
-    // release while the pointer rested on one of its buttons — the player
-    // stays live, so without the stamp the wait would ripen into the
-    // PLAYER's button at the same index, a hint beside a pointer not on it.
-    // The picker hosts its own two questions the same way since 2026-10-25
-    // (the reopen's and Revert's, standing over its list), so the stamp
-    // answers there too: the prompt closed by a key release leaves the
-    // picker live and a wait stamped with the prompt's owner dead. THE STASH LAGS THE CLOSE BY ONE
+    // REPLACED under the pointer: a question standing over an overlay — the
+    // load-in-place prompt over the render player, the reopen's and
+    // Revert's over the picker's list — and closed while the pointer rests
+    // on one of its buttons (that worker's cancel is such a road) leaves the
+    // overlay live, so without the stamp the wait would ripen into the
+    // OVERLAY's button at the same index, a hint beside a pointer not on
+    // it; the wait stamped with the prompt's owner is dead. THE STASH LAGS
+    // THE CLOSE BY ONE
     // PAINT: the
     // frame that repaints the player's row republishes the stash,
     // paint_shift_tooltip refuses the mismatch on that same frame, and this
@@ -7733,7 +7735,7 @@ void GuiInputHandler::finish_level_press_release(
 // opener's and the tooltip lamp's (overlay_admits_chrome, on_button_release; the overlay term's
 // exemption at finish_chrome_press_release's head). THE MODALS ALONE VEIL
 // IT: a prompt's or the progress modal's press gate returns above the band,
-// and an editor dialog standing at the lift refuses it there.
+// and an editor standing at the lift refuses it there.
 bool GuiInputHandler::arm_clip_lamp_press(const GuiPointerPlace& at) {
     if (!app.clip_lamp_struck) return false;
     // The square's hull: the pixels it touches (the pointer names a pixel).
@@ -7832,7 +7834,7 @@ void GuiInputHandler::settle_level_case(bool level_changed) {
 void GuiInputHandler::finish_chrome_press_release(
         const AppState::ChromePress& arm, const GuiPointerPlace& at) {
     // THE VEIL, RE-ASKED ONCE FOR EVERY KIND: a chrome lift is a consumed
-    // nothing while an editor dialog stands, whatever the arm is. It was a
+    // nothing while an editor stands, whatever the arm is. It was a
     // membership test until 2026-08-13, admitting the modal-trap
     // reach-through's own buttons; with that retired the veil is blanket
     // again, and its whole job here is a modal RAISED MID-HOLD — no key can
@@ -9112,13 +9114,15 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
     }
     // THE ROSTER WALK STAYS LIVE UNDER EVERY MODAL SURFACE — the MODAL
     // branches that return before the no-gesture tail (the prompt's, the
-    // player's, the picker's and the dialog editors' below) all call it —
+    // player's, the score viewer's, the picker's, the progress modal's and
+    // the editors' below) all call it —
     // because what it answers is not frozen by a modal: the tail's hard end
     // of a DIALOG tooltip owner whose surface has gone. What it must NOT do under a modal is start a
     // roster TOOLTIP dwell — but for the two keys an overlay leaves live
     // (2026-11-11) — and that refusal lives in the walk itself (the
-    // veil and the no-wait rule). The dialog's own buttons take their walk
-    // through update_modal_dialog_hover in the same branches. What DOES
+    // veil and the no-wait rule). A surface's own buttons take their walk
+    // through update_modal_dialog_hover in the same branches, all but the
+    // editors', which publish no button to walk. What DOES
     // freeze the walk is an active pointer GESTURE — the branches below all
     // return without this call.
 

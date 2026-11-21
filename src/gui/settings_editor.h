@@ -168,8 +168,8 @@ struct GuiInputHandler;
 //    the window repainted (GuiInputHandler::apply_waveform_grow), no card
 //    (the waveform is the answer); the noise's attenuation at once, handed
 //    to the one GuiNoise (GuiNoise::set_attenuation_db: the gain
-//    recomputed, the switch untouched) at the OK, no card (the sound is the
-//    answer), and its crossfade the same (GuiNoise::set_crossfade_s); the
+//    recomputed, the switch untouched) at the Enter, no card (the sound is
+//    the answer), and its crossfade the same (GuiNoise::set_crossfade_s); the
 //    noise's folder at once, the resident
 //    recordings freed and the new folder loaded under an audible level
 //    (GuiNoise::change_folder), no card (the NOISE case's face is the

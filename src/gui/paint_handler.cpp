@@ -8494,14 +8494,17 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
 
 void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) {
     if (!folder_overlay::stands(app)) return;
-    // UNDER A QUESTION'S PAGE THE LIST IS NOT PAINTED (architect 2026-11-20,
-    // send EE; paint_modal_dialog's THE QUESTION PAGE AND THE PROGRESS
-    // PAGE): the page stands in place of the overlay's view — the box and
-    // the question are paint_modal_dialog's, laid after this slot — and the
+    // UNDER A QUESTION'S PAGE OR THE PROGRESS PAGE THE LIST IS NOT PAINTED
+    // (architect 2026-11-20, send EE; paint_modal_dialog's THE QUESTION PAGE
+    // AND THE PROGRESS PAGE; modal_page_stands the one predicate): the page
+    // stands in place of the overlay's view — the box and the page's lines
+    // are paint_modal_dialog's, laid after this slot — and the
     // overlay stays open underneath, its rows, highlight and scroll
     // untouched, repainted when the page leaves (the leave damages the whole
     // window). Its rows answer no press meanwhile: the prompt's gate ranks
-    // above the band's claim (on_button_press). The slot's standing bit is
+    // above the band's claim (on_button_press), and no overlay stands under
+    // the progress page (every batch is dispatched with its overlay closed,
+    // AppState::ModalDialogOwner's block). The slot's standing bit is
     // the dispatch's, unmoved (paint_keyboard_slot: the overlay stands).
     if (modal_page_stands(app)) return;
     const GuiRect surf = folder_overlay::surface_rect(app);
@@ -9560,8 +9563,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
 
     // THE KEYBOARD SLOT (the on-screen keyboard since 2026-08-27, the folder
     // overlay since 2026-08-28 — one band, one tenant at a time), between the
-    // waveform passes above and the three floating surfaces below — which is
-    // exactly where it sits in the picture. The overlay OVERLAYS the waveform
+    // waveform passes above and the two floating surfaces below (the cards
+    // and the tooltip) — which is exactly where it sits in the picture. The overlay OVERLAYS the waveform
     // with its own opaque ground — the MODAL FAMILY'S PANEL since 2026-10-14
     // (the view bar's top row down to the controls row, modal_box.h) — and
     // the keyboard OVERLAYS the canvas's foot, the well's foot, the bottom

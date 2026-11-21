@@ -171,8 +171,8 @@ GuiInputState GuiInputCore::current_mods() const {
 void GuiInputCore::deliver_key(GuiKey key, GuiInputState mods) {
     // THE SHARED DELIVERY PATH: both the press (key_event) and the
     // SYNTHESIZED REPEAT (maybe_fire_repeat) come through here. Key releases
-    // do not: key_event's release branch feeds the repeat cancel and then the
-    // application's release hook directly.
+    // do not: key_event's release branch feeds the repeat cancel and
+    // delivers nothing (no key acts at its lift).
     if (on_key_) on_key_(key, mods);
 }
 

@@ -1276,7 +1276,7 @@ bool GuiSettingsEditor::autocomplete_value() {
 
     // A NON-EMPTY ENTRY (the head's stage 2): the path key's value is a path
     // PREFIX, completed against the filesystem (complete_path_value, its
-    // no-advance cases Tabs that walk); every other key's typed value
+    // no-advance cases silent Tabs); every other key's typed value
     // advances nothing. Leading whitespace off, trailing whitespace kept —
     // the reasons are at ltrim_ws (commit() trims both sides, so a
     // `  /home` completes as the value it commits as).
@@ -1289,7 +1289,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     // AN EMPTY ENTRY (the head's stage 1; whitespace-only counts as empty):
     // THE VALUE THE KEY HOLDS (setting_value, the open's own prefill), so a
     // value cleared by hand comes back with one Tab. THIS is what makes a
-    // SECOND Tab walk with no state to remember the first: the recall just
+    // SECOND Tab silent with no state to remember the first: the recall just
     // written is a non-empty entry, and a non-path key's non-empty entry
     // advances nothing.
     //
@@ -1320,7 +1320,7 @@ bool GuiSettingsEditor::autocomplete_value() {
     // The literal answer, compared against the buffer this call started from:
     // recalling an EMPTY value (a blank free-text key such as an empty `url`
     // or `projects_repo`) onto an empty entry writes nothing and is honestly
-    // no advance, so its Tab walks; a whitespace-only entry recalled empty is
-    // a change (the blanks cleared) and consumes its Tab.
+    // no advance, a silent Tab; a whitespace-only entry recalled empty is
+    // a change (the blanks cleared), an advance.
     return app.settings_editor.pending != pending;
 }

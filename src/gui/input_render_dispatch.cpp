@@ -1,7 +1,7 @@
 #include "input_handler.h"
 
 #include "directory_walk.h"     // the one non-throwing listing walk
-#include "modal_box.h"          // the progress modal's interior (its damage)
+#include "modal_box.h"          // the progress page's step rect (its damage)
 #include "phaseresetmarkers.h"
 #include "render_cache.h"          // fingerprint_sidecar_path
 #include "render_output_naming.h"  // the deliverable's path composition
@@ -693,14 +693,23 @@ void GuiInputHandler::close_batch_progress() {
 }
 
 void GuiInputHandler::swap_batch_progress_for_player() {
-    // THE HELD PRESS DROPS FIRST, CLEANLY (architect 2026-10-14): a pointer
-    // press armed on Cancel is released here as a no-op, so the lift that
-    // follows finds no arm under the player (on_button_release's player
-    // branch takes -1 and dispatches nothing). A
-    // press held anywhere else on the modal armed nothing to drop: the veil
+    // THE PROGRESS PAGE'S HELD PRESS DROPS FIRST, CLEANLY (architect
+    // 2026-10-14): a pointer press armed on its Cancel is released here as a
+    // no-op, so the lift that follows finds no arm under the player
+    // (on_button_release's player branch takes -1 and dispatches nothing). A
+    // press held anywhere else on the page armed nothing to drop: the veil
     // consumed it.
-    app.modal_dialog_pressed      = -1;
-    app.modal_dialog_press_ms     = 0;
+    // ONLY THE PROGRESS PAGE'S OWN ARM (architect 2026-11-20, send EE): the
+    // arm is a slot of the painted stash (AppState::modal_dialog_pressed), so
+    // the stash's owner says whose button it names. UNDER A QUESTION STANDING
+    // OVER THE PROGRESS PAGE the stash is the question's and the arm one of
+    // its answers: the question stands on over the player this swap opens,
+    // its session and its stash unchanged, so the held answer keeps its arm
+    // and its lift dispatches as on any other frame.
+    if (app.modal_dialog.owner == AppState::ModalDialogOwner::Progress) {
+        app.modal_dialog_pressed      = -1;
+        app.modal_dialog_press_ms     = 0;
+    }
     hide_shift_tooltip();
     close_batch_progress();
     // THE RENDER PLAYER ON THE NEW FOLDER: open() enters the newest batch
@@ -822,8 +831,9 @@ void GuiInputHandler::dispatch_next_batch_entry() {
         return;
     }
 
-    // THE PROGRESS MODAL'S SENTENCE FOLLOWS THE ENTRY NOW STARTING
-    // (2026-10-14): "Rendering X of Y...", X this dispatch's 1-based entry.
+    // THE PROGRESS PAGE'S COUNT AND BAR FOLLOW THE ENTRY NOW STARTING
+    // (2026-10-14; AppState::BatchProgress's two lines): "X of Y", X this
+    // dispatch's 1-based entry.
     set_batch_progress_index(batch_.next_index + 1);
 
     // THE BATCH LABEL NAMES WHAT IS BEING COUNTED (architect 2026-08-29):
@@ -858,11 +868,12 @@ void GuiInputHandler::dispatch_next_batch_entry() {
                   "Rendering %d of %d %s...",
                   batch_.next_index + 1, total,
                   batch_.label.c_str());
-    // (ON SCREEN THE BATCH IS THE PROGRESS MODAL'S since 2026-10-14 — its
-    // sentence above, its window over the main page — so this line is
-    // written and taken down as before, the status bar's process line under
-    // the modal for the batch's whole run; the mechanics below are
-    // unchanged.)
+    // (ON SCREEN THE BATCH IS THE PROGRESS PAGE'S (architect 2026-10-14;
+    // 2026-11-20, send EE): its count above, the page in the view — and THE
+    // STATUS BAR IS BLANK UNDER IT, the page saying what this line would
+    // (status_bar_text, paint_handler.cpp). The line is still written into
+    // the slot at each dispatch and taken down at the terminal by the
+    // mechanics below, unpainted for the batch's whole run.)
     // A SWEEP'S LINE IS STATE, WRITTEN STRAIGHT INTO THE SLOT (architect
     // 2026-09-11, on the tablet's panel then pinned at 90 Hz, where the line
     // BLINKED once per cell). The single render's park/promote machinery is

@@ -2463,7 +2463,7 @@ private:
     //   kill_running_render_and_park for a batch command (the batch waiting
     //   out a killed render's drain), so every batch opens it at the press
     //   whichever road it takes. Idempotent: the parked batch's later start
-    //   finds it standing and keeps its session (and its focus). The modal
+    //   finds it standing and keeps its session. The modal
     //   stop (stop_playback_for_modal_open), the roster hint's end, a fresh
     //   session, entry 1 of `total`, and a whole-window damage — a modal has
     //   no rect before its first paint, the prompts' own open.
@@ -2475,10 +2475,11 @@ private:
     //   parked batch's cancel — the state reset and a whole-window damage,
     //   as a prompt's answer takes, which brings the lanes, the canvas and
     //   row 8 back from under the box.
-    // swap_batch_progress_for_player: the COMPLETE terminal's swap — THE HELD
-    //   PRESS DROPS FIRST (the dialog's pointer arm and its keyboard arm, so a
-    //   press held on Cancel or anywhere on the modal is released as a no-op
-    //   and no lift lands on the player), then the modal closes and the
+    // swap_batch_progress_for_player: the COMPLETE terminal's swap — THE
+    //   PROGRESS PAGE'S HELD PRESS DROPS FIRST (the pointer arm on its
+    //   Cancel, released as a no-op, so no lift lands on the player; the arm
+    //   of a question standing over the page, one of its answers, is kept —
+    //   the definition's rule), then the modal closes and the
     //   render player opens on the newest batch folder, which is this batch's
     //   (GuiRenderPlayer::open's own seat: the highest leading index, the
     //   number the sweep minted its folder with).
@@ -3081,7 +3082,7 @@ private:
     //       (text_editor::Kind::TrimPresetName, the settings editor's
     //       shape), the list as it stood and its highlighted name kept for
     //       the commit and the return.
-    //     commit_trim_preset_name: the name editor's OK and Enter: the name
+    //     commit_trim_preset_name: the name editor's Enter: the name
     //       judged by its one grammar (trim_preset_name_refusal — non-empty,
     //       no edge space, the incoming filter's alphabet, unique), a refusal
     //       the editors' own shape (the whole text selected, the editor

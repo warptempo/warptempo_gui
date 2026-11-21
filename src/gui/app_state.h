@@ -3557,7 +3557,8 @@ enum class DialogTrigger {
 // response claim answers nothing (on_button_press; the veil still
 // swallows the press, it just answers nothing). The claim needs the gate
 // because the button RECTS the pointer reads are the previous paint's
-// publication: an editor dialog's buttons publish a zero response key and the
+// publication: every other surface's buttons (an overlay's row, the progress
+// page's Cancel) publish a zero response key and the
 // live-set test refuses them already, but a PROMPT REPLACING A PROMPT — the
 // save-failed rung, the one such route — leaves rects whose Discard/Cancel
 // keys are still live in the new set, on the very seats the new row's
@@ -3570,9 +3571,9 @@ enum class DialogTrigger {
 // update_modal_dialog_hover (the modal branches of on_motion are its only
 // callers — it does not ride the per-tick roster walk), and the wait's owner
 // carries the stash that armed it (AppState::RedesignTooltip).
-// EDITOR DIALOGS ARE DELIBERATELY NOT GATED: a queued key types into the
-// buffer, which is non-destructive and self-evident the moment the field
-// paints, and the commit is a separate deliberate Enter or OK. The
+// THE DIALOG EDITORS ARE DELIBERATELY NOT GATED: a queued key types into the
+// buffer, which is non-destructive and self-evident the moment the entry
+// paints, and the commit is a separate deliberate Enter. The
 // destructive shape is the prompt's ONE-PRESS ANSWERS, which is exactly what
 // this bit guards. A frame deferral (both buffers in flight) simply keeps the
 // bit false longer — presses answer nothing, which is the correct answer.
@@ -6046,10 +6047,10 @@ struct AppState {
     enum class ModalDialogOwner {
         None, Prompt, Editor, Player, Picker, Progress, Score
     };
-    // THE PLAYER'S EIGHT BUTTONS, the third dispatch vocabulary beside a
-    // prompt's response key and the OK bit two-button dialogs share: what a
+    // THE PLAYER'S EIGHT BUTTONS, a dispatch vocabulary of its own beside a
+    // prompt's response key (the overlays' rows have four, one a row): what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
-    // under the Player owner and the other two vocabularies are zero/false
+    // under the Player owner and every other vocabulary is zero / None
     // there). REPEAT ONE joined (architect 2026-08-28) — the row's one
     // LAMP, the only member here whose face carries a state. The order below
     // is the ROW's.
@@ -7037,8 +7038,8 @@ struct AppState {
     // one), so a tap shorter than 50 ms shows the part of the press it
     // reached and goes back from there: EVERY PRESS'S END HOLDS THE FADE at
     // the value reached at that instant (GuiInputHandler::hold_face — the
-    // roster's lift and cancels, its feint, a dialog button's lift, feint,
-    // cancel and key release, the keyboard key's release, the knob's
+    // roster's lift and cancels, its feint, a dialog button's lift, feint
+    // and cancel, the keyboard key's release, the knob's
     // release), and the painter's retarget of the lift's damage runs from
     // there; a key its own act lit goes on toward lit. `all` is every tone of the face — the
     // fill, the ring, THE PRINT AND THE DRAWING'S INK (`color`; a symbolic
@@ -15702,24 +15703,23 @@ inline bool playback_launch_playable(const AppState& a,
 //     derivation would therefore need an override list on top
 //     of it, which is strictly worse than a list that says what it means and
 //     names its owner.
-// MODAL gates are deliberately absent WITH ONE RULED EXCEPTION: a prompt or
-// a dialog editor swallows the PRESS at the pointer path's own veil, and a
-// modal that greyed the chrome under it would be a fourth face nobody asked
-// for (no roster hint starts under the veil — the pointer walk's veil
-// term, recompute_redesign_button_hover — but that is the pointer's fact,
-// not a face state this predicate answers). THE FOLDER OVERLAY IS THE
-// EXCEPTION (architect 2026-08-28: "everything else greys as in the `h`
-// view"): while the band stands — under the render player or the picker —
-// EVERY roster button is dead but the render player's own closer (the
-// view pairs with the rest; the File anchor, lit above the band from
-// 2026-09-03 evening, went with the menu row 2026-10-21, Quit keeping the
-// window manager's close).
+// THE MODAL GATE IS THE BODY'S FIRST ARM (architect 2026-11-20, send EE):
+// under every editor and under a question's page and the progress page THE
+// WHOLE ROSTER GREYS — roster_greyed_whole the one predicate, the rule and
+// his words at the arm. The veil already swallows every PRESS there at the
+// pointer path, and no roster hint starts under it (the pointer walk's veil
+// term, recompute_redesign_button_hover — the pointer's fact, not a face
+// state this predicate answers); the grey is that veil's face, PAINT ALONE.
+// THE FOLDER OVERLAY GREYS TOO (architect 2026-08-28: "everything else greys
+// as in the `h` view"): while the band stands — under the render player or
+// any of the picker's contents — EVERY roster button is dead but the
+// content's own opener, its closer, and the tooltip lamp
+// (overlay_admits_button; the view pairs grey with the rest).
 // THE LOAD IS THE SAME SHAPE (architect 2026-09-24): with no piece to
 // dispatch on every button greys (Back stays live).
-// All three are MODES like
-// the `h` view rather than questions like a prompt, and the whole chrome is
-// what they take away; each veil already makes the chrome inert, and the
-// grey is that veil's honest face rather than a second rule.
+// The overlays and the load are MODES like the `h` view, and the whole
+// chrome is what they take away; each veil already makes the chrome inert,
+// and the grey is that veil's honest face rather than a second rule.
 // THE FIRST SWITCH IS EXHAUSTIVE over the roster with NO `default` arm,
 // deliberately: a new button then fails to compile here (-Wswitch) until it is
 // classified, instead of silently inheriting some other button's answer. The
@@ -16094,7 +16094,7 @@ inline bool redesign_button_enabled(const AppState& a,
     // magnification lamp's own gain-derivation grey outlasts this one.
     if (no_audio_to_dispatch_on(a, total_frames)) return false;
     // THE FOLDER OVERLAY GREYS THE WHOLE ROSTER (the menu row's File anchor
-    // excepted until the row's removal, 2026-10-21), whichever content owns it (architect 2026-08-28, the ruled exception
+    // excepted until the row's removal, 2026-10-21), whichever content owns it (architect 2026-08-28, the ruling
     // recorded above the signature: "everything else greys as in the `h`
     // view"). Under the PLAYER and the PICKER the pointer rule is the veil
     // (every press outside the overlay band and the modal row is consumed —

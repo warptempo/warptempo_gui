@@ -39,8 +39,8 @@
 // value and no keymap object reaches this layer; a backend decodes on its own
 // side of the call and hands over values. It reads no window system.
 //
-// WHAT IT EMITS: the consumer hooks the GUI installs — the key, key-release,
-// button and motion callbacks, the pointer-leave hook and the eleven touch
+// WHAT IT EMITS: the consumer hooks the GUI installs — the key, button and
+// motion callbacks, the pointer-leave hook and the eleven touch
 // hooks (the seven navigation ones — the sweep-armed query among them since
 // 2026-11-07 — the editor-field query and the caret-drag trio)
 // — plus the two probes it asks the GUI (text-editor-active,

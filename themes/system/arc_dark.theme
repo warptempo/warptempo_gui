@@ -58,7 +58,7 @@
 #                                       words and glyph
 # OUR OWN ONE MORE, send AA's stage D2, 2026-11-19 (GTK's progress bar):
 #   ScaleTrough                 2D303B  Arc's progress / scale trough (G3's progressbar trough, $_trough_bg_color):
-#                                       the progress dialog's bar and the scrub's trough
+#                                       the progress page's bar and the scrub's trough
 # OUR OWN ONE MORE, send AA's stage D3, 2026-11-19 (Arc's scale, the scrub; GTK's scale slider):
 #   ScaleSliderBorder           262933  Arc's scale slider's border, the knob's 1 px rim (measured on his Arc-Dark
 #                                       desktop, the scale shot C4g): the scrub's knob at rest

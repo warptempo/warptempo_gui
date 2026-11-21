@@ -54,7 +54,8 @@
 //                              cannot return.
 //     settings_editor.cpp      complete_path_value — the path completer, which
 //                              completes nothing on any fault (a Tab that
-//                              walks the ring) and so has no fault to report.
+//                              completes nothing is silent) and so has no
+//                              fault to report.
 //
 // No backend walks a directory.
 //

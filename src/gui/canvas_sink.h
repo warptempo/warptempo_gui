@@ -211,8 +211,10 @@ struct GuiCanvasPrimitive {
 // the rect every upload leaves out; the modal box's interior instead while
 // the score viewer's page stands, `page` below, 2026-10-27) and THE
 // FLOATERS' HULLS below. The keyboard slot needs no hull: its tenants stand
-// outside the clip (the keyboard and a dialog on it below the paint area,
-// the folder overlay emptying it), and a clip that moved makes the
+// outside the clip (the keyboard alone, the flag editor's, below the paint
+// area; the modal family's box — the folder overlay, a question's page, the
+// progress page, a line editor's value sub-page — emptying it;
+// onscreen_keyboard::waveform_paint_area), and a clip that moved makes the
 // platform's next walk whole. THE PROCESS'S ONE OBJECT
 // (gui_canvas_frame below), because the platform reads it at present and
 // outlives every project set (platform.h's loop contract). `generation`

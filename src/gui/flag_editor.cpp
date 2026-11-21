@@ -904,15 +904,16 @@ void GuiFlagEditor::commit_top_flag_edit() {
 // label on every selected marker with the clipboard's text, without opening
 // the editor, through the editor's own validation"; the contract at the
 // declaration). PER SELECTED MARKER, in the store's order, what opening its
-// editor, selecting all, pasting and pressing OK would do: a scratch session
-// of the flag editor's kind seeded with the marker's line, the whole line
-// selected (enter_text_edit's open-selected), the clipboard through THE ONE
+// editor, selecting all, pasting and pressing Enter would do: a scratch
+// session of the flag editor's kind seeded with the marker's line, the whole
+// line selected (enter_text_edit's open-selected), the clipboard through
+// THE ONE
 // INCOMING FILTER (text_editor::replace_selection — its vocabulary and the
 // kind's byte cap, no second derivation), then the line through the
 // commit's one owner (propose_payload_commit) against the store AS THE
 // EARLIER MARKERS OF THIS PASTE LEFT IT — so a pasted label definition
 // meets the duplicate refusal at its second marker exactly as the second
-// editor's OK would. ALL OR NOTHING: every marker is judged before any is
+// editor's Enter would. ALL OR NOTHING: every marker is judged before any is
 // written; the first refusal cards its own sentence — the paste's
 // over-capacity card, or the commit's "Edit rejected: …" — and the store
 // stands untouched. A marker whose line already says the pasted one moves

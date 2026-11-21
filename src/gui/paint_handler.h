@@ -1441,15 +1441,17 @@ private:
     void paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed);
 
     // THE FOLDER OVERLAY (2026-08-28, the render player): the keyboard-slot
-    // list panel, Live's browser list on the modal family's pane (M6 A,
-    // 2026-11-01 night) — folder
-    // and wav rows with their glyphs, the pickers' glyph-less rows, the
-    // settings page's group rows in the dim print (`text_dim`, 2026-10-28), the
-    // highlight band and the pressed row's lighter pair (2026-11-05), all under
-    // the band's
+    // list panel, Thunar's list under Arc in the modal family's view
+    // (architect 2026-11-19, send AA; folder_overlay.h's THE FACES) — folder
+    // and wav rows with their drawings, the glyph-less plain rows, the
+    // settings page's and the BPM form's group rows as Bold headings in the
+    // text tone, the page's disabled rows in the dim print (`text_dim`), the
+    // highlighted row and the row under a press one flat fill in the
+    // selection pair, all under the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
-    // — and NOT PAINTED UNDER A QUESTION'S PAGE, which stands in the list's
-    // place (modal_page_stands; architect 2026-11-20, send EE) —
+    // — and NOT PAINTED UNDER A QUESTION'S PAGE OR THE PROGRESS PAGE, either
+    // standing in the list's place (modal_page_stands; architect 2026-11-20,
+    // send EE) —
     // and then on its own exposure per row, as the keyboard is. It publishes
     // no geometry: the press router walks the same row table through the same
     // walker (folder_overlay::for_each_row / row_at).

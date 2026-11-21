@@ -44,7 +44,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            two lowercase words and nothing else, any other
 //                            word the launch's hard fail; REQUIRED, read at
 //                            launch to seed the switch and applied LIVE at
-//                            the settings editor's OK and at the settings
+//                            the settings editor's commit from the settings
 //                            page's value list's tap (the apply shape,
 //                            GuiInputHandler::apply_true_colors); the
 //                            first-run value the defaults file's (THE
@@ -77,7 +77,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            REQUIRED, read at
 //                            launch to install the palette before the
 //                            window exists and applied LIVE at the settings
-//                            editor's OK and at the settings page's value
+//                            editor's commit from the settings page's value
 //                            list's tap — the list under one inert group row
 //                            per group, SYSTEM first — a palette
 //                            reinstall and a whole repaint, no card (the
@@ -102,7 +102,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            fraction only when it is not zero, with no
 //                            trailing zero), held as QUARTERS, one subcell of
 //                            the 4x grid each; live at the settings editor's
-//                            OK and at the settings page's value list's tap
+//                            commit from the settings page's value list's tap
 //                            (GuiInputHandler::apply_waveform_grow, a
 //                            repaint: the tips do not move). PERMANENT and
 //                            REQUIRED: the plate is the one thing on the
@@ -127,7 +127,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            one folder under `noise/` beside this file,
 //                            exactly one non-empty path component
 //                            (is_noise_folder_name below); live at the
-//                            settings editor's OK and at the settings
+//                            settings editor's commit from the settings
 //                            page's value list's tap, the resident
 //                            recordings freed and the new folder loaded
 //                            where the level is audible
@@ -171,7 +171,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            decimal dB in [-60.0, 0.0], THE LEVEL GRAMMAR
 //                            LESS `-inf` (parse_noise_attenuation_db below:
 //                            the bed's one off switch is noise_level's);
-//                            live at the settings editor's OK, the gain
+//                            live at the settings editor's Enter, the gain
 //                            recomputed and the switch untouched
 //                            (GuiNoise::set_attenuation_db); a line-editor
 //                            row, no value list; PERMANENT and REQUIRED;
@@ -179,7 +179,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //   noise_crossfade_s=<s>    THE NOISE'S CROSSFADE between two segments, in
 //                            whole SECONDS (architect 2026-10-28): an integer
 //                            in [1, 30] in canonical spelling, live at the
-//                            settings editor's OK and at the settings
+//                            settings editor's commit from the settings
 //                            page's value list's tap (read at the next
 //                            transition); PERMANENT and REQUIRED — the
 //                            crossfade is a recording's relationship to
@@ -198,7 +198,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            key's drawing a fixed 16 W box whatever the
 //                            height (paint_key_glyph), an integer in [10, 50] in
 //                            canonical spelling (parse_key_height below),
-//                            live at the settings editor's OK, the window
+//                            live at the settings editor's Enter, the window
 //                            re-laid-out at once
 //                            (GuiInputHandler::apply_key_height); A TUNING
 //                            KEY with a Settings row, REQUIRED like every
@@ -216,7 +216,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            an
 //                            integer in [10, 50] in canonical spelling
 //                            (parse_key_width below), live at the
-//                            settings editor's OK, the window re-laid-out
+//                            settings editor's Enter, the window re-laid-out
 //                            at once (GuiInputHandler::apply_key_width);
 //                            A TUNING KEY with a Settings row, REQUIRED
 //                            like every key while it stands, which
@@ -233,7 +233,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            render player's and every controls row's group
 //                            spaces), an integer in [2, 44] in canonical
 //                            spelling (parse_run_gap below), live at the
-//                            settings editor's OK, the window re-laid-out
+//                            settings editor's Enter, the window re-laid-out
 //                            at once (GuiInputHandler::apply_run_gap);
 //                            A TUNING KEY with a Settings row, REQUIRED
 //                            like every key while it stands, which
@@ -250,7 +250,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            axis), each an integer in [12, 80] in canonical
 //                            spelling (parse_osk_key_size below), no
 //                            taller-than-wide constraint (his to tune),
-//                            live at the settings editor's OK, the window
+//                            live at the settings editor's Enter, the window
 //                            repainted at once
 //                            (GuiInputHandler::apply_osk_key_size); TWO
 //                            TUNING KEYS with Settings rows, REQUIRED like
@@ -266,7 +266,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            like every table size, an integer in [6, 24]
 //                            in canonical spelling
 //                            (parse_osk_font_px below), live at the settings
-//                            editor's OK, the window repainted at once
+//                            editor's Enter, the window repainted at once
 //                            (GuiInputHandler::apply_osk_font_px); A TUNING
 //                            KEY with a Settings row, REQUIRED like every key
 //                            while it stands, which settles into the face
@@ -283,7 +283,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            canonical spelling (parse_lamp_hold_ms below);
 //                            read LIVE by the tick at every refresh
 //                            (refresh_logo_lamps, main.cpp), so a commit at
-//                            the settings editor's OK takes effect at the
+//                            the settings editor's Enter takes effect at the
 //                            next tick with no live act; A TUNING KEY with a
 //                            Settings row, REQUIRED like every key while it
 //                            stands, which settles into a constexpr once he
@@ -301,7 +301,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            below); read LIVE by the wait's writer and the
 //                            tooltip's clock (note_tooltip_hover,
 //                            tick_tooltip), so a commit at the settings
-//                            editor's OK takes effect at the next arrival
+//                            editor's Enter takes effect at the next arrival
 //                            with no live act; A TUNING KEY with a Settings
 //                            row, REQUIRED like every key while it stands,
 //                            which settles into a constexpr once he rules
@@ -319,10 +319,10 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            (parse_sweep_highlight below), 0 painting no
 //                            highlight; read LIVE by the painter at every
 //                            list build, so a commit at the settings
-//                            editor's OK takes effect at the next sweep with
-//                            no live act; A TUNING KEY with a Settings row,
-//                            REQUIRED like every key while it stands, which
-//                            settles into a constexpr once he rules the
+//                            editor's Enter takes effect at the next sweep
+//                            with no live act; A TUNING KEY with a Settings
+//                            row, REQUIRED like every key while it stands,
+//                            which settles into a constexpr once he rules the
 //                            number, its key, grammar and row going then;
 //                            the first-run value the defaults file's
 //   bright_mix=<pct>         THE BRIGHT TONES' MIX (architect 2026-11-13,
@@ -340,7 +340,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            bright tone the ground; ONE NUMBER FOR EVERY
 //                            THEME (no per-theme value); read at launch to
 //                            install the palette before the window exists
-//                            and applied LIVE at the settings editor's OK,
+//                            and applied LIVE at the settings editor's Enter,
 //                            the palette reinstalled at the new percent and
 //                            a whole repaint, no card (the theme's apply
 //                            shape, GuiInputHandler::apply_theme); A TUNING
@@ -369,7 +369,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            only when it is not zero, with no trailing
 //                            zero), held as HUNDREDTHS; read at launch to
 //                            seat the start before the first plate and
-//                            applied LIVE at the settings editor's OK, the
+//                            applied LIVE at the settings editor's Enter, the
 //                            plate re-rendered and the window repainted, no
 //                            card (GuiInputHandler::
 //                            apply_waveform_fade_px); A TUNING KEY with a
@@ -389,7 +389,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            word the launch's hard fail (THE icons GRAMMAR
 //                            below); REQUIRED, read at launch to choose the
 //                            set before the window exists and applied LIVE
-//                            at the settings editor's OK and at the
+//                            at the settings editor's commit from the
 //                            settings page's value list's tap, the icon
 //                            rasters dropped and a whole repaint, no card
 //                            (GuiInputHandler::apply_icons, the theme's

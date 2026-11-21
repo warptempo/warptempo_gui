@@ -20,7 +20,7 @@
 // (kSettingsValueListKeys, settings_editor.h; the color
 // presets' list of 2026-10-25 went with the presets 2026-11-01, the two
 // levels' lists 2026-11-05 with the band's sliders) — a SUB-PAGE of the settings
-// page, whose Cancel, Esc and commit return to the page on that key's row
+// page, whose Cancel and commit return to the page on that key's row
 // and whose opener key closes the whole panel (architect 2026-10-28 night,
 // GuiInputHandler::return_to_settings_page); and THE TRIM PRESETS LIST
 // (architect 2026-10-28 night), the piece's named trim windows
