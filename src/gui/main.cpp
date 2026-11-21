@@ -1371,8 +1371,14 @@ int scanner_pixel_x(const AppState& a, int64_t vp_start, double spp,
 // siblings' own arguments through displayed_x_at.
 double playhead_exact_x(const AppState& a, int64_t vp_start, double spp,
                         int64_t origin) {
+    return cursor_frame_exact_x(a.playhead_cursor_sample, vp_start, spp,
+                                origin);
+}
+
+double cursor_frame_exact_x(int64_t frame, int64_t vp_start, double spp,
+                            int64_t origin) {
     if (spp <= 0.0) return -1.0;
-    return displayed_x_at(static_cast<double>(a.playhead_cursor_sample),
+    return displayed_x_at(static_cast<double>(frame),
                           static_cast<double>(vp_start), spp, origin);
 }
 
@@ -1491,7 +1497,10 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 // invalidate_scanner_line builds one per place (old and new), unites them
 // when they touch and invalidates what comes out — REAL DAMAGE, for the two
 // per-frame scanner sites and the launch's and the stop's edges
-// (Viewport::invalidate_standing_scanner, architect 2026-11-16, send Q);
+// (Viewport::invalidate_standing_scanner, architect 2026-11-16, send Q), and
+// for THE WAVEFORM'S HOVER LINE, the same one-W line over the same rows
+// (Viewport::invalidate_hover_line, architect 2026-11-21, send FF: this
+// rect its one owner too);
 // the tick's offscreen fallback in this file reads only the WIDTH, as an
 // emptiness test. The narrow-on-plate shape (the rule and the per-site
 // table at playhead_pixel_x, app_state.h).
@@ -2564,7 +2573,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // press, a motion or a veil resolves it first (AppState::
         // TrimBarHover's `leave_ms`; the hold kept, architect 2026-11-20),
         // so the HOVER_EXIT before a DOWN on the bar shows no
-        // bare pill between the hover look and the held look.
+        // bare pill between the hover look and the held look. THE
+        // WAVEFORM'S HOVER LINE, no face and no hold (AppState::HoverLine),
+        // goes at this walk, its last painted cells damaged: a tap's line
+        // leaves at the tap.
         input_handler.stamp_trim_bar_leave();
         input_handler.walk_hover_face();
         // AND THE PEN'S HOT-FACE LATCH (GuiInputHandler::pen_hot_latch_, the

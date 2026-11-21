@@ -1034,10 +1034,11 @@ bool point_on_nav_surface(const AppState& app, int x, int y) {
 // the whole click-placement family's one conversion — the nav click act
 // (place_playhead_at_click_column, run_nav_click_act), the ruler head's drag
 // through it, the
-// scrub click (scrub_press_at) and the empty-lane double-click create; each
-// caller clamps the answer into the live domain
-// (clamp_playhead_to_live_domain) and refuses a place off the strip, the real
-// x against [0, w).
+// scrub click (scrub_press_at), the empty-lane double-click create and the
+// waveform's hover line; ONE ROAD reads it, playhead_landing_at_click_x
+// (app_state.h, defined below), which refuses a place off the strip, the
+// real x against [0, w), and clamps the answer into the live domain
+// (clamp_playhead_to_live_domain).
 // The fallback covers degenerate geometry only (no strip width / no zoom), where
 // there is no painted grid to land on.
 int64_t playhead_frame_at_click_x(const AppState& app, const GuiAudio& audio,
@@ -1157,6 +1158,19 @@ void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x) {
 }
 
 } // namespace
+
+// THE CLICK FAMILY'S ONE ROAD (the declaration, app_state.h): the strip's
+// refusal, then playhead_frame_at_click_x's frame clamped into the live
+// domain — the three placements' code before 2026-11-21 (send FF), hoisted
+// whole so the hover line reads the tap's own answer.
+std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
+                                                   const GuiAudio& audio,
+                                                   double x) {
+    const GuiRect area = waveform_area(app);
+    if (x < 0 || x >= area.w) return std::nullopt;
+    return clamp_playhead_to_live_domain(
+        playhead_frame_at_click_x(app, audio, x), app, audio);
+}
 
 // THE `h` HISTORY VIEW'S DEAD SET — the roster's ONE mode-scoped disabled-face
 // partition, and THE AUTHORITATIVE INVENTORY of it (every other site carries a
@@ -1939,16 +1953,16 @@ void GuiInputHandler::scrub_act_at(int64_t frame) {
 // decides only whether the act pays the stop's fence, never whether it
 // launches.
 void GuiInputHandler::scrub_press_at(double click_rel_x) {
-    const GuiRect area = waveform_area(app);
     // Gutter / invalid column: no launch position exists, silent no-op.
-    if (click_rel_x < 0 || click_rel_x >= area.w) return;
     // The clicked column converts on the PAINTED viewport, the item basis
     // (playhead_frame_at_click_x; architect 2026-09-24, strictly as
     // painted), so the scrub launches at the frame the pixels under the
-    // pointer showed; cold, the live viewport by the basis's own contract.
-    const int64_t frame = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_x(app, audio, click_rel_x), app, audio);
-    scrub_act_at(frame);
+    // pointer showed; cold, the live viewport by the basis's own contract —
+    // both the click family's one road (playhead_landing_at_click_x).
+    const std::optional<int64_t> frame =
+        playhead_landing_at_click_x(app, audio, click_rel_x);
+    if (!frame) return;
+    scrub_act_at(*frame);
 }
 
 // THE WAVEFORM'S COLUMN BOUNDS — the ONE clamp the zoom pivot's held column
@@ -1961,6 +1975,22 @@ static double clamp_col_into_waveform(const GuiRect& wf_area, double col) {
     if (col < 0.0)     col = 0.0;
     if (col > col_max) col = col_max;
     return col;
+}
+
+// THE ZOOM'S SEAT CONVERSION (the declaration, app_state.h): the place
+// clamped into the waveform's columns, the song position under it on the
+// live viewport — the seat's own two lines before 2026-11-21 (send FF),
+// hoisted whole so the hover line with the barrel held reads the seat's own
+// answer.
+ZoomAnchorSeat zoom_anchor_seat_at(const AppState& app, const GuiAudio& audio,
+                                   double x) {
+    const GuiRect wf_area = waveform_area(app);
+    const double  spp     = painter_samples_per_pixel(app, audio, wf_area);
+    const double  vp      = static_cast<double>(app.viewport_start_sample);
+    ZoomAnchorSeat seat;
+    seat.col    = clamp_col_into_waveform(wf_area, x);
+    seat.sample = vp + seat.col * spp;
+    return seat;
 }
 
 // THE ONE-FINGER ZOOM'S LEVEL RULE — read by apply_touch_nav_update's ctrl
@@ -2224,12 +2254,15 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
         // lie off the canvas, and the seat HOLDS this column for the phase
         // (architect 2026-10-31, contract at TouchNavZoomState). The camera
         // the seat was taken against is recorded for re-seat (B) below.
-        const double seat_col = clamp_col_into_waveform(
-            wf_area,
+        // ONE CONVERSION, zoom_anchor_seat_at (app_state.h), which the
+        // waveform's hover line reads with the barrel held, so the white stem
+        // takes the hover line's place when the zoom starts (send FF).
+        const ZoomAnchorSeat seat = zoom_anchor_seat_at(
+            app, audio,
             (f.cx - static_cast<double>(wf_area.x)) -
                 (one_finger_zoom ? f.dx : 0.0));
-        z.anchor_sample = vp + seat_col * spp_old;
-        z.anchor_col    = seat_col;
+        z.anchor_sample = seat.sample;
+        z.anchor_col    = seat.col;
         z.zoom_vp       = app.viewport_start_sample;
         z.zoom_origin   = app.viewport_lattice_origin;
         z.zoom_level    = app.zoom_level;
@@ -5782,6 +5815,55 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     }
 }
 
+// "WOULD A PLAIN PRESS HERE ARM THE PENDING CLICK WHOSE MOTIONLESS RELEASE
+// RUNS run_nav_click_act — THE PLAYHEAD PLACED AT THE PLACE, OR ON THE
+// WAVEFORM'S LOWER HALF PLAY STARTED FROM IT?" — the waveform's hover line's
+// place test (walk_hover_line; architect 2026-11-21, send FF: the line shows
+// "whenever a tap at the pen's place would move the playhead"). A MIRROR OF
+// THE TWO PRESS ROUTERS' OWN TESTS, not a list of rectangles of its own:
+// the routers interleave the double taps' consumes, the trim bar's seed and
+// the marker's act-at-press with these tests, so they read no predicate of
+// this shape, and factoring them to would touch every claim of the band walk
+// for no change in behavior. What it mirrors, past the main page's refusals
+// (main_page_takes_press_at_pointer, its caller's), each a plain press:
+//   on_button_press's band walk — `inside_waveform` (point_on_nav_surface)
+//   and `inside_top` (top_strip_area), the marker hit `mh_index` resolved for
+//   the top strip alone (hit_test_flag at the pointer's real place); in the
+//   top strip, THE RULER BAND (ruler_press_area) arms the placement pending
+//   — the head drag where no flag is hit and the place is on the playhead's
+//   head as painted (point_on_playhead_head), which this answers no: the
+//   triangle hovers on its own terms — THE TRIM BAR (trim_bar_press_area)
+//   takes its own grab or framing, A FLAG (mh_index >= 0) its click at the
+//   press, THE EMPTY MARKER LANE (marker_lane_press_area) the placement
+//   pending, every other top-strip spot nothing; below the top strip THE
+//   WAVEFORM (inside_waveform) arms arm_nav_press, both halves, and any other
+//   place nothing (the stereo divider's rows among them: chrome is not
+//   waveform);
+//   handle_history_mode_press, the `h` view's — the ruler band the same arm
+//   on the same head term, the trim bar its framing double tap alone, the
+//   marker lane a diff flag's focus click (hit_test_flag >= 0) or the
+//   mode's placement pending on an empty stretch, the waveform the mode's
+//   pending click (no scrub half there: both halves land the playhead) —
+//   which answers every place as the live walk does (a flag hit outside
+//   the lane's rect falls to nothing in both), so ONE TEST SERVES BOTH VIEWS.
+// THE LAMPS CHANGE NO ANSWER: a tap under TRIM or ADD SEL is the same click
+// act (the sweeps are drags), ADD SEL forking only a press on a flag.
+bool GuiInputHandler::plain_press_places_playhead_at(
+        const GuiPointerPlace& at) const {
+    const int x = at.x;
+    const int y = at.y;
+    if (rect_contains(top_strip_area(app), x, y)) {
+        const int mh_index = hit_test_flag(app, audio, at.rx, at.ry);
+        if (rect_contains(ruler_press_area(app), x, y))
+            return !(mh_index < 0 &&
+                     point_on_playhead_head(app, at.rx, at.ry));
+        if (rect_contains(trim_bar_press_area(app), x, y)) return false;
+        if (mh_index >= 0) return false;
+        return rect_contains(marker_lane_press_area(app), x, y);
+    }
+    return point_on_nav_surface(app, x, y);
+}
+
 void GuiInputHandler::finalize_editor_text_drag() {
     const ActiveEditorText g = active_editor_text(app, audio);
     if (g.valid) {
@@ -6106,8 +6188,12 @@ void GuiInputHandler::place_playhead_at_click_column(double click_rel_x,
     // exactly the arithmetic and exactly the playback regime the live click
     // uses (run_nav_click_act's mode arm clears the MODE's focus where the
     // live arm clears the store selection). A gutter column seats nothing.
-    const GuiRect area = waveform_area(app);
-    if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    // THE CLICK FAMILY'S ONE ROAD (playhead_landing_at_click_x, app_state.h;
+    // the waveform's hover line reads it too, send FF), the gutter refusal and
+    // the clamp below its own.
+    const std::optional<int64_t> landing =
+        playhead_landing_at_click_x(app, audio, click_rel_x);
+    if (!landing) return;
     // Clamp the click place's frame into the live domain: move_playhead_to
     // clamps internally, but the clamp here stays required because the
     // conversion reads ItemViewportBasis::spp, the PAINTED item epoch, which
@@ -6120,8 +6206,7 @@ void GuiInputHandler::place_playhead_at_click_column(double click_rel_x,
     // painted): the playhead seats at the frame the clicked pixels showed even
     // while a viewport job in flight has moved the live viewport ahead of
     // them; cold, the live viewport by the basis's own contract.
-    const int64_t sample = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_x(app, audio, click_rel_x), app, audio);
+    const int64_t sample = *landing;
     // A POINTER OR TOUCH PLACEMENT STOPS A LIVE PLAY (architect 2026-10-06; the
     // class is stated at stop_playback_if_playing's declaration): past the
     // gutter refusal above and ahead of the first write, so a click that seats
@@ -6163,8 +6248,16 @@ void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // the first. The standing _at_playhead drops then author at that
     // playhead, taking the full create path (walls, undo, selection, and the
     // movement the drop's own playhead seat carries).
-    const GuiRect area = waveform_area(app);
-    if (click_rel_x < 0 || click_rel_x >= area.w) return;
+    // The placement converts on the PAINTED viewport, the item basis
+    // (playhead_frame_at_click_x; architect 2026-09-24, strictly as
+    // painted), so the drop below authors at the place the double tap
+    // pressed on screen; cold, the live viewport by the basis's own contract
+    // — the click family's one road (playhead_landing_at_click_x), whose
+    // gutter refusal is this act's first. The drops themselves convert no
+    // column: they author at the playhead's frame.
+    const std::optional<int64_t> landing =
+        playhead_landing_at_click_x(app, audio, click_rel_x);
+    if (!landing) return;
     // THE LOCK, both reasons (authoring_locked, app_state.h): a drop is
     // authored content on a read-only tab and an undo entry under a lit grid
     // iterations lamp, and the iteration lock admits no drop at all. Silent,
@@ -6172,15 +6265,7 @@ void GuiInputHandler::create_marker_at_empty_lane(double click_rel_x) {
     // its answer.
     if (authoring_locked(app)) return;
     if (!active_column_authoring_allowed(app)) return;
-    // The placement converts on the PAINTED viewport, the item basis
-    // (playhead_frame_at_click_x; architect 2026-09-24, strictly as
-    // painted), so the drop below authors at the place the double tap
-    // pressed on screen; cold, the live viewport by the basis's own contract.
-    // The drops themselves convert no column: they author at the playhead's
-    // frame.
-    const int64_t sample = clamp_playhead_to_live_domain(
-        playhead_frame_at_click_x(app, audio, click_rel_x), app, audio);
-    viewport.move_playhead_to(sample);
+    viewport.move_playhead_to(*landing);
     // active_column_authoring_allowed admits W only in source view (warp
     // drops legal there alone) and P in both audio views (S+P and T+P, each
     // with the lead-in, architect 2026-10-12), so the
@@ -7044,8 +7129,14 @@ void GuiInputHandler::recompute_redesign_button_hover() {
 // barrel's is the last motion's too (pointer_barrel_held_, whose declaration
 // says where it lags the button and what the screen shows then).
 bool GuiInputHandler::hover_admitted() const {
+    return pen_hovers_unlatched() && !pointer_barrel_held_;
+}
+
+// THE POINTER'S HALF LESS THE BARREL (the declaration): the hover line's,
+// which reads the barrel on its own terms (walk_hover_line).
+bool GuiInputHandler::pen_hovers_unlatched() const {
     return app.pointer_in_window && !app.redesign_tooltip.button_held &&
-           !pointer_barrel_held_ && !pen_hot_latch_holds();
+           !pen_hot_latch_holds();
 }
 
 bool GuiInputHandler::hover_admitted_on_main_page() const {
@@ -7578,6 +7669,11 @@ void GuiInputHandler::walk_hover_face() {
     // states' caps are the press's, not the hover's, and show on every
     // theme).
     walk_trim_bar_hover();
+    // AND THE WAVEFORM'S HOVER LINE'S (AppState::HoverLine), so it has this
+    // walk's every caller too — on NO theme term: every theme file carries a
+    // visible HoverLine, and the line is no face (architect 2026-11-21,
+    // send FF).
+    walk_hover_line();
 }
 
 // -- THE TRIM BAR'S HOVER (AppState::TrimBarHover, the rule; the look and
@@ -7705,6 +7801,62 @@ void GuiInputHandler::settle_trim_bar_hover() {
         set_trim_bar_hover(TrimBarPart::None);
 }
 
+// -- THE WAVEFORM'S HOVER LINE (AppState::HoverLine, the state; the look,
+//    the order and the place rule at render.h's render_hover_line;
+//    architect 2026-11-21, send FF) ----------------------------------------
+
+// THE WALK (the declaration). THE LINE STANDS IFF the pen hovers in the
+// plane with no contact and the pen latch not holding (pen_hovers_unlatched:
+// "it should wait to prevent every lift turning into a hover blip"; a finger
+// never reports in the plane — the platform's hover doors take the pen's
+// HOVER actions alone, and a finger's motions carry its held button — so a
+// finger never shows one), the main page takes a press at the place
+// (main_page_takes_press_at_pointer: no modal, no overlay, no card there,
+// audio and no load, no live drag), the zoom's seat does not stand (a zoom
+// running, a pinch, the pen's retained anchor: THE WHITE STEM IS THE MARK)
+// and then, BY THE BARREL:
+//   NOT HELD — a plain press there would place the playhead
+//     (plain_press_places_playhead_at, the routers' own tests): Tap;
+//   HELD — "the hover with the barrel would only work in the place where the
+//     barrel works": over the waveform, the navigation surface
+//     (point_on_nav_surface, the pan zone's own surface — a barrel tip-down
+//     there seats the one-finger zoom in every view and under every lamp,
+//     apply_touch_nav_update, the sweeps' fork yielding to the barrel), the
+//     line where the zoom would anchor: Anchor; everywhere else — the ruler,
+//     the marker lane — the barrel hides it as it hides every hover.
+// NO THEME TERM, NO FADE, NO CLOCK: the answer is handed to the one setter.
+void GuiInputHandler::walk_hover_line() {
+    using Place = AppState::HoverLine::Place;
+    Place place = Place::None;
+    if (pen_hovers_unlatched() && main_page_takes_press_at_pointer() &&
+        !app.touch_nav_zoom.seated) {
+        const GuiPointerPlace at = app.last_mouse_place();
+        if (pointer_barrel_held_) {
+            if (point_on_nav_surface(app, at.x, at.y)) place = Place::Anchor;
+        } else if (plain_press_places_playhead_at(at)) {
+            place = Place::Tap;
+        }
+    }
+    set_hover_line(place);
+}
+
+// THE ONE SETTER (AppState::HoverLine's `declared_x`, the rule): the place
+// stored, then the line's place derived as the paint derives it
+// (GuiPaintHandler::hover_line_x, on the picture standing now); where that
+// differs from the place the last damage declared, the line's cells AS LAST
+// PAINTED (`painted_x`) and its new cells are damaged — the canvas's rows
+// alone (Viewport::invalidate_hover_line) — and the new place is declared.
+// The same place again damages nothing: a pen resting, or moving inside one
+// frame's span at deep zoom, invites no frame.
+void GuiInputHandler::set_hover_line(AppState::HoverLine::Place place) {
+    AppState::HoverLine& h = app.hover_line;
+    h.place = place;
+    const std::optional<double> x = paint_handler.hover_line_x();
+    if (x == h.declared_x) return;
+    h.declared_x = x;
+    viewport.invalidate_hover_line(h.painted_x, x);
+}
+
 // THE SETTLE (the declaration): THE FACES OF A SURFACE THAT LEFT ARE
 // DROPPED — a keyboard key's while the keyboard stands no more or stands on
 // another page, a dialog button's and the knob's while their stash's owner
@@ -7802,6 +7954,11 @@ void GuiInputHandler::settle_face_fades() {
     if (!h.hovered.none() && !hover_face_live(h.hovered))
         set_hover_face(FaceFades::Face{});
     settle_trim_bar_hover();
+    // THE HOVER LINE'S SETTLE IS ITS WALK (AppState::HoverLine): no fade and
+    // no frozen answer, so re-answering it ahead of the frame is its truth —
+    // a veil, a card, a load, a drag gone live or the zoom's seat that came
+    // with no pointer event takes it away in the frame that paints them.
+    walk_hover_line();
 }
 
 // THE CLOCK (the declaration; AppState::FaceFades' THE FRAMES). The walk

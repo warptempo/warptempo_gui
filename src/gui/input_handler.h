@@ -1497,6 +1497,12 @@ struct GuiInputHandler {
     // own walk adds what a press there would meet (the faces' walk below;
     // the well's targets through hover_admitted_on_main_page).
     bool hover_admitted() const;
+    // THE SAME HALF LESS THE BARREL TERM — the pen in the plane, no contact
+    // down, the pen latch not holding: hover_admitted is this and the barrel
+    // not held; the waveform's hover line reads it alone and takes the barrel
+    // on its own terms (walk_hover_line below; pointer_barrel_held_'s one
+    // exception).
+    bool pen_hovers_unlatched() const;
     // THE SAME GATE FOR A TARGET OF THE MAIN PAGE'S WELL at the pointer's
     // place (the trim bar, walk_trim_bar_hover below, its one asker):
     // hover_admitted AND main_page_takes_press_at_pointer — the main page's
@@ -1558,6 +1564,28 @@ struct GuiInputHandler {
     bool trim_bar_frozen_part_kept() const;
     bool trim_bar_part_terms_hold() const;
     TrimBarPart trim_bar_part_under_pointer() const;
+    // THE WAVEFORM'S HOVER LINE (AppState::HoverLine, the state; the look,
+    // the order and the place rule at render.h's render_hover_line;
+    // architect 2026-11-21, send FF; definitions in input_pointer.cpp):
+    //   walk_hover_line — THE WALK: the gate's answer (pen_hovers_unlatched,
+    //     main_page_takes_press_at_pointer, the zoom's seat not standing,
+    //     then the barrel's fork — not held, a plain press there placing the
+    //     playhead, Tap; held, over the waveform where a tip-down seats the
+    //     zoom, Anchor), handed to the setter. Run inside walk_hover_face
+    //     (its every caller) and again by settle_face_fades ahead of every
+    //     frame.
+    //   set_hover_line — THE ONE SETTER: the place stored; where the line's
+    //     derived place (GuiPaintHandler::hover_line_x) differs from the one
+    //     last declared, its cells as last painted and its new cells damaged
+    //     (Viewport::invalidate_hover_line), nothing else.
+    //   plain_press_places_playhead_at — "would a plain press here arm the
+    //     pending click whose motionless release runs run_nav_click_act?",
+    //     past the main page's refusals: the two press routers' own tests
+    //     mirrored beside on_button_press (the lines it mirrors named
+    //     there).
+    void walk_hover_line();
+    void set_hover_line(AppState::HoverLine::Place place);
+    bool plain_press_places_playhead_at(const GuiPointerPlace& at) const;
     // THE WALK: the face the pen is on now, under both halves of the gate
     // and the theme's term (a theme whose hover face is its key face hovers
     // nothing, seams included: architect 2026-11-20: agreed),
@@ -1566,7 +1594,8 @@ struct GuiInputHandler {
     // none), on every tick (the stashes move with no pointer event), at the
     // pen latch's arm and at every pointer leave (main.cpp's hook: none, so
     // the face fades out). The trim bar's walk rides it, after the faces',
-    // on the same theme term (walk_trim_bar_hover).
+    // on the same theme term (walk_trim_bar_hover), and the waveform's hover
+    // line's after that, on no theme term (walk_hover_line).
     void walk_hover_face();
     // THE CLOCK, on the run loop's tick (main.cpp, beside tick_tooltip):
     // the walk, then settle_face_fades, then every fading record stepped to
@@ -1579,7 +1608,8 @@ struct GuiInputHandler {
     // gone or on another page, a dialog stash's owner or session not the
     // live one), so whatever replaces them paints at once; the hovered slot
     // goes where no press would act on its face; the trim bar's part on its
-    // own rule. The clock's first half, and run by itself AHEAD OF EVERY
+    // own rule; the waveform's hover line re-walked (walk_hover_line, its
+    // settle). The clock's first half, and run by itself AHEAD OF EVERY
     // FRAME (the pre-paint hook, main.cpp): a key or a release can raise a
     // modal or close the keyboard and be painted in the same pass, before
     // any tick. A face's new look is never this body's: its painter resolves
@@ -3360,7 +3390,9 @@ private:
     // AppState::FaceFades), and nothing else lights, until the pen
     // has moved the rearm distance from its first hover report, or left and
     // come back.
-    // THE INVENTORY — EVERY FACE THE PRODUCT LIGHTS BY HOVER, ITS ONE
+    // THE INVENTORY — EVERY FACE THE PRODUCT LIGHTS BY HOVER (AND THE TWO
+    // HOVER LOOKS THAT ARE NO FACE, THE TRIM BAR'S AND THE WAVEFORM'S HOVER
+    // LINE), ITS ONE
     // STATEMENT (re-derived 2026-11-21 against AppState::FaceFades' five
     // surfaces, Arc's hover; every other site points here). Each but the list
     // row (its own terms, below) wears Arc's hover face, faded in and out over
@@ -3424,6 +3456,23 @@ private:
     //   contact, no veil or card there, audio and no live drag, the theme
     //   and the bar's own terms), until the pen rearms or leaves; so the
     //   caps do not blink at the lift.
+    //   THE WAVEFORM'S HOVER LINE shows too, NOT A FACE EITHER (architect
+    //   2026-11-21, send FF: "the waveform itself could ... show where the
+    //   cursor would be if I tapped or if I zoomed"): its own walk and its
+    //   own one-value state (walk_hover_line, run inside walk_hover_face and
+    //   again ahead of every frame; AppState::HoverLine), the look, the place
+    //   rule and the damage at render.h's render_hover_line. A one-W line in
+    //   `hover_line` down the canvas alone, at the exact place the playhead
+    //   would land WHEREVER A TAP AT THE PEN'S PLACE WOULD MOVE THE PLAYHEAD
+    //   — the pen over the waveform, over the ruler off the playhead's
+    //   triangle, over the marker lane where no marker is hit — AT ONCE,
+    //   WITH NO FADE, under the pointer's half of the gate LESS THE BARREL
+    //   (pen_hovers_unlatched: this latch holds it like every hover, NO
+    //   FROZEN ANSWER — "it should wait to prevent every lift turning into a
+    //   hover blip"), the main page taking a press there, the zoom's seat
+    //   not standing, and NO THEME TERM; THE BARREL'S ONE EXCEPTION
+    //   (pointer_barrel_held_): with it held the line shows over the
+    //   waveform alone, where the zoom would anchor.
     //   NOTHING ELSE LIGHTS BY HOVER: no entry (NOISE's and its level line, the
     //   value sub-page's field), the title bar's two lamps, a cue or a chip
     //   (render.h's flag block), the time labels, the title bar; a
@@ -3502,8 +3551,8 @@ private:
     // THE BARREL AS THE LAST POINTER MOTION DELIVERED IT (the core's ctrl
     // bit, GuiInputCore::set_ctrl: the S Pen's side button, sampled before
     // the hover report that carried it): written at on_motion's head beside
-    // the tooltip's held bit, read by the hover's two gates, on every motion
-    // and on every tick:
+    // the tooltip's held bit, read by the hover's three gates, on every
+    // motion and on every tick:
     //   * THE FACES' (hover_admitted): NO FACE HOVERS WHILE THE BARREL IS
     //     HELD. A hover face says a press there would act, and a press
     //     carrying the barrel is a consumed no-op on every surface that
@@ -3516,6 +3565,15 @@ private:
     //     shows no hover and no caps (architect 2026-11-20) — its
     //     own term, which its frozen answer under the pen latch and its
     //     leave's held clear (AppState::TrimBarHover's `leave_ms`) re-ask.
+    //   * THE WAVEFORM'S HOVER LINE'S (walk_hover_line), THE ONE EXCEPTION
+    //     TO "NOTHING HOVERS UNDER THE BARREL" (architect 2026-11-21, send
+    //     FF: "isn't the barrel only used for zoom? So the hover with the
+    //     barrel would only work in the place where the barrel works"): with
+    //     the barrel held the line shows OVER THE WAVEFORM ALONE — where a
+    //     tip-down seats the one-finger zoom — at the place the zoom anchor's
+    //     stem would take (zoom_anchor_seat_at, app_state.h), so the white
+    //     stem replaces it in place when the zoom starts; over the ruler and
+    //     the marker lane it hides the line as it hides every hover.
     // THE BIT IS THE LAST MOTION'S, NOT THE BUTTON'S, and lags it in one
     // case that shows: A BARREL EDGE WITH THE PEN STILL IN THE PLANE — the
     // platform sets the core's bit and delivers no motion for the edge

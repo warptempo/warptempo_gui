@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <utility>
 
 class GuiAudio;
@@ -869,13 +870,29 @@ struct Viewport {
     // scope that reaches paint_handler; and invalidate_standing_scanner (the
     // one place twice), the launch's, the stop's and the console's seek's,
     // reaching the plate basis through plate_scanner_x_. IT SERVES THE
-    // SCANNER'S OWN EDGES ALONE — the per-frame advance, the launch's seed,
+    // SCANNER'S OWN EDGES — the per-frame advance, the launch's seed,
     // the stop's teardown, the seek's jump (its old place, then its new):
     // a move of the scanner's place by a move of the viewport or of the
-    // plate's basis carries that mover's own full-area damage. A playhead
+    // plate's basis carries that mover's own full-area damage — AND THE ONE
+    // OTHER HEADLESS CANVAS LINE THAT MOVES BY ITSELF, the waveform's hover
+    // line (invalidate_hover_line below, its one road here). A playhead
     // write is no caller of this: the cursor has a head, and its narrow
     // shape is invalidate_playhead_columns above.
     void invalidate_scanner_line(double old_x, double new_x);
+    // THE WAVEFORM'S HOVER LINE'S DAMAGE (architect 2026-11-21, send FF;
+    // AppState::HoverLine, the state): the line's cells as last painted and
+    // its cells at its new place, each the scanner's rect at that place
+    // (scanner_invalidate_rect, main.cpp, the one rect owner: the hull of a
+    // one-W line's span over the canvas's rows, NOTHING ABOVE THE CANVAS)
+    // through invalidate_scanner_line — united where they touch; a side
+    // that is none declares nothing (the line not painted, or gone). The
+    // rows are the area's whole: where the on-screen keyboard stands over
+    // the view's foot (an editor's open, which takes the line away) the
+    // rect reaches under it, damage the keyboard's frame repaints anyway.
+    // ONE CALLER, GuiInputHandler::set_hover_line, which calls it only where
+    // the line's place changed.
+    void invalidate_hover_line(std::optional<double> old_x,
+                               std::optional<double> new_x);
     // THE STANDING SCANNER'S DAMAGE (architect 2026-11-16, send Q: "number
     // 3, narrowing agree"): the scanner's own rect at its place as it stands
     // — invalidate_scanner_line(x, x), x from plate_scanner_x_, the place the

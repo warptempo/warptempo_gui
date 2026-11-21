@@ -4616,6 +4616,43 @@ GuiPaintHandler::plate_viewport_basis() const {
     return b;
 }
 
+// -- GuiPaintHandler::hover_line_x --------------------------------------
+
+// THE HOVER LINE'S PLACE (the declaration; the rule at render.h's
+// render_hover_line): by the stored gate answer, on the plate basis
+// paint_playheads hands the playhead's line —
+//   Tap: the frame the tap would land on, THE CLICK FAMILY'S ONE ROAD
+//     (playhead_landing_at_click_x: the pen's real place on the painted
+//     item basis, llrint, the live domain's clamp; none off the strip),
+//     back to its exact place by the playhead line's own expression
+//     (cursor_frame_exact_x, playhead_exact_x's, on wf_cache.fp_vp_start as
+//     paint_playheads passes it), so the playhead the tap seats stands on
+//     this very double;
+//   Anchor: the zoom's seat at the pen's real place (zoom_anchor_seat_at,
+//     the seat's own conversion) through the anchor stem's own place
+//     (strip_anchor_stem_x, as paint_strip_drag_anchor reads it), so the
+//     white stem stands where this line stood when the zoom starts.
+// None with no place, no area or no plate span to place on.
+std::optional<double> GuiPaintHandler::hover_line_x() const {
+    using Place = AppState::HoverLine::Place;
+    const Place place = app.hover_line.place;
+    if (place == Place::None) return std::nullopt;
+    const GuiRect area = waveform_area(app);
+    if (area.w <= 0 || area.h <= 0) return std::nullopt;
+    const PlateViewportBasis basis = plate_viewport_basis();
+    if (basis.spp <= 0.0) return std::nullopt;
+    const double rel_x = app.last_mouse_rx - static_cast<double>(area.x);
+    if (place == Place::Anchor)
+        return strip_anchor_stem_x(zoom_anchor_seat_at(app, audio, rel_x).sample,
+                                   basis.vp_start, basis.spp,
+                                   basis.lattice_origin, area.w);
+    const std::optional<int64_t> landing =
+        playhead_landing_at_click_x(app, audio, rel_x);
+    if (!landing) return std::nullopt;
+    return cursor_frame_exact_x(*landing, wf_cache.fp_vp_start, basis.spp,
+                                basis.lattice_origin);
+}
+
 // -- GuiPaintHandler::phase_reset_overlay_band / its ring pass ------------
 
 // (THE ENGINE'S SEED FRAME FOR A RESET was a file-local static here from
@@ -5518,8 +5555,9 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 // THE LIST'S LAST RECORD (build_canvas_list): it blends over everything the
 // canvas list draws in the waveform area — the ground, the grid, the
 // plate's ink and magnify core, the center lines, the stereo divider, the
-// lead-in ring, the playhead's line, the selection stems, the scanner and
-// the zoom anchor's stem — so every line under it is lightened with the
+// hover line, the lead-in ring, the playhead's line, the selection stems,
+// the scanner and the zoom anchor's stem — so every line under it is
+// lightened with the
 // canvas (the one exception to the lines' own color, canvas_sink.h's head),
 // and nothing in the list paints over it. A record that changes under it
 // owes the damage it always did (canvas_sink.h's damage contract); every
@@ -5538,6 +5576,40 @@ void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
     sink.blended_rect(span.x0, static_cast<double>(area.y), span.x1,
                       static_cast<double>(area.y + area.h), hex(0xFFFFFF),
                       app.device_config->sweep_highlight);
+}
+
+// -- GuiPaintHandler::paint_hover_line -----------------------------------
+
+// THE WAVEFORM'S HOVER LINE (architect 2026-11-21, send FF; the rule — what
+// it is, its tone, its order, its place and its damage — at render.h's
+// render_hover_line, the state at AppState::HoverLine). Its place is
+// hover_line_x's, DERIVED HERE AT THE PAINT from the stored gate answer, the
+// pointer's place and the picture this list draws, and RECORDED AS PAINTED
+// (`painted_x`, drawn or yielded alike) — the cells every later damage of
+// the line erases. THE LIST'S FIRST LINE, under the lead-in ring, the
+// playhead's line, the selection stems, the scanner, the zoom anchor's stem
+// and the sweep highlight (build_canvas_list), and NOT DRAWN where a later
+// line of the same width stands on the same exact x over the canvas's whole
+// height (THE COINCIDENT LINES, paint_playheads' paragraph the rule): the
+// playhead's line (or the selection stem it yields to there), a standing
+// selection stem, the running scanner. The lead-in ring's left side is no
+// such line — it leaves the canvas's first and last rows to its runs — so
+// the hover line under it is drawn, as lines at different rows fall.
+void GuiPaintHandler::paint_hover_line(GuiCanvasSink& sink,
+                                       const GuiRect& area) {
+    const std::optional<double> x = hover_line_x();
+    app.hover_line.painted_x = x;
+    if (!x) return;
+    const PlateViewportBasis basis = plate_viewport_basis();
+    if (*x == playhead_exact_x(app, wf_cache.fp_vp_start, basis.spp,
+                               basis.lattice_origin))
+        return;
+    if (stem_stands_at(area, *x)) return;
+    if (app.playhead_scanner_active &&
+        *x == scanner_exact_x(app, wf_cache.fp_vp_start, basis.spp,
+                              basis.lattice_origin))
+        return;
+    render_hover_line(sink, area, *x, palette().hover_line);
 }
 
 // -- GuiPaintHandler::paint_playheads ------------------------------------
@@ -5579,8 +5651,15 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     // decisions." — the one rule about lines that overlap): A LINE IS NOT
     // DRAWN WHERE A LATER LINE OF
     // THE LIST, OF THE SAME WIDTH, STANDS ON THE SAME EXACT x (the doubles
-    // equal) over rows that hold its own. THREE CASES EXIST: this line under
-    // a selection stem — the common state, every select landing the
+    // equal) over rows that hold its own. FOUR CASES EXIST: THE WAVEFORM'S
+    // HOVER LINE, the list's first line (paint_hover_line; architect
+    // 2026-11-21, send FF), under the playhead's line — the common case, the
+    // pen back over the place it just tapped, the tap's landing and the
+    // cursor one frame through one expression on one basis and so one
+    // double — or a selection stem standing there (stem_stands_at; either
+    // way a later line stands on the playhead's place) or the running
+    // scanner (scanner_exact_x on the same basis); THIS line, the
+    // playhead's, under a selection stem — the common state, every select landing the
     // playhead on its marker, the marker and the playhead parked on it one
     // whole displayed frame and so one double through displayed_x_at — the
     // lead-in ring's left side under its reset's stem
@@ -5621,7 +5700,8 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 // pass, still under the flags.
 //
 // SO THE SCANNER STANDS OVER EVERY LINE IN THE WAVEFORM AREA while it runs —
-// over the stems, over the cursor where they overlap, over the plate; only
+// over the stems, over the cursor where they overlap, over the waveform's
+// hover line (render.h's render_hover_line), over the plate; only
 // the zoom anchor's stem and a standing sweep highlight (which lightens it
 // with everything else, paint_sweep_highlight, architect 2026-11-12) come
 // after it. Everything it covers is a per-frame repaint anyway.
@@ -9520,8 +9600,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      old bands until the worker republishes, never crosses the live
         //      divider — in the steady state no ink stands there, so the
         //      order changes no pixel; UNDER every vertical line, steps 4's
-        //      ring through 11, each crossing it as any grid line, architect
-        //      2026-11-02) -> phase-reset overlay ring.
+        //      hover line through 11, each crossing it as any grid line,
+        //      architect 2026-11-02) -> THE WAVEFORM'S HOVER LINE
+        //      (paint_hover_line, architect 2026-11-21, send FF: the pen's
+        //      would-be playhead in the palette's `hover_line`, UNDER EVERY
+        //      OTHER LINE — the ring, the cursor's, the stems, the scanner,
+        //      the anchor stem, then the sweep highlight over it;
+        //      render.h's render_hover_line) -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
         //      Edit's view bar and its span (2026-10-09; no cursor mark in
         //      the bar, ~14:30).
@@ -9765,13 +9850,16 @@ void GuiPaintHandler::build_canvas_list(GuiCanvasDrawList& frame,
         render_center_lines(sink, area);
         render_waveform_divider(sink, area);
         // This list holds no ring (the note's rule, FlagCache's
-        // `ring_declared`).
+        // `ring_declared`), and no hover line — no tap acts with no audio —
+        // so none is recorded as painted (AppState::HoverLine).
         note_ring_drawn(GuiPhaseResetRingSides{});
+        app.hover_line.painted_x.reset();
         return;
     }
     paint_waveform_plate(sink, area);
     render_center_lines(sink, area);
     render_waveform_divider(sink, area);
+    paint_hover_line(sink, area);
     paint_phase_reset_overlay_ring(sink, area);
     paint_playheads(sink, area);
     paint_marker_stems(sink, area);

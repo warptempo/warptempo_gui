@@ -10,6 +10,7 @@
 
 #include <cairo/cairo.h>
 #include <array>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -1006,6 +1007,18 @@ struct GuiPaintHandler {
     };
     PlateViewportBasis plate_viewport_basis() const;
 
+    // THE WAVEFORM'S HOVER LINE'S PLACE, DERIVED (architect 2026-11-21, send
+    // FF; the rule at render.h's render_hover_line, the state at
+    // AppState::HoverLine): the exact place, device px from waveform_area's
+    // left edge, the line stands at for the stored gate answer
+    // (AppState::HoverLine::place), the pointer's real place and the picture
+    // standing now, or none — what paint_hover_line draws, and what the one
+    // setter (GuiInputHandler::set_hover_line) compares with the place it
+    // last declared. PUBLIC for that setter, as plate_viewport_basis for the
+    // playheads' damage sites: damage follows the basis of the pixels it
+    // erases. Read-only geometry, no state touched.
+    std::optional<double> hover_line_x() const;
+
 private:
     // THE DEBT (2026-10-13): set by owe_waveform_rebuild, cleared at the head
     // of force_synchronous_waveform_rebuild by whichever road runs it. While it
@@ -1367,6 +1380,13 @@ private:
     // 2026-11-12) — before the selection stems, and not drawn where one
     // stands on its own exact place (THE COINCIDENT LINES, the definition).
     void paint_playheads(GuiCanvasSink& sink, const GuiRect& area);
+    // THE WAVEFORM'S HOVER LINE (architect 2026-11-21, send FF; the rule at
+    // render.h's render_hover_line): the canvas list's first line, at
+    // hover_line_x's place in the palette's `hover_line`, recording that
+    // place as painted (AppState::HoverLine's `painted_x`) and yielding to a
+    // later line on the same exact x (THE COINCIDENT LINES, paint_playheads'
+    // paragraph).
+    void paint_hover_line(GuiCanvasSink& sink, const GuiRect& area);
     // THE MOVING PLAYBACK LINE, its own pass since 2026-08-01 and invoked AFTER
     // paint_playheads and paint_marker_stems: the scanner draws OVER the stems
     // (and over the cursor where they meet) instead of being erased by every

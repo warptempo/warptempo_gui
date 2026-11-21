@@ -16,7 +16,9 @@
 // render_center_lines, render_waveform_divider (the stereo divider's row —
 // chrome on the canvas, 2026-10-16, render.h's waveform_divider — over the
 // plate, so a plate from before a resize never crosses it, and under every
-// vertical line after it, each crossing it, 2026-11-02), the
+// vertical line after it, each crossing it, 2026-11-02), the waveform's
+// hover line (render_hover_line, architect 2026-11-21, send FF: under every
+// other line), the
 // phase-reset lead-in ring, the cursor's line, the selection stems over it,
 // the scanner, the zoom
 // anchor's stem and LAST THE SWEEP HIGHLIGHT (paint_sweep_highlight,

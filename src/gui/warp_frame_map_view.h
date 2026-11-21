@@ -571,7 +571,9 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 //     playhead's line and the scanner (playhead_exact_x / scanner_exact_x,
 //     main.cpp), the selection stems (the flag iterator's exact_x, stashed
 //     as MarkerStem::x), the zoom anchor's stem (strip_anchor_stem_x
-//     below), the lead-in ring's sides and runs
+//     below), the waveform's hover line (cursor_frame_exact_x or
+//     strip_anchor_stem_x, GuiPaintHandler::hover_line_x; send FF), the
+//     lead-in ring's sides and runs
 //     (GuiPaintHandler::phase_reset_overlay_band) and the TRIM sweep's
 //     highlight (trim_bound_column's x_raw through trim_span_columns);
 //   IN THE CHROME'S LANES, the coverage stamp (CoverageStampPass,
@@ -621,8 +623,8 @@ inline double displayed_x_at(double displayed, double vp_start, double spp,
 // and the nearest whole frame to it otherwise.
 // ITS READERS, the one list: the click family's owner
 // (playhead_frame_at_click_x — the tap's playhead, the scrub click, the
-// ruler head's drag, the empty-lane double-click's seat, and through the
-// playhead every drop), the trim's conversions (trim_mouse_x_to_active_frame
+// ruler head's drag, the empty-lane double-click's seat, the waveform's
+// hover line, and through the playhead every drop), the trim's conversions (trim_mouse_x_to_active_frame
 // and its source sibling, the endcap and bridge drags' motion) and
 // authored_frame_at_x_on_basis (the trim's bound landing,
 // trim_bound_frame_at_x: the bound-set click and the TRIM sweep). The marker
@@ -664,8 +666,10 @@ inline bool displayed_frame_on_screen(double displayed, double vp_start,
 // exact place), the x render_strip_anchor_stem draws its line
 // at: an anchor pushed to or past a song edge pins to the edge column's
 // place, so the stem draws exactly there, and a clamped place always has
-// its line inside the area. Its one reader is
-// the stem painter (paint_strip_drag_anchor, on the PLATE basis).
+// its line inside the area. Its two readers, both on the PLATE basis: the
+// stem painter (paint_strip_drag_anchor) and the waveform's hover line with
+// the barrel held (GuiPaintHandler::hover_line_x, send FF), which stands
+// where the stem would.
 inline double strip_anchor_stem_x(double displayed, double vp_start,
                                   double spp, int64_t origin, int w) {
     double x = displayed_x_at(displayed, vp_start, spp, origin);

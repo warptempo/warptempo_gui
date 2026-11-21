@@ -322,9 +322,11 @@ void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
 // the callers at the declaration, viewport.h; the rect's at
 // scanner_invalidate_rect, main.cpp). Both stand on the area's rows, so
 // they touch exactly when their column intervals overlap or abut. Every
-// caller rides a standing scanner, and none stands while the on-screen
-// keyboard does (every editor's open stops play, architect 2026-11-20), so
-// the rows are the area's whole.
+// scanner caller rides a standing scanner, and none stands while the
+// on-screen keyboard does (every editor's open stops play, architect
+// 2026-11-20), so the rows are the area's whole; the hover line's
+// (invalidate_hover_line) may erase its last cells as an editor's keyboard
+// rises, and the rows' whole reaches under the keyboard there, harmlessly.
 void Viewport::invalidate_scanner_line(double old_x, double new_x) {
     const GuiRect area  = waveform_area(app);
     const GuiRect r_old = scanner_invalidate_rect(area, old_x);
@@ -338,6 +340,15 @@ void Viewport::invalidate_scanner_line(double old_x, double new_x) {
     }
     if (r_old.w > 0) gui.invalidate_region(r_old.x, r_old.y, r_old.w, r_old.h);
     if (r_new.w > 0) gui.invalidate_region(r_new.x, r_new.y, r_new.w, r_new.h);
+}
+
+// The hover line's old cells as painted and its new ones (the rule at the
+// declaration): one place given, that place's rect alone.
+void Viewport::invalidate_hover_line(std::optional<double> old_x,
+                                     std::optional<double> new_x) {
+    if (old_x && new_x) invalidate_scanner_line(*old_x, *new_x);
+    else if (old_x)     invalidate_scanner_line(*old_x, *old_x);
+    else if (new_x)     invalidate_scanner_line(*new_x, *new_x);
 }
 
 // The standing scanner's own rect, or the whole area unwired (the rule and

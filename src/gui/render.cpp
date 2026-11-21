@@ -904,6 +904,15 @@ void render_playhead(GuiCanvasSink& sink,
     canvas_line(sink, area, waveform_line_span(area.x, area.w, x), color);
 }
 
+void render_hover_line(GuiCanvasSink& sink, GuiRect area, double x,
+                       GuiColor color) {
+    if (area.w <= 0 || area.h <= 0) return;
+    // The line's own span (drawn where any of it is inside the strip, cut at
+    // both edges), the canvas's whole height — the playhead's line's form
+    // (the rule at the declaration).
+    canvas_line(sink, area, waveform_line_span(area.x, area.w, x), color);
+}
+
 void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, double x) {
     if (area.w <= 0 || area.h <= 0) return;
     // The clamp is where the affordance lives: an anchor pushed to (or past) a

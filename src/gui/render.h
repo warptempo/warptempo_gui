@@ -4705,7 +4705,8 @@ struct GuiPlateColumns {
 // in the palette's `playhead_line`, the theme's own PlayheadLine (send FF,
 // 2026-11-21; theme_roles.h's OUR OWN, THE WAVEFORM'S HOVER): on arc_dark
 // A5ABB5, Arc's `.h4` / `.category-label`, under the scanner's FFFFFF and
-// over the waveform's hover line 767B87, his brightness order; on a Live
+// over the waveform's hover line 767B87, his brightness order (told once at
+// render_hover_line below); on a Live
 // theme sRGB 81E1EA on Default — THE MEAN OF LIVE'S FADE between white and
 // the head's cyan, white half way to the head (architect 2026-11-12,
 // session 113: the four lossless one-px samples of Live's line, 4AD3E0,
@@ -4734,6 +4735,97 @@ void render_playhead(GuiCanvasSink& sink,
                      int     col,
                      double  x,
                      GuiColor color);
+
+// THE WAVEFORM'S HOVER LINE — THE ONE STATEMENT OF ITS RULE (architect
+// 2026-11-21, send FF: "the waveform itself could ... show where the cursor
+// would be if I tapped or if I zoomed, where ... the playhead or the zoom
+// stem would be. And this would be ... a not as bright stem as the playhead
+// or the scanner" — "I would want it to be an even more dark and faint
+// version of the playhead stem." — "Cost is accepted. I keep the pen away
+// when I don't need it."; every other site points here).
+//   WHAT IT IS: where a tap at the hovering pen's place would put the
+//     playhead, shown WHEREVER SUCH A TAP WOULD MOVE IT — the pen over the
+//     waveform (both halves: the lower half's tap auditions from the place,
+//     it moves where play starts), over the ruler off the playhead's
+//     triangle, over the marker lane where no marker is hit; never over a
+//     marker or the triangle (they hover on their own terms), the trim bar,
+//     a key, a card or chrome the press router refuses. WITH THE BARREL
+//     HELD, over the waveform alone, where a tip-down would anchor the zoom
+//     (pointer_barrel_held_'s one exception, input_handler.h); once the zoom
+//     seats, the white anchor stem is the mark and no hover line is drawn.
+//     The gate — the pen in the plane with no contact, the pen latch not
+//     holding (no line after a lift until 18 W of motion or a leave: "it
+//     should wait to prevent every lift turning into a hover blip"), the
+//     main page taking a press there, no seat — is the walk's
+//     (GuiInputHandler::walk_hover_line), its answer AppState::HoverLine; a
+//     finger never hovers, and nothing shows under an overlay, a question,
+//     an editor or the on-screen keyboard. During play it shows as at rest,
+//     the scanner over it.
+//   ITS TONE, THE BRIGHTNESS ORDER ON THE WAVEFORM (his words above): the
+//     scanner and the zoom anchor's stem FFFFFF ("The scanner should be this
+//     brightest one. And I guess the zoom stem should also be quite bright.
+//     Same color as the scanner"), the playhead's line `playhead_line`
+//     (arc_dark A5ABB5), and this line `hover_line`, the theme's own
+//     HoverLine (arc_dark 767B87, Arc's scrollbar slider: "an even more dark
+//     and faint version of the playhead stem"); on every theme (every theme
+//     file carries a visible HoverLine; no theme term, unlike the faces).
+//   ITS FORM: the playhead's line's — a one-W line (waveform_line_px)
+//     centered on its exact place `x` (device px from area.x), drawn wherever
+//     any of its real interval lies inside the strip and cut at both edges
+//     (waveform_line_span), at exact coverage, down THE CANVAS'S WHOLE
+//     HEIGHT and nothing above it — never through the ruler or the marker
+//     lane, so a pen move repaints no lane. NO FADE: it appears, moves and
+//     leaves at once, as the scanner does.
+//   ITS ORDER: the canvas list's FIRST LINE, after the plate, the center
+//     lines and the stereo divider and under every other line — the lead-in
+//     ring, the playhead's line, the selection stems, the scanner, the zoom
+//     anchor's stem — and under the sweep highlight
+//     (GuiPaintHandler::build_canvas_list; paint_hover_line). It is not
+//     drawn where a later line of the same width stands on its exact x
+//     (THE COINCIDENT LINES, paint_playheads' paragraph): the playhead's
+//     line — the pen back over the place it just tapped — a selection stem,
+//     the running scanner.
+//   ITS PLACE, THE TRUTHFUL ONE, derived at the paint
+//     (GuiPaintHandler::hover_line_x) from the stored gate answer, the pen's
+//     real place and the picture being painted: THE FRAME THE TAP WOULD
+//     LAND ON — the tap's own road (playhead_landing_at_click_x: the frame
+//     under the pen's real place on the painted item basis, the live
+//     domain's clamp) — back to its exact place by the playhead line's own
+//     expression on the plate basis (cursor_frame_exact_x), so after the tap
+//     the playhead's line stands on the very double this line stood on. At
+//     coarse zoom that is the pen's place to under a pixel; at deep zoom,
+//     where a frame is many px, the line steps by frames; past the song's end
+//     it stands where the clamp puts the playhead, on the song's last frame.
+//     WITH THE BARREL HELD, THE ANCHOR'S PLACE: the zoom's seat at the pen's
+//     place (zoom_anchor_seat_at — the pen's real column clamped into the
+//     waveform's [0, w − 1], the song position under it on the live
+//     viewport, no frame taken and no song clamp) through the anchor stem's
+//     own place (strip_anchor_stem_x), so the white stem replaces the line
+//     in place when the zoom starts. The two places part by up to half a
+//     frame's width (the tap's whole frame) and, past the song's end, by the
+//     whole stretch past it (the anchor stands under the pen). When the
+//     picture moves under a still pen (FOLLOW's scroll, a key's zoom, a
+//     landing, a plate's publication) the line stays under the pen and its
+//     landing frame follows, with no event of the pen's.
+//   ITS DAMAGE (canvas_sink.h's contract; the scanner's shape): the line's
+//     cells as last painted and its new cells, each the hull of its span over
+//     the canvas's rows (scanner_invalidate_rect through
+//     Viewport::invalidate_hover_line), nothing above the canvas, and only
+//     where its place changed (GuiInputHandler::set_hover_line against the
+//     place last declared) — so a pen resting, moving inside one frame's
+//     span at deep zoom, or away from the plane costs nothing and the app
+//     presents nothing; while the pen moves in hover range a frame at the
+//     beat. Every edge that removes it (the leave, a contact, the latch's
+//     arm, a veil, a card, a load, a drag gone live, the zoom's seat, the
+//     pen onto a marker, the triangle, the trim bar or a key) damages its
+//     last painted cells the same way. THE OLD CELLS ARE AS PAINTED
+//     (AppState::HoverLine's `painted_x`, written by the painter at every
+//     list build), so no ghost can stand: the cells erased are always the
+//     ones the list on the glass holds.
+void render_hover_line(GuiCanvasSink& sink,
+                       GuiRect area,
+                       double  x,
+                       GuiColor color);
 
 // Draws the strip-drag ANCHOR STEM: a vertical line at the drag's pivot's
 // exact place `x` (device px from area.x, clamped by its producer into

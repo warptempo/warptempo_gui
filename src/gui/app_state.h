@@ -7891,6 +7891,64 @@ struct AppState {
     };
     TrimBarHover trim_bar_hover;
 
+    // THE WAVEFORM'S HOVER LINE — WHERE A TAP AT THE PEN'S PLACE WOULD PUT
+    // THE PLAYHEAD (architect 2026-11-21, send FF: "the waveform itself
+    // could ... show where the cursor would be if I tapped or if I zoomed,
+    // where ... the playhead or the zoom stem would be"; "an even more dark
+    // and faint version of the playhead stem"; "Cost is accepted. I keep the
+    // pen away when I don't need it."). The look, its tone, its order in the
+    // canvas list and its place rule at render_hover_line (render.h), the
+    // one owner of the line; this record is its state alone. NOT ONE OF
+    // FaceFades' FACES and NO FADE: it appears, moves and leaves at once,
+    // as the scanner does, so it needs no clock, no mix and no list — like
+    // TrimBarHover, one value under the hover's gate, written by ONE WALK
+    // (GuiInputHandler::walk_hover_line, run inside walk_hover_face, so it
+    // has that walk's every caller — on_motion's head, on_button_press's
+    // walk, the tick, the pen latch's arm, the pointer-leave hook — and
+    // again AHEAD OF EVERY FRAME from settle_face_fades, so a veil, a load
+    // or the zoom's seat that comes with no pointer event takes it away in
+    // the very frame that paints them).
+    //   `place` THE STORED GATE ANSWER — what a press at the pen's place
+    //     would do with the playhead, as the walk last answered it: None;
+    //     Tap — a plain press there arms the pending click whose motionless
+    //     release places the playhead (or, on the waveform's lower half,
+    //     auditions from the place: it moves where play starts), the line
+    //     at the frame that tap would land on; Anchor — the barrel held over
+    //     the waveform, where a tip-down would seat the zoom, the line at the
+    //     place the zoom anchor's stem would take. Never under a contact, the
+    //     pen latch, a veil, a card at the place, no audio or a load, a live
+    //     drag, or while the zoom's seat stands (the white stem is then the
+    //     mark); the predicate at the walk.
+    //   THE LINE'S PLACE IS DERIVED AT THE PAINT from `place`, the pointer's
+    //     real place and the picture being painted
+    //     (GuiPaintHandler::hover_line_x), never stored: when the picture
+    //     moves under a still pen (FOLLOW's scroll, a key's zoom, a landing,
+    //     a plate's publication) the line stays under the pen and its landing
+    //     frame follows, with no event of the pen's.
+    //   `painted_x` THE LINE AS LAST PAINTED: its exact place (device px
+    //     from waveform_area's left edge) in the canvas list the GPU draws
+    //     now, or none — written by the painter at every list build
+    //     (GuiPaintHandler::paint_hover_line; the no-audio list writes none),
+    //     drawn or yielded to a coincident line alike. THE OLD CELLS EVERY
+    //     DAMAGE ERASES ARE THESE, so a picture that moved between two pen
+    //     events can leave no ghost: the cells the list on the glass holds
+    //     are always the ones declared.
+    //   `declared_x` THE PLACE THE LAST DAMAGE DECLARED (the walk's
+    //     set_hover_line): the walk damages only where the place it derives
+    //     now differs from this one — the old cells as painted and the new
+    //     ones (Viewport::invalidate_hover_line) — so a pen resting, or
+    //     moving inside one frame's span at deep zoom, or away, damages
+    //     nothing and invites no frame; and a frame whose list is not rebuilt
+    //     (an overlay emptying the canvas's paint area) is not asked for
+    //     again and again.
+    struct HoverLine {
+        enum class Place : uint8_t { None, Tap, Anchor };
+        Place                 place = Place::None;
+        std::optional<double> painted_x;
+        std::optional<double> declared_x;
+    };
+    HoverLine hover_line;
+
     // THE HOVER TOOLTIP — THE WHOLE OF ITS STATE, AND THE MODEL'S ONE STATEMENT.
     // THE MODEL IS ALWAYS-SHOW (architect 2026-11-07, session 87, replacing
     // the Windows 95 tooltip control's model of 2026-10-06 — comctl32's
@@ -13583,6 +13641,15 @@ double  playhead_exact_x(const AppState& a, int64_t vp_start, double spp,
                          int64_t origin);
 double  scanner_exact_x(const AppState& a, int64_t vp_start, double spp,
                         int64_t origin);
+// THE CURSOR'S EXACT PLACE FOR ANY WHOLE FRAME — playhead_exact_x's one
+// expression with the frame an argument (playhead_exact_x is this at the
+// resting cursor's frame): the waveform's hover line stands at the frame a
+// tap would land on through it, on the plate basis paint_playheads hands it,
+// so after the tap the playhead's line stands on the very double the hover
+// line stood on (GuiPaintHandler::hover_line_x; architect 2026-11-21, send
+// FF). -1 on a degenerate spp, as playhead_exact_x's.
+double  cursor_frame_exact_x(int64_t frame, int64_t vp_start, double spp,
+                             int64_t origin);
 // Active-domain total frame count. Source view returns audio.total_frames();
 // target view returns the deformed total derived from the warp_frame_map cache
 // (the forward-translated source length). Used by every viewport helper that needs the
@@ -13657,6 +13724,40 @@ inline int64_t clamp_playhead_to_live_domain(int64_t frame,
     if (frame >= total) return total - 1;
     return frame;
 }
+
+// WHERE A TAP AT THE WAVEFORM-RELATIVE REAL x WOULD LAND THE PLAYHEAD — THE
+// CLICK FAMILY'S ONE ROAD, conversion and refusal together (architect
+// 2026-11-21, send FF: the hover line and the tap share one function): none
+// off the strip (the real x against [0, w), the gutter that seats nothing),
+// else the frame under the place on the painted item basis
+// (playhead_frame_at_click_x, input_pointer.cpp, where the rule is) clamped
+// into the live domain (clamp_playhead_to_live_domain). Its readers, by grep
+// 2026-11-21: the placement body (place_playhead_at_click_column), the scrub
+// click (scrub_press_at), the empty lane's double-tap create
+// (create_marker_at_empty_lane) and the waveform's hover line
+// (GuiPaintHandler::hover_line_x). Defined in input_pointer.cpp.
+std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
+                                                   const GuiAudio& audio,
+                                                   double x);
+
+// WHERE A ZOOM SEATED AT THE WAVEFORM-RELATIVE REAL x WOULD ANCHOR — the
+// pinch's and the one-finger (barrel) zoom's one seat conversion
+// (apply_touch_nav_update's seat, input_pointer.cpp, the rule): `col` the
+// place clamped into the waveform's columns [0, w − 1] in reals (the pivot
+// HOLDS this column, TouchNavZoomState::anchor_col), `sample` the song
+// position under it on the LIVE viewport, viewport_start_sample + col · q,
+// q the painter's samples per px (TouchNavZoomState::anchor_sample) — no
+// whole frame taken and no clamp to the song, so past the song's end the
+// anchor stands under the pen. Its second reader is the waveform's hover
+// line with the barrel held (GuiPaintHandler::hover_line_x; architect
+// 2026-11-21, send FF), which stands where the anchor's stem would take
+// (strip_anchor_stem_x on the plate basis). Defined in input_pointer.cpp.
+struct ZoomAnchorSeat {
+    double col    = 0.0;
+    double sample = 0.0;
+};
+ZoomAnchorSeat zoom_anchor_seat_at(const AppState& app, const GuiAudio& audio,
+                                   double x);
 
 // WHERE Home / End WOULD LAND THE CURSOR — the two skip commands' (the keys';
 // their buttons left the row 2026-10-12) one answer, hoisted 2026-08-15 so the dispatch arms that jump share one
