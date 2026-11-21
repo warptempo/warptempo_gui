@@ -7511,8 +7511,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
                                  app.score.has_value();
     // THE ON-SCREEN KEYBOARD, standing over every dialog editor on the
     // window's last rows (onscreen_keyboard.h's placement block, architect
-    // 2026-11-20, send EE): the backdrop's row on the bottom icon row lies
-    // whole under it and yields — nothing painted, nothing published, the
+    // 2026-11-20, send EE): the backdrop's row on the bottom icon row yields
+    // under it — nothing painted, nothing published, the
     // window alone after the box — and everything this body lays is cut at
     // its top line (the clip below), the keyboard painted before this body
     // (on_redraw's order) and so never covered by it.
@@ -7587,21 +7587,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr, const GuiRect& exposed) {
     // THE DIALOG EDITOR'S BACKDROP (send AA's stage D2, the approved Z_06:
     // the line editor over the settings page): the page the editor was
     // opened from (AppState::dialog_backdrop, written by its three openers),
-    // its rows in the room as they stood, the highlighted row kept in view
-    // by the least move (folder_overlay::scroll_showing_row, nothing
-    // written), dead under the modal's veil — no press lights a row. THE
-    // LIST'S BAND IS THE VIEW'S PART ABOVE THE KEYBOARD while it stands (send
-    // EE): the rows cut at its top line, and the highlighted row — the one
-    // the editor was opened on — kept in view above it rather than under it.
+    // its rows in the room as they stood, its highlight kept, painted
+    // AT THE PAGE'S OWN SCROLL ON THE UNCUT VIEW (the box's interior, the
+    // view the page itself painted in, folder_overlay::content_rect), so
+    // nothing moves at the editor's open or close, dead under the modal's
+    // veil — no press lights a row. THE KEYBOARD CUTS IT, never moves it
+    // (architect 2026-11-20, send EE): the clip above stops the rows at the
+    // keyboard's top line, so the row the editor was opened on may lie under
+    // the keyboard — accepted, the window's title naming the key.
     if (room) {
-        GuiRect view = modal_box_interior_rect(app);
-        if (kb_covers && kb_surf.y < view.y + view.h)
-            view.h = std::max(0, kb_surf.y - view.y);
         const AppState::FolderOverlay& page = app.dialog_backdrop.page;
-        paint_list_view(cr, exposed, page, view,
-                        folder_overlay::scroll_showing_row(
-                            page, view, page.scroll_px, page.highlight_row),
-                        /*live=*/false);
+        paint_list_view(cr, exposed, page, modal_box_interior_rect(app),
+                        page.scroll_px, /*live=*/false);
     }
     // THE DIALOG'S WINDOW, painted after the row under it (the row's walk
     // below) so it floats over everything this body lays; its answers are
@@ -8898,8 +8895,9 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // THE BAND IS EACH TENANT'S OWN, ONE BIT A TENANT (2026-08-28; one bit a
     // tenant since architect 2026-11-20, send EE — AppState::
     // keyboard_painted_standing): THE KEYBOARD'S is its surface, a fact of
-    // the window's foot alone, the same rect on the show and the hide — its
-    // edges' own damage (onscreen_keyboard::reconcile_slot_standing); THE
+    // the window's foot alone, the same rect on the show and the hide — held
+    // whole by its edges' own damage (onscreen_keyboard::edge_damage_rect,
+    // paid at reconcile_slot_standing); THE
     // OVERLAY'S is the MODAL FAMILY'S PANEL while it stands — the view bar's
     // top row through the controls row's top since 2026-10-14 (modal_box.h),
     // whatever its listing's length (its fixed height) — and, with it gone,
@@ -9304,8 +9302,10 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //         pixels wherever it hangs, and the flag rebuild's damage counts on
 //         this check to reach the window's top for it (maybe_rebuild_flag_
 //         cache's whole rect); a labeled cue's face starts on the marker
-//         lane's first row (210), its box on rows 140..207 and its extent
-//         from row 126, inside the spared rows, while a chip-only face's
+//         lane's first row (202, its label's box on the lane's rows
+//         202..233), its box on rows 132..199 (two lines 104..199) and its
+//         extent from row 118 (two lines 90), reaching into the spared rows
+//         (118..139; 90..139), while a chip-only face's
 //         starts lower — and whether a label paints moves with the step (a
 //         later label's box covers it). Its box never nears the clock cell:
 //         it hangs above the marker lane, the canvas between.

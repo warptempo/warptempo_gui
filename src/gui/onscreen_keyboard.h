@@ -830,6 +830,10 @@ inline bool stands(const AppState& a) {
 //     view and clearing the surface (modal_box.h's head);
 //   * THE CARDS' ROOM (notification_stack_bound): its foot above the
 //     surface's top line.
+// Where a keyboard tuned short stands under the two yielding lanes' top (the
+// in-range extremes, edge_damage_rect's record), their rows above it show
+// the body ground alone, no key, line or word: accepted (architect
+// 2026-11-20, send EE), the edges' damage covering those rows.
 // Nothing under the surface answers a press, a hover, a hold, a tooltip's
 // dwell or the pan: the keyboard's claim is the whole surface and ranks
 // above every gate but the cards' (claim_rect; the press router, the hover
@@ -896,6 +900,20 @@ inline GuiRect band_rect(const AppState& a) {
     if (surf.h <= line) return GuiRect{0, 0, 0, 0};
     return GuiRect{surf.x, surf.y + line, surf.w, surf.h - line};
 }
+// THE TOP LINE: the surface's first rows, the one W of `well_border` over
+// the band. THE PAINT CLOCK'S RECT WHILE THE KEYBOARD STANDS (the tick's
+// OFFSCREEN FALLBACK, main.cpp; architect 2026-11-20, send EE): always on
+// screen with the surface, its repaint the two flat fills of the
+// keyboard's painter on its rows alone (the grid starts under the top pad,
+// every key culled by its hull), its upload one line of texels, and it
+// meets no canvas row the clip paints (waveform_paint_area stops above it),
+// so no draw list is rebuilt for it — and no pixel changes.
+inline GuiRect top_line_rect(const AppState& a) {
+    const GuiRect surf = surface_rect(a);
+    const int     line = top_line_px();
+    if (surf.w <= 0 || surf.h <= 0) return GuiRect{0, 0, 0, 0};
+    return GuiRect{surf.x, surf.y, surf.w, std::min(line, surf.h)};
+}
 
 // THE KEYBOARD'S CLAIMED SURFACE: its surface, whole — its top line, the
 // pad round the grid and the ground beside the seated block included, so a
@@ -907,11 +925,12 @@ inline GuiRect claim_rect(const AppState& a) {
     return surface_rect(a);
 }
 
-// THE SLOT'S DAMAGE RECTS, one a tenant: THE KEYBOARD'S IS ITS SURFACE
-// (surface_rect, a fact of the window's foot alone), which holds every pixel
-// it paints and every pixel its show covers and its hide gives back — the
-// canvas's foot, the well's foot, the bottom icon row and the status bar
-// (the placement block; architect 2026-11-20, send EE: no relayout pays it);
+// THE SLOT'S DAMAGE RECTS, one a tenant: THE KEYBOARD'S IS ITS SURFACE AND
+// THE LANES THAT YIELD UNDER IT (edge_damage_rect below, facts of the
+// layout that its standing never moves), which hold every pixel it paints and every pixel its
+// show covers or yields and its hide gives back — the canvas's foot, the
+// well's foot, the bottom icon row and the status bar (the placement block;
+// architect 2026-11-20, send EE: no relayout pays it);
 // THE FOLDER OVERLAY'S IS THE WHOLE AREA THE MODAL FAMILY TAKES — its box
 // and the controls row under it (modal_area_rect, modal_box.h, 2026-10-14),
 // which contains every pixel it paints in every content (this function).
@@ -923,6 +942,27 @@ inline GuiRect claim_rect(const AppState& a) {
 // standing band takes that tenant's own rect instead.
 inline GuiRect slot_damage_rect(const AppState& a) {
     return modal_area_rect(a);
+}
+
+// THE KEYBOARD'S EDGE DAMAGE (architect 2026-11-20, send EE): its surface
+// united with the two lanes whose painters yield while it stands — the
+// bottom icon row (bottom_row_area) and the status bar (status_bar_area, its
+// line over the bar its lane's first rows) — so the show blanks and the hide
+// repaints every row that yields, whatever the tunings. Where the surface
+// reaches above both lanes, the union IS the surface: on the tablet (200 %,
+// key_height 28) the lanes stand on rows 1310..1439, under the surface's
+// top at osk_key_h 35 (1048) and at the defaults' 30 (1098), so no row is
+// added. Only where the surface stands shorter than the two lanes — the
+// in-range extremes (at 200 %, osk_key_h 12 with key_height 45..50, or 13
+// with 50; the lanes 2 · key_height + 74 rows against a 162- or 172-row
+// surface) — does the union reach above it, to the bottom icon row's top.
+// The well's foot over that row yields nothing and is not owed.
+inline GuiRect edge_damage_rect(const AppState& a) {
+    GuiRect out = surface_rect(a);
+    if (out.w <= 0 || out.h <= 0) return out;
+    for (const GuiRect& lane : {bottom_row_area(a), status_bar_area(a)})
+        if (lane.w > 0 && lane.h > 0) out = union_rect(out, lane);
+    return out;
 }
 
 // -- The session-change owner, and the waveform's painted rect --------------
@@ -991,16 +1031,17 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // (AppState::keyboard_painted_standing and overlay_painted_standing,
 // GuiPaintHandler::paint_keyboard_slot), and the drift is paid here with
 // THAT TENANT'S DAMAGE RECT (slot_damage_rect's block: the keyboard's
-// surface, the overlay's modal area). THIS IS THE ONE PLACE THE KEYBOARD'S
+// edge_damage_rect, the overlay's modal area). THIS IS THE ONE PLACE THE KEYBOARD'S
 // SHOW AND HIDE ARE PAID, whatever opened or closed its editor: standing is
 // derived (stands, above), so every road — the dialog editors' OK, Cancel,
 // Esc and Enter, the flag editor's, an editor swapped for the overlay it
 // returns to in one pass — moves this comparison, and nothing else has to
 // remember the surface. NO RELAYOUT, NO WHOLE-WINDOW DAMAGE AND NO FADE
 // DROP IS OWED FOR THE KEYBOARD (architect 2026-11-20, send EE; the
-// placement block): it moves no lane, so its surface holds the whole of
-// what its edge changes on screen — the keys arriving, or the canvas's foot,
-// the well's foot, the bottom icon row and the status bar coming back — and
+// placement block): it moves no lane, so its surface and the lanes that
+// yield under it (edge_damage_rect) hold the whole of what its edge changes
+// on screen — the keys arriving, or the canvas's foot, the well's foot, the
+// bottom icon row and the status bar coming back — and
 // the canvas's clip, which moves with it (waveform_paint_area below), makes
 // that frame's chrome upload whole and its canvas clear under the damage
 // (GuiGlCanvas::present_frame's upload rule; on_redraw's CLEAR: the area
@@ -1011,8 +1052,8 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // Viewport::invalidate_modal_dialog_area).
 //
 // On the HIDE the departed tenant no longer stands, so there is nothing to
-// ask of it but its rect: the keyboard's is a fact of the window's foot
-// alone, and the overlay's modal area contains its pixels in every content —
+// ask of it but its rect: the keyboard's a fact of the layout its standing
+// never moves, and the overlay's modal area contains its pixels in every content —
 // and with them the waveform it covered (the box spans the waveform area
 // whole).
 //
@@ -1035,7 +1076,7 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // A few compares per call with the slot down.
 inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
     if (stands(a) != a.keyboard_painted_standing)
-        viewport.invalidate_rect(surface_rect(a));
+        viewport.invalidate_rect(edge_damage_rect(a));
     if (folder_overlay::stands(a) != a.overlay_painted_standing)
         viewport.invalidate_rect(slot_damage_rect(a));
 }
@@ -1074,9 +1115,11 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 //
 // Both surfaces span the waveform's columns and run down past its foot, so
 // what they hide off the waveform is always a BOTTOM SLICE and the answer is
-// a rect. THE KEYBOARD always overlaps the waveform (the waveform is the
-// lanes' whole leftover, 2026-10-07), and the waveform stops at its top
-// line; THE BOX swallows the waveform whole and answers a ZERO-HEIGHT rect,
+// a rect. THE KEYBOARD overlaps the waveform's foot at every ordinary
+// tuning, and the waveform stops at its top line; at the in-range extremes
+// where the surface stands shorter than the bottom icon row and the status
+// bar (edge_damage_rect's record) its top falls below the waveform's foot,
+// and the area comes back uncut (`hidden` <= 0); THE BOX swallows the waveform whole and answers a ZERO-HEIGHT rect,
 // and it is the CLIP rather than the gate that makes that case paint nothing
 // (rects_intersect can still answer true for an empty rect an exposure
 // straddles — it compares edges, not areas). The box starts ABOVE the

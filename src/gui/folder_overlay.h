@@ -446,9 +446,9 @@ inline int row_at(const AppState& a, double x, double y) {
 
 // THE LEAST MOVE THAT SHOWS ROW `index` WHOLE in the band `band`, from the
 // offset `scroll`, clamped onto the listing's walls there: the offset the
-// keyboard row walk's "keep the focused row visible" writes (below), and
-// the dialog editor's backdrop's view of the page it stands over
-// (paint_list_view's caller, which writes nothing).
+// keyboard row walk's "keep the focused row visible" writes (below). (The
+// dialog editor's backdrop paints its page at the page's own scroll,
+// paint_modal_dialog; architect 2026-11-20, send EE.)
 inline double scroll_showing_row(const AppState::FolderOverlay& ov,
                                  const GuiRect& band, double scroll,
                                  int index) {
