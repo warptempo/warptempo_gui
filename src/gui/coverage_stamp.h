@@ -59,6 +59,37 @@ inline uint32_t blend_word(uint32_t d, uint32_t s, double a) {
     return out;
 }
 
+// THE BLEND OF ONE PIXEL A SHAPE LAYS IN SEVERAL TONES (architect
+// 2026-11-20, send DD: the trim bar's pill and its two caps, ONE shape cut
+// into regions by vertical lines, each region its own tone): the opaque
+// source words s[i] laid over the target's word `d`, each at its own
+// coverage a[i] — the shape's exact area inside region i over the pixel,
+// the a[i] together the shape's coverage of the pixel — for each channel
+//     out = floor(d · (1 − Σ a) + Σ s[i] · a[i] + 0.5)
+// each product and each sum one double operation, in that order: the same
+// premultiplied source-over as blend_word, of one shape whose color varies
+// across the pixel, so the pixel is laid once and rounded once and no
+// region's tone is weighed over another's. A pixel one region alone
+// reaches is blend_word's (the caller's).
+inline uint32_t blend_word_bands(uint32_t d, const uint32_t* s,
+                                 const double* a, int n) {
+    double cover = 0.0;
+    for (int i = 0; i < n; ++i) cover += a[i];
+    const double keep = std::max(1.0 - cover, 0.0);
+    uint32_t out = 0;
+    for (int shift = 0; shift < 32; shift += 8) {
+        const double dc = static_cast<double>((d >> shift) & 0xffu);
+        double sum = dc * keep;
+        for (int i = 0; i < n; ++i) {
+            const double sc   = static_cast<double>((s[i] >> shift) & 0xffu);
+            const double laid = sc * a[i];
+            sum += laid;
+        }
+        out |= static_cast<uint32_t>(std::min(sum + 0.5, 255.0)) << shift;
+    }
+    return out;
+}
+
 // A PIXEL'S COVERAGE BY THE DOWN-POINTING 45° TRIANGLE (architect
 // 2026-11-14, send J: the chip and the ruler's head, "I think the chips
 // should also go anti-aliased"): the triangle of APEX (ax, ay) AND HEIGHT h,
@@ -133,9 +164,7 @@ inline double coverage_of_triangle(int px, int py, double ax, double ay,
 // whose RIGHT two are quarter disks of radius `rr` — a radius of 0 a square
 // corner, each radius at most half the rect's height and the two together
 // at most its width (the caller's clamp: the pill's two equal radii at most
-// half its width; the trim bar's cap, send CC 2026-11-20, one side's radius
-// up to the whole width and the other side square), so no two corners'
-// cut-outs meet. THE ANSWER IS THE EXACT
+// half its width), so no two corners' cut-outs meet. THE ANSWER IS THE EXACT
 // AREA of the pixel (px, py) inside it, in [0, 1]: the rect's coverage
 // (coverage_of_rect) less, at every rounded corner whose square the pixel
 // meets, the part of the pixel in the corner's square and outside its

@@ -5811,8 +5811,9 @@ void GuiInputHandler::commit_region_sweep() {
     // (sweep_highlight_rect) while the record still answers it.
     viewport.invalidate_rect(sweep_highlight_rect(app, audio));
     const bool wrote = app.region_drag.wrote_trim;
-    // THE PILL'S SWEPT LOOK ENDS WITH A SWEEP THAT WROTE (trim_bar_look's
-    // `swept`, app_state.h; architect 2026-11-17, session 140): its edge damages the
+    // THE SWEPT LOOK — the moving end's cap in `selected_fill`, both caps
+    // showing — ENDS WITH A SWEEP THAT WROTE (trim_bar_look's `swept`,
+    // app_state.h; architect 2026-11-20, send DD): its edge damages the
     // trim lane here, whatever the commit tail below damages.
     if (wrote && !app.region_drag.select)
         viewport.invalidate_rect(top_trim_row_area(app));
@@ -9146,9 +9147,16 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
         return;
     }
     const SweepHighlightColumns before = sweep_highlight_columns(app, audio);
-    if (write_trim_from_sweep(app.region_drag.anchor_source_frame,
-                              sweep_trim_frame_at_x(rel))) {
+    const int64_t anchor_source = app.region_drag.anchor_source_frame;
+    const int64_t moving_source = sweep_trim_frame_at_x(rel);
+    if (write_trim_from_sweep(anchor_source, moving_source)) {
         app.region_drag.wrote_trim = true;
+        // THE MOVING BOUND, by the write's own order (RegionDragState's
+        // `moving_begin`): the pen sets the begin left of the anchor, the
+        // end right of it, and an equal pair keeps the side. The lane
+        // damage below covers its change.
+        if (moving_source != anchor_source)
+            app.region_drag.moving_begin = moving_source < anchor_source;
         viewport.invalidate_rect(top_trim_row_area(app));
         const SweepHighlightChange moved = sweep_highlight_change(
             app, before, sweep_highlight_columns(app, audio));

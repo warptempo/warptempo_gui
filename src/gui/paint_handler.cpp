@@ -5034,8 +5034,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // No trim gate: the window is ALWAYS set (2026-07-30), so the bar always
     // paints — at the full window the pill spans the whole lane between the
     // song's edges. Its caps are a state's, not the bar's: at rest the bare
-    // pill, the caps only while a part is hovered or held (trim_bar_tones'
-    // table, render.h).
+    // pill, the caps only while a part is hovered or held or a TRIM sweep
+    // moves an end (trim_bar_tones' table, render.h).
     //
     // THIS PASS PUBLISHES THE TRIM BAR'S HIT GEOMETRY (AppState::trim_bar_hit,
     // architect 2026-09-24 — strictly as-painted): hit_test_trim_endcap and
@@ -5130,7 +5130,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // highlight the one exception (paint_sweep_highlight, 2026-11-12).
     // THE BAR'S STATE (architect 2026-11-19 / 2026-11-20, send CC): the
     // part under the hovering pen, the part the bar's own press holds and
-    // a TRIM sweep that wrote, read off their records (trim_bar_look,
+    // the end a TRIM sweep that wrote is moving (send DD, 2026-11-20), read
+    // off their records (trim_bar_look,
     // app_state.h, every edge's damage there); the tones and the caps are
     // the one table's (trim_bar_tones, render.h). THE LOOK IS ASKED AFTER
     // THIS PASS PUBLISHES THE STASH (render_trim_flags' `look`): a pen

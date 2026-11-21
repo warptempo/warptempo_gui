@@ -405,6 +405,104 @@ void CoverageStampPass::rounded_rect_cut(double x0, double y0, double x1,
         [](int, int&, int&) {});
 }
 
+void CoverageStampPass::rounded_rect_bands(double x0, double y0, double x1,
+                                           double y1, double rl, double rr,
+                                           double c0, double c1, GuiColor t0,
+                                           GuiColor t1, GuiColor t2) {
+    if (x1 <= x0 || y1 <= y0) return;
+    const double k0 = std::clamp(c0, x0, x1);
+    const double k1 = std::clamp(c1, k0, x1);
+    const GuiColor tones[3] = {t0, t1, t2};
+    if (!direct_) {
+        // CAIRO'S ROAD: the shape's path once per region, under the
+        // region's rect as a clip.
+        const double lo[3] = {x0, k0, k1};
+        const double hi[3] = {k0, k1, x1};
+        for (int i = 0; i < 3; ++i) {
+            if (hi[i] <= lo[i]) continue;
+            cairo_save(cr_);
+            cairo_set_antialias(cr_, CAIRO_ANTIALIAS_DEFAULT);
+            cairo_new_path(cr_);
+            cairo_rectangle(cr_, lo[i], y0, hi[i] - lo[i], y1 - y0);
+            cairo_clip(cr_);
+            cairo_new_path(cr_);
+            rounded_rect_path(cr_, x0, y0, x1, y1, rl, rr);
+            set_palette_source(cr_, tones[i]);
+            cairo_fill(cr_);
+            cairo_restore(cr_);
+        }
+        return;
+    }
+    // THE STAMP: rounded_rect's cells and whole run, each pixel's column
+    // split at the two lines into the regions' parts; one part, the plain
+    // stamp in its tone; more, each part's exact area of the shape.
+    const double dx = static_cast<double>(target_.dx);
+    const double dy = static_cast<double>(target_.dy);
+    const double sx0 = x0 + dx, sy0 = y0 + dy, sx1 = x1 + dx, sy1 = y1 + dy;
+    const double d0 = k0 + dx, d1 = k1 + dx;
+    const int bx0 = static_cast<int>(std::floor(sx0));
+    const int bx1 = static_cast<int>(std::ceil(sx1));
+    const int by0 = static_cast<int>(std::floor(sy0));
+    const int by1 = static_cast<int>(std::ceil(sy1));
+    const int fx0 = static_cast<int>(std::ceil(sx0 + rl));
+    const int fx1 = static_cast<int>(std::floor(sx1 - rr));
+    const uint32_t words[3] = {word_of(t0), word_of(t1), word_of(t2)};
+    for (const GuiRect& r : target_.clip) {
+        const int cx0 = std::max(bx0, r.x);
+        const int cx1 = std::min(bx1, r.x + r.w);
+        const int cy0 = std::max(by0, r.y);
+        const int cy1 = std::min(by1, r.y + r.h);
+        if (cx1 <= cx0 || cy1 <= cy0) continue;
+        const int wx0 = std::clamp(fx0, cx0, cx1);
+        const int wx1 = std::clamp(fx1, wx0, cx1);
+        for (int yy = cy0; yy < cy1; ++yy) {
+            uint32_t* const row = reinterpret_cast<uint32_t*>(
+                target_.data + static_cast<std::size_t>(yy) * target_.stride);
+            const bool whole_row = coverage_of_span(yy, sy0, sy1) >= 1.0;
+            const double py0 = static_cast<double>(yy);
+            const double py1 = py0 + 1.0;
+            for (int xx = cx0; xx < cx1; ++xx) {
+                const double px0 = static_cast<double>(xx);
+                const double px1 = px0 + 1.0;
+                const double lo[3] = {px0, std::max(px0, d0),
+                                      std::max(px0, d1)};
+                const double hi[3] = {std::min(px1, d0), std::min(px1, d1),
+                                      px1};
+                int only = 0;
+                int parts = 0;
+                for (int i = 0; i < 3; ++i)
+                    if (hi[i] > lo[i]) {
+                        only = i;
+                        ++parts;
+                    }
+                if (parts <= 1) {
+                    if (whole_row && xx >= wx0 && xx < wx1)
+                        row[xx] = words[only];
+                    else
+                        stamp_pixel(row + xx, words[only],
+                                    coverage_of_rounded_rect(
+                                        xx, yy, sx0, sy0, sx1, sy1, rl, rr));
+                    continue;
+                }
+                double a[3] = {0.0, 0.0, 0.0};
+                double cover = 0.0;
+                for (int i = 0; i < 3; ++i) {
+                    if (hi[i] <= lo[i]) continue;
+                    a[i] = std::clamp(
+                        area_of_rounded_rect_in_rect(sx0, sy0, sx1, sy1, rl,
+                                                     rr, lo[i], py0, hi[i],
+                                                     py1),
+                        0.0, 1.0);
+                    cover += a[i];
+                }
+                if (cover > 0.0)
+                    row[xx] = blend_word_bands(row[xx], words, a, 3);
+            }
+        }
+        grow_dirty(GuiRect{cx0, cy0, cx1 - cx0, cy1 - cy0});
+    }
+}
+
 void CoverageStampPass::triangle(double ax, double ay, double h,
                                  GuiColor color) {
     if (h <= 0.0) return;

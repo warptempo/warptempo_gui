@@ -699,11 +699,14 @@ void install_true_colors(bool on);
 // 2026-11-19 / 2026-11-20, send CC; THE TRIM BAR'S CAPS AND GRABS in the
 // lanes block below, the one table at trim_bar_tones): at rest the pill
 // alone in `trim_span_face` (ScrollbarInnerHandle, Arc's slider), as Arc
-// and Kdenlive draw it; under the hovering pen or the bar's own press a
-// CAP at each end of the pill, ours, and the part under the pen or the
-// press in Thunar's hover tone `trim_span_hover_face` or Arc's
-// slider:active `selected_fill`; a TRIM sweep that wrote the pill alone in
-// `selected_fill` (trim_bar_look, app_state.h). The lane's grabs are the
+// and Kdenlive draw it; under the hovering pen, the bar's own press or a
+// TRIM sweep that wrote, A CAP AT EACH END OF THE PILL — the pill's own end
+// cut by one vertical line, ours — and the part under the pen or the press
+// in Thunar's hover tone `trim_span_hover_face` or Arc's slider:active
+// `selected_fill`, a TRIM sweep's moving end wearing `selected_fill` as a
+// held end does (architect 2026-11-20, send DD: "it should look like the
+// end endcap is being dragged b/c effectively that is what it is";
+// trim_bar_look, app_state.h). The lane's grabs are the
 // span's two ends and its body (TrimBarHit, below) over the lane's whole
 // rows — a press need not land on the pill.
 //
@@ -2913,64 +2916,57 @@ inline double marker_flag_max_width_px(bool iteration_on) {
     return label + 2.0 * cell;
 }
 
-// THE TRIM BAR'S CAPS AND GRABS (architect 2026-11-19 / 2026-11-20, send
-// CC, ruled on the mock CC_14: "the trim bar is quite small, and so being
-// able to consider the inside part, part of the handle, that would be
-// helpful"; "a little half circle in each end cap ... the visual of it would
-// give me something to aim at with the pen"; "I would err on the side of a
-// little too small ... Maybe you can just go 1W above the natural radius of
-// a circle that would fit in the trim cap"; "I would want to be
-// symmetrical"). THE CAP is after Kdenlive's zoom bar, NOT ARC'S: the
-// numbers are ours, ruled on the mock. Every length below is ONE OF THREE
-// AUTHORED NUMBERS OR THE PILL'S OWN, so a retuned cap moves its zone:
-//   THE CAP, at each end of the pill (render_trim_flags draws it): A HALF
-//     DISC CONCENTRIC WITH THE PILL'S ROUND END, its radius the pill's
-//     plus kTrimCapOutsetW (1 W: 3 + 1 = 4 W, 8 device px on the tablet at
-//     200 %), on its outer side, AND kTrimCapW (6 W) WIDE IN ALL, the
-//     straight inward part the width less the radius (2 W); centered on the
-//     trough's center rows, so 2 x 4 = 8 W tall on the 6 W pill — rows
-//     148 .. 163 on the tablet, the pill's 150 .. 161. The pill's round end
-//     stands the seat (3 W) inside its bound (THE SLIDER'S BOX AND ITS CORE,
-//     above), so THE CAP'S OUTER EDGE STANDS seat − outset = 2 W INSIDE ITS
-//     BOUND (trim_cap_inset_px: 4 device px), its circle's center seat +
-//     pill radius = 6 W inside it and its straight side 2 + 6 = 8 W inside
-//     it (16 device px) — the begin's off the begin's place, the end's the
-//     mirror image off the end's (the end column's right edge, end.x + 1).
-//     12 x 16 device px on the tablet. THE CAPS SHOW ONLY WHERE BOTH FIT
-//     WHOLE WITH A WHOLE DEVICE PX OF PILL BETWEEN THEM, each its whole
-//     width inside its own half of the slider's box. THE THRESHOLD IS IN
-//     DEVICE PX, BUILT FROM THE CAP'S INSET AND WIDTH AS SCALED AND ROUNDED
-//     (render_trim_flags' `caps_fit`): a box at least
-//     2 x (trim_cap_inset_px + trim_cap_w_px) + 1 device px wide — the inset
-//     the pill's seat less the outset, each of trough, pill and outset
-//     rounded at its element, so the threshold is no fixed W count:
-//     33 device px (16.5 W) on the tablet at 200 % (inset 4, width 12),
-//     17 px (17 W) at 100 % (inset 2, width 6), 22 px at 125 % (inset 2.5,
-//     width 8) — THIS IS THE THRESHOLD'S ONE STATEMENT; every other comment
-//     that names it points here. There the pill keeps its whole seat at
-//     each bound and so the cap stays concentric with its end, and the two caps'
-//     straight sides stand at least a device px apart, so NO PIXEL IS
-//     REACHED BY BOTH CAPS at any fractional place or gui_scale (send CC's
-//     review A, F2, 2026-11-20: two caps sharing a pixel, each stamped
-//     source-over at its partial coverage, leave a + b − ab of cover and
-//     weigh the second cap over the first — at a box of exactly two caps
-//     and their insets (32 device px on the tablet) with the middle half
-//     way through a pixel, 25 % pill and the caps 1 : 2
-//     where the exact answer is the two caps half and half — and a false
-//     line against the trough on the cap rows above and below the pill;
-//     the extra device px keeps every stamp one shape over the pill as
-//     laid, the case that is exact, and asks no two-shape stamp, which the
-//     cairo road, compositing path by path, could not draw exactly either);
-//     a narrower box shows THE PILL ALONE, wearing what
-//     the part under the pen or the press would wear (trim_bar_tones: Arc's
-//     own slider, which has no caps). The zones below are not narrowed with
-//     them: a short span keeps both grabs and its body, uncapped.
-//   THE GRABS — each end's ZONE IS ITS CAP AND kTrimGrabAirW (4 W) ON EACH
-//     SIDE OF IT, over the trim lane's whole rows: from the cap's outer edge
-//     less 4 W, which is 4 − 2 = 2 W OUTSIDE THE BOUND
-//     (trim_grab_outside_px, 4 device px), to its straight side plus 4 W,
-//     2 + 6 + 4 = 12 W INSIDE IT (trim_grab_inside_px, 24 device px): 14 W
-//     wide, 28 device px. THE BRIDGE is the span's body between the two
+// THE TRIM BAR'S CAPS AND GRABS (architect 2026-11-19 / 2026-11-20, sends
+// CC and DD). THE CAP is after Kdenlive's zoom bar, NOT ARC'S, ruled on the
+// mock CC_14 ("a little half circle in each end cap ... the visual of it
+// would give me something to aim at with the pen"; "I would want to be
+// symmetrical") and re-ruled on glass (architect 2026-11-20, send DD: "i'd
+// like to see the encaps radius be the same as the scrollbar's actual end
+// radius but keeping the straight elongtated part of th eendcap"; his
+// words of 2026-11-19: "it should be the same size as the scroll bar
+// itself, not as jutting out from it"):
+//   THE CAP IS THE PILL'S OWN END, CUT BY ONE VERTICAL LINE: from the pill's
+//     tip inward, its round end (the pill's own radius, half its height —
+//     3 W) and kTrimCapStraightW (2 W) of its straight run — trim_cap_w_px,
+//     5 W wide, the pill's own 6 W tall: NOTHING OF A CAP STANDS OUTSIDE
+//     THE PILL. Its outer edge is the pill's tip, the seat inside its bound
+//     (THE SLIDER'S BOX AND ITS CORE, above), its cut line the seat + 5 W
+//     inside it — the begin's off the begin's place, the end's the mirror
+//     image off the end's (the end column's right edge, end.x + 1). Authored
+//     as the pill's radius plus a straight length, so a retuned pill moves
+//     the cap. On the tablet at 200 % the cap 10 x 12 device px, rows
+//     150 .. 161 (the pill's), its tip 6 px and its cut line 16 px (8 W)
+//     inside its bound; at 100 % 5 x 6, the tip 3 and the cut 8; at 125 %
+//     6 x 8 (the radius 4 px, the straight run's 2.5 rounded to 2), the
+//     tip 3.5 and the cut 9.5.
+//   BOTH CAPS AT EVERY LENGTH, THE END'S OVER THE BEGIN'S (architect
+//     2026-11-20, send DD: "shuold show both,wit the end one being on top
+//     like the flags do" — a later flag's label covers an earlier one's):
+//     wherever the look shows caps (trim_bar_tones), both stand, at any
+//     length of the pill, down to its short forms (a disc of its height,
+//     then the box itself): the end's cap takes its 5 W from the right tip
+//     (the whole pill when the pill is shorter), the begin's cap what is
+//     left of its own 5 W from the left tip, the body what is left between.
+//     THE PILL IS STAMPED ONCE and its pixels colored by region
+//     (render_trim_flags; CoverageStampPass::rounded_rect_bands): no pixel
+//     is laid twice, so no seam shows between a cap and the body or between
+//     the two caps.
+//   THE GRABS — each end's ZONE over the trim lane's whole rows, from 2 W
+//     OUTSIDE THE BOUND (trim_grab_outside_px, 4 device px on the tablet) to
+//     12 W INSIDE IT (trim_grab_inside_px, 24 device px): 14 W wide, 28
+//     device px. THE ZONE IS NO LONGER THE CAP WITH THE SAME AIR EACH SIDE:
+//     against the cap as drawn its air is 5 W outside the tip and 4 W
+//     inside the cut line. It keeps the zone he tested on glass and ruled
+//     "good" (architect 2026-11-20, send DD), the one send CC built around
+//     its cap of 2026-11-19 — so it is authored as that zone's own numbers,
+//     A CORE kTrimGrabCoreW (6 W) wide whose outer edge stands
+//     kTrimGrabCoreLeadW (1 W) outside the pill's tip, and kTrimGrabAirW
+//     (4 W) of air on each side of the core — the same rounded terms in the
+//     same order as the zone he tested, so its device px are unchanged at
+//     every gui_scale (100 %: 2 and 12; 125 %: 2.5 and 15.5; 200 %: 4 and
+//     24). The core's inner edge is the cap's cut line wherever the pill's
+//     radius and the straight run round whole (100 %, 200 %); at 125 % it
+//     stands 1 px further in. THE BRIDGE is the span's body between the two
 //     zones' inner edges and drags the pair (render_trim_flags publishes all
 //     three; trim_endcap_rect and trim_bridge_gap own the rule). NARROW:
 //     where the two zones would overlap — the grabs' span under two inside
@@ -2979,34 +2975,37 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 //     bound's 2 W and the bridge is empty (trim_endcap_rect's rule). The
 //     strip's edge, which is the glass's, cuts a zone like anything else
 //     (the lane's clip).
-// The zones read the seat off the same two heights the painter's seat is
-// (trim_pill_seat_px, (trough rows − pill rows) / 2: the trim lane is the
-// trough and its two lines, trim_lane_h_px, so the painter never clamps the
-// trough), so they stand on the caps as drawn at every scale (125 %: the
-// seat 3.5 px, the outset 1, the cap's outer edge 2.5 px inside its bound).
-inline constexpr double kTrimCapOutsetW = 1.0;
-inline constexpr double kTrimCapW       = 6.0;
-inline constexpr double kTrimGrabAirW   = 4.0;
-static_assert(kTrimCapW >= kTrimPillW / 2.0 + kTrimCapOutsetW,
-              "the cap's width holds its half disc");
+// The zones and the caps read the seat off the same two heights the
+// painter's seat is (trim_pill_seat_px, (trough rows − pill rows) / 2: the
+// trim lane is the trough and its two lines, trim_lane_h_px, so the painter
+// never clamps the trough), so they stand where they are drawn at every
+// scale.
+inline constexpr double kTrimCapStraightW  = 2.0;
+inline constexpr double kTrimGrabCoreLeadW = 1.0;
+inline constexpr double kTrimGrabCoreW     = 6.0;
+inline constexpr double kTrimGrabAirW      = 4.0;
 inline double trim_pill_seat_px() {
     return static_cast<double>(trim_trough_h_px() - trim_pill_h_px()) / 2.0;
 }
-inline int trim_cap_outset_px() {
-    return scaled_px(kTrimCapOutsetW, 1);
+inline int trim_cap_straight_px() {
+    return scaled_px(kTrimCapStraightW, 1);
 }
-inline int trim_cap_w_px() {
-    return scaled_px(kTrimCapW, 1);
+inline double trim_cap_w_px() {
+    return static_cast<double>(trim_pill_h_px()) / 2.0 +
+           static_cast<double>(trim_cap_straight_px());
 }
-inline double trim_cap_inset_px() {
-    return trim_pill_seat_px() - static_cast<double>(trim_cap_outset_px());
+// The grab core's outer edge off its bound: the pill's tip less the lead.
+inline double trim_grab_core_outer_px() {
+    return trim_pill_seat_px() -
+           static_cast<double>(scaled_px(kTrimGrabCoreLeadW, 1));
 }
 inline double trim_grab_outside_px() {
     return std::max(0.0, static_cast<double>(scaled_px(kTrimGrabAirW, 1)) -
-                             trim_cap_inset_px());
+                             trim_grab_core_outer_px());
 }
 inline double trim_grab_inside_px() {
-    return trim_cap_inset_px() + static_cast<double>(trim_cap_w_px()) +
+    return trim_grab_core_outer_px() +
+           static_cast<double>(scaled_px(kTrimGrabCoreW, 1)) +
            static_cast<double>(scaled_px(kTrimGrabAirW, 1));
 }
 // (THE ARROW GLYPH, Windows' scroll arrow as one filled 4 x 7 W triangle —
@@ -4990,34 +4989,37 @@ struct TrimBarHit {
 // not hovered. And when you're hovering the end caps, the body loses the
 // hover."; "When the body is being dragged, the caps should not turn blue.
 // They should stay there. Unhovered, unclicked color, the default text. And
-// yes, this is a deviation from ARC, but it's accepted."). A PART of the bar
-// is an end (its grab zone, the cap's) or the body (the bridge), as the
-// press reads them (TrimBarHit). THE LOOK the painter reads
-// (trim_bar_look, app_state.h, fills it):
+// yes, this is a deviation from ARC, but it's accepted."; send DD, the
+// sweep: "trim gesture from icon doens't draw endcaps but it should - it
+// should look like the end endcap is being dragged b/c effectively that is
+// what it is"). A PART of the bar is an end (its grab zone, the cap's) or
+// the body (the bridge), as the press reads them (TrimBarHit). THE LOOK the
+// painter reads (trim_bar_look, app_state.h, fills it):
 //   `hovered` the part under the hovering pen (AppState::TrimBarHover, the
 //     walk GuiInputHandler::walk_trim_bar_hover), none under a contact;
 //   `held` the part the bar's own press holds, from the arm to the lift
 //     (pending_trim_drag / trim_drag: an end, or the pair's body), a pen
 //     or a finger alike — a finger has no hover, so its caps show from the
 //     touch and go with the lift;
-//   `swept` a TRIM sweep that wrote (region_drag.wrote_trim), the other
-//     road that moves the span, with the pen in contact on the canvas.
+//   `swept` THE END A TRIM SWEEP THAT WROTE IS MOVING (region_drag's
+//     `moving_begin`, from its first accepted write to the lift; none
+//     otherwise), the other road that moves the span — the bound the pen
+//     sets, the end while the pen stands right of the down's frame and the
+//     begin while it stands left of it.
 // THE TABLE (trim_bar_tones), first match:
 //   held body ........ the body `selected_fill`, BOTH CAPS `text`
-//   held end ......... THAT CAP `selected_fill`, the body at rest, the
-//                      other cap `text`
-//   swept ............ the body `selected_fill`, NO CAPS
+//   held end, or the
+//   swept end ........ THAT CAP `selected_fill`, the body at rest, the
+//                      other cap `text` — the sweep IS an end held
+//                      (architect 2026-11-20, send DD)
 //   hovered body ..... the body `trim_span_hover_face`, BOTH CAPS `text`
 //   hovered end ...... THAT CAP `trim_span_hover_face`, the body at rest,
 //                      the other cap `text`
 //   none ............. the body at rest (`trim_span_face`), NO CAPS — the
 //                      bar as Arc and Kdenlive draw it.
-// WHERE THE CAPS DO NOT FIT (`caps_fit` false: a slider's box under the
-// threshold in device px stated at THE TRIM BAR'S CAPS AND GRABS, 33 px on
-// the tablet) the pill is the
-// whole slider and wears what the part would — `selected_fill` while
-// anything is held or swept, else `trim_span_hover_face` while any part is
-// hovered, else at rest: Arc's own slider, which has no caps.
+// WHEREVER CAPS SHOW, BOTH STAND, AT EVERY LENGTH OF THE PILL, the end's
+// over the begin's (THE TRIM BAR'S CAPS AND GRABS; architect 2026-11-20,
+// send DD): the table is of the look alone.
 // NO FADE: Arc's `scrollbar slider` carries no transition (arc-theme's
 // `gtk-3.0/gtk-dark.css` as built, its `scrollbar slider` rules, lines
 // 956 .. 960; the 300 ms transition at line 934 is the `scrollbar` trough
@@ -5027,7 +5029,7 @@ enum class TrimBarPart : uint8_t { None, Begin, End, Body };
 struct TrimBarLook {
     TrimBarPart hovered = TrimBarPart::None;
     TrimBarPart held    = TrimBarPart::None;
-    bool        swept   = false;
+    TrimBarPart swept   = TrimBarPart::None;   // Begin or End, or None
 };
 struct TrimBarTones {
     GuiColor body{};
@@ -5035,7 +5037,7 @@ struct TrimBarTones {
     GuiColor begin_cap{};
     GuiColor end_cap{};
 };
-TrimBarTones trim_bar_tones(const TrimBarLook& look, bool caps_fit);
+TrimBarTones trim_bar_tones(const TrimBarLook& look);
 
 // Draws THE TRIM BAR — the trough and the pill on it, between the frame's
 // two lines (architect 2026-10-09, the program is Cool Edit; ARC'S
@@ -5048,8 +5050,10 @@ TrimBarTones trim_bar_tones(const TrimBarLook& look, bool caps_fit);
 // each bound and round there at its real place, the lane's clip cutting
 // it at the strip's edge (architect 2026-11-18, the lanes block's THE
 // SLIDER'S BOX AND ITS CORE), at exact coverage (CoverageStampPass's
-// rounded rect), and over the pill's two ends THE CAPS where the state
-// shows them (THE TRIM BAR'S CAPS AND GRABS), every tone `look`'s through
+// rounded rect), THE CAPS the pill's own two ends in their own tones where
+// the state shows them, the pill still stamped once
+// (CoverageStampPass::rounded_rect_bands; THE TRIM BAR'S CAPS AND GRABS),
+// every tone `look`'s through
 // the one table (trim_bar_tones above); no playhead
 // (the well paragraph above, 2026-10-09 ~14:30). The lane's two lines and
 // its ground are paint_trim's. The lane band is

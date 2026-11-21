@@ -259,7 +259,8 @@
 // render.h's trim_bar_tones): the part under the hovering pen — the pill's
 // body or an end's cap — `trim_span_hover_face` (our ScrollbarSliderHover
 // over Desktop, Thunar's slider under the pointer), the part the bar's own
-// press holds and a TRIM sweep's pill `selected_fill` (Arc's slider:active),
+// press holds and the end a TRIM sweep is moving `selected_fill` (Arc's
+// slider:active; the sweep an end held, architect 2026-11-20, send DD),
 // and every cap neither hovered nor held `text` (his "the default text";
 // the caps, Kdenlive's and ours, have no tone of Arc's). No fade: they
 // change at once.

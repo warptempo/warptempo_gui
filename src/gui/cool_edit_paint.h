@@ -131,7 +131,8 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, GuiColor fill);
 // (paint_ruler_row), a lit linked key's left seam and a hovering key's two
 // seams (paint_linked_group, the second in a mixed tone, StampTone below);
 // THE ROUNDED RECT, the trim bar's pill
-// (render_trim_flags; architect 2026-11-17, session 140) and Arc's keys'
+// (render_trim_flags; architect 2026-11-17, session 140; IN THREE BANDS
+// with its caps, send DD 2026-11-20) and Arc's keys'
 // borders, faces and accents (materials.h's paint_linked_group, send Z,
 // 2026-11-19); THE ROUNDED RING, a word button's and an entry's border;
 // THE ROUNDED RECT CUT, NOISE's progress line (paint_entry); the
@@ -172,6 +173,24 @@ public:
     // nothing where x1 <= x0 or y1 <= y0.
     void rounded_rect(double x0, double y0, double x1, double y1, double rl,
                       double rr, StampTone tone);
+    // THE ROUNDED RECT IN THREE BANDS (architect 2026-11-20, send DD: the
+    // trim bar's pill and its two caps, THE TRIM BAR'S CAPS AND GRABS,
+    // render.h): rounded_rect's shape STAMPED ONCE, its columns cut by two
+    // vertical lines `c0` <= `c1` into three regions — [x0, c0] in `t0`,
+    // [c0, c1] in `t1`, [c1, x1] in `t2` (a line outside the shape empties
+    // its region). A pixel one region alone reaches takes rounded_rect's own
+    // stamp in that region's tone, byte for byte; a pixel a line crosses
+    // takes each region's tone weighed by THE SHAPE'S EXACT AREA in that
+    // region's part of the pixel (area_of_rounded_rect_in_rect), laid and
+    // rounded once (blend_word_bands, coverage_stamp.h) — EXACT in real
+    // arithmetic wherever the line falls, a round end included, so no pixel
+    // is laid twice and no seam shows at a line. THE CAIRO ROAD, where the
+    // target is refused, fills the shape once per region under the region's
+    // rect as a clip, at cairo's own coverage: a pixel a line crosses is laid
+    // by two fills there, source-over, a seam the direct road has not.
+    void rounded_rect_bands(double x0, double y0, double x1, double y1,
+                            double rl, double rr, double c0, double c1,
+                            GuiColor t0, GuiColor t1, GuiColor t2);
     // THE ROUNDED RING (send Z, 2026-11-19: a GTK box's border, the word
     // buttons' and the entries'): the rounded rect [x0, x1] x [y0, y1] of
     // radius `r` on all four corners LESS its padding box — `bw` inside it

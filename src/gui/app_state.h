@@ -906,6 +906,18 @@ struct RegionDragState {
     // commit tail, so no render triggers behind it.
     // (`moved` is the TRIM arm lamp's: a sweep that moved puts it out.)
     bool    wrote_trim   = false;
+    // WHICH BOUND THE PEN IS MOVING (architect 2026-11-20, send DD: "it
+    // should look like the end endcap is being dragged b/c effectively that
+    // is what it is"): set at every ACCEPTED write by the write's own order
+    // (write_trim_from_sweep: begin the lesser of the anchor and the frame
+    // under the pen, end the greater) — true when the pen's frame stands
+    // left of the anchor, so the pen sets the begin, false when right of it,
+    // so it sets the end; a write whose two frames are equal keeps the
+    // side it had (false before any). Read by trim_bar_look's `swept`, the
+    // cap that wears `selected_fill` while the sweep stands written; the
+    // write that changes it is an accepted write, whose lane damage covers
+    // the cap changing sides (apply_region_drag_motion).
+    bool    moving_begin = false;
     double  press_x      = 0.0;    // the press's REAL place (window px), for the gate
     double  press_y      = 0.0;
     // THE TRIM'S FIXED END — a whole SOURCE frame in the authored int64 domain,
@@ -20017,18 +20029,25 @@ SweepHighlightChange sweep_highlight_change(
 // for the bridge's arm, else the end it took (pending_trim_drag before the
 // crossing, trim_drag after it, `both` / `is_begin` the same in either),
 // from the press that arms it to the lift, a pen or a finger alike —
-// `swept` A TRIM SWEEP from its first accepted write (region_drag.wrote_trim,
-// the TRIM former alone) to the lift — the two roads that move the span,
-// which wear Arc's slider:active (architect 2026-11-17, session 140, ruling
-// 4, "ruled: both") — and `hovered` the part under the hovering pen
+// `swept` THE BOUND A TRIM SWEEP IS MOVING from its first accepted write
+// (region_drag.wrote_trim, the TRIM former alone) to the lift, a pen or a
+// finger alike: the end while the pen's frame stands right of the down's,
+// the begin while it stands left of it (region_drag.moving_begin, the
+// sweep's write's own order) — the two roads that move the span, which
+// wear Arc's slider:active, the sweep's on its moving end's cap AS AN END
+// HELD (architect 2026-11-20, send DD: "it should look like the end endcap
+// is being dragged b/c effectively that is what it is"), at the lift the
+// bar back to the hover's answer (the pen over the waveform: the pill
+// alone) — and `hovered` the part under the hovering pen
 // (AppState::TrimBarHover). The barrel's bound-set press is a click until
 // its crossing, which arms the pending, so a barrel click lights nothing.
 // Read off those records, no flag of its own. EVERY EDGE OF IT DAMAGES THE
 // TRIM LANE (top_trim_row_area), ONE LANE DAMAGE AN EDGE: the held edges —
 // the arm and the pending's disarm (arm_pending_trim_drag /
 // disarm_pending_trim_drag), the drag's commit (commit_trim_drag), the
-// crossing's refused begin — the sweep's first accepted write (its every
-// write damages the lane) and its commit (commit_region_sweep), and THE
+// crossing's refused begin — the sweep's first accepted write and every
+// change of its moving side (each an accepted write, and its every write
+// damages the lane) and its commit (commit_region_sweep), and THE
 // HOVER'S EDGES, every change of the hovered part (set_trim_bar_hover, its
 // one setter): the walk's — the pen's arrival over the bar, its move
 // between the body and an end or off the bar, a contact going down (the
@@ -20063,8 +20082,10 @@ inline TrimBarLook trim_bar_look(const AppState& app) {
                     : is_begin ? TrimBarPart::Begin
                                : TrimBarPart::End;
     }
-    look.swept = app.region_drag.active && !app.region_drag.select &&
-                 app.region_drag.wrote_trim;
+    if (app.region_drag.active && !app.region_drag.select &&
+        app.region_drag.wrote_trim)
+        look.swept = app.region_drag.moving_begin ? TrimBarPart::Begin
+                                                  : TrimBarPart::End;
     look.hovered = app.trim_bar_hover.part;
     return look;
 }
