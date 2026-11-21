@@ -796,9 +796,9 @@ struct Viewport {
     //     PAINT-CLOCK KEEPERS, which change nothing the clock shows and are
     //     members because the cell is on screen whenever the bottom icon row
     //     is: the playing heartbeat's OFFSCREEN FALLBACK (when the scanner's
-    //     line yields no damage; while the on-screen keyboard stands, the
-    //     row yielding under it, the keyboard's top line in the cell's place,
-    //     clock_invalidate_rect's record), the A/B audition's REST (every tick while a rest
+    //     line yields no damage; never under the on-screen keyboard, every
+    //     editor's open stopping play, clock_invalidate_rect's record), the
+    //     A/B audition's REST (every tick while a rest
     //     stands, so the display's idle timer never fires inside the act,
     //     2026-10-18) and the display keep-alive's brief window after a
     //     fast Stop (the tick's head, one damage per

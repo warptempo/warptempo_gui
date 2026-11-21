@@ -115,7 +115,10 @@ struct GuiInputHandler;
 // one predicate for a keyboard-taking modal: the dialog line editor (the
 // settings line, the trim preset's name, the BPM form's line) and, since
 // 2026-10-25, the flag and iteration bound editors — a
-// modal admits its own vocabulary alone) and in the `h` history view
+// modal admits its own vocabulary alone; every editor's open stops play,
+// architect 2026-11-20, send EE, stop_playback_for_modal_open, so nothing of
+// the project's sounds under one for a Pause, a Stop or a focus loss to
+// end) and in the `h` history view
 // (playback is removed from the view whole and bare Space is consumed
 // there).
 //

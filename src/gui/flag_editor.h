@@ -44,12 +44,16 @@ struct GuiFlagEditor {
     // freeze-adjacent ops clusters, which return their sentences instead
     // (GuiOpRefusal, warpmarkers_ops.h).
     GuiNotifications&     notifications;
-    // THE PAYLOAD COMMIT'S STOP (architect 2026-10-14): a commit that changes
-    // the marker is a marker mutation and stops a live play (the keyboard stop
-    // rule at stop_playback_if_playing's declaration). Its one reader is
-    // commit_top_flag_edit; the opens keep their recorded exemption, and the
-    // bound commit and the BPM form's field commit write session-only state
-    // outside the class.
+    // THE OPENS' STOP AND THE CHANGED WRITES' STOP. Every editor's open stops
+    // play through the modal-open stop (architect 2026-11-20, send EE: "play
+    // should stop on editor open. i don't use that workflow and never have";
+    // enter_text_edit and enter_iter_bound_edit, the decision table at
+    // stop_playback_for_modal_open's declaration); a write that changes a
+    // marker is a marker mutation and stops a live play (architect
+    // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
+    // declaration: commit_top_flag_edit and the label paste,
+    // paste_payload_onto_selection). The bound commit and the BPM form's
+    // field commit write session-only state outside the class.
     GuiPlaybackLifecycle& playback_lifecycle;
 
     GuiFlagEditor(AppState&             app_,
@@ -111,9 +115,10 @@ struct GuiFlagEditor {
     // the marker single-selected and landed, the addressed cell written to
     // `side` behind that select, the seed the cell's own token (`+0.00` or
     // `+0` on a blank bracket, the column deciding) fully selected.
-    // A modal (keyboard, pointer and touch since 2026-10-25), no
-    // playback stop at the open — the lane editors' recorded exemption. Read-only refuses at the callers,
-    // as the flag editor's open does.
+    // A modal (keyboard, pointer and touch since 2026-10-25) whose open stops
+    // play past its guards, as every editor's open does (architect
+    // 2026-11-20, send EE; stop_playback_for_modal_open). Read-only refuses
+    // at the callers, as the flag editor's open does.
     void enter_iter_bound_edit(char column, int idx, MarkerCell side);
     // Commit the open bound session, ON THE LIVE COLUMN (which is the open's
     // column — the view cannot move under an open session): an EMPTY buffer

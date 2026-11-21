@@ -808,10 +808,11 @@ inline bool stands(const AppState& a) {
 // inventory:
 //   * THE CANVAS: its painted rect stops at the surface's top line
 //     (waveform_paint_area below — the GL canvas's clip, the navigation
-//     surface's extent and so the touch pan zone's), and so do the whole
-//     area's damage and the scanner's (Viewport::invalidate_waveform_area,
-//     invalidate_scanner_line: play runs on under the flag editor), the
-//     layout's waveform area and the plate untouched;
+//     surface's extent and so the touch pan zone's), the layout's waveform
+//     area, its damage and the plate untouched — NOTHING PLAYS UNDER THE
+//     KEYBOARD (every editor's open stops play, architect 2026-11-20, send
+//     EE; stop_playback_for_modal_open), so no scanner or FOLLOW frame
+//     damages the canvas's rows under it;
 //   * THE BOTTOM ICON ROW (paint_bottom_strip): its keys, the timestamp and
 //     the tab name stand down and publish zero rects and a zero clock cell,
 //     the clock's damage owner answering an empty rect
@@ -900,21 +901,6 @@ inline GuiRect band_rect(const AppState& a) {
     if (surf.h <= line) return GuiRect{0, 0, 0, 0};
     return GuiRect{surf.x, surf.y + line, surf.w, surf.h - line};
 }
-// THE TOP LINE: the surface's first rows, the one W of `well_border` over
-// the band. THE PAINT CLOCK'S RECT WHILE THE KEYBOARD STANDS (the tick's
-// OFFSCREEN FALLBACK, main.cpp; architect 2026-11-20, send EE): always on
-// screen with the surface, its repaint the two flat fills of the
-// keyboard's painter on its rows alone (the grid starts under the top pad,
-// every key culled by its hull), its upload one line of texels, and it
-// meets no canvas row the clip paints (waveform_paint_area stops above it),
-// so no draw list is rebuilt for it — and no pixel changes.
-inline GuiRect top_line_rect(const AppState& a) {
-    const GuiRect surf = surface_rect(a);
-    const int     line = top_line_px();
-    if (surf.w <= 0 || surf.h <= 0) return GuiRect{0, 0, 0, 0};
-    return GuiRect{surf.x, surf.y, surf.w, std::min(line, surf.h)};
-}
-
 // THE KEYBOARD'S CLAIMED SURFACE: its surface, whole — its top line, the
 // pad round the grid and the ground beside the seated block included, so a
 // press on the top line, the pad or beside the block is the keyboard's
@@ -1097,9 +1083,8 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // Every one of those grounds is fully opaque and every waveform pass runs
 // BEFORE them (the authoritative paint order, paint_handler.cpp), so a
 // waveform pixel under them is work whose result is thrown away in the same
-// frame: a narrow scanner damage column crossing the keyboard would
-// otherwise pay the plate's draw and every vertical over the surface's rows,
-// at the panel's own beat. ONE GATE, ONE CLIP for every surface. Its move is
+// frame: a damage rect crossing the surface would otherwise pay the plate's
+// draw and every vertical over the surface's rows. ONE GATE, ONE CLIP for every surface. Its move is
 // the keyboard's edge's whole cost on the canvas side: the frame's chrome
 // upload whole and the canvas cleared under the edge's damage, no plate
 // re-render (reconcile_slot_standing above).

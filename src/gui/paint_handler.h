@@ -1413,9 +1413,8 @@ private:
     // for their reason: this pass shapes up to thirteen cap runs per row, which
     // the outer Cairo clip would NOT elide, and a
     // narrow per-frame damage must not pay for them — the caret blink damages
-    // the editor's box every half second, and the flag editor is the one
-    // keyboard-modal surface that does not stop playback, so the scanner's own
-    // damage and the clock cell's run at the frame's cadence above it.
+    // the editor's box every half second above it (no play runs under an
+    // editor, every editor's open stopping it, architect 2026-11-20, send EE).
     //
     // It publishes no geometry: the press router derives its rects from the
     // same walker this does, so there is no stash for a skipped run to strand.

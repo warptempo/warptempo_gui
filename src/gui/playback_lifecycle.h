@@ -307,8 +307,15 @@ struct GuiPlaybackLifecycle {
 
     // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
     // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-10-28 — ELEVEN
-    // sites (the color picker's open was another 2026-10-07..14): THE
+    // opens. THE CALLER INVENTORY, re-derived by grep 2026-11-20 — SIXTEEN
+    // sites (the color picker's open was another 2026-10-07..14): THE LANE
+    // EDITORS' TWO OPENS (flag_editor.cpp: GuiFlagEditor::enter_text_edit,
+    // the flag editor's one open chokepoint, and enter_iter_bound_edit, the
+    // iteration bound editor's; architect 2026-11-20, send EE); in
+    // input_key_dispatch.cpp THE TRIM PRESETS LIST (open_trim_presets), its
+    // Save As name editor (trim_presets_save_as) and the BPM form's line
+    // editor (bpm_form_commit), each a dialog editor opened over a closed
+    // picker; THE
     // PROGRESS MODAL's open (GuiInputHandler::open_batch_progress,
     // input_render_dispatch.cpp, 2026-10-14, the batch's Render press);
     // GuiSettingsEditor::open (settings_editor.cpp); in
@@ -368,7 +375,7 @@ struct GuiPlaybackLifecycle {
     // body through the player's fork — a stop that must keep the resume point
     // the ordinary modal stop would not — so the RULE holds for every modal
     // surface even though this function's caller set is not literally every
-    // opener. And THE LANE EDITORS' OPEN is the table's exemption below.
+    // opener.
     // Authoring or answering a dialog over a live audition is the wrong default,
     // and Space is inside each of those surfaces' blocked sets, so playback
     // cannot restart until the surface closes.
@@ -385,24 +392,29 @@ struct GuiPlaybackLifecycle {
     //     soundtrack, since 2026-10-26 night, likewise begins where the
     //     project's audition ends), all standing in the modal family's box —
     //     STOP.
-    //   * The LANE EDITORS' OPEN (the flag editor and the iteration bound
-    //     editor) IS EXEMPT, and that is a DECISION, not an omission: editing
-    //     flag text while listening to the passage is a workflow the
-    //     architect uses, and it stays recorded so when the editors became
-    //     modals, pointer included (architect 2026-10-25 — the
-    //     exemption kept as it was; until then their modality was chords
-    //     alone). Its open site
-    //     (GuiFlagEditor::enter_top_flag_edit) carries a pointer back here.
-    //     THE EXEMPTION IS THE OPEN'S ALONE: the payload COMMIT that changes
-    //     the marker is a marker mutation and stops (architect 2026-10-14, the
-    //     keyboard stop rule above; GuiFlagEditor::commit_top_flag_edit).
+    //   * THE LANE EDITORS' OPEN — the flag editor in every kind and the
+    //     iteration bound editor — STOPS TOO (architect 2026-11-20, send EE:
+    //     "play should stop on editor open. i don't use that workflow and
+    //     never have"): EVERY EDITOR'S OPEN STOPS, so nothing of the
+    //     project's plays while the on-screen keyboard stands — PLAY and the
+    //     clock lie under it, and the keyboard is the one live element
+    //     (onscreen_keyboard.h's placement block). The stop is this one,
+    //     whole: the scanner down, the transport's state, the car's console
+    //     (whose admits() takes no command under an editor) and the fast-Stop
+    //     keep-alive's arming as for any modal open. Its two sites
+    //     (GuiFlagEditor::enter_text_edit, enter_iter_bound_edit) sit past
+    //     their opens' guards and the re-open on the live session's own
+    //     target, ahead of the select and the land. EDIT's hold, the label
+    //     paste, opens no editor and stops only on a changed write, the
+    //     keyboard stop rule above (GuiFlagEditor::paste_payload_onto_
+    //     selection).
     // REFUSAL-GATED (the standing rule): the stop is the price of an OPEN, so
     // each site calls this only once its own guards have passed — a refused open
     // must leave a listening session untouched. Do NOT hoist a call above a
     // guard ladder.
     // Mechanically this IS stop_playback_if_playing (a modal open needs no
     // teardown the gesture stop does not already do); the separate name is what
-    // gives the rule and its one exemption a greppable home. The NON-modal stops
+    // gives the rule a greppable home. The NON-modal stops
     // (gesture stops, the S/T toggle, the load-in-place mutator's self-guard)
     // keep
     // calling stop_playback_if_playing directly.

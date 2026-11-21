@@ -257,9 +257,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // tear an edit down on its way to a command that does not exist.
     // THE POINTER IS VEILED BY THE SAME PREDICATE since 2026-10-25 (an act
     // that takes the keyboard is a modal — keyboard_modal_editor_active's
-    // declaration names every reader); opening a flag editor still does not
-    // stop playback — that one rides no predicate at all, each modal surface
-    // spelling its own stop at its open site.
+    // declaration names every reader). The playback stop rides no predicate
+    // at all: each modal surface spells its own at its open site, every
+    // editor's open included (architect 2026-11-20, send EE;
+    // stop_playback_for_modal_open).
     if (keyboard_modal_editor_active() &&
         modal_editor_key_blocked(key, mods)) {
         // A BOUND CHORD UNDER ANY MODAL IS SILENT (architect 2026-10-25:

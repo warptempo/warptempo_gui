@@ -4474,9 +4474,8 @@ public:
     // IT IS NOT A PLAYBACK-STOP PREDICATE and neither is the one above. The
     // stop has ONE owner, GuiPlaybackLifecycle::stop_playback_for_modal_open,
     // which every open site calls and which records the whole decision table
-    // (the dialog editors and the prompts stop; the lane editors' open is
-    // EXEMPT and keeps a live audition playing, their payload commit
-    // stopping it).
+    // (every editor's open stops, the lane editors' included, architect
+    // 2026-11-20, send EE; the dialog editors and the prompts likewise).
     bool modal_dialog_editor_active() const;
 private:
     // The editors' key gate, the sibling of read_only_key_blocked's allowlist

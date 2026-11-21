@@ -132,21 +132,15 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
 // per-frame advance, its launch and its stop (invalidate_scanner_line and
 // invalidate_standing_scanner below). The rect and the lanes it holds are at the
 // declaration (viewport.h); the rows above it are owed a check
-// (damage_window_top_rows). WHILE THE ON-SCREEN KEYBOARD STANDS the rect
-// ends on its top line: the canvas's rows under it are the keyboard's
-// pixels, the waveform not painted there (onscreen_keyboard.h's placement
-// block, send EE, 2026-11-20), so a FOLLOW scroll under the flag editor —
-// the one editor play runs under — repaints no key row on every frame for
-// nothing; the keyboard's hide damages its whole surface, the canvas's foot
-// among it.
+// (damage_window_top_rows). THE AREA WHOLE, the on-screen keyboard standing
+// or not: no play runs under an editor (every editor's open stops it,
+// architect 2026-11-20, send EE; stop_playback_for_modal_open), so no
+// per-frame damage — a FOLLOW scroll, a loop wrap — reaches here while the
+// keyboard covers the area's foot, and a rare one that did would repaint
+// the keyboard's own rows over it, no pixel wrong.
 void Viewport::invalidate_waveform_area() {
     const GuiRect a = waveform_area(app);
-    int y1 = a.y + a.h;
-    if (onscreen_keyboard::stands(app)) {
-        const GuiRect kb = onscreen_keyboard::surface_rect(app);
-        if (kb.h > 0) y1 = std::min(y1, std::max(a.y, kb.y));
-    }
-    damage_window_top_rows(app, gui, y1);
+    damage_window_top_rows(app, gui, a.y + a.h);
 }
 
 // THE WINDOW-TOP RECT, SPLIT AT THE VIEWPORT'S LANES (2026-10-13; the rule
@@ -342,19 +336,12 @@ void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
 // The scanner's old and new rects, united where they touch (the rule and
 // the callers at the declaration, viewport.h; the rect's at
 // scanner_invalidate_rect, main.cpp). Both stand on the area's rows, so
-// they touch exactly when their column intervals overlap or abut. THE
-// ROWS END ON THE ON-SCREEN KEYBOARD'S TOP LINE WHILE IT STANDS: the line is
-// not drawn under it (the canvas's clip, onscreen_keyboard::
-// waveform_paint_area; send EE, 2026-11-20), so a scanner frame under the
-// flag editor repaints none of the keyboard's key rows in its column. The
-// columns stay the area's (the plate basis).
+// they touch exactly when their column intervals overlap or abut. Every
+// caller rides a standing scanner, and none stands while the on-screen
+// keyboard does (every editor's open stops play, architect 2026-11-20, send
+// EE), so the rows are the area's whole.
 void Viewport::invalidate_scanner_line(double old_x, double new_x) {
-    GuiRect area = waveform_area(app);
-    if (onscreen_keyboard::stands(app)) {
-        const GuiRect kb = onscreen_keyboard::surface_rect(app);
-        if (kb.h > 0 && kb.y < area.y + area.h)
-            area.h = std::max(0, kb.y - area.y);
-    }
+    const GuiRect area  = waveform_area(app);
     const GuiRect r_old = scanner_invalidate_rect(area, old_x);
     const GuiRect r_new = scanner_invalidate_rect(area, new_x);
     if (r_old.w > 0 && r_new.w > 0 &&

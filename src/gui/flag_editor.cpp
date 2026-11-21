@@ -128,6 +128,15 @@ void GuiFlagEditor::enter_text_edit(int idx,
         return;
     }
 
+    // THE MODAL-OPEN STOP (architect 2026-11-20, send EE: "play should stop
+    // on editor open. i don't use that workflow and never have";
+    // GuiPlaybackLifecycle::stop_playback_for_modal_open owns the decision
+    // table). Past every guard — the wrapper's and its callers' refusals, the
+    // range test and the re-open on the live session's own target above, so a
+    // refused open and a re-open stop nothing — and ahead of the select and
+    // the land, so the land seats a resting playhead.
+    playback_lifecycle.stop_playback_for_modal_open();
+
     // Target-switching path. Single-select the new editor target so the
     // marker-column outline follows it, and LAND the playhead on it: the marker
     // lane owns the playhead (the rule is stated in full at
@@ -183,14 +192,12 @@ void GuiFlagEditor::enter_text_edit(int idx,
 }
 
 // The flag-editor open route (bare Return — EDIT on glass — with the payload
-// addressed) ends here. NO PLAYBACK STOP, and that is
-// an explicit exemption rather than an omission: the top-strip flag editor
-// is the one modal surface that keeps playing, so a live audition survives
-// the open — and the editing; a commit that changes the marker stops
-// (architect 2026-10-14, commit_top_flag_edit). The decision and its
-// rationale are recorded at
-// GuiPlaybackLifecycle::stop_playback_for_modal_open, the one owner of the
-// modal-open stop the dialog surfaces call.
+// addressed) ends here. THE OPEN STOPS PLAY, as every editor's open does
+// (architect 2026-11-20, send EE: "play should stop on editor open. i don't
+// use that workflow and never have"): the stop is enter_text_edit's, past
+// the guards, through GuiPlaybackLifecycle::stop_playback_for_modal_open, the
+// one owner of the modal-open stop and its decision table, so nothing of the
+// project's plays under the editor and its keyboard.
 //
 // THE SEED IS THE PLAIN COMPOSER'S LINE in every mode (architect 2026-09-05):
 // the same tempo, scale and label the flag paints, and never a bracket. The
@@ -247,6 +254,12 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
         viewport.invalidate_top_strip();
         return;
     }
+
+    // THE MODAL-OPEN STOP, past every guard above (the cell's eligibility,
+    // the tie follower, the re-open on the live session's own cell) and
+    // ahead of the land — the payload editor's open's (enter_text_edit;
+    // architect 2026-11-20, send EE, every editor's open stops play).
+    playback_lifecycle.stop_playback_for_modal_open();
 
     // The focus repaired, then single-selected and landed — the payload
     // editor's open verbatim (its comments carry the why, the select and the
@@ -858,9 +871,11 @@ void GuiFlagEditor::commit_top_flag_edit() {
     // A COMMIT THAT CHANGES THE MARKER IS A MARKER MUTATION AND STOPS (architect
     // 2026-10-14, the keyboard stop rule at stop_playback_if_playing's
     // declaration): past the refusal above and ahead of the write, and only on
-    // a changed commit, so a commit of the text already standing leaves a play
-    // running as the open did (the open's exemption, stop_playback_for_modal_
-    // open's decision table).
+    // a changed commit. The open already stopped play (architect 2026-11-20,
+    // send EE; stop_playback_for_modal_open's decision table) and nothing
+    // starts one under the editor, so this finds nothing to stop; it stays as
+    // the keyboard stop rule's site on the changed write, the shape the label
+    // paste's stop shares (paste_payload_onto_selection).
     if (canonical_changed) playback_lifecycle.stop_playback_if_playing();
     // Capture pre-state for undo BEFORE mutating.
     std::vector<GuiWarpMarker> pre_state = mv_const;

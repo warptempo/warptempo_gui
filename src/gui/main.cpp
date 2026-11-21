@@ -1552,23 +1552,22 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // the row whole and the row yields under it (onscreen_keyboard.h's placement
 // block, the one inventory of what yields; architect 2026-11-20, send EE:
 // the row is inactive while the keyboard stands, so showing it is not
-// helpful), so no clock-moving frame has a pixel to repaint there — under
-// the flag editor during playback, the one editor play runs under, every
-// scanner frame would otherwise repaint the keyboard's own rows over the
-// lane for nothing. A zero rect is no damage (GuiPlatform::invalidate_region
-// drops it), so a road that counts on this damage to produce a frame
-// presents nothing through it while the keyboard stands. Each such road,
-// under the keyboard (architect 2026-11-20, send EE):
-//   * THE TICK'S OFFSCREEN FALLBACK, the one that can run there — play runs
-//     on under the flag editor, and a scanner off the view would otherwise
-//     stop the paint clock — damages the keyboard's top line instead
-//     (onscreen_keyboard::top_line_rect; the fallback's own block);
-//   * THE FAST-STOP KEEP-ALIVE may stand there (a fast Stop, or a play's
-//     natural end within its first second, then the flag editor's open) and
-//     presents nothing: it keeps the panel awake for a scanner's next play,
-//     and no play starts under the keyboard (the bottom icon row's Play
-//     lies under it, its keys go to the editor, and the car's console
-//     admits nothing under an editor, GuiCarTransport::admits);
+// helpful), so no clock-moving frame has a pixel to repaint there. A zero
+// rect is no damage (GuiPlatform::invalidate_region drops it), so a road
+// that counts on this damage to produce a frame presents nothing through it
+// while the keyboard stands. Each such road, under the keyboard (architect
+// 2026-11-20, send EE):
+//   * THE TICK'S OFFSCREEN FALLBACK never runs there: it rides a project
+//     play, and every editor's open stops play
+//     (stop_playback_for_modal_open), so no scanner stands under the
+//     keyboard;
+//   * THE FAST-STOP KEEP-ALIVE may stand there — the editor's own open is a
+//     stop, so EDIT pressed within a second of Play arms it, as does a fast
+//     Stop or a play's natural end within its first second followed by the
+//     open — and presents nothing: it keeps the panel awake for a scanner's
+//     next play, and no play starts under the keyboard (the bottom icon
+//     row's Play lies under it, its keys go to the editor, and the car's
+//     console admits nothing under an editor, GuiCarTransport::admits);
 //   * THE A/B AUDITION'S RESTS never stand there: every editor opens from a
 //     press or a key, and either ends the act first
 //     (GuiInputHandler::end_audition_for_press; Play's own box, its one
@@ -3153,10 +3152,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // 2026-11-20, send EE; onscreen_keyboard.h's placement block):
             // while it stands it covers the bottom icon row whole, whose keys
             // publish empty rects and paint nothing (paint_bottom_strip's
-            // yield), so a drift there — PLAY's glyph at a play's end under
-            // the flag editor, which play runs on under — is no pixel of the
-            // screen's, and the strip fallback would repaint the keyboard's
-            // rows for a key nobody sees. Skipped, its record cleared; the
+            // yield), so a drift there — the whole row going dead at an
+            // editor's open, PLAY's glyph turning back at the play that open
+            // stopped (every editor's open stops play, architect 2026-11-20,
+            // send EE), a render's landing greying or lighting a key — is no
+            // pixel of the screen's, and the strip fallback would repaint
+            // the keyboard's rows for a key nobody sees. Skipped, its record cleared; the
             // keyboard's hide damages its whole surface
             // (onscreen_keyboard::reconcile_slot_standing), the row among it,
             // so the row comes back republished.
@@ -3756,26 +3757,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // nothing, damage the CLOCK CELL instead: it is the honest
             // rect — the clock tracks the SCANNER's time while playing, so
             // it is frozen alongside the line for exactly the same stretch —
-            // and on screen whenever the bottom icon row is, so a paint is
-            // produced. WHILE THE ON-SCREEN KEYBOARD STANDS (play runs on
-            // under the flag editor) the row yields under it and the clock's
-            // rect is empty, so the fallback damages THE KEYBOARD'S TOP LINE
-            // instead (onscreen_keyboard::top_line_rect; architect
-            // 2026-11-20, send EE): always on screen with the keyboard, its
-            // repaint changing no pixel — two flat fills over its rows, one
-            // line of texels uploaded, no canvas row and so no list rebuild —
-            // the frame the GPU composes whole as every frame. Without it an
-            // off-screen scanner would stop the paint clock and the line pop
-            // in late at the next caret blink. Follow is untouched: no
+            // and on screen whenever a project play runs, so a paint is
+            // produced: every surface that covers the bottom icon row, the
+            // on-screen keyboard included, stopped play at its open (every
+            // editor's open stops it, architect 2026-11-20, send EE;
+            // stop_playback_for_modal_open). Follow is untouched: no
             // viewport work is added here, and a following viewport keeps
             // the line onscreen so the fallback simply never fires.
-            if (scanner_invalidate_rect(waveform_area(app), x).w <= 0) {
-                if (onscreen_keyboard::stands(app))
-                    viewport.invalidate_rect(
-                        onscreen_keyboard::top_line_rect(app));
-                else
-                    invalidate_clock_area();
-            }
+            if (scanner_invalidate_rect(waveform_area(app), x).w <= 0)
+                invalidate_clock_area();
             return;
         }
 
