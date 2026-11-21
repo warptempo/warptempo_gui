@@ -231,10 +231,11 @@ namespace folder_overlay {
 
 // -- The geometry ------------------------------------------------------------
 //
-// THE ROW IS THUNAR'S DETAILS ROW AT 9 pt (architect 2026-11-19, send Z,
-// "use tunar", his approval of tmp/sendZ/VIEW/Z_04; send AA's stage D2; the
-// design tmp/sendY/P2_design_overlays.md §B at 12 W text, the mock kit's
-// list_row / group_heading the reference): the panel owns the two row
+// THE ROW IS THUNAR'S DETAILS ROW AT 9 pt, GIVEN AIR (architect 2026-11-19,
+// send Z, "use tunar", his approval of tmp/sendZ/VIEW/Z_04; send AA's stage
+// D2; the design tmp/sendY/P2_design_overlays.md §B at 12 W text, the mock
+// kit's list_row / group_heading the reference; THE TWO HEIGHTS OURS since
+// 2026-11-21, send EE, below): the panel owns the two row
 // heights, the row's face and baseline (row_face, row_baseline_px) and the
 // head pad derived from them (head_pad_px); the row's drawing and its pens
 // stand at the painter's own constants (paint_handler.cpp's THE LIST VIEW,

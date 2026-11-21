@@ -8485,14 +8485,19 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
             // a face of two looks; a lit one is no fading face (its record
             // dropped, so it comes back to rest at once), an unlit one asks
             // its look — Hover where it is the hovered face — and paints its
-            // stored mix, the hover tone's weight over the view's tone.
+            // stored mix, the hover tone's weight over the view's tone. A ROW
+            // AT REST THAT HOLDS NO RECORD is asked nothing and recorded
+            // nothing (AppState::FaceFades' THE LIST ROW'S HOVER: only a row
+            // the pen is on or one still fading holds a record): it paints no
+            // fill, its look at rest.
             if (!inert) {
                 const AppState::FaceFades::Face face{
                     AppState::FaceFades::Surface::ListRow, index,
                     AppState::ModalDialogOwner::None, ov.listing};
                 if (lit) {
                     fades.drop(face);
-                } else {
+                } else if (fades.hovered == face ||
+                           fades.find(face) != nullptr) {
                     const FaceMix m = fades.face_as_painted(
                         face, r_hull,
                         fades.hovered == face ? FaceLook::Hover

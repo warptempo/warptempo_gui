@@ -130,8 +130,8 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // owner).
     // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30 under the
     // strictness ruling, which is why no card composes here): both drop roads
-    // author AT the playhead — the `s` key through
-    // drop_copy_previous_at_playhead and the empty-lane double-click through
+    // author AT the playhead — the `s` key (the Drop key on glass) through
+    // drop_copy_previous_at_playhead and the empty-lane double tap through
     // the same body — and the playhead rests in [0, total-1] by every writer's
     // own clamp, warp's SOURCE home making that conversion the identity. So
     // the wall is a structural belt, not a refusal a press can meet; an error
@@ -141,7 +141,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // A DROP IS A MARKER MUTATION AND STOPS (architect 2026-10-14, the keyboard
     // stop rule at stop_playback_if_playing's declaration): past both refusals
     // above and ahead of the insert, so a refused drop leaves a play running.
-    // Every drop road (bare `s`, the Drop button, the empty-lane double-click)
+    // Every drop road (bare `s`, the Drop key, the empty-lane double tap)
     // reaches this body.
     playback_lifecycle.stop_playback_if_playing();
     // THE DROP SPENDS THE SELECTION POSTURE (architect 2026-11-11, "single
@@ -150,7 +150,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // accepted path alone — past this body's two silent returns and its one
     // caller's carded refusals (drop_copy_previous_at_playhead: the occupied
     // frame, the painted edge), ahead of the insert — so every road into the
-    // warp drop (bare `s`, the Drop key, the empty-lane double-click) meets
+    // warp drop (bare `s`, the Drop key, the empty-lane double tap) meets
     // it exactly once and a refused drop leaves the lamp lit. The class and
     // its inventory are at selection_consumed (app_state.h).
     selection_consumed(app);
@@ -163,8 +163,8 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // NO DEVIATION CHAIN ON A NEW MARKER (architect approval 2026-09-18), and
     // it is the DEFAULT here rather than a clear: `tempo_cents` is the
     // RESOLVED TOTAL on every road into this body — bare `s` copying the
-    // previous owner's value (drop_copy_previous_at_playhead), the empty-lane
-    // double-click — so a drop writes that total as a PLAIN BASE. The chain
+    // previous owner's value (drop_copy_previous_at_playhead), the Drop key
+    // and the empty-lane double tap — so a drop writes that total as a PLAIN BASE. The chain
     // is the history of the decisions made on the marker the value came from,
     // and it stays with that marker.
     // Snapshot pre-mutation state for undo. Captured after the wall check
@@ -192,8 +192,8 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     viewport.invalidate_waveform_area();
 
     // Re-affirm the playhead on the just-dropped marker. The drop is authored
-    // AT the playhead (drop_copy_previous_at_playhead — the `s` command and the
-    // empty-lane double-click) in warp's
+    // AT the playhead (drop_copy_previous_at_playhead — the `s` command, the
+    // Drop key and the empty-lane double tap) in warp's
     // SOURCE home view (the home-view binding, architect 2026-07-22), where
     // source_frame_to_active_domain is identity, so this is a no-op
     // reaffirmation — the marker is created under the playhead and the playhead
@@ -212,7 +212,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // PAST EVERY REFUSAL by
     // construction, which still matters because the seat is a movement: the
     // callers' gates (read-only, active_column_authoring_allowed, the
-    // double-click's own in-area test) return before calling at all, and this
+    // double tap's own in-area test) return before calling at all, and this
     // function's own two refusals — no sample rate, and a drop_frame past the
     // EOF wall — return above, before the insert. So a refused drop reaches
     // neither the insert nor the seat.
@@ -273,8 +273,8 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // app_state.h; the test's owner warp_marker_in_vicinity_of,
 // warp_frame_map_view.h, over warp_frames_coincide), the
 // drop returns kMarkerDropOccupiedCard for its dispatcher to raise, ahead of
-// any write. Asked here, in the body, so both roads into the warp drop meet
-// it (bare `s` and the empty-lane double-click). So the copy-previous walk
+// any write. Asked here, in the body, so every road into the warp drop meets
+// it (bare `s`, the Drop key and the empty-lane double tap). So the copy-previous walk
 // below never runs for a frame a marker holds: find_immediate_prior looks
 // strictly before a frame that is free.
 //

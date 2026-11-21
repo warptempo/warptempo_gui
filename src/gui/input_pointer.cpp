@@ -185,8 +185,9 @@ constexpr ToolbarChord kToolbarChords[] = {
     // road — stood in the bottom row's verb group from 2026-08-27 and in the
     // icon row for the evening of 2026-09-29, when the architect DELETED it:
     // tapping a flag and then moving the pen to a button is counterintuitive
-    // when a double tap on the flag does it, and the double-click is safe since
-    // the first click arms and waits and the grab gate doubled. It came back as
+    // when a double tap on the flag does it, and the double tap is safe: its
+    // first tap acts at once and arms only a drag that waits for the doubled
+    // grab gate. It came back as
     // row 8's EDIT, 2026-10-09; the editor's two pointer roads are tap then
     // EDIT and the double tap on the flag, architect 2026-11-21.)
     // Row 4 — the icon row. (The view axes' buttons are the two radio pairs
@@ -717,9 +718,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     // does not repeat, as the walk does not.
     {RedesignButton::TransportWalkPrevious,
      GuiKeys::Tab,    false, true,  false},                             // Shift+Tab
-    // The declined double-click
-    // rule's mechanical reason is recorded at the roster entry (every
-    // double-click surface in this product acts on its FIRST click too).
     // WALK BOTH TABS was a member on Ctrl+Shift+Tab until the architect
     // deleted it on 2026-09-14: the march is Switch Tab's shifted press
     // (below).
@@ -3359,6 +3357,19 @@ static bool double_tap_at(const DoubleClickCandidate& dc,
                double_click_slack_px();
 }
 
+// DOES A MARKER CELL CARRY A DOUBLE-TAP ACT ON THE ACTIVE COLUMN — NO DOUBLE
+// TAP WHERE THERE IS NO DOUBLE-TAP ACT (architect 2026-11-21, send EE; the
+// family at DoubleClickSurface, app_state.h): every cell does but A PHASE
+// RESET'S PAYLOAD, which authors no line and has no editor (EDIT's own
+// fork), so a pair of taps there is two plain taps — the second selects,
+// lands and arms the pending drag like any press. Asked at both ends of the
+// marker's double tap: the motionless release seeds nothing on such a cell
+// and the consume pairs nothing there, so nothing a press seeds on it can be
+// consumed later.
+static bool marker_cell_double_taps(const AppState& a, MarkerCell cell) {
+    return cell != MarkerCell::Payload || a.active_markers_view == 'W';
+}
+
 // THE PLAIN MARKER SELECT — the plain click's act, factored out of
 // run_marker_click_act (architect 2026-09-14); it arms no PendingMarkerPress
 // and seeds or consumes no double-click (its caller does). Its clauses are the
@@ -3453,8 +3464,8 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
     // (hit_test_flag_cell; the MarkerCell block at PendingMarkerPress,
     // app_state.h), asked ONCE for the press's THREE readers: the toggle
     // press's own surface test just below, the addressed cell written under
-    // the selection fork and the double-click seed the plain arm stamps at
-    // the tail. It is a pure geometry read, which is what lets it stand ahead
+    // the selection fork and the pending press the plain arm arms at the
+    // tail (the value drag's subject and the double-tap seed). It is a pure geometry read, which is what lets it stand ahead
     // of the stop.
     const MarkerCell cell = hit_test_flag_cell(app, audio, at.rx, at.ry);
     // ADD TO SELECTION IS THE TOGGLE ARM'S SECOND PRODUCER (architect
@@ -3548,12 +3559,22 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
     // (stop_playback_for_modal_open, inside the opens; architect 2026-11-20,
     // send EE, "play should stop on editor open"), the cell editor on the
     // lane's line box, the on-screen keyboard over the page's foot. THE
-    // GATES ARE READ LIVE AT THIS PRESS: read-only and the P view's payload
-    // (phase resets have no per-flag editor) refuse SILENTLY — the gesture
+    // GATES ARE READ LIVE AT THIS PRESS and refuse SILENTLY — the gesture
     // class's own answer, the one place this road parts from EDIT, whose
     // refusals card (the lock at the key gate, the subject at the arm) —
     // and a refused consume is still the double tap's second press, so it
-    // arms nothing either (below). THE OFF-HOME COLUMN DOES NOT REFUSE
+    // arms nothing either (below). THE SILENT REFUSALS, re-checked
+    // 2026-11-21, each refuse the drag the second press would otherwise arm
+    // too (the crossing's own gates, on_motion), so the consume costs no
+    // gesture: READ-ONLY, a locked tab, on any cell (authoring_locked
+    // refuses the horizontal drag and the payload's value drag, the tab's
+    // read-only bit a bound cell's); THE ITERATION LOCK on the W payload
+    // (authoring_locked, both drags); A TIE FOLLOWER'S bound cell, the
+    // open's own belt (value_drag_target refuses its value drag,
+    // authoring_locked the horizontal drag under the lit mode). THE P
+    // COLUMN'S PAYLOAD IS NO DOUBLE-TAP CELL AT ALL (marker_cell_double_taps:
+    // no editor, and its horizontal drag, S+P and T+P with iterations dark,
+    // acts), so a second press there is an ordinary press. THE OFF-HOME COLUMN DOES NOT REFUSE
     // (architect 2026-08-24): the payload editor edits a marker's VALUES and
     // never its position, so it is a member of the fifth ruled exception to
     // the home-view binding and opens in W+target too (the inventory is at
@@ -3570,14 +3591,20 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
     // (MarkerCell): the flag box opens the payload editor, a bound cell its
     // bound editor, and a pair straddling a seam opens the one the first tap
     // named. The gates differ with them: the PAYLOAD editor keeps the LOCK
-    // and the P view, the BOUND editor read-only and the cell's own
+    // (the W column's alone), the BOUND editor read-only and the cell's own
     // eligibility (a cell that paints is eligible, and the open is a belt
     // behind that, the tie follower's included) on EITHER column; a
     // phase-reset bound cell's double tap authors a session-only render
     // parameter rather than content. Every open route opens fully SELECTED
     // (open-selected), so there is no tapped-glyph caret to seat.
+    // THE EDITOR OPENS ON THE FIRST TAP'S CELL AND ADDRESSES IT: both opens
+    // write the addressed cell themselves past their guards (the payload's
+    // select seats it on the payload, Selection::seat_focus; the bound
+    // editor writes its side), so after a pair straddling a seam the axis is
+    // the cell the editor opened on, not the second press's.
     const bool double_click =
         dc_at_press.target == hit &&
+        marker_cell_double_taps(app, dc_at_press.cell) &&
         double_tap_at(dc_at_press, DoubleClickSurface::Marker, at);
     if (double_click &&
         // THE LOCK, WITH THE BOUND CELLS CARVED OUT (architect 2026-09-10).
@@ -3596,14 +3623,12 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
         switch (dc_at_press.cell) {
         case MarkerCell::Payload:
             // THE PAYLOAD AXIS OPENS THE WARP column's canonical-line editor.
-            // A phase reset authors no payload line at all, so the P column
-            // opens nothing, silent — and arms nothing, the double tap's
-            // return below. (The bare-Return arm makes the same fork.)
-            if (app.active_markers_view == 'W') {
-                flag_editor.enter_top_flag_edit(hit);
-                return;
-            }
-            break;
+            // A phase reset authors no payload line at all, so the P
+            // column's payload is no double-tap cell (marker_cell_double_taps,
+            // asked above): a Payload seed is the W column's here. (The
+            // bare-Return arm makes the same fork, carding.)
+            flag_editor.enter_top_flag_edit(hit);
+            return;
         case MarkerCell::Lower:
         case MarkerCell::Upper:
             // A bound cell paints on EITHER column's eligible markers under
@@ -4001,7 +4026,9 @@ void GuiInputHandler::folder_overlay_open_row(int index) {
         case AppState::FolderOverlay::Owner::None:
             return;
         case AppState::FolderOverlay::Owner::Player:
-            render_player.open_row(index);
+            // The row's tap: its play leaves the scroll where the tap found
+            // it (GuiRenderPlayer::play_wav's band seat).
+            render_player.open_row(index, /*tapped=*/true);
             return;
         case AppState::FolderOverlay::Owner::ProjectPicker:
             open_project_commit(index);
@@ -6003,7 +6030,7 @@ void GuiInputHandler::arm_nav_press(const GuiPointerPlace& at, bool history,
 // lane left the navigation surface) — the same pending, the click act and the
 // seed unchanged; a crossed press is the no-op every pending's crossing is
 // (architect 2026-10-30, on_motion's branch), so a lane's only drag is the
-// head drag. FOUR CALLERS, by grep 2026-10-30: the live router's ruler band
+// head drag. FOUR CALLERS, by grep 2026-11-21: the live router's ruler band
 // and its empty marker-lane stretch (the one that seeds), and the `h` view's
 // router's ruler and empty lane stretch. `head_drag` (architect 2026-10-09
 // ~17:40) is the two ruler bands' alone, true where the plain press landed on
@@ -6530,6 +6557,9 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
         // moved-drag rule.)
         const PendingMarkerPress press = app.pending_marker_press;
         app.pending_marker_press = PendingMarkerPress{};
+        // A CELL WITH NO DOUBLE-TAP ACT SEEDS NOTHING (marker_cell_double_taps:
+        // the P column's payload), so the next press there is a plain one.
+        if (!marker_cell_double_taps(app, press.cell)) return;
         // THE CELL IS THE PRESS'S TOO, for the position's own reason: the seed
         // describes the press, and the box may be repainted at a different
         // width before the second click arrives.
@@ -7373,6 +7403,12 @@ void GuiInputHandler::set_hover_face(const AppState::FaceFades::Face& face) {
     };
     if (!left.none() && hover_face_live(left))
         turn(left, FaceLook::Hover, FaceLook::Rest);
+    // A LIST ROW AT REST HOLDS NO RECORD (AppState::FaceFades' THE LIST
+    // ROW'S HOVER): the row the pen reached is seated at rest on its box as
+    // painted (the painter's own walk, folder_overlay::row_rect's hull), so
+    // the turn below starts its fade and the clock's step damages it.
+    if (face.surface == FaceFades::Surface::ListRow)
+        h.seat_at_rest(face, hull(folder_overlay::row_rect(app, face.index)));
     if (!face.none()) turn(face, FaceLook::Rest, FaceLook::Hover);
     if (!left.none()) retarget_seams_beside(left, now);
     if (!face.none()) retarget_seams_beside(face, now);
@@ -7705,10 +7741,15 @@ void GuiInputHandler::settle_trim_bar_hover() {
 // 2026-11-21, send EE) — so
 // whatever replaces them, or the key when it comes back, paints its looks at
 // once (AppState::FaceFades' WHAT DOES NOT FADE); nothing is damaged, the
-// surface that replaced them having been repainted. THE HOVERED SLOT GOES where no press would act on its face (it
+// surface that replaced them having been repainted. A LIST ROW'S RECORD
+// THAT HAS LANDED AT REST and is not the hovered face goes too (a resting
+// row holds no record, THE LIST ROW'S HOVER), so the rows' records are the
+// hovered row's and the few still fading out, never the list's. THE HOVERED SLOT GOES where no press would act on its face (it
 // went lit or disabled, a veil rose, its surface left), so the next walk
-// re-answers; its record is its painter's to retarget. And the trim bar's
-// hovered part, on its own rule.
+// re-answers; its record is its painter's to retarget — AND WHERE THE
+// HOVERED LIST ROW'S BOX MOVED and the pen is on another row now (the
+// ListRow arm below), with no retarget, its record gone with the move. And
+// the trim bar's hovered part, on its own rule.
 void GuiInputHandler::settle_face_fades() {
     using FaceFades = AppState::FaceFades;
     using Surface   = FaceFades::Surface;
@@ -7725,15 +7766,36 @@ void GuiInputHandler::settle_face_fades() {
                 case Surface::ListRow: {
                     // A LIST ROW'S (AppState::FaceFades' THE LIST ROW'S
                     // HOVER): gone with its list — not standing, hidden
-                    // under a page, or another listing — or off the box it
-                    // was painted on (a scroll moved it).
+                    // under a page, or another listing — AT REST (landed
+                    // there and not the hovered face: a resting row holds no
+                    // record, so a standing list costs the clock nothing),
+                    // or off the box it was painted on (a scroll moved it).
                     const AppState::FolderOverlay& ov = app.folder_overlay;
                     if (!list_painted || r.face.dialog_session != ov.listing ||
                         r.face.index < 0 ||
                         r.face.index >= static_cast<int>(ov.rows.size()))
                         return true;
-                    return !(hull(folder_overlay::row_rect(
-                                 app, r.face.index)) == r.box);
+                    if (!r.fading && r.target == FaceLook::Rest &&
+                        !(r.face == h.hovered))
+                        return true;
+                    if (hull(folder_overlay::row_rect(app, r.face.index)) ==
+                        r.box)
+                        return false;
+                    // THE HOVERED ROW MOVED UNDER A RESTING PEN (a scroll no
+                    // pointer made: the render player's item change, the
+                    // car's step): where the pen is on another row now, the
+                    // hover goes with the record, no retarget — the row
+                    // paints at rest at its new place and the next walk
+                    // lights the row under the pen; where it is still on
+                    // this row, the row keeps the hover, its look at once on
+                    // its new box.
+                    if (r.face == h.hovered) {
+                        const GuiPointerPlace at = app.last_mouse_place();
+                        if (folder_overlay::row_at(app, at.rx, at.ry) !=
+                            r.face.index)
+                            h.hovered = FaceFades::Face{};
+                    }
+                    return true;
                 }
                 case Surface::Keyboard:
                     return !kb_stands ||

@@ -356,7 +356,7 @@ void GuiRenderPlayer::delete_batch_folders(
     if (app.folder_overlay.rows.empty()) close();
 }
 
-void GuiRenderPlayer::open_row(int index) {
+void GuiRenderPlayer::open_row(int index, bool tapped) {
     const AppState::FolderOverlay& ov = app.folder_overlay;
     if (index < 0 || index >= static_cast<int>(ov.rows.size())) return;
     // The row is copied: the act below rebuilds the listing under it.
@@ -380,7 +380,7 @@ void GuiRenderPlayer::open_row(int index) {
             for (size_t i = 0; i < wavs.size(); ++i) {
                 if (wavs[i].path == row.path) { wi = static_cast<int>(i); break; }
             }
-            play_wav(row.path, wavs, wi);
+            play_wav(row.path, wavs, wi, tapped);
             return;
         }
         case Row::Kind::Plain:
@@ -659,7 +659,7 @@ int64_t GuiRenderPlayer::scrub_frame_at(double x) const {
 
 bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
                                const std::vector<Row>& folder_wavs,
-                               int index) {
+                               int index, bool tapped) {
     AppState::RenderPlayer& rp = app.render_player;
 
     // THE DECODE VOCABULARY: probe, the rate/channel equality against the
@@ -800,19 +800,22 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // row. The listing is walked rather than asked for a row index because
     // item_index names the ITEM FOLDER's wav list, which is not this listing
     // when the two differ.
-    // A BAND ALREADY ON THE ITEM'S ROW IS LEFT WHERE IT STANDS, its scroll
-    // untouched: that is the user's own play — the row's tap, whose seat
-    // scrolled nothing (folder_overlay::seat_tapped_row: THE PRESS NEVER
-    // SCROLLS, architect 2026-11-21, send EE), or Play on the highlighted
-    // row — and a keep-visible scroll here would move the list under the
-    // pen after the tap. Only a band the transport moves (Next, Previous,
-    // the folder's ends, the auto-advance) is brought into view.
-    if (item_changed) {
+    // THE ROW'S TAP IS THE ONE PLAY THAT SCROLLS NOTHING (`tapped`, passed
+    // down from the row's lift through open_row; THE PRESS NEVER SCROLLS,
+    // architect 2026-11-21, send EE — the ruling bans a scroll at a row's tap
+    // and nowhere else): that lift has already seated the highlight on the
+    // tapped row with the scroll untouched (folder_overlay::seat_tapped_row,
+    // the row under the pen, partly cut or whole as the user left it), and a
+    // keep-visible scroll here would move the list under the pen after the
+    // tap. EVERY OTHER PLAY KEEPS THE KEEP-VISIBLE SEAT (set_highlight): Play
+    // on the controls row (the highlighted row perhaps dragged out of view),
+    // the transport's Next / Previous, the folder's ends, the auto-advance
+    // and the car's console bring the playing item's row into view.
+    if (item_changed && !tapped) {
         for (size_t i = 0; i < app.folder_overlay.rows.size(); ++i) {
             const Row& r = app.folder_overlay.rows[i];
             if (r.kind == Row::Kind::Wav && r.path == rp.item) {
-                if (app.folder_overlay.highlight_row != static_cast<int>(i))
-                    folder_overlay::set_highlight(app, static_cast<int>(i));
+                folder_overlay::set_highlight(app, static_cast<int>(i));
                 break;
             }
         }
@@ -853,7 +856,7 @@ void GuiRenderPlayer::play_button_act() {
     // standing, the tap restarts it from 0 and Play toggles it — everywhere
     // else the two agree exactly.
     if (const int row = render_player_highlight_act_row(app); row >= 0) {
-        open_row(row);
+        open_row(row, /*tapped=*/false);
         return;
     }
     transport_toggle_act();
@@ -1035,14 +1038,15 @@ void GuiRenderPlayer::play_live_from(int64_t from) {
 void GuiRenderPlayer::first_in_item_folder() {
     if (!render_player_first_in_item_folder_actionable(app)) return;
     const std::vector<Row> folder = app.render_player.item_folder;
-    play_wav(folder.front().path, folder, 0);
+    play_wav(folder.front().path, folder, 0, /*tapped=*/false);
 }
 
 void GuiRenderPlayer::last_in_item_folder() {
     if (!render_player_last_in_item_folder_actionable(app)) return;
     const std::vector<Row> folder = app.render_player.item_folder;
     const int last = static_cast<int>(folder.size()) - 1;
-    play_wav(folder[static_cast<size_t>(last)].path, folder, last);
+    play_wav(folder[static_cast<size_t>(last)].path, folder, last,
+             /*tapped=*/false);
 }
 
 void GuiRenderPlayer::seek_by(int64_t delta_frames) {
@@ -1170,7 +1174,8 @@ void GuiRenderPlayer::home() {
         const AppState::RenderPlayer& rp = app.render_player;
         const std::vector<Row> folder = rp.item_folder;
         const int i = rp.item_index - 1;
-        play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+        play_wav(folder[static_cast<size_t>(i)].path, folder, i,
+                 /*tapped=*/false);
         return;
     }
     seek_to(0);
@@ -1278,7 +1283,8 @@ bool GuiRenderPlayer::advance_to_next_in_item_folder() {
     const AppState::RenderPlayer& rp = app.render_player;
     const std::vector<Row> folder = rp.item_folder;
     const int i = rp.item_index + 1;
-    return play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+    return play_wav(folder[static_cast<size_t>(i)].path, folder, i,
+                    /*tapped=*/false);
 }
 
 void GuiRenderPlayer::on_natural_end() {
@@ -1321,7 +1327,8 @@ void GuiRenderPlayer::on_natural_end() {
         const std::vector<Row> folder = rp.item_folder;
         const int i = rp.item_index;
         const bool replayed =
-            play_wav(folder[static_cast<size_t>(i)].path, folder, i);
+            play_wav(folder[static_cast<size_t>(i)].path, folder, i,
+                     /*tapped=*/false);
         if (!replayed) {
             // The lamp's arm is terminal: nothing follows this return, and the
             // transport is left paused at the end of an item that will not

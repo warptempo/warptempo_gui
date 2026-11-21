@@ -3306,8 +3306,8 @@ inline int level_travel_px() {
 // hit_test_flag_cell's walk (Upper first, then Lower, else Payload)
 // can never answer a cell that has no pixels. EVERY PRODUCER SETS BOTH (the flag pass, the editor's riding run and the `h`
 // view's diff flags). ONE READER, hit_test_flag_cell (app_state.cpp),
-// whose MarkerCell answer the marker press reads for the addressed cell and
-// the double-click seed.
+// whose MarkerCell answer the marker press reads for the addressed cell, the
+// value drag's subject and the double-tap seed.
 //
 // TWO PRODUCERS SINCE 2026-09-05, and the second is why this shape is a struct
 // rather than a lane-pass local: the flag pass emits one of these per painted

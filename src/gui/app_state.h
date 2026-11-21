@@ -1653,9 +1653,16 @@ enum class DoubleClickSurface {
 // NOTHING: no pending of any kind (marker press, trim drag, the trim bar's
 // long-press record, placement press, click act) and no gesture, so its
 // release is inert and nothing freezes the displayed basis. A recognized
-// second press whose act REFUSES (a locked tab, the P column's payload, the
-// create's home-view gate) arms nothing either — it is still the second press
-// of a double tap. THE INVENTORY, re-grepped 2026-11-21 — every consume of a
+// second press whose act REFUSES (a locked tab, the iteration lock on the
+// flag box, a tie follower's bound cell, the create's home-view gate) arms
+// nothing either — it is still the second press of a double tap; each such
+// refusal refuses the drag that press would otherwise arm too, so the
+// consume costs no gesture (run_marker_click_act's THE SILENT REFUSALS; the
+// lane arms no drag at all). NO DOUBLE TAP WHERE THERE IS NO DOUBLE-TAP ACT
+// (architect 2026-11-21, send EE): A PHASE RESET'S FLAG BOX — no editor, and
+// a drag there acts — is no double-tap cell, seeding and consuming nothing
+// (marker_cell_double_taps, input_pointer.cpp), so two taps there are two
+// plain taps. THE INVENTORY, re-grepped 2026-11-21 — every consume of a
 // candidate, all in input_pointer.cpp through the one test double_tap_at and
 // all reached through on_button_press, which the touch translation drives
 // with the same deliveries, so glass keeps the rule with no touch-side code:
@@ -1694,9 +1701,10 @@ enum class DoubleClickSurface {
 //                 EDIT's own two opens, so it takes every editor open's stop
 //                 (stop_playback_for_modal_open); its gates are read live
 //                 and refuse SILENTLY (read-only; the iteration lock on the
-//                 payload; the P column's payload; the tie follower's cell,
-//                 the open's own belt), the gesture class's answer where EDIT
-//                 cards. The SEED stays a release act: the motionless lift
+//                 payload; the tie follower's cell, the open's own belt),
+//                 the gesture class's answer where EDIT cards. THE P
+//                 COLUMN'S PAYLOAD is no double-tap cell: its lift seeds
+//                 nothing and a pair there is two plain taps. The SEED stays a release act: the motionless lift
 //                 (a pending that never crossed the GRAB gate) writes the
 //                 next candidate at the PRESS's place, with the press's cell,
 //                 so the pairing stays press-to-press and a pair straddling a
@@ -1970,8 +1978,8 @@ enum class RedesignButton {
     // 2026-08-27 and after Render in this row for the evening of 2026-09-29,
     // when the architect DELETED it: tapping a flag and then moving the pen to
     // a button is counterintuitive when a double tap on the flag does it, and
-    // the double-click is safe since the first click arms and waits and the
-    // grab gate doubled. It came back as row 8's EDIT, 2026-10-09,
+    // the double tap is safe: its first tap acts at once and arms only a drag
+    // that waits for the doubled grab gate. It came back as row 8's EDIT, 2026-10-09,
     // IconOpenTextEditor, beside the flag's double tap.)
     // (THE SHOW TRIM REGION BUTTON led the zoom group here from 2026-08-16
     // until the architect deleted it whole on 2026-09-22 with its bare `[`
@@ -3005,14 +3013,6 @@ enum class RedesignButton {
     // (WALK BOTH TABS, the group's third button on Ctrl+Shift+Tab, stood here
     // from 2026-08-15 to 2026-09-14, when the architect DELETED it under the
     // shift-admission rule: the march is Switch Tab's hold.)
-    //
-    // A DOUBLE-CLICK-MEANS-CTRL+SHIFT RULE WAS CONSIDERED AND DECLINED, and
-    // the reason is mechanical rather than a preference: EVERY double-click
-    // surface in this product acts on its FIRST click too, so a double-click
-    // on the walk would step one marker AND THEN walk both tabs, landing the
-    // user somewhere he did not ask to be. Making the first click not fire
-    // would mean delaying EVERY single click by the double-click window, which
-    // is exactly what the act-at-lift work exists to avoid.
     //
     // The `h` view's DERIVED partition needs no hand entry for it: its bare
     // chord is the mode's own vocabulary in there (history_mode_owns_key), so
@@ -7443,10 +7443,23 @@ struct AppState {
     // THE LIT ROW — the highlight, a row under press — IS NO FADING FACE:
     // it wears the selection pair at once, its record dropped by its
     // painter, so it comes back to rest at once too (the list's press and
-    // highlight have no transition of their own here). WHAT DOES NOT FADE
+    // highlight have no transition of their own here). A ROW AT REST HOLDS
+    // NO RECORD (the lighter road a list's many rows take, so a standing
+    // list costs the clock and the settle nothing however long it is): its
+    // painter asks no look of a row that is neither the hovered face nor
+    // recorded and paints it at rest; the hover's setter seats the row the
+    // pen reaches at rest on its box as painted (seat_at_rest) and turns it
+    // toward the hover, the clock's step its damage; the settle drops a row's
+    // record once it has landed at rest and is not the hovered face. So the
+    // rows' records are the hovered row's and those still fading out, a few
+    // at most. WHAT DOES NOT FADE
     // FOR A ROW: a row first shown (no record); A ROW AFTER A SCROLL — its
     // box moved, so the settle drops its record and its next paint is its
-    // look at once; A ROW OF ANOTHER LISTING — every rebuild of the rows is
+    // look at once — THE HOVERED ROW INCLUDED: where a scroll no pointer made
+    // (the render player's item change, the car's step) moves it from under
+    // a resting pen, the settle clears the hover with its record, so the row
+    // paints at rest at its new place and the next walk lights the row the
+    // pen is on (a row the pen is still on keeps the hover); A ROW OF ANOTHER LISTING — every rebuild of the rows is
     // a new listing (FolderOverlay::listing), and the settle drops every row
     // record whose listing is not the standing one, or once the list stands
     // no more or is hidden; every row after a relayout or a theme change
@@ -7456,7 +7469,8 @@ struct AppState {
     // THE FRAMES — NOTHING IS DAMAGED AT REST: while a face fades, every step
     // of the clock that moves its stored mix damages THAT FACE'S OWN PAINTED
     // EXTENT (face_extent: a roster key's painted box, a dialog button's box,
-    // a keyboard key's face, the knob's disc — a linked key's box holds both
+    // a keyboard key's face, the knob's disc, a list row's box cut to the
+    // view — a linked key's box holds both
     // its seam columns, materials.h's paint_linked_group), and a seam's step
     // its own columns (seam_extent, inside each neighbor's extent), which
     // invites a frame on every beat (platform_android.cpp's kFrameBeat) until
@@ -7473,8 +7487,8 @@ struct AppState {
     // THE BOUND: `records` is reserved kCapacity at construction and never
     // grows past it — every roster key, the largest keyboard page's keys,
     // every dialog button and the knob, a seam each beside a linked key, and
-    // the rows one list view shows (a scrolled-away row's record dropped by
-    // the settle), are a few hundred at most — so the clock and the painters allocate
+    // the few list rows that hover or fade (a resting row holds none), are a
+    // few hundred at most — so the clock and the painters allocate
     // nothing per tick or frame; a face past the bound paints its look at
     // once.
     struct FaceFades {
@@ -7700,6 +7714,20 @@ struct AppState {
         void drop(const Face& face) {
             std::erase_if(records,
                           [&](const Record& r) { return r.face == face; });
+        }
+        // A RESTING LIST ROW'S RECORD SEATED FOR THE INPUT'S RETARGET (the
+        // head's THE LIST ROW'S HOVER: a row at rest holds no record, so the
+        // hover's setter seats one at rest on the row's box as painted before
+        // turning it toward the hover, and the clock's step then damages
+        // it). A face already recorded keeps its record; past the bound none
+        // is seated (the face paints its look at once).
+        void seat_at_rest(const Face& face, const GuiRect& box) {
+            if (find(face) != nullptr || records.size() >= kCapacity) return;
+            records.push_back(Record{.face   = face,
+                                     .box    = box,
+                                     .target = FaceLook::Rest,
+                                     .from   = FaceMix::of(FaceLook::Rest),
+                                     .mix    = FaceMix::of(FaceLook::Rest)});
         }
     };
     FaceFades face_fades;
@@ -20017,8 +20045,10 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // published boundaries compared against mouse_x, nothing more. ITS ONE
 // CONSUMER (re-derived 2026-10-30): THE
 // MARKER PRESS (run_marker_click_act) writes the addressed cell from the
-// answer, stamps it onto the double-click seed so each cell can open its own
-// editor, and asks it for the sticky ctrl's own box test (the MarkerCell
+// answer (the cell EDIT opens), carries it on the pending press as the value
+// drag's subject and to the double-tap seed its motionless release writes,
+// so each cell can open its own editor, and asks it for the sticky ctrl's
+// own box test (the MarkerCell
 // block at PendingMarkerPress states the whole rule). It answers Payload for a point
 // that hits no flag at all, which is the harmless answer: a caller with no
 // hit has nothing to fork. Same backward walk, same topmost-wins arbitration

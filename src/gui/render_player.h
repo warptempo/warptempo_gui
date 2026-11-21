@@ -166,7 +166,11 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // LISTING, and stays where it is when the user has navigated elsewhere. Its
 // one owner is play_wav, which is the one place the item changes, so the rule
 // covers the user's own plays for free (the row is already the highlight
-// there) and needs no membership list. A USER'S OWN HIGHLIGHT MOVES ARE
+// there; Play on the controls row brings it into view if it was dragged out)
+// and needs no membership list — BUT THE ROW'S TAP, whose lift has already
+// seated the band on the tapped row and whose play seats nothing and scrolls
+// nothing (THE PRESS NEVER SCROLLS, architect 2026-11-21, send EE; play_wav's
+// `tapped`). A USER'S OWN HIGHLIGHT MOVES ARE
 // UNTOUCHED — nothing here fights the band back onto the item, which is why
 // THE SEAT IS GATED ON THE CHANGE and not run at every call: the REPEAT ONE
 // replay re-enters play_wav on the item already resting there at every
@@ -386,8 +390,10 @@ struct GuiRenderPlayer {
     // producers (re-grepped 2026-10-30) are the row tap's motionless lift,
     // through the overlay's one row-act fork (folder_overlay_open_row), and
     // the Play button's two row arms (play_button_act, below; the car's
-    // toggle reaching them past its LIVE arm).
-    void open_row(int index);
+    // toggle reaching them past its LIVE arm). `tapped` says which: true
+    // from the row's tap alone, whose play leaves the list's scroll where the
+    // tap found it (play_wav's band seat).
+    void open_row(int index, bool tapped);
     // One folder up — THE MODAL ROW'S UP BUTTON since the `..` row retired
     // (2026-09-01), and THE CAR'S OWN PREVIOUS in both of its arms:
     // car_previous() composes this body at the band's first row AT REST and
@@ -909,11 +915,13 @@ private:
                const std::filesystem::path& seat_folder);
     // Decode `path` under the vocabulary above; on success bind it as the
     // item and play it from its start. `folder_wavs` / `index` name the
-    // item's folder list and its place in it. Returns whether it played; a
-    // refusal has raised its card and changed nothing.
+    // item's folder list and its place in it. `tapped` is true on the row
+    // tap's own play alone (open_row's), which seats no band and scrolls
+    // nothing; every other play brings the item's row into view. Returns
+    // whether it played; a refusal has raised its card and changed nothing.
     bool play_wav(const std::filesystem::path& path,
                   const std::vector<AppState::FolderOverlayRow>& folder_wavs,
-                  int index);
+                  int index, bool tapped);
     // THE FOLDER'S FORWARD STEP, one body for its three callers (2026-09-04):
     // the natural end's auto-advance below, the deliberate next_track above
     // and resume()'s end rule (the PLAY key at the end). The next wav of the item's folder as listed, played from its
