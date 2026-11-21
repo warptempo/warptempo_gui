@@ -1029,8 +1029,8 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // grammar owner (parse_osk_key_size, device_config.h), APPLIED LIVE AT THE
     // COMMIT — the live struct, then the one live act
     // (GuiInputHandler::apply_osk_key_size: the renderer's seat and the window
-    // re-laid-out at once, the band's height moving the modal stack that stands
-    // on it) — and persisted, so NO CARD: the keyboard standing under this very
+    // repainted at once, the box moving the keyboard's surface alone, which
+    // moves no lane) — and persisted, so NO CARD: the keyboard standing under this very
     // editor is the answer. The page opens the line editor on each (no value
     // list, 137 values no short domain); Tab on an empty entry recalls the
     // writer's spelling (recall_gui_setting_value).

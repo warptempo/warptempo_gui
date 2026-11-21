@@ -167,7 +167,7 @@ namespace {
 // LINE (lane_foot_line_h_px(), one hairline), whose bottom edge is the
 // waveform top. EVERY LANE rides the gui_scale axis, its lines one W rounded
 // at the element (render.h's line rule). The BOTTOM strip is THREE LANES,
-// from the app's foot inward (app_foot_y below): THE STATUS BAR (status_bar_lane_h_px(), its
+// from the window's foot inward: THE STATUS BAR (status_bar_lane_h_px(), its
 // line and 22 W, Thunar's; render.h's status bar block), THE BOTTOM ICON ROW
 // (bottom_row_h_px(), 7 W, the key, 7 W) — the clock in its flat time
 // field and the active tab's name beside it, and, packed against the right
@@ -178,15 +178,11 @@ namespace {
 // waveform; the flexible gap 2 above them. NO TENANT MOVES A LANE: the
 // modal family's box and controls row (modal_box.h) stand over the lanes
 // above the status bar, and every lane here keeps its rows under them. THE
-// ON-SCREEN KEYBOARD IS NO TENANT (architect 2026-11-19, send BB: "if this
-// was a gtk app (what it's modeled on) the osk would not exist, or would be
-// added below the bottom icon row and status bar"): it stands OUTSIDE THE
-// APP on the window's last rows (onscreen_keyboard.h's placement block), and
-// the whole table is laid on THE APP'S FOOT, the height above it (app_foot_y
-// below) — so while it stands the status bar rests on its top line, the
-// bottom icon row and the well's foot over that, and the waveform, the
-// leftover, is shorter by the keyboard's height; the top lanes never move.
-// ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect 2026-10-21:
+// ON-SCREEN KEYBOARD MOVES NO LANE EITHER: it stands over the window's last
+// rows — the status bar, the bottom icon row and the view's foot — and the
+// table is laid on the window's height whether it stands or not
+// (onscreen_keyboard.h's placement block, the rule's owner; architect
+// 2026-11-20, send EE). ACROSS, EVERY LANE SPANS THE WHOLE WINDOW (architect 2026-10-21:
 // strip_row_rect).
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
@@ -209,9 +205,7 @@ namespace {
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, which
 // is the whole geometry (the app's own caption lane and sizing frame of
 // 2026-10-05 removed 2026-10-24), so no window chrome's rows need arithmetic
-// here. `win_h` below is THE APP'S FOOT (app_foot_y: the window's height, or
-// the height above the on-screen keyboard while it stands, send BB). The
-// derivation, all of
+// here. `win_h` below is the clamped window height. The derivation, all of
 // it in the four functions below (the gap's SIZE is the centering's
 // remainder above the block, and the lanes above the gap are part of the top
 // lane stack whichever side of it they sit on):
@@ -254,15 +248,9 @@ namespace {
 //   132 below (THE WELL'S FOOT 1308–1309, THE BOTTOM ICON ROW 1310–1393, its
 //   faces 1324–1379, THE STATUS BAR'S LINE 1394–1395 and THE BAR 1396–1439);
 //   leftover 1072: the waveform 1072 rows on 236–1307, both gaps 0; the
-//   waveform the panel's whole width, columns 0–2303. UNDER THE ON-SCREEN
-//   KEYBOARD (send BB; app_foot_y above) the same stacks on the app's foot:
-//   at his tuning (osk_key_h 35, the surface 392 rows on 1048–1439) the
-//   foot 1048 — THE WELL'S FOOT 916–917, THE BOTTOM ICON ROW 918–1001 (its
-//   faces 932–987), THE STATUS BAR'S LINE 1002–1003 and THE BAR 1004–1047 —
-//   and the waveform 680 rows on 236–915; at the defaults (osk_key_h 30, 342
-//   rows on 1098–1439) the foot 1098 — 966–967, 968–1051 (faces 982–1037),
-//   1052–1053 and 1054–1097 — and the waveform 730 rows on 236–965. The top
-//   stack, rows 0–235, never moves.
+//   waveform the panel's whole width, columns 0–2303. The on-screen
+//   keyboard changes none of these rows (it stands over the last ones;
+//   onscreen_keyboard.h's placement block holds its worked rows).
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -304,7 +292,7 @@ namespace {
 // — strip_row_rect — is the single geometry owner; every named accessor
 // delegates to it, so a lane is a pure index from its strip's window edge,
 // and a bottom lane's y is its inset flipped about the window midline (THE
-// STATUS BAR — its line and the bar — rests ON the app's foot as bottom
+// STATUS BAR — its line and the bar — rests ON the window's foot as bottom
 // lane 0, THE BOTTOM ICON ROW above it as lane 1 and the well's foot above
 // that as lane 2 — gap 2 above all three, in bottom_strip_h's total rather
 // than in a lane's inset).
@@ -317,53 +305,17 @@ static void clamp_dims(int& w, int& h) {
     if (h < kMinWindowHeightPx) h = kMinWindowHeightPx;
 }
 
-// THE WINDOW'S FOOT AND THE APP'S FOOT — TWO ARITHMETICS, NAMED APART
-// (architect 2026-11-19, send BB: "if this was a gtk app (what it's modeled
-// on) the osk would not exist, or would be added below the bottom icon row
-// and status bar"; his "i take your recommends for all").
-// THE WINDOW'S FOOT is the clamped window height: one past the panel's last
-// row, where the on-screen keyboard stands (onscreen_keyboard::foot_y) —
-// the keyboard is a docked thing OUTSIDE the app, on the screen's last rows.
-// THE APP'S FOOT is the height the lane table lays the app on: the window's
-// foot LESS THE KEYBOARD'S SURFACE WHILE IT STANDS (its top line and its
-// band, onscreen_keyboard::surface_height_px), the window's foot otherwise —
-// so the status bar (bottom lane 0) rests on the keyboard's top line, the
-// bottom icon row over it, the well's foot over that, and the waveform is
-// the leftover of the shorter height, what a docked keyboard does to a GTK
-// window. EVERY LANE BELOW READS THE APP'S FOOT (app_dims) and nothing else;
-// no lane reads the window's height. DERIVED FROM THE ONE STANDING
-// PREDICATE (onscreen_keyboard::stands, a live editor session), the way every
-// keyboard fact is, so no stored inset can drift from the keyboard it
-// describes; the layout edge that relays the window out when the answer
-// moves is GuiInputHandler::reconcile_keyboard_layout's. A window too short
-// for the lanes above the keyboard computes the zero waveform
-// waveform_area's own guard answers.
-// On the tablet (2304 x 1440, 200 %): the window's foot 1440; the app's foot
-// 1440 with no keyboard, 1048 under the keyboard at his tuning (osk_key_h
-// 35, the surface 392 rows) and 1098 at the defaults (osk_key_h 30, 342).
+// THE WINDOW'S FOOT: the clamped window height, one past the panel's last
+// row — the one height the lane table is laid on (every lane function below
+// clamps the window's own dims) and the row the on-screen keyboard stands on
+// (onscreen_keyboard::foot_y). The keyboard never shortens it: it stands
+// over the window's last rows and nothing is relaid for it
+// (onscreen_keyboard.h's placement block; architect 2026-11-20, send EE).
 int window_foot_y(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
     return h;
 }
-
-int app_foot_y(const AppState& a) {
-    const int h = window_foot_y(a);
-    return onscreen_keyboard::stands(a)
-               ? h - onscreen_keyboard::surface_height_px()
-               : h;
-}
-
-namespace {
-// The lane table's two dimensions: the clamped window width and THE APP'S
-// FOOT (app_foot_y above), the one height every lane is laid on.
-void app_dims(const AppState& a, int& w, int& h) {
-    int ch = a.height;
-    w = a.width;
-    clamp_dims(w, ch);
-    h = app_foot_y(a);
-}
-} // namespace
 
 namespace {
 // Per-lane pixel heights, indexed from each strip's window edge inward. EVERY
@@ -422,20 +374,18 @@ int top_lane_height(int lane) {
         default: return 0;
     }
 }
-// The bottom strip's THREE lanes, indexed from THE APP'S FOOT inward
-// (app_foot_y: the window's foot, or the on-screen keyboard's top line while
-// it stands) like every lane table here: lane 0 is THE STATUS BAR on that foot
+// The bottom strip's THREE lanes, indexed from the WINDOW'S FOOT inward
+// like every lane table here: lane 0 is THE STATUS BAR on the window's foot
 // (architect 2026-11-19, send Z: its line and its 22 W; render.h's status
 // bar block), lane 1 THE BOTTOM ICON ROW (2026-08-12, rows 8 and 9 merged:
 // the clock left, the buttons flush right; the layout is
 // paint_bottom_row_buttons_and_clock's), lane 2 THE WELL'S FOOT (one of the
 // well's lines). THE ORDER IS FIXED: no tenant of the row moves a lane — the
 // modal family's box and controls row stand over these rows (modal_box.h),
-// the box above the status bar; the on-screen keyboard is no tenant, the
-// three standing on its top line while it stands (send BB, 2026-11-19, the
-// head of this block). GAP 2 sits ABOVE the
-// three, in bottom_strip_h's total
-// rather than in a lane's inset, so lane 0 is flush with the app's foot
+// the box above the status bar, and the on-screen keyboard over all three
+// while it stands (onscreen_keyboard.h's placement block, send EE). GAP 2
+// sits ABOVE the three, in bottom_strip_h's total
+// rather than in a lane's inset, so lane 0 is flush with the window edge
 // like the top strip's own lane 0 (and gap 2 being 0, lane 2's top is the
 // waveform's bottom).
 constexpr int kBottomStatusLane   = 0;
@@ -444,7 +394,7 @@ constexpr int kBottomWellFootLane = 2;
 int bottom_lane_height(int lane) {
     switch (lane) {
         // THE STATUS BAR (send Z, 2026-11-19): its line and the bar, on the
-        // app's foot (render.h's status_bar_lane_h_px).
+        // window's foot (render.h's status_bar_lane_h_px).
         case kBottomStatusLane:   return status_bar_lane_h_px();
         case kBottomRowLane:      return bottom_row_h_px();
         // THE WELL'S FOOT, the frame's bottom line; top edge = waveform bottom.
@@ -465,20 +415,17 @@ int strip_total_h(bool top_strip) {
     return sum;
 }
 // THE LEFTOVER the waveform and the two flexible gaps share (the vertical rule
-// above): the app's height (app_foot_y) less the whole top lane stack and
-// less the bottom row.
+// above): the window less the whole top lane stack and less the bottom row.
 // EACH VOCABULARY'S WELL IS THE LEFTOVER OF ITS OWN LANES (the planner's
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
 // gui_scale 200 and key_height 28 the lanes leave 1440 − 236 − 132 = 1072
-// device rows (2026-11-20, send EE), 1048 − 236 − 132 = 680 under the
-// on-screen keyboard at his tuning and 1098 − 368 = 730 at the defaults
-// (send BB). No color moves a lane (the key's height, a tuning key, and the
-// keyboard's standing move them). May
+// device rows (2026-11-20, send EE), the on-screen keyboard standing or not.
+// No color moves a lane (the key's height, a tuning key, moves them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
-// the silent-wrong guard at waveform_area owns that case). Takes THE APP'S
-// FOOT (app_dims), exactly as every other geometry entry point does.
+// the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
+// window height, exactly as every other geometry entry point does.
 int centered_leftover_h(int win_h) {
     return win_h - strip_total_h(/*top_strip=*/true)
                  - strip_total_h(/*top_strip=*/false);
@@ -533,8 +480,8 @@ int bottom_flex_gap(int win_h) {
 // render_background's chrome erase), and waveform_area's y is this sum with
 // no second expression.
 int top_strip_h(const AppState& a) {
-    int w = 0, h = 0;
-    app_dims(a, w, h);
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
     return strip_total_h(/*top_strip=*/true) + top_flex_gap(h);
 }
 // The BOTTOM strip's public height INCLUDES GAP 2 (2026-08-12: the row
@@ -544,20 +491,20 @@ int top_strip_h(const AppState& a) {
 // repainted in the window ground, and waveform_area's h - top - bottom
 // arithmetic yields the waveform height with no second expression.
 int bottom_strip_h(const AppState& a) {
-    int w = 0, h = 0;
-    app_dims(a, w, h);
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
     return strip_total_h(/*top_strip=*/false) + bottom_flex_gap(h);
 }
 
 GuiRect top_strip_area(const AppState& a) {
-    int w = 0, h = 0;
-    app_dims(a, w, h);
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
     return GuiRect{0, 0, w, top_strip_h(a)};
 }
 
 GuiRect waveform_area(const AppState& a) {
-    int w = 0, h = 0;
-    app_dims(a, w, h);
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
     // BOTH strip heights INCLUDE their flexible gap (commit B's two-gap
     // centering, both gaps 0 since the waveform became the whole leftover),
     // so the h - top - bot arithmetic below yields the waveform height — the
@@ -640,10 +587,9 @@ GuiRect waveform_area(const AppState& a) {
 // between the band and the view bar, so the trim lane and every lane below
 // it carry the gap while the icon row stands at the window's top). The
 // bottom strip's own gap 2 is NOT an inset here: its lanes count up from the
-// app's foot (app_foot_y, `h` below — the window's foot, or the on-screen
-// keyboard's top line while it stands, send BB), and the gap sits above
-// them, inside bottom_strip_h. The top strip counts downward from y=0; the
-// bottom strip mirrors it about the app's midline (`h - inset - lane_h`).
+// window's foot, and the gap sits above them, inside bottom_strip_h. The top
+// strip counts downward from y=0; the bottom strip mirrors it about the
+// window midline (`h - inset - lane_h`).
 //
 // ACROSS, EVERY LANE SPANS THE WINDOW (architect 2026-10-21: "every row
 // grows 1 W px each side"). Every damage rect and painter reads its lane
@@ -666,8 +612,8 @@ GuiRect waveform_area(const AppState& a) {
 namespace {
 GuiRect strip_row_rect(const AppState& a, bool top_strip,
                        int lane_from_window_edge) {
-    int w = 0, h = 0;
-    app_dims(a, w, h);
+    int w = a.width, h = a.height;
+    clamp_dims(w, h);
     const auto lane_height = [&](int i) {
         return top_strip ? top_lane_height(i) : bottom_lane_height(i);
     };
@@ -799,9 +745,8 @@ GuiRect well_foot_area(const AppState& a) {
 // `run_gap` tuning key). It is BOTTOM LANE 1, over the status bar (lane 0)
 // and under the well's foot (lane 2, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal family's controls row on its
-// rows is never a lane: modal_box.h); the status bar under it rests on the
-// on-screen keyboard's top line while the keyboard stands (app_foot_y, send
-// BB).
+// rows and the on-screen keyboard over it while it stands are never lanes:
+// modal_box.h, onscreen_keyboard.h's placement block).
 // Gap 2 stands above lane 1 inside bottom_strip_h and is zero since the
 // waveform became the whole leftover.
 // THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
@@ -814,13 +759,13 @@ GuiRect bottom_row_area(const AppState& a) {
 }
 
 // THE STATUS BAR'S LANE (architect 2026-11-19, send Z; render.h's status
-// bar block): BOTTOM LANE 0, on the app's foot under the bottom icon
+// bar block): BOTTOM LANE 0, on the window's foot under the bottom icon
 // row, the window's whole width — its first hairline the line over the bar,
 // the rest the bar. Every overlay and modal stands above it (the controls
-// row reads bottom_row_area), so the bar stays painted under them, and its
-// foot is THE APP'S FOOT (app_foot_y): with the on-screen keyboard standing
-// its last row stands directly over the keyboard's top line, in view under
-// every editor (architect 2026-11-19, send BB).
+// row reads bottom_row_area), so the bar stays painted under them; the
+// on-screen keyboard alone covers it, and its painter yields while the
+// keyboard stands (onscreen_keyboard.h's placement block; architect
+// 2026-11-20, send EE).
 GuiRect status_bar_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, kBottomStatusLane);
 }
@@ -1598,13 +1543,30 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // the row's painter zeroes the cell while it yields to an overlay's row — an
 // overlay standing, or a dialog editor over its backdrop (paint_handler.cpp's
 // modal_owns_bottom_row) — so a clock-moving route there widens to the lane
-// instead of damaging a cell that is not being painted. UNDER A QUESTION, THE
-// PROGRESS DIALOG OR THE FLAG EDITOR OVER THE MAIN PAGE the row is the main
-// page's and its cell is published (architect 2026-11-19, send BB), so the
-// clock ticks in its own cell — under the flag editor during playback, the
-// one modal play runs under, every scanner frame — on the row relaid above
-// the on-screen keyboard while it stands.
+// instead of damaging a cell that is not being painted. UNDER A QUESTION OR
+// THE PROGRESS DIALOG OVER THE MAIN PAGE the row is the main page's and its
+// cell is published (architect 2026-11-19, send BB), so the clock ticks in
+// its own cell.
+//
+// WHILE THE ON-SCREEN KEYBOARD STANDS THE RECT IS EMPTY: the keyboard covers
+// the row whole and the row yields under it (onscreen_keyboard.h's placement
+// block, the one inventory of what yields; architect 2026-11-20, send EE:
+// the row is inactive while the keyboard stands, so showing it is not
+// helpful), so no clock-moving frame has a pixel to repaint there — under
+// the flag editor during playback, the one editor play runs under, every
+// scanner frame would otherwise repaint the keyboard's own rows over the
+// lane for nothing. A zero rect is no damage (GuiPlatform::invalidate_region
+// drops it), so the keep-alive's and the audition rest's damage below
+// presents nothing while the keyboard stands: neither has a scanner to keep
+// awake for under it (no press reaches Play there, and every modal's open
+// ends the audition). The keyboard's hide damages its whole surface, the
+// row among it (onscreen_keyboard::reconcile_slot_standing), so the clock
+// comes back current.
 GuiRect clock_invalidate_rect(const AppState& a) {
+    if (onscreen_keyboard::stands(a)) {
+        const GuiRect lane = bottom_row_area(a);
+        return GuiRect{lane.x, lane.y, 0, 0};
+    }
     const GuiRect cell = a.clock_cell_rect;
     if (cell.w <= 0 || cell.h <= 0) return bottom_row_area(a);
     return cell;
@@ -1663,8 +1625,13 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
 // against the one last painted (AppState::status_bar_painted), and the
 // bar's own lane is damaged — nothing else — while they differ or nothing
 // has been recorded (canvas_sink.h's contract: every visible change owes
-// declared damage). No timeout, no hold.
+// declared damage). No timeout, no hold. NOTHING WHILE THE ON-SCREEN
+// KEYBOARD STANDS: it covers the bar, whose painter yields under it
+// (paint_status_bar; onscreen_keyboard.h's placement block, architect
+// 2026-11-20, send EE), and its hide damages its whole surface, the bar
+// among it, so the line comes back current.
 void refresh_status_bar(AppState& app, GuiPlatform& gui) {
+    if (onscreen_keyboard::stands(app)) return;
     if (app.status_bar_painted_valid &&
         status_bar_text(app) == app.status_bar_painted)
         return;
@@ -2713,7 +2680,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // an overlay's row (the cell then reads zero); either way a rect on
         // screen, so
         // the present follows from the damage alone, whatever the forks below
-        // paint there.
+        // paint there — but none while the on-screen keyboard stands over the
+        // row (that owner's empty rect: nothing to keep awake for under it).
         if (playback_lifecycle.display_keep_alive_wanted(monotonic_ms()) &&
             gui.display_keep_alive_due())
             invalidate_clock_area();
@@ -3471,12 +3439,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // it (2026-10-13). The live editor SESSION can change without the
         // standing moving (a flag-editor retarget, a close and a reopen in
         // one drained batch); that is the lamps' owner, reconcile_session,
-        // the pre-paint's and the press router's alone. THE KEYBOARD'S
-        // LAYOUT EDGE FIRST (send BB, 2026-11-19; the contract at
-        // GuiInputHandler::reconcile_keyboard_layout): the keyboard's coming
-        // and going relays the app out, and this tick pays it where no frame
-        // was scheduled for the change.
-        input_handler.reconcile_keyboard_layout();
+        // the pre-paint's and the press router's alone.
         onscreen_keyboard::reconcile_slot_standing(app, viewport);
 
         // THE ROSTER WALK IS NOT MOTION-ONLY. It resolves the tooltip's owner
@@ -3917,15 +3880,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // not change, and it sits ABOVE the playback guards below because it
         // has nothing to do with playback.
         onscreen_keyboard::reconcile_session(app, viewport);
-        // THE KEYBOARD'S LAYOUT EDGE AND THE SLOT'S SHOW AND HIDE, ahead of
-        // the frame for the same reason (2026-10-13): an editor opened or
-        // closed by this pass's press or key is painted in this pass, before
-        // any tick, so the relayout the keyboard's edge owes — the whole
-        // window's damage and the plate's rebuild, flushed below at the new
-        // height (GuiInputHandler::reconcile_keyboard_layout, send BB) — and
-        // the band the folder overlay leaves (reconcile_slot_standing) must
-        // be in this frame.
-        input_handler.reconcile_keyboard_layout();
+        // THE SLOT'S SHOW AND HIDE, ahead of the frame for the same reason
+        // (2026-10-13): an editor opened or closed by this pass's press or
+        // key is painted in this pass, before any tick, and the surface it
+        // raises or leaves must be in this frame's damage (the owner's
+        // record, reconcile_slot_standing).
         onscreen_keyboard::reconcile_slot_standing(app, viewport);
         // AND NO FRAME FADES A FACE OF A SURFACE THAT LEFT, for the same
         // reason (sends CC and DD, 2026-11-20; AppState::FaceFades' WHAT

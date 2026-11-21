@@ -3570,9 +3570,11 @@ void GuiInputHandler::apply_run_gap(int w) {
 
 void GuiInputHandler::apply_osk_key_size(int w_w, int h_w) {
     // The contract is at the declaration (input_handler.h): the push, then
-    // the relayout tail; the commit's arm owns the persist.
+    // every face's look at once and the whole window's damage, no relayout;
+    // the commit's arm owns the persist.
     set_osk_key_size_w(w_w, h_w);
-    relayout_window();
+    app.face_fades.drop_all();
+    viewport.invalidate_all();
 }
 
 void GuiInputHandler::apply_osk_font_px(int em_w) {
@@ -3605,17 +3607,6 @@ void GuiInputHandler::relayout_window() {
     app.face_fades.drop_all();
     viewport.invalidate_all();
     paint_handler.on_resize(app.width, app.height);
-}
-
-void GuiInputHandler::reconcile_keyboard_layout() {
-    // The contract, the order and the two callers are at the declaration
-    // (input_handler.h).
-    const bool live = onscreen_keyboard::stands(app);
-    if (live == app.keyboard_laid_out_standing) return;
-    app.keyboard_laid_out_standing = live;
-    relayout_window();
-    if (!no_audio_to_dispatch_on(app, audio.total_frames()))
-        viewport.kick_waveform_sync();
 }
 
 void GuiInputHandler::apply_true_colors(bool on) {

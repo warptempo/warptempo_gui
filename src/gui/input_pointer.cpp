@@ -982,10 +982,10 @@ bool point_on_playhead_head(const AppState& app, double x, double y) {
 // AND ONLY WHERE THE WAVEFORM IS PAINTED (2026-10-10, ON SCREEN IS AS
 // PAINTED): the extent is the waveform's painted rect,
 // onscreen_keyboard::waveform_paint_area — waveform_area less the modal
-// family's box (nothing at all while the box stands, modal_box.h; the
-// on-screen keyboard takes no cut, the waveform area itself ending on its
-// top line, send BB). Those rows answer nothing: what lies under a surface
-// is covered. ONE RECT FOR
+// family's box (nothing at all while the box stands, modal_box.h) or the
+// on-screen keyboard's surface (onscreen_keyboard.h's placement block).
+// Those rows answer nothing: what lies under a surface is covered. ONE RECT
+// FOR
 // THE PIXELS AND THE PRESS, rather than a press rect of its
 // own beside the paint rect: the press then cannot answer where the waveform
 // is not painted, whatever later stands over it. The COORDINATES stay
@@ -2610,14 +2610,24 @@ bool GuiInputHandler::touch_point_in_pan_zone(
     // press, where the editor's modal veil consumes it and closes nothing
     // (every editor a pure modal, architect 2026-10-29, on_button_press's
     // veil).)
-    // (THE ON-SCREEN KEYBOARD NEEDS NO CLAUSE (architect 2026-11-19, send BB): the
-    // app is laid out above it (main.cpp's app_foot_y), so the waveform — the
-    // whole pan zone, point_on_nav_surface below — ends on the keyboard's top
-    // line and a finger on a key is off the zone by construction, resolving
-    // to the pointer translation and the keyboard's own press claim, where a
-    // key acts, never the phone-model pan.)
-    // AND IT YIELDS UNDER THE FOLDER OVERLAY'S BAND (2026-08-28), for the
-    // clause above's reason exactly and for one more: the panel paints over
+    // AND IT YIELDS UNDER THE ON-SCREEN KEYBOARD (2026-08-27; architect
+    // 2026-11-20, send EE: the keyboard stands over the view's foot, nothing
+    // relaid — onscreen_keyboard.h's placement block), for the flag box
+    // carve-out's reason exactly: the keyboard paints over the canvas's lower
+    // part, and a finger landing on a key inside a pan zone would become the
+    // phone-model pan and NEVER DELIVER A PRESS — so every key would need a
+    // hold beat to type one character. Answering false lets the finger
+    // resolve to the pointer translation and reach the keyboard's own press
+    // claim, which is where a key acts. (The waveform's painted rect stops at
+    // the keyboard's top line too, waveform_paint_area, so
+    // point_on_nav_surface below agrees.) ONE SPELLING OF "ON THE KEYBOARD":
+    // this asks the same rect the press claim asks (claim_rect), so the two
+    // cannot disagree.
+    if (onscreen_keyboard::stands(app) &&
+        rect_contains(onscreen_keyboard::claim_rect(app), x, y))
+        return false;
+    // AND IT YIELDS UNDER THE FOLDER OVERLAY'S BAND (2026-08-28), for the two
+    // clauses above's reason exactly and for one more: the panel paints over
     // the waveform whole (its band is the modal family's panel, from the view
     // bar's top row to the controls row, modal_box.h, 2026-10-14), the whole
     // waveform is the pan zone, and
@@ -3696,7 +3706,8 @@ bool GuiInputHandler::claim_onscreen_keyboard_press(
     const GuiRect surf = onscreen_keyboard::surface_rect(app);
     // THE CLAIM IS THE WHOLE SURFACE (onscreen_keyboard::claim_rect): its
     // top line, the band's pads, the ground beside the block and the grid
-    // (nothing of the app lies under it, the lanes relaid above it, send BB).
+    // — the canvas's foot, the bottom icon row and the status bar under it
+    // answer nothing (onscreen_keyboard.h's placement block, send EE).
     // CONSUMED FROM HERE, whatever it lands on — the surface is opaque to
     // the pointer.
     if (!rect_contains(onscreen_keyboard::claim_rect(app), x, y)) return false;
@@ -5181,7 +5192,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     const GuiRect top  = top_strip_area(app);
     // The waveform BAND is the navigation surface, point_on_nav_surface
     // exactly — the canvas's interior where the waveform is painted
-    // (2026-10-09): the column's margins beside it are the
+    // (2026-10-09; the keyboard's surface carved out, 2026-10-10 and again
+    // since send EE, 2026-11-20): the column's margins beside it are the
     // program's panel, and a press there falls to the tail's consumed
     // nothing. `area` stays the coordinate origin.
     const bool inside_waveform = point_on_nav_surface(app, x, y);

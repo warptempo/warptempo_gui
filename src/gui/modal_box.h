@@ -43,20 +43,19 @@
 //      overlay's own controls while an overlay's page is the page behind —
 //      the overlay standing, or a dialog editor's backdrop — and the main
 //      page's keys and timestamp otherwise (paint_handler.cpp's
-//      modal_owns_bottom_row); UNDER A QUESTION, THE PROGRESS DIALOG OR AN
-//      EDITOR IT IS PAINTED AS THE TOP ICON ROW IS UNDER THE SAME MODAL, the
-//      same page's face, not dimmed (GTK greys no window under its dialog;
-//      under a dialog editor the whole window is the page it was opened
-//      from, as it stood — roster_face_page_owner), and DEAD TO PRESSES
-//      (the modal's veil), the dialog's answers its window's own buttons and
-//      the keyboard's Enter / Esc;
-//   3. under both, THE STATUS BAR on the app's foot (render.h's status bar
-//      block: it keeps its process line under every modal and drops its
-//      selection count), in view under every overlay and editor — while the
-//      on-screen keyboard stands its last row stands directly over the
-//      keyboard's top line (below).
+//      modal_owns_bottom_row); UNDER A QUESTION OR THE PROGRESS DIALOG IT IS
+//      PAINTED AS THE TOP ICON ROW IS UNDER THE SAME MODAL, the same page's
+//      face, not dimmed (GTK greys no window under its dialog), and DEAD TO
+//      PRESSES (the modal's veil), the dialog's answers its window's own
+//      buttons; UNDER EVERY EDITOR THE ON-SCREEN KEYBOARD STANDS OVER IT and
+//      it yields (below), the answers the window's buttons and the
+//      keyboard's Enter / Esc;
+//   3. under both, THE STATUS BAR on the window's foot (render.h's status
+//      bar block: it keeps its process line under every modal and drops its
+//      selection count), in view under every overlay and question, covered
+//      by the on-screen keyboard under every editor (below).
 // At the tablet's 2304 x 1440, 200 % and the keys' defaults (key_width 36,
-// key_height 28; the 56-row title bar), no keyboard standing: the box's line
+// key_height 28; the 56-row title bar), the keyboard standing or not: the box's line
 // rows 140–141 and 1308–1309, THE VIEW x 0..2303 and y 142..1307 (1166
 // rows); the controls row 1310–1393, its face rows 1324–1379, its first
 // face's columns 12–83 and its last 2220–2291; the status bar 1394–1439
@@ -79,25 +78,24 @@
 // (paint_modal_dialog, THE DIALOG WINDOW); they take no rect of this file
 // but the view.
 //
-// THE ON-SCREEN KEYBOARD STANDS UNDER THE APP, AND THE APP IS RELAID OUT
-// ABOVE IT (architect 2026-11-19, send BB: "if this was a gtk app (what it's
-// modeled on) the osk would not exist, or would be added below the bottom
-// icon row and status bar"; his "i take your recommends for all"): the
-// keyboard on the window's last rows (onscreen_keyboard::surface_rect), the
-// lane table laid on the height above it (main.cpp's app_foot_y) — the
-// status bar's last row on the keyboard's top line, the bottom icon row over
-// it, the box's last rows the line over that row. So every rect below is
-// the lane table's and takes no keyboard term: with a dialog editor
-// standing, THE BOX'S VIEW is the room its window is centered in, ending on
-// the line over the relaid bottom icon row, and the page the editor was
-// opened from is painted there as it was left (the dialog editor's backdrop,
-// AppState::dialog_backdrop). On the tablet at key_height 28 and his
-// keyboard tuning, osk_key_w 24 and osk_key_h 35 (48 x 70 device px): the
-// keyboard 1048–1439 (onscreen_keyboard.h's arithmetic), the status bar
-// 1002–1047, the controls row 918–1001, the box 140–917 and THE VIEW y
-// 142..915; at the defaults (osk_key_h 30) the keyboard 1098–1439, the
-// status bar 1052–1097, the controls row 968–1051, the box 140–967 and the
-// view y 142..965.
+// THE ON-SCREEN KEYBOARD STANDS OVER THE PAGE, AND NOTHING IS RELAID FOR IT
+// (architect 2026-11-20, send EE; the rule's one owner onscreen_keyboard.h's
+// placement block): every rect below is the lane table's and takes no
+// keyboard term. With a dialog editor standing THE BOX KEEPS ITS WHOLE VIEW,
+// the page the editor was opened from painted in it as it was left (the
+// dialog editor's backdrop, AppState::dialog_backdrop), the keyboard over
+// the view's foot, the bottom icon row and the status bar, and what the box
+// lays cut at the keyboard's top line (paint_modal_dialog); THE EDITOR'S
+// WINDOW IS CENTERED IN THE WHOLE VIEW, as a question's is on the panel. On
+// the tablet at key_height 28: the view y 142..1307 (1166 rows); the
+// rename window 308 W wide, its client 300 x 112 W (224 device rows), with
+// the 28 W title bar and the 4 W foot border 288 rows, centered at y
+// 581..868, x 844..1459 (Save As, its label row gone, 250 rows at
+// 600..849), xfwm's shadow reaching row 904 — clear of the keyboard's top
+// line at his tuning (osk_key_w 24, osk_key_h 35: the keyboard 1048–1439,
+// the view's visible part 142..1047) and at the defaults (osk_key_h 30:
+// 1098–1439); a keyboard tuned tall enough to reach the window cuts it
+// there, its claim answering the presses (paint_modal_dialog's cut).
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);
@@ -135,9 +133,8 @@ inline bool modal_box_stands(const AppState& a) {
 }
 
 // THE CONTROLS ROW (item 2): the bottom icon row's own rows, the lane itself
-// (bottom_row_area), wherever the lane table lays it — over the status bar on
-// the app's foot, which stands on the on-screen keyboard's top line while
-// the keyboard stands (send BB). Its seats are the bottom icon row's
+// (bottom_row_area), over the status bar on the window's foot. Its seats are
+// the bottom icon row's
 // (paint_handler.cpp's bottom_row_seats, the one owner).
 inline GuiRect modal_controls_row_rect(const AppState& a) {
     const GuiRect lane = bottom_row_area(a);
@@ -149,9 +146,8 @@ inline GuiRect modal_controls_row_rect(const AppState& a) {
 // well_columns, the panel's own since 2026-11-19, send Z: edge to edge);
 // down, the trim lane's first row (the line under the top icon row) to the
 // controls row's top (its last rows the line over the bottom icon row, the
-// well's foot) — the lane table's rows, so with the on-screen keyboard
-// standing the box ends over the relaid bottom icon row (send BB; the head's
-// rows). A zero rect on a degenerate stack.
+// well's foot) — the lane table's rows, the on-screen keyboard standing or
+// not (the head's rows). A zero rect on a degenerate stack.
 inline GuiRect modal_box_rect(const AppState& a) {
     const WellColumns well = well_columns(a);
     const GuiRect trim  = top_trim_row_area(a);
@@ -167,8 +163,8 @@ inline GuiRect modal_box_rect(const AppState& a) {
 // the tablet at 200 %, 1 at 100 %; those rows the box's lines), across the
 // panel's own columns, 0 .. 2303 on the tablet — the lists' rows stand on
 // it edge to edge (folder_overlay.h), the score viewer's page in it, and a
-// dialog editor's window centered in it (the room; y 142..915 under the
-// keyboard at his tuning, the head's rows).
+// dialog editor's window centered in it (the room; y 142..1307, the
+// keyboard over its foot while it stands, the head's rows).
 inline GuiRect modal_box_interior_rect(const AppState& a) {
     const GuiRect box = modal_box_rect(a);
     const int     lw  = hairline_px();
@@ -198,7 +194,8 @@ inline GuiRect modal_panel_rect(const AppState& a) {
 }
 
 // THE WHOLE AREA A MODAL TAKES: the box and the controls row under it (the
-// on-screen keyboard is its own surface under the app, outside this area).
+// on-screen keyboard is its own surface, its damage its own,
+// onscreen_keyboard::slot_damage_rect's block).
 // The slot's show and hide damage (onscreen_keyboard::slot_damage_rect) and
 // the closers' (Viewport::invalidate_modal_dialog_area).
 inline GuiRect modal_area_rect(const AppState& a) {

@@ -3,9 +3,10 @@
 // THE ON-SCREEN KEYBOARD — the painted key surface the GLASS types on
 // (architect + planner 2026-08-27). This header is the surface's ONE OWNER of
 // everything that is not pixels or a press body: the layout table, the
-// geometry, the two lamps' session-change reset, the waveform's painted rect
-// under the modal family's box, and the predicate that says whether the
-// surface stands at all. The PAINTER lives in paint_handler.cpp beside
+// geometry, the two lamps' session-change reset, the rule that the waveform is
+// not painted under the band or the modal family's box, and the predicate
+// that says whether the surface stands at all. The PAINTER lives in
+// paint_handler.cpp beside
 // every other painter, and the PRESS ROUTER in input_pointer.cpp beside every
 // other press router; both walk this file's table through the one walker below,
 // so paint and hit cannot describe different keys.
@@ -19,17 +20,16 @@
 // below; its caps' size the `osk_font_px` key since 2026-10-29 night,
 // cap_word's paragraph), the block of keys SEATED WITH THE GAP BETWEEN ITS
 // `5` AND `6` ON THE WINDOW'S CENTER (architect 2026-11-08, block_x_px) in a
-// band that runs the window's width ON THE WINDOW'S LAST ROWS, OUTSIDE THE
-// APP, one line of its own above it, THE APP RELAID OUT ABOVE IT — the
-// status bar on its top line, the bottom icon row over that, the canvas
-// taking what is left (architect 2026-11-19, send BB; the placement block
-// below) — its two pads the bottom icon row's own and no height floor
-// (pad_top_px / pad_foot_px), on the body tone, nothing beside the block.
-// It stands while ANY
+// band that runs the window's width ON THE WINDOW'S LAST ROWS, one line of
+// its own above it, STANDING OVER THE STATUS BAR, THE BOTTOM ICON ROW AND
+// THE VIEW'S FOOT, NOTHING RELAID (architect 2026-11-20, send EE; the
+// placement block below) — its two pads the bottom icon row's own and no
+// height floor (pad_top_px / pad_foot_px), on the body tone, nothing beside
+// the block. It stands while ANY
 // OF THE TEXT EDITORS stands, on a backend that asks for one, and it
 // REPLACES NOTHING: the flag editor keeps painting in the marker lane, a
-// dialog editor keeps its window centered in the box's view above the
-// relaid rows (modal_box.h). THERE IS NO SECOND TEXT BUFFER — the live editor's own
+// dialog editor keeps its window centered in the box's view (modal_box.h).
+// THERE IS NO SECOND TEXT BUFFER — the live editor's own
 // text_editor::State is the only text state in the product, exactly as it was
 // before this surface existed.
 //
@@ -677,8 +677,8 @@ inline double block_x_px(const GuiRect& band) {
 // vertical padding. i do like the osk key dimensions and overall layout"):
 // the band is its pads and the grid, NO HEIGHT FLOOR — no minimum height
 // and no line of the canvas it must reach. THE PADS ARE THUNAR'S TOOLBAR
-// ROUND ITS BUTTONS, THE ROW STANDING OVER THE KEYBOARD'S STATUS BAR
-// (render.h's ARC'S TOOLBAR PADS): kToolbarPadW, 7 W, between the
+// ROUND ITS BUTTONS, THE ROW THE KEYBOARD COVERS (render.h's ARC'S TOOLBAR
+// PADS): kToolbarPadW, 7 W, between the
 // keyboard's top line and the grid's upper outer line (pad_top_px) and
 // again between the grid's lower outer line and the window's last row
 // (pad_foot_px) — SYMMETRIC as the row's own (architect 2026-11-20, send
@@ -714,15 +714,11 @@ inline int key_rows_h_px() {
     return kRowCount * key_h_px() + (kRowCount - 1) * key_gap_px();
 }
 
-// THE KEYBOARD'S FOOT — THE WINDOW'S REAL LAST ROW (architect 2026-11-19,
-// send BB: "if this was a gtk app (what it's modeled on) the osk would not
-// exist, or would be added below the bottom icon row and status bar"): THE
-// WINDOW'S FOOT, the clamped window height (main.cpp's window_foot_y), never
-// the app's — the lane table is laid on the height above the keyboard
-// (app_foot_y), so the status bar's last row stands on this surface's top
-// line and the bar, its process line kept under every editor
-// (status_bar_text drops only the selection count), stays in view over the
-// keyboard.
+// THE KEYBOARD'S FOOT — THE WINDOW'S LAST ROW: THE WINDOW'S FOOT, the
+// clamped window height (main.cpp's window_foot_y), the one height the lane
+// table is laid on too — the keyboard stands over the status bar, the bottom
+// icon row and the view's foot there, nothing relaid (the placement block
+// below; architect 2026-11-20, send EE).
 inline int foot_y(const AppState& a) { return window_foot_y(a); }
 // THE KEYBOARD'S TOP LINE (the design's Z_06: the keyboard parted from
 // what stands above by Thunar's pane line): ONE W of `well_border`
@@ -793,23 +789,50 @@ inline bool stands(const AppState& a) {
 // THE KEYBOARD STANDS ACROSS THE PROGRAM'S LANES (architect 2026-10-14, on
 // the settings-keyboard mock): its band runs across the program lanes — the
 // band's width the lanes' (bottom_row_area's x and width, the window's) —
-// AND STANDS ON THE WINDOW'S LAST ROWS, OUTSIDE THE APP, THE APP RELAID OUT
-// ABOVE IT (architect 2026-11-19, send BB: "actually windows like score and
-// player need the bottom row, and so thy might as well keep the status bar,
-// which sets the precedent that overlays keep them. if this was a gtk app
-// (what it's modeled on) the osk would not exist, or would be added below
-// the bottom icon row and status bar"; his "i take your recommends for
-// all"): the keyboard is a docked thing, not a tenant of the app; the lane
-// table is laid on the height above it (main.cpp's app_foot_y), so while it
-// stands THE STATUS BAR'S LAST ROW STANDS DIRECTLY OVER THE KEYBOARD'S TOP
-// LINE, THE BOTTOM ICON ROW OVER THE STATUS BAR, the well's foot over that,
-// and THE CANVAS TAKES WHAT IS LEFT — shorter, and redrawn whole, both
-// channels, each time the keyboard comes and goes (the layout edge,
-// GuiInputHandler::reconcile_keyboard_layout): what a docked keyboard does
-// to a GTK window. The bottom icon row shows the page behind's row, dead
-// under the editor's veil (paint_handler.cpp's modal_owns_bottom_row), and
-// the status bar keeps its process line and drops its selection count
-// (status_bar_text).
+// AND STANDS ON THE WINDOW'S LAST ROWS OVER THE STATUS BAR, THE BOTTOM ICON
+// ROW AND THE VIEW'S FOOT — THE APP IS NEVER RELAID FOR IT (architect
+// 2026-11-20, send EE, reversing 2026-11-19's keyboard below the app: "the
+// waveform and the bottom row don't move such that the on-screen keyboard
+// sits on top of them and essentially the bottom row is not visible ... I
+// think it's better than what we have because the bottom row remains
+// inactive. So simply showing it isn't helpful. And same with the status
+// bar. The status bar should just be obscured by the OSK."; "the osk should
+// essentially stop all other activity and become the only active element
+// when it's onscreen"; "i agree that simpler is better"). THIS IS THE RULE'S
+// ONE OWNER: the lane table is laid on the window's height whether the
+// keyboard stands or not (main.cpp's window_foot_y), so its coming and going
+// moves no lane, changes no rect of the app's and re-renders no plate — the
+// waveform area, and with it every field of the plate's fingerprint, stand
+// still; its own show and hide are paid by its surface alone (the slot
+// comparator, reconcile_slot_standing below). WHAT YIELDS UNDER IT, the one
+// inventory:
+//   * THE CANVAS: its painted rect stops at the surface's top line
+//     (waveform_paint_area below — the GL canvas's clip, the navigation
+//     surface's extent and so the touch pan zone's), and so do the whole
+//     area's damage and the scanner's (Viewport::invalidate_waveform_area,
+//     invalidate_scanner_line: play runs on under the flag editor), the
+//     layout's waveform area and the plate untouched;
+//   * THE BOTTOM ICON ROW (paint_bottom_strip): its keys, the timestamp and
+//     the tab name stand down and publish zero rects and a zero clock cell,
+//     the clock's damage owner answering an empty rect
+//     (clock_invalidate_rect, main.cpp; GuiClockFingerprint::yields); under
+//     a dialog editor the backdrop page's controls row
+//     (paint_handler.cpp's modal_owns_bottom_row, paint_modal_dialog) yields
+//     with it;
+//   * THE STATUS BAR (paint_status_bar): nothing painted, its comparator and
+//     its writers' damage silent (refresh_status_bar, main.cpp;
+//     Viewport::invalidate_status_bar_area);
+//   * WHAT A DIALOG EDITOR'S WINDOW STANDS OVER — the box and the backdrop
+//     page's list in its view: cut at the surface's top line
+//     (paint_modal_dialog's clip), the window itself centered in the whole
+//     view and clearing the surface (modal_box.h's head);
+//   * THE CARDS' ROOM (notification_stack_bound): its foot above the
+//     surface's top line.
+// Nothing under the surface answers a press, a hover, a hold, a tooltip's
+// dwell or the pan: the keyboard's claim is the whole surface and ranks
+// above every gate but the cards' (claim_rect; the press router, the hover
+// walk, the pan zone), the waveform's painted rect stops above it, the bottom
+// icon row publishes no rect, and the editor's veil holds everything else.
 // ONE LINE OF ITS OWN OVER IT (top_line_px, `well_border`: Thunar's pane
 // line parting the keyboard from what stands above; architect 2026-11-19,
 // send Z, his approval of tmp/sendZ/VIEW/Z_06), THE BOTTOM ICON ROW'S TWO
@@ -819,10 +842,11 @@ inline bool stands(const AppState& a) {
 // beside it and nothing else there. ITS KEYS ARE ONE GRID OF ARC'S BUTTON
 // TONES WITH SHARED LINES (his K2 ruling; the design's §E;
 // paint_onscreen_keyboard). Under a dialog editor the modal family's box
-// stands above the relaid rows, its view the room the editor's window is
-// centered in (modal_box.h's head); under the flag editor, the one editor
-// with no dialog, the main page stands relaid above it. UNDER AN OVERLAY
-// THE KEYBOARD NEVER STANDS (stands' record).
+// stands over the page behind down to the bottom icon row, the keyboard
+// over the box's foot, the editor's window centered in the whole view
+// (modal_box.h's head); under the flag editor, the one editor with no
+// dialog, the main page stands under it, its canvas cut at the surface's
+// top line. UNDER AN OVERLAY THE KEYBOARD NEVER STANDS (stands' record).
 // (THE TASKBARS, 2026-10-10 to 2026-10-14 — architect, "they're analogous to
 // the taskbar … they sit on top of the design": the keyboard and the dialog
 // laid over the window's foot at its whole width, one raised Hilight line
@@ -832,27 +856,27 @@ inline bool stands(const AppState& a) {
 //     grid's outer lines x 901..1552) at osk_key_w 24: AT osk_key_h 35 (his
 //     tuning's, the keys 48 x 70 device px) the surface 1048..1439 — the top
 //     line 1048..1049, the band 1050..1439, its first key row's top 1066
-//     (the pads' arithmetic above) — and above it the status bar 1002..1047
-//     (its line 1002..1003), the bottom icon row 918..1001 (its keys
-//     932..987), the well's foot 916..917 and THE CANVAS 236..915 (680 rows;
-//     1072 with no keyboard), a dialog editor's view y 142..915; AT THE
-//     DEFAULTS (osk_key_h 30) the surface 1098..1439, the first key row's
-//     top 1116, the status bar 1052..1097 (its line 1052..1053), the bottom
-//     icon row 968..1051 (keys 982..1037), the well's foot 966..967 and the
-//     canvas 236..965 (730 rows). The top stack, rows 0..235, never moves.
-// ON SCREEN IS AS PAINTED: the keyboard's claim is opaque (claim_rect) and
-// nothing of the app lies under it — the lanes end on its top line, so the
-// waveform's painted rect needs no cut for it (waveform_paint_area).
+//     (the pads' arithmetic above) — over the status bar 1394..1439, the
+//     bottom icon row 1310..1393, the well's foot 1308..1309 and the
+//     canvas's foot 1048..1307, THE CANVAS VISIBLE 236..1047 (812 of its
+//     1072 rows); under a dialog editor over the view's foot, the view
+//     142..1307 visible 142..1047; AT THE DEFAULTS (osk_key_h 30) the
+//     surface 1098..1439, its first key row's top 1116, the canvas visible
+//     236..1097 (862 rows). Every lane at its rows of the window with no
+//     keyboard (main.cpp's stacks).
 // Geometry only here: every rect below is a fact about geometry and asks no
 // standing unless its name or its contract says so.
 
 // THE KEYBOARD'S SURFACE: the program lanes' x and width (bottom_row_area's,
-// the window's), standing on the window's last row (foot_y, send BB), its
-// height surface_height_px — its top line and the band (the pads and the
-// grid) — the block of keys on its seat in it (for_each_key, block_x_px).
-// NOTHING OF THE APP STANDS UNDER IT: the lane table ends on its top line
-// while it stands (app_foot_y). The one zero rect is the degenerate one: a
-// window with no width, or a height that scales to nothing.
+// the window's), standing on the window's last row (foot_y), its height
+// surface_height_px — its top line and the band (the pads and the grid) —
+// the block of keys on its seat in it (for_each_key, block_x_px). It
+// OVERLAYS what stands there — the canvas's lower rows, the well's foot,
+// the bottom icon row and the status bar — nothing in the vertical stack
+// moved to make room (the placement block). A FACT OF THE WINDOW'S FOOT
+// ALONE, so it is the same rect on the hide as on the show. The one zero
+// rect is the degenerate one: a window with no width, or a height that
+// scales to nothing.
 inline GuiRect surface_rect(const AppState& a) {
     const GuiRect lane   = bottom_row_area(a);
     const int     h      = surface_height_px();
@@ -871,26 +895,27 @@ inline GuiRect band_rect(const AppState& a) {
 // THE KEYBOARD'S CLAIMED SURFACE: its surface, whole — its top line, the
 // pad round the grid and the ground beside the seated block included, so a
 // press on the top line, the pad or beside the block is the keyboard's
-// consumed nothing (nothing of the app lies under it, the placement block),
-// and a press on the grid, its lines included, is a key's (key_at).
+// consumed nothing rather than a reach into what lies under it (the
+// placement block's inventory), and a press on the grid, its lines
+// included, is a key's (key_at).
 inline GuiRect claim_rect(const AppState& a) {
     return surface_rect(a);
 }
 
-// THE SLOT'S DAMAGE RECT: the whole area the modal family takes — the
-// folder overlay's box and the controls row under it (modal_area_rect,
-// modal_box.h, 2026-10-14), which contains every pixel the overlay paints in
-// every content. THE KEYBOARD'S OWN SHOW AND HIDE OWE IT NOTHING (send BB,
-// 2026-11-19): those edges move the lane table and are paid as the whole
-// window by the layout edge (GuiInputHandler::reconcile_keyboard_layout),
-// which contains the keyboard's surface and every relaid row; what the slot
-// comparator still pays is the folder overlay's show and hide, unchanged.
-// THE SHOW/HIDE COMPARATOR TAKES IT (reconcile_slot_standing, below): those
+// THE SLOT'S DAMAGE RECTS, one a tenant: THE KEYBOARD'S IS ITS SURFACE
+// (surface_rect, a fact of the window's foot alone), which holds every pixel
+// it paints and every pixel its show covers and its hide gives back — the
+// canvas's foot, the well's foot, the bottom icon row and the status bar
+// (the placement block; architect 2026-11-20, send EE: no relayout pays it);
+// THE FOLDER OVERLAY'S IS THE WHOLE AREA THE MODAL FAMILY TAKES — its box
+// and the controls row under it (modal_area_rect, modal_box.h, 2026-10-14),
+// which contains every pixel it paints in every content (this function).
+// THE SHOW/HIDE COMPARATOR TAKES THEM (reconcile_slot_standing, below): those
 // two edges damage a band whose tenant is arriving or has already gone, so
-// the rect cannot be that tenant's own — on the hide the departed surface's
-// pixels are exactly what has to be erased, and on the show the arriving
-// one's whole band has to be covered. A damage INSIDE a standing band takes
-// that tenant's own rect instead.
+// the rect cannot be that tenant's own painted extent — on the hide the
+// departed surface's pixels are exactly what has to be erased, and on the
+// show the arriving one's whole band has to be covered. A damage INSIDE a
+// standing band takes that tenant's own rect instead.
 inline GuiRect slot_damage_rect(const AppState& a) {
     return modal_area_rect(a);
 }
@@ -955,23 +980,36 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // whole surface: the keyboard appears and disappears with the editors' open
 // and close, the folder overlay with the render player and the picker, and
 // those routes damage the marker lane, the bottom row or the dialog — never
-// the whole band this slot paints in. So the live answer (either tenant standing)
-// is compared against the AS-PAINTED bit, which the slot's paint dispatch
-// refreshes only on a frame whose rect FULLY COVERS the band
-// (AppState::keyboard_slot_painted_standing, GuiPaintHandler::
-// paint_keyboard_slot), and the drift is paid here. THE KEYBOARD'S OWN
-// SHOW AND HIDE ARE THE LAYOUT EDGE'S (send BB, 2026-11-19): they relay the
-// app out above or back over the keyboard's rows, and
-// GuiInputHandler::reconcile_keyboard_layout pays them as the whole window
-// beside this comparator at both of its callers, so the bit's keyboard term
-// drifts only inside a frame that edge's damage already covers; what this
-// comparator still pays is the folder overlay's show and hide.
+// the whole band the tenant paints in. So EACH TENANT'S live answer is
+// compared against ITS OWN AS-PAINTED BIT, which the slot's paint dispatch
+// refreshes only on a frame whose rect FULLY COVERS that tenant's band
+// (AppState::keyboard_painted_standing and overlay_painted_standing,
+// GuiPaintHandler::paint_keyboard_slot), and the drift is paid here with
+// THAT TENANT'S DAMAGE RECT (slot_damage_rect's block: the keyboard's
+// surface, the overlay's modal area). THIS IS THE ONE PLACE THE KEYBOARD'S
+// SHOW AND HIDE ARE PAID, whatever opened or closed its editor: standing is
+// derived (stands, above), so every road — the dialog editors' OK, Cancel,
+// Esc and Enter, the flag editor's, an editor swapped for the overlay it
+// returns to in one pass — moves this comparison, and nothing else has to
+// remember the surface. NO RELAYOUT, NO WHOLE-WINDOW DAMAGE AND NO FADE
+// DROP IS OWED FOR THE KEYBOARD (architect 2026-11-20, send EE; the
+// placement block): it moves no lane, so its surface holds the whole of
+// what its edge changes on screen — the keys arriving, or the canvas's foot,
+// the well's foot, the bottom icon row and the status bar coming back — and
+// the canvas's clip, which moves with it (waveform_paint_area below), makes
+// that frame's chrome upload whole and its canvas clear under the damage
+// (GuiGlCanvas::present_frame's upload rule; on_redraw's CLEAR: the area
+// changed, so it is unknown), no plate re-rendered: the waveform area, and
+// so the plate's fingerprint, do not move. Whatever else the opening or
+// closing route changes it damages itself (the flag editor's lane, a dialog
+// editor's open the whole window, its close the modal area,
+// Viewport::invalidate_modal_dialog_area).
 //
-// THE DAMAGE IS THE SLOT'S BAND (slot_damage_rect), and only that: on the
-// HIDE the departed overlay no longer stands, so there is nothing to ask its
-// rect of, and the modal family's whole area (the folder overlay's box and
-// the controls row under it) contains its pixels in every content — and with
-// them the waveform it covered (the box spans the waveform area whole).
+// On the HIDE the departed tenant no longer stands, so there is nothing to
+// ask of it but its rect: the keyboard's is a fact of the window's foot
+// alone, and the overlay's modal area contains its pixels in every content —
+// and with them the waveform it covered (the box spans the waveform area
+// whole).
 //
 // TWO CALLERS (2026-10-13, the tablet's stale keyboard): the PRE-PAINT HOOK
 // (main.cpp), ahead of every frame the backend paints, and the TICK. The
@@ -985,33 +1023,40 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // on that frame, GuiPlatform::present), and the GPU showed the departed keys
 // over a canvas that answered the press. Paid at pre-paint, the clip moves
 // on the very frame whose damage covers the band, so the whole rect goes up
-// cleared (the layout edge's whole-window damage now carries the keyboard's
-// half of that record). The tick call stays for a standing change that
-// declares no damage of its own: a frame paints only with damage, so the
-// pre-paint would never run for it.
+// cleared. The tick call stays for a standing change that declares no damage
+// of its own: a frame paints only with damage, so the pre-paint would never
+// run for it.
 //
 // A few compares per call with the slot down.
 inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
-    const bool live = stands(a) || folder_overlay::stands(a);
-    if (live == a.keyboard_slot_painted_standing) return;
-    viewport.invalidate_rect(slot_damage_rect(a));
+    if (stands(a) != a.keyboard_painted_standing)
+        viewport.invalidate_rect(surface_rect(a));
+    if (folder_overlay::stands(a) != a.overlay_painted_standing)
+        viewport.invalidate_rect(slot_damage_rect(a));
 }
 
-// THE WAVEFORM'S PAINTED RECT — waveform_area minus what stands over it, THE
+// THE WAVEFORM'S PAINTED RECT — waveform_area minus what stands over it: THE
 // MODAL FAMILY'S BOX (the folder overlay's, a dialog editor's room or the
-// score viewer's — modal_box_stands, modal_box.h) — and the ONE OWNER of
-// the rule that THE WAVEFORM IS NOT PAINTED WHERE THE BOX PAINTS. THE
-// ON-SCREEN KEYBOARD TAKES NO CUT (architect 2026-11-19, send BB): the lane
-// table ends on its top line while it stands (main.cpp's app_foot_y), so the
-// waveform area itself stops above it and nothing of the canvas lies under
-// the keyboard.
+// score viewer's — modal_box_stands, modal_box.h) or THE KEYBOARD alone (the
+// flag editor's; the placement block) — and the ONE OWNER of the rule that
+// THE WAVEFORM IS NOT PAINTED WHERE THOSE PAINT. IT SUBTRACTS THE STANDING
+// SURFACE'S OWN RECT, which is a real fork rather than a formality: the box
+// is the modal family's panel every time it stands (the view bar's top row
+// down since 2026-10-14, modal_box.h, whatever its content) and the
+// keyboard's is its surface, so a rect borrowed from the other would either
+// hide waveform nothing paints over or leave the panel painting where the
+// waveform still runs. (Under a dialog editor both stand, and the box, which
+// starts above the waveform, empties it whole.)
 //
-// The box's ground is fully opaque and every waveform pass runs BEFORE it
-// (the authoritative paint order, paint_handler.cpp), so a waveform pixel
-// under it is work whose result is thrown away in the same frame: a narrow
-// scanner damage column crossing it would otherwise pay the plate blit and
-// every vertical over its whole height, at the panel's own tick rate. ONE
-// GATE, ONE CLIP.
+// Every one of those grounds is fully opaque and every waveform pass runs
+// BEFORE them (the authoritative paint order, paint_handler.cpp), so a
+// waveform pixel under them is work whose result is thrown away in the same
+// frame: a narrow scanner damage column crossing the keyboard would
+// otherwise pay the plate's draw and every vertical over the surface's rows,
+// at the panel's own beat. ONE GATE, ONE CLIP for every surface. Its move is
+// the keyboard's edge's whole cost on the canvas side: the frame's chrome
+// upload whole and the canvas cleared under the edge's damage, no plate
+// re-render (reconcile_slot_standing above).
 //
 // IT IS THE EXPOSURE GATE, THE CLIP AND THE NAVIGATION SURFACE'S EXTENT,
 // NEVER A COORDINATE INPUT: the column mapping keeps reading waveform_area
@@ -1022,8 +1067,12 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // paint and hit cannot drift. This rect says WHERE THE PIXELS MAY LAND, and
 // so where the waveform takes a press.
 //
-// THE BOX swallows the waveform whole and answers a ZERO-HEIGHT rect, and it
-// is the CLIP rather than the gate that makes that case paint nothing
+// Both surfaces span the waveform's columns and run down past its foot, so
+// what they hide off the waveform is always a BOTTOM SLICE and the answer is
+// a rect. THE KEYBOARD always overlaps the waveform (the waveform is the
+// lanes' whole leftover, 2026-10-07), and the waveform stops at its top
+// line; THE BOX swallows the waveform whole and answers a ZERO-HEIGHT rect,
+// and it is the CLIP rather than the gate that makes that case paint nothing
 // (rects_intersect can still answer true for an empty rect an exposure
 // straddles — it compares edges, not areas). The box starts ABOVE the
 // waveform (the view bar's top row since 2026-10-14; the panel's ceiling
@@ -1035,8 +1084,12 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 inline GuiRect waveform_paint_area(const AppState& a) {
     const GuiRect area  = waveform_area(a);
     int           cut_y = area.y + area.h;
-    if (modal_box_stands(a))
+    if (modal_box_stands(a)) {
         cut_y = std::min(cut_y, modal_panel_rect(a).y);
+    } else if (stands(a)) {
+        const GuiRect kb = surface_rect(a);
+        if (kb.w > 0 && kb.h > 0) cut_y = std::min(cut_y, kb.y);
+    }
     const int hidden = (area.y + area.h) - cut_y;
     if (hidden <= 0) return area;
     GuiRect painted = area;

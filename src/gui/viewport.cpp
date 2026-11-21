@@ -132,10 +132,21 @@ bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
 // per-frame advance, its launch and its stop (invalidate_scanner_line and
 // invalidate_standing_scanner below). The rect and the lanes it holds are at the
 // declaration (viewport.h); the rows above it are owed a check
-// (damage_window_top_rows).
+// (damage_window_top_rows). WHILE THE ON-SCREEN KEYBOARD STANDS the rect
+// ends on its top line: the canvas's rows under it are the keyboard's
+// pixels, the waveform not painted there (onscreen_keyboard.h's placement
+// block, send EE, 2026-11-20), so a FOLLOW scroll under the flag editor —
+// the one editor play runs under — repaints no key row on every frame for
+// nothing; the keyboard's hide damages its whole surface, the canvas's foot
+// among it.
 void Viewport::invalidate_waveform_area() {
     const GuiRect a = waveform_area(app);
-    damage_window_top_rows(app, gui, a.y + a.h);
+    int y1 = a.y + a.h;
+    if (onscreen_keyboard::stands(app)) {
+        const GuiRect kb = onscreen_keyboard::surface_rect(app);
+        if (kb.h > 0) y1 = std::min(y1, std::max(a.y, kb.y));
+    }
+    damage_window_top_rows(app, gui, y1);
 }
 
 // THE WINDOW-TOP RECT, SPLIT AT THE VIEWPORT'S LANES (2026-10-13; the rule
@@ -160,10 +171,12 @@ void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1) {
 // THE PROCESS LINE'S DAMAGE — the status bar's lane whole (send Z,
 // 2026-11-19). The caller inventory and why the writers declare it beside
 // the tick's comparator are at the declaration, viewport.h. The lane is the
-// lane table's, so UNDER THE ON-SCREEN KEYBOARD it is the bar relaid on the
-// keyboard's top line (send BB, main.cpp's app_foot_y), in view, and the
-// same rect repaints it there.
+// lane table's, on the window's foot. NONE WHILE THE ON-SCREEN KEYBOARD
+// STANDS: it covers the bar, whose painter yields under it, and its hide
+// damages its whole surface, the bar among it (onscreen_keyboard.h's
+// placement block; architect 2026-11-20, send EE).
 void Viewport::invalidate_status_bar_area() {
+    if (onscreen_keyboard::stands(app)) return;
     const GuiRect t = status_bar_area(app);
     if (t.w > 0 && t.h > 0) gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
@@ -198,9 +211,9 @@ void Viewport::invalidate_tab_name_area() {
 // WINDOW'S PAINTED EXTENT as last published (the window and its shadow's
 // reach, ModalDialogGeometry::box), so a close erases the window and its
 // shadow and brings the lanes, the canvas and the bottom icon row back. A
-// dialog editor's close takes the keyboard with it, and the keyboard's
-// layout edge relays the app out and damages the whole window
-// (GuiInputHandler::reconcile_keyboard_layout, send BB). Under the render
+// dialog editor's close takes the keyboard with it, whose hide damages its
+// own surface — the box's foot, the bottom icon row and the status bar it
+// covered (onscreen_keyboard::reconcile_slot_standing, send EE). Under the render
 // player and
 // the picker the controls row is the lane's own rows, and their
 // list's damage is the folder overlay's. (The taskbar dialog, 2026-10-10 to
@@ -237,8 +250,8 @@ void Viewport::invalidate_modal_dialog_area() {
 // step or the caret's blink changes, and the window never moves or grows
 // with the text (architect 2026-11-19, send AA). Before the session's first
 // paint — whose open damaged the whole window — the box's view, the room the
-// window is centered in (the lane table's, ending over the bottom icon row
-// relaid above the on-screen keyboard, send BB), grown by the window's
+// window is centered in (the lane table's, ending over the bottom icon row,
+// the on-screen keyboard over its foot), grown by the window's
 // shadow's reach (modal_box.h's xfwm_shadow_rect), every pixel the window
 // can lay down. The rule and the
 // caller inventory at the declaration, viewport.h.
@@ -324,9 +337,19 @@ void Viewport::invalidate_playhead_columns(int old_px, int new_px) {
 // The scanner's old and new rects, united where they touch (the rule and
 // the callers at the declaration, viewport.h; the rect's at
 // scanner_invalidate_rect, main.cpp). Both stand on the area's rows, so
-// they touch exactly when their column intervals overlap or abut.
+// they touch exactly when their column intervals overlap or abut. THE
+// ROWS END ON THE ON-SCREEN KEYBOARD'S TOP LINE WHILE IT STANDS: the line is
+// not drawn under it (the canvas's clip, onscreen_keyboard::
+// waveform_paint_area; send EE, 2026-11-20), so a scanner frame under the
+// flag editor repaints none of the keyboard's key rows in its column. The
+// columns stay the area's (the plate basis).
 void Viewport::invalidate_scanner_line(double old_x, double new_x) {
-    const GuiRect area  = waveform_area(app);
+    GuiRect area = waveform_area(app);
+    if (onscreen_keyboard::stands(app)) {
+        const GuiRect kb = onscreen_keyboard::surface_rect(app);
+        if (kb.h > 0 && kb.y < area.y + area.h)
+            area.h = std::max(0, kb.y - area.y);
+    }
     const GuiRect r_old = scanner_invalidate_rect(area, old_x);
     const GuiRect r_new = scanner_invalidate_rect(area, new_x);
     if (r_old.w > 0 && r_new.w > 0 &&

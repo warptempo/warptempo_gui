@@ -2,6 +2,7 @@
 
 #include "audio.h"            // GuiAudio, the struck card's piece
 #include "folder_overlay.h"   // pad_px, the panel's air (one accessor read)
+#include "onscreen_keyboard.h"  // the room's foot while the keyboard stands
 #include "paint_handler.h"    // the lane table
 #include "phase_reset_propagate.h"  // format_active_domain_time, the places
 #include "warp_frame_map_view.h"   // warp_red_flag_set_cached, the strike
@@ -71,9 +72,11 @@ GuiRect notification_stack_bound(const AppState& a) {
     // window's last column — rows from 32 and columns to 2271 on the tablet
     // — over the title bar and the top icon row, whatever stands there. The
     // foot is the panel's own pad, folder_overlay::pad_px (architect
-    // 2026-08-30; one W) above the bottom icon row's lane — the lane table's,
-    // relaid above the on-screen keyboard while it stands (send BB), so the
-    // room follows it there. The
+    // 2026-08-30; one W) above the bottom icon row's lane, OR ABOVE THE
+    // ON-SCREEN KEYBOARD'S TOP LINE WHILE IT STANDS, whichever is higher
+    // (architect 2026-11-20, send EE: the keyboard stands over the bottom
+    // icon row, onscreen_keyboard.h's placement block) — the cards paint
+    // after the keyboard, so a card never stands on its keys. The
     // card's INTERNAL padding is a different concept — notifyd's, the box's
     // own (notifications.h).
     //
@@ -86,7 +89,11 @@ GuiRect notification_stack_bound(const AppState& a) {
     const int w       = notification_card_max_w_px(a);
     const int x       = a.width - seat - w;
     const int y       = seat;
-    const int floor_y = bottom_row_area(a).y - pad;
+    int       floor_y = bottom_row_area(a).y - pad;
+    if (onscreen_keyboard::stands(a)) {
+        const GuiRect kb = onscreen_keyboard::surface_rect(a);
+        if (kb.h > 0) floor_y = std::min(floor_y, kb.y - pad);
+    }
     return GuiRect{x, y, w, std::max(0, floor_y - y)};
 }
 

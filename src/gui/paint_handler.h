@@ -1385,7 +1385,9 @@ private:
     // dialog editor and the progress modal in xfwm's window floating over
     // what stands (send AA's stage D2); the bottom icon row's own painter
     // yields the lane to it while an overlay's page is behind
-    // (modal_owns_bottom_row). `exposed` the damage rect the frame paints (the
+    // (modal_owns_bottom_row); everything it lays cut at the on-screen
+    // keyboard's top line while that stands (send EE). `exposed` the damage
+    // rect the frame paints (the
     // dialog editor's backdrop culls its rows by it). Painted from on_redraw
     // right after the keyboard slot,
     // unconditionally: it publishes AppState::modal_dialog and
@@ -1396,11 +1398,12 @@ private:
 
     // THE ON-SCREEN KEYBOARD (2026-08-27), the glass's key surface — its
     // band across the program lanes on the window's last rows, its block of
-    // keys seated in it, the app relaid out above it (onscreen_keyboard.h's
-    // placement block; send BB, 2026-11-19): nothing of the app lies under
-    // it. It paints AFTER every waveform pass and BEFORE the modal and the
-    // floating surfaces: the flag editor in the marker lane and a dialog
-    // editor's window in the box's view stand above its top line.
+    // keys seated in it, standing over the canvas's foot, the bottom icon row
+    // and the status bar, nothing relaid (onscreen_keyboard.h's placement
+    // block, its inventory of what yields under it; send EE, 2026-11-20). It
+    // paints AFTER every waveform pass and BEFORE the modal and the floating
+    // surfaces: the flag editor in the marker lane and a dialog editor's
+    // window in the box's view stand above its top line, the box cut there.
     //
     // GATED WHOLE ON onscreen_keyboard::stands (onscreen_keyboard.h — the
     // layout table, the geometry and the two lamps all live there): this body
@@ -1423,9 +1426,11 @@ private:
     // the on-screen keyboard and the FOLDER OVERLAY (folder_overlay.h) share
     // — the overlay replaces the keyboard there, so at most one tenant
     // stands. This dispatch is the slot's one paint entry and THE ONE WRITER
-    // of AppState::keyboard_slot_painted_standing (the slot comparator's
-    // as-painted bit, onscreen_keyboard::reconcile_slot_standing): it refreshes the bit only on a rect that
-    // FULLY COVERS the band — the roster publisher's own rule, for the two
+    // of AppState::keyboard_painted_standing and overlay_painted_standing
+    // (the slot comparator's as-painted bits, one a tenant,
+    // onscreen_keyboard::reconcile_slot_standing): it refreshes each only on
+    // a rect that FULLY COVERS that tenant's band — the roster publisher's
+    // own rule, for the two
     // edges the keyboard's body used to carry (a show whose route damaged
     // only the marker lane or the bottom row, a hide painted first by an
     // unrelated narrow damage) — then paints whichever tenant stands.

@@ -107,8 +107,9 @@ struct GuiRectF {
 //     edge at a fraction there would leave a partly covered pixel nothing
 //     composites: whatever chrome other than the floaters stands over the
 //     hole is whole pixels on its OUTER edges — the modal family's box,
-//     and any other chrome that reaches over it (the on-screen keyboard
-//     stands under the app, beside the hole, since send BB). THE FLOATING
+//     and any other chrome that reaches over it (the on-screen keyboard's
+//     surface, whose whole top line the hole is cut at,
+//     onscreen_keyboard::waveform_paint_area). THE FLOATING
 //     SURFACES' BOXES (the tooltip's and the notification cards') COMPOSITE
 //     TRULY since send AA's stage D1 (2026-11-19: their carried fills at
 //     .95, their rounded corners, the tooltip's shadow — the GPU's blend
@@ -1257,14 +1258,15 @@ int  run_gap_w();
 // KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
 // like a phone … chiclets, taller than wide"): the live box IN W
 // (scaled_px's axis), read by onscreen_keyboard.h's geometry and nothing
-// else (osk_key_h moving the band's height and so the surface's top — and,
-// while the keyboard stands, the app's foot the lane table is laid on,
-// main.cpp's app_foot_y, send BB — the band's pads the bottom icon row's
-// own, onscreen_keyboard::pad_top_px / pad_foot_px, 2026-11-19). The key_height
+// else (osk_key_h moving the band's height and so the surface's top, which
+// stands over the app and moves no lane, send EE, 2026-11-20 — the band's
+// pads the bottom icon row's own, onscreen_keyboard::pad_top_px /
+// pad_foot_px, 2026-11-19). The key_height
 // seat's shape exactly — file-scope state in render.cpp,
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
-// (GuiInputHandler::apply_osk_key_size, which re-lays-out at once). The
+// (GuiInputHandler::apply_osk_key_size, which repaints at once, no
+// relayout). The
 // grammar and the range are device_config.h's (parse_osk_key_size); the
 // construction state is 24 x 30 W (kOskKeyWDefaultW, kOskKeyHDefaultW; 48
 // x 60 device px on the tablet), the first-run values the shipped defaults
@@ -1738,10 +1740,9 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // the bottom icon row's rows; a question, a dialog editor and the progress
 // modal are dialogs in xfwm's window over what stands (paint_handler.cpp's
 // THE DIALOG WINDOW); the on-screen keyboard stands on the window's last
-// rows across the lanes, OUTSIDE THE APP, which is relaid out on the height
-// above it — the status bar on its top line, the bottom icon row over that,
-// the canvas the leftover (onscreen_keyboard.h's placement block, main.cpp's
-// app_foot_y; send BB, 2026-11-19).
+// rows across the lanes, over the status bar, the bottom icon row and the
+// view's foot, nothing relaid (onscreen_keyboard.h's placement block; send
+// EE, 2026-11-20).
 
 // THE PROGRAM'S BAND AND ITS CASE — THE ICON ROW, the top strip's lane 0,
 // at the surface's top since 2026-10-24 (architect 2026-10-09: the program is Cool
@@ -1834,9 +1835,9 @@ inline int key_gap_px() {
 // as Thunar and Mousepad draw it stands 8 W on one side and 7 W on the
 // other, a 1-px quirk given up for the symmetric 7 / 7). Through scaled_px,
 // floored at one device px: 14 device px on the tablet at 200 %. THE
-// ON-SCREEN KEYBOARD, standing under the status bar on the window's last
-// rows, wears the same pad above and below its grid (onscreen_keyboard.h's
-// pad_top_px / pad_foot_px, send BB). His reason for room under the bottom
+// ON-SCREEN KEYBOARD, standing over the bottom icon row and the status bar
+// on the window's last rows, wears the same pad above and below its grid
+// (onscreen_keyboard.h's pad_top_px / pad_foot_px, send BB). His reason for room under the bottom
 // row: "my hand isn't naturally at the very edge of the screen" — the
 // status bar stands under it (status_bar_lane_h_px).
 inline constexpr double kToolbarPadW = 7.0;
@@ -2453,14 +2454,15 @@ WellColumns well_columns(const AppState& a);
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
 // Every overlay — the render player, the project picker's contents, the
 // score viewer — stands its controls on these rows, THE MODAL FAMILY'S
-// CONTROLS ROW (modal_box.h); UNDER A QUESTION, THE PROGRESS DIALOG OR AN
-// EDITOR THE ROWS SHOW THE PAGE BEHIND'S ROW — the main page's keys and
-// timestamp, or the overlay's controls (a dialog editor's backdrop's among
-// them) — the top icon row the same page's face under the same modal
+// CONTROLS ROW (modal_box.h); UNDER A QUESTION OR THE PROGRESS DIALOG THE
+// ROWS SHOW THE PAGE BEHIND'S ROW — the main page's keys and timestamp, or
+// the overlay's controls — the top icon row the same page's face under the
+// same modal
 // (roster_face_page_owner, app_state.h), both rows dead to presses
 // (architect 2026-11-19, send BB; paint_handler.cpp's
-// modal_owns_bottom_row), relaid over the status bar above the on-screen
-// keyboard while it stands (main.cpp's app_foot_y).
+// modal_owns_bottom_row); UNDER EVERY EDITOR THE ON-SCREEN KEYBOARD STANDS
+// OVER THE ROWS and the row yields (onscreen_keyboard.h's placement block,
+// send EE, 2026-11-20).
 inline int bottom_row_h_px() {
     return strip_h_px();
 }
@@ -2472,9 +2474,9 @@ inline int bottom_row_h_px() {
 // the bottom icon row — ONE W OF `well_border` (Arc's $borders_color, the
 // line Thunar draws over its bar) AND THE BAR, kStatusBarPadW (4 W) + the
 // body face's line box (14 W, 11 + 3) + kStatusBarPadW: 1 + 22 = 23 W, 46
-// device rows on the tablet at 200 % (with no keyboard standing the line
-// 1394 .. 1395 and the bar 1396 .. 1439; under the on-screen keyboard at his
-// tuning 1002 .. 1003 and 1004 .. 1047), each part through scaled_px,
+// device rows on the tablet at 200 % (the line 1394 .. 1395 and the bar
+// 1396 .. 1439, under the on-screen keyboard while it stands), each part
+// through scaled_px,
 // rounded at the element. THE BAR IS
 // THE BODY TONE `body_face`, its text Regular 12 W (GuiFace::Body) in `text`,
 // THE PEN kStatusBarPenW (14 W) from the panel's left edge — THUNAR'S
@@ -2487,12 +2489,13 @@ inline int bottom_row_h_px() {
 // (line_box_baseline). Its content and
 // its damage: paint_status_bar and status_bar_text (paint_handler.cpp).
 // INERT CHROME: no hit, no tooltip, no gesture. It stands under every
-// overlay and modal (the controls row above it reading bottom_row_area),
-// IN VIEW UNDER EVERY EDITOR, on the app's foot, which
-// is the on-screen keyboard's top line while the keyboard stands (architect
-// 2026-11-19, send BB: overlays keep the bottom icon row and the status
-// bar, "which sets the precedent that overlays keep them"; main.cpp's
-// app_foot_y, onscreen_keyboard.h's placement block).
+// overlay and modal (the controls row above it reading bottom_row_area;
+// architect 2026-11-19, send BB: overlays keep the bottom icon row and the
+// status bar, "which sets the precedent that overlays keep them"), on the
+// window's foot, COVERED BY THE ON-SCREEN KEYBOARD under every editor, its
+// painter yielding there (architect 2026-11-20, send EE: "The status bar
+// should just be obscured by the OSK"; onscreen_keyboard.h's placement
+// block).
 inline constexpr double kStatusBarPadW = 4.0;
 inline constexpr double kStatusBarPenW = 14.0;
 // THE BOTTOM ICON ROW'S LEFT RUN'S PEN (architect 2026-11-19, send AA,

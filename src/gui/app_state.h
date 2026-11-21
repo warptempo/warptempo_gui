@@ -6403,10 +6403,9 @@ struct AppState {
     // editor under it (Enter, Esc) still owes the core that key-up, and the
     // release path — with the touch hard-end beside it — is its one clearer.
     //
-    // (The as-painted STANDING bit left this struct 2026-08-28 for
-    // `keyboard_slot_painted_standing` below: the band the keyboard paints in
-    // is shared with the folder overlay since the render player, and one bit
-    // describes the SLOT rather than either tenant.)
+    // (The as-painted STANDING bit lives outside this struct,
+    // `keyboard_painted_standing` below, beside the folder overlay's: the
+    // slot's two tenants, each its own bit.)
     // `pressed_keysym` is the key-up the held key OWES, or 0 for a held key
     // that synthesizes nothing (the page key, Shift). It is
     // stored rather than re-derived from `pressed_key` because the press's own
@@ -6427,37 +6426,28 @@ struct AppState {
     };
     OnscreenKeyboard onscreen_keyboard;
 
-    // THE KEYBOARD SLOT'S AS-PAINTED BIT (2026-08-27 as the keyboard's own;
-    // widened 2026-08-28 to the slot): does a KEYBOARD-SLOT SURFACE — the
-    // on-screen keyboard or the folder overlay, which replaces the keyboard in
-    // its band (folder_overlay.h) — stand as of the last frame that painted
-    // the whole band? The slot comparator (onscreen_keyboard::
-    // reconcile_slot_standing, at pre-paint and tick) reads it against the
-    // live OR of the two standing predicates, the roster faces' own
-    // mechanism: a surface appears and disappears with facts that damage no
-    // pixel of its own band, so the drift between this and the live answer is
-    // what pays for the show/hide repaint. ONE WRITER, the slot's paint
-    // dispatch (GuiPaintHandler::paint_keyboard_slot), which stamps it only
-    // on a rect that fully covers THE STANDING TENANT'S BAND — two different
-    // rects: the overlay's is the CEILING BAND every time it stands (from the
-    // WINDOW'S TOP down since 2026-09-03, whatever its listing's length —
-    // its fixed height of 2026-08-28 at the architect's new ceiling) while the
-    // keyboard's is its five key rows, and with neither standing the band to
-    // cover is the slot's tallest, which is what the hide's own damage draws
-    // — and then paints whichever tenant stands, so neither painter can claim
+    // THE KEYBOARD SLOT'S AS-PAINTED BITS, ONE A TENANT (2026-08-27 as the
+    // keyboard's own; 2026-08-28 the slot's; one bit a tenant since
+    // architect 2026-11-20, send EE, when the keyboard's edges went back to
+    // its own surface — the two tenants' damage rects differ, and an editor
+    // swapped for the overlay it returns to in one pass moves both): does
+    // THE ON-SCREEN KEYBOARD stand as of the last frame that painted its
+    // whole surface, and does THE FOLDER OVERLAY stand as of the last frame
+    // that painted its whole band? The slot comparator (onscreen_keyboard::
+    // reconcile_slot_standing, at pre-paint and tick) reads each against its
+    // tenant's live standing predicate, the roster faces' own mechanism: a
+    // surface appears and disappears with facts that damage no pixel of its
+    // own band, so the drift between a bit and the live answer is what pays
+    // for that tenant's show/hide repaint, its own rect
+    // (onscreen_keyboard::slot_damage_rect's block). ONE WRITER, the slot's
+    // paint dispatch (GuiPaintHandler::paint_keyboard_slot), which stamps
+    // each only on a rect that fully covers THAT TENANT'S BAND — the
+    // keyboard's surface (a fact of the window's foot alone, standing or
+    // not), the overlay's panel while it stands and the modal area, its
+    // hide's own damage, while it does not — so neither painter can claim
     // pixels the frame did not write.
-    bool keyboard_slot_painted_standing = false;
-
-    // THE LAYOUT'S KEYBOARD BIT, AS LAID OUT (architect 2026-11-19, send BB):
-    // did the on-screen keyboard stand when the window was last relaid out
-    // for it? The lanes themselves are DERIVED from the live answer
-    // (main.cpp's app_foot_y, onscreen_keyboard::stands), so this bit lays
-    // nothing out: it is the layout edge's memory, compared against the live
-    // answer to know that the app moved above or back over the keyboard's
-    // rows and that the relayout is owed. ONE WRITER, the edge
-    // (GuiInputHandler::reconcile_keyboard_layout), which writes it as it
-    // pays the relayout.
-    bool keyboard_laid_out_standing = false;
+    bool keyboard_painted_standing = false;
+    bool overlay_painted_standing  = false;
 
     // THE ARMED DIALOG BUTTON — the CLICK FACE and, unlike the roster's, THE
     // ACT'S OWN RECORD: these buttons act AT THE RELEASE (architect 2026-08-13,
@@ -9664,12 +9654,15 @@ struct AppState {
     // PAGE AS IT STOOD (`page`: its rows, its highlight and its scroll, the
     // press dropped) and THE TITLE the editor's window wears (`title`: the
     // row's key — the line's text before its `=` — or "Save As", the button's
-    // word). paint_modal_dialog paints `page` in the box's view, ITS
-    // CONTROLS ROW ON THE BOTTOM ICON ROW (architect 2026-11-19, send BB:
-    // the row of the page behind, painted as with no dialog over it — the
-    // trim presets list's enabled bits off this page and the live trim,
+    // word). paint_modal_dialog paints `page` in the box's view, cut at the
+    // on-screen keyboard's top line (the keyboard over the view's foot,
+    // onscreen_keyboard.h's placement block, send EE), ITS CONTROLS ROW —
+    // the row of the page behind (architect 2026-11-19, send BB; the trim
+    // presets list's enabled bits off this page and the live trim,
     // trim_presets_button_enabled's page form; the BPM form's off the live
-    // markers; the settings page's Close) and its window's title and label
+    // markers; the settings page's Close) — YIELDING UNDER THE KEYBOARD,
+    // which covers the bottom icon row while every dialog editor stands
+    // (architect 2026-11-20, send EE), and its window's title and label
     // off `title` while a dialog editor stands, and reads neither otherwise;
     // and THE ROSTER'S FACE reads `page.owner` there (roster_face_page_owner:
     // the top icon row the page behind's, its opener lit — one rule for both
@@ -11058,9 +11051,9 @@ GuiRect marker_lane_press_area(const AppState& a);
 // over the status bar, Arc's pad, the case and the pad again (the
 // simple layout, 2026-10-22; Cool Edit's dock bar over its content band and
 // the border under it 2026-10-09 to then), whatever stands over it (the
-// modal family's box and controls row, modal_box.h), relaid with the status
-// bar above the on-screen keyboard while it stands (main.cpp's app_foot_y,
-// send BB). (It was row 7's
+// modal family's box and controls row, modal_box.h; the on-screen keyboard
+// over it while it stands, onscreen_keyboard.h's placement block). (It was
+// row 7's
 // single status lane from 2026-08-01, one of two lanes while the transport
 // row stood, 2026-08-11..12, the strip's whole surface at the unification,
 // the strip's one lane resting on the WINDOW'S FOOT from commit B, one of
@@ -11071,20 +11064,14 @@ GuiRect marker_lane_press_area(const AppState& a);
 // the bar's (status_bar_area below; notifications.h's head).
 GuiRect bottom_row_area(const AppState& a);
 // THE STATUS BAR'S LANE (main.cpp; render.h's status bar block): the line
-// and the bar under the bottom icon row, the window's whole width, its foot
-// THE APP'S FOOT (app_foot_y below).
+// and the bar under the bottom icon row, the window's whole width, on the
+// window's foot (window_foot_y below).
 GuiRect status_bar_area(const AppState& a);
-// THE WINDOW'S FOOT AND THE APP'S FOOT (architect 2026-11-19, send BB; the
-// rule at their definitions, main.cpp): the window's foot is the clamped
-// window height, where the on-screen keyboard stands
-// (onscreen_keyboard::foot_y); the app's foot is the height every lane is
-// laid on — the window's foot less the keyboard's surface while it stands —
-// the status bar's last row one above it. A reader that means "the app's
-// last row" asks app_foot_y; the window's own extent (the GL surface,
-// whole-window damage, a dialog centered on the panel, the keyboard's foot)
-// is the window's.
+// THE WINDOW'S FOOT (the rule at its definition, main.cpp): the clamped
+// window height, the one height the lane table is laid on and the row the
+// on-screen keyboard stands on (onscreen_keyboard::foot_y), the keyboard
+// moving no lane (architect 2026-11-20, send EE).
 int window_foot_y(const AppState& a);
-int app_foot_y(const AppState& a);
 
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
@@ -11165,11 +11152,11 @@ GuiRect tooltip_damage_band(const AppState& a);
 // row down to the bottom row's top, 2026-08-28 to 2026-10-14 — IS GONE: the
 // folder overlay stands in the modal family's box since 2026-10-14
 // (modal_box.h, its one owner), and the on-screen keyboard's band stands on
-// the window's last rows under the app, which is relaid above it
-// (onscreen_keyboard.h's placement block, send BB, 2026-11-19). The two
-// still never both stand — the overlay's owners are
-// not editors, the record at onscreen_keyboard::stands — and still share the
-// slot's one show-and-hide damage rect, onscreen_keyboard::slot_damage_rect.)
+// the window's last rows over the app, nothing relaid (onscreen_keyboard.h's
+// placement block, send EE, 2026-11-20). The two still never both stand —
+// the overlay's owners are not editors, the record at
+// onscreen_keyboard::stands — and each pays its own show and hide in the
+// slot's comparator, onscreen_keyboard::reconcile_slot_standing.)
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio);
 double  current_samples_per_pixel(const AppState& a, const GuiAudio& audio);

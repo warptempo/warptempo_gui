@@ -321,8 +321,8 @@ inline int content_height_px(const AppState& a) {
 // `bpm`), the BPM form its four, and every other value list its key's
 // whole domain).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
-// so the surface is the box's panel over the lanes laid on the window's
-// whole height (main.cpp's app_foot_y equal to the window's height).
+// so the surface is the box's panel over the lanes, nothing of the
+// keyboard's to cut from it.
 inline GuiRect surface_rect(const AppState& a) {
     return modal_panel_rect(a);
 }

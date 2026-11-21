@@ -251,7 +251,7 @@ enum class GuiIconSet { Breeze, Papirus };
 //                            spelling (parse_osk_key_size below), no
 //                            taller-than-wide constraint (his to tune),
 //                            live at the settings editor's OK, the window
-//                            re-laid-out at once
+//                            repainted at once
 //                            (GuiInputHandler::apply_osk_key_size); TWO
 //                            TUNING KEYS with Settings rows, REQUIRED like
 //                            every key while they stand, which settle into
