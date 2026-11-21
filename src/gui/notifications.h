@@ -50,11 +50,12 @@
 // line; render.h's status bar block, paint_handler.cpp's status_bar_text the
 // one composer and paint_status_bar the painter: its first field, the
 // selection count and the history view's GitHub word beside it) — A BATCH'S
-// PROGRESS IS THE PROGRESS MODAL'S since 2026-10-14 ("Rendering X of Y..."
-// in the modal family's box from the Render press to the batch's terminal,
-// AppState::BatchProgress), and the status bar under the modal carries the
-// sweep's own line ("Rendering N of M <label>...") beside it, the bar
-// standing under every modal; on the main page the line is a single
+// PROGRESS IS THE PROGRESS MODAL'S since 2026-10-14 (the progress page:
+// "Rendering...", the bar and "X of Y" in the modal family's box from the
+// Render press to the batch's terminal, AppState::BatchProgress), THE STATUS
+// BAR BLANK UNDER IT (architect 2026-11-20, send EE: the page says what the
+// sweep's own line, "Rendering N of M <label>...", would; status_bar_text);
+// on the main page the line is a single
 // render's "Rendering..." and a preview's "Updating..."; an
 // EVENT is an act answered with a sentence, or a background act that
 // finished badly — a CARD. The state surface has NO TIMEOUTS because nothing

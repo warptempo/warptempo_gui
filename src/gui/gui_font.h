@@ -20,12 +20,13 @@
 // drawn for 9 pt = 12 px) — 24 device px on the tablet — BUT THE RULER'S
 // DIGITS, 10 W (20 device px; Arc's `font-size: smaller`, 12 / 1.2: "the
 // ruler, we should make the ruler font small still"). No other size on the
-// main page. THE DIALOGS TAKE GTK'S TWO OTHER SIZES (send AA's stage D2,
-// 2026-11-19; the design's overlays at 12 W text): LARGE 14.4 W (Pango's
-// "large", 1.2 x; 29 device px on the tablet) for a question's and the
-// progress dialog's sentence — the one size not a whole W, GTK's own ratio
-// — and CAPTION 10 W (Pango's "small") for the progress dialog's count.
-// THE USES: BODY 12 (the lists, the cards, the dialogs' words and entry,
+// main page. THE PROGRESS PAGE'S COUNT TAKES GTK'S "small" (send AA's stage
+// D2, 2026-11-19): CAPTION 10 W (Pango's "small", 12 / 1.2). (A question's
+// and the progress page's sentence are plain Body text since send EE,
+// architect 2026-11-20: GTK's "large" was the popup's — "the oversized text
+// is the clue".)
+// THE USES: BODY 12 (the lists, the cards, a question's and the progress
+// page's sentence, the dialog editor's words and entry,
 // the NOISE number, the status bar), PROGRAM 12 (the
 // clocks — the bottom icon row's timestamp and the render player's two
 // time labels — the tab's name and the tooltip's name line), LABEL 12 (the cues'
@@ -34,17 +35,16 @@
 // its right group, render.h's title bar block; the dialogs' window titles
 // and the lists' group headings, send AA's stage D2), SMALL 10 (the ruler's
 // digits), KEYS 12 (the on-screen keyboard's caps — the default of the
-// one LIVE size, the `osk_font_px` tuning key's, GuiFont below), LARGE
-// 14.4 and CAPTION 10 (the dialogs, above). The rows
+// one LIVE size, the `osk_font_px` tuning key's, GuiFont below) and
+// CAPTION 10 (the progress page's count, above). The rows
 // coinciding in number stay rows of their own: the roster is the
 // distinction.
 // TWO WEIGHTS (architect 2026-11-19, send Z: "yes, regular is good"): THE
 // REGULAR FOR BODY TEXT — Body, Program, Label, Hint, Caption, and the
 // on-screen keyboard's caps (Keys; Regular since send AA's stage D2, the
 // design's §E and the approved Z_06, the Bold they wore before) — and THE
-// BOLD FOR THE TITLE BAR AND THE DIALOGS' TITLES AND HEADINGS (Bold), THE
-// RULER'S DIGITS (Small) AND A DIALOG'S SENTENCE (Large: GTK's message
-// dialog's primary text), as GTK Arc sets them (xfwm's title, Thunar's
+// BOLD FOR THE TITLE BAR AND THE DIALOGS' TITLES AND HEADINGS (Bold) AND
+// THE RULER'S DIGITS (Small), as GTK Arc sets them (xfwm's title, Thunar's
 // column and section headers bold, every other text regular).
 // (The printed legends under the keys, the Legend row, retired with the
 // legends, architect 2026-11-18: "That's from the hi-fi theme".)
@@ -102,11 +102,9 @@
 // ruler's digits (`Small`), the clocks, the tab's name and the
 // tooltip's name line (`Program`), the on-screen keyboard's caps (`Keys`),
 // the tooltip's hint line (`Hint`), the cues' labels with the lane's
-// editors (`Label`), a question's and the progress dialog's sentence
-// (`Large`) and the progress dialog's count (`Caption`).
-enum class GuiFace { Body, Bold, Small, Program, Keys, Hint, Label, Large,
-                     Caption };
-inline constexpr std::size_t kGuiFaceCount = 9;
+// editors (`Label`) and the progress page's count (`Caption`).
+enum class GuiFace { Body, Bold, Small, Program, Keys, Hint, Label, Caption };
+inline constexpr std::size_t kGuiFaceCount = 8;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
 // Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the APK's
@@ -114,7 +112,7 @@ inline constexpr std::size_t kGuiFaceCount = 9;
 // initializer, so a file added here is packed with no second list; the
 // backend hands the bytes in in this order, and a use names its file by its
 // index here — the Regular read by the body text and the keyboard's caps,
-// the Bold by the title bar, the dialogs' titles and sentences, the lists'
+// the Bold by the title bar, the dialogs' titles, the lists'
 // headings and the ruler's digits (the head). Both
 // are TrueType
 // (FT_New_Memory_Face).
@@ -134,7 +132,8 @@ struct GuiFaceSize {
     double      em_w = 0.0;
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
-    {0, 12.0},   // Body: the lists, the cards, the dialogs, the status bar
+    {0, 12.0},   // Body: the lists, the cards, the pages, the dialogs, the
+                 // status bar
     {1, 12.0},   // Bold: the title bar (the brand and its right group),
                  // the dialogs' window titles, the lists' group headings
     {1, 10.0},   // Small: the ruler's digits
@@ -143,9 +142,7 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
     {0, 12.0},   // Hint: the tooltip's hint line
     {0, 12.0},   // Label: the cues' labels and the lane's editors
-    {1, 14.4},   // Large: a question's and the progress dialog's sentence
-                 // (GTK's "large", 1.2 x the 12 W text; send AA's stage D2)
-    {0, 10.0},   // Caption: the progress dialog's count (GTK's "small",
+    {0, 10.0},   // Caption: the progress page's count (GTK's "small",
                  // 12 / 1.2; send AA's stage D2)
 };
 

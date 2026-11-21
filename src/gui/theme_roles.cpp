@@ -379,13 +379,13 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.selection_text      = packed(standby_text);
     t.score_pane_face     = packed(ink);
     // THE DIALOG WINDOW'S FRAME (send AA's stage D2, 2026-11-19: xfwm's
-    // frame round a question, the line editor and the progress dialog,
-    // paint_handler.cpp's paint_xfwm_window): its edge ControlContrastFrame
+    // frame round the line editor, paint_handler.cpp's paint_xfwm_frame):
+    // its edge ControlContrastFrame
     // (arc_dark 21252B, xfwm's assets.svg), its title bar's highlight row
     // our own TitleHighlight (353B48; a Live theme's SurfaceArea, the title
     // tone, so the row is not seen there); AND ARC'S PROGRESS / SCALE TROUGH
     // our own ScaleTrough over the ground (2D303B; a Live theme's
-    // ScrollbarInnerTrack, so its trim trough's tone), the progress dialog's
+    // ScrollbarInnerTrack, so its trim trough's tone), the progress page's
     // bar.
     t.frame_edge          = packed(contrast);
     t.title_highlight     = packed(opaque(roles["TitleHighlight"]));

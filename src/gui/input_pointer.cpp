@@ -2582,14 +2582,15 @@ bool GuiInputHandler::touch_point_in_pan_zone(
     // card is opaque to the pointer everywhere else too (the hover walk), so
     // the zone agrees with it.
     if (notification_card_at(app, x, y) != 0) return false;
-    // AND IT YIELDS WHOLE UNDER A QUESTION AND THE PROGRESS MODAL (send AA's
-    // stage D2, 2026-11-19): their window floats over the main page, the
-    // waveform painted under it, so a finger landing on an answer inside the
-    // pan zone would become the phone-model pan and deliver no press on
-    // contact. Answering false lets every finger resolve to the pointer
-    // translation, whose press arms the window's buttons or is consumed by
-    // the veil (on_button_press's prompt and progress gates); the pan itself
-    // is refused under both (the touch frame's refusal list).
+    // AND IT YIELDS WHOLE UNDER A QUESTION'S PAGE AND THE PROGRESS PAGE
+    // (architect 2026-11-20, send EE): the page takes the view, the waveform
+    // not painted under it (the modal family's box stands, so
+    // point_on_nav_surface below would answer no too — the term states the
+    // rule at its own rank, ahead of the surface test). Every finger
+    // resolves to the pointer translation, whose press arms the page's
+    // answers on the bottom icon row or is consumed by the veil
+    // (on_button_press's prompt and progress gates); the pan itself is
+    // refused under both (the touch frame's refusal list).
     if (app.prompt.active || app.batch_progress.active) return false;
     // (THE ZONE YIELDED INSIDE THE SHOWN TRIM REGION OVERLAY from 2026-08-15,
     // so a finger could reach the overlay's endcap and bridge drags. Both are
@@ -3070,7 +3071,7 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
         // THE FOCUS'S DAMAGE IS A DIALOG EDITOR'S ALONE: its field reads the
         // focus (the entry's ring and caret, paint_modal_dialog's editor
         // arm), so the move damages the window as published. A question,
-        // the progress dialog, the player, the picker and the score viewer
+        // the progress page, the player, the picker and the score viewer
         // paint no focus (the row's NO FOCUS LOOK), so their press owes the
         // face damaged above and nothing more — never the window and its
         // shadow.
@@ -4810,14 +4811,15 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // (THE SIZING FRAME's claim, above every veil, 2026-10-05 to 2026-10-24,
     // went with the app's frame.)
 
-    // Prompt-modal input handling: while a prompt dialog is up, its BUTTONS
-    // are the pointer's only targets — and since 2026-08-13 a plain press
+    // Prompt-modal input handling: while a question's page is up, its
+    // ANSWERS — the word buttons on the bottom icon row's place — are the
+    // pointer's only targets, and since 2026-08-13 a plain press
     // on one only ARMS it (architect: "everything else acts on lift"). The
     // ACT is at the release, in on_button_release's mirror of this gate, which
     // is where activate_response is called and where the live-response-set
-    // validation lives. Every other press — a ctrl press,
-    // anywhere — is swallowed: THE VEIL. Responses still answer from the
-    // keyboard unchanged.
+    // validation lives. Every other press — a ctrl press, anywhere, the
+    // page and the greyed top icon row alike — is swallowed: THE VEIL. No
+    // key reaches a prompt (on_key's gate).
     // THE TWO GATES ARE ON BOTH EDGES, deliberately: the press cannot arm
     // without them and the release re-asks both before dispatching, so an arm
     // cannot survive a dialog that changed under it (the painter drops the arm
@@ -4826,11 +4828,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // publication, so between a raise and its first paint they belong to the
     // previous dialog. A PROMPT REPLACING A PROMPT — the save-failed rung, the
     // one such route — leaves Discard and Cancel rects whose keys ARE live in
-    // the new set, at coordinates the new layout (different text, different
-    // button words, so different widths) no longer uses: a press there
-    // answered destructively against a question that had not been painted.
-    // Gated on the same bit the keyboard reads, so both halves of the answer
-    // wait for the same frame. The veil is unchanged either way — the press is
+    // the new set, on the very seats the new question's answers take (the
+    // word buttons stand on the bottom icon row's fixed seats, architect
+    // 2026-11-20, send EE): a press there would answer destructively
+    // against a question that had not been painted.
+    // The veil is unchanged either way — the press is
     // still consumed by the `return` below, it just arms nothing.
     // AND THE STASH'S IDENTITY IS THE CLAIM'S OTHER HALF: a stash an EDITOR
     // painted never answers a prompt, whatever its keys say (published
@@ -4981,8 +4983,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // THE PROGRESS MODAL'S VEIL (architect 2026-10-14, AppState::
     // BatchProgress): while a batch's modal stands the pointer has ONE target
     // of its own, the controls row's Cancel (the arm every dialog button
-    // takes, its act at the lift); EVERY OTHER PRESS IS CONSUMED —
-    // the box, the lanes and the roster alike, the prompt's own veil. Ranked with the two list
+    // takes, its act at the lift); EVERY OTHER PRESS IS CONSUMED — the
+    // progress page and the greyed top icon row alike, the prompt's own
+    // veil. Ranked with the two list
     // owners' veils, none of which can stand beside it; the cards, the
     // keyboard and a prompt over it answer above.
     if (app.batch_progress.active) {
@@ -6897,7 +6900,7 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 // asks it of the face its hit found, the settle of the hovered face, and
 // the hover's setter of the face the pen left.
 //   ROSTER — the modals veil the whole roster (the press router's ranks: a
-//     question, any editor, the progress dialog); under an overlay the press
+//     question, any editor, the progress page); under an overlay the press
 //     reaches the top icon row's band alone (the three veils' claim); then
 //     the painted bits: enabled (under an overlay only the keys it leaves
 //     live are painted enabled, redesign_button_enabled's overlay arm) and
@@ -7044,10 +7047,9 @@ AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer() const {
 // A FACE'S OWN PAINTED EXTENT — a fade's damage (AppState::FaceFades' THE
 // FRAMES), the press faces' damage owners' shapes: a roster key's
 // painted extent (invalidate_roster_press_face's rect: its box, both seam
-// columns inside it), a dialog button's box as published and the seam
-// column after it where it is an action row's answer
-// (ModalDialogButton::seam_after: that column is the next answer's, and it
-// moves with this one's hover), a keyboard key's face (its hull, key_rect:
+// columns inside it), a dialog button's box as published (a linked glyph
+// key's box holds both its seam columns; a word button has none), a
+// keyboard key's face (its hull, key_rect:
 // the grid's lines do not move), the knob's disc at its published center
 // (its hull, cut to the item). EMPTY where the face's stash is no longer its
 // own — whatever replaced that surface repainted it.
@@ -7070,10 +7072,7 @@ GuiRect GuiInputHandler::face_extent(
             if (!stash_is_faces || face.index < 0 ||
                 face.index >= static_cast<int>(dlg.buttons.size()))
                 break;
-            const AppState::ModalDialogButton& b =
-                dlg.buttons[static_cast<size_t>(face.index)];
-            return GuiRect{b.rect.x, b.rect.y, b.rect.w + b.seam_after,
-                           b.rect.h};
+            return dlg.buttons[static_cast<size_t>(face.index)].rect;
         }
         case Surface::Keyboard:
             if (!onscreen_keyboard::stands(app) ||
@@ -7162,7 +7161,8 @@ void GuiInputHandler::hold_face(const AppState::FaceFades::Face& face) {
 // two boxes that share one seam column, materials.h's linked_key_box — the
 // groups stand a run gap apart, so no other box ends there); a dialog
 // button's the button before it in the stash, where the two are linked (a
-// glyph key publishes its seam, an answer the seam after it).
+// glyph key publishes its seam; word buttons — a question's answers among
+// them — stand apart and share none).
 AppState::FaceFades::Face GuiInputHandler::seam_left_face(
         const AppState::FaceFades::Face& right) const {
     using Face    = AppState::FaceFades::Face;
@@ -7192,7 +7192,7 @@ AppState::FaceFades::Face GuiInputHandler::seam_left_face(
                 right.index >= static_cast<int>(dlg.buttons.size()))
                 break;
             const size_t k = static_cast<size_t>(right.index);
-            if (dlg.buttons[k].seam > 0 || dlg.buttons[k - 1].seam_after > 0)
+            if (dlg.buttons[k].seam > 0)
                 return Face{Surface::Dialog, right.index - 1,
                             right.dialog_owner, right.dialog_session};
             break;
@@ -7237,10 +7237,8 @@ AppState::FaceFades::Face GuiInputHandler::seam_right_face(
 // THE SEAM'S OWN COLUMNS (the declaration) — the first border's columns of
 // the face that names it, on its box's rows: a roster key's `seam` columns
 // from its box's left edge, cut to its painted extent; a dialog button's
-// the same, an answer's the one border the answer before it publishes as
-// its seam after. Both lie inside each neighbor's own damage (face_extent:
-// a linked key's box holds both its seam columns; an answer's extent its
-// box and the seam after it).
+// the same. Both lie inside each neighbor's own damage (face_extent: a
+// linked key's box holds both its seam columns).
 GuiRect GuiInputHandler::seam_extent(
         const AppState::FaceFades::Face& right) const {
     using Surface = AppState::FaceFades::Surface;
@@ -7265,8 +7263,7 @@ GuiRect GuiInputHandler::seam_extent(
             return GuiRect{0, 0, 0, 0};
         const size_t k = static_cast<size_t>(right.index);
         const AppState::ModalDialogButton& b = dlg.buttons[k];
-        const int w = b.seam > 0 ? b.seam : dlg.buttons[k - 1].seam_after;
-        return GuiRect{b.rect.x, b.rect.y, std::max(0, w), b.rect.h};
+        return GuiRect{b.rect.x, b.rect.y, std::max(0, b.seam), b.rect.h};
     }
     return GuiRect{0, 0, 0, 0};
 }
@@ -7455,7 +7452,8 @@ void GuiInputHandler::settle_trim_bar_hover() {
 // and modal_dialog_live_owner), a roster key's, and the seam it names, while
 // its published box is empty (the key off the screen: the `h` view's Older /
 // Newer standing in for LEFT / RIGHT, the bottom icon row's keys while an
-// overlay's controls stand there) — so
+// overlay's controls, a question's answers or the progress page's Cancel
+// stand there) — so
 // whatever replaces them, or the key when it comes back, paints its looks at
 // once (AppState::FaceFades' WHAT DOES NOT FADE); nothing is damaged, the
 // surface that replaced them having been repainted. THE HOVERED SLOT GOES where no press would act on its face (it

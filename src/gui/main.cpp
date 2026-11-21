@@ -1540,13 +1540,13 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame
 // damages the window entire. THE MODAL STATE READS THE SAME ZERO (2026-08-13):
-// the row's painter zeroes the cell while it yields to an overlay's row — an
-// overlay standing, or a dialog editor over its backdrop (paint_handler.cpp's
-// modal_owns_bottom_row) — so a clock-moving route there widens to the lane
-// instead of damaging a cell that is not being painted. UNDER A QUESTION OR
-// THE PROGRESS DIALOG OVER THE MAIN PAGE the row is the main page's and its
-// cell is published (architect 2026-11-19, send BB), so the clock ticks in
-// its own cell.
+// the row's painter zeroes the cell while it yields to the modal family's
+// row — an overlay standing, a question's page or the progress page (their
+// answers on the row, architect 2026-11-20, send EE), or a dialog editor
+// over its backdrop (paint_handler.cpp's modal_owns_bottom_row) — so a
+// clock-moving route there widens to the lane instead of damaging a cell
+// that is not being painted (nothing plays under a question or the progress
+// page: each raise stops playback).
 //
 // WHILE THE ON-SCREEN KEYBOARD STANDS THE RECT IS EMPTY: the keyboard covers
 // the row whole and the row yields under it (onscreen_keyboard.h's placement

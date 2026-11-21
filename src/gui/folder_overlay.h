@@ -295,7 +295,9 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
 // "1 agree" / "2 agree"): A PAD OF CONTENT OVER THE FIRST ROW that puts THE
 // FIRST LINE'S CAP TOP kPageMarginCapTopW (13 W) UNDER THE VIEW'S TOP at
 // scroll 0, WHATEVER THE FIRST ROW'S KIND. THE RULE IS THE CAP TOP AND THE
-// PAD IS DERIVED, never an authored number: the margin's 13 W less the cap
+// PAD IS DERIVED, never an authored number (modal_box.h's
+// page_margin_head_pad_px, the arithmetic's one definition, the two pages'
+// first line reading it too): the margin's 13 W less the cap
 // top's depth inside the first row — that row's baseline (row_baseline_px)
 // less its face's cap band (gui_font_cap_px, the file's own unhinted "H",
 // the metric every placement reads) — so it FOLLOWS THE FIRST ROW'S KIND: a
@@ -335,10 +337,8 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
 inline int head_pad_px(const AppState::FolderOverlay& ov) {
     if (ov.rows.empty()) return 0;
     const AppState::FolderOverlayRow::Kind kind = ov.rows.front().kind;
-    const double cap_top_depth =
-        row_baseline_px(kind) - gui_font_cap_px(gui_font(row_face(kind)));
-    return static_cast<int>(std::nearbyint(
-        static_cast<double>(page_margin_cap_top_px()) - cap_top_depth));
+    return page_margin_head_pad_px(gui_font(row_face(kind)),
+                                   row_baseline_px(kind));
 }
 
 // (THE BAND OWNS NO LINE OF ITS OWN — the lines above and below the view are

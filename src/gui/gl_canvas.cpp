@@ -84,7 +84,7 @@ constexpr const char* kCanvasVertexShader =
 //       texels stand only inside a hull (the transparency invariant), where
 //       mode 1 draws them over the list's pixel this draw left untouched;
 //   1 — THE BLENDED DRAW INSIDE A HULL (send AA's stage D1, the tooltip's
-//       .95 fill and its shadow, the cards' .95 fills, a question's shadow;
+//       .95 fill and its shadow, the cards' .95 fills;
 //       confined to the hulls since send BB): the texel goes out as cairo
 //       holds it, PREMULTIPLIED (t.bgr, t.a), under the blend present_frame
 //       enables for this draw — the fixed state's premultiplied source-over
@@ -1545,8 +1545,8 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // each texel at its pixel and DISCARDING an alpha-0 one, so the canvas
 // shows wherever the backbuffer's interior is clear and every other
 // pixel is the backbuffer's (kCanvasFragmentShader) — AND INSIDE THE
-// FLOATERS' HULLS drawn under the premultiplied blend, so the tooltip's,
-// the cards' and a question's translucent pixels composite over the canvas
+// FLOATERS' HULLS drawn under the premultiplied blend, so the tooltip's
+// and the cards' translucent pixels composite over the canvas
 // the list drew (send AA's stage D1, 2026-11-19; confined to the hulls by
 // send BB the same day, THE TEXTURE'S DRAW below). The frame is
 // cleared first, opaque black: with discards a pixel neither draw writes

@@ -666,10 +666,10 @@ struct Viewport {
     void invalidate_tab_name_area();
     // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
     // onto the row 2026-08-13, and the row yields to it whole), WITH THE
-    // MODAL FAMILY'S WHOLE AREA while a prompt, a dialog editor or the
-    // progress modal stands or was last painted (2026-10-14, modal_box.h — the box over the canvas
-    // column and its controls row; the taskbar dialog's overlay to the
-    // window's foot 2026-10-10 to 2026-10-14 — the definition says why). ITS CALLERS,
+    // MODAL FAMILY'S WHOLE AREA while a question's page, the progress page
+    // or a dialog editor stands or was last painted (2026-10-14, modal_box.h
+    // — the box over the canvas column and its controls row; the definition
+    // says why). ITS CALLERS,
     // re-greped 2026-10-14, are the DIALOG EDITOR's closers plus the
     // RENDER PLAYER's three, the player being the row's third owner (A
     // STANDING EDITOR'S EDITS — typing, the completions, the caret blink, a
@@ -696,8 +696,8 @@ struct Viewport {
     // published rect before its first paint owes; their CLOSERS that come
     // through here take the family's area by the stash's painted owner. The
     // rect is the lane whole and the family's area, and — while the last paint
-    // drew a question, a dialog editor or the progress modal — the window's
-    // stashed box too (its shadow reaches past the area), so a CLOSER that
+    // drew a dialog editor — its window's stashed box too (the window and
+    // its shadow's reach), so a CLOSER that
     // runs between paints still erases what the last frame drew and the
     // row's own tenants come back with it.
     //

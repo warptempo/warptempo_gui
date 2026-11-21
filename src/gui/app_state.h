@@ -3496,14 +3496,16 @@ enum class DialogTrigger {
     TRIM_PRESET_SAVE_CONFIRM,
 };
 
-// In-window modal prompt state. When `active` is true, THE PROMPT STANDS IN
-// THE MODAL FAMILY'S BOX (paint_modal_dialog, architect 2026-10-14,
-// modal_box.h — its question on the box's first row on the face, one REAL
-// BUTTON per response flush right on the controls row under it, row 8's
-// tenants standing down whole). It stood on the bottom row from 2026-08-13
-// (the text at the left pad, the buttons after it, the taskbar dialog laid
-// over the row from 2026-10-10); the centered box of 2026-08-12 is scrapped,
-// and before that arc the prompts were a tier in this same row's status span.
+// In-window modal prompt state. When `active` is true, THE QUESTION STANDS
+// AS A FULL PAGE (architect 2026-11-20, send EE: "we shuold remove the
+// popups ... instead, the old prompt eg 'do you want to revert and drop
+// changes?' should come back"; paint_handler.cpp's THE QUESTION PAGE AND
+// THE PROGRESS PAGE, the owner): the view — the modal family's box's
+// interior, modal_box.h — one flat page in the lists' tone whatever stood
+// there, the question alone on it on THE PAGE MARGIN, one WORD BUTTON per
+// answer flush right where the bottom icon row's keys stand (that row's own
+// tenants and an overlay's controls standing down whole), and every key of
+// the top icon row greyed while it stands (roster_greyed_whole).
 // THE BUTTONS ARE THE PROMPT'S ONE ROAD (architect 2026-10-30: the hardware
 // keyboard is closed, and the on-screen keyboard stands only under an
 // editor, which every prompt's raise either finds absent or takes down
@@ -3542,7 +3544,8 @@ enum class DialogTrigger {
 // never seen. `painted` closes that
 // span BY THE PAINTER'S OWN HAND: it is false at every raise (`present`
 // below is the one route, so no raiser can forget it) and the ONE writer of
-// true is paint_modal_dialog's prompt branch — the same surface, the same
+// true is paint_modal_dialog's question branch (its plan: THE QUESTION PAGE
+// AND THE PROGRESS PAGE's THE PAINTED GATE) — the same surface, the same
 // run-loop iteration, the same buffer the frame then commits. No
 // synchronization machinery, no generation counter, no probe: that locality
 // IS the mechanism, and it is precisely what a SECOND window surface cannot
@@ -3556,8 +3559,11 @@ enum class DialogTrigger {
 // publication: an editor dialog's buttons publish a zero response key and the
 // live-set test refuses them already, but a PROMPT REPLACING A PROMPT — the
 // save-failed rung, the one such route — leaves rects whose Discard/Cancel
-// keys are still live at coordinates the new (differently laid out) button row
-// no longer uses, so the stale-rect press was answerable and destructive. The
+// keys are still live in the new set, on the very seats the new row's
+// answers take (the word buttons stand on the bottom icon row's fixed
+// seats, so Retry / Discard / Cancel lands where Save / Discard / Cancel
+// stood), so the stale-rect press would answer a question never seen,
+// destructively. The
 // dialog's TOOLTIP WAIT is deliberately not gated: a stale hit names a button
 // for the wait until THE NEXT DELIVERED MOTION, which is what re-runs
 // update_modal_dialog_hover (the modal branches of on_motion are its only
@@ -5902,21 +5908,26 @@ struct AppState {
     };
     DialogEditorText dialog_editor_text;
 
-    // THE MODAL SURFACE'S PAINTED GEOMETRY. The prompts, the two dialog
-    // editors and the progress modal paint as DIALOG WINDOWS centered in the
-    // modal family's room (paint_dialog_window, paint_handler.cpp's THE
-    // DIALOG WINDOW); the render player and the picker on the family's
-    // controls row (modal_box.h): while one stands the bottom icon row's
-    // tenants stand down whole. This is the
+    // THE MODAL SURFACE'S PAINTED GEOMETRY. A QUESTION AND THE PROGRESS PAGE
+    // ARE FULL PAGES — the view the page, their answers word buttons on the
+    // family's controls row (architect 2026-11-20, send EE; paint_handler.cpp's
+    // THE QUESTION PAGE AND THE PROGRESS PAGE); the dialog editor paints as
+    // a DIALOG WINDOW centered in the modal family's room
+    // (paint_dialog_window, paint_handler.cpp's THE DIALOG WINDOW); the
+    // render player, the picker and the score viewer stand on the family's
+    // controls row (modal_box.h): while a page or an overlay stands the
+    // bottom icon row's tenants stand down whole. This is the
     // painter's stash of what was drawn, the roster model:
     // paint_modal_dialog rewrites it every run (zero/invalid when no dialog
     // stands), and the pointer path reads it instead of re-deriving layout.
     // `box` is the modal's whole SURFACE — the controls row under the render
-    // player and the picker, the score viewer's whole area (modal_area_rect,
-    // modal_box.h), and under a question, a dialog editor or the progress
-    // modal THE DIALOG'S WINDOW AND ITS SHADOW'S REACH (xfwm_shadow_rect,
-    // modal_box.h; paint_dialog_window) — which is what the hover
-    // invalidation and the damage ride; `field` is the editor's entry, its
+    // player and the picker; the modal family's whole area (modal_area_rect,
+    // modal_box.h: the box and the controls row under it) under the score
+    // viewer, a question and the progress page; and under a dialog editor
+    // THE DIALOG'S WINDOW AND ITS SHADOW'S REACH (xfwm_shadow_rect,
+    // modal_box.h; paint_dialog_window) — DAMAGE'S FALLBACK, read where no
+    // narrower rect is known (a press face with no stash index, a dialog
+    // editor's focus move); `field` is the editor's entry, its
     // box border included (zero for prompts) — the click-to-caret /
     // text-drag claim region and a standing editor's edit damage
     // (Viewport::invalidate_dialog_editor_box); `buttons` are the answer
@@ -5996,9 +6007,9 @@ struct AppState {
     // 2026-11-11, session 106: the lit PLAYER key is the way out) — is
     // the bottom row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
-    // still outranks it (the load confirmation takes the box and the
-    // controls row over the player's list exactly as the quit prompt does
-    // over an editor's line, 2026-10-14); the player and an
+    // still outranks it (the load confirmation's page takes the view and
+    // the controls row in place of the player's list and row, the player
+    // standing under it); the player and an
     // editor are never live together (its opener refuses under any editor and
     // its key router consumes every editor opener).
     // THE FOURTH OWNER IS THE PICKER (architect 2026-08-28): the
@@ -6007,10 +6018,9 @@ struct AppState {
     // click on a row opens it). Ranked WITH the player, and like the player
     // it STANDS UNDER ITS OWN QUESTIONS since 2026-10-25 (architect: one
     // rule for the overlays) — the reopen's unsaved-tab question and
-    // Revert's discard question, both raised from the picker, take the box
-    // and the controls row over its list, and their Cancel returns to it.
-    // (The open act closed the picker before raising its question from
-    // 2026-08-28 until then.) The close road's exit still takes it down at
+    // Revert's discard question, both raised from the picker, take the view
+    // and the controls row in place of its list and row, and their Cancel
+    // returns to it. The close road's exit still takes it down at
     // its head. The picker
     // and the player are NEVER LIVE TOGETHER (each opener refuses under the
     // other, and neither is an editor), as neither is live beside an editor
@@ -6020,8 +6030,9 @@ struct AppState {
     // the color picker's card on the well, 2026-10-07..14 — each deleted with
     // its surface.)
     // THE FIFTH OWNER IS THE PROGRESS MODAL since 2026-10-14
-    // (AppState::BatchProgress): a batch's "Rendering X of Y..." on the box's
-    // face with Cancel alone on the controls row. Ranked directly UNDER THE
+    // (AppState::BatchProgress): THE PROGRESS PAGE — a batch's sentence, bar
+    // and count on the view with Cancel alone on the controls row (architect
+    // 2026-11-20, send EE). Ranked directly UNDER THE
     // PROMPT (a WM close can raise the unsaved-work question over a running
     // batch) and above the other three, none of which stands beside it: the
     // player's and the picker's openers are unreachable under its router and
@@ -6192,14 +6203,6 @@ struct AppState {
         // key on its left in a linked group (linked_key_seam_px,
         // materials.h) — 0 on a group's first key and on a word button.
         int         seam = 0;
-        // THE SEAM AFTER (send CC, 2026-11-20): the columns right after the
-        // box that move with THIS button's fade though they are the next
-        // button's — an action row's answer's right seam, the next answer's
-        // first columns (paint_action_row) — so a fade's damage holds
-        // them (GuiInputHandler::face_extent). 0 on every other
-        // button: a linked key's box holds both its seams, a word button
-        // has none.
-        int         seam_after = 0;
         // The hit test's one question (point_on_key's linked form).
         bool hit(int x, int y) const { return point_on_key(rect, seam, x, y); }
         char        response_key = 0;   // prompt dialogs; 0 elsewhere
@@ -7129,7 +7132,8 @@ struct AppState {
     //
     // THE FACES: every Arc button the product paints — the roster's keys
     // (both icon rows), the dialog stash's buttons (every controls row's
-    // keys and word buttons, a dialog window's answers and buttons), the
+    // keys and word buttons, a question's answers and the progress page's
+    // Cancel among them, and the dialog editor's window's two), the
     // on-screen keyboard's keys — and the scrub's knob, each named by its
     // surface and its index there (a dialog button's and the knob's with the
     // stash's owner and session, so a face never outlives the surface it was
@@ -7274,20 +7278,20 @@ struct AppState {
     // gone or on another page, a dialog stash's owner or session no longer
     // the live one, a roster key whose published box is empty — off the
     // screen — with the seam it names), the next paint of whatever replaces
-    // it, or of the key when it comes back, at once; THE VEIL'S DEAD PAGE: a
-    // roster key painted under a question or the progress dialog — whose
-    // page behind wears its face as it stood, no key of it greyed for the
-    // modal — paints its look at once at every paint while that veil stands,
-    // and at once again when it leaves (the record's `veiled`,
-    // paint_handler.cpp's modal_veil_stands), and a controls row under a
-    // dialog makes no record. AN EDITOR IS NO VEIL'S DEAD PAGE (architect
-    // 2026-11-20, send EE): the page under it — the main page under the flag
-    // editor, the backdrop page under a dialog editor — stands before, under
-    // and after it, and the on-screen keyboard greys its whole roster
-    // (redesign_button_enabled's keyboard arm), so those keys are standing
-    // keys whose state changes and fade as Arc's sheet says: into greyed
-    // 200 ms, a lit key into lit-and-inert 50 ms, and back at the editor's
-    // close (rest 200, lit 50), each from the picture on screen. Not faces at all:
+    // it, or of the key when it comes back, at once — THE BOTTOM ICON ROW'S
+    // KEYS UNDER A QUESTION OR THE PROGRESS PAGE among them: the row yields
+    // to the page's answers, its keys publish empty boxes and are not
+    // painted, so they come back at once when the page leaves — and a
+    // dialog editor's backdrop row under its window makes no record. THE TOP
+    // ICON ROW IS THE SAME STANDING ROW UNDER EVERY MODAL (architect
+    // 2026-11-20, send EE): it stands before, under and after an editor, a
+    // question and the progress page, each of which greys its whole roster
+    // (redesign_button_enabled's first arm, roster_greyed_whole), so its
+    // keys are standing keys whose state changes and fade as Arc's sheet
+    // says: into greyed 200 ms, a lit key into lit-and-inert 50 ms, and back
+    // when the modal leaves (rest 200, lit 50), each from the picture on
+    // screen; no page paints a roster key's look at once for being under a
+    // veil. Not faces at all:
     // NOISE's entry and its level line, list rows, the title bar's lamps,
     // the trim bar, the cards, the tooltips.
     // THE FRAMES — NOTHING IS DAMAGED AT REST: while a face fades, every step
@@ -7383,7 +7387,6 @@ struct AppState {
             Face     face;
             GuiRect  box{0, 0, 0, 0};
             FaceLook target      = FaceLook::Rest;
-            bool     veiled      = false;
             bool     fading      = false;
             // HELD AT A PRESS'S END (hold): the fade stands still at the
             // value it had reached — the clock skips it — until the next
@@ -7468,15 +7471,14 @@ struct AppState {
         }
         // THE PAINTERS' ONE CALL (the head's THE ONE SOURCE): the picture to
         // paint `face` in, its painter having resolved `look` for it on
-        // `box` this run, `veiled` under a modal's veil, `exposed` where this
-        // run's clip meets the box. A face the clip misses changes nothing
-        // (its stored mix, or the look itself with no record); a face with no
-        // record, re-laid (another box), under a standing veil or across a
-        // veil's edge paints its look at once, recorded; a face whose look moved begins its fade
-        // from its stored mix, its start the clock's next step, and paints
-        // that stored mix; else its stored mix.
+        // `box` this run, `exposed` where this run's clip meets the box. A
+        // face the clip misses changes nothing (its stored mix, or the look
+        // itself with no record); a face with no record or re-laid (another
+        // box) paints its look at once, recorded; a face whose look moved
+        // begins its fade from its stored mix, its start the clock's next
+        // step, and paints that stored mix; else its stored mix.
         FaceMix as_painted(const Face& face, const GuiRect& box, FaceLook look,
-                           int64_t duration, bool veiled, bool exposed) {
+                           int64_t duration, bool exposed) {
             Record* r = find(face);
             if (!exposed) return r ? r->mix : FaceMix::of(look);
             if (r == nullptr) {
@@ -7484,16 +7486,14 @@ struct AppState {
                     records.push_back(Record{.face   = face,
                                              .box    = box,
                                              .target = look,
-                                             .veiled = veiled,
                                              .from   = FaceMix::of(look),
                                              .mix    = FaceMix::of(look)});
                 return FaceMix::of(look);
             }
-            if (veiled || !(r->box == box) || r->veiled != veiled) {
+            if (!(r->box == box)) {
                 *r = Record{.face   = face,
                             .box    = box,
                             .target = look,
-                            .veiled = veiled,
                             .from   = FaceMix::of(look),
                             .mix    = FaceMix::of(look)};
                 return r->mix;
@@ -7506,16 +7506,16 @@ struct AppState {
         // looks this run resolved for its faces, its duration the right
         // face's destination's (the head's THE SEAMS) — the line's weight.
         FaceMix face_as_painted(const Face& face, const GuiRect& box,
-                                FaceLook look, bool veiled, bool exposed) {
+                                FaceLook look, bool exposed) {
             return as_painted(face, box, look, duration_ms(face.surface, look),
-                              veiled, exposed);
+                              exposed);
         }
         double seam_as_painted(const Face& right, const GuiRect& box,
                                FaceLook left_look, FaceLook right_look,
-                               bool veiled, bool exposed) {
+                               bool exposed) {
             return as_painted(right.left_seam(), box,
                               seam_target(left_look, right_look),
-                              duration_ms(right.surface, right_look), veiled,
+                              duration_ms(right.surface, right_look),
                               exposed)[FaceLook::Hover];
         }
         // EVERY RECORD DROPPED (the head's WHAT DOES NOT FADE): the next
@@ -8792,11 +8792,10 @@ struct AppState {
     // ruling is at the TrimState store.
     TrimState trim;
 
-    // The command prompt, A QUESTION IN A DIALOG WINDOW (paint_modal_dialog's
-    // paint_dialog_window: the question over its action row of real
-    // buttons, the bottom icon row's tenants standing down). Active only
-    // when a close / re-detect gesture fires while a confirmation is
-    // required.
+    // The command prompt, A QUESTION ON A FULL PAGE (paint_modal_dialog's
+    // THE QUESTION PAGE: the question on the view, its answers word buttons
+    // where the bottom icon row's tenants stand down). Active only while a
+    // question is asked (PromptState::present's raises).
     PromptState prompt;
 
     // Shared text-editor state for TWO editors distinguished by Kind: the
@@ -9116,13 +9115,15 @@ struct AppState {
     // THE PROGRESS MODAL (architect 2026-10-10 evening; its shape 2026-10-14
     // on his progress mock) — THE MODAL FAMILY'S FIFTH
     // MEMBER (modal_box.h, ModalDialogOwner::Progress). EVERY BATCH — the grid
-    // iterations and the BPM sweep — opens it AT THE RENDER PRESS: THUNAR'S
-    // PROGRESS DIALOG in xfwm's window centered on the panel (send AA's stage
-    // D2, 2026-11-19; paint_handler.cpp's THE DIALOG WINDOW) — its sentence,
-    // the bar over the entries done, the count under it, and CANCEL ALONE,
-    // the window's one button, the modal's one road. The lines are
-    // `sentence()` and `count()` below, the count rewritten as each entry
-    // starts.
+    // iterations and the BPM sweep — opens it AT THE RENDER PRESS: THE
+    // PROGRESS PAGE (architect 2026-11-20, send EE: "yes, progress window
+    // can go back"; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS
+    // PAGE) — the view one flat page, on it the sentence, the bar over the
+    // entries done and the count under it, and CANCEL ALONE, a word button
+    // where the bottom icon row's keys stand, the modal's one road; every
+    // key of the top icon row greyed and the status bar blank while it
+    // stands. The lines are `sentence()` and `count()` below, the count
+    // rewritten as each entry starts.
     //   `active`   it stands — from the press (GuiInputHandler::
     //              open_batch_progress: at the batch's first dispatch, or at
     //              the park when the batch waits out a killed render's drain)
@@ -9140,8 +9141,10 @@ struct AppState {
     // under the existing "Rendered N of M" card. A cancel while the batch is
     // still PARKED closes it at the cancel (GuiInputHandler::
     // cancel_batch_progress): the parked batch is disarmed and never runs.
-    // While it stands the status bar under it carries the batch's own line
-    // (queue_progress_text; the bar stands under every modal, send Z).
+    // WHILE IT STANDS THE STATUS BAR IS BLANK (architect 2026-11-20, send
+    // EE: "agree" — the page says what the batch's process line would;
+    // status_bar_text, paint_handler.cpp), a question raised over it
+    // included.
     struct BatchProgress {
         bool     active  = false;
         uint64_t session = 0;
@@ -9150,9 +9153,9 @@ struct AppState {
         // THE ELLIPSIS (architect 2026-10-14, his word) is spelled as the
         // product spells every ellipsis it paints: three periods, as
         // "Updating..." and the flag truncation's "..." are.
-        // THE PROGRESS DIALOG'S TWO LINES (send AA's stage D2, 2026-11-19:
-        // Thunar's progress dialog, the operation over the bar and its count
-        // under it): THE SENTENCE the batch's operation, "Rendering...", the
+        // THE PROGRESS PAGE'S TWO LINES (Thunar's progress dialog's: the
+        // operation over the bar and its count under it; send AA's stage
+        // D2, 2026-11-19): THE SENTENCE the batch's operation, "Rendering...", the
         // single render's own word with its ellipsis, and THE COUNT the
         // entry rendering of the batch, "3 of 11" — his sentence of
         // 2026-10-14, "Rendering 3 of 11...", parted across the two lines
@@ -9676,7 +9679,7 @@ struct AppState {
     // and THE ROSTER'S LIT BIT reads `page.owner` there
     // (roster_face_page_owner: the page behind's opener lit, architect
     // 2026-11-19, send BB — and inert, the whole roster greyed while the
-    // keyboard stands, redesign_button_enabled's keyboard arm, architect
+    // keyboard stands, redesign_button_enabled's first arm, architect
     // 2026-11-20, send EE). The next
     // opener overwrites both. Nothing writes the page, the trim or
     // the markers under the editor's veil, so the row shows the bits the list
@@ -10164,6 +10167,29 @@ inline bool score_viewer_stands(const AppState& a) {
     return a.score_viewer.active;
 }
 
+// DOES A QUESTION'S PAGE OR THE PROGRESS PAGE STAND? (architect 2026-11-20,
+// send EE; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE) —
+// THE ONE PREDICATE: a prompt up or a batch's progress standing, each a
+// full page over whatever stands — the main page, the `h` view or an
+// overlay, which stays open under it. Its readers are the page's four
+// consequences, each at its owner: the modal family's box stands, so the
+// waveform is not painted (modal_box_stands, modal_box.h); the bottom icon
+// row yields to the page's answers (paint_handler.cpp's
+// modal_owns_bottom_row); the folder overlay's list is not painted
+// (paint_folder_overlay); and the whole roster greys (roster_greyed_whole,
+// below). THE PAGE NEVER STANDS WITH THE ON-SCREEN KEYBOARD — no road raises
+// one while an editor owns the keyboard: the close road takes every editor
+// down before its question rises (GuiPrompt::request_close); every other
+// raise is a roster key's lift, a chord or an overlay's own button, each
+// consumed by the editor's veil (keyboard_modal_editor_active:
+// on_button_press's veil, modal_editor_key_blocked), and no overlay stands
+// beside an editor (each closes at the editor's open); a batch is
+// dispatched by RENDER's chord or the BPM form's RENDER, dead the same way;
+// the save-failed rung replaces a question standing already.
+inline bool modal_page_stands(const AppState& a) {
+    return a.prompt.active || a.batch_progress.active;
+}
+
 // DOES THE STANDING SCORE VIEWER HOLD THE ENGINE? (2026-10-26 night) — its
 // transport bound to the soundtrack, live or paused (AppState::ScoreViewer::
 // transport). A target preview completing meanwhile does not rebind
@@ -10274,7 +10300,7 @@ inline const char* overlay_leave_word(const AppState& a) {
 // overlay too, a lamp and no roster key (ChromePress's Lamp kind). (Under a
 // dialog editor, no overlay standing, no key answers: the editor's veil
 // holds every road here, and the face greys the whole roster,
-// redesign_button_enabled's keyboard arm.)
+// redesign_button_enabled's first arm.)
 inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
     return is_overlay_opener(a, b) || b == RedesignButton::IconTooltips;
 }
@@ -11085,8 +11111,8 @@ int window_foot_y(const AppState& a);
 // (DOES A CHROME TENANT OWN THE BOTTOM ROW — chrome_tenant_owns_bottom_row,
 // a prompt or a dialog editor standing in THE DIALOG, the taskbar overlay
 // laid over the window's foot, 2026-10-10 to 2026-10-14 — IS GONE with the
-// overlay: the prompts and the dialog editors are dialogs in xfwm's window
-// since send AA's stage D2, a dialog editor's in the modal family's room,
+// overlay: a prompt is a full page in the modal family's box since send EE
+// and a dialog editor a dialog in xfwm's window in that box's room,
 // modal_box.h.)
 
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT LIES IN (architect 2026-11-07,
@@ -16092,17 +16118,20 @@ bool phase_reset_paste_actionable(const AppState& app, const GuiAudio& audio);
 
 // IS THE WHOLE ROSTER GREYED — THE PAGES ON WHICH EVERY ROSTER KEY IS DEAD
 // AND LOOKS IT (architect 2026-11-20, send EE; the rule and its words at its
-// one reader, redesign_button_enabled's keyboard arm): today exactly while
-// the on-screen keyboard stands, one of the editors owning it — the term
-// onscreen_keyboard::stands asks, AppState::text_editor_session, spelled here
-// because that header includes this one. THE ONE PLACE A PAGE JOINS: a
-// question's or the progress dialog's page joining the rule joins here, and
-// the face and the tick's comparator follow (they read the enabled bit,
-// never this); the one other site such a page must answer is the veil's dead
-// page (paint_handler.cpp's modal_veil_stands, whose look-at-once is the
-// question's and the progress dialog's today).
+// one reader, redesign_button_enabled's first arm), UNDER EVERY MODAL:
+//   * WHILE THE ON-SCREEN KEYBOARD STANDS, one of the editors owning it —
+//     the term onscreen_keyboard::stands asks, AppState::text_editor_session,
+//     spelled here because that header includes this one;
+//   * WHILE A QUESTION'S PAGE OR THE PROGRESS PAGE STANDS (modal_page_stands;
+//     his "i just want to make sure the dead buttons are somehow
+//     communicated", and to "Arc's own disabled look is the dead keys'
+//     sign": "agree") — TIPS, NOISE and a standing overlay's lit opener
+//     included, the opener lit and inert.
+// THE ONE PLACE A PAGE JOINS: the face and the tick's comparator follow (they
+// read the enabled bit, never this). PAINT ALONE, both terms: the modal's
+// own veil already keeps every roster key dead (the arm's head).
 inline bool roster_greyed_whole(const AppState& a) {
-    return a.text_editor_session() != 0;
+    return a.text_editor_session() != 0 || modal_page_stands(a);
 }
 
 inline bool redesign_button_enabled(const AppState& a,
@@ -16119,18 +16148,16 @@ inline bool redesign_button_enabled(const AppState& a,
     // face (the folder-overlay arm below): on screen is as painted, the
     // roster's truthful rule. THE PROMPTS, THE EDITORS AND THE PROGRESS
     // MODAL are MODAL: they take focus and control by definition, so what
-    // they cover — the toolbar — is dead behind their veil. A PROMPT AND THE
-    // PROGRESS MODAL GREY NO KEY OF THEIR OWN: the roster wears the face of
-    // the page behind, as it stood — the main page's or the standing
-    // overlay's own — so this body has no arm for them. EVERY EDITOR — the
-    // three dialog editors, and since 2026-10-25 the lane editors, the flag
+    // they cover — the toolbar — is dead behind their veil, AND UNDER EVERY
+    // ONE OF THEM THE WHOLE ROSTER GREYS (the first arm below, architect
+    // 2026-11-20, send EE: the dead keys look dead): a question's page and
+    // the progress page (modal_page_stands), and EVERY EDITOR — the three
+    // dialog editors, and since 2026-10-25 the lane editors, the flag
     // editor and the iteration bound editor (architect: "acts that need a
-    // keyboard — shouldn't they just be modals?") — OWNS THE ON-SCREEN
-    // KEYBOARD, AND WHILE IT STANDS THE WHOLE ROSTER GREYS (the keyboard arm
-    // below, architect 2026-11-20, send EE: the dead keys look dead). An act
-    // that takes the keyboard is a modal, and a modal admits its own
-    // vocabulary alone (keyboard_modal_editor_active, the one predicate,
-    // input_handler.h). This is the one record of the rule.
+    // keyboard — shouldn't they just be modals?") — which owns the on-screen
+    // keyboard. An act that takes the keyboard is a modal, and a modal
+    // admits its own vocabulary alone (keyboard_modal_editor_active, the one
+    // predicate, input_handler.h). This is the one record of the rule.
     //
     // THE THREE CLASSES (architect 2026-10-25): THE MODALS above; THE
     // OVERLAYS, the render player and the picker's five contents (the
@@ -16157,44 +16184,52 @@ inline bool redesign_button_enabled(const AppState& a,
     //
     // AN OVERLAY STAYS STANDING UNDER ITS OWN QUESTION (architect
     // 2026-10-25, the player's precedent made one rule): the player's load
-    // in place and folder delete, the picker's reopen and revert — the
-    // prompt takes the box and the controls row over the overlay's list,
-    // owns the keyboard and the pointer ahead of its router and its veil,
-    // and nothing behind it changes face (the opener key stays lit and
-    // live-faced, its press swallowed by the prompt's veil, so this body
-    // needs no prompt term); Cancel returns to the overlay as it stood, and
-    // the answer that acts runs the act over it — the load closing the
-    // player at its success, the reopen and the revert ending the session
-    // and the picker with it, the delete leaving the player on its new
-    // listing. The picker closed itself before its question from 2026-08-28
-    // until then.
+    // in place and folder delete, the picker's reopen and revert, the trim
+    // presets list's save and delete, the score viewer's reset — the
+    // question's page takes the view and the controls row IN PLACE OF the
+    // overlay's list (or page) and its own controls (architect 2026-11-20,
+    // send EE), owns the pointer ahead of its router and its veil, and the
+    // overlay stays open under it, untouched; ITS OPENER KEY STAYS LIT AND
+    // GREYS WITH THE REST OF THE ROSTER, lit and inert (the first arm
+    // below), its press swallowed by the prompt's veil; Cancel returns to
+    // the overlay as it stood, and the answer that acts runs the act over
+    // it — the load closing the player at its success, the reopen and the
+    // revert ending the session and the picker with it, the delete leaving
+    // the player on its new listing.
     //
     // (THE THREE MENU ANCHORS answered first here, from menu_anchor_live,
     // until the menu row's removal, 2026-10-21.)
-    // WHILE THE ON-SCREEN KEYBOARD STANDS ONLY IT IS LIVE, AND EVERY ROSTER
-    // KEY LOOKS DEAD — THE RULE'S ONE OWNER (architect 2026-11-20, send EE:
-    // "the osk should essentially stop all other activity and become the
-    // only active element when it's onscreen"; "i agree that simpler is
-    // better. i just want to make sure the dead buttons are somehow
-    // communicated"; on the greyed top icon row read as Arc's own disabled
-    // look, taken as enough: "agree"). While an editor owns the keyboard
-    // (roster_greyed_whole: the flag editor in either kind, the iteration
-    // bound editor among them, and the three dialog editors) this answers
-    // FALSE FOR EVERY ROSTER KEY, NO EXCEPTION — the tooltip lamp, the level
-    // case NOISE and a dialog editor's backdrop opener included — so every
-    // key of the top icon row wears Arc's greyed look, a lit one its
-    // lit-and-inert look (its lit bit redesign_button_selected's, which asks
-    // nothing of the editors: TARGET / PHASE on the main page, the backdrop's
-    // opener under a dialog editor, roster_face_page_owner), and NOISE its
-    // disabled entry (paint_level_case); nothing else is added, no tone and
-    // no look of its own (materials.h's THE KEY). Ranked AHEAD OF EVERY OTHER
-    // ARM. PAINT ALONE: the editor's veil (keyboard_modal_editor_active,
-    // input_handler.h) already keeps every key dead — no press, lift,
-    // hold-repeat, hover, tooltip dwell or chord reaches one — so no input
-    // road changes its answer; the face says what the veil does. The main
-    // page (or the backdrop page) stands under the editor, so its keys are
-    // standing keys whose state changes: they fade into the greyed looks and
-    // back at the editor's close (AppState::FaceFades: no veil's dead page).
+    // UNDER A MODAL ONLY THE MODAL IS LIVE, AND EVERY ROSTER KEY LOOKS DEAD
+    // — THE RULE'S ONE OWNER (architect 2026-11-20, send EE: "the osk should
+    // essentially stop all other activity and become the only active element
+    // when it's onscreen"; "i agree that simpler is better. i just want to
+    // make sure the dead buttons are somehow communicated"; on the greyed
+    // top icon row read as Arc's own disabled look, taken as enough:
+    // "agree"). While an editor owns the on-screen keyboard, or a question's
+    // page or the progress page stands (roster_greyed_whole: the flag editor
+    // in either kind, the iteration bound editor among them, the three
+    // dialog editors; modal_page_stands) this answers FALSE FOR EVERY ROSTER
+    // KEY, NO EXCEPTION — the tooltip lamp, the level case NOISE, a dialog
+    // editor's backdrop opener and a standing overlay's opener under its own
+    // question included — so every key of the top icon row wears Arc's
+    // greyed look, a lit one its lit-and-inert look (its lit bit
+    // redesign_button_selected's, which asks nothing of the modals: TARGET /
+    // PHASE on the main page, the backdrop's opener under a dialog editor,
+    // roster_face_page_owner, the overlay's opener under its question), and
+    // NOISE its disabled entry (paint_level_case); nothing else is added, no
+    // tone and no look of its own (materials.h's THE KEY). The bottom icon
+    // row's keys read the same answer and show none of it: the row yields to
+    // the keyboard or to the page's answers (paint_bottom_strip). Ranked
+    // AHEAD OF EVERY OTHER ARM. PAINT ALONE: the modal's own veil already
+    // keeps every key dead — an editor's (keyboard_modal_editor_active,
+    // input_handler.h), the prompt's and the progress modal's gates
+    // (on_button_press, on_button_release, on_key, the hover's and the
+    // tooltip's terms, input_pointer.cpp / input_handler.cpp) — no press,
+    // lift, hold-repeat, hover, tooltip dwell or chord reaches one, so no
+    // input road changes its answer; the face says what the veil does. THE
+    // TOP ICON ROW STANDS BEFORE, UNDER AND AFTER EVERY MODAL, so its keys
+    // are standing keys whose state changes: they fade into the greyed looks
+    // and back when the modal leaves (AppState::FaceFades).
     if (roster_greyed_whole(a)) return false;
     // THE LOAD GREYS THE ROSTER (architect 2026-09-24): while there is no
     // piece to dispatch on — a load in flight, or a set before its load,
@@ -16349,12 +16384,11 @@ inline bool redesign_button_enabled(const AppState& a,
         // answers with close_picker (the picker's Cancel), and the render
         // player greys it (its router consumes Ctrl+O); the `h` view leaves
         // it lit (Ctrl+O is on its allowlist, the derived partition above).
-        // THE MODALS ARE NO TERM: a prompt, the progress modal and every
-        // editor veil the chrome, every press on it silently consumed, and no
-        // modal greys a key of its own — the roster wears the page behind's
-        // face, a dialog editor's the page it was opened from (the dialog
-        // editor arm above; the classes' record at this predicate's head),
-        // where OPEN PROJECT is grey. Neither lock drops Ctrl+O (read_only_key_blocked admits
+        // THE MODALS ARE NO TERM HERE: a prompt, the progress modal and every
+        // editor veil the chrome, every press on it silently consumed, and
+        // the whole roster greys under each of them (the first arm above;
+        // the classes' record at this predicate's head), OPEN PROJECT with
+        // it. Neither lock drops Ctrl+O (read_only_key_blocked admits
         // it, the iteration lock inheriting the admission). ITS SHIFT TWIN,
         // REVERT, ADDS NOTHING HERE under the twin rule: the plain act is
         // live wherever the roster is, and Revert's own refusals (a
@@ -17688,9 +17722,11 @@ inline bool redesign_button_enabled(const AppState& a,
 // it and puts none out: the bits are the page behind's — under a dialog
 // editor the page it was opened from, whose opener stays lit (the openers'
 // arm below, roster_face_page_owner; send BB, 2026-11-19) — and under every
-// editor, the on-screen keyboard standing and the whole roster greyed
-// (redesign_button_enabled's keyboard arm, send EE, 2026-11-20), each lit
-// key wears the lit-and-inert look by the same one rule. Three readers: the painter
+// editor, the on-screen keyboard standing, and under a question's page or
+// the progress page, the whole roster greyed
+// (redesign_button_enabled's first arm, send EE, 2026-11-20), each lit
+// key wears the lit-and-inert look by the same one rule — a standing
+// overlay's opener under its own question among them. Three readers: the painter
 // (which stashes what it painted), main.cpp's staleness comparator and the band's fingerprint
 // (GuiPaintHandler::upper_rows_fingerprint). (The lift's radio refusal, a
 // lit view pair member's press a consumed nothing, was one more until the
@@ -17896,7 +17932,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // from, so SETTINGS stays lit under the settings line, PRESETS under
         // Save As and BPM under the BPM field — lit and inert there, the
         // whole roster greyed while the keyboard stands
-        // (redesign_button_enabled's keyboard arm, send EE).
+        // (redesign_button_enabled's first arm, send EE).
         case RedesignButton::IconListen:
         case RedesignButton::OpenProject:
         case RedesignButton::IconSettings:

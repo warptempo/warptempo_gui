@@ -1380,11 +1380,13 @@ private:
     void paint_sweep_highlight(GuiCanvasSink& sink, const GuiRect& area);
     void paint_bottom_strip(cairo_t* cr);
     // THE MODAL (2026-08-13): the overlays' controls on the modal family's
-    // controls row (modal_box.h, 2026-10-14) — the page behind's, live or,
-    // under a dialog, paint-only (send BB, 2026-11-19) — and a question, a
-    // dialog editor and the progress modal in xfwm's window floating over
-    // what stands (send AA's stage D2); the bottom icon row's own painter
-    // yields the lane to it while an overlay's page is behind
+    // controls row (modal_box.h, 2026-10-14) — live, or a dialog editor's
+    // backdrop's, paint-only (send BB, 2026-11-19); A QUESTION'S PAGE AND
+    // THE PROGRESS PAGE, the box's view the page and their answers word
+    // buttons on that row (architect 2026-11-20, send EE); and a dialog
+    // editor in xfwm's window in the box's view (send AA's stage D2); the
+    // bottom icon row's own painter yields the lane to it while an overlay
+    // or a page stands
     // (modal_owns_bottom_row); everything it lays cut at the on-screen
     // keyboard's top line while that stands (send EE). `exposed` the damage
     // rect the frame paints (the
@@ -1445,6 +1447,8 @@ private:
     // highlight band and the pressed row's lighter pair (2026-11-05), all under
     // the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands
+    // — and NOT PAINTED UNDER A QUESTION'S PAGE, which stands in the list's
+    // place (modal_page_stands; architect 2026-11-20, send EE) —
     // and then on its own exposure per row, as the keyboard is. It publishes
     // no geometry: the press router walks the same row table through the same
     // walker (folder_overlay::for_each_row / row_at).

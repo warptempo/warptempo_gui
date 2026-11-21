@@ -91,9 +91,8 @@
 // is an integral rectangle whose antialiasing blends against its own ground
 // alone, design record §2) — OR, WHERE A FLOATING SURFACE STANDS, ANY
 // PREMULTIPLIED ALPHA (send AA's stage D1, 2026-11-19: Arc's tooltip, its
-// .95 fill, rounded corners and GTK's shadow, notifyd's .95 cards, and a
-// question's or the progress modal's xfwm shadow — "if we can do the
-// transparency, we might as well"): cairo lays the floater over the cleared
+// .95 fill, rounded corners and GTK's shadow, and notifyd's .95 cards — "if
+// we can do the transparency, we might as well"): cairo lays the floater over the cleared
 // zeros, so its texels are its own premultiplied color, and INSIDE THE
 // FLOATERS' HULLS (GuiCanvasDrawList::floaters below; send BB, 2026-11-19)
 // the texture's draw blends them source-over the canvas the list drew
@@ -112,8 +111,10 @@
 // paints under the box (the lanes paint their exposure under it and the box
 // covers them, on_redraw's paint-order block step 12). The invariant is the
 // same inside it: alpha 0, an opaque overlay's 255, or a floater's
-// premultiplied alpha inside its hull (a card, the tooltip or a question
-// over the viewer). The two tenants never stand together, so the scissor,
+// premultiplied alpha inside its hull (a card or the tooltip over the
+// viewer; a question over the viewer takes the box whole, its page opaque,
+// and the page hole is gone under it). The two tenants never stand
+// together, so the scissor,
 // the rect every upload leaves out but where a hull meets it, and the
 // hulls' blend are one rule for both.
 //
@@ -305,8 +306,12 @@ inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
 // THE FLOATERS' HULLS (architect 2026-11-19, send BB: "ok to implement the
 // fix you suggested for the power draw by card"; the cost of a standing
 // floater confined to where it stands): ONE RECT A FAMILY — the cards'
-// stack, the tooltip, a question's or the progress modal's window — in
-// surface px, empty where the family paints nothing, every pixel the family
+// stack and the tooltip, THE TWO FAMILIES (a question, the progress page and
+// a dialog editor's window are none: each stands on the modal family's box,
+// under which the canvas is not painted, modal_box.h's modal_box_stands, so
+// nothing of a modal floats over the canvas; architect 2026-11-20, send EE)
+// — in surface px, empty where the family paints nothing, every pixel the
+// family
 // may have standing in the backbuffer inside it (a hull, generous, never a
 // mask). WRITTEN BY THE PAINT HANDLER: emptied at the frame's first rect
 // (on_redraw's canvas block) and widened after each on_redraw run by what
@@ -320,8 +325,8 @@ inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
 // a later rect of the frame clears where it meets these hulls, and the next
 // frame folds them into the known-clear record (canvas_clear_hulls,
 // on_redraw's CLEAR).
-enum class GuiFloaterFamily : int { Cards = 0, Tooltip = 1, Dialog = 2 };
-inline constexpr int kGuiFloaterFamilies = 3;
+enum class GuiFloaterFamily : int { Cards = 0, Tooltip = 1 };
+inline constexpr int kGuiFloaterFamilies = 2;
 using GuiFloaterHulls = std::array<GuiRect, kGuiFloaterFamilies>;
 
 struct GuiCanvasDrawList {

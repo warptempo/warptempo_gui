@@ -498,7 +498,7 @@ struct GuiPalette {
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor frame_edge;      // the dialog window's frame edge (xfwm's)
     GuiColor title_highlight; // the dialog window's title bar's second row
-    GuiColor scale_trough;    // the progress dialog's bar's trough and the scrub's (paint_scale)
+    GuiColor scale_trough;    // the progress page's bar's trough and the scrub's (paint_scale)
     GuiColor scale_slider_border; // the scrub's knob's rim at rest (paint_scale)
     // THE THREE CARRIED FILLS (send AA's stage D1, theme_roles.h's CARRIED
     // block): each the role's color here, ITS OPACITY the installed row's
@@ -1737,9 +1737,11 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // player, the picker's contents, the score viewer — is the modal family's
 // box and controls row (modal_box.h), the box (the view between two lines)
 // from the trim lane's first row to the well's foot and the controls row on
-// the bottom icon row's rows; a question, a dialog editor and the progress
-// modal are dialogs in xfwm's window over what stands (paint_handler.cpp's
-// THE DIALOG WINDOW); the on-screen keyboard stands on the window's last
+// the bottom icon row's rows; a question and the progress modal are full
+// pages in that box, their answers on its controls row (architect
+// 2026-11-20, send EE; paint_handler.cpp's THE QUESTION PAGE AND THE
+// PROGRESS PAGE), and a dialog editor is a dialog in xfwm's window in the
+// box's view (paint_handler.cpp's THE DIALOG WINDOW); the on-screen keyboard stands on the window's last
 // rows across the lanes, over the status bar, the bottom icon row and the
 // view's foot, nothing relaid (onscreen_keyboard.h's placement block; send
 // EE, 2026-11-20).
@@ -1917,7 +1919,7 @@ inline int program_run_gap_px() {
 // (G3's scale, C4g), one widget:
 //   THE TROUGH — kScaleTroughW, 5 W thick (10 device px on the tablet at
 //     200 %), a full pill (radius half its thickness), `scale_trough` (our
-//     own ScaleTrough, arc_dark 2D303B; the progress dialog's trough too),
+//     own ScaleTrough, arc_dark 2D303B; the progress page's bar's too),
 //     CENTERED EXACTLY ON THE KEYS' ROWS (the tablet at key_height 28: keys
 //     1324..1379, the trough rows 1347..1356), across the item's columns.
 //     THE PLAYED PART — Arc's `scale highlight` — from the trough's left end
@@ -2454,15 +2456,14 @@ WellColumns well_columns(const AppState& a);
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
 // Every overlay — the render player, the project picker's contents, the
 // score viewer — stands its controls on these rows, THE MODAL FAMILY'S
-// CONTROLS ROW (modal_box.h); UNDER A QUESTION OR THE PROGRESS DIALOG THE
-// ROWS SHOW THE PAGE BEHIND'S ROW — the main page's keys and timestamp, or
-// the overlay's controls — the top icon row the same page's face under the
-// same modal, both rows dead to presses
-// (architect 2026-11-19, send BB; paint_handler.cpp's
+// CONTROLS ROW (modal_box.h); UNDER A QUESTION'S PAGE OR THE PROGRESS PAGE
+// THE ROWS HOLD THE PAGE'S ANSWERS, Arc's word buttons flush right, and
+// nothing else — no timestamp, no tab name, no key, none of an overlay's
+// controls (architect 2026-11-20, send EE; paint_handler.cpp's
 // modal_owns_bottom_row); UNDER EVERY EDITOR THE ON-SCREEN KEYBOARD STANDS
 // OVER THE ROWS and the row yields (onscreen_keyboard.h's placement block,
-// send EE, 2026-11-20), the top icon row greyed whole above it
-// (redesign_button_enabled's keyboard arm, app_state.h).
+// send EE, 2026-11-20); under each of them the top icon row greyed whole
+// above it (redesign_button_enabled's first arm, app_state.h).
 inline int bottom_row_h_px() {
     return strip_h_px();
 }

@@ -193,7 +193,7 @@ private:
     // departed floater leaves go up through them at the next walk), and
     // whether the texture has had a walk since it was made (ensure_texture
     // clears it).
-    static constexpr int kFloaterSlots = 3;
+    static constexpr int kFloaterSlots = 2;
     int          upload_clip_[4]      = {0, 0, 0, 0};
     GuiGlRect    upload_hulls_[kFloaterSlots] = {};
     bool         upload_seeded_       = false;

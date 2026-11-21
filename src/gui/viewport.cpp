@@ -192,45 +192,48 @@ void Viewport::invalidate_tab_name_area() {
 // has stood in the row since 2026-08-13, and the row's own tenants come back
 // on a close). No cell arithmetic: the rects below are the modal family's own
 // geometry, the lane alone covering only what keeps to the row, which a
-// prompt's and a dialog editor's box does not (below) — the stash's owner the
+// page's and a dialog editor's box does not (below) — the stash's owner the
 // one published bit read, and only to say whether a box stood last frame.
 // A STANDING DIALOG EDITOR'S EDITS do not come through here either: they
 // take the box's interior alone (invalidate_dialog_editor_box, below).
 // The OPENERS do not come through here — nothing is
 // painted before a surface's first paint, so they invalidate the whole
-// window. Caller inventory at the declaration.
-// A PROMPT, A DIALOG EDITOR OR THE PROGRESS MODAL IS A DIALOG IN XFWM'S
-// WINDOW (send AA's stage D2, 2026-11-19; paint_handler.cpp's THE DIALOG
-// WINDOW), a dialog editor's standing in the box's view — so while one
-// stands, OR WHILE THE LAST PAINT DREW ONE (the stash's owner, which a
+// window — nor do a question's raise, replacement and leave or the progress
+// page's open and close, each a whole-window damage at its own site. Caller
+// inventory at the declaration.
+// A QUESTION AND THE PROGRESS PAGE ARE FULL PAGES IN THE MODAL FAMILY'S BOX
+// (architect 2026-11-20, send EE; paint_handler.cpp's THE QUESTION PAGE AND
+// THE PROGRESS PAGE) and A DIALOG EDITOR IS A DIALOG IN XFWM'S WINDOW
+// standing in the box's view (send AA's stage D2, 2026-11-19;
+// paint_handler.cpp's THE DIALOG WINDOW) — so while one of them stands, OR
+// WHILE THE LAST PAINT DREW ONE (the stash's owner, which a
 // closer reads before any paint: its surface is gone from the state but not
 // yet from the screen), the damage is the lane UNITED WITH THE MODAL
 // FAMILY'S WHOLE AREA (modal_area_rect — the line under the top icon row to
-// the bottom icon row's foot, which contains the room) AND THE
-// WINDOW'S PAINTED EXTENT as last published (the window and its shadow's
-// reach, ModalDialogGeometry::box), so a close erases the window and its
-// shadow and brings the lanes, the canvas and the bottom icon row back. A
+// the bottom icon row's foot: the page whole, and the editor's room) AND,
+// FOR A DIALOG EDITOR, THE WINDOW'S PAINTED EXTENT as last published (the
+// window and its shadow's reach, ModalDialogGeometry::box), so a close
+// erases the window and its shadow and brings the lanes, the canvas and the
+// bottom icon row back. A
 // dialog editor's close takes the keyboard with it, whose hide damages its
 // own surface — the box's foot, the bottom icon row and the status bar it
 // covered (onscreen_keyboard::reconcile_slot_standing, send EE). Under the render
 // player and
 // the picker the controls row is the lane's own rows, and their
-// list's damage is the folder overlay's. (The taskbar dialog, 2026-10-10 to
-// 2026-10-14, took the lane united with its overlay to the window's foot.)
+// list's damage is the folder overlay's.
 void Viewport::invalidate_modal_dialog_area() {
     const GuiRect t = bottom_row_area(app);
     gui.invalidate_region(t.x, t.y, t.w, t.h);
     const AppState::ModalDialogOwner painted = app.modal_dialog.owner;
-    if (modal_box_dialog_stands(app) || score_viewer_stands(app) ||
+    if (modal_page_stands(app) || modal_box_dialog_stands(app) ||
+        score_viewer_stands(app) ||
         painted == AppState::ModalDialogOwner::Prompt ||
         painted == AppState::ModalDialogOwner::Editor ||
         painted == AppState::ModalDialogOwner::Progress ||
         painted == AppState::ModalDialogOwner::Score)
         invalidate_rect(modal_area_rect(app));
     if (app.modal_dialog.valid &&
-        (painted == AppState::ModalDialogOwner::Prompt ||
-         painted == AppState::ModalDialogOwner::Editor ||
-         painted == AppState::ModalDialogOwner::Progress))
+        painted == AppState::ModalDialogOwner::Editor)
         invalidate_rect(app.modal_dialog.box);
     // THE STANDING DIALOG TOOLTIP (the rule is at the declaration): its
     // published rect and the band every seat of it lies in

@@ -841,7 +841,7 @@ inline bool stands(const AppState& a) {
 // walk, the pan zone), the waveform's painted rect stops above it, the bottom
 // icon row publishes no rect, and the editor's veil holds everything else —
 // THE KEYBOARD THE ONE LIVE ELEMENT, the top icon row above it greyed whole
-// so the dead keys look dead (redesign_button_enabled's keyboard arm,
+// so the dead keys look dead (redesign_button_enabled's first arm,
 // app_state.h, the owner; architect 2026-11-20, send EE).
 // ONE LINE OF ITS OWN OVER IT (top_line_px, `well_border`: Thunar's pane
 // line parting the keyboard from what stands above; architect 2026-11-19,
@@ -1068,7 +1068,8 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 }
 
 // THE WAVEFORM'S PAINTED RECT — waveform_area minus what stands over it: THE
-// MODAL FAMILY'S BOX (the folder overlay's, a dialog editor's room or the
+// MODAL FAMILY'S BOX (the folder overlay's, a question's page, the progress
+// page, a dialog editor's room or the
 // score viewer's — modal_box_stands, modal_box.h) or THE KEYBOARD alone (the
 // flag editor's; the placement block) — and the ONE OWNER of the rule that
 // THE WAVEFORM IS NOT PAINTED WHERE THOSE PAINT. IT SUBTRACTS THE STANDING

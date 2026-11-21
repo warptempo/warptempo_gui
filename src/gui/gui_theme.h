@@ -52,7 +52,7 @@ struct GuiThemeTones {
     uint32_t score_pane_face;     // the score viewer's pane, the page's mat (= the ink)
     uint32_t frame_edge;          // the dialog window's frame edge, its outer W round the window (ControlContrastFrame; xfwm's frame, paint_xfwm_window)
     uint32_t title_highlight;     // the dialog window's title bar's second row (TitleHighlight, our own role; arc_dark 353B48; a Live theme's SurfaceArea)
-    uint32_t scale_trough;        // the progress dialog's bar's trough and the scrub's (ScaleTrough, our own role, over the ground; arc_dark 2D303B; a Live theme's ScrollbarInnerTrack)
+    uint32_t scale_trough;        // the progress page's bar's trough and the scrub's (ScaleTrough, our own role, over the ground; arc_dark 2D303B; a Live theme's ScrollbarInnerTrack)
     uint32_t scale_slider_border; // the scrub's knob's one-W rim at rest (ScaleSliderBorder, our own role, over the ground; arc_dark 262933, Arc's slider border; a Live theme's ClipBorder, its well_border)
     // THE THREE CARRIED FILLS (theme_roles.h's CARRIED block; send AA's stage
     // D1, 2026-11-19): each word 0xAARRGGBB, THE TOP BYTE ITS OPACITY (FF

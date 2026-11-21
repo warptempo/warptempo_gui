@@ -625,7 +625,8 @@ inline int score_scrub_page_under(const AppState& a, double cx) {
 }
 
 // THE PAGE STANDS: the viewer stands with a score loaded and is THE LIVE
-// MODAL SURFACE — no prompt over it (RESET's question takes the box), read
+// MODAL SURFACE — no prompt over it (RESET's question's page takes the view
+// in the page's place, no mat shown, modal_box.h), read
 // through the one ranking (AppState::modal_dialog_live_session) — which is
 // paint_modal_dialog's score branch's condition exactly: the box's interior
 // is then the frame's hole and the GPU draws the page (GuiCanvasPage::stands,

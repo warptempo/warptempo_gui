@@ -118,14 +118,15 @@
 // app_state.h, whose head owns the rule), so a lit one wears the lit and
 // inert look and an unlit one the disabled look — ONE RULE for a dead key
 // wherever it is dead; the overlay's opener and the tooltip lamp, live
-// there, keep their live states. A QUESTION OR THE PROGRESS DIALOG changes
-// no key behind it: the roster wears the page behind's face. WHILE THE
-// ON-SCREEN KEYBOARD STANDS (every editor) EVERY ROSTER KEY IS DEAD AND
-// LOOKS IT, the same rule: each wears the disabled look, a lit one the lit
-// and inert look — the main page's lit view pair under the flag editor, the
-// backdrop page's opener under a dialog editor (roster_face_page_owner) —
+// there, keep their live states. UNDER EVERY MODAL — WHILE THE ON-SCREEN
+// KEYBOARD STANDS (every editor) AND WHILE A QUESTION'S PAGE OR THE PROGRESS
+// PAGE STANDS — EVERY ROSTER KEY IS DEAD AND LOOKS IT, the same rule: each
+// wears the disabled look, a lit one the lit and inert look — the main
+// page's lit view pair under the flag editor or a question, the backdrop
+// page's opener under a dialog editor (roster_face_page_owner), a standing
+// overlay's opener under its own question —
 // Arc's own disabled look the dead keys' one sign (redesign_button_enabled's
-// keyboard arm, app_state.h, the owner; architect 2026-11-20, send EE). NOTHING
+// first arm, app_state.h, the owner; architect 2026-11-20, send EE). NOTHING
 // IS PRINTED UNDER A KEY (the legends retired 2026-11-18, send Z: "That's
 // from the hi-fi theme"); the tooltip names the act.
 // THE HOVER IS ARC'S (architect 2026-11-18, send Y: "I think we could
@@ -139,7 +140,8 @@
 // CSS line 136; our own role ButtonHoverBackground, a Live theme's key face
 // itself, so no hover shows there), THE BORDER, THE DRAWING AND THE WORD
 // UNCHANGED — on a key of both icon rows and of the controls rows, a word
-// button, a dialog's answer, an on-screen keyboard key, and the scrub's
+// button (a question's answers and a dialog editor's among them), an
+// on-screen keyboard key, and the scrub's
 // knob's fill inside its unchanged rim (Arc's scale slider:hover). IN A
 // LINKED GROUP THE SEAM COLUMN ON EACH SIDE OF THE HOVERING KEY WEARS THE
 // BORDER TONE `well_border` between the border's rows (measured on his

@@ -1514,7 +1514,7 @@ struct GuiInputHandler {
     // THE MAIN PAGE'S REFUSALS OF A PRESS AT THE POINTER'S PLACE, each one
     // the press router (on_button_press) meets before any well target's
     // claim (C6 of package 6's review, 2026-11-20): A VEIL — a modal (a question, a
-    // dialog editor, the progress dialog, a lane editor: nothing behind one
+    // dialog editor, the progress page, a lane editor: nothing behind one
     // is pressable) or an overlay (its box covers the lanes); A CARD over
     // the place (a card is opaque to the pointer); NO AUDIO, or a load
     // running (the router's `app.loading || audio.total_frames() <= 0`);
@@ -1621,7 +1621,7 @@ struct GuiInputHandler {
     //     key, the knob): a roster key's by the two boxes as published — the
     //     box that ends where `right`'s seam ends, on its rows; a dialog
     //     button's the button before it, where `right` publishes a seam (a
-    //     linked glyph key) or that one a seam after (a question's answer).
+    //     linked glyph key; word buttons share none).
     //   seam_right_face — its inverse: the face whose seam `left`'s box ends
     //     on, none at a group's last key.
     //   seam_extent — the seam's own columns on its box's rows, cut to what
@@ -2491,8 +2491,9 @@ private:
     //   session, entry 1 of `total`, and a whole-window damage — a modal has
     //   no rect before its first paint, the prompts' own open.
     // set_batch_progress_index: the entry now starting (1-based), from
-    //   dispatch_next_batch_entry at each dispatch, with the box's interior
-    //   damaged when the sentence changes.
+    //   dispatch_next_batch_entry at each dispatch, with what the step
+    //   changes damaged — the progress page's bar's rows through its count's
+    //   line (modal_box.h's ModalPageLines::step), not the page.
     // close_batch_progress: the CANCELLED and SHORT terminals' close, and the
     //   parked batch's cancel — the state reset and a whole-window damage,
     //   as a prompt's answer takes, which brings the lanes, the canvas and
@@ -3354,9 +3355,9 @@ private:
     //     group's seams with them (AppState::FaceFades' THE SEAMS);
     //   * THE DIALOG STASH'S BUTTONS — every controls row's keys and word
     //     buttons (the render player's, the score viewer's, the trim presets
-    //     list's, the BPM form's, the picker's one word) and a dialog
-    //     window's (a question's answers, the line editor's Cancel and OK,
-    //     the progress dialog's Cancel);
+    //     list's, the BPM form's, the picker's one word, a question's
+    //     answers, the progress page's Cancel) and the dialog editor's
+    //     window's Cancel and OK;
     //   * THE ON-SCREEN KEYBOARD'S KEYS;
     //   * THE SCRUB'S KNOB, the render player's and the score viewer's.
     //   THE TRIM BAR hovers too, NOT ONE OF THESE FADING FACES: its own
@@ -4416,7 +4417,7 @@ private:
     // and touch gesture is consumed, silently, and the on-screen keyboard
     // it raises greys the whole roster behind it, a lit key lit and inert —
     // the main page's, or a dialog editor's backdrop page's, its opener lit
-    // (redesign_button_enabled's record of the classes and its keyboard arm,
+    // (redesign_button_enabled's record of the classes and its first arm,
     // architect 2026-11-20, send EE; roster_face_page_owner). PAINT ALONE:
     // this predicate's veil is what keeps every key dead. The way out is Esc (cancel) and Enter
     // (commit) alone — the on-screen keyboard's own two keys (its Esc lower

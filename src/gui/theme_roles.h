@@ -237,8 +237,8 @@
 //                                     normal card's words and glyph since
 //                                     send AA's stage D1
 //   AND TWO MORE OF OUR OWN FOR THE DIALOGS (send AA's stage D2, 2026-11-19:
-//   xfwm's window round a question, the line editor and the progress
-//   dialog, and GTK's progress bar; paint_handler.cpp's THE DIALOG WINDOW),
+//   xfwm's window round the line editor, paint_handler.cpp's THE DIALOG
+//   WINDOW, and GTK's progress bar, the progress page's),
 //   each file but Arc's its own nearest value, so no Live theme sees them:
 //     title highlight        242424 = TitleHighlight (arc_dark 353B48,
 //                                     xfwm4's assets.svg): the window's
@@ -247,7 +247,7 @@
 //                                     itself
 //     scale trough           242424 = ScaleTrough over the ground (arc_dark
 //                                     2D303B, Arc's progress and scale
-//                                     trough): the progress dialog's bar and
+//                                     trough): the progress page's bar and
 //                                     the scrub's trough; a Live theme's
 //                                     ScrollbarInnerTrack, so its trim
 //                                     trough's tone

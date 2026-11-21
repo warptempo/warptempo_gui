@@ -656,8 +656,11 @@ void GuiInputHandler::open_batch_progress(int total) {
     bp.session = text_editor::next_session_id();
     bp.index   = 1;
     bp.total   = total;
-    // A modal OPEN damages the whole window: the box covers the canvas column
-    // and the modal has no rect before its first paint.
+    // A modal OPEN damages the whole window: the page takes the view from
+    // the lanes and the canvas, its Cancel the bottom icon row, the top icon
+    // row greys (its keys' fades, AppState::FaceFades) and the status bar
+    // goes blank (status_bar_text), and the modal has no rect before its
+    // first paint.
     viewport.invalidate_all();
 }
 
@@ -665,22 +668,27 @@ void GuiInputHandler::set_batch_progress_index(int index) {
     AppState::BatchProgress& bp = app.batch_progress;
     if (!bp.active || bp.index == index) return;
     bp.index = index;
-    // THE COUNT'S AND THE BAR'S DAMAGE: the progress dialog's window as last
-    // painted (ModalDialogGeometry::box, its window and shadow's reach — a
-    // fixed size, centered, so the extent is the same window's), or the whole
-    // window before its first paint (send AA's stage D2).
-    const AppState::ModalDialogGeometry& dlg = app.modal_dialog;
-    viewport.invalidate_rect(
-        dlg.valid && dlg.owner == AppState::ModalDialogOwner::Progress
-            ? dlg.box
-            : GuiRect{0, 0, app.width, app.height});
+    // A STEP'S DAMAGE IS WHAT IT CHANGES — THE BAR'S ROWS THROUGH THE COUNT'S
+    // LINE, NOT THE PAGE (architect 2026-11-20, send EE; modal_box.h's
+    // ModalPageLines::step: the bar's rows through the count's line box
+    // across the view, rows 203..252 on the tablet): the done part of the
+    // bar and the count's digits are the two things a step moves, the
+    // sentence, the page round them and the Cancel under them untouched. The
+    // rect is the layout's own, a fact of the window that asks no paint (the
+    // page's open damaged the whole window, so a step before its first paint
+    // adds nothing wrong). NONE UNDER A QUESTION standing over the progress
+    // page: its page shows neither the bar nor the count, and its leave
+    // damages the whole window, so the progress page comes back current.
+    if (app.prompt.active) return;
+    viewport.invalidate_rect(modal_page_lines(app).step);
 }
 
 void GuiInputHandler::close_batch_progress() {
     if (!app.batch_progress.active) return;
     app.batch_progress = AppState::BatchProgress{};
-    // The box leaves the canvas column whole: the lanes, the waveform and row
-    // 8 come back — a whole-window damage, as a prompt's answer takes.
+    // The page leaves the view whole: the lanes, the waveform, the bottom
+    // icon row and the status bar's line come back and the top icon row
+    // fades back — a whole-window damage, as a prompt's answer takes.
     viewport.invalidate_all();
 }
 
