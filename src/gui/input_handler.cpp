@@ -452,7 +452,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              was stamped in; a silent no-op with
     //                              nothing to return to (run_overview_command)
     //   - Shift+0                → frame the trim (2026-10-24), the trim
-    //                              bar's long press (run_span_framing_command):
+    //                              bar's double tap (run_span_framing_command):
     //                              the camera alone
     //   - c (no mods)            → focused-marker jump (when present) +
     //                              working zoom; with no focused marker,
@@ -1174,7 +1174,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // produce, or a stamp from the other audio view) it is a silent no-op
     // and its button greys. Neither press arms or keeps a
     // camera posture: both clear HOLD and CHASE through the one chokepoint
-    // clear (clamp_viewport_start). The trim bar's long press
+    // clear (clamp_viewport_start). The trim bar's double tap
     // deliberately
     // DIVERGES from this (run_span_framing_command — it zooms to the
     // trim / whole-song span); C remains the DIRECT working-zoom-and-center
@@ -1191,12 +1191,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
     // SHIFT+0 FRAMES THE TRIM (architect 2026-10-24, Zoom to Fit's shifted
-    // press and long press): the trim bar's long press EXACTLY — the one
+    // press and long press): the trim bar's double tap EXACTLY — the one
     // command both run (run_span_framing_command: a proper trim sub-window
     // with the edge margin each side, else the whole song), so the key, the
     // button and the gesture are one act. A camera act: no trim bound, the
     // playhead and the selection untouched, admitted on a locked tab, under
-    // the iteration lock and in the `h` view as the bar's long press is
+    // the iteration lock and in the `h` view as the bar's double tap is
     // (is_trim_frame_key, gui_input.h, the three readers).
     if (is_trim_frame_key(key, mods)) {
         run_span_framing_command();
@@ -2579,7 +2579,7 @@ void GuiInputHandler::run_overview_command() {
     //
     // THE TWO RECORDS are this function's alone: it is the stamp's one writer
     // and the whole-song state's one setter (both declarations, app_state.h).
-    // The trim bar's LONG PRESS and Shift+0 DIVERGE from this
+    // The trim bar's DOUBLE TAP and Shift+0 DIVERGE from this
     // (run_span_framing_command): they frame the trim / whole-song SPAN.
     //
     // A PRESS THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom darkens
@@ -2730,7 +2730,7 @@ std::optional<SpanFramingLanding> span_framing_landing(const AppState& app,
     return SpanFramingLanding{target_level, target_start};
 }
 
-// THE SPAN SHIFT+0 AND THE TRIM BAR'S LONG PRESS FRAME — the target of
+// THE SPAN SHIFT+0 AND THE TRIM BAR'S DOUBLE TAP FRAME — the target of
 // run_span_framing_command as a pure question (2026-10-25, lifted beside the
 // landing above for the same reader). TWO READERS: run_span_framing_command
 // and span_framing_would_act below. No span (nullopt) where the command has
@@ -2869,11 +2869,11 @@ bool span_framing_would_act(const AppState& app, const GuiAudio& audio) {
 }
 
 void GuiInputHandler::run_span_framing_command() {
-    // FOUR CALLERS (re-grepped 2026-11-21): Shift+0 (since 2026-10-24, Zoom
-    // to Fit's long press), the trim bar's long press (architect 2026-11-18,
-    // TrimBarPressSeed), the trim bar's double tap (architect 2026-11-21,
-    // send EE; the live band's and the `h` view's arms, input_pointer.cpp)
-    // and a trim preset's apply. They ZOOM TO A SPAN, their own route beside bare `0`'s
+    // THREE CALLERS (re-grepped 2026-11-21): Shift+0 (since 2026-10-24, Zoom
+    // to Fit's long press), the trim bar's double tap (architect 2026-11-21,
+    // send EE, the bar's one framing gesture, no hold there meaning
+    // anything; TrimBarPressSeed; the live band's and the `h` view's arms,
+    // input_pointer.cpp) and a trim preset's apply. They ZOOM TO A SPAN, their own route beside bare `0`'s
     // whole-piece toggle (run_overview_command) and `c`'s marker-jump working
     // zoom. It only ever FRAMES a span,
     // never the fine working zoom. TWO ARMS since 2026-08-18: a proper trim

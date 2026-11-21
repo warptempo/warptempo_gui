@@ -1267,8 +1267,8 @@ struct GuiInputHandler {
     // pen barrel's one-finger zoom (apply_touch_nav_update's zoom frames, on
     // every frame that moved the level — idempotent past the first), Zoom to
     // Fit and its recall (run_overview_command), the span framings
-    // (run_span_framing_command: Shift+0, the trim bar's long press and its
-    // double tap, a trim preset's apply) and the centre command (run_center_command, its
+    // (run_span_framing_command: Shift+0, the trim bar's double tap, a trim
+    // preset's apply) and the centre command (run_center_command, its
     // `user_zoom` true: `c`, the Center key, both marches, Ctrl+J).
     void darken_zoom_lamps_if_level_moved(double level_before);
 
@@ -1533,7 +1533,7 @@ struct GuiInputHandler {
     // THE ONE SETTER, which damages the trim lane on a change and ends a
     // pending answer and a leave's held clear on every write. "WOULD A PRESS HERE ARM A GRAB?" past the main
     // page's refusals: the stash published, NOT THE `h` VIEW (its router
-    // takes only the framing long press on the bar), and NOT THE BARREL
+    // takes only the framing double tap on the bar), and NOT THE BARREL
     // (pointer_barrel_held_: a barrel press on the bar is the bound-set
     // click, another act than the grab the hover promises). The frozen
     // answer's terms: the pen in the plane with no contact, the main page
@@ -2732,10 +2732,9 @@ private:
     // posture. The rationale is at the definition.
     void run_overview_command();
 
-    // THE SPAN-FRAMING command, run by Shift+0, the TRIM BAR LANE's LONG
-    // PRESS (architect 2026-11-18, TrimBarPressSeed), its DOUBLE TAP
-    // (architect 2026-11-21) and a trim preset's apply (the four callers at
-    // the definition): ZOOM TO A SPAN, never
+    // THE SPAN-FRAMING command, run by Shift+0, the TRIM BAR LANE's DOUBLE
+    // TAP (architect 2026-11-21, TrimBarPressSeed) and a trim preset's apply
+    // (the three callers at the definition): ZOOM TO A SPAN, never
     // the working zoom. TWO ARMS since 2026-08-18 (the
     // region arm above them died with the separate region state) — a proper
     // trim SUB-WINDOW (expressed in the active domain) → the whole
@@ -3103,7 +3102,7 @@ private:
     //       untouched) with the setter's deselect. The pair the tab already
     //       holds is the store's own no-op. THEN THE PRESET IS FRAMED
     //       (2026-10-28 night, his glass on 852a28d9), on the no-op arm too:
-    //       the trim bar's long press's and Shift+0's one framer,
+    //       the trim bar's double tap's and Shift+0's one framer,
     //       run_span_framing_command. THEN THE LIST CLOSES (architect
     //       2026-11-19, send CC: "On selecting a trim preset, the overlay
     //       should close."), on the no-op arm too, by the PRESETS key's own
@@ -3412,8 +3411,7 @@ private:
     //   body: the body the hover tone, both caps the text tone — or none
     //   after a grab lifted off the part it held (run on past a wall onto an
     //   end's zone, past the partner, on the ruler) and after any other
-    //   lift, the bar's long press (whose lift reframes the view) among
-    //   them, and the walk keeps that answer, pending or resolved, never
+    //   lift, and the walk keeps that answer, pending or resolved, never
     //   re-reading the pen's place, while
     //   trim_bar_frozen_part_kept holds (the pen in the plane with no
     //   contact, no veil or card there, audio and no live drag, the theme
@@ -4844,7 +4842,7 @@ private:
     //     through untouched. Its own comment carries the admitted list and the
     //     acts. It takes the press's DOUBLE-TAP SNAPSHOT because one of
     //     those acts is a double tap (the trim bar's framing, architect
-    //     2026-11-21; its long press resolved at the lift by on_button_release's
+    //     2026-11-21; its first tap seeded at the lift by on_button_release's
     //     one resolver, TrimBarPressSeed) and on_button_press clears the shared
     //     field before this is reached. IT ACTS AT THE PRESS for the double
     //     tap's framing and for all three diff-flag
@@ -4881,8 +4879,8 @@ private:
     //   (THE MODE'S TWO FRAMING OWNERS ARE DELETED — 2026-08-18.
     //     frame_viewed_commit_diff_span framed the viewed checkpoint's whole
     //     delta, an ON-DEMAND ACT from 2026-08-05 with the trim bar's plain
-    //     DOUBLE-CLICK as its one caller; the bar's framing gestures (its
-    //     double tap and its long press) run the ORDINARY span framing now
+    //     DOUBLE-CLICK as its one caller; the bar's framing gesture (its
+    //     double tap) runs the ORDINARY span framing now
     //     (run_span_framing_command), the bar having stopped
     //     displaying the diff span, so the act went producer-less.
     //     frame_history_view_whole_song was the full zoom out it fell through

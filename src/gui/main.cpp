@@ -647,7 +647,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // count's authority; twenty-seven stand outside the `h` view and eighteen
 // inside it, re-counted 2026-10-29 with the Restrict lamp), the toolbar band. Lane 1 is the
 // TRIM lane (the trim bar: the span and its two ends, every trim
-// gesture and the span-framing long press and double tap), the first lane UNDER GAP 1
+// gesture and the span-framing double tap), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
 // ladder and the playhead's head; a placement lane); lane 3 is the MARKER
 // lane (the cues); lane 4 is THE LANE'S FOOT LINE, one of the well's lines, whose

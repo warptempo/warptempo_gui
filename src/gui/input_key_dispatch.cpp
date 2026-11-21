@@ -254,7 +254,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
          !ctrl && !alt);
     // ZOOM TO FIT AND ITS SHIFTED FORM, FRAME THE TRIM (2026-10-24): both are
     // the camera — the whole piece and back, the trim's span — writing no
-    // store, so both are admitted (the trim bar's long press, the frame's
+    // store, so both are admitted (the trim bar's double tap, the frame's
     // pointer twin, is read-only-legal too). The ctrl-shifted form,
     // Reset Trim, is admitted below on its own reason (is_trim_maximize).
     const bool is_zero =
@@ -2213,7 +2213,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // at the magnification he chose rather than at an overview he has to
         // re-establish after each press. NO EDGE FRAMES AT ALL since
         // 2026-08-18, the entry's own framing having gone with the view's
-        // navigation-state ownership: the trim bar's long press is the view's
+        // navigation-state ownership: the trim bar's double tap is the view's
         // one framing gesture, and it frames the TRIM WINDOW in here exactly as
         // it does outside. So this edge writes NO viewport at all.
         //
@@ -2792,7 +2792,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // ZOOM TO FIT AND FRAME THE TRIM — Zoom to Fit's two presses (bare `0`
     // and Shift+0, since 2026-10-24; architect 2026-10-30: every press a lit
     // button can make is a press the view admits): the camera, touching
-    // nothing the view froze — the frame is the trim bar's long press's
+    // nothing the view froze — the frame is the trim bar's double tap's
     // act, which the view runs too (handle_history_mode_press's trim-bar
     // arm). (RESET TRIM, Shift+T, the PRESETS key's hold, is not admitted:
     // the view names neither `t` chord — the key is hidden here, bare `t`'s
@@ -6651,7 +6651,7 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 // THE APPLY ALSO FRAMES THE PRESET (architect 2026-10-28 night, his glass on
 // 852a28d9: "selecting a preset should also double click its trim bar and
 // frame it like the long press on FIT"): the one span framer the trim bar's
-// long press and Shift+0 (Zoom to Fit's long press) run, called as they
+// double tap and Shift+0 (Zoom to Fit's long press) run, called as they
 // call it — run_span_framing_command, a camera act alone (no bound, the
 // playhead and the selection untouched; its applier's chokepoint clears the
 // hold; a level it moves puts out TRIM, ADD SEL, FOLLOW and RESTR, a user

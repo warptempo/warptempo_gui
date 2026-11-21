@@ -83,17 +83,17 @@ namespace GuiKeys {
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
 // thing before the rest crosses into its held meaning. It is the delay of
-// THE PRODUCT'S TWO HOLDS and of nothing else (re-grepped 2026-11-18):
-//   * THE CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at
-//     all three of its read sites — the roster lift, the RENDER PLAYER'S
-//     MODAL ROW, which joined 2026-08-28 (its skips and Delete admit a
-//     modified press, and their long press reaches it), and THE
-//     NOTIFICATION CARD'S LIFT, which joined 2026-10-01 (a long press on any
-//     card dismisses every card) — one value and one term;
-//   * THE TRIM BAR'S LONG PRESS (architect 2026-11-18, "Trim bar long press.
-//     Yes"; TrimBarPressSeed, app_state.h), a plain press on the bar's lane
-//     held still, which frames the trim — on_button_release's resolver. The
-//     barrel's press there reads no clock (PendingClickAct, app_state.h).
+// THE PRODUCT'S ONE HOLD and of nothing else (re-grepped 2026-11-21): THE
+// CHROME SHIFT LONG PRESS (chrome_shift_hold_ms, app_state.h), at all three
+// of its read sites — the roster lift, the RENDER PLAYER'S MODAL ROW, which
+// joined 2026-08-28 (its skips and Delete admit a modified press, and their
+// long press reaches it), and THE NOTIFICATION CARD'S LIFT, which joined
+// 2026-10-01 (a long press on any card dismisses every card) — one value and
+// one term. NO HOLD ON THE TRIM BAR MEANS ANYTHING (architect 2026-11-21,
+// send EE: "the double tap will be enough, and we can remove the long
+// press"): a still press there of any length is a tap, its double tap the
+// bar's framing gesture (TrimBarPressSeed, app_state.h), and the barrel's
+// press there reads no clock either (PendingClickAct, app_state.h).
 // It has NO VISUAL
 // ANNOUNCEMENT: the span is measured where the act runs (the lift) and
 // nothing on screen marks the moment
@@ -1247,15 +1247,15 @@ inline bool is_trim_reset_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for the chord that FRAMES THE TRIM (GuiInputHandler::
-// run_span_framing_command, the trim bar's long press exactly — a proper
+// run_span_framing_command, the trim bar's double tap exactly — a proper
 // trim sub-window with the edge margin each side, else the whole song):
 // SHIFT+0 exactly — shift, no ctrl, no alt (architect 2026-10-24; it was the
 // reset until then). Bare `0` is Zoom to Fit's toggle and untouched;
 // `0` is the whole song to the camera, shifted the trim's span to the camera.
 // A CAMERA ACT: it writes no store and no trim, so the read-only allowlist
 // (read_only_key_blocked) and the `h` view's (history_mode_key_blocked)
-// both ADMIT it, as both states admit the trim bar's long press and double
-// tap (its glass twins, TrimBarPressSeed / DoubleClickSurface), and the
+// both ADMIT it, as both states admit the trim bar's double tap (its glass
+// twin, TrimBarPressSeed / DoubleClickSurface), and the
 // iteration lock
 // inherits the read-only admission. One-shot. THREE READERS: on_key's
 // dispatch arm (input_handler.cpp) and the two allowlists; the Zoom to Fit

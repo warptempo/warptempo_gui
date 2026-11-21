@@ -228,7 +228,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // 2026-09-29, when its row moved to the bottom row's, below.)
     // IT ADMITS SHIFT since 2026-10-24 (redesign_button_shift_admits; Zoom
     // to Fit since that day): its long press dispatches
-    // Shift+0, FRAME THE TRIM (the trim bar's long press). (RESET TRIM is
+    // Shift+0, FRAME THE TRIM (the trim bar's double tap). (RESET TRIM is
     // the PRESETS row's Shift+T, below.) It does not repeat: the `repeats` column is unset.
     {RedesignButton::IconZoomFitBest,  GuiKeys::Digit0, false, false, false}, // bare 0 (+Shift: Shift+0)
     // WAVEFORM MAGNIFICATION (architect 2026-09-22) — the bare
@@ -3676,7 +3676,7 @@ void GuiInputHandler::run_marker_click_act(int hit, const GuiPointerPlace& at,
 // decided where the act runs, the end cap nearest the press's place on the
 // painted columns
 // (trim_bound_click, input_trim.cpp; architect 2026-11-10 — no clock is
-// read, a long press meaning nothing on the trim bar).
+// read, no hold meaning anything on the trim bar, architect 2026-11-21).
 // THE POINT'S BASIS DOES NOT MOVE UNDER IT: the armed record is a member of
 // the displayed-basis freeze (displayed_basis_frozen, app_state.h —
 // architect 2026-09-24), because the lift and the crossing both convert the
@@ -4819,14 +4819,15 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // breaks it. The consume checks below read this snapshot; each surface
     // then re-seeds its own fresh candidate at a motionless RELEASE (only the
     // release knows the press stayed a tap).
-    // THE MARKER SEED IS SPLIT ACROSS THE TWO EDGES, which is unusual enough
-    // to state here: the press consumes against this snapshot (it is gone by
-    // the release), while the seed written at the lift carries the PRESS's
-    // place with the RELEASE's stamp — the place looking back so the spatial
-    // pairing stays press-to-press, the stamp the seed's own so the window is
-    // measured release-to-press as it is on the other two surfaces. The full
-    // reasoning is at the seed itself (on_button_release's marker-pending
-    // arm). One closed point: the clear covers every press that consumes
+    // THE GRAB SURFACES' SEEDS ARE SPLIT ACROSS THE TWO EDGES (the marker's,
+    // and the trim bar's by the marker's rule since 2026-11-21, send EE),
+    // which is unusual enough to state here: the press consumes against this
+    // snapshot (it is gone by the release), while the seed written at the
+    // lift carries the PRESS's place with the RELEASE's stamp — the place
+    // looking back so the spatial pairing stays press-to-press, the stamp the
+    // seed's own so the window is measured release-to-press as it is on the
+    // empty lane. The full reasoning is at the marker's seed itself
+    // (on_button_release's marker-pending arm). One closed point: the clear covers every press that consumes
     // nothing, without a clear scattered on each path, and it sits ABOVE
     // every claim and veil below.
     const DoubleClickCandidate dc_at_press = app.double_click;
@@ -5452,7 +5453,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // above and never reach here.
             //
             // THE BAND IS trim_bar_press_area (main.cpp) — the exact band the
-            // plain endcap/bar drags and the span-framing long press claim,
+            // plain endcap/bar drags and the span-framing double tap claim,
             // so every trim press reads ONE accessor: the lane's rows on the
             // waveform area's columns, the panel's whole width since the
             // canvas went edge to edge (send Z, 2026-11-19); a barrel press
@@ -5536,11 +5537,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
             // this contends with nothing: a marker-part press falls to the marker
             // handling below. The PLAIN press frames the trim where it is a
             // double tap's second (architect 2026-11-21), else records the
-            // long press that frames it (TrimBarPressSeed, architect
-            // 2026-11-18; the lift decides) and arms the cap/bridge drag
-            // every plain press takes where it lands on one; a quick tap that
-            // never becomes a drag is a CONSUMED NOTHING whose motionless
-            // lift seeds the double tap; the bound-set click
+            // double tap's first half (TrimBarPressSeed; the lift decides)
+            // and arms the cap/bridge drag every plain press takes where it
+            // lands on one; a tap that never becomes a drag, held for any
+            // length, is a CONSUMED NOTHING whose lift seeds the double tap;
+            // the bound-set click
             // is the ctrl claim above. The plain press stops no playback: the
             // trim bar's stop belongs to the DRAG's first accepted bound change
             // (input_trim.cpp).
@@ -5591,11 +5592,11 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // 2026-08-07 — the band's read-only return is deleted below. Either
                 // way the trim bar CONSUMES the press — it never falls to the
                 // marker handling.
-                // A QUICK PLAIN TRIM-BAR TAP THAT NEVER BECOMES A DRAG IS A
+                // A PLAIN TRIM-BAR TAP THAT NEVER BECOMES A DRAG IS A
                 // CONSUMED NOTHING (architect 2026-07-30) but for the double
-                // tap's seed its lift writes — a still press held kHoldDelayMs
-                // is the long press below, which frames the trim at the lift,
-                // and a second tap inside the window frames it at its press.
+                // tap's seed its lift writes, however long it was held (the
+                // bar has no long press, architect 2026-11-21, send EE); a
+                // second tap inside the window frames the trim at its press.
                 // The tap's entire act was
                 // PUBLISHING the trim window as a region highlight, and that
                 // coupling is retired outright with the SPAN FORM — so the two
@@ -5607,37 +5608,32 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // and the trim-mutation stop at its FIRST ACCEPTED bound change
                 // (input_trim.cpp), which is where a trim commit actually happens.
                 //
-                // THE LONG PRESS FRAMES THE TRIM (architect 2026-11-18,
-                // TrimBarPressSeed, the contract): the press records its place
-                // and time on the whole band — endcaps, body and bare trough
-                // alike, since it frames rather than grabs — and the lift
-                // decides (on_button_release). It is pure navigation, allowed
-                // in read-only for that reason; no bound is touched, and
-                // playhead and selection are untouched. It DIVERGES from the
-                // bare `0` key, which only ever reaches the whole song (and,
-                // from there, `c`); it frames a proper trim sub-window, else
-                // the whole song.
-                //
-                // THE DOUBLE TAP FRAMES THE TRIM TOO (architect 2026-11-21,
-                // send EE; the window's owner at kDoubleClickMs, app_state.h):
-                // the same command on the same whole band, its test the one
-                // the `h` view's own arm asks (double_tap_at). THE
-                // CONSUME ACTS AT THIS PRESS AND ARMS NOTHING — A DOUBLE TAP
-                // IS NEVER A DRAG (the rule at DoubleClickSurface): no pending
-                // trim drag, no held look, no long-press record, so its lift
-                // is inert and no pending stands to hold the staged
-                // viewport's promote under the new framing. It seeds nothing
-                // (a consumed press never seeds).
+                // THE DOUBLE TAP FRAMES THE TRIM (architect 2026-11-21, send
+                // EE; TrimBarPressSeed, the contract; the window's owner at
+                // kDoubleClickMs, app_state.h): run_span_framing_command on
+                // the whole band — endcaps, body and bare trough alike, since
+                // it frames rather than grabs — its test the one the `h`
+                // view's own arm asks (double_tap_at). It is pure navigation,
+                // allowed in read-only for that reason; no bound is touched,
+                // and playhead and selection are untouched. It DIVERGES from
+                // the bare `0` key, which only ever reaches the whole song
+                // (and, from there, `c`); it frames a proper trim sub-window,
+                // else the whole song. THE CONSUME ACTS AT THIS PRESS AND
+                // ARMS NOTHING — A DOUBLE TAP IS NEVER A DRAG (the rule at
+                // DoubleClickSurface): no pending trim drag, no held look, no
+                // press record, so its lift is inert and no pending stands to
+                // hold the staged viewport's promote under the new framing.
+                // It seeds nothing (a consumed press never seeds).
                 if (double_tap_at(dc_at_press, DoubleClickSurface::TrimBar,
                                   at)) {
                     run_span_framing_command();
                     return;
                 }
-                // THE LONG PRESS'S RECORD, and the double tap's first half:
-                // the lift decides between them (on_button_release).
+                // THE DOUBLE TAP'S FIRST HALF: the press's place, which the
+                // lift seeds if the press never became a drag
+                // (on_button_release).
                 app.trim_bar_press = TrimBarPressSeed{
-                    .active = true, .press_x = at.rx, .press_y = at.ry,
-                    .press_ms = monotonic_ms()};
+                    .active = true, .press_x = at.rx, .press_y = at.ry};
                 // THE BAND'S READ-ONLY RETURN IS DELETED (architect 2026-08-07):
                 // it was the sole read-only defense for the whole trim-bar band,
                 // and the ruling removed the thing it was defending — read-only
@@ -6228,9 +6224,8 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     hide_shift_tooltip();
     // THE TRIM BAR'S LIFTED PART STARTS OVER WITH EVERY RELEASE, above every
     // return (AppState::TrimBarHover's `lifted`): only the bar's own grab
-    // arms below write it, so the pen latch's arm after any other lift —
-    // the bar's long press, which returns above them, among them — installs
-    // none; a lift's pending answer ends here too (none can stand at a
+    // arms below write it, so the pen latch's arm after any other lift
+    // installs none; a lift's pending answer ends here too (none can stand at a
     // release: the press before it came through a leave, which ends it).
     app.trim_bar_hover.lifted       = TrimBarPart::None;
     app.trim_bar_hover.lift_pending = false;
@@ -6400,48 +6395,28 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     }
     if (text_editor::is_active(app.settings_editor)) return;
 
-    // THE TRIM BAR'S LONG PRESS AND ITS DOUBLE TAP'S SEED, resolved here for
-    // every release (architect 2026-11-18 and 2026-11-21; the contract at
-    // TrimBarPressSeed, app_state.h): the press
-    // recorded its place and time, and this lift frames the trim when the
-    // press lasted the hold delay, no trim drag went live and the pointer's
-    // real travel stayed under the grab gate. Measured HERE against the
-    // record's own stamp, as every hold in the product is (kHoldDelayMs,
-    // gui_input.h): no timer, no announcement. THE PILL'S PENDING DRAG IS
-    // DISARMED FIRST, so no pending stands to hold the staged viewport's
-    // promote under the new framing (the bar's held look going with it),
-    // and the release is spent: nothing below it was armed by this press, and
-    // it seeds no double tap (a press that acted never seeds, the family
-    // rule at DoubleClickSurface). A quick lift falls through to the
-    // pending's disarm below, the consumed nothing a still trim-bar tap has
-    // always been — BUT IT SEEDS THE TRIM BAR'S DOUBLE TAP (architect
-    // 2026-11-21, send EE) where no trim drag went live and the pointer's
-    // real travel stayed inside the double tap's slack. THE SLACK IS THE
-    // STRICTER CLAUSE: it is the drag gate's length (double_click_slack_px()
-    // == drag_moved_threshold_px()) while the bar crosses into its drag at
-    // grab_moved_threshold_px(), twice it, so a lift inside the slack never
-    // follows a crossing, and a tap that rolled between the two is still a
-    // tap that simply seeds no framing double tap (the accessors' notes,
-    // app_state.h). The seed stands at this lift's place, stamped now. The
-    // record is consumed either way.
+    // THE TRIM BAR'S DOUBLE TAP'S SEED, resolved here for every release
+    // (architect 2026-11-21, send EE; the contract at TrimBarPressSeed,
+    // app_state.h). THE BAR HAS NO LONG PRESS: no clock is read, so a press
+    // held for any length lifts as a tap. THE SEED FOLLOWS THE MARKER'S RULE
+    // (PendingMarkerPress's seed, below): a lift that never became a drag is
+    // a first tap — the record still standing (on_motion drops it at the grab
+    // gate, the bar's drag gate and the flag's) and no trim drag gone live —
+    // wherever inside the gate it lifts. The seed stands at the PRESS's
+    // place, the marker's choice and reason (press-to-press pairing; the
+    // touch layer's release carries the finger's last position), stamped
+    // now, the family's release stamp. Nothing here returns: the lift falls
+    // through to the pending's disarm below, the consumed nothing a trim-bar
+    // tap has always been. The record is consumed either way.
     {
         const TrimBarPressSeed seed = app.trim_bar_press;
         app.trim_bar_press = TrimBarPressSeed{};
         if (seed.active && !app.trim_drag.active) {
-            const double travel =
-                real_travel_px(seed.press_x, seed.press_y, at.rx, at.ry);
-            if (travel < grab_moved_threshold_px() &&
-                monotonic_ms() - seed.press_ms >= kHoldDelayMs) {
-                disarm_pending_trim_drag();
-                run_span_framing_command();
-                return;
-            }
-            if (travel <= double_click_slack_px()) {
-                app.double_click = DoubleClickCandidate{
-                    .surface = DoubleClickSurface::TrimBar,
-                    .time_ms = monotonic_ms(),
-                    .press_x = at.rx, .press_y = at.ry, .target = -1};
-            }
+            app.double_click = DoubleClickCandidate{
+                .surface = DoubleClickSurface::TrimBar,
+                .time_ms = monotonic_ms(),
+                .press_x = seed.press_x, .press_y = seed.press_y,
+                .target  = -1};
         }
     }
 
@@ -6689,8 +6664,7 @@ void GuiInputHandler::finalize_active_drags() {
     // A force-end is not a clean tap sequence, so no double-tap candidate may
     // survive to pair with a later tap (the standing rule at every
     // non-release gesture end) — and neither may the trim bar's press record,
-    // which the next release would otherwise resolve as a long press or a
-    // double tap's seed.
+    // which the next release would otherwise resolve as a double tap's seed.
     app.double_click   = DoubleClickCandidate{};
     app.trim_bar_press = TrimBarPressSeed{};
 }
@@ -7609,7 +7583,7 @@ void GuiInputHandler::walk_hover_face() {
 // "WOULD A PRESS ON THE BAR ARM A GRAB NOW?" past the main page's refusals
 // (main_page_takes_press_at_pointer, which the walk asks through the gate):
 // the stash published (a cold bar has nothing to grab: route_trim_bar_press
-// reads it), NOT THE `h` VIEW (its router takes only the framing long press
+// reads it), NOT THE `h` VIEW (its router takes only the framing double tap
 // on the bar, handle_history_mode_press: the zones and the bridge are
 // painted geometry with no grab there), and NOT THE BARREL (a barrel press
 // on the bar is the bound-set click, set_trim_bound_at_click, another act
@@ -8795,19 +8769,18 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 //     take the same pending as PLACEMENT SURFACES (arm_placement_press,
 //     2026-09-25), so their motionless clicks land the playhead and a drag
 //     there does nothing but the ruler's head drag.
-//   * a LONG PRESS or a DOUBLE TAP anywhere on the TRIM BAR band FRAMES THE
-//     TRIM SPAN (TrimBarPressSeed; the double tap architect 2026-11-21, send
-//     EE) — the span that band is displaying, the tab's own window in here as
-//     everywhere else since 2026-08-18 — through the LIVE band's own framing
-//     owner (run_span_framing_command): the double tap's second press here
-//     (the one test the live band asks, double_tap_at), the long press at the
-//     lift by the live release's one resolver, which also seeds the double
-//     tap. They are the ONLY framing gestures on the canvas a standing
-//     view has, the internal edges
+//   * a DOUBLE TAP anywhere on the TRIM BAR band FRAMES THE TRIM SPAN
+//     (TrimBarPressSeed; architect 2026-11-21, send EE, the bar's long press
+//     removed) — the span that band is displaying, the tab's own window in
+//     here as everywhere else since 2026-08-18 — through the LIVE band's own
+//     framing owner (run_span_framing_command): the second press here (the
+//     one test the live band asks, double_tap_at), the first tap seeded at
+//     its lift by the live release's one resolver. It is the ONLY framing
+//     gesture on the canvas a standing view has, the internal edges
 //     writing no viewport at all and the window being the user's for the whole
-//     visit. They move the viewport and nothing else, and a QUICK single tap on
-//     that band stays the consumed nothing a motionless trim-bar tap is
-//     everywhere.
+//     visit. It moves the viewport and nothing else, and a single tap on
+//     that band, held for any length, stays the consumed nothing a trim-bar
+//     tap is everywhere.
 //   * a press on a DIFF FLAG in the MARKER LANE takes the mode's focus (at most
 //     one, painted in its class's selected pair) and LANDS THE PLAYHEAD on that
 //     flag's authored frame, through the same owner every marker land uses —
@@ -8899,7 +8872,7 @@ bool GuiInputHandler::handle_history_mode_press(
     // ruler is a placement lane (arm_placement_press, 2026-09-25) whose
     // playhead head is the head drag in here as outside (2026-10-09 ~17:40,
     // the mode's land at every placement; the diff flags rank first), the
-    // trim bar keeps its framing long press and double tap, the marker lane splits
+    // trim bar keeps its framing double tap, the marker lane splits
     // flag-vs-stretch, and the waveform is the navigation surface. Each lane
     // is its PRESS RECT on both axes, the live walk's (main.cpp's
     // well_lane_press_rect: anything beside the lanes falls to the tail's
@@ -8915,8 +8888,9 @@ bool GuiInputHandler::handle_history_mode_press(
             return true;
         }
     }
-    // THE TRIM BAR'S LONG PRESS AND DOUBLE TAP FRAME THE TRIM SPAN — THE
-    // ORDINARY ACT (architect 2026-11-18 and 2026-11-21; since 2026-08-18, the
+    // THE TRIM BAR'S DOUBLE TAP FRAMES THE TRIM SPAN — THE ORDINARY ACT
+    // (architect 2026-11-21, send EE, the bar's one framing gesture; since
+    // 2026-08-18, the
     // diff-span substitution's deletion, the bar shows the tab's real trim
     // window in here, so the gesture that reads "zoom to what the bar shows"
     // frames that window and nothing else).
@@ -8925,11 +8899,12 @@ bool GuiInputHandler::handle_history_mode_press(
     // own test (double_tap_at, against the snapshot the press took before
     // clearing the field) and arms nothing, a double tap never being a drag
     // (DoubleClickSurface, app_state.h). Any other press records the live
-    // band's own TrimBarPressSeed, and the live release's one resolver frames
-    // a long press or seeds the double tap, NO trim drag being able to go
-    // live in here, so nothing differs from outside. A QUICK single tap here
-    // is the consumed nothing a motionless trim-bar tap is everywhere in the
-    // product (architect 2026-07-30). The WHOLE band, endcaps
+    // band's own TrimBarPressSeed, and the live release's one resolver seeds
+    // the double tap by the marker's rule (a lift whose press never crossed
+    // the grab gate, at the press's place), NO trim drag being able to go
+    // live in here, so nothing differs from outside. A single tap here, held
+    // for any length, is the consumed nothing a trim-bar tap is everywhere in
+    // the product (architect 2026-07-30). The WHOLE band, endcaps
     // included: those endcaps are painted geometry with no gesture in here, so
     // splitting the band would be a distinction nothing acts on. Read-only does
     // not refuse it — framing is navigation, exactly as the pan and the zoom
@@ -8947,8 +8922,7 @@ bool GuiInputHandler::handle_history_mode_press(
                 return true;
             }
             app.trim_bar_press = TrimBarPressSeed{
-                .active = true, .press_x = at.rx, .press_y = at.ry,
-                .press_ms = monotonic_ms()};
+                .active = true, .press_x = at.rx, .press_y = at.ry};
             return true;
         }
     }
@@ -9852,12 +9826,14 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
         update_trim_drag(at.rx);
         return;
     }
-    // THE TRIM BAR'S LONG PRESS ENDS AT THE GRAB GATE (TrimBarPressSeed,
-    // app_state.h; architect 2026-11-18: "a drag would end the long press ...
-    // just a move"): a motion whose real travel from the press reaches
-    // grab_moved_threshold_px drops the record, so a press that moved and came
-    // back is no hold — on the pill the same motion begins its drag below, on
-    // the bare trough it begins nothing. A LOST BUTTON drops it too: an
+    // THE TRIM BAR'S PRESS RECORD ENDS AT THE GRAB GATE (TrimBarPressSeed,
+    // app_state.h; the marker's rule for the double tap's first tap,
+    // architect 2026-11-21, send EE): a motion whose real travel from the
+    // press reaches grab_moved_threshold_px — the gate the pill's drag and a
+    // flag's drag begin at — drops the record, so a press that moved that far
+    // and came back seeds nothing at its lift, as a flag's pending that
+    // crossed seeds nothing; on the pill the same motion begins its drag
+    // below, on the bare trough it begins nothing. A LOST BUTTON drops it too: an
     // unclean end leaves no record for a later release to resolve, the
     // force-end finalizer's rule. Falls through: the pill's pending reads its
     // own fields below.

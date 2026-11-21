@@ -61,9 +61,10 @@
 //     column and then hands over to that bound's endcap drag): the verdict
 //     is asked live where the act runs, and it reads no clock — a long
 //     press means nothing to the BARREL'S bound set (the S Pen's side button
-//     being the Ctrl bit, a tap with it held is the click); the bar's PLAIN
-//     press keeps its own long press and double tap, both framing the trim
-//     (TrimBarPressSeed, app_state.h).
+//     being the Ctrl bit, a tap with it held is the click); no hold on the
+//     bar means anything, plain or barrel, the PLAIN press's double tap
+//     framing the trim (architect 2026-11-21, send EE; TrimBarPressSeed,
+//     app_state.h).
 //   THE TYPED AND LOADED ROUTES (the settings editor's `trim_*=` commits, and
 //     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
 //     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
@@ -1324,8 +1325,8 @@ void GuiInputHandler::commit_trim_drag() {
 // of the end the end) — a trim one frame wide included, which widens to
 // the left by a click left of it and to the right by a click right of it.
 // NO LONG PRESS MEANS ANYTHING TO THE BARREL'S BOUND SET: the verdict reads
-// no clock (the bar's PLAIN press keeps its own long press and double tap,
-// both framing the trim, TrimBarPressSeed, app_state.h).
+// no clock (nor does the bar's PLAIN press, whose double tap frames the
+// trim, architect 2026-11-21, send EE; TrimBarPressSeed, app_state.h).
 //
 // THREE CONSUMED NO-OPS, ALL SILENT — nothing writes, nothing deselects,
 // nothing stops, the caller arms no drag, no card — asked in this order.
