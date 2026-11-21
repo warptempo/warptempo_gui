@@ -34,8 +34,8 @@
 // IS SETTLED"): no ring, no stroke on the ground. THE PROGRAM'S LANES, top to
 // bottom, ON ARC'S NUMBERS SINCE 2026-11-19 (send Z; DESIGN §1, the one
 // table render.h's blocks derive): THE BAND at the window's top — THE
-// TITLE BAR (28 W, render.h's title bar block), Arc's toolbar pads 7 W
-// above the keys and 8 W below (render.h's toolbar pads), its keys in plain
+// TITLE BAR (28 W, render.h's title bar block), Arc's toolbar pad 7 W
+// above the keys and 7 W below (render.h's toolbar pads), its keys in plain
 // runs, the runs the `run_gap` tuning key's W apart (6 its default); then
 // THE WELL, flat regions RUNNING THE PANEL'S WHOLE WIDTH, EDGE TO EDGE, its
 // lines one W of `well_border` (render.h's THE WELL'S EDGES) — the line
@@ -45,7 +45,7 @@
 // editor's box on its whole rows), its line, THE CANVAS — the waveform
 // area, its grid and its center lines, its two channels' wells with the
 // stereo divider between them — and the well's foot; then THE BOTTOM ICON
-// ROW, 8 W, the case, 7 W; then THE STATUS BAR, its line and 22 W, on the
+// ROW, 7 W, the case, 7 W; then THE STATUS BAR, its line and 22 W, on the
 // app's foot — the window's, or the on-screen keyboard's top line while it
 // stands (send BB, main.cpp's app_foot_y). The keys' outermost faces stand 6 W inside the panel
 // (render.h's kEdgeInsetW and THE EDGE RULE at well_columns). (The band's

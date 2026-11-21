@@ -34,8 +34,8 @@
 //      exception (below); no frame, no ring, no shadow (paint_modal_box,
 //      paint_handler.cpp);
 //   2. directly under it THE CONTROLS ROW, THE BOTTOM ICON ROW'S OWN ROWS —
-//      the inner pad 8 W, the key (key_width wide and key_height tall,
-//      render.h's icon_case_w_px / icon_case_h_px), the outer pad 7 W
+//      the pad 7 W, the key (key_width wide and key_height tall,
+//      render.h's icon_case_w_px / icon_case_h_px), the pad 7 W
 //      (strip_h_px) — on the body tone, its outermost BOXES 6 W INSIDE THE
 //      PANEL (render.h's kEdgeInsetW; materials.h's THE KEY). THE ROW IS
 //      THE PAGE BEHIND'S, ONE RULE FOR BOTH ICON ROWS (architect
@@ -57,8 +57,8 @@
 //      keyboard's top line (below).
 // At the tablet's 2304 x 1440, 200 % and the keys' defaults (key_width 36,
 // key_height 28; the 56-row title bar), no keyboard standing: the box's line
-// rows 142–143 and 1306–1307, THE VIEW x 0..2303 and y 144..1305 (1162
-// rows); the controls row 1308–1393, its face rows 1324–1379, its first
+// rows 140–141 and 1308–1309, THE VIEW x 0..2303 and y 142..1307 (1166
+// rows); the controls row 1310–1393, its face rows 1324–1379, its first
 // face's columns 12–83 and its last 2220–2291; the status bar 1394–1439
 // under it.
 //
@@ -93,11 +93,11 @@
 // opened from is painted there as it was left (the dialog editor's backdrop,
 // AppState::dialog_backdrop). On the tablet at key_height 28 and his
 // keyboard tuning, osk_key_w 24 and osk_key_h 35 (48 x 70 device px): the
-// keyboard 1046–1439 (onscreen_keyboard.h's arithmetic), the status bar
-// 1000–1045, the controls row 914–999, the box 142–913 and THE VIEW y
-// 144..911; at the defaults (osk_key_h 30) the keyboard 1096–1439, the
-// status bar 1050–1095, the controls row 964–1049, the box 142–963 and the
-// view y 144..961.
+// keyboard 1048–1439 (onscreen_keyboard.h's arithmetic), the status bar
+// 1002–1047, the controls row 918–1001, the box 140–917 and THE VIEW y
+// 142..915; at the defaults (osk_key_h 30) the keyboard 1098–1439, the
+// status bar 1052–1097, the controls row 968–1051, the box 140–967 and the
+// view y 142..965.
 //
 // Geometry here, every rect a fact that asks no standing, and the box's two
 // standing predicates beside it (modal_box_dialog_stands, modal_box_stands);
@@ -167,7 +167,7 @@ inline GuiRect modal_box_rect(const AppState& a) {
 // the tablet at 200 %, 1 at 100 %; those rows the box's lines), across the
 // panel's own columns, 0 .. 2303 on the tablet — the lists' rows stand on
 // it edge to edge (folder_overlay.h), the score viewer's page in it, and a
-// dialog editor's window centered in it (the room; y 144..911 under the
+// dialog editor's window centered in it (the room; y 142..915 under the
 // keyboard at his tuning, the head's rows).
 inline GuiRect modal_box_interior_rect(const AppState& a) {
     const GuiRect box = modal_box_rect(a);

@@ -778,9 +778,10 @@ AppState::RedesignButtonFace& publish_button_face(
 // them.
 //
 // THE VERTICAL STORY (architect 2026-11-18 / 2026-11-19, send Z; render.h's
-// band paragraph): the title bar (render.h's title bar block), Arc's outer
-// pad 7 W, the key (band_case_top_offset_px), the inner pad 8 W; the bottom
-// icon row the inner pad 8 W, its key, the outer pad 7 W.
+// band paragraph): the title bar (render.h's title bar block), Arc's pad
+// 7 W, the key (band_case_top_offset_px), the pad 7 W; the bottom icon row
+// the pad 7 W, its key, the pad 7 W (symmetric, architect 2026-11-20, send
+// EE; render.h's ARC'S TOOLBAR PADS).
 //
 // THE HORIZONTAL WALK (architect 2026-10-22: "push all icons
 // together … add a spacing after render, and after flatten"): the roster's
@@ -1506,7 +1507,7 @@ static void icon_row_walk(bool history,
 
 // THE BAND'S SEATS (2026-10-21: lifted out of paint_icon_row; the simple
 // layout's runs 2026-10-22; ARC'S LINKED GROUPS since 2026-11-19, send Z,
-// DESIGN §3, the kit's Layout): THE KEY the title bar and the outer pad
+// DESIGN §3, the kit's Layout): THE KEY the title bar and the pad
 // under the band's top (band_case_top_offset_px). THE RIGHT RUN IS RESOLVED
 // FIRST, because it decides where every run to its left may stand (the
 // overflow rule at kIconRowViewPairs): ONE LINKED GROUP whose last box ends
@@ -1772,8 +1773,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE ICON ROW (top lane 0, at the window's top; row 4 of the
     // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
     // roster block above), the simple layout since 2026-10-22 — the title
-    // bar, Arc's outer pad, the cases, the inner pad on the body tone (send
-    // Z, 2026-11-19), the left members in
+    // bar, Arc's pad, the cases, the pad on the body tone (send Z,
+    // 2026-11-19; 7 W each side, send EE), the left members in
     // THREE RUNS and the right five in ONE — TWENTY-SEVEN members outside the
     // `h` view and EIGHTEEN inside it (2026-10-29, the Restrict lamp behind
     // Follow, hidden in the view), RE-COUNTED off the roster enum, the
@@ -2168,8 +2169,9 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // the other icon buttons", bigger finger targets without stealing waveform
 // height): the program's key (70 x key_height, 2026-11-04 night) — read from
 // the band's own accessors (render.h's program block) so the rows cannot
-// drift apart — on THE ROW'S OWN GROUND, Arc's inner pad above the case and
-// its outer pad below it (send Z, 2026-11-19; Cool Edit's row 8 under its dock
+// drift apart — on THE ROW'S OWN GROUND, Arc's pad above the case and the
+// same pad below it (send Z, 2026-11-19; 7 W each side since 2026-11-20,
+// send EE; Cool Edit's row 8 under its dock
 // bar, 4 W above and 5 below, 2026-10-09 to then). (Row 8's kdenlive
 // transport metrics, its 26-px boxes and
 // its ruled separators; Explorer's flat case with WordPad's air and the
@@ -2621,7 +2623,7 @@ static void paint_time_text(cairo_t* cr, const GuiRect& slot,
 // box starts and its last key's box ends: the seats themselves (the box,
 // border included, is the key, materials.h's THE KEY), both rows'
 // outermost boxes 6 W inside the panel, as the band's (icon_row_seats); THE
-// CASE the inner pad under the row's top (icon_case_top_offset_px, 8 W).
+// CASE the pad under the row's top (icon_case_top_offset_px, 7 W).
 // Text and fields (the clock) start on the left seat. The two rows differ
 // only in `row`: the bottom icon row's lane (bottom_row_area), or the
 // controls row's, the same rows (modal_controls_row_rect, which never lifts
@@ -2633,7 +2635,7 @@ struct BottomRowSeats {
     int right_x     = 0;   // one past the row's right-aligned cluster
     int cases_left  = 0;   // the row's first face's first column (left_x)
     int cases_right = 0;   // one past the row's last face (right_x)
-    int case_y      = 0;   // the face's top: the row's top plus the inner pad
+    int case_y      = 0;   // the face's top: the row's top plus the pad
     int case_w      = 0;   // the program's key, both rows' every button
     int case_h      = 0;
 };
@@ -2758,8 +2760,8 @@ static void row8_block_walk(bool history, const Row8Block& b,
 // panel's left edge — the status bar's column under it (kStatusBarPenW,
 // the same 14 W by its own ruling) — ON THE BASELINE THE ENTRY'S TEXT HAD:
 // the 14 W line box centered on the keys' 28 W rows (line_box_baseline,
-// +18 W of the case), so with the row's 8 W above its keys and 7 W below,
-// 15 W of the row above the line box and 14 W under it. THE PIPE'S PEN
+// +18 W of the case), so with the row's 7 W above its keys and 7 W below,
+// 14 W of the row above the line box and 14 W under it. THE PIPE'S PEN
 // STANDS AT THE TIMESTAMP SPECIMEN'S ADVANCE ("00:00.000", time_w), so the
 // pipe and the name never move as the digits run. THE TIMESTAMP'S OWN BOX
 // (`time_box`): the specimen's advance from the pen by the line box's rows,
@@ -2814,7 +2816,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // materials.h's paint_linked_group) with their drawings on them
     // (paint_key_glyph).
 
-    // The row's seats (bottom_row_seats): the band's case at the inner pad
+    // The row's seats (bottom_row_seats): the band's case at the pad
     // under the lane's top.
     const BottomRowSeats seats = bottom_row_seats(app, lane);
     const int btn_y     = seats.case_y;
@@ -4443,7 +4445,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // palette's `playhead_head` (Live's cyan 03C3D5 since 2026-11-01), NO
     // SHADOW (2026-11-02), the head's own tone apart from the line's static
     // `playhead_line` (render_playhead), THE TRIANGLE ON THE RULER'S LAST
-    // cue_chip_h_px DEVICE ROWS (200 %: rows 194 .. 201), its apex on THE
+    // cue_chip_h_px DEVICE ROWS (200 %: rows 192 .. 199), its apex on THE
     // BOTTOM EDGE OF THE RULER'S FOOT ROW, over the ticks' feet (2026-10-09
     // ~21:00; the ruler's foot since the flat well). It stands over the
     // ticks and digits the walk above laid down, covering whatever lies
@@ -5269,11 +5271,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
 // yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
 // row — THROUGH THE ONE-W LINE under the lane (the lane's foot line, one of
-// the well's lines) TO THE CANVAS'S LAST ROW (200 %: rows 235 .. 1305, 235
-// .. 911 under the on-screen keyboard at his tuning, send BB; on the
+// the well's lines) TO THE CANVAS'S LAST ROW (200 %: rows 233 .. 1307, 233
+// .. 915 under the on-screen keyboard at his tuning, send BB; on the
 // line's real span of columns: at a whole place the column left of the
 // marker's and the marker's own), so no gap stands between the apex and
-// the stem (his "small gap": the rows under the lane, 236 .. 237 today,
+// the stem (his "small gap": the rows under the lane, 234 .. 235 today,
 // the canvas-only stem left). TWO PAINTERS, ONE DECISION:
 // the canvas's rows are the GPU's (this pass, through the sink, whose list
 // is scissored to the canvas paint area), the lane's last row and the
@@ -9172,7 +9174,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // painted only under a clip that covers its extent (paint_shift_tooltip's
 // PUBLISHED AS PAINTED), and a lanes-only rect cuts a box that crosses the
 // lanes' top. THE ROWS THE CHECK SPARES are the window's top through the
-// viewport lanes' top (viewport_lanes_top_y; rows 0..141 on the tablet) —
+// viewport lanes' top (viewport_lanes_top_y; rows 0..139 on the tablet) —
 // the route already damaged the rest of its rect — and the clock cell
 // (clock_invalidate_rect). A family leaves the term where no viewport step —
 // a pan, a zoom, FOLLOW's scroll, every route that owes the rows — can
@@ -9239,7 +9241,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //         it hangs above the marker lane, the canvas between.
 //       - A TOP-ROW ROSTER KEY (face rows 70..125): its box hangs from the
 //         gap under the face, rows 128..195 (two lines 128..223), its extent
-//         from row 114 — its record always meets the spared rows (114..141),
+//         from row 114 — its record always meets the spared rows (114..139),
 //         so it holds the upper rows' check.
 //       - A BOTTOM-ROW ROSTER KEY (face rows 1324..1379): its box stands on
 //         the gap over the face, rows 1254..1321 (two lines 1226..1321), its

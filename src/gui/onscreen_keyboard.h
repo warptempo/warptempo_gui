@@ -678,14 +678,12 @@ inline double block_x_px(const GuiRect& band) {
 // the band is its pads and the grid, NO HEIGHT FLOOR — no minimum height
 // and no line of the canvas it must reach. THE PADS ARE THUNAR'S TOOLBAR
 // ROUND ITS BUTTONS, THE ROW STANDING OVER THE KEYBOARD'S STATUS BAR
-// (render.h's ARC'S TOOLBAR PADS; tmp/sendZ/DESIGN.md §1, measured on his 9 pt desktop, "8 + 28 +
-// 7"): kToolbarPadInnerW, 8 W, between the keyboard's top line and the
-// grid's upper outer line (pad_top_px), and kToolbarPadOuterW, 7 W, between
-// the grid's lower outer line and the window's last row (pad_foot_px) —
-// READ FROM THE SAME ACCESSORS THE BOTTOM ICON ROW'S LAYOUT READS
-// (toolbar_pad_inner_px / toolbar_pad_outer_px, strip_h_px), each a whole
-// W through scaled_px. THE ASYMMETRY IS DELIBERATE AND IS THE ROW'S OWN,
-// measured: its 8 W on the well's side, its 7 W on the window's edge.
+// (render.h's ARC'S TOOLBAR PADS): kToolbarPadW, 7 W, between the
+// keyboard's top line and the grid's upper outer line (pad_top_px) and
+// again between the grid's lower outer line and the window's last row
+// (pad_foot_px) — SYMMETRIC as the row's own (architect 2026-11-20, send
+// EE) and READ FROM THE SAME ACCESSOR THE BOTTOM ICON ROW'S LAYOUT READS
+// (toolbar_pad_px, strip_h_px), a whole W through scaled_px.
 // THE BAND IS WHOLE PIXELS and so is every key row: the pads, the five key
 // rows, the four gaps and the grid's two outer lines (key_gap_px each) are
 // each whole device px, so the first key row's top stands a pad and a gap
@@ -693,22 +691,22 @@ inline double block_x_px(const GuiRect& band) {
 // row. THE KEYS KEEP THEIR OWN BOX (osk_key_w / osk_key_h); across there is
 // no pad: the block stands on its seat (block_x_px) and the ground beside
 // it is what the window's width leaves.
-// Worked on the tablet at 200 % (2304 x 1440; 2 device px a W: the pads 16
-// and 14, the gap and the lines 2), the surface standing on the window's
+// Worked on the tablet at 200 % (2304 x 1440; 2 device px a W: the pads 14
+// each, the gap and the lines 2), the surface standing on the window's
 // last row (foot_y, the window's foot 1440):
 //   AT osk_key_h 35 (his tuning's, the keys 48 x 70): the grid 5 x 70 + 4 x
-//     2 + 2 x 2 = 362 rows, the band 16 + 362 + 14 = 392, the surface 394,
-//     rows 1046..1439 — the top line 1046..1047, the pad 1048..1063, the
+//     2 + 2 x 2 = 362 rows, the band 14 + 362 + 14 = 390, the surface 392,
+//     rows 1048..1439 — the top line 1048..1049, the pad 1050..1063, the
 //     upper outer line 1064..1065, the first key row 1066..1135, the last
 //     key row 1354..1423, the lower outer line 1424..1425, the pad
 //     1426..1439.
 //   AT THE DEFAULTS (osk_key_h 30, the keys 48 x 60): the grid 5 x 60 + 4 x
-//     2 + 2 x 2 = 312 rows, the band 342, the surface 344, rows 1096..1439 —
-//     the top line 1096..1097, the upper outer line 1114..1115, the first
+//     2 + 2 x 2 = 312 rows, the band 340, the surface 342, rows 1098..1439 —
+//     the top line 1098..1099, the upper outer line 1114..1115, the first
 //     key row 1116..1175, the last key row 1364..1423, the lower outer line
 //     1424..1425, the pad 1426..1439.
-inline int pad_top_px()  { return toolbar_pad_inner_px(); }
-inline int pad_foot_px() { return toolbar_pad_outer_px(); }
+inline int pad_top_px()  { return toolbar_pad_px(); }
+inline int pad_foot_px() { return toolbar_pad_px(); }
 
 // The five key rows and the four gaps between them, the band less its pads
 // and the grid's two outer lines.
@@ -832,16 +830,16 @@ inline bool stands(const AppState& a) {
 //   On the tablet (200 %, 2304 x 1440, key_height 28), across x 0..2303,
 //     the block of keys x 903..1550 (648 wide, its seat block_x_px; the
 //     grid's outer lines x 901..1552) at osk_key_w 24: AT osk_key_h 35 (his
-//     tuning's, the keys 48 x 70 device px) the surface 1046..1439 — the top
-//     line 1046..1047, the band 1048..1439, its first key row's top 1066
-//     (the pads' arithmetic above) — and above it the status bar 1000..1045
-//     (its line 1000..1001), the bottom icon row 914..999 (its keys
-//     930..985), the well's foot 912..913 and THE CANVAS 238..911 (674 rows;
-//     1068 with no keyboard), a dialog editor's view y 144..911; AT THE
-//     DEFAULTS (osk_key_h 30) the surface 1096..1439, the first key row's
-//     top 1116, the status bar 1050..1095 (its line 1050..1051), the bottom
-//     icon row 964..1049 (keys 980..1035), the well's foot 962..963 and the
-//     canvas 238..961 (724 rows). The top stack, rows 0..237, never moves.
+//     tuning's, the keys 48 x 70 device px) the surface 1048..1439 — the top
+//     line 1048..1049, the band 1050..1439, its first key row's top 1066
+//     (the pads' arithmetic above) — and above it the status bar 1002..1047
+//     (its line 1002..1003), the bottom icon row 918..1001 (its keys
+//     932..987), the well's foot 916..917 and THE CANVAS 236..915 (680 rows;
+//     1072 with no keyboard), a dialog editor's view y 142..915; AT THE
+//     DEFAULTS (osk_key_h 30) the surface 1098..1439, the first key row's
+//     top 1116, the status bar 1052..1097 (its line 1052..1053), the bottom
+//     icon row 968..1051 (keys 982..1037), the well's foot 966..967 and the
+//     canvas 236..965 (730 rows). The top stack, rows 0..235, never moves.
 // ON SCREEN IS AS PAINTED: the keyboard's claim is opaque (claim_rect) and
 // nothing of the app lies under it — the lanes end on its top line, so the
 // waveform's painted rect needs no cut for it (waveform_paint_area).

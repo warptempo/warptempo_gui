@@ -149,7 +149,7 @@ namespace {
 // THE BAND (icon_row_h_px(), at the surface's top): THE TITLE BAR (28 W,
 // render.h's title bar block) and THE TOP ICON ROW (Arc's toolbar: 7 W, the
 // key — the `key_width` tuning key's W wide by the `key_height` tuning
-// key's W tall, 36 x 28 their defaults — and 8 W; render.h's band
+// key's W tall, 36 x 28 their defaults — and 7 W; render.h's band
 // paragraph), then FLEXIBLE GAP 1, then THE WELL — THE PROGRAM'S CANVAS
 // COLUMN, flat regions RUNNING THE PANEL'S WHOLE WIDTH (render.h's THE
 // WELL'S EDGES): the TRIM lane (trim_lane_h_px(), the line under the top
@@ -169,7 +169,7 @@ namespace {
 // at the element (render.h's line rule). The BOTTOM strip is THREE LANES,
 // from the app's foot inward (app_foot_y below): THE STATUS BAR (status_bar_lane_h_px(), its
 // line and 22 W, Thunar's; render.h's status bar block), THE BOTTOM ICON ROW
-// (bottom_row_h_px(), 8 W, the key, 7 W) — the clock in its flat time
+// (bottom_row_h_px(), 7 W, the key, 7 W) — the clock in its flat time
 // field and the active tab's name beside it, and, packed against the right
 // edge, the COPY / PASTE duo, the two skips, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the step and
@@ -235,7 +235,7 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD (re-derived from the lane table
-// 2026-11-19, send Z; every line one W, 2 device px on the tablet; the text
+// 2026-11-20, send EE; every line one W, 2 device px on the tablet; the text
 // 12 W, the ruler's 10 W; the device rows below the tablet's at 200 % and
 // key_height 28 — a tune moves the band's and the bottom icon row's case
 // rows and the canvas by their difference; key_width moves no row). Every
@@ -244,24 +244,25 @@ namespace {
 // times the factor.
 //   2304x1440 AT gui_scale 200, THE GLASS HOST AND THE ONE HOST (the
 //   tablet's WHOLE SURFACE, full screen with both system bars hidden since
-//   2026-10-01 — MainActivity.java's head): THE BAND 142 (the title bar
-//   0–55, the top icon row's pad 56–69, its faces 70–125, its pad 126–141)
-//   + THE TRIM LANE 28 (the line 142–143, the trough 144–167, the line
-//   168–169) + THE RULER LANE 34 (the ruler 170–201, the line 202–203) +
-//   THE MARKER LANE 32 (204–235) + THE FOOT LINE 2 (236–237) = 238 above
-//   (the ruler and the marker lane 16 W each since 2026-11-19, send AA);
-//   134 below (THE WELL'S FOOT 1306–1307, THE BOTTOM ICON ROW 1308–1393, its
+//   2026-10-01 — MainActivity.java's head): THE BAND 140 (the title bar
+//   0–55, the top icon row's pad 56–69, its faces 70–125, its pad 126–139)
+//   + THE TRIM LANE 28 (the line 140–141, the trough 142–165, the line
+//   166–167) + THE RULER LANE 34 (the ruler 168–199, the line 200–201) +
+//   THE MARKER LANE 32 (202–233) + THE FOOT LINE 2 (234–235) = 236 above
+//   (the ruler and the marker lane 16 W each since 2026-11-19, send AA; the
+//   icon rows' pads 7 W each side since 2026-11-20, send EE);
+//   132 below (THE WELL'S FOOT 1308–1309, THE BOTTOM ICON ROW 1310–1393, its
 //   faces 1324–1379, THE STATUS BAR'S LINE 1394–1395 and THE BAR 1396–1439);
-//   leftover 1068: the waveform 1068 rows on 238–1305, both gaps 0; the
+//   leftover 1072: the waveform 1072 rows on 236–1307, both gaps 0; the
 //   waveform the panel's whole width, columns 0–2303. UNDER THE ON-SCREEN
 //   KEYBOARD (send BB; app_foot_y above) the same stacks on the app's foot:
-//   at his tuning (osk_key_h 35, the surface 394 rows on 1046–1439) the
-//   foot 1046 — THE WELL'S FOOT 912–913, THE BOTTOM ICON ROW 914–999 (its
-//   faces 930–985), THE STATUS BAR'S LINE 1000–1001 and THE BAR 1002–1045 —
-//   and the waveform 674 rows on 238–911; at the defaults (osk_key_h 30, 344
-//   rows on 1096–1439) the foot 1096 — 962–963, 964–1049 (faces 980–1035),
-//   1050–1051 and 1052–1095 — and the waveform 724 rows on 238–961. The top
-//   stack, rows 0–237, never moves.
+//   at his tuning (osk_key_h 35, the surface 392 rows on 1048–1439) the
+//   foot 1048 — THE WELL'S FOOT 916–917, THE BOTTOM ICON ROW 918–1001 (its
+//   faces 932–987), THE STATUS BAR'S LINE 1002–1003 and THE BAR 1004–1047 —
+//   and the waveform 680 rows on 236–915; at the defaults (osk_key_h 30, 342
+//   rows on 1098–1439) the foot 1098 — 966–967, 968–1051 (faces 982–1037),
+//   1052–1053 and 1054–1097 — and the waveform 730 rows on 236–965. The top
+//   stack, rows 0–235, never moves.
 //
 // THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
@@ -338,8 +339,8 @@ static void clamp_dims(int& w, int& h) {
 // for the lanes above the keyboard computes the zero waveform
 // waveform_area's own guard answers.
 // On the tablet (2304 x 1440, 200 %): the window's foot 1440; the app's foot
-// 1440 with no keyboard, 1046 under the keyboard at his tuning (osk_key_h
-// 35, the surface 394 rows) and 1096 at the defaults (osk_key_h 30, 344).
+// 1440 with no keyboard, 1048 under the keyboard at his tuning (osk_key_h
+// 35, the surface 392 rows) and 1098 at the defaults (osk_key_h 30, 342).
 int window_foot_y(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
@@ -377,8 +378,8 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE BAND, the
-// title bar, the outer pad, the key (its height the `key_height` tuning
-// key, 2026-10-29) and the inner pad (render.h's band paragraph,
+// title bar, the pad, the key (its height the `key_height` tuning
+// key, 2026-10-29) and the pad again (render.h's band paragraph,
 // icon_row_h_px), the well's four lanes the trim bar, the ruler, the marker
 // lane and the lane's foot line (render.h's well lanes block): 28 + 34 + 32
 // + 2 = 96 device rows on the tablet — THE WELL'S FOOT one W too
@@ -406,7 +407,7 @@ constexpr int kTopLaneFootLane    = 4;
 static_assert(kTopFlexGapLane == kTopTrimLane);
 int top_lane_height(int lane) {
     switch (lane) {
-        // THE BAND: the title bar, the outer pad, the case, the inner pad.
+        // THE BAND: the title bar, the pad, the case, the pad.
         case kTopProgramLane: return icon_row_h_px();
         // THE WELL'S THREE (architect 2026-10-09, the program is Cool Edit;
         // flat since 2026-11-01 night; render.h's well lanes block the
@@ -470,9 +471,9 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 200 and key_height 28 the lanes leave 1440 − 238 − 134 = 1068
-// device rows (2026-11-19, send AA), 1046 − 238 − 134 = 674 under the
-// on-screen keyboard at his tuning and 1096 − 372 = 724 at the defaults
+// gui_scale 200 and key_height 28 the lanes leave 1440 − 236 − 132 = 1072
+// device rows (2026-11-20, send EE), 1048 − 236 − 132 = 680 under the
+// on-screen keyboard at his tuning and 1098 − 368 = 730 at the defaults
 // (send BB). No color moves a lane (the key's height, a tuning key, and the
 // keyboard's standing move them). May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
@@ -586,13 +587,13 @@ GuiRect waveform_area(const AppState& a) {
     // lane, each from its rounded parts, which is not one multiply of the
     // sum), the well's lines one W each (2026-11-04), and at the 1000 %
     // ceiling (architect 2026-10-05) they PASS the tablet's 1440 rows at
-    // key_height's default 28: the band (280 + 70 + 280 + 80 = 710) and the
-    // bottom icon row (80 + 280 + 70 = 430) and the status bar (10 + 220)
-    // take 1370 before the well's lanes, so the top of the vocabulary lands
+    // key_height's default 28: the band (280 + 70 + 280 + 70 = 700) and the
+    // bottom icon row (70 + 280 + 70 = 420) and the status bar (10 + 220)
+    // take 1350 before the well's lanes, so the top of the vocabulary lands
     // on this floor (one W is 10 device px there). (The host runs far below
-    // it: the tablet at 200 % on its 1440-tall surface, where they take 372
-    // at the default key and leave the waveform 1068, the stack record at the
-    // lane table above; re-derived 2026-11-19, send AA.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
+    // it: the tablet at 200 % on its 1440-tall surface, where they take 368
+    // at the default key and leave the waveform 1072, the stack record at the
+    // lane table above; re-derived 2026-11-20, send EE.) The guard does not rest on that arithmetic, because the ceiling is a vocabulary the
     // architect moves — it has now moved four times — and the lane set is one
     // the redesign keeps adding to and taking from. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
@@ -785,8 +786,8 @@ GuiRect well_foot_area(const AppState& a) {
 
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
 // render.h's bottom-row block) — THE STRIP since the simple layout
-// (2026-10-22): Arc's inner pad 8 W, the key, the outer pad 7 W on the body
-// tone (send Z, 2026-11-19), at the left one plain-text run — the timestamp,
+// (2026-10-22): Arc's pad 7 W, the key, the pad 7 W on the body tone (send
+// Z, 2026-11-19; symmetric since 2026-11-20, send EE), at the left one plain-text run — the timestamp,
 // a text pipe and the active tab's name (paint_handler.cpp's
 // bottom_left_run) — and, packed against the right edge, the COPY / PASTE
 // duo, the skips (Go to Start, Go to End; 2026-10-24), the

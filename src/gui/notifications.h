@@ -918,9 +918,9 @@ int notification_card_max_w_px(const AppState& a);
 // the block above) — DOWN TO THE PANEL'S PAD OF AIR (folder_overlay::pad_px,
 // one W) ABOVE THE BOTTOM ROW'S LANE — the lane table's, so it follows the
 // bottom icon row up above the on-screen keyboard while that stands (send
-// BB, main.cpp's app_foot_y). On the tablet: rows 32 .. 1305 (the bottom
-// icon row's first row 1308 less the 2-row pad; 32 .. 911 under the keyboard
-// at his tuning, the row on 914), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title bar and the top icon row paint
+// BB, main.cpp's app_foot_y). On the tablet: rows 32 .. 1307 (the bottom
+// icon row's first row 1310 less the 2-row pad; 32 .. 915 under the keyboard
+// at his tuning, the row on 918), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title bar and the top icon row paint
 // whole under a card, its .95 fill over them; a press on a card is the
 // card's (claim_notification_press ranks above every claim and veil), so a
 // key, the struck clip lamp's square or any chrome under it answers nothing
@@ -951,9 +951,9 @@ int notification_card_max_w_px(const AppState& a);
 // (Two places, "4 … at 00:12.345 and 01:23.456", 560.3 px: 677 wide;
 // three, "6 … and 02:05.000", 680.4 px: 797 wide.) A SECOND ONE-LINE CARD
 // under it stands 12 rows lower, rows 132 .. 219 (glyph 160 .. 191,
-// baseline 184), over the icon row's foot pad, the trim lane (142 .. 169),
-// the ruler (170 .. 207) and the marker lane's first rows (210 .. 219); a
-// third, rows 232 .. 319, is the first to reach the canvas (from row 252).
+// baseline 184), over the icon row's foot pad, the trim lane (140 .. 167),
+// the ruler lane (168 .. 201) and the marker lane's first rows (202 .. 219);
+// a third, rows 232 .. 319, is the first to reach the canvas (from row 236).
 // THE SEAT READS THE WINDOW'S EDGES, NO LANE (architect 2026-11-19, send
 // BB: notifyd seats a card off the screen's corner "without regard for what
 // it obstructs"): the top and the right are notifyd's SPACE in from the
@@ -998,8 +998,8 @@ GuiRect notification_stack_bound(const AppState& a);
 // window being the whole 2304 x 1440 panel since the activity went full
 // screen (2026-10-01; the stacks are recorded at main.cpp's vertical-stack
 // owner). On the tablet today (send BB, 2026-11-19: the one-line card 88
-// device rows, the gap 12, the room rows 32 .. 1305, 1274 rows) it is 12
-// (1286 over 100): every window this product runs in holds more cards than
+// device rows, the gap 12, the room rows 32 .. 1307, 1276 rows) it is 12
+// (1288 over 100): every window this product runs in holds more cards than
 // the architect will ever stack.
 int notification_capacity(const AppState& a);
 

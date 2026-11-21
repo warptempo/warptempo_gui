@@ -11055,7 +11055,7 @@ GuiRect trim_bar_press_area(const AppState& a);
 GuiRect ruler_press_area(const AppState& a);
 GuiRect marker_lane_press_area(const AppState& a);
 // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged): bottom lane 1
-// over the status bar, Arc's inner pad, the case and the outer pad (the
+// over the status bar, Arc's pad, the case and the pad again (the
 // simple layout, 2026-10-22; Cool Edit's dock bar over its content band and
 // the border under it 2026-10-09 to then), whatever stands over it (the
 // modal family's box and controls row, modal_box.h), relaid with the status

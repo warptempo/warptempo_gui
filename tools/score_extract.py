@@ -29,13 +29,14 @@
 # past the new count or misspelled (stale_pages). A refusal (one line, exit 1) writes nothing. Nothing about the pages
 # is the user's to set: what a page is and where its range runs are read off the video (WHAT A PAGE IS).
 #   --fit W:H   THE VIEWER'S BOX in device px (default PAGE_FIT, the tablet's): each page is scaled, down or up, to
-#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2066x1162
-#               from any 16:9 video at the default (k = min(2304/1920, 1162/1080) = 1.0759); a PDF's slice is the box's height and its page's width at THE
+#               fit inside it keeping the video's aspect (fit_size), always exactly the viewer's fit size: 2073x1166
+#               from any 16:9 video at the default (k = min(2304/1920, 1166/1080) = 1.0796); a PDF's slice is the box's height and its page's width at THE
 #               DOCUMENT SCALE. THE FILE IS THAT PICTURE PADDED TO THE BOX'S PARITY (center_pad; architect 2026-11-15:
 #               the viewer shows a page at 100 % on whole pixels, centered): where the side that does not fill the box
 #               leaves an odd number of pixels, the page gains one column on its right (or one row at its bottom), its
-#               own edge column repeated, so the leftover halves evenly — none from a 16:9 video at the default
-#               (2304 - 2066 = 238 is even), 2102x1182 from one at a 2256x1182 box (2256 - 2101 = 155 is odd). The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
+#               own edge column repeated, so the leftover halves evenly — one column from a 16:9 video at the default
+#               (2304 - 2073 = 231 is odd: the file 2074x1166), 2102x1182 from one at a 2256x1182 box (2256 - 2101 =
+#               155 is odd), none from one at a 2304x1170 box (2080x1170, 2304 - 2080 = 224 is even). The viewer prints its box at its open, `warptempo_gui: score page box WxH` (the
 #               laptop's terminal, the tablet's logcat warptempo:I): that pair, as W:H, pre-sizes the pages for
 #               another screen or gui_scale.
 #   --rate R    the unit of pages.txt's frames (default the video's audio sample_rate; required when the video has no
@@ -220,7 +221,7 @@
 #   slice's are area-scaled as the video road's frames are.
 #
 # THE PDF ROAD'S INSTANCES (measured 2026-10-27 at the default box then, the 2026-10 box of 1111 rows, so every
-# "x 1111" slice height below is that box's, not today's 1162; PAD 26, the staff test, the extent, the rise and the
+# "x 1111" slice height below is that box's, not today's 1166; PAD 26, the staff test, the extent, the rise and the
 # average rows; "rows" are canonical, "systems" the rule's sure ones, "slices" the pages written; "sure", "average" and
 # "dropped" count the PDF pages by outcome). K.550 is the one the rule was ruled on; the ten others are the test set of
 # tmp/research/mozart_pdfs/, and where their rule's systems are not the printed ones is listed below.
@@ -336,14 +337,15 @@ DIFF_W, DIFF_H = 480, 270
 #   2026-11-19), x 0 .. 2303, and its interior, the flat pane, is the box's whole width: x 0, WIDTH 2304.
 #   DOWN (at the keys' defaults, key_height 28 W = 56 device px): the box (modal_box_rect) runs from the trim lane's
 #   first row (top_trim_row_area) to the controls row's top (modal_controls_row_rect, the bottom icon row's lane).
-#   The band above the trim lane is the title bar's 28 W (56), the outer pad's 7 W (14), the key's 28 W (56) and
-#   the inner pad's 8 W (16), 142 rows; under the box, the bottom icon row (16 + 56 + 14 = 86 rows) over the status
-#   bar (2 + 44 = 46 rows) on the window's foot, from row 1440 - 46 - 86 = 1308. So the box is rows 142..1307 (its
-#   last rows the well's foot), those outer rows ground, and its interior (modal_box_interior_rect) one hairline
-#   (2 device px) in: y 144..1305, HEIGHT 1162 - the viewer's box 2304x1162. The pages on file may have been fitted
+#   The band above the trim lane is the title bar's 28 W (56), the pad's 7 W (14), the key's 28 W (56) and the
+#   pad's 7 W again (14; the icon rows' pads symmetric since 2026-11-20, send EE), 140 rows; under the box, the
+#   bottom icon row (14 + 56 + 14 = 84 rows) over the status bar (2 + 44 = 46 rows) on the window's foot, from row
+#   1440 - 46 - 84 = 1310. So the box is rows 140..1309 (its first rows the line under the top icon row, its last
+#   the well's foot), and its interior (modal_box_interior_rect) one hairline (2 device px) in: y 142..1307,
+#   HEIGHT 1166 - the viewer's box 2304x1166. The pages on file may have been fitted
 #   to an earlier box: the viewer fits a page to its live box either way (score_viewer.h), and a rerun at the default
 #   re-fits them to this one.
-PAGE_FIT = (2304, 1162)
+PAGE_FIT = (2304, 1166)
 # THE PAGE FILE: GRAYSCALE JPEG at this quality, Huffman-optimized (architect 2026-10-26: "grayscale ok", quality 92).
 # A score page is black ink on paper, so one channel loses nothing a reader sees; ffmpeg's mjpeg encoder writes no
 # gray JPEG (its pixel formats are yuvj420p, 422p and 444p alone), so the grab pipes ffmpeg's gray rawvideo to Pillow,

@@ -669,10 +669,10 @@ void install_true_colors(bool on);
 // the tablet at 200 % since the rebase of 2026-11-05; the ruler's ticks and
 // every canvas line the same W, waveform_line_px). THE ROWS ON THE TABLET
 // (200 %; main.cpp's lane table the record; at key_height 28, its default
-// since send Z): rows 142 .. 143 the line under the top icon row, the
-// trough 144 .. 167, rows 168 .. 169 its line, the ruler 170 .. 201, rows
-// 202 .. 203 its line, the marker lane 204 .. 235, rows 236 .. 237 its
-// line, the canvas 238 .. 1305, rows 1306 .. 1307 the well's foot
+// since send Z): rows 140 .. 141 the line under the top icon row, the
+// trough 142 .. 165, rows 166 .. 167 its line, the ruler 168 .. 199, rows
+// 200 .. 201 its line, the marker lane 202 .. 233, rows 234 .. 235 its
+// line, the canvas 236 .. 1307, rows 1308 .. 1309 the well's foot
 // (architect: "waveform height ok to take from"; "it's okay if it takes
 // away from the waveform height", 2026-11-18).
 //
@@ -1776,18 +1776,16 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 //
 // THE BAND — THE TITLE BAR AND THE TOP ICON ROW (architect 2026-11-18 /
 // 2026-11-19, send Z; DESIGN §1): THE TITLE BAR (title_bar_h_px, its block
-// above), then ARC'S TOOLBAR, its pads DELIBERATELY UNEQUAL — kToolbarPadOuterW
-// = 7 W above the faces, the case, kToolbarPadInnerW = 8 W below them — the
-// asymmetry Arc's own (GTK's toolbar padding as Thunar draws it, measured on
-// his 9 pt desktop), MIRRORED IN THE BOTTOM ICON ROW (8 W above its faces,
-// on the well's side, and 7 W below, on the status bar's): the 8 W stands
-// on each row's well side. At key_height 28: 28 + 7 + 28 + 8 = 71 W, 142
-// device rows on the tablet at 200 % (the title bar 0 .. 55, the faces 70
-// .. 125, the pad 126 .. 141), on the body tone, no line between the title
+// above), then ARC'S TOOLBAR, ONE PAD ON BOTH SIDES OF THE FACES —
+// kToolbarPadW, 7 W above them and 7 W below (architect 2026-11-20, send EE:
+// symmetric on his word, the bottom icon row the same; ARC'S TOOLBAR PADS
+// below). At key_height 28: 28 + 7 + 28 + 7 = 70 W, 140 device rows on the
+// tablet at 200 % (the title bar 0 .. 55, the pad 56 .. 69, the faces 70 ..
+// 125, the pad 126 .. 139), on the body tone, no line between the title
 // bar and the row (a tone change only), the trim lane's first row the line
 // under it. (The band's pads off the on-screen keyboard's key height had
-// no reader left here; the keyboard's band reads the bottom icon row's two
-// pads since 2026-11-19, send BB, onscreen_keyboard.h's pad_top_px /
+// no reader left here; the keyboard's band reads the bottom icon row's
+// pad since 2026-11-19, send BB, onscreen_keyboard.h's pad_top_px /
 // pad_foot_px.) Its runs are paint_icon_row's
 // walk (icon_row_seats: each run one linked group, the run gap of ground
 // between two groups, program_run_gap_px). The hit target is the painted
@@ -1829,49 +1827,46 @@ inline int key_gap_px() {
     return scaled_px(kKeyGapW, 1);
 }
 // ARC'S TOOLBAR PADS (architect 2026-11-18 / 2026-11-19, send Z; DESIGN
-// §1; the band paragraph above): kToolbarPadOuterW, 7 W, on each icon row's
-// side away from the well (above the top row's faces, below the bottom
-// row's) and kToolbarPadInnerW, 8 W, on its side toward the well (below the
-// top row's, above the bottom row's) — a DELIBERATE ASYMMETRY, Arc's own,
-// mirrored between the two rows. Through scaled_px, floored at one device
-// px: 14 and 16 device px on the tablet at 200 %. THE ON-SCREEN KEYBOARD,
-// standing under the status bar on the window's last rows, wears the bottom
-// icon row's two round its grid (onscreen_keyboard.h's pad_top_px /
-// pad_foot_px, send BB). His reason for room under
-// the bottom row: "my hand isn't naturally at the very edge of the screen"
-// — the status bar stands under it (status_bar_lane_h_px).
-inline constexpr double kToolbarPadOuterW = 7.0;
-inline constexpr double kToolbarPadInnerW = 8.0;
-inline int toolbar_pad_outer_px() {
-    return scaled_px(kToolbarPadOuterW, 1);
-}
-inline int toolbar_pad_inner_px() {
-    return scaled_px(kToolbarPadInnerW, 1);
+// §1; the band paragraph above): kToolbarPadW, 7 W, ON BOTH SIDES OF THE
+// FACES IN BOTH ICON ROWS — above and below the top row's, above and below
+// the bottom row's (architect 2026-11-20, send EE: "we dont' want to be
+// injecitng an asymmetry where there doesnt have to be one"; Arc's toolbar
+// as Thunar and Mousepad draw it stands 8 W on one side and 7 W on the
+// other, a 1-px quirk given up for the symmetric 7 / 7). Through scaled_px,
+// floored at one device px: 14 device px on the tablet at 200 %. THE
+// ON-SCREEN KEYBOARD, standing under the status bar on the window's last
+// rows, wears the same pad above and below its grid (onscreen_keyboard.h's
+// pad_top_px / pad_foot_px, send BB). His reason for room under the bottom
+// row: "my hand isn't naturally at the very edge of the screen" — the
+// status bar stands under it (status_bar_lane_h_px).
+inline constexpr double kToolbarPadW = 7.0;
+inline int toolbar_pad_px() {
+    return scaled_px(kToolbarPadW, 1);
 }
 // THE CASE'S TOP, AS AN OFFSET FROM THE BOTTOM ICON ROW'S TOP and the modal
-// controls row's: the inner pad (8 W), the one expression every reader of
-// those strips' case seat takes (the bottom row's and the controls row's
-// seats, hit rects, tooltips).
+// controls row's: the pad (7 W), the one expression every reader of those
+// strips' case seat takes (the bottom row's and the controls row's seats,
+// hit rects, tooltips).
 inline int icon_case_top_offset_px() {
-    return toolbar_pad_inner_px();
+    return toolbar_pad_px();
 }
 // THE BAND'S CASE TOP, AS AN OFFSET FROM THE BAND'S OWN TOP: the title bar
-// and the outer pad (28 + 7 = 35 W, 70 device rows on the tablet), read by
-// the band's seats alone (icon_row_seats, paint_handler.cpp, which every
-// band reader takes).
+// and the pad (28 + 7 = 35 W, 70 device rows on the tablet), read by the
+// band's seats alone (icon_row_seats, paint_handler.cpp, which every band
+// reader takes).
 inline int band_case_top_offset_px() {
-    return title_bar_h_px() + toolbar_pad_outer_px();
+    return title_bar_h_px() + toolbar_pad_px();
 }
-// THE STRIP — the bottom icon row's: the inner pad, the case, the outer pad
-// (8 + 28 + 7 = 43 W, 86 device rows on the tablet at key_height 28).
+// THE STRIP — the bottom icon row's: the pad, the case, the pad (7 + 28 + 7
+// = 42 W, 84 device rows on the tablet at key_height 28).
 inline int strip_h_px() {
-    return toolbar_pad_inner_px() + icon_case_h_px() + toolbar_pad_outer_px();
+    return toolbar_pad_px() + icon_case_h_px() + toolbar_pad_px();
 }
-// THE BAND: the title bar, the outer pad, the case, the inner pad (28 + 7 +
-// 28 + 8 = 71 W, 142 device rows on the tablet at key_height 28).
+// THE BAND: the title bar, the pad, the case, the pad (28 + 7 + 28 + 7 = 70
+// W, 140 device rows on the tablet at key_height 28).
 inline int icon_row_h_px() {
-    return title_bar_h_px() + toolbar_pad_outer_px() + icon_case_h_px() +
-           toolbar_pad_inner_px();
+    return title_bar_h_px() + toolbar_pad_px() + icon_case_h_px() +
+           toolbar_pad_px();
 }
 // THE GROUND BETWEEN TWO RUNS (architect 2026-10-22, the simple layout; the
 // hi-fi's gap again since 2026-11-03, the retrofit, reversing that
@@ -2056,8 +2051,8 @@ inline int program_run_gap_px() {
 // the grabs around them: THE TRIM BAR'S CAPS AND GRABS below. THE TRIM
 // LANE: the line under the top icon row, the trough and the line under it
 // (the line Arc's scrollbar draws in $borders_color on its content side):
-// 14 W, 28 device rows, rows 142 .. 169 at key_height 28 on the tablet, the
-// trough 144 .. 167. The modal family's box keeps its seat on the lane's
+// 14 W, 28 device rows, rows 140 .. 167 at key_height 28 on the tablet, the
+// trough 142 .. 165. The modal family's box keeps its seat on the lane's
 // first row (modal_box.h); the cards stand at the window's top right over
 // whatever is there, notifyd's seat (notification_stack_bound, send BB,
 // 2026-11-19).
@@ -2166,11 +2161,11 @@ inline int cue_triangle_rows() {
 // sides at 45°. THE CHIP'S APEX STANDS ON THE BOTTOM EDGE OF THE LANE'S LAST
 // ROW, THE CHIP SITTING ON THE LANE'S FOOT as it always has (the fork's mock
 // floated the bare fill W · √2 above the foot, where the outline had held
-// it: not taken) — at 200 %, lane rows 204 .. 235, its apex on the edge
-// under row 235, its top edge 8 above it, the chip's rows 228 .. 235. THE
+// it: not taken) — at 200 %, lane rows 202 .. 233, its apex on the edge
+// under row 233, its top edge 8 above it, the chip's rows 226 .. 233. THE
 // RULER'S HEAD IS THE SAME CHIP (architect 2026-11-04, mock k1, "4 accept
 // overlap"), its apex on the bottom edge of the ruler's last row (200 %:
-// ruler rows 170 .. 201, the head's rows 194 .. 201), so its top can reach
+// ruler rows 168 .. 199, the head's rows 192 .. 199), so its top can reach
 // into the ruler's digits where it stands under a label — ACCEPTED
 // ("timestamp not really important for fine tune, just ballpark"): it
 // paints over them as a chip paints over a label (paint_ruler_row).
@@ -2448,10 +2443,11 @@ WellColumns well_columns(const AppState& a);
 // membership), all one lane over the status bar.
 //
 // THE ROW IS THE STRIP (architect 2026-10-22, the simple layout; Arc's pads
-// since 2026-11-19, send Z): THE INNER PAD (8 W), the program's key (the
+// since 2026-11-19, send Z): THE PAD (7 W), the program's key (the
 // band's own, read from its accessors above so the rows cannot drift
-// apart), THE OUTER PAD (7 W) — strip_h_px, at key_height 28 43 W, 86
-// device rows on the tablet at 200 % (16 + 56 + 14) — on the body tone, no
+// apart), THE PAD AGAIN (7 W; symmetric since 2026-11-20, send EE) —
+// strip_h_px, at key_height 28 42 W, 84 device rows on the tablet at 200 %
+// (14 + 56 + 14) — on the body tone, no
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
 // and then barred groups and the border under it stood 2026-10-09 to
 // 2026-10-22). The layout is paint_bottom_row_buttons_and_clock's walk.
@@ -2478,7 +2474,7 @@ inline int bottom_row_h_px() {
 // body face's line box (14 W, 11 + 3) + kStatusBarPadW: 1 + 22 = 23 W, 46
 // device rows on the tablet at 200 % (with no keyboard standing the line
 // 1394 .. 1395 and the bar 1396 .. 1439; under the on-screen keyboard at his
-// tuning 1000 .. 1001 and 1002 .. 1045), each part through scaled_px,
+// tuning 1002 .. 1003 and 1004 .. 1047), each part through scaled_px,
 // rounded at the element. THE BAR IS
 // THE BODY TONE `body_face`, its text Regular 12 W (GuiFace::Body) in `text`,
 // THE PEN kStatusBarPenW (14 W) from the panel's left edge — THUNAR'S
@@ -2539,9 +2535,9 @@ inline int status_bar_lane_h_px() {
 // 2026-11-03: every lane above and below the well is a skin length or a
 // hairline, derived at the element. On the tablet at 200 % and key_height
 // 28 (send Z; the ruler and the marker lane 16 W since send AA): the band
-// 142 device rows (56 + 14 + 56 + 16), the well's lanes above the canvas
+// 140 device rows (56 + 14 + 56 + 14), the well's lanes above the canvas
 // 94 (28 + 34 + 32) and its foot line 2, the well's foot 2, the bottom icon
-// row 86 (16 + 56 + 14) and the status bar 46 (2 + 44): the canvas 1068
+// row 84 (14 + 56 + 14) and the status bar 46 (2 + 44): the canvas 1072
 // rows of the surface's 1440 — main.cpp's lane table the record.)
 // AT THE WAVEFORM'S EDGES A CUE IS CLIPPED (architect 2026-09-26, the flag
 // box's rule kept for the cue): the marker lane paints inside the waveform's
@@ -2946,7 +2942,7 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 //     image off the end's (the end column's right edge, end.x + 1). Authored
 //     as the pill's radius plus a straight length, so a retuned pill moves
 //     the cap. On the tablet at 200 % the cap 10 x 12 device px, rows
-//     150 .. 161 (the pill's), its tip 6 px and its cut line 16 px (8 W)
+//     148 .. 159 (the pill's), its tip 6 px and its cut line 16 px (8 W)
 //     inside its bound; at 100 % 5 x 6, the tip 3 and the cut 8; at 125 %
 //     6 x 8 (the radius 4 px, the straight run's 2.5 rounded to 2), the
 //     tip 3.5 and the cut 9.5.
@@ -3532,11 +3528,11 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // ring's sides, the scanner and the zoom anchor's
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). On the tablet at 200 % and
-// key_height 28 (its default since send Z) the canvas is 1068 rows,
-// 238-1305 (main.cpp's lane table, re-derived 2026-11-19, send AA: the
-// ruler and the marker lane 16 W each): the upper well's band 533 rows
-// (238-770), the divider rows 771-772 (one W), the lower well's band 533
-// rows (773-1305) and NO SPARE ROW (1068 less the divider's 2 is even; an
+// key_height 28 (its default since send Z) the canvas is 1072 rows,
+// 236-1307 (main.cpp's lane table, re-derived 2026-11-20, send EE: the
+// icon rows' pads 7 W each side): the upper well's band 535 rows
+// (236-770), the divider rows 771-772 (one W), the lower well's band 535
+// rows (773-1307) and NO SPARE ROW (1072 less the divider's 2 is even; an
 // odd remainder would be the canvas's last row, ONE CHANNEL'S BAND below).
 //
 // THE DIVIDER'S ROWS, area-local, for an area `area_h` rows tall at a
