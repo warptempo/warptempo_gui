@@ -1248,7 +1248,7 @@ inline bool is_trim_reset_key(GuiKey key, GuiInputState mods) {
 
 // True for the chord that FRAMES THE TRIM (GuiInputHandler::
 // run_span_framing_command, the trim bar's double tap exactly — a proper
-// trim sub-window with the edge margin each side, else the whole song):
+// trim sub-window with at most the edge margin each side, else the whole song):
 // SHIFT+0 exactly — shift, no ctrl, no alt (architect 2026-10-24; it was the
 // reset until then). Bare `0` is Zoom to Fit's toggle and untouched;
 // `0` is the whole song to the camera, shifted the trim's span to the camera.

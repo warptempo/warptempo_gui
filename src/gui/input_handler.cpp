@@ -1193,7 +1193,7 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // SHIFT+0 FRAMES THE TRIM (architect 2026-10-24, Zoom to Fit's shifted
     // press and long press): the trim bar's double tap EXACTLY — the one
     // command both run (run_span_framing_command: a proper trim sub-window
-    // with the edge margin each side, else the whole song), so the key, the
+    // with at most the edge margin each side, else the whole song), so the key, the
     // button and the gesture are one act. A camera act: no trim bound, the
     // playhead and the selection untouched, admitted on a locked tab, under
     // the iteration lock and in the `h` view as the bar's double tap is
@@ -2657,16 +2657,15 @@ std::optional<SpanFramingLanding> span_framing_landing(const AppState& app,
                                                        int64_t lo, int64_t hi,
                                                        bool margin) {
     // The shared span framer's arithmetic (frame_span_into_view, declared in
-    // input_handler.h, applies it). Computes the margined
-    // fit level, then ALWAYS derives the start by CENTERING the margined span in
-    // the PAINTED window at that level (W·q_t, q_t the sixteenth-frame grid step
-    // — the span the waveform will show); the start itself is left unsnapped,
-    // clamp_viewport_start owning the viewport grid (see the centering block
-    // below). A span too small for the floor (effective_min_zoom_level) to fill (the floor-saturated case)
-    // rests centered instead of left-aligned, and the unclamped case degenerates
-    // to the span's left edge (W·q_t covers the margined span by the fit-level
-    // solve, past it by under a sixteenth of a frame per column). Ends at
-    // apply_zoom_to_start.
+    // input_handler.h, applies it). Computes the fit level of the span's
+    // window (its margined window under `margin`), then ALWAYS derives the
+    // start by CENTERING the bare span in the PAINTED window at that level
+    // (W·q_t, q_t the sixteenth-frame grid step — the span the waveform will
+    // show); the start itself is left unsnapped, clamp_viewport_start owning
+    // the viewport grid and the walls (see the centering block below). A span
+    // too small for the floor (effective_min_zoom_level) to fill (the
+    // floor-saturated case) rests centered, or on the wall it is near. Ends
+    // at apply_zoom_to_start.
     if (audio.total_frames() <= 0) return std::nullopt;
     const GuiRect area = waveform_area(app);
     const int     W    = area.w;
@@ -2676,52 +2675,51 @@ std::optional<SpanFramingLanding> span_framing_landing(const AppState& app,
     if (total <= 0) return std::nullopt;
 
     if (hi < lo) std::swap(lo, hi);   // defensive; monotone callers keep order
-    double flo = static_cast<double>(lo);
-    double fhi = static_cast<double>(hi);
-    // THE MARGIN IS THE EDGE MARGIN, A FRACTION OF THE WINDOW PER SIDE
-    // (kViewportEdgeMarginFraction, app_state.h, since 2026-09-22 — it padded
-    // 2.5 % OF THE SPAN per side until then): the framed span occupies
-    // 1 − 2m of the window it is fitted into, so each side pads m / (1 − 2m)
-    // of the span. The fit and the centring below then read the padded span
-    // unchanged.
-    if (margin) {
-        const double f = kViewportEdgeMarginFraction;
-        const double m = f / (1.0 - 2.0 * f) * static_cast<double>(hi - lo);
-        flo -= m;
-        fhi += m;
-    }
-
+    // THE MARGIN IS THE EDGE MARGIN, AT MOST A FRACTION OF THE WINDOW A SIDE
+    // (architect 2026-11-21, send EE: "it really should just be a 5% maximum
+    // on either side, not a minimum of 10%. Combined."): the window fitted is
+    // the span's MARGINED WINDOW, edge_margined_window_frames (app_state.h,
+    // the rule and its arithmetic beside kViewportEdgeMarginFraction, the
+    // one geometry land_subject's fit test also reads), so a side on the
+    // song's wall shows what exists there and hands nothing to the other.
+    // Without the margin (the whole song) the window is the span itself.
+    //
     // Fit level: effective_max_zoom_level's own solve (fit_zoom_level, main.cpp
-    // — the level whose painted span W·q covers the span) with the
-    // span in place of total, clamped into [effective floor, per-file
+    // — the level whose painted span W·q covers the window) with the
+    // window in place of total, clamped into [effective floor, per-file
     // effective ceiling]. A zoom-OUT ceiling and a zoom-IN floor, so framing a
-    // tiny span may go deep (down to effective_min_zoom_level) while a span wider than the song
-    // saturates at whole-song-visible — and the whole song's span solves to
-    // the ceiling itself.
-    double span = fhi - flo;
+    // tiny span may go deep (down to effective_min_zoom_level), while the
+    // margined window never exceeds the live domain (its fourth line) and
+    // the whole song's window solves to the ceiling itself.
+    double span = margin ? edge_margined_window_frames(lo, hi, total)
+                         : static_cast<double>(hi - lo);
     if (span < 1.0) span = 1.0;  // guard log2 of <= 0 (degenerate lo == hi)
     const double raw_level = fit_zoom_level(span, W, column);
     const double ceiling = effective_max_zoom_level(W, total, column);
     const double target_level =
         std::clamp(raw_level, effective_min_zoom_level(column), ceiling);
 
-    // CENTER: place the margined span's midpoint at the centre of the PAINTED
+    // CENTER: place the BARE span's midpoint at the centre of the PAINTED
     // window at the target level, visible_t = W·q_t (samples_visible's span at
     // that level, the one geometry land_subject's fit test and centring read) —
     // at the fit level and at every whole level (column × 2^(L − 2), a whole
     // number of frames or a half at level 1) q_t is the level's spp itself,
     // and a level clamped to the floor or the ceiling centres on the window it
     // will actually paint. Only the FINAL start is nearbyint'd;
-    // the viewport grid is clamp_viewport_start's (the chokepoint). In the
-    // ordinary UNCLAMPED fit W·q_t is the margined span rounded UP to the
-    // sixteenth-frame grid (under W/16 frames over, fit_zoom_level), so
-    // mid - visible_t/2 sits under W/32 frames left of flo — a column or two at
-    // the deepest zoom and nothing at a coarse one, inside the edge margin
-    // either way — and the start is nearbyint(flo) less that residue. The
-    // ceiling-saturated whole-song case (mid = total/2, W·q_t >= total ->
-    // start <= 0) is clamped to 0 by clamp_viewport_start's whole-song
-    // branch (whole_song_fits_painted_span, main.cpp: q·w >= total).
-    const double mid       = 0.5 * (flo + fhi);
+    // the viewport grid and the song's two walls are clamp_viewport_start's
+    // (the chokepoint). THE WALLS PLACE THE MARGINS, NO RULE HERE: in the
+    // ordinary UNCLAMPED fit W·q_t is the margined window V rounded UP to the
+    // sixteenth-frame grid (under W/16 frames over, fit_zoom_level), so with
+    // neither side walled each side shows f·V plus half that residue; with
+    // the left wall short (lo < f·V) the centred start is (lo − f·V) / 2
+    // less half the residue, under 0, and the left wall rests it at 0: lo
+    // shown on the left, f·V plus the residue on the right; the right wall
+    // the mirror (the rest max_viewport_start_grid, the strip's end within a
+    // column q_t past the song's end, so the left shows f·V to within that
+    // column). The ceiling-saturated whole-song case (mid = total/2,
+    // W·q_t >= total -> start <= 0) is clamped to 0 by clamp_viewport_start's
+    // whole-song branch (whole_song_fits_painted_span, main.cpp: q·w >= total).
+    const double mid = 0.5 * (static_cast<double>(lo) + static_cast<double>(hi));
     const double visible_t =
         painter_quantized_spp(samples_per_pixel_at(target_level, column)) *
         static_cast<double>(W);
@@ -2844,7 +2842,7 @@ void land_and_frame_active_markers(AppState& app, const GuiAudio& audio,
     }
     // THE CAMERA IS THE LANDING OWNER'S RESTORE OVER THE RANGE (the fit test
     // and the answers at Viewport::land_subject, viewport.cpp), zooming out
-    // only when the range plus the edge margin cannot fit: the false verdict
+    // only when the range's margined window cannot fit: the false verdict
     // hands it to the span framer's margin arm, which then only ever zooms
     // out (the argument is at the fit test). A one-member range always fits.
     // ACCEPTED COST: the landing's changed path and the framer each owe one

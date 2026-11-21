@@ -578,8 +578,9 @@ struct Viewport {
     // coarser, an on-screen subject moves nothing and an off-screen one is
     // PAGED IN, lo landing the edge margin in from the LEFT edge. RESTORE: a subject WHOLLY ON SCREEN moves
     // nothing at every zoom; an off-screen one that fits is CENTRED on its
-    // midpoint at every zoom; a range that CANNOT FIT (wider than 1 − 2 × the
-    // edge margin of the window) returns FALSE having written nothing. The
+    // midpoint at every zoom; a range that CANNOT FIT (its margined window,
+    // edge_margined_window_frames in app_state.h, wider than the live painted
+    // window) returns FALSE having written nothing. The
     // WALK's centring ARMS THE HOLD POSTURE, so the hold stands only at the
     // working zoom (architect 2026-09-28); a restore's centring never arms
     // it (architect 2026-09-24), and a singleton restore reaches it with the

@@ -169,16 +169,17 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 //   * Viewport::land_subject — THE LANDING OWNER (the Tab walk in both
 //     audio views and the marker drop's landing, the undo/redo restore, the
 //     phase-reset pastes' landing): its fit test
-//     asks whether the range is at most 1 − 2 × margin of the window at the
-//     live zoom (else its one caller that can meet the verdict, the group
-//     body land_and_frame_active_markers, zooms out through the framer's
-//     margin arm below), and the
+//     asks whether the range's MARGINED WINDOW (edge_margined_window_frames
+//     below) is at most the live painted window (else its one caller that
+//     can meet the verdict, the group body land_and_frame_active_markers,
+//     zooms out through the framer's margin arm below), and the
 //     walk's page-in, an off-screen landing at any zoom but the working one,
 //     finer or coarser, lands the subject the margin in from the LEFT edge exactly as follow's
 //     does (the restore never pages in);
 //   * frame_span_into_view's `margin` arm (input_handler.cpp) — the span
-//     framer pads each side by this fraction OF THE WINDOW, so the framed
-//     span occupies 1 − 2 × margin of it.
+//     framer fits the span's MARGINED WINDOW (edge_margined_window_frames
+//     below): at most this fraction OF THE WINDOW of empty space on either
+//     side, a walled side handing nothing to the other.
 // (center_span_in_view, the group restore's centring camera of 2026-09-22,
 // was a reader until its deletion 2026-09-23; the restore's singleton
 // centred its marker outright, reading nothing, over the same day.)
@@ -188,9 +189,49 @@ inline int64_t working_column_frames(int sample_rate, int display_width_px) {
 // keep-visible edge-align (Viewport::reseat_playhead_to), which scrolls the
 // minimum. viewport_edge_margin_samples below is the two page-ins' one
 // conversion to samples (paged_in_viewport_start, viewport.cpp); the span
-// framer and the landing owner's fit test work in doubles over the painted
-// span (W·q) and read the fraction themselves.
+// framer and the landing owner's fit test read the fraction through
+// edge_margined_window_frames below, in doubles against the painted span
+// (W·q).
 constexpr double kViewportEdgeMarginFraction = 0.05;
+
+// THE MARGINED WINDOW — the window, in frames, that a span [lo, hi] of a live
+// domain `total` frames long fills with its margins (architect 2026-11-21,
+// send EE: "it really should just be a 5% maximum on either side, not a
+// minimum of 10%. Combined."; "3 agree" — every caller of the framer's margin
+// arm). THE RULE: AT MOST f = kViewportEdgeMarginFraction OF THE WINDOW OF
+// EMPTY SPACE ON EITHER SIDE OF THE SPAN, and a side that cannot show its
+// margin — the song's wall, L = lo frames left of the span, R = total − hi
+// right of it — HANDS NOTHING TO THE OTHER. The window is the one V that
+// solves
+//     V = S + min(f·V, L) + min(f·V, R),   S = hi − lo,
+// unique, the right side growing with slope at most 2f < 1. The right side
+// is the least of four lines of V, each of slope under 1, so V is the least
+// of their four fixed points:
+//     S / (1 − 2f)       neither side walled (each margin f·V);
+//     (S + L) / (1 − f)  the left wall short (L shown, f·V on the right);
+//     (S + R) / (1 − f)  the mirror;
+//     S + L + R          both short: the whole live domain.
+// CONTINUOUS as a span nears a wall: nothing jumps when lo reaches 0. With the
+// begin on the left wall the span fills 1 − f of the window; on both walls it
+// fills it whole. L and R are floored at 0: the trim arm's bounds are mapped
+// through the DISPLAYED map (displayed_or_live_target_map) while `total` is
+// the live domain's, and the two may differ by a few frames between an edit
+// and its render's publish — the frames that exist are never fewer than
+// none. TWO READERS, one geometry (the never-zooms-in argument at
+// Viewport::land_subject): span_framing_landing's margin arm (input_handler.
+// cpp), which fits this window and centres the bare span in it, the walls
+// then handing each side exactly what it can show; and land_subject's fit
+// test, which refuses a range whose margined window exceeds the live
+// painted window.
+inline double edge_margined_window_frames(int64_t lo, int64_t hi,
+                                          int64_t total) {
+    const double f = kViewportEdgeMarginFraction;
+    const double S = static_cast<double>(hi - lo);
+    const double L = static_cast<double>(std::max<int64_t>(0, lo));
+    const double R = static_cast<double>(std::max<int64_t>(0, total - hi));
+    return std::min({S / (1.0 - 2.0 * f), (S + L) / (1.0 - f),
+                     (S + R) / (1.0 - f), S + L + R});
+}
 
 // The edge margin in whole samples of a window `visible` samples wide,
 // banker's-rounded (a point on the sample grid; clamp_viewport_start then
@@ -16295,8 +16336,8 @@ int64_t phase_reset_lead_in_launch_offset(const AppState& a,
 // always lit) — so the grey, the line and the presses cannot disagree.
 //
 // WOULD SHIFT+0 (FRAME THE TRIM) ACT: run_span_framing_command's own three
-// steps as a pure question — its span (a proper trim sub-window with the edge
-// margin each side, else the whole song), the span framer's landing, and the
+// steps as a pure question — its span (a proper trim sub-window with at most
+// the edge margin each side, else the whole song), the span framer's landing, and the
 // applier's idempotence test (zoom_to_start_would_move, the one owner the act
 // itself returns on) — so it is false exactly where the press would land the
 // viewport it leaves: a second framing with nothing moved between, or bare

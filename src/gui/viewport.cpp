@@ -1612,18 +1612,24 @@ void Viewport::follow_scanner() {
 //   * WHOLLY ON SCREEN (lo and hi each painted in the columns [0, w) of
 //     the live viewport, displayed_frame_on_screen — the walk's on-screen
 //     test is the same one): NOTHING MOVES, at every zoom;
-//   * CANNOT FIT: the range is wider than 1 − 2 × the edge margin of the
-//     PAINTED window at the live zoom (samples_visible, W·q on the
-//     sixteenth-frame grid to the nearest frame — the span the centring
-//     below places the subject in and the geometry fit_zoom_level solves
-//     in) — the room the span framer's margin arm (frame_span_into_view,
-//     input_handler.cpp) leaves a span. One geometry on both sides
-//     guarantees the caller's zoom-out never zooms in: a refused range's
-//     margined span exceeds W·q = W·n/16 less at most half a frame, so the
-//     framer's fit takes at least n sixteenths (n + 1 but where the span
-//     lies within that half frame), never under the live level's q; and an
-//     accepted range keeps the painted margin. RETURNS FALSE HAVING
-//     WRITTEN NOTHING: the zoom-out fit is the caller's;
+//   * CANNOT FIT: the range's MARGINED WINDOW (edge_margined_window_frames,
+//     app_state.h: the span plus at most the edge margin of empty space a
+//     side, a side on the song's wall showing what exists there; architect
+//     2026-11-21, send EE) exceeds the PAINTED window at the live zoom
+//     (samples_visible, W·q on the sixteenth-frame grid to the nearest
+//     frame — the span the centring below places the subject in and the
+//     geometry fit_zoom_level solves in) — the very window the span
+//     framer's margin arm (frame_span_into_view, input_handler.cpp) fits,
+//     over the same live domain (live_total_frames, both sides). One
+//     geometry on both sides guarantees the caller's zoom-out never zooms
+//     in: a refused range's margined window V exceeds W·q = W·n/16 less at
+//     most half a frame, so 16·V / W exceeds n − 8 / W and the framer's fit
+//     ceil(16·V / W) takes at least n sixteenths (n + 1 but where V lies
+//     within that half frame), never under the live level's q; and an
+//     accepted range, centred and rested by the walls, shows on each side
+//     at least the margin that side can show (the edge margin of the live
+//     window, or all there is to the wall). RETURNS FALSE HAVING WRITTEN
+//     NOTHING: the zoom-out fit is the caller's;
 //   * OFF SCREEN AND FITS: CENTRED on its midpoint AT EVERY ZOOM, coarse
 //     included; never a page-in.
 // THE HOLD POSTURE (AppState::camera_hold) IS ARMED, OF THIS OWNER'S ANSWERS,
@@ -1750,9 +1756,9 @@ bool Viewport::land_subject(int64_t lo, int64_t hi, LandingKind kind) {
             centre = true;
             break;
     }
-    const double room = (1.0 - 2.0 * kViewportEdgeMarginFraction) *
-                        static_cast<double>(visible);
-    if (static_cast<double>(hi - lo) > room) return false;
+    if (edge_margined_window_frames(lo, hi, live_total_frames(app, audio)) >
+        static_cast<double>(visible))
+        return false;
     const int64_t old_vp = app.viewport_start_sample;
     const int64_t old_origin = app.viewport_lattice_origin;
     app.viewport_start_sample = centre

@@ -994,10 +994,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     zoom, the zoom untouched — while the hold is dark;
     //   * SEVERAL MARKERS land their range the same way — nothing when it is
     //     already wholly on screen, its midpoint centred when it fits — and
-    //     when the range plus the edge margin on each side cannot fit the
-    //     window at the current zoom, the owner writes nothing and the span
-    //     framer ZOOMS OUT until it does and centres it (frame_span_into_view
-    //     with margin, input_handler.cpp), never in — the land and this
+    //     when the range plus its edge margins (at most the margin a side, a
+    //     side on the song's wall showing what exists there,
+    //     edge_margined_window_frames, app_state.h) cannot fit the window at
+    //     the current zoom, the owner writes nothing and the span framer
+    //     ZOOMS OUT until it does and centres it, the walls resting it
+    //     (frame_span_into_view with margin, input_handler.cpp), never in — the land and this
     //     camera one body, land_and_frame_active_markers (input_handler.cpp),
     //     which the phase-reset pastes' landing shares (architect 2026-11-17,
     //     send U);

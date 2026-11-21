@@ -477,15 +477,16 @@ void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
 // [effective_min_zoom_level, effective ceiling]) and CENTER the span in the window, then apply
 // through Viewport::apply_zoom_to_start (pre-clamps the level, funnels through
 // clamp_viewport_start, keeps the idempotent current-vs-target no-op, kicks one
-// sync render). `margin` adds the EDGE MARGIN per side — kViewportEdgeMarginFraction
-// of the WINDOW, so the span fills 1 − 2 × margin of it (trim / group cases); the
-// whole-song case passes margin=false. The fit level is fit_zoom_level's
-// ceil-to-sixteenths solve, and the centering formula uses the PAINTED window at
-// that level (W·q_t, q_t on the sixteenth-frame grid); only the final start is
-// rounded, the viewport grid being clamp_viewport_start's. A floor-saturated
-// span rests CENTERED rather than left-aligned, and the unclamped case
-// degenerates to the span's left edge (W·q_t covers the margined span, over it
-// by under a sixteenth of a frame per column). Shared by
+// sync render). `margin` fits the span's MARGINED WINDOW — at most
+// kViewportEdgeMarginFraction of the WINDOW of empty space a side, a side on
+// the song's wall handing nothing to the other (edge_margined_window_frames,
+// app_state.h; architect 2026-11-21, send EE) — for the trim / group cases;
+// the whole-song case passes margin=false. The fit level is fit_zoom_level's
+// ceil-to-sixteenths solve, and the centering formula places the bare span's
+// midpoint in the PAINTED window at that level (W·q_t, q_t on the
+// sixteenth-frame grid), the walls resting a span by them; only the final
+// start is rounded, the viewport grid being clamp_viewport_start's. A
+// floor-saturated span rests CENTERED, or on the wall it is near. Shared by
 // run_span_framing_command (both arms) and the cannot-fit arm of
 // land_and_frame_active_markers below (on a false verdict from the landing
 // owner Viewport::land_subject, whose fit test guarantees that arm only ever
@@ -2738,8 +2739,9 @@ private:
     // the working zoom. TWO ARMS since 2026-08-18 (the
     // region arm above them died with the separate region state) — a proper
     // trim SUB-WINDOW (expressed in the active domain) → the whole
-    // song (full zoom-out, which the FULL trim window also takes). The trim span is framed with the edge margin
-    // per side (kViewportEdgeMarginFraction, app_state.h); the fit level and span-start are set through the clamp chokepoints
+    // song (full zoom-out, which the FULL trim window also takes). The trim span is framed with at most the edge
+    // margin a side, a walled side handing nothing across
+    // (edge_margined_window_frames, app_state.h); the fit level and span-start are set through the clamp chokepoints
     // via Viewport::apply_zoom_to_start (NOT apply_zoom_change — no playhead
     // recenter). Idempotent: a second press with the viewport unchanged
     // no-ops.
