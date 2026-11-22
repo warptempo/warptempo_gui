@@ -6,10 +6,8 @@
 #include "gui_font.h"
 #include "text_shape.h"
 #include "text_raster.h"    // XSpan, the cut labels' visible intervals
-#include "theme_file.h"
-#include "palette_file.h"   // kGuiPaletteRoles (the program's roles)
+#include "palette_file.h"   // kGuiPaletteFill (the palette off the row)
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
-#include "theme_file.h"     // kGuiThemeRoles (the chrome's roles)
 #include "materials.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -3067,9 +3065,6 @@ namespace {
     // before the window exists (the gui_scale shape).
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
-    // The installed theme's row, a copy (installed_theme, render.h): every
-    // word 0 until the first install, never read before it.
-    GuiThemeTones     g_tones{};
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
@@ -3084,31 +3079,20 @@ GuiColor surface_text(GuiSurface surface) {
     return pal.label;
 }
 uint64_t palette_generation() { return g_palette_generation; }
-const GuiThemeTones& installed_theme() { return g_tones; }
 WaveformPlateInks waveform_plate_inks() {
-    // The window's words (the struct's declaration, render.h), the installed
-    // theme's two tones.
-    const GuiThemeTones& t = installed_theme();
-    return WaveformPlateInks{display_transform::display_rgb(t.waveform_ink),
-                             display_transform::display_rgb(t.waveform_core)};
+    // The window's words (the struct's declaration, render.h), the row's
+    // two tones.
+    return WaveformPlateInks{
+        display_transform::display_rgb(kArcDarkTones.waveform_ink),
+        display_transform::display_rgb(kArcDarkTones.waveform_core)};
 }
 
-void install_palette(const GuiThemeTones& tones) {
-    // The contract is at the declaration (render.h). THE ROW COPIED FIRST,
-    // as it is, for the word
-    // readers (installed_theme); then THE
-    // PROGRAM'S FIFTEEN off the palette's role table (palette_file.h), THE
-    // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the
-    // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
-    // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
-    // (palette_file.cpp), so a role cannot be valued and not painted.
-    g_tones = tones;
-    const GuiThemeTones& t = g_tones;
-    for (const GuiPaletteRole& r : kGuiPaletteRoles)
-        g_palette.*(r.member) = hex(t.*(r.tone));
-    for (const GuiThemeRole& r : kGuiThemeRoles)
-        g_palette.*(r.member) = hex(t.*(r.tone));
-    g_palette.face = hex(t.body_face);
+void install_palette() {
+    // The contract is at the declaration (render.h): every member off the
+    // row (kArcDarkTones, gui_theme.h) through the fill table
+    // (palette_file.h), which covers the struct exactly.
+    for (const GuiPaletteFill& f : kGuiPaletteFill)
+        g_palette.*(f.member) = hex(kArcDarkTones.*(f.tone));
     ++g_palette_generation;
 }
 

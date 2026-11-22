@@ -7579,8 +7579,8 @@ struct AppState {
     //   laid-out cues (no Marker record, no hovered marker, no cue painted
     //   lit: GuiPaintHandler::lane_cues_rest).
     // THE LIST ROW'S HOVER (architect 2026-11-21; the look at
-    // paint_handler.cpp's THE LIST VIEW, the tone theme_roles.h's
-    // `list_hover_face`, Arc's own 3 % white over the view, the same day:
+    // paint_handler.cpp's THE LIST VIEW, the tone `list_hover_face`
+    // (gui_theme.h), Arc's own 3 % white over the view, the same day:
     // "I prefer to go more truthful. It just needs to be very subtle."): a
     // list row is a face of TWO LOOKS, Rest and Hover,
     // on Arc's `row` transition — INTO HOVER AT ONCE, OUT OF IT 150 ms on

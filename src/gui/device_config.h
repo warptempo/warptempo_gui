@@ -587,9 +587,9 @@
 // chromes"): it named the built-in `windows-2000-standard` or a theme file
 // read at launch from a themes folder beside this file (the imported
 // catalog shipped as bundled files, copied in at every launch), absent the
-// chrome's own, with a Settings row; every chrome's colors are compiled in
-// since (theme_file.h), and the program's own colors were one compiled-in
-// palette (palette_file.h) until 2026-11-05. A `theme` KEY OF A THIRD
+// chrome's own, with a Settings row; the chrome's colors were compiled in
+// after it, and the program's own colors one compiled-in palette
+// (palette_file.h) until 2026-11-05. A `theme` KEY OF A THIRD
 // MEANING stood 2026-11-05 to 2026-11-21 — the slug of a row of a themes'
 // list, Live 12's themes and Arc-Dark — RETIRED 2026-11-21, send GG ("i am
 // committed": one look, Arc-Dark, palette_file.h's head); an old `theme=`

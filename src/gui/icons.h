@@ -55,7 +55,7 @@
 //
 // THE BOUND DRAWING (architect 2026-11-02; the road of 2026-10-10 restored):
 // a file that paints in `currentColor` — every file here — WEARS THE COLOR
-// ITS CALLER PASSES, a 0xRRGGBB value (one of the theme row's words — the
+// ITS CALLER PASSES, a 0xRRGGBB value (one of the compiled row's words — the
 // text tones, a lit key's print and its dimmed tone; no role
 // table): its bytes are kept and parsed per color with resvg's user
 // stylesheet `svg { color: #RRGGBB; }` (svg_icon::parse), which

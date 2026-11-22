@@ -51,7 +51,6 @@
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
-#include "theme_roles.h"   // load_gui_theme: the launch's read and install
 #include "phaseresetmarkers_ops.h"
 #include "prompt.h"
 #include "undo.h"
@@ -4320,9 +4319,8 @@ int gui_main() {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     // (The chromes and captions folders were read ahead of it 2026-10-07..14,
-    // the preset files the color picker wrote; the theme is the APK's one
-    // theme file, read once at launch by the theme load below,
-    // theme_roles.h's head.)
+    // the preset files the color picker wrote; the colors are compiled since
+    // 2026-11-21, kArcDarkTones, gui_theme.h, installed below.)
     // THE TEMPLATE IS THE SHIPPED DEFAULTS FILE (device_config.h's THE
     // FIRST-RUN VALUES, 2026-11-09), read and parsed at every launch: a file
     // the reader refuses is a build defect, answered here exactly as a bad
@@ -4400,34 +4398,12 @@ int gui_main() {
     // the first plate's render inputs read it; the other road is the
     // settings editor's commit (GuiInputHandler::apply_waveform_fade_px).
     set_waveform_fade_hundredths(device_config.waveform_fade_hundredths);
-    // THE THEME, ONCE PER PROCESS (architect 2026-11-06, session 75; the
-    // theme files 2026-11-11, session 110; ONE THEME, Arc-Dark, since
-    // 2026-11-21, send GG; theme_roles.h's head): the APK's one theme file
-    // (GuiPlatform::bundled_theme_file) read now, after the config, parsed
-    // and derived (load_gui_theme), and every member of the palette
-    // installed off its row before there is a window, the program's and the
-    // chrome's alike, at the row's own numbers (install_palette, render.h).
-    // THE FILE'S FAULT IS A BUILD DEFECT, the validation doctrine's class (1)
-    // as the icons' above: one line naming the file and the error, and no
-    // window. Every painter reads the palette through palette() (render.h's
-    // palette block).
-    {
-        auto text = GuiPlatform::bundled_theme_file();
-        if (!text) {
-            std::fprintf(stderr, "warptempo_gui: themes: %s\n",
-                         text.error().c_str());
-            return 1;
-        }
-        auto tones = load_gui_theme(*text);
-        if (!tones) {
-            std::fprintf(stderr,
-                         "warptempo_gui: themes: the shipped system/%s.theme: %s\n",
-                         std::string(kGuiDefaultThemeSourceSlug).c_str(),
-                         tones.error().c_str());
-            return 1;
-        }
-        install_palette(*tones);
-    }
+    // THE PALETTE, ONCE PER PROCESS (architect 2026-11-21, send GG: one
+    // look, Arc-Dark, its tones compiled — kArcDarkTones, gui_theme.h):
+    // every member installed off the row before there is a window, the
+    // program's and the chrome's alike (install_palette, render.h). Every
+    // painter reads the palette through palette() (render.h's palette block).
+    install_palette();
     // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
     // display_transform.h's head): the switch's bit seeded here, before the
     // window and every cache that converts exist, so the launch owes none of

@@ -6,14 +6,13 @@
      breeze-icons' music-note-16th recolored, a `currentColor` drawing on a
      22 x 22 viewBox; the app's drawings are Papirus's, assets/icons/README.md),
      rendered by resvg at the art's height in the
-     theme's text tone #D3DAE3 (apk/build_apk.sh's LAUNCHER_INK,
-     given as resvg's user stylesheet) and centered over THE APP'S GROUND,
-     FLAT: #2F343F (architect 2026-11-02: the icon wears the window's own
-     ground; Arc-Dark's since 2026-11-18, send Y, the one theme since
-     2026-11-21, send GG; both READ by apk/build_apk.sh from the one theme
-     file, themes/system/arc_dark.theme, its SurfaceArea and
-     ControlForeground lines, that file the one owner, its slug read out of
-     src/gui/gui_theme.h's kGuiDefaultThemeSourceSlug),
+     font color #D3DAE3 (apk/build_apk.sh's LAUNCHER_INK, given as resvg's
+     user stylesheet) and centered over THE APP'S GROUND, FLAT: #2F343F
+     (architect 2026-11-02: the icon wears the window's own ground;
+     Arc-Dark's since 2026-11-18, send Y, the one look since 2026-11-21,
+     send GG; both READ by apk/build_apk.sh from the compiled row of the
+     look's tones, kArcDarkTones in src/gui/gui_theme.h, its `.ground` and
+     `.text` lines, that row the one owner),
      one color over the whole
      canvas, so the mask shows a dark shape carrying the note. An
      ADAPTIVE icon, the whole of it: minSdk is 30, so

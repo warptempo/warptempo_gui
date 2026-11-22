@@ -155,16 +155,6 @@ set(WARPTEMPO_GUI_SOURCES
     # by construction: warptempo_cli never read any of them, and the file
     # describes the panel in front of the user rather than the piece.
     src/gui/device_config.cpp
-    # THE CHROME'S COLORS (2026-10-04): the chrome's role table.
-    # GUI-ONLY like the config: the CLI paints nothing.
-    src/gui/theme_file.cpp
-    # THE THEME (2026-11-11; one theme, Arc-Dark, since 2026-11-21): the
-    # APK's one theme file, read and derived at launch (theme_roles.h).
-    # GUI-ONLY like the config: the CLI paints nothing.
-    src/gui/theme_roles.cpp
-    # THE PALETTE (2026-10-07; the one theme's since 2026-11-21): the
-    # program's role table's coverage proofs. GUI-ONLY.
-    src/gui/palette_file.cpp
     src/gui/project_model.cpp
     src/gui/undo.cpp
     src/gui/phaseresetmarkers_ops.cpp

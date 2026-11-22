@@ -130,8 +130,8 @@ shopt -s nocaseglob
 # tablet's old files/warptempo_gui/sounds/ is not this script's business and
 # is never read or deleted.
 #
-# NO THEMES TRAVEL (architect 2026-11-21, send GG: one look, Arc-Dark, the
-# APK's one theme file; src/gui/theme_roles.h's head). The themes folder
+# NO THEMES TRAVEL (architect 2026-11-21, send GG: one look, Arc-Dark, its
+# tones compiled into the app, src/gui/gui_theme.h). The themes folder
 # this script mirrored from 2026-11-11 is read and written by nothing: the
 # laptop's $WARPTEMPO_TABLET_HOME/themes is never read, and the tablet's
 # files/warptempo_gui/themes/, where one stands, is left as it is.

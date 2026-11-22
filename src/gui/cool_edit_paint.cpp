@@ -76,7 +76,7 @@ uint32_t CoverageStampPass::word_of(GuiColor color) {
 // A TONE'S WORD (StampTone's rule, materials.h): a plain color's own word;
 // a mix the colors' words weighed per channel, the sum over the weights'
 // total rounded once, half to even (nearbyint under the default rounding
-// mode, the derivation's rounding, theme_roles.h).
+// mode, the compiled row's rounding, gui_theme.h).
 namespace {
 template <class WordOf>
 uint32_t mixed_word(const StampTone& tone, WordOf&& word_of_color) {

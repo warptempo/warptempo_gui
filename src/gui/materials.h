@@ -15,23 +15,21 @@
 // flat"; Live's grammar, every number measured on his Live 12 shots at
 // 100 %). This header is the one owner of the ground's, the key's, the lit
 // face's, the text tones', the well's tones' and the pane's RULES; THEIR
-// NUMBERS ARE THE INSTALLED THEME'S since 2026-11-05 (the theme arc; one
-// theme, Arc-Dark, since 2026-11-21, send GG, palette_file.h's head) —
-// every painter reads palette()'s member for the role (render.h's
-// GuiPalette; the chrome's role table, theme_file.h), and every number
-// quoted below as DEFAULT'S is Live's "Default Dark Neutral Medium" (the
-// record, not a painted tone; palette_file.h's head), with the Live role it
-// comes from (the derivation, theme_roles.h's head). The constants that held them
-// (kGround, kKeyFace, kTextInk and the rest, 2026-11-01..05) are retired:
-// nothing outside the installed palette names a color.
+// NUMBERS ARE ARC-DARK'S, COMPILED (architect 2026-11-21, send GG: the row
+// kArcDarkTones, gui_theme.h, each line its Arc source; palette_file.h's
+// head) — every painter reads palette()'s member for the role (render.h's
+// GuiPalette; the fill table kGuiPaletteFill, palette_file.h). A number
+// quoted below as DEFAULT'S is a record of the look before Arc, not a
+// painted tone (a later comments' round retells them). The constants that
+// held them (kGround, kKeyFace, kTextInk and the rest, 2026-11-01..05) are
+// retired: nothing outside the compiled row names a color.
 //
 // TWO GROUNDS (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §2): THE
-// TITLE BAR ALONE wears the title tone `ground` — Default's 242424
-// (SurfaceArea; arc_dark 2F343F, Arc's $header_bg): "the darkest color
-// would only apply to the top line, the title bar" (paint_title_bar) — and
-// EVERYTHING ELSE OUTSIDE THE WELL'S REGIONS AND THE KEYS wears THE BODY
-// TONE `body_face` — Default's 242424 too (a Live theme's SurfaceArea; our
-// own role WindowBackground; arc_dark 383C4A, Arc's $bg_color): both icon
+// TITLE BAR ALONE wears the title tone `ground` — 2F343F, Arc's
+// $header_bg: "the darkest color would only apply to the top line, the
+// title bar" (paint_title_bar) — and EVERYTHING ELSE OUTSIDE THE WELL'S
+// REGIONS AND THE KEYS wears THE BODY TONE `body_face` — 383C4A, Arc's
+// $bg_color: both icon
 // rows and their pads, the gaps between keys, the status bar, the erase
 // (render_background), the on-screen keyboard's band and the modal family's
 // controls row (the pages wear the lists' view tone, `ruler_face`). The
@@ -43,8 +41,7 @@
 // palette's chokepoint (set_palette_source, render.h), which converts it for
 // the window as it converts every color (display_color), so True Colors
 // holds with no cache of its own. The palette's `face` IS THE BODY TONE
-// (render.cpp's install_palette), the chrome's `ground` role the title tone
-// (theme_file.h).
+// (palette_file.h's fill table), the chrome's `ground` role the title tone.
 //
 // THE KEY IS ARC'S BUTTON (architect 2026-11-18 / 2026-11-19, send Z;
 // DESIGN §3, the approved pictures Z_01 / Z_02 and the mock kit's
@@ -67,17 +64,17 @@
 // let go of the green"; "lit but
 // inert: let's do arcs numbers"): REST the face under the drawing in
 // `text`; PRESSED, LIT AND LIT UNDER PRESS ONE LOOK — `:active` and
-// `:checked` are one in Arc — THE ACCENT `cue` (Default FFAD56,
-// ViewCheckControlEnabledOn; arc_dark 5294E2, Arc's selection blue) OVER THE
-// KEY'S OWN COLUMNS BETWEEN THE GROUP'S BORDER ROWS, both its seams
-// included, the border kept `well_border`, the drawing in `text_on_lit`
-// (Default 070707, StandbySelectionForeground; arc_dark FFFFFF);
+// `:checked` are one in Arc — THE ACCENT `cue` (5294E2, Arc's selection
+// blue) OVER THE KEY'S OWN COLUMNS BETWEEN THE GROUP'S BORDER ROWS, both its
+// seams included, the border kept `well_border`, the drawing in
+// `text_on_lit` (FFFFFF, Arc's $selected_fg_color);
 // DISABLED the face `key_dim_face` (the key face at 55 % over the body
 // tone), the border `key_dim_border` (the well's border at 55 % over it) on
 // the key's own stretch of the ring, the drawing `key_dim_ink`; LIT AND
 // INERT — checked and disabled — the face `lit_dim_fill` under
 // `text_on_lit_dim` (Arc's button:disabled:checked under the button's
-// opacity; theme_roles.h's DERIVED block). A SEAM BETWEEN TWO KEYS OF
+// opacity; the arithmetic at their lines of kArcDarkTones, gui_theme.h). A
+// SEAM BETWEEN TWO KEYS OF
 // DIFFERENT STATES WEARS THE LEFT KEY'S FACE, a lit key taking both its
 // seams (the kit's paint order, paint_linked_group).
 // EVERY CHECKED KEY WEARS THE ONE ACCENT: the state lamps (MAGNIFY, Read
@@ -176,8 +173,8 @@
 // A LIST'S RESTING ROW HOVERS TOO — ARC'S `row.activatable:hover` (architect
 // 2026-11-21: "I'd like to add hover"; its tone the same day: "I
 // prefer to go more truthful. It just needs to be very subtle."):
-// `list_hover_face`, 3 % white over the list's view (theme_roles.h's DERIVED
-// block), across the lit bar's width, in at once
+// `list_hover_face`, 3 % white over the list's view (its line of
+// kArcDarkTones, gui_theme.h), across the lit bar's width, in at once
 // and out over Arc's 150 ms `row` transition (paint_handler.cpp's THE LIST
 // VIEW; AppState::FaceFades' THE LIST ROW'S HOVER).
 // THE MARKER LANE HOVERS TOO — A MARKER'S CUE (architect 2026-11-21, send
@@ -222,30 +219,26 @@
 // lines its keys' (onscreen_keyboard::key_at). THE HOVER'S HIT IS THE
 // PRESS'S (AppState::FaceFades).
 //
-// THE TEXT TONES (architect 2026-11-02, M13, "we use Ableton colors as much
-// as possible"): Live's two — `text`, Default's B5B5B5 (ControlForeground),
-// on every word, digit and drawing the chrome prints — the clocks, the tab
-// name, the status bar, the lists and their drawings, the dialogs' words,
-// the keyboard's caps, the keys' glyphs (2026-11-02) — and `text_dim`,
-// Default's 757575 (TextDisabled), for the settings page's disabled rows,
-// the tooltip's hint line and an inert marker label. ON THE ARC PAGE (architect 2026-11-19,
-// send Z) the title bar wears `title_text`, the marker labels
-// `sidebar_text` and the ruler's digits `ruler_text` (theme_roles.h's head). ON A LIT KEY'S FACE the print — its glyph, the
-// on-screen keyboard's lit cap — is `text_on_lit`, Default's 070707
-// (StandbySelectionForeground, the selection's text; architect 2026-11-17,
-// session 140), in place of `text` (architect 2026-11-11, session 106, THE
-// KEY above); on a lit disabled key's dimmed face `text_on_lit_dim`,
-// Default's 2A221A. THE
-// CARDS' words and glyph wear their own ink, `card_ink`, Default's 070707
-// (StandbySelectionForeground, the same print) on Live's orange (THE CARDS,
-// below; 2026-11-04 night; the print's tone since 2026-11-17, D4). A
-// DISABLED KEY'S glyph takes its own tone, `key_dim_ink`,
-// Default's 5D5D5D (ViewCheckControlDisabledOff over the key face, Live's
-// own number on every theme since 2026-11-07, theme_roles.h's head; architect
-// 2026-11-02, on mock b3: "the disabled icons are too similar to enabled
-// ones", 757575 reading too close to B5B5B5 at a key's size), darker than
-// Live's dim text so a dead key reads dead at a glance; the lists' and the
-// tooltip's dim print keep `text_dim`. NOTHING WEARS A SHADOW (2026-11-01, "no shadow anywhere"; the
+// THE TEXT TONES (architect 2026-11-02, M13; Arc's since 2026-11-19, send
+// Z; every number at its line of kArcDarkTones, gui_theme.h): `text`, Arc's
+// font color D3DAE3, on every word, digit and drawing the chrome prints —
+// the clocks, the tab name, the status bar, the lists and their drawings,
+// the dialogs' words, the keyboard's caps, the keys' glyphs (2026-11-02) —
+// and `text_dim`, 7E838F, for the settings page's disabled rows, the
+// tooltip's hint line and an inert marker label. ON THE ARC PAGE (architect
+// 2026-11-19, send Z) the title bar wears `title_text`, the marker labels
+// `sidebar_text` and the ruler's digits `ruler_text`. ON A LIT KEY'S FACE
+// the print — its glyph, the on-screen keyboard's lit cap — is
+// `text_on_lit`, Arc's white (architect 2026-11-17, session 140), in place
+// of `text` (architect 2026-11-11, session 106, THE KEY above); on a lit
+// disabled key's dimmed face `text_on_lit_dim`, 9AA1AF. A STANDING CARD'S
+// words and glyph wear their own ink, `card_ink`, Arc's white on its
+// destructive red (THE CARDS, below; a normal card's `sidebar_text`). A
+// DISABLED KEY'S glyph takes its own tone, `key_dim_ink`, 7F8591, measured
+// on his Arc-Dark desktop (architect 2026-11-19, send Z; 2026-11-02, on mock
+// b3: "the disabled icons are too similar to enabled ones"), so a dead key
+// reads dead at a glance; the lists' and the tooltip's dim print keep
+// `text_dim`. NOTHING WEARS A SHADOW (2026-11-01, "no shadow anywhere"; the
 // well's cue labels, triangles and ticks with the rest since 2026-11-02):
 // every word, digit, tick and triangle is ink alone.
 //
@@ -280,15 +273,14 @@
 // the ruler's — the canvas's — tone in a one-W `well_border` ring; the
 // marker lane's cell editor the same fill in the accent's square border.
 //
-// THE TRIM BAR'S TWO TONES (render_trim_flags): `trim_bar_face`, the trough, is Live's
-// ScrollbarInnerTrack over the ground (architect 2026-11-17, session 140);
-// `trim_span_face`, the pill at rest, is Live's ScrollbarInnerHandle over
-// Desktop, the ruler's ticks Live's DetailViewRulerMarkings over the ruler
-// face, on every theme (architect 2026-11-07, session 82; theme_roles.h's
-// head). ITS STATES' TONES (architect 2026-11-20; the one table at
-// render.h's trim_bar_tones): the part under the hovering pen — the pill's
-// body or an end's cap — `trim_span_hover_face` (our ScrollbarSliderHover
-// over Desktop, Thunar's slider under the pointer), the part the bar's own
+// THE TRIM BAR'S TWO TONES (render_trim_flags): `trim_bar_face`, the trough,
+// is Arc's scrollbar trough (architect 2026-11-17, session 140);
+// `trim_span_face`, the pill at rest, is Arc's scrollbar slider (their
+// numbers at their lines of kArcDarkTones, gui_theme.h). ITS STATES' TONES
+// (architect 2026-11-20; the one table at render.h's trim_bar_tones): the
+// part under the hovering pen — the pill's body or an end's cap —
+// `trim_span_hover_face` (Arc's slider:hover, Thunar's slider under the
+// pointer), the part the bar's own
 // press holds and the end a TRIM sweep is moving `selected_fill` (Arc's
 // slider:active; the sweep an end held, architect 2026-11-20),
 // and every cap neither hovered, held nor moved by a sweep `text` (his "the
@@ -296,15 +288,12 @@
 // the caps, Kdenlive's and ours, have no tone of Arc's). No fade: they
 // change at once.
 //
-// THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6: Live's browser
-// selection): a flat bar in `selection_fill`, Default's 637E86
-// (StandbySelectionBackground), under `selection_text`, Default's 070707
-// (StandbySelectionForeground, Live's own partner of the bar; architect
-// 2026-11-06, session 75 — ControlContrastFrame's 111111 before it, our
-// mispairing; arc_dark Arc's one selection, the accent 5294E2 under FFFFFF)
-// — the flag editor's and the dialog editors' selected substring and the
-// lists' highlighted row, across the view's whole width (the chrome's
-// `selected_fill` / `selected_text`, theme_file.h). A LIST ROW UNDER A
+// THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6): a flat bar in
+// `selection_fill` under its own partner `selection_text` (architect
+// 2026-11-06, session 75) — Arc's one selection, the accent 5294E2 under
+// FFFFFF — the flag editor's and the dialog editors' selected substring and
+// the lists' highlighted row, across the view's whole width (the chrome's
+// `selected_fill` / `selected_text`). A LIST ROW UNDER A
 // PRESS WEARS THE SAME PAIR (send AA's stage D2, 2026-11-19: Thunar is
 // single-click, a pressed row a selected one; the lighter press row of
 // 2026-11-05, Live's SelectionBackground under SelectionForeground,
@@ -347,8 +336,8 @@
 // face `key_dim_face`, the border `key_dim_border` on the key's own stretch
 // of the ring, the drawing `key_dim_ink`); LIT AND INERT — checked and
 // disabled (the face `lit_dim_fill`, the print `text_on_lit_dim`, Arc's
-// button:disabled:checked under the button's opacity: theme_roles.h's
-// DERIVED block). A DISABLED KEY UNDER PRESS IS UNCHANGED (his "disable no
+// button:disabled:checked under the button's opacity: their lines of
+// kArcDarkTones, gui_theme.h). A DISABLED KEY UNDER PRESS IS UNCHANGED (his "disable no
 // press is right", 2026-11-05): a dead key arms nothing (every press arm
 // refuses a painted-dead face), so the press bit is read for a live key
 // alone. key_state is the one place the three bits are folded; every Arc
@@ -513,11 +502,11 @@ inline GuiColor key_ring_tone(FaceLook l) {
     return l == FaceLook::Disabled ? p.key_dim_border : p.well_border;
 }
 
-// THE INK OF A KEY'S DRAWING for its state, the installed theme's sRGB word
+// THE INK OF A KEY'S DRAWING for its state, the compiled row's sRGB word
 // (the glyph road takes the word, icons::draw_glyph): `text` at rest,
 // `text_on_lit` lit, `key_dim_ink` disabled, `text_on_lit_dim` lit and inert.
 inline uint32_t key_ink(KeyState s) {
-    const GuiThemeTones& t = installed_theme();
+    const GuiThemeTones& t = kArcDarkTones;
     switch (s) {
         case KeyState::Lit:      return t.text_on_lit;
         case KeyState::Disabled: return t.key_dim_ink;
@@ -531,7 +520,7 @@ inline uint32_t key_ink(KeyState s) {
 // dim text of every inert word (a word button is never checked, so its lit
 // and inert print is never asked).
 inline uint32_t word_button_ink(KeyState s) {
-    return s == KeyState::Disabled ? installed_theme().text_dim
+    return s == KeyState::Disabled ? kArcDarkTones.text_dim
                                    : key_ink(s);
 }
 // THE SAME TWO INKS BY LOOK (the hover's the rest's), and AS PAINTED: the
@@ -548,7 +537,7 @@ inline uint32_t key_ink(FaceLook l) {
     return key_ink(KeyState::Rest);
 }
 inline uint32_t word_button_ink(FaceLook l) {
-    return l == FaceLook::Disabled ? installed_theme().text_dim
+    return l == FaceLook::Disabled ? kArcDarkTones.text_dim
                                    : key_ink(l);
 }
 inline StampTone key_ink_tone(const FaceMix& m) {
@@ -710,8 +699,8 @@ void paint_entry(cairo_t* cr, const GuiRect& box,
                  std::optional<double> progress = std::nullopt,
                  bool focused = false);
 
-// A PAINT-TIME MIX OF TWO INSTALLED WORDS, `t` of `b` over `a`, per channel,
-// rounded half to even (the derivation's rounding, theme_roles.h): the
+// A PAINT-TIME MIX OF TWO WORDS OF THE ROW, `t` of `b` over `a`, per
+// channel, rounded half to even (the row's own rounding, gui_theme.h): the
 // disabled entry's number, the text at 35 % over the entry's fill (Arc's
 // insensitive entry).
 inline uint32_t mix_word(uint32_t a, uint32_t b, double t) {

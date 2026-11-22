@@ -162,8 +162,8 @@
 // WOULD ACT ON HOVERS under the pen (architect 2026-11-21: "I'd like to
 // add hover"): across the same width, `list_hover_face`, ARC'S OWN
 // `row.activatable:hover`, 3 % white over the view's tone (the same day: "I
-// prefer to go more truthful. It just needs to be very subtle.";
-// theme_roles.h's DERIVED block), in at once
+// prefer to go more truthful. It just needs to be very subtle."; its line
+// of kArcDarkTones, gui_theme.h), in at once
 // and out over Arc's row transition (the look at paint_handler.cpp's THE
 // LIST VIEW; the state, the gate and the fade AppState::FaceFades; the
 // inventory at GuiInputHandler::pen_hot_latch_),

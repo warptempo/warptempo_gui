@@ -3,7 +3,6 @@
 #include "canvas_sink.h"   // GuiCanvasDrawList, the GL canvas's frame
 #include "gui_font.h"
 #include "gui_main.h"
-#include "gui_theme.h"     // kGuiDefaultThemeSourceSlug, the one theme file's name
 
 #include <android/asset_manager.h>
 #include <android/choreographer.h>
@@ -800,8 +799,8 @@ GuiPlatform::~GuiPlatform() {
 // init()
 // ---------------------------------------------------------------------------
 
-// THE ONE ASSET READ WHOLE (2026-11-09; the icons' directory walk below,
-// the defaults file's single read and the theme file's share it): `path` opened through the
+// THE ONE ASSET READ WHOLE (2026-11-09; the icons' directory walk below
+// and the defaults file's single read share it): `path` opened through the
 // activity's AAssetManager and read to its length. THE ERROR ARM'S
 // PRODUCERS: an asset that will not open or not read whole (IO on the
 // installed APK, or a build that packed no such file).
@@ -917,18 +916,6 @@ read_asset_dir(const std::string& dir_name,
 std::expected<std::map<std::string, std::string>, std::string>
 GuiPlatform::bundled_icon_files() {
     return read_asset_dir("icons", {".svg"});
-}
-
-// The one theme file, read whole as the defaults file is (contract at the
-// declaration, bundled_theme_file).
-std::expected<std::string, std::string> GuiPlatform::bundled_theme_file() {
-    AAssetManager* mgr = (g_android_app && g_android_app->activity)
-                             ? g_android_app->activity->assetManager
-                             : nullptr;
-    if (!mgr) return std::unexpected(std::string("no AAssetManager"));
-    return read_asset_whole(mgr, "themes/system/" +
-                                     std::string(kGuiDefaultThemeSourceSlug) +
-                                     ".theme");
 }
 
 bool GuiPlatform::init(int width, int height, const char* /*title*/) {

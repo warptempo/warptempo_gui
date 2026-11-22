@@ -18,12 +18,11 @@ layers. Both provenances are in `assets/icons/README.md`.
 
 ## The theme
 
-The theme is NUMBERS. The repository's one theme file, `themes/system/arc_dark.theme` (packed into the APK), holds
-role color values read by hand from arc-theme (https://github.com/jnsh/arc-theme, commit 94ac8c7d; GPL-3.0) — its
-GTK 3 sass (`common/gtk-3.0/sass/_colors.scss`, `_common.scss`) and its xfwm4 assets (`common/xfwm4/dark/assets.svg`),
-the Arc-Dark variant — keyed by Ableton Live 12's theme role names and roles of our own; no file of arc-theme is in
-this repository or the APK, and the theme file's header names each role's source. The app's tones come from those
-values through the derivation at `src/gui/theme_roles.h`'s head.
+The theme is NUMBERS. The app's tones are one compiled row, `kArcDarkTones` in `src/gui/gui_theme.h`, whose numbers
+are read by hand from arc-theme (https://github.com/jnsh/arc-theme, commit 94ac8c7d; GPL-3.0) — its GTK 3 sass
+(`common/gtk-3.0/sass/_colors.scss`, `_common.scss`), its compiled GTK 3 stylesheet's selectors and its xfwm4 assets
+(`common/xfwm4/dark/assets.svg`), the Arc-Dark variant — each line's comment naming its source and, for a computed
+tone, its arithmetic. No file of arc-theme is in this repository or the APK.
 
 ## The tablet's APK
 

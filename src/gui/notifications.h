@@ -16,7 +16,7 @@
 // red", and "good to build" on the approved picture Z_07): A ROUNDED BOX
 // (kNotificationRadiusW), NO BORDER, NO SHADOW (notifyd draws none,
 // measured), ITS FILL A CARRIED FILL AT ITS
-// OPACITY OVER WHAT LIES UNDER IT (theme_roles.h's CARRIED block; the
+// OPACITY OVER WHAT LIES UNDER IT (gui_theme.h's THE THREE CARRIED FILLS; the
 // canvas's pixels composited by the GPU, canvas_sink.h's THE TRANSPARENCY
 // INVARIANT) — A NORMAL (timed) CARD notifyd's grey `card_fill` (arc_dark
 // 353945 at .95) with its words and glyph in `sidebar_text` (BAC3CF), A

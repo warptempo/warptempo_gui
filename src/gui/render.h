@@ -7,7 +7,7 @@
 #include "chrome_spec.h"      // live_chrome_spec(), the live chrome's lengths
 #include "program_spec.h"     // kProgramSpec, the program's lengths (the band, row 8)
 #include "display_transform.h" // display_color's transform (sRGB -> the window's space)
-#include "gui_theme.h"        // GuiThemeTones, the installed row (install_palette)
+#include "gui_theme.h"        // kArcDarkTones, the compiled row (install_palette, the word readers)
 
 #include <algorithm>
 #include <array>
@@ -190,33 +190,28 @@ struct TrimRange {
 // well or on a thing that enters it (the waveform's canvas, ink and core,
 // the canvas's grid and center line, the cues' one color and the disabled
 // cue's grey, the playhead and the scanner; palette_file.h's head owns the
-// rule that parts program from chrome) — ONE PALETTE, THE ONE THEME'S,
-// ARC-DARK'S (architect 2026-11-01: the Cool Edit presets and their
-// `waveform` key dropped, the canvas grammar kept; architect 2026-11-05,
-// the theme arc, a theme's row read at launch; one theme since 2026-11-21,
-// send GG, arc_dark's file through the derivation, theme_roles.h, installed
-// at its own numbers); A
+// rule that parts program from chrome) — ONE PALETTE, ARC-DARK'S,
+// COMPILED (architect 2026-11-01: the Cool Edit presets and their
+// `waveform` key dropped, the canvas grammar kept; architect 2026-11-21,
+// send GG: one look, its tones the compiled row kArcDarkTones, gui_theme.h,
+// each line its Arc source); A
 // LIT OR PRESSED KEY'S FACE IS THE ACCENT, the palette's role `cue` (the
 // markers' chip the same word, `cue_fill`, 2026-11-13) — its inert face the
 // chrome's `lit_dim_fill` (architect 2026-11-11, session 106; Arc's states
 // since 2026-11-19, send Z, materials.h's THE KEY; the radio keys' purple
 // retired that day); THE
-// PANEL'S FACE is the flat ground (the theme's `ground`, Default's 242424,
-// the flat look, architect 2026-11-01), and THE CHROME'S ROLES are the
-// theme's tones, one per role (theme_file.h's role table, the one owner;
-// the flat look's constants 2026-11-01..05; Cool Edit's tones off the Face
-// 2026-10-10 to 2026-10-23). The chrome's roles and their order are the
-// role table (kGuiThemeRoles, theme_file.h). THE APP PAINTS NO CAPTION
+// PANEL'S FACE is the body tone (`body_face`, send Z, 2026-11-19), the
+// title bar alone the row's `ground`, and THE CHROME'S ROLES are the row's
+// tones, one per role. Every member and the row's tone that fills it are
+// the fill table (kGuiPaletteFill, palette_file.h, the one owner). THE APP
+// PAINTS NO CAPTION
 // since 2026-10-24 (THE CAPTION's note, below): its six roles, the
 // `caption` device key and its 42 built-in schemes left 2026-10-21, its
 // flat skin constants with the caption itself.
-// The palette's roles and their tones are kGuiPaletteRoles (palette_file.h).
-// There is NO LEVEL (architect 2026-10-04): a dark look, like
-// any look made official, would be a chrome variant of its own
-// (2026-10-08) — and is, since 2026-11-05, a theme of its own. The app
-// computes no color at paint time: every one is a theme row's word, the
-// derived tones computed once at the launch's read (theme_roles.h's head, THE
-// DERIVATION).
+// There is NO LEVEL (architect 2026-10-04) and no second look (architect
+// 2026-11-21, send GG). The app computes no color at paint time: every one
+// is a word of the compiled row, each computed tone's arithmetic told at
+// its line there (gui_theme.h).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — the chrome's flat-look tones among them
 // (materials.h, 2026-11-01: the ground, the key's faces (rest, disabled
@@ -227,7 +222,7 @@ struct TrimRange {
 // struct since 2026-11-05) — or
 // THE GLYPHS (architect 2026-11-01, M7; every drawing Papirus's, icons.h's
 // head): each file is recolored to `currentColor` and painted in THE TONE the
-// caller passes as the installed theme's sRGB word (installed_theme():
+// caller passes as the row's sRGB word (kArcDarkTones, gui_theme.h:
 // `text`, `key_dim_ink` on a disabled key, `text_on_lit` on a lit key's
 // accent face and `text_on_lit_dim` on a lit disabled one's dimmed face,
 // materials.h's key_ink; icons.h's THE BOUND DRAWING) — the one place an
@@ -333,11 +328,11 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's FIFTEEN (palette_file.h, 2026-10-07; one
-//                 palette, Live's numbers, since 2026-11-01): the
-//                 waveform's canvas, ink and core (ROW 6, below; the view
-//                 bar's span wears none of them, materials.h's neutral trio
-//                 since 2026-10-25); THE CANVAS'S TWO LINES, Cool Edit's
+//   THE PALETTE   the program's THIRTEEN (palette_file.h, 2026-10-07;
+//                 Arc-Dark's compiled numbers since 2026-11-21, send GG):
+//                 the waveform's canvas (ROW 6, below; the plate's ink and
+//                 core are no palette role, the plate taking the row's two
+//                 words, waveform_plate_inks); THE CANVAS'S TWO LINES, Cool Edit's
 //                 grammar — `grid` under the waveform and `center` on each
 //                 channel's zero, over it (ROW 6); THE MARKER'S CHIP
 //                 (architect 2026-11-04; 2026-11-05) — `cue_fill` every
@@ -351,9 +346,8 @@ struct TrimRange {
 //                 roles,
 //                 `playhead_head` — its triangle in the ruler — and
 //                 `playhead_line` — its stem's one static tone in the
-//                 canvas, our own PlayheadLine (send FF, 2026-11-21:
-//                 arc_dark A5ABB5, Arc's `.h4`; on a Live theme white half
-//                 way to its head, Default's 81E1EA; THE PLAYHEAD, below);
+//                 canvas (send FF, 2026-11-21: A5ABB5, Arc's `.h4`; THE
+//                 PLAYHEAD, below);
 //                 THE WAVEFORM'S HOVER's three (send FF, 2026-11-21) —
 //                 `hover_line` the waveform's hover line and its triangle
 //                 in the ruler (send GG), `cue_hover` and
@@ -364,14 +358,15 @@ struct TrimRange {
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
 //                 the white of the stems that belong to the controls
 //                 (architect 2026-10-09). THE PANEL'S `face` (both icon
-//                 rows, the status bar and the erase) is the theme's body
+//                 rows, the status bar and the erase) is the row's body
 //                 tone `body_face` (send Z, 2026-11-19), no palette role.
 // THE FLOATING SURFACES — ARC'S TOOLTIP AND NOTIFYD'S CARDS (architect
 // 2026-11-19, send Z: his "good to build" on the picture Z_07, "if we
 // can do the transparency, we might as well"; built in send AA's stage D1),
 // each its own look on the one rounded box (paint_floating_box,
 // paint_handler.cpp: no border, no ring), ITS FILL A CARRIED FILL PAINTED
-// AT ITS OPACITY OVER WHAT LIES UNDER IT (theme_roles.h's CARRIED block;
+// AT ITS OPACITY OVER WHAT LIES UNDER IT (gui_theme.h's THE THREE CARRIED
+// FILLS;
 // set_palette_source_alpha over the chrome, the GPU's blend inside the
 // floaters' hulls over the canvas — canvas_sink.h's THE TRANSPARENCY
 // INVARIANT): THE TOOLTIP
@@ -380,19 +375,17 @@ struct TrimRange {
 // THE TOOLTIP IS ARC'S and ARC'S TOOLTIP SHADOW); A NORMAL CARD notifyd's
 // grey `card_fill` (353945 at .95) under `sidebar_text`, A STANDING CARD
 // Arc's destructive red `card_standing_fill` (F04A50 at .95) under
-// `card_text` (= `card_ink`, the theme's
-// StandbySelectionForeground, the print on a lit face), radius 2 W, no
-// shadow (notifications.h's THE LOOK). On a Live theme the tooltip's fill
-// is its SurfaceBackground and both cards' its Alert, all opaque. THIS
-// PARAGRAPH IS THE RULE'S ONE STATEMENT.
+// `card_text` (= `card_ink`, Arc's white on its destructive red), radius
+// 2 W, no shadow (notifications.h's THE LOOK). THIS PARAGRAPH IS THE RULE'S
+// ONE STATEMENT.
 // THE CANVAS RUNS THE PANEL'S WHOLE WIDTH (architect 2026-11-19, send Z,
 // edge to edge; render.h's THE WELL'S EDGES): its two channels' wells are
 // parted by one line of `well_border` (waveform_divider), its edges the
 // panel's columns, the well's lines above and below (the palette block's
 // well paragraph).
 //
-// THE DISABLED FACES (2026-10-23; the key's own dim tone, Default's 5D5D5D,
-// since 2026-11-02; Arc's disabled button since 2026-11-19, send Z): a dead
+// THE DISABLED FACES (2026-10-23; the key's own dim tone since 2026-11-02;
+// Arc's disabled button since 2026-11-19, send Z): a dead
 // key DIMS ITS DRAWING (`key_dim_ink`, paint_key_glyph), its face
 // `key_dim_face` and its stretch of the ring `key_dim_border` — A DEAD LIT
 // KEY DIMS FACE AND DRAWING TOGETHER, the dimmed accent `lit_dim_fill`
@@ -448,28 +441,26 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 // floaters' hulls).
 void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha);
 
-// A CARRIED FILL'S OPACITY (theme_roles.h's CARRIED block): the top byte of
-// its row word over 255 — F2 (.949) on arc_dark's three. Read off installed_theme()'s word, the palette's
-// GuiColor holding the color alone.
+// A CARRIED FILL'S OPACITY (gui_theme.h's THE THREE CARRIED FILLS): the top
+// byte of its row word over 255 — F2 (.949) on the three. Read off
+// kArcDarkTones' word, the palette's GuiColor holding the color alone.
 inline constexpr double tone_alpha(uint32_t word) {
     return static_cast<double>((word >> 24) & 0xFFu) / 255.0;
 }
 
 // -- THE ACTIVE PALETTE ---------------------------------------------------------
 //
-// The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES —
-// derived from the panel's Face since 2026-10-10, the flat look's constants
-// 2026-11-01..05, THE INSTALLED THEME'S TONES since 2026-11-05 (theme_file.h)
-// — and the palette's program roles, one field each — the chrome's in
-// kGuiThemeRoles' order (theme_file.h), the program's in kGuiPaletteRoles'
-// (palette_file.h), and the panel's `face` — the tables covering the struct
-// exactly (palette_file.cpp's static_asserts); the mapping above says what
-// each paints. Every field is a solid byte triple; THE THREE CARRIED FILLS'
-// opacity is no field — it rides the installed row's word (tone_alpha
-// below), so the tables still cover the struct in GuiColors alone.
+// The resolved colors, ONE STRUCT (2026-10-07): the chrome's ROLES and the
+// palette's program roles, one field each, and the panel's `face` — every
+// field filled off the compiled row (kArcDarkTones, gui_theme.h; Arc-Dark's
+// since 2026-11-21, send GG) by the fill table, in this struct's order
+// (kGuiPaletteFill, palette_file.h, whose static_asserts prove it covers the
+// struct exactly); the mapping above says what each paints. Every field is
+// a solid byte triple; THE THREE CARRIED FILLS' opacity is no field — it
+// rides the row's word (tone_alpha above), so the table still covers the
+// struct in GuiColors alone.
 struct GuiPalette {
-    // THE CHROME (Windows' element names; the values the installed theme's,
-    // theme_file.h's role table).
+    // THE CHROME (Windows' element names).
     GuiColor ground;          // COLOR_3DFACE
     GuiColor label;           // COLOR_BTNTEXT
     GuiColor selected_fill;   // COLOR_HIGHLIGHT
@@ -477,22 +468,21 @@ struct GuiPalette {
     GuiColor field_text;      // COLOR_WINDOWTEXT
     GuiColor card_text;       // COLOR_INFOTEXT (a standing card's words and glyph; a normal card's are sidebar_text)
     // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule;
-    // members since the theme arc, 2026-11-05, their numbers the installed
-    // theme's — Default's quoted at materials.h; the clip lamp the lamp
-    // arc's, the same night; the lit key's inert face 2026-11-11, session
-    // 106; the trough and the well's lines 2026-11-17; THE ARC PAGE'S SIX
-    // 2026-11-19, send Z, theme_roles.h's head: the body tone, the title,
+    // members since 2026-11-05, their numbers the compiled row's,
+    // gui_theme.h; the clip lamp the lamp arc's, the same night; the lit
+    // key's inert face 2026-11-11, session 106; the trough and the well's
+    // lines 2026-11-17; THE ARC PAGE'S SIX 2026-11-19, send Z: the body tone, the title,
     // sidebar and ruler texts, the disabled key's face and border; THE
     // FLOATERS' FOUR 2026-11-19, send AA's stage D1: the three carried fills
     // and the limiter lamp; THE PROGRESS TROUGH, stage D2; THE SCALE'S RIM,
     // stage D3; THE TWO HOVER TONES 2026-11-20; THE LIST ROW'S HOVER
     // 2026-11-21; A HOVERED DISABLED MARKER'S LABEL, send FF, 2026-11-21).
-    GuiColor body_face;      // THE BODY TONE, the ground under the title bar (WindowBackground; `face` below is this tone)
+    GuiColor body_face;      // THE BODY TONE, the ground under the title bar (`face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
-    GuiColor title_text;      // the title bar's text on the Arc page (TitleForeground)
-    GuiColor sidebar_text;    // the marker labels' ink on the Arc page, later the tooltip's and the cards' (SidebarForeground)
+    GuiColor title_text;      // the title bar's text on the Arc page
+    GuiColor sidebar_text;    // the marker labels' ink on the Arc page, later the tooltip's and the cards'
     GuiColor text_dim;        // the inert rows, the tooltip's hint line, a disabled marker's label
-    GuiColor inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen (CueDisabledLabelHover; arc_dark 9DA3AD)
+    GuiColor inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen
     GuiColor key_dim_ink;     // a disabled key's glyph, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
     GuiColor key_dim_face;    // a disabled key's face (the key face at 55 % over the body tone; paint_linked_group, paint_word_button)
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
@@ -506,24 +496,23 @@ struct GuiPalette {
     GuiColor lane_face;       // the marker lane
     GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
     GuiColor trim_span_face;  // the trim bar's pill at rest, the span
-    GuiColor trim_span_hover_face; // the trim bar's part under the hovering pen, the pill's body or an end's cap (ScrollbarSliderHover; trim_bar_tones)
+    GuiColor trim_span_hover_face; // the trim bar's part under the hovering pen, the pill's body or an end's cap (trim_bar_tones)
     GuiColor well_border;     // THE WELL'S LINES, the stereo divider and the status bar's line (paint_well_frame_rows, render_waveform_divider, paint_status_bar); the keys', word buttons' and entries' rings
     GuiColor score_pane_face; // the score viewer's pane, the page's mat
     GuiColor scale_trough;    // the progress page's bar's trough and the scrub's (paint_scale)
     GuiColor scale_slider_border; // the scrub's knob's rim at rest (paint_scale)
-    // THE THREE CARRIED FILLS (send AA's stage D1, theme_roles.h's CARRIED
-    // block): each the role's color here, ITS OPACITY the installed row's
-    // word's top byte (tone_alpha below), painted at it over what lies under.
+    // THE THREE CARRIED FILLS (send AA's stage D1, gui_theme.h's THE THREE
+    // CARRIED FILLS): each the role's color here, ITS OPACITY the row's
+    // word's top byte (tone_alpha above), painted at it over what lies under.
     GuiColor tooltip_fill;    // the tooltip's box (paint_shift_tooltip)
     GuiColor card_fill;       // a normal (timed) card's box (paint_notifications)
     GuiColor card_standing_fill; // a standing (critical) card's box
-    GuiColor limiter_lamp;    // the title bar's limiter lamp, lit (Alert, its own tone since send AA's stage D1: the cards left Alert)
+    GuiColor limiter_lamp;    // the title bar's limiter lamp, lit (its own tone since send AA's stage D1, the cards' fills their own)
     GuiColor clip_lamp;       // the title bar's clip lamp, lit and not struck (THE TWO LAMPS, the title bar block)
-    // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
-    // palette_file.h).
+    // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (palette_file.h's rule). The
+    // plate's ink and core are no field: the plate takes the row's two words
+    // (waveform_plate_inks below).
     GuiColor waveform_canvas;
-    GuiColor waveform_ink;
-    GuiColor waveform_core;
     GuiColor grid;
     GuiColor center;
     GuiColor cue;
@@ -553,15 +542,6 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE INSTALLED THEME'S ROW (the derivation's row as it is, install_palette
-// below) — the sRGB WORDS behind palette(), for the few readers that need the word rather
-// than a GuiColor: the glyph road's tone (icons::draw_glyph; key_ink,
-// materials.h), the plate's two inks (waveform_plate_inks below). Every other
-// painter reads palette(). Before the first install every word is 0
-// (construction state, as palette()'s black), never read: gui_main installs
-// the row before the window exists, ahead of every painter.
-const GuiThemeTones& installed_theme();
-
 // THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
 // surface's recorded text color under the live chrome — "text over a fill
 // is the theme's recorded pair" — read by the words painted there, the one
@@ -581,19 +561,19 @@ enum class GuiSurface {
 };
 GuiColor surface_text(GuiSurface surface);
 
-// Install every color off THE THEME'S ROW (`tones`, the one theme's,
-// Arc-Dark's, load_gui_theme, theme_roles.h; architect 2026-11-05, the theme
-// arc; one theme since 2026-11-21, send GG) AT ITS OWN NUMBERS:
-// THE PROGRAM'S members off the palette's role table
-// (kGuiPaletteRoles, palette_file.h), THE CHROME'S off the chrome's
-// (kGuiThemeRoles, theme_file.h), the panel's `face` off the theme's body
-// tone (`body_face`, send Z)
-// — the tables covering the struct exactly (palette_file.cpp) — and THE
-// ROW COPIED as installed_theme(). Its one caller: gui_main's startup,
-// before the window and every cache exist, so it owes no apply shape. It
-// resolves and never refuses, and it bumps palette_generation below, the
-// flag cache's fingerprint term.
-void install_palette(const GuiThemeTones& tones);
+// Install every color off THE COMPILED ROW (kArcDarkTones, gui_theme.h;
+// Arc-Dark's, architect 2026-11-21, send GG): every member of the palette,
+// the chrome's, the program's and the panel's `face` alike, through the
+// fill table (kGuiPaletteFill, palette_file.h, proven to cover the struct
+// exactly). Its one caller: gui_main's startup, before the window and every
+// cache exist, so it owes no apply shape. It is a call rather than a
+// constant palette for its bump: it opens palette_generation below at 1, so
+// no cache's construction-state fingerprint (0) matches a painted palette.
+// The few readers that need the sRGB WORD rather than a GuiColor (the glyph
+// road's tone, key_ink in materials.h; the carried fills' opacity,
+// tone_alpha; the plate's two inks, waveform_plate_inks below) read
+// kArcDarkTones itself.
+void install_palette();
 
 // THE PALETTE'S GENERATION — a counter the install family bumps, so a
 // cached surface whose pixels carry palette colors keys the palette BY
@@ -1144,8 +1124,8 @@ void install_true_colors(bool on);
 
 // THE PLATE'S TWO BAKED INKS, as words: the fingerprint field and the job
 // field that carry the active ink and core to the worker (the worker reads
-// no live state), the installed theme's two tones (installed_theme,
-// `waveform_ink` and `waveform_core`; palette_file.h). THE WORDS ARE THE WINDOW'S
+// no live state), the compiled row's two tones (kArcDarkTones'
+// `waveform_ink` and `waveform_core`, gui_theme.h). THE WORDS ARE THE WINDOW'S
 // (architect 2026-10-08, display_transform.h's head): waveform_plate_inks
 // hands the two roles through display_transform::display_rgb on the GUI
 // thread, so the plate writes them as they come, and a flip of True Colors
@@ -2393,8 +2373,8 @@ inline int cue_chip_hit_right_px() {
 // so the waveform area is x 0 .. the window's last column.
 //
 // THE WELL'S LINES (architect 2026-11-17, session 140, D2: "lets use the
-// thunar border" — Arc's $borders_color; the tone `well_border`, Live's
-// ClipBorder, theme_roles.h): ONE W, ACROSS THE PANEL'S WHOLE WIDTH — the
+// thunar border" — Arc's $borders_color; the tone `well_border`,
+// gui_theme.h): ONE W, ACROSS THE PANEL'S WHOLE WIDTH — the
 // trim lane's first row (the line under the top icon row) and its last
 // (under the trough), the ruler lane's last row, the lane's foot line (top
 // lane 4), the well's foot, and on the canvas THE STEREO DIVIDER
@@ -4311,28 +4291,15 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE CORE (architect 2026-11-04, mock f1, reversing the lit outline of
 // 2026-09-27) — THE GROWN INNER SHAPE (the inner bars of all columns with
 // their contour, dilated by the `waveform_grow` key) FILLED SOLID in the
-// `waveform_core` role, LIVE'S SurfaceBackground, THE KEY FACE, on every
-// theme (architect 2026-11-07, session 83, his pick i4 of that session on real
-// MAGNIFY-lit captures, Default and Immaterial judged; the one owner
-// theme_roles.h's DERIVATION): his ask a lighter core from a tone the palette
-// already holds, with no antialiasing halo — the candidates mocked the ground
-// (SurfaceArea), the lane (Desktop), the grid, the key face and the canvas.
-// On Default 363636 over the 191919 ink, ONE STEP UNDER THE 393939 CANVAS,
-// so the center line (the ink, over the plate) reads hard across the core —
-// ruled fine (his "yes", session 83); Immaterial 2F3138. Mock f1's word
-// stands: "the absence of it would indicate a quiet section". THE TONE'S
-// RECORD: 1A1A1A, one level over the ink, picked 2026-11-04 morning on mock
-// f1 ("1e is already quite bright … just a tiny amt of brightness is all
-// that's needed" — f1's dummy inner), read nearly invisible on the real
-// compressed bar, because f1's dummy inner was a smooth band a third of
-// the plate's height and one level over the ink needs a large contiguous
-// area to register; 1C1C1C, three levels, ruled in session 33 on mocks
-// m1..m7 of that session (core_tones.py, the real capture recolored one tone
-// each: "1c works"), where 1D1D1D was declined for not being a Live tone;
-// 1E1E1E, five levels, his pick i1 of session 38 that night on the real lit
-// capture, read from Live's ControlBackground on every theme 2026-11-06
-// (session 80: his pick was that role's number on Default) until the key
-// face replaced it. The core lies over
+// `waveform_core` tone, THE KEY FACE (architect 2026-11-07, session 83, his
+// pick i4 of that session on real MAGNIFY-lit captures; the number and its
+// Arc source at its line of kArcDarkTones, gui_theme.h): his ask a lighter
+// core from a tone the palette already holds, with no antialiasing halo —
+// the candidates mocked the ground, the lane, the grid, the key face and
+// the canvas. On Arc-Dark 444A58 over the 262A33 ink, one step over the
+// 404552 canvas, so the center line (the ink, over the plate) reads hard
+// across the core (his "yes", session 83). Mock f1's word stands: "the
+// absence of it would indicate a quiet section". The core lies over
 // the outer bar's ink: the composite is area-correct, the core over the
 // grown inner's coverage and the ink over the rest of the union's
 // (kListFragmentShader's head), so the inner keeps its shape and its
@@ -4745,17 +4712,11 @@ struct GuiPlateColumns {
 // ~46 % app / ~53 % SurfaceFlinger at 90 presents a second, the present
 // itself the cost: "seems like it's unavoidable"): a solid one-W line, opaque
 // on every pixel it covers whole,
-// in the palette's `playhead_line`, the theme's own PlayheadLine (send FF,
-// 2026-11-21; theme_roles.h's OUR OWN, THE WAVEFORM'S HOVER): on arc_dark
-// A5ABB5, Arc's `.h4` / `.category-label`, under the scanner's FFFFFF and
-// over the waveform's hover line 767B87, his brightness order (told once at
-// render_hover_line below); on a Live
-// theme sRGB 81E1EA on Default — THE MEAN OF LIVE'S FADE between white and
-// the head's cyan, white half way to the head (architect 2026-11-12,
-// session 113: the four lossless one-px samples of Live's line, 4AD3E0,
-// 59D7E3, 85E2EA and DBF6F9, lie on the byte line from FFFFFF toward
-// 03C3D5, so the triangle wave's mean is the half), the word its file
-// carries — its own pixel the same over the ink and over the canvas,
+// in the palette's `playhead_line` (send FF, 2026-11-21; its line of
+// kArcDarkTones, gui_theme.h): A5ABB5, Arc's `.h4` / `.category-label`,
+// under the scanner's FFFFFF and over the waveform's hover line 767B87, his
+// brightness order (told once at render_hover_line below) — its own pixel
+// the same over the ink and over the canvas,
 // stopped or playing; the ruler's head keeps its own `playhead_head`, the
 // scanner its FFFFFF. NOTHING IS DAMAGED AT REST: the line moves only with the cursor,
 // whose writers own the damage (playhead_invalidate_rect, main.cpp). A
@@ -4818,12 +4779,10 @@ void render_playhead(GuiCanvasSink& sink,
 //     scanner and the zoom anchor's stem FFFFFF ("The scanner should be this
 //     brightest one. And I guess the zoom stem should also be quite bright.
 //     Same color as the scanner"), the playhead's line `playhead_line`
-//     (arc_dark A5ABB5), and this line `hover_line`, the theme's own
-//     HoverLine (arc_dark 767B87, Arc's scrollbar slider: "an even more dark
-//     and faint version of the playhead stem"), ITS TRIANGLE THE SAME TONE
-//     ("same color as the hover stem").
-//     The order is the theme's own numbers' (theme_roles.h's THE SCANNER
-//     block).
+//     (A5ABB5), and this line `hover_line` (767B87, Arc's scrollbar slider:
+//     "an even more dark and faint version of the playhead stem"), ITS
+//     TRIANGLE THE SAME TONE ("same color as the hover stem").
+//     The order is the compiled row's numbers' (kArcDarkTones, gui_theme.h).
 //   ITS FORM: the playhead's line's — a one-W line (waveform_line_px)
 //     centered on its exact place `x` (device px from area.x), drawn wherever
 //     any of its real interval lies inside the strip and cut at both edges

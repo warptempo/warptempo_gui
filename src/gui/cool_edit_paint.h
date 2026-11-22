@@ -13,14 +13,12 @@
 // coverage stamp (the well's regions — the trim bar, the ruler, the marker
 // lane — are painted by render_trim_flags, paint_ruler_row and the flag
 // pass). The lengths are program_spec.h's and render.h's (each a rounded
-// part); the colors the installed theme's — the flat look's tones
+// part); the colors Arc-Dark's compiled row's (gui_theme.h) — the flat look's tones
 // (materials.h's THE WELL) and the palette's, every one read from palette(). THE PLAYHEAD'S OWN COLORS are the palette's
-// `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
-// 2026-11-01, arc_dark A5ABB5, the stem's color (architect 2026-11-21,
-// send GG) — and `playhead_line` — the line's one static tone in the
-// canvas, the theme's own PlayheadLine (send FF, 2026-11-21; arc_dark
-// A5ABB5, Arc's `.h4`; Default's 81E1EA, white half way to its head) —
-// palette_file.h's role table, as the
+// `playhead_head` — the head in the ruler, A5ABB5, the stem's color
+// (architect 2026-11-21, send GG) — and `playhead_line` — the line's one
+// static tone in the canvas (send FF, 2026-11-21; A5ABB5, Arc's `.h4`) —
+// their lines of kArcDarkTones (gui_theme.h), as the
 // marker's chip is the palette's `cue_fill` (the accent, 2026-11-13), a
 // disabled one's `inactive_cue`, no outline (2026-11-19, send AA).
 // THE TRIANGLES ARE SMOOTH-EDGED AT THEIR EXACT PLACES (architect 2026-11-14,

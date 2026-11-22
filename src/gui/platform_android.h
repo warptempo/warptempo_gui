@@ -125,17 +125,6 @@ public:
     // the package reaches the load as its first missing file.
     static std::expected<std::map<std::string, std::string>, std::string>
     bundled_icon_files();
-    // THE ONE THEME'S FILE (architect 2026-11-21, send GG: one look,
-    // Arc-Dark; theme_roles.h's head, THE FILE) — the whole text of the
-    // APK's asset `themes/system/<kGuiDefaultThemeSourceSlug>.theme`
-    // (gui_theme.h; arc_dark.theme), the repository's file, which
-    // build_apk.sh's asset step packs. Read by the launch's theme load alone
-    // (load_gui_theme, gui_main), IN PLACE, through the same manager and
-    // whole-asset read as the defaults file above. STATIC, asked before any
-    // window exists. THE ERROR ARM'S PRODUCER IS IO or a build that packed
-    // no such file (an asset that will not open or not read whole), carried
-    // to the launch's hard fail.
-    static std::expected<std::string, std::string> bundled_theme_file();
     // THE WINDOW TITLE HAS NO SURFACE: the activity is fullscreen and
     // landscape-only with no system titlebar, so this setter stores nothing
     // and paints nothing (the app paints no caption, 2026-10-24). It stays on
