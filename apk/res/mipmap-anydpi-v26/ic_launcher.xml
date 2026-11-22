@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
-     recents card). Its picture (architect 2026-11-01, M7; the project's
-     quaver of 2026-10-23 retired 2026-11-02): BREEZE'S NOTE,
-     assets/icons/AppIcon.svg (a regular file, the launcher's drawing alone:
-     breeze-icons' music-note-16th recolored, a `currentColor` drawing on a
-     22 x 22 viewBox; the app's drawings are Papirus's, assets/icons/README.md),
+     recents card). Its picture (architect 2026-11-21, send HH): PAPIRUS'S
+     NOTE, assets/icons/MusicNote16th.svg, the drawing the app paints in its
+     title bar and on the BPM key (assets/icons/README.md its provenance), a
+     `currentColor` drawing on a 16 x 16 box (width and height, no viewBox),
      rendered by resvg at the art's height in the
      font color #D3DAE3 (apk/build_apk.sh's LAUNCHER_INK, given as resvg's
      user stylesheet) and centered over THE APP'S GROUND, FLAT: #2F343F
@@ -23,20 +22,23 @@
      copy of res/:
        ic_launcher_background.png  the full 108 dp canvas flat in #2F343F;
        ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
-                                   the viewBox's (52 dp: the note's viewBox
-                                   is square), centred on a transparent
-                                   canvas of the density's full 108 dp.
+                                   the box's (52 dp: the note's box is
+                                   square; resvg scales the whole 16 x 16
+                                   box to the height), centered on a
+                                   transparent canvas of the density's full
+                                   108 dp.
 
      THE 66 dp SAFE ZONE: an adaptive foreground's art should sit inside the
      mask's guaranteed-visible inner circle, Android's own 66 dp of the 108 dp
      canvas. The art 52 dp tall (architect 2026-10-16, his pick off a 60 /
      56 / 52 / 48 / 44 / 40 dp series on the glass: at 64 dp the art filled
      ~86 % of the launcher's visible tile and nearly touched its corners):
-     the note's 22-unit viewBox at 52 / 22 = 2.36 dp a unit. Its ink spans
-     x 6 .. 16 and y 3 .. 19 units (23.6 x 37.8 dp, measured off the path
-     data); its farthest ink (the head's lower left, the ellipse about
-     (9, 16.5) with radii 3 x 2.5) lies about 8.4 units, 19.9 dp, from the
-     viewBox's center (11, 11), inside the 33 dp circle with about 13 dp to
+     the note's 16-unit box at 52 / 16 = 3.25 dp a unit. Its ink spans
+     x 4 .. 12 and y 1 .. 15 units (26 x 45.5 dp, measured off the path
+     data: the stem x 8 .. 10, the flag to x 12 over y 1 .. 5, the head a
+     circle of radius 3 at (7, 12)); its farthest ink (the flag's top right
+     corner, (12, 1)) lies sqrt(65) = 8.06 units, 26.2 dp, from the box's
+     center (8, 8), inside the 33 dp circle with about 6.8 dp to
      spare. The same 52 dp at every density (the per-density PNG pixel size
      scales with the density factor f alone):
 
@@ -49,8 +51,8 @@
 
      A BUILD PRODUCT, NEVER COMMITTED: this file is the one tracked file of
      res/, and build_apk.sh writes the PNGs beside it in the package tree
-     (byte-stable, -strip) from assets/icons/AppIcon.svg, Breeze's note, at
-     the build. The safe-zone figure above is the note's. -->
+     (byte-stable, -strip) from assets/icons/MusicNote16th.svg, Papirus's
+     note, at the build. The safe-zone figure above is the note's. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@mipmap/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>

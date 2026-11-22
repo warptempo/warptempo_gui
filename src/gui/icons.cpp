@@ -80,8 +80,8 @@ std::optional<LoadedSet>& loaded_set() {
 }
 
 // THE SET'S LOAD (load_set's body): every enumerator's file found in `files`
-// and parsed; a file of any other name in the folder (AppIcon.svg, the
-// README, the licence text) is never looked up.
+// and parsed; a file of any other name in the folder (the README, the
+// licence text) is never looked up.
 std::expected<LoadedSet, std::string> load_files(
         const std::map<std::string, std::string>& files) {
     LoadedSet loaded;

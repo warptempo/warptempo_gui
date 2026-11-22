@@ -5,7 +5,7 @@ one look, Arc-Dark and Papirus, no second set and no device key): one SVG per `i
 (`src/gui/icons.h`), each named by its enumerator, in this one flat folder. The program reads the set at launch,
 through resvg (`src/gui/svg_icon.h`), from the APK's `icons/` assets (`apk/build_apk.sh` copies this folder's `.svg`
 files there). A missing enumerator's file, or one that is not well-formed SVG, fails the launch, naming the file.
-Files of other names here (this README, the licence texts, the launcher's `AppIcon.svg`) are never looked up.
+Files of other names here (this README, the licence text) are never looked up.
 
 ## Papirus, recolored
 
@@ -33,8 +33,7 @@ THE IMPORTER, `tools/icons/import_papirus.py` (standalone, stdlib only, no link 
 one table, enumerator to source file under `Papirus/16x16/`, and writes each `<Enumerator>.svg` here by THE RECOLOR
 RULE (below); the checkout is its one argument and is read as data, nothing in it run
 (`python3 -I tools/icons/import_papirus.py <papirus-icon-theme checkout>`), and it prints the provenance table below.
-It writes only its rows' files and removes nothing, so a rerun leaves `AppIcon.svg`, the licence texts and this README
-as they are. EVERY ROW IS IMPORTED, THE TWO CARDS INCLUDED: Papirus's `dialog-information` and `dialog-error` already
+It writes only its rows' files and removes nothing, so a rerun leaves the licence text and this README as they are. EVERY ROW IS IMPORTED, THE TWO CARDS INCLUDED: Papirus's `dialog-information` and `dialog-error` already
 cut their mark (an i, an !) out of a filled disc, the mark's subpaths wound against the disc's, so one color shows it.
 EVERY FILE IS A DISTINCT DRAWING, by realpath and path data rather than by name (the importer flags a share; there is
 none — the score viewer's page keys wear chevrons of their own, not GoPrevious's / GoNext's arrows).
@@ -149,32 +148,19 @@ no path data changed.
 | `FormatIndentMore` | `symbolic/actions/format-indent-more-symbolic.svg (-> actions/format-indent-more.svg)` | `950a2222431581fe70478e7bd640c5c15cfd163d9f32867a5b221a0f6938e49c` |  |
 | `KeyEnter` | `symbolic/actions/keyboard-enter-symbolic.svg` | `3f3d6745742a454428ece370bc49f4de81f311fcf28e4d07793c1f8bee6d595a` | no key-enter; keyboard-enter |
 
-## The launcher icon, Breeze's note
+## The launcher icon, Papirus's note
 
-THE LAUNCHER ICON is `AppIcon.svg`, a regular file and no enumerator's: breeze-icons' sixteenth note (architect
-2026-11-01, M7, the launcher's picture since), the launcher's drawing alone — the app paints Papirus's
-`MusicNote16th.svg`, never this file. `apk/build_apk.sh` renders it at every build in the font color over its flat
-ground — Arc-Dark's, the one look, D3DAE3 over 2F343F, read from the compiled row of the look's tones,
-`kArcDarkTones` in `src/gui/gui_theme.h` (its `.text` and `.ground` lines)
-(`apk/res/mipmap-anydpi-v26/ic_launcher.xml`). It is breeze-icons 6.31.0's (KDE Frameworks,
-https://invent.kde.org/frameworks/breeze-icons) as Arch Linux installs it under `/usr/share/icons/breeze-dark/`, by
-the recolor rule above (its literal colors `currentColor`, its color-scheme `<style>` and classes dropped, its path
-data and its 22-unit viewBox verbatim):
-
-| File | Source (breeze-dark 6.31.0) | sha256 of the source |
-|---|---|---|
-| `AppIcon.svg` | `actions/22/music-note-16th.svg` | `1411cf454d39ef5781564fde937acc5b512b8f31f5372b079996680f39bc8c17` |
+THE LAUNCHER ICON is `MusicNote16th.svg`, the title bar's note and the BPM key's drawing (architect 2026-11-21, send
+HH: one drawing, one file), Papirus's and credited in the table above. `apk/build_apk.sh` renders it at every build in
+the font color over its flat ground — Arc-Dark's, the one look, D3DAE3 over 2F343F, read from the compiled row of the
+look's tones, `kArcDarkTones` in `src/gui/gui_theme.h` (its `.text` and `.ground` lines)
+(`apk/res/mipmap-anydpi-v26/ic_launcher.xml`).
 
 ## Licence
 
 Papirus's icons are licensed under the GNU General Public License, version 3 — GPL-3.0; copyright the papirus-icon-theme
 authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above). The licence text is
 `LICENSE-GPL-3.txt` (the checkout's `LICENSE`, verbatim), the same licence as the repository's own `LICENSE`.
-
-Breeze's icons are licensed under the GNU Lesser General Public License, version 3 or (at your option) any later
-version — LGPL-3.0-or-later; copyright the breeze-icons authors (KDE). `AppIcon.svg` alone is Breeze's, a modified
-copy (the recolor rule above). The licence text is `LICENSE-LGPL-3.txt`, which supplements the GNU GPL v3 in the
-repository's `LICENSE`.
 
 The drawings are data, read at run time (the launcher's at build time) and never linked or compiled into the
 program's code; the repository distributes source only (`THIRD_PARTY.md`).

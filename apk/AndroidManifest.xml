@@ -29,9 +29,9 @@
   <!-- The OTG stick is M6's, and a device without one must still install. -->
   <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
-  <!-- android:icon is the launcher and recents icon: Breeze's note,
-       assets/icons/AppIcon.svg (a regular file, the launcher's drawing
-       alone), rendered by resvg in the font color #D3DAE3 over its flat
+  <!-- android:icon is the launcher and recents icon: Papirus's note,
+       assets/icons/MusicNote16th.svg (the title bar's and the BPM key's
+       drawing, its 16 x 16 box 52 dp tall), rendered by resvg in the font color #D3DAE3 over its flat
        ground #2F343F (Arc-Dark's compiled row, src/gui/gui_theme.h), the
        adaptive icon's
        background layer

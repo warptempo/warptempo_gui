@@ -42,10 +42,9 @@
 // CARDS, DialogError and DialogInformation, are imported, their discs
 // cutting the mark out so one color shows it (assets/icons/README.md's
 // provenance).
-// THE LAUNCHER ICON is assets/icons/AppIcon.svg, a regular file holding
-// breeze-icons' note (the launcher's picture alone), which
-// apk/build_apk.sh renders at every build; no enumerator names it (no
-// painter draws it, and the load reads only the enumerators' files).
+// THE LAUNCHER ICON is the title bar's note, MusicNote16th.svg, which
+// apk/build_apk.sh renders at every build from this folder (architect
+// 2026-11-21, send HH: one drawing, one file).
 // THE SET PARSED AT LAUNCH through resvg (svg_icon.h: the wrapper and the
 // error rule), straight from the bundle — never copied into the config
 // folder (load_set, below) — and rasterised lazily, per (drawing, ink px,
@@ -131,8 +130,7 @@ inline constexpr int kIconCount = 0 WARPTEMPO_ICONS(WARPTEMPO_ICON_ONE);
 
 // THE FILE NAMES, the enumerators spelled in enum order: each enumerator's
 // file in the folder is `<name>.svg`. A misspelling is a missing file at the
-// next launch, which fails it. (The folder's AppIcon.svg is the launcher's
-// and no enumerator's: the load never looks it up.)
+// next launch, which fails it.
 inline constexpr const char* kIconNames[] = {
 #define WARPTEMPO_ICON_NAME(name) #name,
     WARPTEMPO_ICONS(WARPTEMPO_ICON_NAME)
@@ -145,7 +143,7 @@ static_assert(std::size(kIconNames) == kIconCount);
 // assets; READ IN PLACE, never copied into the config folder: nobody
 // authors an icon on the device), then per enumerator in enum order
 // `<name>.svg` parsed (svg_icon::parse), all before any draw; files of other
-// names (AppIcon.svg, the launcher's) never looked up. THE ERROR ARM'S
+// names never looked up. THE ERROR ARM'S
 // PRODUCERS: the bundle unreadable (IO), a file not there, or a file not
 // well-formed SVG (a build defect) — "icons: Folder.svg: missing", the first
 // only, which gui_main prints and exits on (the validation doctrine's class

@@ -109,8 +109,7 @@ public:
     // THE BUNDLED ICONS' FILES (icons.h's head; ONE SET, Papirus, architect
     // 2026-11-21, send GG) — the drawings of assets/icons/, a map from FILE
     // NAME (`<Enumerator>.svg`, icons.h's kIconNames; no folder) to the
-    // file's whole bytes, every `.svg` of the bundle's folder (the
-    // launcher's AppIcon.svg among them, which the load never looks up).
+    // file's whole bytes, every `.svg` of the bundle's folder.
     // Read by the launch's icon load alone (icons::load_set, icons.h), IN
     // PLACE: nothing is copied into the config folder (nobody authors an
     // icon on the device). The bundle is the APK's `icons/` assets — the

@@ -114,8 +114,7 @@ for f in $FONT_FILES; do
 done
 # THE BUNDLED ICONS, ONE SET (icons.h's head; Papirus alone, architect
 # 2026-11-21, send GG): every `.svg` of the repository's assets/icons/
-# (tools/icons/import_papirus.py's drawings, and AppIcon.svg, the launcher's
-# drawing, which the app does not read) copied into the package's
+# (tools/icons/import_papirus.py's drawings) copied into the package's
 # assets/icons/, which aapt2 link's -A packs (deflated) as the APK's `icons/`
 # asset directory. The folder holds regular files alone (cp -L stays: a link
 # would be copied as the file it names). The app reads the set in place at
@@ -186,12 +185,10 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml, tracked, and its two
 # PNG layers per density, RENDERED HERE AT EVERY BUILD from the drawing
 # into a staged copy of res/ under the package tree,
-# which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.svg, a regular
-# file: BREEZE'S NOTE (breeze-icons' music-note-16th, the launcher's
-# picture since 2026-11-01, M7; kept when the app's drawings became
-# Papirus's alone, architect 2026-11-21, send GG — the app paints Papirus's
-# MusicNote16th.svg, never this file; assets/icons/README.md its
-# provenance), a `currentColor` drawing
+# which aapt2 compiles. THE DRAWING is assets/icons/MusicNote16th.svg,
+# PAPIRUS'S NOTE, the one the app paints in its title bar and on the BPM key
+# (architect 2026-11-21, send HH: one drawing, one file, read in place, no
+# copy; assets/icons/README.md its provenance), a `currentColor` drawing
 # painted LAUNCHER_INK, the font color (the row's `.text`), through resvg's user
 # stylesheet (below). THE FRAMING
 # (Android's adaptive mask demands a full-bleed square): the FOREGROUND the
@@ -200,7 +197,8 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # series on the glass: the 64 dp art filled ~86 % of the launcher's visible
 # tile and nearly touched its corners) -- an SVG rendered by RESVG, the
 # product's own renderer (svg_icon.cpp), at the art's height, its width the
-# viewBox's (the note's 22 x 22: a 52 dp square), never rasterised small and
+# drawing's box's (the note's 16 x 16 width and height, no viewBox, which
+# resvg scales whole to the height: a 52 dp square), never rasterised small and
 # upscaled (magick's own delegate renders the SVG at its user size and
 # blurs at -resize) -- centered on the transparent 108 dp canvas; the
 # BACKGROUND that canvas FLAT IN THE WINDOW'S OWN GROUND (architect
@@ -215,8 +213,8 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # by resvg, svg_icon.cpp, each copied by cairo); the canvas interior and the
 # score page are the GPU's (canvas_sink.h); the app declares no @string, no style, no res/values. aapt2 compile turns the
 # staged directory into res.zip, which link takes as a positional input.
-APP_ICON="$ICON_DIR/AppIcon.svg"
-[ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, Breeze's note)"
+APP_ICON="$ICON_DIR/MusicNote16th.svg"
+[ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/MusicNote16th.svg (the launcher icon's drawing, Papirus's note)"
 # THE ICON'S TWO COLORS ARE READ, NEVER SPELLED HERE: the compiled row of
 # the look's tones, kArcDarkTones in src/gui/gui_theme.h (architect
 # 2026-11-21, send GG: the tones compiled, each line its Arc source), is

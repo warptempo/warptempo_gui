@@ -26,8 +26,8 @@ mark's subpaths wound against the disc's), so one color shows it and no hand
 transcription is needed.
 
 IT WRITES ONLY THE ROWS' FILES and removes nothing: the folder's other files
--- AppIcon.svg (the launcher's drawing, breeze-icons' note), the two licence
-texts and README.md -- are never opened, so a rerun leaves them as they are.
+-- the licence text and README.md -- are never opened, so a rerun leaves
+them as they are.
 A row dropped from ROSTER leaves its old file behind, to be deleted by hand
 with its enumerator.
 
