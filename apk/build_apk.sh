@@ -186,19 +186,21 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # PNG layers per density, RENDERED HERE AT EVERY BUILD from the drawing
 # into a staged copy of res/ under the package tree,
 # which aapt2 compiles. THE DRAWING is assets/icons/MusicNote16th.svg,
-# PAPIRUS'S NOTE, the one the app paints in its title bar and on the BPM key
-# (architect 2026-11-21, send HH: one drawing, one file, read in place, no
+# PAPIRUS'S NOTE, the one the app paints in its title bar, on the BPM key and
+# on the lists' wav rows (architect 2026-11-21, send HH: one drawing, one file, read in place, no
 # copy; assets/icons/README.md its provenance), a `currentColor` drawing
 # painted LAUNCHER_INK, the font color (the row's `.text`), through resvg's user
 # stylesheet (below). THE FRAMING
 # (Android's adaptive mask demands a full-bleed square): the FOREGROUND the
-# drawing fitted to the 52 dp art square
-# (architect 2026-10-16, his pick off a 60 / 56 / 52 / 48 / 44 / 40 dp
-# series on the glass: the 64 dp art filled ~86 % of the launcher's visible
-# tile and nearly touched its corners) -- an SVG rendered by RESVG, the
+# drawing fitted to the 46 dp art square
+# (architect 2026-11-22, send II: "take the launcher's icon size down a
+# little, leaving it just slightly larger than the old breeze version" --
+# Papirus's note inks 23 x 40.25 dp at 46 dp, about the retired Breeze
+# note's width and ~6 % taller, well inside the 66 dp safe circle;
+# ic_launcher.xml's head the arithmetic) -- an SVG rendered by RESVG, the
 # product's own renderer (svg_icon.cpp), at the art's height, its width the
 # drawing's box's (the note's 16 x 16 width and height, no viewBox, which
-# resvg scales whole to the height: a 52 dp square), never rasterised small and
+# resvg scales whole to the height: a 46 dp square), never rasterised small and
 # upscaled (magick's own delegate renders the SVG at its user size and
 # blurs at -resize) -- centered on the transparent 108 dp canvas; the
 # BACKGROUND that canvas FLAT IN THE WINDOW'S OWN GROUND (architect
@@ -206,7 +208,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # 2F343F, Arc's $header_bg, since 2026-11-18, send Y; the one look since
 # 2026-11-21, send GG; LAUNCHER_GROUND below, read from the compiled row),
 # one color over the whole
-# square, which the launcher's mask cuts to its shape. Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
+# square, which the launcher's mask cuts to its shape. Per density f, the 46 dp art A = 46f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
 # Byte-stable: -strip drops the date chunks. Cairo paints the
 # chrome and the glyphs onto the backbuffer (Papirus's SVGs rasterised
@@ -242,7 +244,7 @@ LAUNCHER_CSS="$PKGDIR/launcher_ink.css"
 printf 'svg { color: %s; }\n' "$LAUNCHER_INK" > "$LAUNCHER_CSS"
 RES_STAGE="$PKGDIR/res"
 cp -r "$APPDIR/res" "$RES_STAGE"
-for row in mdpi:52:108 hdpi:78:162 xhdpi:104:216 xxhdpi:156:324 xxxhdpi:208:432; do
+for row in mdpi:46:108 hdpi:69:162 xhdpi:92:216 xxhdpi:138:324 xxxhdpi:184:432; do
     IFS=: read -r density art canvas <<< "$row"
     dir="$RES_STAGE/mipmap-$density"
     mkdir -p "$dir"

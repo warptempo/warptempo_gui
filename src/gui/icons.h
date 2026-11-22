@@ -32,11 +32,14 @@
 //   (materials.h's key_ink; architect 2026-11-11, session 106; 2026-11-17,
 //   session 140; 2026-11-19, send Z).
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the title bar's note
-//   (MusicNote16th, BPM's glyph too) and its battery + clock legend's glyph
+//   (MusicNote16th) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_title_bar), the list rows'
-//   folder and disc (Folder / ViewMediaTrack, SOURCE's glyph too,
-//   paint_folder_overlay), the cards' class glyphs (DialogInformation /
-//   DialogError, paint_notifications).
+//   folder and note (Folder / MusicNote16th, paint_folder_overlay), the
+//   cards' class glyphs (DialogInformation / DialogError,
+//   paint_notifications). THE NOTE IS SHARED THREE WAYS (architect
+//   2026-11-22, send II): the title bar, the BPM key and the wav rows (the
+//   launcher's art too, below); SOURCE's disc, ViewMediaTrack, is the key's
+//   alone.
 // THE ROSTER IS AS RULED (2026-11-17, session 140; 2026-11-22, send II); a
 // re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
 // DISTINCT DRAWING (by the written path data and transform; the icon

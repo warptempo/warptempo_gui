@@ -33,10 +33,12 @@ WHICH SEAT WEARS WHICH DRAWING is the act vocabularies' owners' (`redesign_butto
 and the on-screen keyboard's glyph keys (`onscreen_keyboard::cap_icon` in `src/gui/onscreen_keyboard.h`: Tab
 FormatIndentMore and Enter KeyEnter, its two drawings of its own; Bksp EditClear, Copy / Paste EditCopy / EditPaste,
 LEFT / RIGHT GoPrevious / GoNext, UP / DOWN GoUp / GoDown and the pass key InsertLink shared with the program keys).
-OFF THE KEYS (`src/gui/icons.h`'s head): the title bar's note is MusicNote16th (the BPM key's drawing too) and its
-battery Battery000Charging while on power, Battery000 otherwise; the list rows wear Folder on a folder or project row
-and ViewMediaTrack, the disc, on a wav row (SOURCE's drawing, a deliberate share: "keep just one"); a normal card
-wears DialogInformation and a standing one DialogError.
+OFF THE KEYS (`src/gui/icons.h`'s head): the title bar's note is MusicNote16th and its battery Battery000Charging
+while on power, Battery000 otherwise; the list rows wear Folder on a folder or project row and MusicNote16th, the
+note, on a wav row; a normal card wears DialogInformation and a standing one DialogError. THE NOTE IS SHARED THREE
+WAYS (architect 2026-11-22, send II: "render player actually plays target audio, not source. but it should take the
+bpm note aka the logo"): the title bar, the BPM key and the wav rows, and the launcher icon is rendered from it
+(below); SOURCE's disc, ViewMediaTrack, is the key's alone.
 
 THE IMPORTER, `tools/icons/import_papirus.py` (standalone, stdlib only, no link path from any product target), holds the
 one table, enumerator to source file under `Papirus/16x16/`, and writes each `<Enumerator>.svg` here by THE RECOLOR
@@ -169,9 +171,10 @@ transcriptions, with no path data changed, two of them wrapped in their transfor
 
 ## The launcher icon, Papirus's note
 
-THE LAUNCHER ICON is `MusicNote16th.svg`, the title bar's note and the BPM key's drawing (architect 2026-11-21, send
-HH: one drawing, one file), Papirus's and credited in the table above. `apk/build_apk.sh` renders it at every build in
-the font color over its flat ground — Arc-Dark's, the one look, D3DAE3 over 2F343F, read from the compiled row of the
+THE LAUNCHER ICON is `MusicNote16th.svg`, the title bar's note, the BPM key's and the wav rows' drawing (architect
+2026-11-21, send HH: one drawing, one file), Papirus's and credited in the table above. `apk/build_apk.sh` renders it
+at every build, its art 46 dp of the 108 dp layer (architect 2026-11-22, send II), in the font color over its flat
+ground — Arc-Dark's, the one look, D3DAE3 over 2F343F, read from the compiled row of the
 look's tones, `kArcDarkTones` in `src/gui/gui_theme.h` (its `.text` and `.ground` lines)
 (`apk/res/mipmap-anydpi-v26/ic_launcher.xml`).
 

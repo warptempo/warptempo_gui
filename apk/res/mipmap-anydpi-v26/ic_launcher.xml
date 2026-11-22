@@ -2,7 +2,8 @@
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
      recents card). Its picture (architect 2026-11-21, send HH): PAPIRUS'S
      NOTE, assets/icons/MusicNote16th.svg, the drawing the app paints in its
-     title bar and on the BPM key (assets/icons/README.md its provenance), a
+     title bar, on the BPM key and on the lists' wav rows
+     (assets/icons/README.md its provenance), a
      `currentColor` drawing on a 16 x 16 box (width and height, no viewBox),
      rendered by resvg at the art's height in the
      font color #D3DAE3 (apk/build_apk.sh's LAUNCHER_INK, given as resvg's
@@ -21,33 +22,37 @@
      EVERY BUILD by apk/build_apk.sh's launcher step into its staged
      copy of res/:
        ic_launcher_background.png  the full 108 dp canvas flat in #2F343F;
-       ic_launcher_foreground.png  the drawing rendered 52 dp tall, its width
-                                   the box's (52 dp: the note's box is
+       ic_launcher_foreground.png  the drawing rendered 46 dp tall, its width
+                                   the box's (46 dp: the note's box is
                                    square; resvg scales the whole 16 x 16
                                    box to the height), centered on a
                                    transparent canvas of the density's full
                                    108 dp.
 
+     THE ART 46 dp (architect 2026-11-22, send II: "take the launcher's icon
+     size down a little, leaving it just slightly larger than the old breeze
+     version"): the note's 16-unit box at 46 / 16 = 2.875 dp a unit. Its ink
+     spans x 4 .. 12 and y 1 .. 15 units (measured off the path data: the
+     stem x 8 .. 10, the flag to x 12 over y 1 .. 5, the head a circle of
+     radius 3 at (7, 12)), 23 x 40.25 dp — about the width of the Breeze
+     note the launcher wore until 2026-11-21 (23.6 x 37.8 dp of ink at its
+     52 dp art) and some 6 % taller.
+
      THE 66 dp SAFE ZONE: an adaptive foreground's art should sit inside the
      mask's guaranteed-visible inner circle, Android's own 66 dp of the 108 dp
-     canvas. The art 52 dp tall (architect 2026-10-16, his pick off a 60 /
-     56 / 52 / 48 / 44 / 40 dp series on the glass: at 64 dp the art filled
-     ~86 % of the launcher's visible tile and nearly touched its corners):
-     the note's 16-unit box at 52 / 16 = 3.25 dp a unit. Its ink spans
-     x 4 .. 12 and y 1 .. 15 units (26 x 45.5 dp, measured off the path
-     data: the stem x 8 .. 10, the flag to x 12 over y 1 .. 5, the head a
-     circle of radius 3 at (7, 12)); its farthest ink (the flag's top right
-     corner, (12, 1)) lies sqrt(65) = 8.06 units, 26.2 dp, from the box's
-     center (8, 8), inside the 33 dp circle with about 6.8 dp to
-     spare. The same 52 dp at every density (the per-density PNG pixel size
-     scales with the density factor f alone):
+     canvas. The note's farthest ink (the flag's top right corner, (12, 1))
+     lies sqrt(65) = 8.06 units, 23.2 dp, from the box's center (8, 8),
+     inside the 33 dp circle with about 9.8 dp to spare. The same 46 dp at
+     every density (the per-density PNG pixel size scales with the density
+     factor f alone):
 
-       density  f    canvas C=108f  art 52f  offset (C-52f)/2
-       mdpi     1    108            52       28
-       hdpi     1.5  162            78       42
-       xhdpi    2    216            104      56
-       xxhdpi   3    324            156      84
-       xxxhdpi  4    432            208      112
+       density  f    canvas C=108f  art 46f  offset (C-46f)/2
+       mdpi     1    108            46       31
+       hdpi     1.5  162            69       46.5 (magick's center takes
+                                                 a whole px, 46)
+       xhdpi    2    216            92       62
+       xxhdpi   3    324            138      93
+       xxxhdpi  4    432            184      124
 
      A BUILD PRODUCT, NEVER COMMITTED: this file is the one tracked file of
      res/, and build_apk.sh writes the PNGs beside it in the package tree

@@ -1693,7 +1693,8 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     const double baseline = title_baseline(lane);
 
     // THE NOTE (MusicNote16th on the ink-box road — the BPM key's drawing
-    // too, a deliberate share, architect 2026-11-02, R14 (4)) IN ITS 12 W
+    // and the wav rows' too, a deliberate share, architect 2026-11-02,
+    // R14 (4); 2026-11-22, send II, icons.h's head) IN ITS 12 W
     // BOX (architect 2026-11-19, send Z): ITS INK'S LEFT EDGE
     // kTitleNoteInsetW inside the panel (architect 2026-11-19, send AA), its
     // ink centered on the bar's rows exactly.
@@ -8700,14 +8701,20 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // the view's left edge — a plain row's name, A GROUP HEADING'S NAME ON THE
 // ROWS' OWN PEN ("yes align"), and in a listing whose rows wear drawings
 // the drawing's canvas. A list row's drawing — Folder on a folder or
-// project row, ViewMediaTrack, the disc, on a wav row (SOURCE's
-// drawing, architect 2026-11-02, R14 (4) / R15 (Q4)) — is the set's whole
+// project row, MusicNote16th, THE NOTE, on a wav row (architect 2026-11-22,
+// send II: "render player actually plays target audio, not source. but it
+// should take the bpm note aka the logo"; the title bar's note and BPM's
+// drawing, shared three ways, icons.h's head) — is the set's whole
 // 16 W canvas (kListDrawingBoxW) at the pen across and CENTERED IN THE LIST
 // ROW down, (row − canvas) / 2 = +4 W in the 24 W row (kListDrawingYW,
 // derived from folder_overlay::kListRowW, never a second authored number;
 // architect 2026-11-21), in the TEXT TONE on every face (the drawing unchanged
-// under the highlight, as Thunar's), its name 3 W after the canvas
-// (kListDrawingGapW, Thunar's: the pen 12 + 16 + 3 = 31 W); the name
+// under the highlight, as Thunar's), its name 6 W after the canvas
+// (kListDrawingGapW, architect 2026-11-22, send II: "increase the distance
+// b/w icon and text in lists, eg player", "6 w"; the pen 12 + 16 + 6 =
+// 34 W, 68 device px on the tablet; the name's pen and its mask's left end
+// are this column's only readers — the press and the hover take the whole
+// row, folder_overlay::row_at); the name
 // Regular 12 W (GuiFace::Body) at the margin's pen itself in a listing
 // where no row wears a drawing (the settings page, the value lists, the
 // trim presets, the BPM form: "all lists that don't have the player's
@@ -8730,7 +8737,7 @@ static constexpr double kListDrawingYW =
     (folder_overlay::kListRowW - kListDrawingBoxW) / 2.0;
 static_assert(kListDrawingYW == static_cast<double>(static_cast<int>(kListDrawingYW)),
               "the list row's drawing centered in its row, a whole W down");
-static constexpr double kListDrawingGapW = 3.0;
+static constexpr double kListDrawingGapW = 6.0;
 
 // ONE LIST VIEW: the rows of `ov` in the band `band` under the scroll
 // offset `scroll`, clipped to the band (whole pixels: a row the band cuts is
@@ -8839,7 +8846,7 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                 row.kind == AppState::FolderOverlayRow::Kind::Wav) {
                 const icons::Icon glyph =
                     row.kind == AppState::FolderOverlayRow::Kind::Wav
-                        ? icons::Icon::ViewMediaTrack
+                        ? icons::Icon::MusicNote16th
                         : icons::Icon::Folder;
                 const icons::InkInBox fit =
                     icons::ink_in_box(glyph, drawing_box);
