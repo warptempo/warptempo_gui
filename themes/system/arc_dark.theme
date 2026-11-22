@@ -1,7 +1,7 @@
-# Arc Dark -- A SHIPPED SYSTEM THEME AND THE `default` THEME'S SOURCE since 2026-11-18 (architect, send
-# Y: "arc_dark and 75 will be my default", "let the remote session make that the default"; the
-# `default` row a copy of this file's, src/gui/theme_roles.h's THE LIST; the launcher icon's ground and
-# ink this file's SurfaceArea and ControlForeground, apk/build_apk.sh). Shipped since 2026-11-17,
+# Arc Dark -- THE ONE THEME since 2026-11-21 (architect, send GG: "i am committed"; the default since
+# 2026-11-18, send Y: "arc_dark and 75 will be my default"; src/gui/theme_roles.h's THE FILE; the
+# launcher icon's ground and ink this file's SurfaceArea and ControlForeground, apk/build_apk.sh).
+# Shipped since 2026-11-17,
 # session 140's arc (its look a scratch test of 2026-11-13, session 123, parked until then), WRITTEN BY
 # HAND from the arc-theme sources, not converted
 # from an .ask: THE ROLE VALUES ALONE, read from arc-theme's sass and xfwm4 assets (no file of arc-theme

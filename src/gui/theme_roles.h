@@ -1,135 +1,63 @@
 #pragma once
 
-#include "gui_theme.h"   // GuiTheme, GuiThemeTones, the reference row, the slug rule
+#include "gui_theme.h"   // GuiThemeTones
 
-#include <filesystem>
-#include <map>
-#include <optional>
+#include <expected>
 #include <string>
 #include <string_view>
-#include <vector>
 
-// THE THEMES' LIST, THE THEME FILE AND THE DERIVATION (architect 2026-11-05,
-// the theme arc; 2026-11-06, session 75: this file the derivation's one
-// owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
-// FORMAT, the files in the repository and the APK). A theme is one file of
-// LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — PLUS FIFTEEN ROLES OF OUR OWN (THE
-// FORMAT, below), and the derivation, this file's, turns each into a row of
-// GuiThemeTones at the launch's read.
+// THE THEME FILE AND THE DERIVATION (architect 2026-11-05, the theme arc;
+// 2026-11-06, session 75: this file the derivation's one owner; architect
+// 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED FORMAT; ONE THEME
+// since 2026-11-21, send GG: "i am committed" — Arc-Dark alone, the themes'
+// list and the `theme` key gone with every other theme). The theme is one
+// file of LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads,
+// under Live's own role names, never a derived tone — PLUS FIFTEEN ROLES OF
+// OUR OWN (THE FORMAT, below), and the derivation, this file's, turns it
+// into the row of GuiThemeTones at the launch's read.
 //
-// THE FORMAT (its one owner here). A theme file is `<slug>.theme`, ASCII
-// text (UTF-8 in a comment), a line ending `\n` — a `\r` before it is
-// stripped, so a file saved with CRLF reads the same — and the last line's
-// `\n` optional. A line is EMPTY, A COMMENT (its first byte `#`, the rest
-// anything), or A ROLE LINE `Name=HEX` exactly: no space anywhere, Name one
-// of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
-// flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
-// the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
-// AND OUR OWN FIFTEEN, WindowBackground, TitleForeground and
-// SidebarForeground, the three fills TooltipBackground, CardBackground and
-// CardStandingBackground, ScaleTrough (send AA's stage D2),
-// ScaleSliderBorder (send AA's stage D3), the two hover tones
-// ButtonHoverBackground and ScrollbarSliderHover (send CC) and the five of
-// the waveform's hover PlayheadLine, HoverLine, CueHover, CueDisabledHover
-// and CueDisabledLabelHover (send FF), kOwnThemeRoles:
-// no Live role names them),
-// HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
-// an 8-digit word's last byte its straight alpha — kept raw, the derivation
-// compositing it (the COMPOSITED block) or, for the three fills, CARRYING
-// IT TO THE PAINTER (the CARRIED block). Every role of the table exactly
-// once, in any order (the converter writes the table's). THE SLUG is the
-// file's stem through THE SLUG RULE (theme_slug_of_stem, gui_theme.h), and a
-// shipped file is named by its own slug (`default_dark_cool_medium.theme`,
-// `sb_dash_mod.theme`): the slugs are the ones the `theme` key spelled when
-// the app read Live's .ask files itself (2026-11-06 .. 11-11), so every
-// config line keeps working.
+// THE FORMAT (its one owner here). The theme file is ASCII text (UTF-8 in
+// a comment), a line ending `\n` — a `\r` before it is stripped, so a file
+// saved with CRLF reads the same — and the last line's `\n` optional. A
+// line is EMPTY, A COMMENT (its first byte `#`, the rest anything), or A
+// ROLE LINE `Name=HEX` exactly: no space anywhere, Name one of kThemeRoles
+// (theme_roles.cpp; Live's role names, the one nested role flattened to the
+// key `StandardVuMeter/Maximum` — Live's own meter clip box — AND OUR OWN
+// FIFTEEN, WindowBackground, TitleForeground and SidebarForeground, the
+// three fills TooltipBackground, CardBackground and CardStandingBackground,
+// ScaleTrough (send AA's stage D2), ScaleSliderBorder (send AA's stage D3),
+// the two hover tones ButtonHoverBackground and ScrollbarSliderHover (send
+// CC) and the five of the waveform's hover PlayheadLine, HoverLine,
+// CueHover, CueDisabledHover and CueDisabledLabelHover (send FF),
+// kOwnThemeRoles: no Live role names them), HEX 6 or 8 hex digits,
+// case-blind on read, an 8-digit word's last byte its straight alpha — kept
+// raw, the derivation compositing it (the COMPOSITED block) or, for the
+// three fills, CARRYING IT TO THE PAINTER (the CARRIED block). Every role of
+// the table exactly once, in any order.
 //
-// A FILE IS LEFT OUT, with one stderr line naming its path (its name, for a
-// bundled file) and the first error, its line number where it has one, for:
-// unreadable; a stem that spells no slug (no letter or digit); a malformed
-// line; a role name the table lacks; a role twice; a role missing.
+// THE FILE. The one shipped file is the repository's
+// `themes/system/arc_dark.theme` (kGuiDefaultThemeSourceSlug, gui_theme.h),
+// WRITTEN BY HAND from the arc-theme sources, no .ask behind it, its header
+// the record of every role (architect 2026-11-17, session 140), packed by
+// apk/build_apk.sh as the APK's `themes/system/` asset and read in place at
+// launch (GuiPlatform::bundled_theme_file). READ ONCE AT LAUNCH
+// (load_gui_theme, gui_main, after the config and before the palette's first
+// install).
 //
-// THE FILES. The SHIPPED files are the repository's `themes/system/` and
-// `themes/extra/`, packed by apk/build_apk.sh as the APK's `themes/system/`
-// and `themes/extra/` assets and read in place at launch
-// (GuiPlatform::bundled_theme_files) — each converted ONCE on the laptop
-// from Live's or the pack's `.ask` (Ableton's theme XML) by
-// tools/themes/ask_to_theme.py, never by hand but for the `_mod` files'
-// recorded edits, the two roles of 2026-11-17 (ScrollbarInnerTrack and
-// ClipBorder, each file's from its own .ask, its header line the record)
-// and our own six of 2026-11-19 (each file's own SurfaceArea and
-// ControlForeground copied, the ROLE-NAMED block's OUR OWN, and its own
-// SurfaceBackground and Alert for the three fills, the CARRIED block; and
-// our own one of send AA's stage D2, each file's own ScrollbarInnerTrack
-// copied, and of stage D3, its own ClipBorder, the
-// ROLE-NAMED block's OUR OWN; and our own two of send CC, 2026-11-20, each
-// file's own SurfaceBackground and ScrollbarInnerHandle copied, ARC'S HOVER
-// below; and our own five of send FF, 2026-11-21, written by a script
-// through the converter's own pair table and arithmetic — each file's own
-// RangeDefault white half way, its ScrollbarInnerHandle,
-// ViewCheckControlEnabledOn, BackgroundClip and TextDisabled,
-// THE WAVEFORM'S HOVER below; each header line the record; the converter
-// writes them the same way) —
-// AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
-// it, its header the record of every role (architect 2026-11-17, session
-// 140); NO .ASK FILE IS IN THE REPOSITORY OR THE APK, and the app reads
-// none. THE USER'S files are `themes/*.theme` FLAT beside the device
-// config (device_config_path()'s parent / "themes", the noise's
-// composition): each regular file directly there whose name ends `.theme`;
-// a subfolder, or any other file, is ignored silently; a MISSING OR
-// UNLISTABLE folder is the ordinary state and silent (empty on his tablet).
-// READ ONCE AT LAUNCH (load_gui_themes, gui_main, after the config and
-// before the palette's first install): a file dropped while the app runs
-// shows at the next launch, and the list is immutable for the process after
-// the load.
+// THE FILE IS THE PROGRAM'S OWN, so its fault is A BUILD DEFECT, the
+// validation doctrine's class (1) as icons::load_set's: the file missing or
+// unreadable in the APK (the platform's read), a malformed line, a role name
+// the table lacks, a role twice or a role missing (the parse, its line
+// number where it has one) makes the launch print one line and open no
+// window.
 //
-// THE LIST — the value list's order, under THREE GROUPS, the headings exact
-// (gui_theme.h's kGuiThemeGroup*):
-//   SYSTEM        `default` FIRST — ARC-DARK (architect 2026-11-18, send
-//                 Y: "let the remote session make that the default"): a
-//                 copy of `arc_dark`'s row under the slug `default`, the opening theme and the
-//                 fallback below — then BY SLUG every file of
-//                 `themes/system/` (Live's stock themes; `arc_dark`, the
-//                 default's source, so after `angst_robot`; `immaterial_mod`,
-//                 D5: alphabetical, so right after `immaterial`; and
-//                 `sb_gunmetal_mod`, a SYSTEM file since it was the
-//                 default's source, 2026-11-12, so after `riparian`) AND THE
-//                 COMPILED REFERENCE ROW as `default_dark_neutral_medium`
-//                 (kGuiReferenceThemeTones, gui_theme.h: Live's Default Dark
-//                 Neutral Medium, compiled, no file shipping it). Arc-Dark
-//                 is listed twice, as `default` and under its own slug.
-//   EXTRA         every file of `themes/extra/` by slug: the Sonic Bloom
-//                 pack as he curated it (2026-11-07) less Gunmetal, the five
-//                 `_mod` files his hand edits, each recorded in its header
-//                 comment — the pack alone.
-//   USER-DEFINED  his own files beside the config, by slug (then by file
-//                 name). A user file whose slug a shipped row bears
-//                 (`default`, `default_dark_neutral_medium` and every SYSTEM
-//                 and EXTRA slug) or an earlier user file bears is LEFT OUT
-//                 with its line (D9: the earlier group wins).
-// A heading shows only over rows (settings_editor.h's value_list_groups).
-//
-// A BUNDLED FILE IS THE PROGRAM'S OWN, so its fault is A BUILD DEFECT, the
-// validation doctrine's class (1) as icons::load_set's: a shipped file left
-// out by the rules above, a shipped file not named by its own slug, two
-// shipped files of one slug, a shipped file slugging to `default` or
-// `default_dark_neutral_medium`, or no `arc_dark` (the default's source,
-// kGuiDefaultThemeSourceSlug) among SYSTEM's files makes the load answer
-// the error, and gui_main prints one line and opens no window.
-//
-// A CONFIG NAMING A SLUG NO ROW BEARS (a user file removed) OPENS IN
-// `default` with one stderr line, the config's line untouched until he picks
-// another (gui_main; the reader judges the shape alone, device_config.h's
-// THE theme GRAMMAR).
-//
-// THE DERIVATION — our Default tone = Live's role, each Default number the
-// reference row's (Live's Default Dark Neutral Medium; palette_file.h's
-// static_asserts). A ROLE-NAMED role is read FLAT, its alpha byte dropped:
-// each is 6-digit in every shipped file (audited 2026-11-06, session 81). A
-// role found carrying alpha is COMPOSITED over the surface it paints on,
-// never stripped (architect 2026-11-06, session 81, his "ok to implement"):
-// the COMPOSITED block.
+// THE DERIVATION — our Default tone = Live's role, each Default number Live's
+// Default Dark Neutral Medium's (the record of the derivation's Live
+// origin; arc_dark's own number named beside it where the telling needs
+// it). A ROLE-NAMED role is read FLAT, its alpha byte dropped: each is
+// 6-digit in the shipped file. A role found carrying alpha is COMPOSITED
+// over the surface it paints on, never stripped (architect 2026-11-06,
+// session 81, his "ok to implement"): the COMPOSITED block.
 //
 //   ROLE-NAMED (one Live role each):
 //     ground                 242424 = SurfaceArea (ruling 2, 2026-11-05: the
@@ -262,11 +190,7 @@
 //   AND TWO MORE FOR ARC'S HOVER (architect 2026-11-18, send Y: "lets go arc
 //   truthful re: hoevers"; 2026-11-20, send CC: "If they're from Canonical,
 //   from Arc, I'll just accept them"; the hover's rule and its one owner
-//   AppState::FaceFades, app_state.h), each file but Arc's the word of the
-//   role the tone moves from, so NO HOVER SHOWS ON A LIVE THEME — and where
-//   the key's hover tone is the key face itself no face hovers at all, the
-//   linked groups' seams included (GuiInputHandler::walk_hover_face's theme
-//   term — architect 2026-11-20: agreed):
+//   AppState::FaceFades, app_state.h):
 //     key hover face         363636 = ButtonHoverBackground, read flat as the
 //                                     key face's role is (arc_dark 505666,
 //                                     Arc's button:hover, gtk3 CSS line 136,
@@ -285,9 +209,7 @@
 //                                     end's cap (render.h's trim_bar_tones;
 //                                     the walk
 //                                     GuiInputHandler::walk_trim_bar_hover);
-//                                     a Live theme's ScrollbarInnerHandle,
-//                                     where the theme's term shows no hover
-//                                     on the bar at all
+//                                     a Live theme's ScrollbarInnerHandle
 //   AND FIVE MORE FOR THE WAVEFORM'S HOVER AND THE PLAYHEAD'S STEM
 //   (architect 2026-11-21, send FF: "just make sure they're all colors
 //   from Arc, dark"; the brightness order on the waveform his — the
@@ -510,13 +432,11 @@
 //                                     8-bit compositing (the alpha as 7 / 255)
 //                                     may read one level under it on two
 //                                     channels, 454A57 (reasoned, not
-//                                     measured) — the formula taken. ONE
-//                                     CONDITION: a theme whose key hover face
-//                                     is its key face (every Live theme)
-//                                     hovers nothing (architect 2026-11-20),
-//                                     so there
-//                                     the view's own tone: no row hovers, as
-//                                     no key does
+//                                     measured) — the formula taken. (The
+//                                     arithmetic still asks whether the key
+//                                     hover face differs from the key face,
+//                                     derive(); on arc_dark it does, 505666
+//                                     against 444A58.)
 //     lit dim fill, text on lit dim
 //                            86623B, 2A221A = THE LIT-BUT-INERT PAIR ON ARC'S
 //                                     OWN NUMBERS (architect 2026-11-19, send
@@ -580,44 +500,17 @@
 // accepted, not a bug, no backstop (architect 2026-11-05; the trough
 // 2026-11-17: Live's transparent ScrollbarInnerTrack).
 //
-// THE SONIC BLOOM FILES' UNDEFINED ROLES: a pack file may carry a role it does
-// not use as 000000 (ScrollbarInnerHandle black on 12 SB files,
-// DetailViewRulerMarkings on 4; of the shipped files, ScrollbarInnerTrack an
-// opaque 000000 on SB Cielo, Dash, Elegance, Onyx, Rosequartz and Viridian,
-// ClipBorder on SB Dash, Elegance, Rosequartz and Viridian). NO RULE CORRECTS IT: he edits the individual
-// theme by hand, a `_mod` file of the shipped themes (architect 2026-11-07,
-// session 82: "i'd rather manually fix individual sb themes than make rules
-// around their missing colors").
-//
-// The derivation is total and leaves no file out. ITS ARITHMETIC IS
+// The derivation is total. ITS ARITHMETIC IS
 // PYTHON'S, BIT FOR BIT (the derivation was first written in Python, and the
 // proof of 2026-11-06 diffed every row on the tablet against its numbers):
 // doubles in its operation order, Python's round() as nearbyint under the
 // default rounding mode (half to even; theme_roles.cpp).
 
-// Build THE LIST (the head's groups and order), once per process, before
-// the palette's first install: `system_files` and `extra_files` the shipped
-// files, each a map from FILE NAME (`<slug>.theme`, no folder) to the file's
-// whole text — the APK's `themes/system/` and `themes/extra/` assets
-// (GuiPlatform::bundled_theme_files), or any host's reading of the
-// repository's folders — and `user_dir` the user's flat folder (an empty
-// path is the absent folder: no config home). THE ERROR ARM is the head's
-// build defect (a shipped file's fault), the message naming the file;
-// nothing is listed then. A user file's fault is its stderr line alone.
-std::optional<std::string> load_gui_themes(
-    const std::map<std::string, std::string>& system_files,
-    const std::map<std::string, std::string>& extra_files,
-    const std::filesystem::path& user_dir);
-
-// THE LIST in the value list's order, `default` first. Empty before the
-// load.
-const std::vector<GuiTheme>& gui_themes();
-
-// THE ROW WHOSE SLUG IS `slug`, or nullptr when no row bears it: the
-// settings editor's `theme` commit refuses such a slug (the value list
-// names only the list's own), the launch opens in `default` (the head).
-const GuiTheme* find_gui_theme(std::string_view slug);
-
-// The `default` row, Arc-Dark's copy (the list's first; the
-// load must have answered no error).
-const GuiTheme& default_gui_theme();
+// THE ONE THEME'S ROW off the shipped file's whole text (the head's THE
+// FILE; GuiPlatform::bundled_theme_file, or any host's reading of the
+// repository's `themes/system/arc_dark.theme`): the file parsed (THE
+// FORMAT) and derived (THE DERIVATION), at its own numbers — or THE ERROR
+// ARM, the head's build defect, the parse's first error with its line number
+// where it has one. Pure: no state is kept; gui_main installs the row
+// (install_palette, render.h).
+std::expected<GuiThemeTones, std::string> load_gui_theme(std::string_view text);

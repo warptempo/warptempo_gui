@@ -1,7 +1,6 @@
 #pragma once
 
 #include "failure.h"
-#include "gui_theme.h"      // is_theme_slug, kGuiDefaultThemeSlug: the `theme` key's grammar
 
 #include <charconv>
 #include <cstdint>
@@ -14,7 +13,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Twenty-one keys live here and nowhere else,
+// piece (architect 2026-08-27). Twenty keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -46,45 +45,6 @@
 //                            FIRST-RUN VALUES below). (The row's
 //                            toggle, 2026-10-08..10-21, persisted nothing:
 //                            the switch was true at every launch.)
-//   theme=<slug>             THE WINDOW'S THEME (architect 2026-11-05, the
-//                            theme arc: "i'd like to implement all" — Live
-//                            12's own themes selectable WHOLE, chrome and
-//                            well together; palette_file.h's head): the
-//                            SLUG of one row of the themes' list
-//                            (theme_roles.h, built at launch from theme
-//                            files since 2026-11-11: SYSTEM — `default`,
-//                            Arc-Dark's copy (architect 2026-11-18, send
-//                            Y), first, then Live's stock themes,
-//                            arc_dark, immaterial_mod, sb_gunmetal_mod
-//                            and the compiled default_dark_neutral_medium —
-//                            EXTRA, the APK's other Sonic Bloom files,
-//                            and USER-DEFINED, the `themes/*.theme` files
-//                            beside this file), exactly as
-//                            the slug rule spells it. THE READER JUDGES THE
-//                            SHAPE ALONE (is_theme_slug, gui_theme.h; THE
-//                            theme GRAMMAR below): any other word the
-//                            launch's hard fail (kThemeGrammarReason), and a
-//                            well-shaped slug no row bears LOADS — the window
-//                            opens in `default` with one stderr line and the
-//                            line stays as written until he picks another
-//                            (architect 2026-11-06, session 75: a file
-//                            removed; the noise's absent-folder shape).
-//                            REQUIRED, read at
-//                            launch to install the palette before the
-//                            window exists and applied LIVE at the settings
-//                            editor's commit from the settings page's value
-//                            list's tap — the list under one inert group row
-//                            per group, SYSTEM first — a palette
-//                            reinstall and a whole repaint, no card (the
-//                            apply shape, GuiInputHandler::apply_theme); the
-//                            first-run value the defaults file's. A config from
-//                            before the key stops the startup on the
-//                            missing line, as every joined key's did (no
-//                            migration; the sync script's setup adds the
-//                            line on the tablet).
-//                            (A `theme` key of another meaning — a chrome
-//                            theme file read at launch — stood
-//                            2026-10-03..10-08, THE COLOUR KEYS below.)
 //   waveform_grow=<px>       THE WAVEFORM PLATE'S GROW (architect
 //                            2026-10-31; the rule at render.h's
 //                            kWaveformSubcells, the plate shader's GROW,
@@ -488,7 +448,8 @@
 // `waveform_column_px` appended at the end and gone within
 // 2026-11-01, `waveform` gone 2026-11-01, `true_colors` after
 // `last_project` since; `theme` placed after `true_colors` 2026-11-05, the
-// display keys together — true_colors, theme, waveform_grow; the noise's
+// display keys together, and retired 2026-11-21, send GG (one look,
+// Arc-Dark); the noise's
 // attenuation `noise_attenuation_level` placed after `noise_level`
 // 2026-11-05 night, the noise's four — folder, level, attenuation,
 // crossfade; the lamps' hold `lamp_hold_ms` APPENDED after `osk_font_px`
@@ -628,13 +589,12 @@
 // catalog shipped as bundled files, copied in at every launch), absent the
 // chrome's own, with a Settings row; every chrome's colors are compiled in
 // since (theme_file.h), and the program's own colors were one compiled-in
-// palette (palette_file.h) until 2026-11-05. THE `theme` KEY IS BACK WITH
-// ANOTHER MEANING since 2026-11-05 (the head's list): the slug of one of
-// Live 12's own themes, chrome and well together (palette_file.h's head) —
-// a row of the list built at launch from the theme files (theme_roles.h,
-// since 2026-11-11); an old `theme=` line of that era's
-// shape (a name with capitals, a hyphen) is the ordinary bad-value hard
-// fail, a well-shaped one naming no row opening in default.
+// palette (palette_file.h) until 2026-11-05. A `theme` KEY OF A THIRD
+// MEANING stood 2026-11-05 to 2026-11-21 — the slug of a row of a themes'
+// list, Live 12's themes and Arc-Dark — RETIRED 2026-11-21, send GG ("i am
+// committed": one look, Arc-Dark, palette_file.h's head); an old `theme=`
+// line is the ordinary unknown-key hard fail, no migration (the sync
+// script's setup removing it on the tablet).
 // The sidecar schema keeps everything that is about the music
 // (settings_file.h, where the retired-key record lives).
 //
@@ -649,7 +609,7 @@
 // (architect 2026-11-08, session 95: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty-one lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -669,7 +629,7 @@
 // program-written — the first run stamps it from the defaults file and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the
-// twenty-one keys and each at most once, EVERY KEY REQUIRED (architect
+// twenty keys and each at most once, EVERY KEY REQUIRED (architect
 // 2026-10-12, deferred, his "yes" 2026-10-14: "if one of these lines is not
 // in place, it means something's wrong with the config or the setup" — the
 // writer emits every line and the defaults file spells every key, so an absent
@@ -702,7 +662,7 @@
 // SETTINGS PAGE's row (settings_editor.h) — its value list, or the line
 // editor holding the value alone (architect 2026-11-19, send AA) — for
 // `gui_scale`, `projects_repo`, `projects_path`,
-// `true_colors`, since 2026-11-05 `theme`, since 2026-10-31 `waveform_grow`,
+// `true_colors`, since 2026-10-31 `waveform_grow`,
 // since 2026-10-28 `noise`, since 2026-11-05 night
 // `noise_attenuation_level`, `noise_crossfade_s` and since 2026-10-29 the
 // tuning keys `key_height`, `osk_key_w` and `osk_key_h` and that night
@@ -748,9 +708,9 @@
 // The key is still REQUIRED in every case: the file admits no absent state,
 // only an empty VALUE.
 //
-// The members are in the writer's order. (No key names a color: `theme`
-// names a compiled theme by its slug, every color that theme's own row,
-// palette_file.h, architect 2026-11-05.)
+// The members are in the writer's order. (No key names a color: every
+// color is the one theme's, Arc-Dark's, palette_file.h, architect
+// 2026-11-21, send GG.)
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
@@ -759,12 +719,6 @@ struct DeviceConfig {
     // TRUE COLORS (2026-10-21, the head's list): required; `on` the
     // construction state.
     bool        true_colors = true;
-    // THE WINDOW'S THEME, a slug (2026-11-05, the head's list): required;
-    // `default` the construction state (kGuiDefaultThemeSlug, gui_theme.h:
-    // the opening theme's slug). The string is the writer's
-    // spelling, kept as read even when no row bears it (2026-11-06); the row
-    // is found at every read (find_gui_theme, theme_roles.h).
-    std::string theme = std::string(kGuiDefaultThemeSlug);
     // THE WAVEFORM PLATE'S GROW in quarters of a device px (2026-10-31, the
     // head's list; a permanent key): required; the construction state is
     // 1 px (kWaveformGrowDefaultQuarters below).
@@ -975,17 +929,6 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
     if (v == kTrueColorsOff) return false;
     return std::nullopt;
 }
-
-// THE theme GRAMMAR (2026-11-05; the shape alone since 2026-11-06) — a word
-// as the slug rule spells it, its one owner is_theme_slug (gui_theme.h),
-// read by the reader. A WELL-SHAPED SLUG NO ROW BEARS IS NOT THE GRAMMAR'S:
-// it loads and the window opens in default (architect 2026-11-06, session
-// 75; gui_main, theme_roles.h's head). The settings editor's commit asks the
-// list itself (find_gui_theme, theme_roles.h) and refuses a slug no row bears
-// with the same reason; the writer writes the slug verbatim and Tab
-// completes against the list's slugs (GuiSettingsEditor::value_choices). The
-// reason is spelled here beside the other keys'.
-inline constexpr const char* kThemeGrammarReason = "must name a theme";
 
 // A CANONICAL SIGNED INTEGER (2026-10-28, the noise's integers' shared
 // lexis — the crossfade's since the two levels went decimal 2026-11-05 — and
@@ -1466,7 +1409,8 @@ inline std::optional<int> parse_waveform_fade_px(std::string_view v) {
 // and the presets 2026-11-01; the `caption` key's, is_builtin_scheme_name,
 // left with the key 2026-10-21. The `theme_level` grammar and the program color grammar of the twelve keys
 // left with those keys 2026-10-04; the `theme` key's own grammar left with
-// the key 2026-10-08.)
+// the key 2026-10-08, and the slug grammar of its third meaning
+// (`is_theme_slug`) with that key 2026-11-21, send GG.)
 
 // HOW A PATH UNDER THE PROJECTS PATH IS NAMED IN A SENTENCE — the basename
 // rule's composer for everything the project model and the loaders say
@@ -1616,10 +1560,9 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — eighteen keys,
+// which serves its ONE device-key body — seventeen keys,
 // `projects_repo=`, `projects_path=`, since 2026-10-21
-// `true_colors=`, since 2026-11-05 `theme=` (its live act
-// GuiInputHandler::apply_theme), since 2026-10-31 `waveform_grow=` (its live act
+// `true_colors=`, since 2026-10-31 `waveform_grow=` (its live act
 // GuiInputHandler::apply_waveform_grow), since 2026-10-28 `noise=` (its
 // GuiNoise::change_folder), since 2026-11-05 night `noise_attenuation_level=`
 // (its GuiNoise::set_attenuation_db) and `noise_crossfade_s=`, and since 2026-10-29 the tuning

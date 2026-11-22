@@ -7702,22 +7702,8 @@ void GuiInputHandler::retarget_seams_beside(
     }
 }
 
-namespace {
-// THE THEME'S TERM, the faces' walk's and the trim bar's alike: the installed
-// theme HAS a hover face — its ButtonHoverBackground another tone than its
-// key face; on every Live theme the two are one word (theme_roles.h's OUR
-// OWN, ARC'S HOVER), and its ScrollbarSliderHover is the pill's own word too.
-bool installed_theme_hovers() {
-    const GuiThemeTones& tones = installed_theme().tones;
-    return tones.key_hover_face != tones.key_face;
-}
-} // namespace
-
-// THE WALK (the declaration): none unless the theme's term holds — on a
-// Live theme no face hovers, the seams included, so no hover fades or is
-// damaged there (architect 2026-11-20: agreed; a press, a lit edge
-// and a greying fade on every theme, AppState::FaceFades) — and the
-// pointer's gate admits one; else the live face under the pen.
+// THE WALK (the declaration): none unless the pointer's gate admits one;
+// else the live face under the pen.
 // THE LANES' ONE HIT IS ASKED HERE, ONCE (architect 2026-11-21, send FF:
 // plain_lane_press_at), wherever the pen hovers unlatched with the barrel
 // up and the main page takes a press at it — the terms both of its readers
@@ -7731,19 +7717,13 @@ void GuiInputHandler::walk_hover_face() {
                 main_page_takes_press_at_pointer()
             ? plain_lane_press_at(app.last_mouse_place())
             : PlainLanePress{};
-    set_hover_face(installed_theme_hovers() && hover_admitted()
-                       ? hover_face_under_pointer(lane)
-                       : AppState::FaceFades::Face{});
+    set_hover_face(hover_admitted() ? hover_face_under_pointer(lane)
+                                    : AppState::FaceFades::Face{});
     // THE TRIM BAR'S WALK RIDES THIS ONE (AppState::TrimBarHover), so it has
-    // this walk's every caller, and it reads the same theme term: on a Live
-    // theme the bar shows no hover and no hover caps either (its held
-    // states' caps are the press's, not the hover's, and show on every
-    // theme).
+    // this walk's every caller.
     walk_trim_bar_hover();
     // AND THE WAVEFORM'S HOVER LINE'S (AppState::HoverLine), so it has this
-    // walk's every caller too — on NO theme term: every theme file carries a
-    // visible HoverLine, and the line is no face (architect 2026-11-21,
-    // send FF), on the lanes' one hit above.
+    // walk's every caller too, on the lanes' one hit above.
     walk_hover_line_on(lane);
 }
 
@@ -7766,19 +7746,18 @@ bool GuiInputHandler::trim_bar_takes_grab() const {
 
 // THE FROZEN ANSWER'S TERMS (the declaration): the pointer's half of the
 // gate less the latch — the pen in the plane, no contact down — the main
-// page taking a press at the pointer, the theme's term and the bar's own.
+// page taking a press at the pointer and the bar's own.
 bool GuiInputHandler::trim_bar_frozen_part_kept() const {
     return app.pointer_in_window && !app.redesign_tooltip.button_held &&
            trim_bar_part_terms_hold();
 }
 
 // THE TERMS A STANDING PART KEEPS WITHOUT RE-READING THE PEN'S PLACE (the
-// declaration): the main page taking a press at the place, the theme's term
-// and the bar's own — what the frozen answer and the leave's held clear
-// both re-ask, each adding its own pointer terms.
+// declaration): the main page taking a press at the place and the bar's
+// own — what the frozen answer and the leave's held clear both re-ask, each
+// adding its own pointer terms.
 bool GuiInputHandler::trim_bar_part_terms_hold() const {
-    return main_page_takes_press_at_pointer() && installed_theme_hovers() &&
-           trim_bar_takes_grab();
+    return main_page_takes_press_at_pointer() && trim_bar_takes_grab();
 }
 
 // THE LEAVE'S STAMP (the declaration; AppState::TrimBarHover's `leave_ms`,
@@ -7817,8 +7796,8 @@ void GuiInputHandler::set_trim_bar_hover(TrimBarPart part) {
 }
 
 // THE WALK (the declaration). UNLATCHED, the part under the pen where the
-// main page's gate (hover_admitted_on_main_page), the theme's term and the
-// bar's own (trim_bar_takes_grab) admit one, else none. WHILE THE PEN LATCH
+// main page's gate (hover_admitted_on_main_page) and the bar's own
+// (trim_bar_takes_grab) admit one, else none. WHILE THE PEN LATCH
 // HOLDS, THE ANSWER IS FROZEN: the part standing — none from the latch's
 // arm (arm_pen_hot_latch) and, after a grab's lift, the held part the trim
 // painter's next publishing pass resolves the pending answer to where the
@@ -7848,9 +7827,7 @@ void GuiInputHandler::walk_trim_bar_hover() {
             set_trim_bar_hover(TrimBarPart::None);
         return;
     }
-    set_trim_bar_hover(hover_admitted_on_main_page() &&
-                               installed_theme_hovers() &&
-                               trim_bar_takes_grab()
+    set_trim_bar_hover(hover_admitted_on_main_page() && trim_bar_takes_grab()
                            ? trim_bar_part_under_pointer()
                            : TrimBarPart::None);
 }
@@ -7863,8 +7840,8 @@ void GuiInputHandler::walk_trim_bar_hover() {
 // place goes the tick after the frame that first paints the card (its hit
 // reads the rects that frame publishes, notification_card_at). AND
 // A LIFT'S PENDING ANSWER (AppState::TrimBarHover's `lift_pending`) whose
-// frozen terms no longer hold (trim_bar_frozen_part_kept: the theme, a
-// contact, the pointer out besides the above) goes here too, ahead of the
+// frozen terms no longer hold (trim_bar_frozen_part_kept: a contact, the
+// pointer out besides the above) goes here too, ahead of the
 // frame whose publishing pass would otherwise resolve it.
 void GuiInputHandler::settle_trim_bar_hover() {
     const AppState::TrimBarHover& h = app.trim_bar_hover;
@@ -7897,7 +7874,7 @@ void GuiInputHandler::settle_trim_bar_hover() {
 //     apply_touch_nav_update, the sweeps' fork yielding to the barrel), the
 //     line where the zoom would anchor: Anchor; everywhere else — the ruler,
 //     the marker lane — the barrel hides it as it hides every hover.
-// NO THEME TERM, NO FADE, NO CLOCK: the answer is handed to the one setter.
+// NO FADE, NO CLOCK: the answer is handed to the one setter.
 // THE PLAIN PRESS'S PLACE IS THE LANES' ONE HIT (`lane`, plain_lane_press_at:
 // Places), asked by walk_hover_face for this walk and the marker's face
 // together, or by walk_hover_line below for this walk alone (the settle's).

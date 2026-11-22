@@ -1730,8 +1730,6 @@ struct FlagFace {
 // MIXED (show_cue_label: the bar is part of the text); the `h` view's items
 // take the pair of their row's fill and their segments' inertness, a
 // removed item the disabled pair, an added or changed one the enabled pair.
-// On a Live theme each hover tone is its rest's own, so nothing hovers there
-// (theme_roles.h's own roles; the walk asks the faces' theme term first).
 FlagFace resolve_flag_face(GuiFlagSide side, bool disabled, bool strike,
                            bool selected) {
     const GuiPalette& p = palette();
@@ -3069,11 +3067,9 @@ namespace {
     // before the window exists (the gui_scale shape).
     GuiPalette        g_palette{};
     uint64_t          g_palette_generation = 0;
-    // The installed theme's row, a copy (installed_theme, render.h): the
-    // compiled reference row until the first install.
-    GuiTheme          g_theme{std::string(kGuiReferenceThemeSlug),
-                              std::string(kGuiThemeGroupSystem),
-                              kGuiReferenceThemeTones};
+    // The installed theme's row, a copy (installed_theme, render.h): every
+    // word 0 until the first install, never read before it.
+    GuiThemeTones     g_tones{};
 } // namespace
 
 const GuiPalette& palette() { return g_palette; }
@@ -3088,26 +3084,26 @@ GuiColor surface_text(GuiSurface surface) {
     return pal.label;
 }
 uint64_t palette_generation() { return g_palette_generation; }
-const GuiTheme& installed_theme() { return g_theme; }
+const GuiThemeTones& installed_theme() { return g_tones; }
 WaveformPlateInks waveform_plate_inks() {
     // The window's words (the struct's declaration, render.h), the installed
     // theme's two tones.
-    const GuiThemeTones& t = installed_theme().tones;
+    const GuiThemeTones& t = installed_theme();
     return WaveformPlateInks{display_transform::display_rgb(t.waveform_ink),
                              display_transform::display_rgb(t.waveform_core)};
 }
 
-void install_palette(const GuiTheme& theme) {
-    // The contract and the apply shape the live caller owes are at the
-    // declaration (render.h). THE ROW COPIED FIRST, as it is, for the word
+void install_palette(const GuiThemeTones& tones) {
+    // The contract is at the declaration (render.h). THE ROW COPIED FIRST,
+    // as it is, for the word
     // readers (installed_theme); then THE
     // PROGRAM'S FIFTEEN off the palette's role table (palette_file.h), THE
     // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.
-    g_theme = theme;
-    const GuiThemeTones& t = g_theme.tones;
+    g_tones = tones;
+    const GuiThemeTones& t = g_tones;
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
         g_palette.*(r.member) = hex(t.*(r.tone));
     for (const GuiThemeRole& r : kGuiThemeRoles)

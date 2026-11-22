@@ -153,8 +153,8 @@ no path data changed.
 
 THE LAUNCHER ICON is `AppIcon.svg`, a regular file and no enumerator's: breeze-icons' sixteenth note (architect
 2026-11-01, M7, the launcher's picture since), the launcher's drawing alone — the app paints Papirus's
-`MusicNote16th.svg`, never this file. `apk/build_apk.sh` renders it at every build in the `default` theme's text tone
-over its flat ground — Arc-Dark since 2026-11-18, D3DAE3 over 2F343F, read from the default's source file
+`MusicNote16th.svg`, never this file. `apk/build_apk.sh` renders it at every build in the theme's text tone over
+its flat ground — Arc-Dark's, the one theme, D3DAE3 over 2F343F, read from the one theme file
 `themes/system/arc_dark.theme` (its slug read out of `kGuiDefaultThemeSourceSlug`, `src/gui/gui_theme.h`)
 (`apk/res/mipmap-anydpi-v26/ic_launcher.xml`). It is breeze-icons 6.31.0's (KDE Frameworks,
 https://invent.kde.org/frameworks/breeze-icons) as Arch Linux installs it under `/usr/share/icons/breeze-dark/`, by

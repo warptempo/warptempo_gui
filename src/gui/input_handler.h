@@ -1526,9 +1526,7 @@ struct GuiInputHandler {
     bool main_page_takes_press_at_pointer() const;
     // THE TRIM BAR'S HOVER (AppState::TrimBarHover, the rule; the look at
     // render.h's trim_bar_tones; architect 2026-11-20). THE WALK —
-    // under the theme's term (the faces' own, walk_hover_face: a theme whose
-    // keys show no hover shows none on the bar either, the held states'
-    // caps unchanged) and trim_bar_takes_grab, the part under the pen under
+    // under trim_bar_takes_grab, the part under the pen under
     // hover_admitted_on_main_page; WHILE THE PEN LATCH HOLDS, the part
     // already standing (none from the latch's arm, or the lifted part the
     // trim painter's publishing pass resolved a grab's pending answer to,
@@ -1545,7 +1543,7 @@ struct GuiInputHandler {
     // (pointer_barrel_held_: a barrel press on the bar is the bound-set
     // click, another act than the grab the hover promises). The frozen
     // answer's terms: the pen in the plane with no contact, the main page
-    // taking a press there, the theme's term and the bar's own — the
+    // taking a press there and the bar's own — the
     // pointer's half less the latch. The part under the pointer by the
     // press's own two hits (hit_test_trim_endcap, point_in_trim_bridge_span).
     // THE LEAVE'S HELD CLEAR (AppState::TrimBarHover's `leave_ms`, the rule;
@@ -1554,7 +1552,7 @@ struct GuiInputHandler {
     // and the walk keeps it for kTrimBarLeaveHoldMs while the pointer stays
     // out, no contact is down and trim_bar_part_terms_hold — the terms a
     // standing part keeps without re-reading the pen's place (the main
-    // page taking a press there, the theme's term, the bar's own), which the
+    // page taking a press there, the bar's own), which the
     // frozen answer re-asks too.
     void walk_trim_bar_hover();
     void settle_trim_bar_hover();
@@ -1602,16 +1600,14 @@ struct GuiInputHandler {
     void walk_hover_line_on(const PlainLanePress& lane);
     void set_hover_line(AppState::HoverLine::Place place);
     PlainLanePress plain_lane_press_at(const GuiPointerPlace& at) const;
-    // THE WALK: the face the pen is on now, under both halves of the gate
-    // and the theme's term (a theme whose hover face is its key face hovers
-    // nothing, seams included: architect 2026-11-20: agreed),
+    // THE WALK: the face the pen is on now, under both halves of the gate,
     // handed to the one setter. Run on every pointer
     // motion (on_motion's head, above every branch: a held button answers
     // none), on every tick (the stashes move with no pointer event), at the
     // pen latch's arm and at every pointer leave (main.cpp's hook: none, so
-    // the face fades out). The trim bar's walk rides it, after the faces',
-    // on the same theme term (walk_trim_bar_hover), and the waveform's hover
-    // line's after that, on no theme term (walk_hover_line_on), THE LANES'
+    // the face fades out). The trim bar's walk rides it, after the faces'
+    // (walk_trim_bar_hover), and the waveform's hover line's after that
+    // (walk_hover_line_on), THE LANES'
     // ONE HIT (plain_lane_press_at) asked once here for the line and for
     // the marker's face alike.
     void walk_hover_face();
@@ -3466,7 +3462,7 @@ private:
     //     chip and a dimmer label), on the keys' 200 ms both ways, the
     //     walk's one hit for it and for the hover line
     //     (plain_lane_press_at). The main page's gate
-    //     (hover_admitted_on_main_page) and the faces' theme term; no marker
+    //     (hover_admitted_on_main_page); no marker
     //     hovers under the barrel, and after a lift on one this latch holds
     //     as for a key. THE PLAYHEAD'S TRIANGLE IS NO FACE (architect
     //     2026-11-21, send GG: "very hard to see ... very hard to stably
@@ -3477,7 +3473,7 @@ private:
     //   walk_hover_face; AppState::TrimBarHover; architect 2026-11-20), on
     //   the main page's form of the same gate
     //   (hover_admitted_on_main_page) plus the bar's own terms (its stash,
-    //   not the `h` view, not the barrel) and the faces' theme term, AT
+    //   not the `h` view, not the barrel), AT
     //   ONCE, WITH NO FADE (Arc's scrollbar slider has no transition): the
     //   part under the pen — an end's grab zone or the body between them —
     //   and both caps change (render.h's trim_bar_tones: the hovered body
@@ -3498,8 +3494,8 @@ private:
     //   lift, and the walk keeps that answer, pending or resolved, never
     //   re-reading the pen's place, while
     //   trim_bar_frozen_part_kept holds (the pen in the plane with no
-    //   contact, no veil or card there, audio and no live drag, the theme
-    //   and the bar's own terms), until the pen rearms or leaves; so the
+    //   contact, no veil or card there, audio and no live drag, and the
+    //   bar's own terms), until the pen rearms or leaves; so the
     //   caps do not blink at the lift.
     //   THE WAVEFORM'S HOVER LINE shows too, NOT A FACE EITHER (architect
     //   2026-11-21, send FF: "the waveform itself could ... show where the
@@ -3518,8 +3514,8 @@ private:
     //   WITH NO FADE, under the pointer's half of the gate LESS THE BARREL
     //   (pen_hovers_unlatched: this latch holds it like every hover, NO
     //   FROZEN ANSWER — "it should wait to prevent every lift turning into a
-    //   hover blip"), the main page taking a press there, the zoom's seat
-    //   not standing, and NO THEME TERM; THE BARREL'S ONE EXCEPTION
+    //   hover blip"), the main page taking a press there and the zoom's
+    //   seat not standing; THE BARREL'S ONE EXCEPTION
     //   (pointer_barrel_held_): with it held the line shows over the
     //   waveform alone, where the zoom would anchor, with no triangle (his
     //   word, send GG: "no triangle hover while barrel is held").
@@ -4350,25 +4346,6 @@ private:
     // menu's "True Colors" command row, its toggle 2026-10-08..10-21, retired
     // with the popup.)
     void apply_true_colors(bool on);
-
-    // THE THEME'S ONE LIVE ACT (architect 2026-11-05, the theme arc;
-    // palette_file.h's head): the settings editor's `theme=` commit and its
-    // value list's tap (one body, apply_device_setting) reinstall the whole
-    // palette off the named row, at its own numbers, through
-    // install_palette, and run the apply
-    // shape its declaration owes (render.h) — install_true_colors' own, for
-    // the same two caches: the icon rasters dropped (a key glyph's raster
-    // keys on its sRGB tone, which the theme moves), the plate kicked when
-    // its two inks moved — the waveform_plate_inks pair read before and after
-    // — and the flag cache refreshed otherwise, the whole window invalidated.
-    // THE SHADER NEEDS NOTHING (confirmed 2026-11-05 at gl_canvas.cpp's
-    // kListFragmentShader: every color is the draw list's own word, word_rgb
-    // of v_words.x / .y, no color uniform; the plate's inks ride the worker's
-    // job and its fingerprint, waveform_cache.cpp). It cards nothing: the
-    // screen is the answer. The commit gates the no-op and writes the device
-    // config; the launch installs the config's theme before the window exists
-    // (main.cpp), with nothing cached to rebuild.
-    void apply_theme(const GuiTheme& theme);
 
     // The read-only bit's one setter (2026-09-04, after two roads had
     // drifted apart on damage). One road writes the bit in-app: bare `o` on

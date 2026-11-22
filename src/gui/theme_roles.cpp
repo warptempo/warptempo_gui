@@ -5,27 +5,22 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <expected>
-#include <fstream>
 #include <iterator>
-#include <sstream>
 #include <string>
-#include <system_error>
 #include <utility>
 
-// The format, the groups, the order, the left-out files and THE DERIVATION
-// are at the declaration's head (theme_roles.h), the one owner; this file
-// is their code.
+// The format, the file's build defect and THE DERIVATION are at the
+// declaration's head (theme_roles.h), the one owner; this file is their
+// code.
 
 namespace {
 
 // THE ROLE TABLE: the roles a theme file holds, each exactly once — EXACTLY
 // THE ROLES A TONE READS (the head's DERIVATION), Live's names, the one
 // nested role flattened to `StandardVuMeter/Maximum` (the head's THE
-// FORMAT), and last OUR OWN FIFTEEN (kOwnThemeRoles below). The converter
-// (tools/themes/ask_to_theme.py) reads the names out of this initializer,
-// so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
+// FORMAT), and last OUR OWN FIFTEEN (kOwnThemeRoles below), the one
+// enumeration. Each was present in every stock and Sonic Bloom file
 // when it joined (StandbySelectionForeground 2026-11-06;
 // TakeLaneTrackNotHighlighted, ViewCheckControlDisabledOff,
 // ScrollbarInnerHandle and DetailViewRulerMarkings, the grid, the disabled
@@ -68,8 +63,6 @@ constexpr std::string_view kThemeRoles[] = {
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
 
-constexpr std::string_view kThemeSuffix = ".theme";
-
 constexpr std::size_t role_index(std::string_view name) {
     for (std::size_t i = 0; i < kThemeRoleCount; ++i)
         if (kThemeRoles[i] == name) return i;
@@ -94,11 +87,11 @@ constexpr std::size_t role_index(std::string_view name) {
 // flat, 0.5) per channel, rounded half to even, the derivation's mix (the
 // playhead's line as the derivation drew it on every theme until send FF,
 // architect 2026-11-12, session 113: the mean of Live's fade between white
-// and the head) — so a Live theme's file carries that tone as its word. The
-// one enumeration of the pairs: the converter
-// (tools/themes/ask_to_theme.py) reads this initializer too, writing each
-// own role as its source role's word, or that word white half way (an .ask
-// holds none of them).
+// and the head) — so a Live theme's file carried that tone as its word. A
+// RECORD SINCE 2026-11-21, send GG: arc_dark's file, the one shipped,
+// carries Arc's own word for each, and the converter that wrote the Live
+// files' copies went with them; the table is checked against the role table
+// (own_roles_in_table) and read by nothing else.
 enum class OwnRoleRead {
     Copy,           // the source role's word itself
     WhiteHalfWay,   // white half way to the source's word read flat
@@ -370,8 +363,7 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.key_face            = packed(face);
     // A KEY'S FACE UNDER THE HOVERING PEN (send CC, 2026-11-20; the head's
     // OUR OWN, ARC'S HOVER): our own ButtonHoverBackground, read flat as the
-    // key face's own role is (arc_dark 505666, Arc's button:hover; a Live
-    // theme's SurfaceBackground, the key face itself: no hover shows there).
+    // key face's own role is (arc_dark 505666, Arc's button:hover).
     t.key_hover_face      = packed(opaque(roles["ButtonHoverBackground"]));
     // THE LIST ROW'S HOVER (architect 2026-11-21; the head's
     // DERIVED block): ARC'S OWN, `row.activatable:hover`'s rgba(255, 255,
@@ -381,12 +373,10 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     // prefer to go more truthful. It just needs to be very subtle."):
     // arc_dark 404552 -> 464B57. The desktop's 8-bit compositing (cairo /
     // pixman, the alpha 0.03 as 7 / 255) may read one level under it on two
-    // channels (454A57, reasoned, not measured) — the formula taken. THE ONE
-    // CONDITION: a theme whose hover face is its key face (every Live theme)
-    // hovers nothing (architect 2026-11-20), so its row's hover tone is the
-    // view's own — no hover shows, as no key's does; the walk never hovers a
-    // row there either (installed_theme_hovers, input_pointer.cpp, the same
-    // compare).
+    // channels (454A57, reasoned, not measured) — the formula taken. The
+    // compare below is the arithmetic as it stood, kept until the
+    // derivation retires: on arc_dark the hover face (505666) is not the key
+    // face (444A58), so the 3 % white is taken.
     const Rgb hover_face = opaque(roles["ButtonHoverBackground"]);
     const bool theme_hovers = hover_face.r != face.r ||
                               hover_face.g != face.g ||
@@ -451,188 +441,12 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     return t;
 }
 
-// -- THE LIST ----------------------------------------------------------
-
-std::vector<GuiTheme>& themes_storage() {
-    static std::vector<GuiTheme> list;
-    return list;
-}
-
-// The one stderr line a left-out user file prints (the head).
-void say_left_out(const std::filesystem::path& path, const std::string& why) {
-    std::fprintf(stderr, "warptempo_gui: Theme '%s' left out: %s\n",
-                 path.string().c_str(), why.c_str());
-}
-
-// The slug a file name ending `.theme` spells (empty when it spells none).
-std::string slug_of_file_name(std::string_view name) {
-    return theme_slug_of_stem(name.substr(0, name.size() - kThemeSuffix.size()));
-}
-
-struct ThemeFile {
-    std::string slug;
-    std::string name;   // the file name (a bundled file) or its path (a user's)
-    GuiThemeTones tones;
-};
-
-// One shipped group: every file parsed and checked (the head's build
-// defect), by slug — or the first defect's message.
-std::expected<std::vector<ThemeFile>, std::string> read_bundled_group(
-        std::string_view folder,
-        const std::map<std::string, std::string>& files) {
-    std::vector<ThemeFile> out;
-    for (const auto& [name, text] : files) {
-        const std::string where =
-            "themes: the shipped " + std::string(folder) + "/" + name;
-        if (!name.ends_with(kThemeSuffix))
-            return std::unexpected(where + ": not a .theme file");
-        const std::string slug = slug_of_file_name(name);
-        if (slug.empty())
-            return std::unexpected(where + ": its name spells no slug");
-        if (name != slug + std::string(kThemeSuffix))
-            return std::unexpected(where + ": not named by its slug '" + slug +
-                                   "'");
-        if (slug == kGuiDefaultThemeSlug || slug == kGuiReferenceThemeSlug)
-            return std::unexpected(where + ": its slug '" + slug +
-                                   "' is the list's own");
-        std::expected<ThemeRoles, std::string> roles = parse_theme_file(text);
-        if (!roles) return std::unexpected(where + ": " + roles.error());
-        out.push_back(ThemeFile{slug, name, derive(*roles)});
-    }
-    std::sort(out.begin(), out.end(),
-              [](const ThemeFile& a, const ThemeFile& b) {
-                  return a.slug < b.slug;
-              });
-    return out;
-}
-
-// The user's flat folder: each regular `*.theme` directly in it, by slug
-// (then by file name), each read and parsed; a file left out with its line,
-// a slug in `taken` too (and then taken). A missing or unlistable folder
-// holds none, silently.
-std::vector<ThemeFile> read_user_folder(const std::filesystem::path& dir,
-                                        std::vector<std::string>& taken) {
-    std::vector<ThemeFile> out;
-    if (dir.empty()) return out;
-    std::error_code ec;
-    if (!std::filesystem::is_directory(dir, ec)) return out;
-    std::filesystem::directory_iterator it(dir, ec);
-    if (ec) return out;
-    std::vector<std::pair<std::string, std::filesystem::path>> files;
-    for (const std::filesystem::directory_entry& e : it) {
-        std::error_code fec;
-        if (!e.is_regular_file(fec)) continue;
-        const std::string name = e.path().filename().string();
-        if (name.size() <= kThemeSuffix.size() || !name.ends_with(kThemeSuffix))
-            continue;
-        files.emplace_back(slug_of_file_name(name), e.path());
-    }
-    std::sort(files.begin(), files.end(),
-              [](const auto& a, const auto& b) {
-                  if (a.first != b.first) return a.first < b.first;
-                  return a.second.filename().string() <
-                         b.second.filename().string();
-              });
-    for (auto& [slug, path] : files) {
-        if (slug.empty()) {
-            say_left_out(path, "its name spells no slug");
-            continue;
-        }
-        if (std::find(taken.begin(), taken.end(), slug) != taken.end()) {
-            say_left_out(path, "its slug '" + slug + "' is taken");
-            continue;
-        }
-        std::ifstream in(path, std::ios::binary);
-        std::ostringstream buf;
-        if (in) buf << in.rdbuf();
-        if (!in || in.bad()) {
-            say_left_out(path, "the file could not be read");
-            continue;
-        }
-        std::expected<ThemeRoles, std::string> roles =
-            parse_theme_file(buf.str());
-        if (!roles) {
-            say_left_out(path, roles.error());
-            continue;
-        }
-        taken.push_back(slug);
-        out.push_back(ThemeFile{std::move(slug), path.string(), derive(*roles)});
-    }
-    return out;
-}
-
 } // namespace
 
-std::optional<std::string> load_gui_themes(
-        const std::map<std::string, std::string>& system_files,
-        const std::map<std::string, std::string>& extra_files,
-        const std::filesystem::path& user_dir) {
-    // The groups, the order and the left-out files are the head's
-    // (theme_roles.h). Once per process (architect 2026-11-06, session 75):
-    // the list is immutable after this returns, so a pointer into it stays
-    // good (install_palette copies its row all the same, render.h).
-    static bool loaded = false;
-    assert(!loaded && "the themes are read once, at launch");
-    loaded = true;
-
-    auto system = read_bundled_group("system", system_files);
-    if (!system) return system.error();
-    auto extra = read_bundled_group("extra", extra_files);
-    if (!extra) return extra.error();
-
-    // THE SHIPPED SLUGS, each once: the list's own two, then both groups.
-    std::vector<std::string> taken{std::string(kGuiDefaultThemeSlug),
-                                   std::string(kGuiReferenceThemeSlug)};
-    for (const std::vector<ThemeFile>* group : {&*system, &*extra}) {
-        for (const ThemeFile& f : *group) {
-            if (std::find(taken.begin(), taken.end(), f.slug) != taken.end())
-                return "themes: two shipped files of the slug '" + f.slug + "'";
-            taken.push_back(f.slug);
-        }
-    }
-    const auto source = std::find_if(
-        system->begin(), system->end(), [](const ThemeFile& f) {
-            return f.slug == kGuiDefaultThemeSourceSlug;
-        });
-    if (source == system->end())
-        return "themes: no shipped system/" +
-               std::string(kGuiDefaultThemeSourceSlug) + ".theme";
-
-    std::vector<ThemeFile> user = read_user_folder(user_dir, taken);
-
-    // SYSTEM: `default` first, then by slug the files and the reference row.
-    std::vector<GuiTheme> list;
-    list.push_back(GuiTheme{std::string(kGuiDefaultThemeSlug),
-                            std::string(kGuiThemeGroupSystem), source->tones});
-    std::vector<GuiTheme> system_rows;
-    for (const ThemeFile& f : *system)
-        system_rows.push_back(
-            GuiTheme{f.slug, std::string(kGuiThemeGroupSystem), f.tones});
-    system_rows.push_back(GuiTheme{std::string(kGuiReferenceThemeSlug),
-                                   std::string(kGuiThemeGroupSystem),
-                                   kGuiReferenceThemeTones});
-    std::sort(system_rows.begin(), system_rows.end(),
-              [](const GuiTheme& a, const GuiTheme& b) {
-                  return a.slug < b.slug;
-              });
-    for (GuiTheme& t : system_rows) list.push_back(std::move(t));
-    for (const ThemeFile& f : *extra)
-        list.push_back(GuiTheme{f.slug, std::string(kGuiThemeGroupExtra), f.tones});
-    for (const ThemeFile& f : user)
-        list.push_back(GuiTheme{f.slug, std::string(kGuiThemeGroupUser), f.tones});
-    themes_storage() = std::move(list);
-    return std::nullopt;
-}
-
-const std::vector<GuiTheme>& gui_themes() { return themes_storage(); }
-
-const GuiTheme* find_gui_theme(std::string_view slug) {
-    for (const GuiTheme& t : themes_storage())
-        if (t.slug == slug) return &t;
-    return nullptr;
-}
-
-const GuiTheme& default_gui_theme() {
-    assert(!themes_storage().empty() && "the themes are loaded at launch");
-    return themes_storage().front();
+std::expected<GuiThemeTones, std::string> load_gui_theme(std::string_view text) {
+    // The file's build defect and the derivation are the head's
+    // (theme_roles.h); the caller names the file in its message.
+    std::expected<ThemeRoles, std::string> roles = parse_theme_file(text);
+    if (!roles) return std::unexpected(roles.error());
+    return derive(*roles);
 }

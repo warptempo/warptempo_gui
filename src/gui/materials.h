@@ -15,12 +15,12 @@
 // flat"; Live's grammar, every number measured on his Live 12 shots at
 // 100 %). This header is the one owner of the ground's, the key's, the lit
 // face's, the text tones', the well's tones' and the pane's RULES; THEIR
-// NUMBERS ARE THE INSTALLED THEME'S since 2026-11-05 (the theme arc: Live
-// 12's own themes selectable whole through the `theme` device key,
-// palette_file.h's head) — every painter reads palette()'s member for the
-// role (render.h's GuiPalette; the chrome's role table, theme_file.h), and
-// every number quoted below is DEFAULT'S, Live's "Default Dark Neutral
-// Medium" (the compiled reference row, gui_theme.h), with the Live role it
+// NUMBERS ARE THE INSTALLED THEME'S since 2026-11-05 (the theme arc; one
+// theme, Arc-Dark, since 2026-11-21, send GG, palette_file.h's head) —
+// every painter reads palette()'s member for the role (render.h's
+// GuiPalette; the chrome's role table, theme_file.h), and every number
+// quoted below as DEFAULT'S is Live's "Default Dark Neutral Medium" (the
+// record, not a painted tone; palette_file.h's head), with the Live role it
 // comes from (the derivation, theme_roles.h's head). The constants that held them
 // (kGround, kKeyFace, kTextInk and the rest, 2026-11-01..05) are retired:
 // nothing outside the installed palette names a color.
@@ -134,8 +134,7 @@
 // going to mess with the fade"): UNDER THE HOVERING PEN A RESTING KEY'S
 // FACE IS `key_hover_face`
 // (Arc's button:hover background, arc_dark 505666 on the 444A58 face, gtk3
-// CSS line 136; our own role ButtonHoverBackground, a Live theme's key face
-// itself, so no hover shows there), THE BORDER, THE DRAWING AND THE WORD
+// CSS line 136; our own role ButtonHoverBackground), THE BORDER, THE DRAWING AND THE WORD
 // UNCHANGED — on a key of both icon rows and of the controls rows, a word
 // button (a question's answers among them), an
 // on-screen keyboard key, and the scrub's
@@ -518,7 +517,7 @@ inline GuiColor key_ring_tone(FaceLook l) {
 // (the glyph road takes the word, icons::draw_glyph): `text` at rest,
 // `text_on_lit` lit, `key_dim_ink` disabled, `text_on_lit_dim` lit and inert.
 inline uint32_t key_ink(KeyState s) {
-    const GuiThemeTones& t = installed_theme().tones;
+    const GuiThemeTones& t = installed_theme();
     switch (s) {
         case KeyState::Lit:      return t.text_on_lit;
         case KeyState::Disabled: return t.key_dim_ink;
@@ -532,7 +531,7 @@ inline uint32_t key_ink(KeyState s) {
 // dim text of every inert word (a word button is never checked, so its lit
 // and inert print is never asked).
 inline uint32_t word_button_ink(KeyState s) {
-    return s == KeyState::Disabled ? installed_theme().tones.text_dim
+    return s == KeyState::Disabled ? installed_theme().text_dim
                                    : key_ink(s);
 }
 // THE SAME TWO INKS BY LOOK (the hover's the rest's), and AS PAINTED: the
@@ -549,7 +548,7 @@ inline uint32_t key_ink(FaceLook l) {
     return key_ink(KeyState::Rest);
 }
 inline uint32_t word_button_ink(FaceLook l) {
-    return l == FaceLook::Disabled ? installed_theme().tones.text_dim
+    return l == FaceLook::Disabled ? installed_theme().text_dim
                                    : key_ink(l);
 }
 inline StampTone key_ink_tone(const FaceMix& m) {

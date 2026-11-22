@@ -450,7 +450,7 @@ void paint_level_case(cairo_t* cr, const GuiRect& entry, bool enabled,
     const GuiFont font = gui_font(GuiFace::Body);
     const text_shape::SharedRun run =
         text_shape::memoized_run(font, format_level_db_face(level_db));
-    const GuiThemeTones& tones = installed_theme().tones;
+    const GuiThemeTones& tones = installed_theme();
     const uint32_t ink =
         enabled ? tones.text : mix_word(tones.ruler_face, tones.text, 0.35);
     cairo_save(cr);
@@ -1681,7 +1681,7 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     const WellColumns well = well_columns(app);
     const GuiPalette& p = palette();
     const GuiColor ink = p.title_text;
-    const uint32_t ink_word = installed_theme().tones.title_text;
+    const uint32_t ink_word = installed_theme().title_text;
     cairo_save(cr);
     {
         cairo_save(cr);
@@ -3574,7 +3574,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     paint_tooltip_shadow(cr, box_hull, radius);
     paint_floating_box(cr, box_hull, static_cast<double>(radius),
                        p.tooltip_fill,
-                       tone_alpha(installed_theme().tones.tooltip_fill));
+                       tone_alpha(installed_theme().tooltip_fill));
 
     // THE BASELINES (the block above): line 1's its line box's ascent under
     // the top pad, line 2's its own ascent under line 1's box; the pen one
@@ -3914,8 +3914,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         const GuiPalette& p = palette();
         const GuiColor ink  = standing ? p.card_text : p.sidebar_text;
         const uint32_t fill_word = standing
-                                       ? installed_theme().tones.card_standing_fill
-                                       : installed_theme().tones.card_fill;
+                                       ? installed_theme().card_standing_fill
+                                       : installed_theme().card_fill;
         paint_floating_box(cr, card, radius,
                            standing ? p.card_standing_fill : p.card_fill,
                            tone_alpha(fill_word));
@@ -8474,7 +8474,7 @@ void GuiPaintHandler::paint_onscreen_keyboard(cairo_t* cr,
 
     // THE CAPS AND THE DRAWINGS, after the stamp.
     const GuiFont font = gui_font(GuiFace::Keys);
-    const GuiThemeTones& t = installed_theme().tones;
+    const GuiThemeTones& t = installed_theme();
     onscreen_keyboard::for_each_key(
         app, page,
         [&](uint32_t index, const onscreen_keyboard::KeyDef& k,
@@ -8749,7 +8749,7 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
     cairo_rectangle(cr, band.x, band.y, band.w, band.h);
     cairo_clip(cr);
     const GuiPalette&    pal = palette();
-    const GuiThemeTones& t   = installed_theme().tones;
+    const GuiThemeTones& t   = installed_theme();
     // THE NAMES' COLUMN, ONE PER LISTING (the block above), derived from the
     // rows themselves.
     const bool wears_drawings = std::any_of(

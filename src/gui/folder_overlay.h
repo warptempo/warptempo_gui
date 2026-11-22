@@ -4,9 +4,9 @@
 // keyboard slot's band until 2026-10-14, the modal family's box since,
 // modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
-// SETTINGS PAGE's twenty-six keys as `key=value` lines under two group
+// SETTINGS PAGE's twenty-five keys as `key=value` lines under two group
 // rows (architect 2026-10-28, on a mock he verified on the glass: "yes" to
-// the list, "keep" to the group rows) — the twenty-four editable keys and,
+// the list, "keep" to the group rows) — the twenty-three editable keys and,
 // among the piece's lines, `scale` and `bpm` as disabled rows (architect
 // 2026-10-29) — and THE VALUE LIST, one listed key's
 // values, the page's row for that key's content (architect 2026-10-25: "maybe
@@ -15,10 +15,9 @@
 // them Windows identical, but now we don't have the responsibility" — "brief
 // it as a scrolling list", "Yes"; this widget as it stands, no new chrome) —
 // since 2026-10-28 night for `true_colors`, `noise` and
-// `noise_crossfade_s`, since 2026-10-31 for `waveform_grow` and since
-// 2026-11-05 for `theme`
-// (kSettingsValueListKeys, settings_editor.h; the icon set's of
-// 2026-11-17 went with its key 2026-11-21; the color
+// `noise_crossfade_s` and since 2026-10-31 for `waveform_grow`
+// (kSettingsValueListKeys, settings_editor.h; the themes' of 2026-11-05
+// and the icon set's of 2026-11-17 went with their keys 2026-11-21; the color
 // presets' list of 2026-10-25 went with the presets 2026-11-01, the two
 // levels' lists 2026-11-05 with the band's sliders) — a SUB-PAGE of the settings
 // page, whose Cancel and commit return to the page on that key's row
@@ -269,8 +268,8 @@ inline int pad_px()               { return hairline_px(); }
 // length of the list that is no row. EVERY LIST STANDS ON THEM — the render player's
 // folders and wavs, the project picker, the settings page, its value lists,
 // the trim presets, the BPM form — the heading the Group rows' (the
-// settings page's DEVICE / PIECE, `theme`'s three groups, the BPM form's
-// one); every other kind a list row.
+// settings page's DEVICE / PIECE, the BPM form's one); every other kind a
+// list row.
 inline constexpr double kListRowW     = 24.0;
 inline constexpr double kListHeadingW = 28.0;
 inline int list_row_height_px()     { return scaled_px(kListRowW, 1); }
@@ -337,11 +336,10 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
 // 24-px em in both files, 17 rows as hinted; the view's top row 142, the
 // margin row 168; the rows of 2026-11-21, 24 W and 28 W):
 //   a list row first (the picker, the player, the trim presets, a value
-//     list without groups): the caps 32 − 16.51 = 15.49 px deep, the pad
+//     list): the caps 32 − 16.51 = 15.49 px deep, the pad
 //     26 − 15.49 = 10.51 -> 11 px; the first row 153..200, its baseline 185,
 //     the painted caps' first row 168 (the unhinted band's top 168.49);
-//   a heading first (the settings page, the BPM form, `theme`'s value
-//     list): the caps 36 − 16.51 = 19.49 px deep, the pad 6.51 -> 7 px;
+//   a heading first (the settings page, the BPM form): the caps 36 − 16.51 = 19.49 px deep, the pad 6.51 -> 7 px;
 //     the heading's row 149..204, its baseline 185, the caps' first row
 //     168; the next row 205..252.
 // IT IS CONTENT, AND IT SCROLLS WITH THE ROWS (GTK's padding inside the

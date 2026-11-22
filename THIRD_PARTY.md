@@ -16,20 +16,14 @@ is KDE's breeze-icons (6.31.0; LGPL-3.0-or-later, the text in `assets/icons/LICE
 recolored copy of its dark theme's 22-px `music-note-16th`, which `apk/build_apk.sh` renders into the launcher's
 layers. Both provenances are in `assets/icons/README.md`.
 
-## The themes
+## The theme
 
-The themes are NUMBERS. The repository's `themes/system/` and `themes/extra/` files (`<slug>.theme`, packed into the
-APK) are role color values read from Ableton AG's Live 12 stock theme files (`.ask`, Ableton's theme XML; Live's
-`Resources/Themes`) and from the Sonic Bloom theme pack, converted once by `tools/themes/ask_to_theme.py`; six of the
-Sonic Bloom files (`…_mod`) and `immaterial_mod` (Live's Immaterial with one color shaded) are hand-edited, each file's
-header saying what changed. NO `.ask` FILE IS IN THIS REPOSITORY OR THE APK. One EXTRA theme,
-`themes/extra/arc_dark.theme`, is no conversion: its role values were read by hand from arc-theme
-(https://github.com/jnsh/arc-theme, commit 94ac8c7d; GPL-3.0) — its GTK 3 sass (`common/gtk-3.0/sass/_colors.scss`,
-`_common.scss`) and its xfwm4 assets (`common/xfwm4/dark/assets.svg`), the Arc-Dark variant — and no file of arc-theme
-is in this repository or the APK; the theme file's header names each role's source. One theme is compiled in as the
-reference, `default_dark_neutral_medium` (`src/gui/gui_theme.h`'s `kGuiReferenceThemeTones`): a table of colors derived
-from Live 12's Default Dark Neutral Medium. Every theme's tones come from its values through the derivation at
-`src/gui/theme_roles.h`'s head; files the user places beside the device config (`themes/*.theme`) are read the same way.
+The theme is NUMBERS. The repository's one theme file, `themes/system/arc_dark.theme` (packed into the APK), holds
+role color values read by hand from arc-theme (https://github.com/jnsh/arc-theme, commit 94ac8c7d; GPL-3.0) — its
+GTK 3 sass (`common/gtk-3.0/sass/_colors.scss`, `_common.scss`) and its xfwm4 assets (`common/xfwm4/dark/assets.svg`),
+the Arc-Dark variant — keyed by Ableton Live 12's theme role names and roles of our own; no file of arc-theme is in
+this repository or the APK, and the theme file's header names each role's source. The app's tones come from those
+values through the derivation at `src/gui/theme_roles.h`'s head.
 
 ## The tablet's APK
 

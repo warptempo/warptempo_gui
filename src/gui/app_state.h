@@ -7423,12 +7423,7 @@ struct AppState {
     //     time label, presses nothing and so hovers nothing, architect
     //     2026-11-20; a dialog
     //     button's box less its seam, the keyboard's key_at, the knob's disc
-    //     as painted), under no card. AND THE THEME'S: where the installed
-    //     theme's hover face is its key face (every Live theme, the own
-    //     roles' rule) no face hovers at all, THE SEAMS INCLUDED (architect
-    //     2026-11-20) — the
-    //     press, lit and greyed tones exist on every theme, so THOSE FADE ON
-    //     EVERY THEME (the fade is behavior, the tones the theme's).
+    //     as painted), under no card.
     // EVERY LEAVE FADES OUT, as Arc's does when the pointer leaves the
     // widget: the pen rising out of the plane, a HOVER_EXIT, focus loss (the
     // pointer-leave hook, main.cpp, through the walk). THE HOVER_EXIT THE
@@ -7464,9 +7459,9 @@ struct AppState {
     // PAINTED FOR THE FIRST TIME OR RE-LAID paints its look at once (no record,
     // or its box not the record's: a dialog, an overlay's row, the keyboard
     // appearing or changing its page, a relayout); THE WHOLE LIST IS DROPPED
-    // on a relayout and on a theme, True Colors or
+    // on a relayout and on a True Colors or
     // on-screen keyboard key size commit (GuiInputHandler::relayout_window,
-    // apply_theme, apply_true_colors, apply_osk_key_size:
+    // apply_true_colors, apply_osk_key_size:
     // drop_all), so every face paints its look at once;
     // A SURFACE THAT LEAVES drops its faces (settle_face_fades: the keyboard
     // gone or on another page, a dialog stash's owner or session no longer
@@ -7514,8 +7509,8 @@ struct AppState {
     //   label's box, the rightmost on top) — under the main page's
     //   form of the pointer's gate (hover_admitted_on_main_page: the pen in
     //   the plane, no contact, the barrel not held, the latch not holding,
-    //   no veil, no overlay, no card there, audio and no load, no live drag)
-    //   and the theme's term. Every flag a tap there acts on: enabled and
+    //   no veil, no overlay, no card there, audio and no load, no live
+    //   drag). Every flag a tap there acts on: enabled and
     //   disabled, selected or not, struck or not, a live column's marker and
     //   every `h` view item alike (its press is the item's focus click).
     //   THE ONE HIT SERVES THE HOVER LINE TOO: the walk hands the same answer
@@ -7583,8 +7578,6 @@ struct AppState {
     //   last; nothing at rest, where both roads return before walking the
     //   laid-out cues (no Marker record, no hovered marker, no cue painted
     //   lit: GuiPaintHandler::lane_cues_rest).
-    //   NOT ON A LIVE THEME: the walk's theme term hovers no marker there,
-    //   so nothing fades or is damaged.
     // THE LIST ROW'S HOVER (architect 2026-11-21; the look at
     // paint_handler.cpp's THE LIST VIEW, the tone theme_roles.h's
     // `list_hover_face`, Arc's own 3 % white over the view, the same day:
@@ -7619,8 +7612,8 @@ struct AppState {
     // pen is on (a row the pen is still on keeps the hover); A ROW OF ANOTHER LISTING — every rebuild of the rows is
     // a new listing (FolderOverlay::listing), and the settle drops every row
     // record whose listing is not the standing one, or once the list stands
-    // no more or is hidden; every row after a relayout or a theme change
-    // (drop_all). A hover edge's damage is the two rows' own boxes
+    // no more or is hidden; every row after a relayout or a True Colors
+    // change (drop_all). A hover edge's damage is the two rows' own boxes
     // (face_extent), never the list: the row reached one frame (the step
     // that lands it), the row left ceil(150 / 22.2) + 1 = 8 frames at most.
     // THE FRAMES — NOTHING IS DAMAGED AT REST: while a face fades, every step
@@ -7939,8 +7932,8 @@ struct AppState {
     //     zone or the bridge, TrimBarHit), under the gate
     //     hover_admitted_on_main_page — the pen in the plane, no contact, the
     //     pen latch not holding, no modal, no overlay, no card there, audio
-    //     loaded and no load running, no live drag — the faces' theme term
-    //     (none on a Live theme) and the bar's own terms, only where a press
+    //     loaded and no load running, no live drag — and the bar's own
+    //     terms, only where a press
     //     there would arm a grab (trim_bar_takes_grab): the stash published,
     //     not in the `h` view, whose bar takes only the framing double tap,
     //     not with the barrel held, whose press there is the bound-set click.
@@ -7999,8 +7992,7 @@ struct AppState {
     //     and the walk keeps the part, damaging nothing, while the stamp is
     //     younger than kTrimBarLeaveHoldMs, the pointer still out, no
     //     contact down and the terms a press there needed still holding
-    //     (the main page taking a press at the place, the theme's term, the
-    //     bar's own). THE STAMP GOES ON EVERY ROAD, by whichever comes
+    //     (the main page taking a press at the place, the bar's own). THE STAMP GOES ON EVERY ROAD, by whichever comes
     //     first: the first TICK that finds it that old (the walk drops the
     //     part, one lane damage); a press (its walk under the held bit
     //     answers none, and the bar's own arm installs the held look in the
@@ -9359,7 +9351,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the twenty-four keys the
+    // 2026-10-28: the Settings button and bare `;`; the twenty-three keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened on the row's key, PREFILLED with its value
@@ -9367,9 +9359,9 @@ struct AppState {
     // the page has closed — or, on the row of a key with a value list, that
     // list swapped in under the same session); and the VALUE LIST
     // (2026-10-28 night for `true_colors`,
-    // `noise` and `noise_crossfade_s`, 2026-10-31 for `waveform_grow`,
-    // 2026-11-05 for `theme`; the icon set's of 2026-11-17 went with its key
-    // 2026-11-21; the two levels' lists went 2026-11-05 with
+    // `noise` and `noise_crossfade_s`, 2026-10-31 for `waveform_grow`; the
+    // themes' of 2026-11-05 and the icon set's of 2026-11-17 went with their
+    // keys 2026-11-21; the two levels' lists went 2026-11-05 with
     // their decimal grammar, their rows opening the line editor; reached
     // through the page's row for its key alone; the key's values as rows, the open act
     // the value's commit through the typed line's own body, then the return
@@ -9957,7 +9949,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's twenty-four keys as
+    // (architect 2026-10-28), with the settings editor's twenty-three keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
@@ -10106,13 +10098,11 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its twenty-four editable key lines and the two
+    // rows (its two headings, its twenty-three editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
-    // words, and under `theme` one Group heading per group of the themes'
-    // list, SYSTEM first (2026-11-05; SYSTEM, EXTRA and USER-DEFINED since
-    // 2026-11-11, theme_roles.h); the trim presets list Plain rows alone
+    // words; the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
     // preset's name alone (architect 2026-10-28 night); the BPM form a Group
     // row and three Plain rows (build_bpm_form_rows), row f + 1 the field f

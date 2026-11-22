@@ -51,7 +51,7 @@
 #include "render_cache.h"
 #include "target_render.h"
 #include "text_editor.h"
-#include "theme_roles.h"   // the themes' list: the launch's read and install
+#include "theme_roles.h"   // load_gui_theme: the launch's read and install
 #include "phaseresetmarkers_ops.h"
 #include "prompt.h"
 #include "undo.h"
@@ -4320,9 +4320,9 @@ int gui_main() {
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
     // (The chromes and captions folders were read ahead of it 2026-10-07..14,
-    // the preset files the color picker wrote; the themes are the APK's
-    // own theme files and the user's, read once at launch by the theme load
-    // below, theme_roles.h's head.)
+    // the preset files the color picker wrote; the theme is the APK's one
+    // theme file, read once at launch by the theme load below,
+    // theme_roles.h's head.)
     // THE TEMPLATE IS THE SHIPPED DEFAULTS FILE (device_config.h's THE
     // FIRST-RUN VALUES, 2026-11-09), read and parsed at every launch: a file
     // the reader refuses is a build defect, answered here exactly as a bad
@@ -4400,54 +4400,33 @@ int gui_main() {
     // the first plate's render inputs read it; the other road is the
     // settings editor's commit (GuiInputHandler::apply_waveform_fade_px).
     set_waveform_fade_hundredths(device_config.waveform_fade_hundredths);
-    // THE THEMES' LIST, ONCE PER PROCESS (architect 2026-11-06, session 75;
-    // the theme files 2026-11-11, session 110; theme_roles.h's head): the
-    // APK's shipped files (GuiPlatform::bundled_theme_files, SYSTEM and
-    // EXTRA) and the user's flat `themes/` beside the config (the noise's
-    // composition), read now, after the config and before the palette's
-    // first install; a file dropped while the app runs shows at the next
-    // launch. A SHIPPED FILE'S FAULT IS A BUILD DEFECT, the validation
-    // doctrine's class (1) as the icons' above: one line naming the file and
-    // the error, and no window. THE PALETTE, before there is a window: THE
-    // CONFIG'S THEME (the `theme` key, architect 2026-11-05 — one of Live
-    // 12's own, palette_file.h's head), its row found in the list
-    // (find_gui_theme), and every member of the palette installed off it,
-    // the program's and the chrome's alike, at the row's own numbers
-    // (install_palette, render.h). A SLUG NO ROW BEARS (the reader judged the shape alone: a user file
-    // removed) OPENS IN `default`, Arc-Dark's copy (architect
-    // 2026-11-11, session 110, D6; Arc-Dark the default since 2026-11-18,
-    // send Y), with one stderr line, the config's line
-    // left as written — the struct keeps the string, so the next persist
-    // writes it back unchanged — until he picks another (architect
-    // 2026-11-06, the noise's absent-folder shape). The other road is the
-    // settings editor's `theme=` commit and its value list's tap
-    // (GuiInputHandler::apply_theme), which owes the caches' apply shape
-    // this launch call does not. Every painter reads it through palette()
-    // (render.h's palette block).
+    // THE THEME, ONCE PER PROCESS (architect 2026-11-06, session 75; the
+    // theme files 2026-11-11, session 110; ONE THEME, Arc-Dark, since
+    // 2026-11-21, send GG; theme_roles.h's head): the APK's one theme file
+    // (GuiPlatform::bundled_theme_file) read now, after the config, parsed
+    // and derived (load_gui_theme), and every member of the palette
+    // installed off its row before there is a window, the program's and the
+    // chrome's alike, at the row's own numbers (install_palette, render.h).
+    // THE FILE'S FAULT IS A BUILD DEFECT, the validation doctrine's class (1)
+    // as the icons' above: one line naming the file and the error, and no
+    // window. Every painter reads the palette through palette() (render.h's
+    // palette block).
     {
-        auto bundled = GuiPlatform::bundled_theme_files();
-        if (!bundled) {
+        auto text = GuiPlatform::bundled_theme_file();
+        if (!text) {
             std::fprintf(stderr, "warptempo_gui: themes: %s\n",
-                         bundled.error().c_str());
+                         text.error().c_str());
             return 1;
         }
-        const std::filesystem::path config = device_config_path();
-        if (const std::optional<std::string> err = load_gui_themes(
-                bundled->system, bundled->extra,
-                config.empty() ? std::filesystem::path()
-                               : config.parent_path() / "themes")) {
-            std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
-            return 1;
-        }
-        const GuiTheme* theme = find_gui_theme(device_config.theme);
-        if (theme == nullptr) {
+        auto tones = load_gui_theme(*text);
+        if (!tones) {
             std::fprintf(stderr,
-                         "warptempo_gui: No theme '%s' in the list; the "
-                         "window opens in default, the config's line kept\n",
-                         device_config.theme.c_str());
-            theme = &default_gui_theme();
+                         "warptempo_gui: themes: the shipped system/%s.theme: %s\n",
+                         std::string(kGuiDefaultThemeSourceSlug).c_str(),
+                         tones.error().c_str());
+            return 1;
         }
-        install_palette(*theme);
+        install_palette(*tones);
     }
     // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
     // display_transform.h's head): the switch's bit seeded here, before the

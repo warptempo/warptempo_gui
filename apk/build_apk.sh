@@ -130,24 +130,22 @@ shopt -u nullglob
 mkdir -p "$ASSETS/icons"
 cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
 wt_say "assets: icons, ${#ICON_FILES[@]} files"
-# THE BUNDLED THEMES (architect 2026-11-11, session 110, THE THEME FILES;
-# src/gui/theme_roles.h's head): every `.theme` of the repository's
-# themes/system/ and themes/extra/ copied into the package's
-# assets/themes/system/ and assets/themes/extra/, which aapt2 link's -A packs
-# as the APK's `themes/system/` and `themes/extra/` asset directories. The
-# app reads them in place at launch (GuiPlatform::bundled_theme_files,
-# platform_android.cpp; load_gui_themes). An empty folder is a build defect
-# and stops the script here.
+# THE BUNDLED THEME, ONE FILE (architect 2026-11-21, send GG: one look,
+# Arc-Dark; src/gui/theme_roles.h's head, THE FILE): every `.theme` of the
+# repository's themes/system/ — arc_dark.theme alone — copied into the
+# package's assets/themes/system/, which aapt2 link's -A packs as the APK's
+# `themes/system/` asset directory. The app reads its one file in place at
+# launch (GuiPlatform::bundled_theme_file, platform_android.cpp;
+# load_gui_theme). An empty folder is a build defect and stops the script
+# here.
 THEME_DIR="$APPDIR/../themes"
-for group in system extra; do
-    shopt -s nullglob
-    THEME_FILES=("$THEME_DIR/$group"/*.theme)
-    shopt -u nullglob
-    [ "${#THEME_FILES[@]}" -gt 0 ] || wt_die "no .theme files under $THEME_DIR/$group"
-    mkdir -p "$ASSETS/themes/$group"
-    cp -f "${THEME_FILES[@]}" "$ASSETS/themes/$group/"
-    wt_say "assets: themes/$group, ${#THEME_FILES[@]} files"
-done
+shopt -s nullglob
+THEME_FILES=("$THEME_DIR/system"/*.theme)
+shopt -u nullglob
+[ "${#THEME_FILES[@]}" -gt 0 ] || wt_die "no .theme files under $THEME_DIR/system"
+mkdir -p "$ASSETS/themes/system"
+cp -f "${THEME_FILES[@]}" "$ASSETS/themes/system/"
+wt_say "assets: themes/system, ${#THEME_FILES[@]} files"
 # THE DEVICE CONFIG'S FIRST-RUN VALUES: the repository's tracked
 # assets/device_config_defaults (the tablet's own config as last snapshotted
 # by tools/snapshot_device_defaults.sh; src/gui/device_config.h's THE
@@ -237,13 +235,13 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
 [ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, Breeze's note)"
-# THE ICON'S TWO COLORS ARE READ, NEVER SPELLED HERE: the `default` theme's
-# source file, themes/system/<slug>.theme (src/gui/theme_roles.h's THE
-# FORMAT and THE LIST; Arc-Dark's arc_dark.theme since 2026-11-18, send Y),
-# is their one owner — the ground its SurfaceArea (the window's `ground`),
+# THE ICON'S TWO COLORS ARE READ, NEVER SPELLED HERE: the one theme's
+# file, themes/system/<slug>.theme (src/gui/theme_roles.h's THE FORMAT and
+# THE FILE; Arc-Dark's arc_dark.theme, the one theme since 2026-11-21, send
+# GG), is their one owner — the ground its SurfaceArea (the window's `ground`),
 # the note's ink its ControlForeground (the logo lane's `text`). THE SLUG IS
 # READ TOO, out of its one owner, kGuiDefaultThemeSourceSlug's one line in
-# src/gui/gui_theme.h, so the icon follows the default by itself. The line
+# src/gui/gui_theme.h, so the icon follows the theme's file by itself. The line
 # not matching once, a slug outside the slug rule's letters, the file
 # missing, or a role line missing or not 6 hex digits, stops the script
 # here.
@@ -252,7 +250,7 @@ LAUNCHER_SLUG=$(sed -n 's/^inline constexpr std::string_view kGuiDefaultThemeSou
 [[ "$LAUNCHER_SLUG" =~ ^[a-z0-9_]+$ ]] \
     || wt_die "no one kGuiDefaultThemeSourceSlug = \"<slug>\"; line in $GUI_THEME_H (the launcher icon's theme)"
 LAUNCHER_THEME="$THEME_DIR/system/$LAUNCHER_SLUG.theme"
-[ -f "$LAUNCHER_THEME" ] || wt_die "missing $LAUNCHER_THEME (the default theme's source, the launcher icon's colors)"
+[ -f "$LAUNCHER_THEME" ] || wt_die "missing $LAUNCHER_THEME (the one theme's file, the launcher icon's colors)"
 launcher_role() {                     # $1 = role name -> "#RRGGBB"
     local word
     word=$(sed -n "s/^$1=\([0-9A-Fa-f]*\)\r\{0,1\}\$/\1/p" "$LAUNCHER_THEME" | head -n 1)

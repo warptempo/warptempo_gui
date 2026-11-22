@@ -23,9 +23,12 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY-ONE keys since 2026-11-21, send
-// GG: the icon set `icons`, the permanent key of 2026-11-17 at the end,
-// retired with the one set, Papirus, icons.h's head; TWENTY-TWO earlier
+// REQUIRED SET, every one of them (TWENTY keys since 2026-11-21, send GG:
+// the window's theme `theme`, the permanent key of 2026-11-05 after
+// `true_colors`, retired with the one look, Arc-Dark, palette_file.h's head;
+// TWENTY-ONE earlier that day, the icon set `icons`, the permanent key of
+// 2026-11-17 at the end, retired with the one set, Papirus, icons.h's head;
+// TWENTY-TWO earlier
 // that day, the theme's highlights' mix toward its ground, the tuning key of
 // 2026-11-13 between `sweep_highlight` and `waveform_fade_px`, retired at
 // 100, the theme's own numbers, architect 2026-11-21; TWENTY-THREE from
@@ -103,10 +106,6 @@ namespace {
 // `waveform` preset key stood before it until 2026-11-01), and the tuning
 // keys keep the end where they leave from.
 //
-// THE THEME (architect 2026-11-05): `theme` FOLLOWS `true_colors`, the
-// display keys together — the conversion, the theme, the plate's grow — a
-// permanent key.
-//
 // THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
 // `true_colors`, the display keys' end — a permanent key, the canvas's one
 // scaling concession (device_config.h's head), so it stands among the
@@ -136,7 +135,9 @@ namespace {
 // the permanent seconds key above).
 //
 // (The icon set `icons` followed `waveform_fade_px` 2026-11-17 to
-// 2026-11-21, send GG, the one permanent key past the tuning keys.)
+// 2026-11-21, send GG, the one permanent key past the tuning keys; the
+// window's theme `theme` followed `true_colors` 2026-11-05 to 2026-11-21,
+// send GG.)
 // (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
 // 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
 // kNoiseFadeOutMs; the tooltip's gap `tooltip_gap` after `tooltip_delay_ms`
@@ -154,7 +155,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "projects_path",
     "last_project",
     "true_colors",
-    "theme",
     "waveform_grow",
     "noise",
     "noise_level",
@@ -370,10 +370,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "true_colors") {
             // The switch's word (format_true_colors, the grammar's owner).
             s += format_true_colors(cfg.true_colors);
-        } else if (k == "theme") {
-            // The theme's slug verbatim, as read (is_theme_slug's shape; a
-            // slug no row bears is written back as it stood, 2026-11-06).
-            s += cfg.theme;
         } else if (k == "waveform_grow") {
             // The grow's canonical decimal (format_waveform_grow).
             s += format_waveform_grow(cfg.waveform_grow_quarters);
@@ -496,9 +492,9 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.last_project = value;
             return {};
         }
-        // An old `waveform=`, `palette=`, `chrome=`, `scheme=` or `caption=`
-        // line is the unknown key below (no key names a color: `theme`
-        // names a compiled theme by its slug, palette_file.h).
+        // An old `waveform=`, `palette=`, `chrome=`, `scheme=`, `caption=`
+        // or `theme=` line is the unknown key below (no key names a color:
+        // every color is the one theme's, Arc-Dark's, palette_file.h).
         // TRUE COLORS (2026-10-21): one of the two words under its one owner
         // (parse_true_colors, device_config.h), required like every key; any
         // other word the launch's hard fail.
@@ -508,20 +504,6 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kTrueColorsGrammarReason);
             }
             out.true_colors = *on;
-            return {};
-        }
-        // THE THEME (2026-11-05; the shape alone since 2026-11-06): a slug
-        // under its one grammar owner (is_theme_slug, gui_theme.h), required
-        // like every key; any other word the launch's hard fail
-        // (kThemeGrammarReason, device_config.h). A slug no row bears loads
-        // (the list is built after this read; gui_main opens in default).
-        // The slug is kept as the writer's spelling; the row is found again
-        // by every reader.
-        if (key == "theme") {
-            if (!is_theme_slug(value)) {
-                return bad_value(ln, key, value, kThemeGrammarReason);
-            }
-            out.theme = value;
             return {};
         }
         // THE NOISE'S FOUR KEYS (2026-10-28; the attenuation 2026-11-05

@@ -31,7 +31,7 @@
 
   <!-- android:icon is the launcher and recents icon: Breeze's note,
        assets/icons/AppIcon.svg (a regular file, the launcher's drawing
-       alone), rendered by resvg in the `default` theme's text tone #D3DAE3
+       alone), rendered by resvg in the theme's text tone #D3DAE3
        over its flat ground #2F343F (Arc-Dark's), the adaptive icon's
        background layer
        (res/mipmap-anydpi-v26/ic_launcher.xml holds the sizes and the ground's

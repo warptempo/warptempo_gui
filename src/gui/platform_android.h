@@ -125,25 +125,17 @@ public:
     // the package reaches the load as its first missing file.
     static std::expected<std::map<std::string, std::string>, std::string>
     bundled_icon_files();
-    // THE BUNDLED THEMES' FILES (architect 2026-11-11, session 110, THE
-    // THEME FILES; theme_roles.h's head) — the repository's themes/system/
-    // and themes/extra/, each a map from FILE NAME (`<slug>.theme`, no
-    // folder) to the file's whole text, every `.theme` of the APK's
-    // `themes/system/` and `themes/extra/` assets, which build_apk.sh's
-    // asset step packs. Read by the launch's theme load alone
-    // (load_gui_themes, gui_main), IN PLACE, through the same reader and
-    // manager as the icons above. STATIC, asked before any window exists.
-    // THE ERROR ARM'S PRODUCER IS IO (an asset that will not open), carried
-    // to the launch's hard fail; an absent asset directory lists empty
-    // (read_asset_dir). An empty `system` fails the load as the build defect
-    // it is (arc_dark, the default's source, is missing); an empty `extra`
-    // loads silently with no EXTRA rows. The packaging gate is build_apk.sh's
-    // asset step, which refuses either group empty.
-    struct BundledThemeFiles {
-        std::map<std::string, std::string> system;
-        std::map<std::string, std::string> extra;
-    };
-    static std::expected<BundledThemeFiles, std::string> bundled_theme_files();
+    // THE ONE THEME'S FILE (architect 2026-11-21, send GG: one look,
+    // Arc-Dark; theme_roles.h's head, THE FILE) — the whole text of the
+    // APK's asset `themes/system/<kGuiDefaultThemeSourceSlug>.theme`
+    // (gui_theme.h; arc_dark.theme), the repository's file, which
+    // build_apk.sh's asset step packs. Read by the launch's theme load alone
+    // (load_gui_theme, gui_main), IN PLACE, through the same manager and
+    // whole-asset read as the defaults file above. STATIC, asked before any
+    // window exists. THE ERROR ARM'S PRODUCER IS IO or a build that packed
+    // no such file (an asset that will not open or not read whole), carried
+    // to the launch's hard fail.
+    static std::expected<std::string, std::string> bundled_theme_file();
     // THE WINDOW TITLE HAS NO SURFACE: the activity is fullscreen and
     // landscape-only with no system titlebar, so this setter stores nothing
     // and paints nothing (the app paints no caption, 2026-10-24). It stays on

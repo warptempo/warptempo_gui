@@ -7,7 +7,7 @@
 #include "chrome_spec.h"      // live_chrome_spec(), the live chrome's lengths
 #include "program_spec.h"     // kProgramSpec, the program's lengths (the band, row 8)
 #include "display_transform.h" // display_color's transform (sRGB -> the window's space)
-#include "gui_theme.h"        // GuiTheme, the installed theme's row (install_palette)
+#include "gui_theme.h"        // GuiThemeTones, the installed row (install_palette)
 
 #include <algorithm>
 #include <array>
@@ -190,14 +190,12 @@ struct TrimRange {
 // well or on a thing that enters it (the waveform's canvas, ink and core,
 // the canvas's grid and center line, the cues' one color and the disabled
 // cue's grey, the playhead and the scanner; palette_file.h's head owns the
-// rule that parts program from chrome) — ONE PALETTE PER THEME, LIVE'S OWN
-// NUMBERS (architect 2026-11-01: the Cool Edit presets and their `waveform`
-// key dropped, the canvas grammar kept, Live's measured default compiled
-// in; architect 2026-11-05, the theme arc: Live 12's own themes, whole, the
-// `theme` device key naming one row of the themes' list — the theme files
-// read at launch since 2026-11-11, theme_roles.h — the compiled reference
-// row, Live's Default, that measured palette to the byte but the selection
-// pair's text, gui_theme.h; every row installed at its own numbers); A
+// rule that parts program from chrome) — ONE PALETTE, THE ONE THEME'S,
+// ARC-DARK'S (architect 2026-11-01: the Cool Edit presets and their
+// `waveform` key dropped, the canvas grammar kept; architect 2026-11-05,
+// the theme arc, a theme's row read at launch; one theme since 2026-11-21,
+// send GG, arc_dark's file through the derivation, theme_roles.h, installed
+// at its own numbers); A
 // LIT OR PRESSED KEY'S FACE IS THE ACCENT, the palette's role `cue` (the
 // markers' chip the same word, `cue_fill`, 2026-11-13) — its inert face the
 // chrome's `lit_dim_fill` (architect 2026-11-11, session 106; Arc's states
@@ -360,7 +358,7 @@ struct TrimRange {
 //                 `hover_line` the waveform's hover line and its triangle
 //                 in the ruler (send GG), `cue_hover` and
 //                 `inactive_cue_hover` a hovered chip, enabled and
-//                 disabled, each its rest's own tone on a Live theme (a hovered
+//                 disabled (a hovered
 //                 disabled marker's label the chrome's
 //                 `inactive_cue_label_hover`); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
@@ -451,8 +449,7 @@ void set_waveform_source(cairo_t* cr, GuiColor c);
 void set_palette_source_alpha(cairo_t* cr, GuiColor c, double alpha);
 
 // A CARRIED FILL'S OPACITY (theme_roles.h's CARRIED block): the top byte of
-// its row word over 255 — FF opaque on every Live theme, F2 (.949) on
-// arc_dark's three. Read off installed_theme()'s word, the palette's
+// its row word over 255 — F2 (.949) on arc_dark's three. Read off installed_theme()'s word, the palette's
 // GuiColor holding the color alone.
 inline constexpr double tone_alpha(uint32_t word) {
     return static_cast<double>((word >> 24) & 0xFFu) / 255.0;
@@ -551,19 +548,19 @@ struct GuiPalette {
 
 // THE ONE ACCESSOR every painter reads. The installed palette is file-scope
 // state in render.cpp, written by the install family below alone:
-// install_palette at gui_main's startup, before the window exists, and at
-// every `theme` commit (GuiInputHandler::apply_theme), and
+// install_palette at gui_main's startup, before the window exists, and
 // install_true_colors. Before the first install it is construction state
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE INSTALLED THEME'S ROW (the list's row as it is, install_palette
+// THE INSTALLED THEME'S ROW (the derivation's row as it is, install_palette
 // below) — the sRGB WORDS behind palette(), for the few readers that need the word rather
 // than a GuiColor: the glyph road's tone (icons::draw_glyph; key_ink,
 // materials.h), the plate's two inks (waveform_plate_inks below). Every other
-// painter reads palette(). Before the first install it is the compiled
-// Default row (construction state, as palette()'s black), never painted.
-const GuiTheme& installed_theme();
+// painter reads palette(). Before the first install every word is 0
+// (construction state, as palette()'s black), never read: gui_main installs
+// the row before the window exists, ahead of every painter.
+const GuiThemeTones& installed_theme();
 
 // THE SURFACES WHOSE TEXT ROLE MAY DEPEND ON THE CHROME (2026-10-09): each
 // surface's recorded text color under the live chrome — "text over a fill
@@ -584,38 +581,19 @@ enum class GuiSurface {
 };
 GuiColor surface_text(GuiSurface surface);
 
-// Install every color off ONE THEME'S ROW (`theme`, a row of the themes'
-// list, theme_roles.h; architect 2026-11-05, the theme arc) AT ITS OWN
-// NUMBERS (architect 2026-11-21, send GG: the row as the list holds it):
+// Install every color off THE THEME'S ROW (`tones`, the one theme's,
+// Arc-Dark's, load_gui_theme, theme_roles.h; architect 2026-11-05, the theme
+// arc; one theme since 2026-11-21, send GG) AT ITS OWN NUMBERS:
 // THE PROGRAM'S members off the palette's role table
 // (kGuiPaletteRoles, palette_file.h), THE CHROME'S off the chrome's
 // (kGuiThemeRoles, theme_file.h), the panel's `face` off the theme's body
 // tone (`body_face`, send Z)
 // — the tables covering the struct exactly (palette_file.cpp) — and THE
-// ROW COPIED as installed_theme(), under the list row's slug and group
-// (architect 2026-11-06, session 75: the list is built once at launch and
-// immutable; the copy needs no lifetime argument and covers the
-// construction state before the load). Its callers: gui_main's startup,
-// before the window exists (the config's `theme`), and
-// GuiInputHandler::apply_theme, at every `theme` commit. It resolves and never
-// refuses, and it bumps palette_generation below, the flag cache's
-// fingerprint term.
-// THE APPLY SHAPE THE CALLER OWES after a live install (apply_theme; the
-// launch's call, before the window and every cache exist, owes none) IS
-// install_true_colors' (below), the same two caches and for the same
-// reason: the icon rasters dropped (icons::drop_rasters — a key glyph's
-// raster keys on its sRGB tone, which the theme moves), the waveform plate
-// kicked when its two inks moved (the waveform_plate_inks pair read before
-// and after; Viewport::kick_waveform_sync, the plate re-rendered in the new
-// inks and the flag cache rebuilt at its tail) and the flag cache alone
-// otherwise (Viewport::refresh_flag_cache), then the whole window
-// invalidated. THE SHADER NEEDS NOTHING: gl_canvas.cpp's list fragment
-// shader reads every color from the draw list's own words (word_rgb of
-// v_words.x / .y; no color uniform), and the plate's two inks ride
-// waveform_plate_inks into the worker's job (waveform_cache.cpp) and its
-// fingerprint, so a theme that moves them rebuilds the plate and one that
-// keeps them re-renders nothing.
-void install_palette(const GuiTheme& theme);
+// ROW COPIED as installed_theme(). Its one caller: gui_main's startup,
+// before the window and every cache exist, so it owes no apply shape. It
+// resolves and never refuses, and it bumps palette_generation below, the
+// flag cache's fingerprint term.
+void install_palette(const GuiThemeTones& tones);
 
 // THE PALETTE'S GENERATION — a counter the install family bumps, so a
 // cached surface whose pixels carry palette colors keys the palette BY
@@ -1172,8 +1150,7 @@ void install_true_colors(bool on);
 // hands the two roles through display_transform::display_rgb on the GUI
 // thread, so the plate writes them as they come, and a flip of True Colors
 // (install_true_colors) moves the fingerprint exactly when it moves a
-// colored ink — a gray ink converts to itself and re-renders nothing — and
-// a `theme` commit (install_palette) exactly when the theme's inks differ.
+// colored ink — a gray ink converts to itself and re-renders nothing.
 struct WaveformPlateInks {
     uint32_t ink_rgb  = 0;
     uint32_t core_rgb = 0;
@@ -4844,8 +4821,7 @@ void render_playhead(GuiCanvasSink& sink,
 //     (arc_dark A5ABB5), and this line `hover_line`, the theme's own
 //     HoverLine (arc_dark 767B87, Arc's scrollbar slider: "an even more dark
 //     and faint version of the playhead stem"), ITS TRIANGLE THE SAME TONE
-//     ("same color as the hover stem"); on every theme (every theme file
-//     carries a visible HoverLine; no theme term, unlike the faces).
+//     ("same color as the hover stem").
 //     The order is the theme's own numbers' (theme_roles.h's THE SCANNER
 //     block).
 //   ITS FORM: the playhead's line's — a one-W line (waveform_line_px)

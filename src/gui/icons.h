@@ -158,9 +158,7 @@ std::optional<std::string> load_set();
 // rasters are converted for the window as they are made, svg_icon.h): the
 // cache refills lazily at the new sizes and in the new conversion, the
 // fits with them; the parsed drawings stay (a bound parse keys its sRGB
-// color, which neither change moves), AND ON A THEME COMMIT
-// (GuiInputHandler::apply_theme: a raster keys on its sRGB color, which the
-// theme moves, render.h's install_palette). A key's lit edge drops nothing:
+// color, which neither change moves). A key's lit edge drops nothing:
 // the print on a lit face is one more color key beside the text tones.
 void drop_rasters();
 

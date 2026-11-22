@@ -1,27 +1,20 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
 #include <string_view>
 
-// THE THEME'S SHAPE (architect 2026-11-05, the theme arc: "i'd like to
-// implement all" — Ableton Live 12's own themes selectable whole, chrome and
-// well together, through the one `theme` device key; architect 2026-11-11,
-// session 110: THE THEME FILES, our own keyed format of Live's raw roles,
-// shipped in the APK). A theme is one row of sRGB words, GuiThemeTones,
-// under a slug the config spells and a group the Settings page's value list
-// heads it with. THE LIST — SYSTEM (`default` first), EXTRA, USER-DEFINED,
-// each theme file through THE DERIVATION — is theme_roles.h's, whose head
-// owns the format, the groups, the order, the left-out files and the
-// derivation. This header holds what needs no file: the row's shape, the
-// compiled reference row, the list's own slugs, the groups' headings and
-// THE SLUG RULE.
+// THE THEME'S SHAPE (architect 2026-11-05, the theme arc; ONE THEME since
+// 2026-11-21, send GG: "i am committed" — one look, Arc-Dark at 9 pt, every
+// other theme removed). The theme is one row of sRGB words, GuiThemeTones,
+// read at launch from the one shipped theme file, arc_dark's, through THE
+// DERIVATION (theme_roles.h's head owns the format and the derivation).
+// This header holds the row's shape and the file's slug.
 
-// Every sRGB word the GUI paints, one theme's (0xRRGGBB). Beside each member
-// what reads it and the Live role it comes from (the one owners: materials.h's
-// head, palette_file.h's role list, render.h's palette block; the derivation,
-// theme_roles.h's head). A row of the list holds the theme's own numbers,
-// and the installed row is that row as it is (install_palette, render.h).
+// Every sRGB word the GUI paints (0xRRGGBB). Beside each member what reads
+// it and the role it comes from (the one owners: materials.h's head,
+// palette_file.h's role list, render.h's palette block; the derivation,
+// theme_roles.h's head). The installed row is the derivation's row as it is
+// (install_palette, render.h).
 struct GuiThemeTones {
     uint32_t ground;              // the flat ground everywhere outside the well and the keys (SurfaceArea); THE TITLE TONE on the Arc page and the launcher icon's ground
     uint32_t body_face;           // THE BODY TONE, the ground of everything under the title bar (WindowBackground, our own role; a Live theme's SurfaceArea): the palette's `face`, both icon rows, the status bar, the erase, the modal pane's and the keyboard's ground
@@ -29,15 +22,15 @@ struct GuiThemeTones {
     uint32_t title_text;          // the title bar's text and drawings (TitleForeground, our own role; a Live theme's ControlForeground; paint_title_bar)
     uint32_t sidebar_text;        // the live marker labels' ink, the tooltip's words and a normal card's words and glyph (SidebarForeground, our own role; a Live theme's ControlForeground)
     uint32_t text_dim;            // the inert rows and the tooltip's hint line (TextDisabled)
-    uint32_t inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen, its rest `text_dim` (CueDisabledLabelHover, our own role; arc_dark 9DA3AD, Arc's dim button under its row's hover, `.gedit-document-panel row:hover:not(:selected) button`; a Live theme's TextDisabled, the label's own tone: no hover)
+    uint32_t inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen, its rest `text_dim` (CueDisabledLabelHover, our own role; arc_dark 9DA3AD, Arc's dim button under its row's hover, `.gedit-document-panel row:hover:not(:selected) button`; a Live theme's TextDisabled, the label's own tone)
     uint32_t text_on_lit;         // what is printed on a lit key's face, its glyph and the on-screen keyboard's lit cap (StandbySelectionForeground, the selection's text); a word alone, read by key_ink (materials.h)
     uint32_t key_dim_ink;         // a disabled key's glyph (ViewCheckControlDisabledOff over the face)
     uint32_t key_dim_face;        // a disabled key's and word button's face (the key face at 55 % over the body tone, theme_roles.h's DERIVED block)
     uint32_t key_dim_border;      // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone, the same block)
     uint32_t text_on_lit_dim;     // a checked-but-disabled key's glyph on its dimmed face ((text_on_lit at 80 % over the accent at 75 % over the body tone) at 60 % over the body tone, theme_roles.h's DERIVED block); a word alone, read by key_ink
     uint32_t key_face;            // a key's and a word button's face at rest, the scrub's knob's fill (SurfaceBackground)
-    uint32_t key_hover_face;      // that face under the hovering pen, the hover mix's far end: a key's, a word button's, an on-screen keyboard key's, the scrub's knob's fill (ButtonHoverBackground, our own role; arc_dark 505666, Arc's button:hover; a Live theme's SurfaceBackground, the key face itself: no hover)
-    uint32_t list_hover_face;     // a list row under the hovering pen: ARC'S ROW HOVER, rgba(255, 255, 255, 0.03) over the list's view (ruler_face), c + 0.03 · (255 − c) rounded, the stylesheet's own number computed exactly (theme_roles.h's DERIVED block; arc_dark 404552 -> 464B57; a theme whose key_hover_face is its key_face, every Live theme, the view's own tone: no hover)
+    uint32_t key_hover_face;      // that face under the hovering pen, the hover mix's far end: a key's, a word button's, an on-screen keyboard key's, the scrub's knob's fill (ButtonHoverBackground, our own role; arc_dark 505666, Arc's button:hover; a Live theme's SurfaceBackground, the key face itself)
+    uint32_t list_hover_face;     // a list row under the hovering pen: ARC'S ROW HOVER, rgba(255, 255, 255, 0.03) over the list's view (ruler_face), c + 0.03 · (255 − c) rounded, the stylesheet's own number computed exactly (theme_roles.h's DERIVED block; arc_dark 404552 -> 464B57)
     uint32_t lit_dim_fill;        // a checked-but-disabled key's face: (the accent at 75 % over the body tone) at 60 % over the body tone, Arc's numbers
     uint32_t ruler_face;          // the ruler, Arc's entry's fill and the flag editor's (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the ruler face, the canvas)
@@ -69,192 +62,20 @@ struct GuiThemeTones {
     uint32_t center;              // each channel's zero line (= the ink)
     uint32_t cue;                 // THE ACCENT: a lit or pressed key's face, every checked key's, NOISE's progress line, the on-screen keyboard's lit keys, the scrub's played part and its held knob, the flag editor's border (ViewCheckControlEnabledOn)
     uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (= the accent, cue)
-    uint32_t cue_hover;           // an enabled marker's chip under the hovering pen (CueHover, our own role; arc_dark 639FE5, Arc's hover of a blue thing, `.documents-entry-tag:hover`; a Live theme's ViewCheckControlEnabledOn, the chip's own tone: no hover)
+    uint32_t cue_hover;           // an enabled marker's chip under the hovering pen (CueHover, our own role; arc_dark 639FE5, Arc's hover of a blue thing, `.documents-entry-tag:hover`; a Live theme's ViewCheckControlEnabledOn, the chip's own tone)
     uint32_t cue_outline;         // the selection stem, the lead-in ring (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill (BackgroundClip)
-    uint32_t inactive_cue_hover;  // a disabled marker's chip under the hovering pen (CueDisabledHover, our own role; arc_dark 90939B, Arc's `wm_icon_bg`, the titlebar glyph awake; a Live theme's BackgroundClip, the chip's own tone: no hover)
+    uint32_t inactive_cue_hover;  // a disabled marker's chip under the hovering pen (CueDisabledHover, our own role; arc_dark 90939B, Arc's `wm_icon_bg`, the titlebar glyph awake; a Live theme's BackgroundClip, the chip's own tone)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
     uint32_t playhead_line;       // the playhead's canvas line, its stem (PlayheadLine, our own role; arc_dark A5ABB5, Arc's `.h4` / `.category-label`; a Live theme's white half way to its RangeDefault)
     uint32_t hover_line;          // the waveform's hover line and its triangle in the ruler (HoverLine, our own role, over the canvas; arc_dark 767B87, Arc's scrollbar slider; a Live theme's ScrollbarInnerHandle)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
-// One row of the list (theme_roles.h): the slug the config spells and the
-// value list shows, the heading of the group it is listed under (one of the
-// three below, printed as it is spelled) and its tones.
-struct GuiTheme {
-    std::string   slug;
-    std::string   group;
-    GuiThemeTones tones;
-};
-
-// THE GROUPS' HEADINGS, exactly as the value list prints them (architect
-// 2026-11-11, session 110, D4; theme_roles.h's THE LIST): the shipped
-// themes of `themes/system/` with the reference row, the shipped themes of
-// `themes/extra/`, and his own files beside the config.
-inline constexpr std::string_view kGuiThemeGroupSystem = "SYSTEM";
-inline constexpr std::string_view kGuiThemeGroupExtra  = "EXTRA";
-inline constexpr std::string_view kGuiThemeGroupUser   = "USER-DEFINED";
-
-// THE LIST'S OWN SLUGS (theme_roles.h's head). `default` is THE OPENING
-// THEME, the first row and the missing-theme fallback: a copy of the
-// shipped Arc-Dark (`arc_dark`, kGuiDefaultThemeSourceSlug, a file of
-// SYSTEM; architect 2026-11-18, send Y: "let the remote session make that
-// the default"). The launcher
-// icon reads the same file (apk/build_apk.sh, which takes the slug from
+// THE ONE THEME'S FILE (architect 2026-11-21, send GG: one look): the
+// shipped `themes/system/<slug>.theme`, Arc-Dark's (the default since
+// 2026-11-18, send Y; the one theme since 2026-11-21), which the launch
+// reads (GuiPlatform::bundled_theme_file, gui_main) and the launcher icon's
+// two colors are read from (apk/build_apk.sh, which takes the slug from
 // this line: keep it one line, `= "<slug>";`).
-// `default_dark_neutral_medium` is the compiled reference row below. A
-// shipped file slugging to either is a build defect, a user file left out.
-inline constexpr std::string_view kGuiDefaultThemeSlug       = "default";
 inline constexpr std::string_view kGuiDefaultThemeSourceSlug = "arc_dark";
-inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neutral_medium";
-
-// THE REFERENCE ROW, COMPILED (architect 2026-11-06, session 75; THE
-// REFERENCE since 2026-11-11, session 110, D4: `default` a shipped file's
-// copy — Arc-Dark's since 2026-11-18, send Y — this row
-// staying compiled and listed in SYSTEM as `default_dark_neutral_medium`,
-// no file shipping it). Live's "Default Dark
-// Neutral Medium" — LIVE'S DEFAULT, whose numbers every "Default N" in the
-// code's comments names — through the derivation (theme_roles.h's head),
-// the measured palette of 2026-11-01..05 to the byte but THE SELECTION
-// PAIR'S TEXT 070707, Default's StandbySelectionForeground (architect
-// 2026-11-06, session 75: Live's own partner of the
-// StandbySelectionBackground bar; the 111111 of ControlContrastFrame before
-// it was our mispairing) AND THE PRINT ON A LIT FACE 070707,
-// Default's StandbySelectionForeground, and THE CARDS' WORDS the same
-// 070707 (architect 2026-11-17, session 140: Arc prints its selection text
-// on its checked blue, D4 its warning text on the cards) AND THE RULER
-// 393939, the canvas's tone (architect 2026-11-17, session 140, ruling 3)
-// AND THE LIT-BUT-INERT PAIRS ON ARC'S OWN NUMBERS (architect 2026-11-19,
-// send Z: "let's do arcs numbers"; theme_roles.h's DERIVED block): a
-// checked-but-disabled key's face 86623B, (the accent FFAD56 at 75 % over
-// the body tone 242424, C88B4A) at 60 % over the body tone, and its glyph
-// 2A221A, (the print 070707 at 80 % over C88B4A) at 60 % over the body tone,
-// dimmed with the button as GTK's opacity dims it AND THE THREE ROLES OF
-// OUR OWN, each Default's own existing number (architect 2026-11-19, send
-// Z): THE BODY TONE 242424 (SurfaceArea), THE TITLE BAR'S TEXT and THE
-// SIDEBAR TEXT B5B5B5 (ControlForeground) AND THE ARC PAGE'S DERIVED THREE:
-// THE RULER'S DIGITS 7D7D7D, the text at 55 % over the ruler 393939
-// (Arc's `.dim-label`; architect 2026-11-21, send GG); THE
-// DISABLED KEY'S FACE 2E2E2E, the key face 363636 at 55 % over the body
-// tone, and ITS BORDER 272727, the well's border 2A2A2A at 55 % over it AND
-// THE PLAYHEAD'S LINE 81E1EA, our own PlayheadLine (send FF, 2026-11-21),
-// the word a converted Default file carries: white half way to its head
-// 03C3D5 (architect 2026-11-12, session 113: the mean of Live's fade) AND
-// THE WAVEFORM'S HOVER, our own four more of send FF, each Default's own
-// number for the tone it stands beside, so the reference row shows no
-// marker hover: the hover line 696969 (its ScrollbarInnerHandle, the
-// pill's word, over the canvas), a hovered chip's FFAD56 (the accent), a
-// hovered disabled chip's 5D5D5D (BackgroundClip) and its label's 757575
-// (TextDisabled, the inert label's ink) AND THE ENABLED CHIP'S FILL
-// FFAD56, the accent
-// (ViewCheckControlEnabledOn; architect 2026-11-13, session 119) AND THE
-// TRIM BAR'S TROUGH 242424, Default's ScrollbarInnerTrack 00000000 over the
-// ground — Live's transparent track, so the ground itself — and THE WELL'S
-// FRAME 2A2A2A, Default's ClipBorder (architect 2026-11-17, session 140)
-// AND THE THREE CARRIED FILLS, each opaque at the tone it replaced (send
-// AA's stage D1, 2026-11-19): the tooltip's 363636 (SurfaceBackground), a
-// normal card's and a standing card's E76942 (Alert), the limiter lamp
-// keeping Alert's E76942 as its own tone AND THE TWO HOVER TONES, each the
-// tone it moves from (send CC, 2026-11-20): a key's hover face 363636
-// (SurfaceBackground) and the pill's 696969 (ScrollbarInnerHandle), so the
-// reference row shows no hover AND THE LIST ROW'S HOVER 393939, the view's
-// own tone (a theme whose key hover face 363636 is its key face 363636
-// hovers nothing, so not Arc's 3 % white but the ruler 393939; architect
-// 2026-11-21), so no list row hovers either.
-// THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
-// 119): like every row of the list it holds the theme's own numbers.
-// palette_file.h's static_asserts pin every word. The pre-install
-// palette's row too
-// (render.cpp's construction state, never painted).
-inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
-    0x242424, // ground
-    0x242424, // body_face
-    0xB5B5B5, // text
-    0xB5B5B5, // title_text
-    0xB5B5B5, // sidebar_text
-    0x757575, // text_dim
-    0x757575, // inactive_cue_label_hover
-    0x070707, // text_on_lit
-    0x5D5D5D, // key_dim_ink
-    0x2E2E2E, // key_dim_face
-    0x272727, // key_dim_border
-    0x2A221A, // text_on_lit_dim
-    0x363636, // key_face
-    0x363636, // key_hover_face
-    0x393939, // list_hover_face
-    0x86623B, // lit_dim_fill
-    0x393939, // ruler_face
-    0x919191, // ruler_tick
-    0x7D7D7D, // ruler_text
-    0x2A2A2A, // lane_face
-    0x242424, // trim_bar_face
-    0x696969, // trim_span_face
-    0x696969, // trim_span_hover_face
-    0x2A2A2A, // well_border
-    0x637E86, // selection_fill
-    0x070707, // selection_text
-    0x191919, // score_pane_face
-    0x242424, // scale_trough
-    0x2A2A2A, // scale_slider_border
-    0xFF363636, // tooltip_fill
-    0xFFE76942, // card_fill
-    0xFFE76942, // card_standing_fill
-    0x070707, // card_ink
-    0xE76942, // limiter_lamp
-    0xFF0A0A, // clip_lamp
-    0x393939, // waveform_canvas
-    0x191919, // waveform_ink
-    0x363636, // waveform_core
-    0x303030, // grid
-    0x191919, // center
-    0xFFAD56, // cue
-    0xFFAD56, // cue_fill
-    0xFFAD56, // cue_hover
-    0x111111, // cue_outline
-    0x5D5D5D, // inactive_cue
-    0x5D5D5D, // inactive_cue_hover
-    0x03C3D5, // playhead_head
-    0x81E1EA, // playhead_line
-    0x696969, // hover_line
-    0xFFFFFF, // scanner
-};
-
-// THE SLUG RULE (architect 2026-11-05; unchanged 2026-11-06): a file's stem
-// lowercased, every run of characters outside [a-z0-9] one `_`, a leading or
-// trailing `_` stripped — "Twenty-Four Carat" -> `twenty_four_carat`, "SB Red
-// Greys" -> `sb_red_greys`. The bytes are judged one by one, ASCII alone.
-inline std::string theme_slug_of_stem(std::string_view stem) {
-    std::string out;
-    bool pending_sep = false;
-    for (const char raw : stem) {
-        char c = raw;
-        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
-        const bool word = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
-        if (!word) { pending_sep = true; continue; }
-        if (pending_sep && !out.empty()) out.push_back('_');
-        pending_sep = false;
-        out.push_back(c);
-    }
-    return out;
-}
-
-// THE SLUG'S SHAPE — exactly the words the slug rule spells: one or more runs
-// of [a-z0-9] joined by single `_`s. THE ONE GRAMMAR OWNER of a theme's
-// spelling, read by the device config's reader (its `theme` line, a shape
-// and nothing more since 2026-11-06 — a slug no row bears loads and opens in
-// `default`, theme_roles.h's head).
-constexpr bool is_theme_slug(std::string_view s) {
-    if (s.empty() || s.front() == '_' || s.back() == '_') return false;
-    char prev = 0;
-    for (const char c : s) {
-        const bool word = (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
-        if (!word && c != '_') return false;
-        if (c == '_' && prev == '_') return false;
-        prev = c;
-    }
-    return true;
-}
-static_assert(is_theme_slug(kGuiDefaultThemeSlug));
-static_assert(is_theme_slug(kGuiDefaultThemeSourceSlug));
-static_assert(is_theme_slug(kGuiReferenceThemeSlug));

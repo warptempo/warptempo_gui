@@ -1,76 +1,32 @@
 #pragma once
 
 #include "render.h"         // GuiPalette, GuiColor: the role table's members
-#include "gui_theme.h"      // GuiThemeTones, kGuiReferenceThemeTones: the words
+#include "gui_theme.h"      // GuiThemeTones: the role table's tones
 
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
 
-// THE PALETTE IS ONE PER THEME, THE `theme` KEY'S, AND ITS NUMBERS ARE
-// ABLETON LIVE'S OWN (architect 2026-11-05, the theme arc — "i'd like to
-// implement all" — reopening 2026-11-01's one-palette ruling on his word:
-// "Agree, let's drop them. We keep the canvas grammar" — "We've taken the
-// design, the layout from CoolEdit, and I think that's enough"): Live 12's
-// own themes, whole — chrome and well together — selectable through ONE
-// device key, `theme` (device_config.h), its value a slug of the themes'
-// list (theme_roles.h): SINCE 2026-11-11 (architect, session 110) THE
-// APP'S OWN THEME FILES, Live's raw role values in our keyed format, shipped
-// in the APK (SYSTEM, EXTRA) or dropped beside the device config
-// (USER-DEFINED), each through the one derivation (theme_roles.h's head),
-// `default` Arc-Dark's copy (2026-11-18). No per-color key, no Settings
-// row for a color.
+// THE PALETTE IS THE ONE THEME'S, ARC-DARK'S (architect 2026-11-21, send
+// GG: "i am committed" — every other theme removed, one look; the theme arc
+// of 2026-11-05 — "i'd like to implement all" — reopening 2026-11-01's
+// one-palette ruling on his word: "Agree, let's drop them. We keep the
+// canvas grammar" — "We've taken the design, the layout from CoolEdit, and I
+// think that's enough"): the theme file `themes/system/arc_dark.theme`,
+// Live's raw role values in our keyed format with roles of our own, shipped
+// in the APK and read at launch through the one derivation (theme_roles.h's
+// head). No per-color key, no Settings row for a color.
 // Cool Edit Pro 2.1 keeps THE CANVAS GRAMMAR — the view
 // bar, the ruler, the marker lane, the grid and center lines, the cues, the
 // playhead, the stereo divider and their lengths (program_spec.h) — and
-// gives no color. THE REFERENCE ROW (Live's Default, "Default Dark Neutral
-// Medium", COMPILED: kGuiReferenceThemeTones, gui_theme.h, listed as
-// `default_dark_neutral_medium`; no file ships it) IS THE 2026-11-01..05
-// MEASURED PALETTE TO THE BYTE but the selection
-// pair's text (070707 since 2026-11-06), the magnify core (363636, Live's
-// SurfaceBackground, since 2026-11-07), the lit-but-inert key's pair
-// (2026-11-11), the playhead's line
-// (2026-11-12), the enabled chip's fill (the accent, 2026-11-13)
-// and the print on a lit face, the cards' ink and the ruler (2026-11-17,
-// session 140), the two lit-but-inert pairs (2026-11-17, on Arc's own
-// numbers since 2026-11-19, send Z) and the three roles of our own and the
-// Arc page's three derived tones (2026-11-19; all at the foot) — the numbers
-// MEASURED OFF HIS OWN SHOTS OF LIVE 12's default theme (2026-11-01: the
-// canvas, the ink, the zero line, the grid's one-px equivalent, the
-// playhead's triangle, the orange of Live's markers and lit buttons;
-// 2026-11-02 the grey of its inactive marker; 2026-11-04 its dark line) —
-// AND THE PLAYHEAD LINE'S STATIC TONE, the reference row's own PlayheadLine,
-// white half way to its head, the mean of Live's fade (81E1EA; architect
-// 2026-11-12, session 113; our own role since send FF, 2026-11-21,
-// theme_roles.h's OUR OWN, THE WAVEFORM'S HOVER), and THE ENABLED CHIP'S
-// FILL, the accent FFAD56 (2026-11-13, session 119) — the
-// static_asserts at the foot are that proof in the build, every one of the
-// fifty words with its literal (the waveform's hover of send FF,
-// 2026-11-21, four tones each Default's own number for the tone it stands
-// beside — the hover line 696969, the pill's ScrollbarInnerHandle; the
-// hovered chip FFAD56, the accent; the hovered disabled chip 5D5D5D and its label 757575, the inert chip's
-// and the inert label's — so no hover shows on the reference row; the list row's hover of 2026-11-21,
-// 393939, the ruler's own tone on a theme whose keys hover nothing; the two
-// hover tones of send CC, 2026-11-20, a key's 363636 and the pill's 696969,
-// each Default's own number for the role it copies; the progress bar's
-// trough of send AA's stage D2, 2026-11-19, 242424, ScrollbarInnerTrack
-// over the ground, a Live theme's own number — and the scale's rim of stage
-// D3, 2A2A2A, ClipBorder over the ground —
-// the lamp arc's clip lamp the same night, the lit-but-inert key's face and
-// its glyph of 2026-11-11, and the enabled chip's fill of 2026-11-12, retold
-// 2026-11-13; the trough and the
-// well's frame of 2026-11-17, with the print on a lit face,
-// the cards' ink, the ruler and the two inert pairs retold that day,
-// session 140; the body tone, the title bar's text, the sidebar text, the
-// ruler's digits and the disabled key's face and border of 2026-11-19, send
-// Z, with the two inert pairs retold; the three carried fills, each opaque
-// (its top byte FF), and the limiter lamp of send AA's stage D1 the same
-// day, the cards' face retired into them).
+// gives no color.
 //
-// THE ROWS ARE THE THEMES' OWN NUMBERS AND THE PALETTE INSTALLED IS THE ROW
+// THE ROW IS THE THEME'S OWN NUMBERS AND THE PALETTE INSTALLED IS THE ROW
 // AS IT IS (architect 2026-11-21, send GG: install_palette paints the
-// theme's own numbers). Every "Default N" below is the reference row's own
-// number, the record, and the screen shows exactly it.
+// theme's own numbers). Every "Default N" below is Live's Default's number
+// ("Default Dark Neutral Medium", the derivation's reference of its Live
+// roles), the record and not a painted tone; the screen shows arc_dark's,
+// named beside a role where the telling needs it.
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -79,7 +35,7 @@
 // fills every member off the installed theme's row — the program members
 // off this file's table, the panel's `face` off the theme's body tone, the
 // chrome members off theme_file.h's — so every painter reads palette() and
-// no painter knows which table a color came from, nor which theme.
+// no painter knows which table a color came from.
 //
 // THE PALETTE'S RULE (architect 2026-10-07 ~10:00): A COLOR THE PROGRAM
 // DRAWS IN THE WELL, OR ON A THING THAT ENTERS THE WELL, IS THE PALETTE'S; a
@@ -88,8 +44,8 @@
 // flag editor's field and selection band, the chrome's selected pair). So
 // the palette's program roles are exactly the FIFTEEN below (TWO ROLES MAY
 // SHARE A NUMBER — the ink and `center` share Default's 191919, and
-// `cue_fill` the accent `cue`'s FFAD56, and each hover its rest's on a Live
-// theme: a role is what it paints, not its value). Each role's Default word
+// `cue_fill` the accent `cue`'s FFAD56: a role is what it paints, not its
+// value). Each role's Default word
 // and its source (the derivation, theme_roles.h's head):
 //   waveform_canvas  393939  the canvas, Live's darker band (DetailGridTiles
 //                            over DetailViewBackground)
@@ -144,8 +100,7 @@
 //                            hover) (CueHover, our own role;
 //                            arc_dark 639FE5, Arc's hover of a blue thing,
 //                            `.documents-entry-tag:hover`; a Live theme's
-//                            ViewCheckControlEnabledOn, the chip's own tone,
-//                            so no hover shows there)
+//                            ViewCheckControlEnabledOn, the chip's own tone)
 //   cue_outline      111111  LIVE'S DARK LINE (architect 2026-11-04): THE
 //                            SELECTION STEM down the canvas (every selected
 //                            marker, architect 2026-11-05; enabled or
@@ -255,114 +210,3 @@ inline constexpr GuiPaletteRole kGuiPaletteRoles[] = {
     {&GuiPalette::scanner,          &GuiThemeTones::scanner},
 };
 inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
-
-// THE DEFAULT PROOF (the head): the compiled reference row, Live's Default
-// (kGuiReferenceThemeTones, gui_theme.h) pins the measured palette of
-// 2026-11-01..05 — every one of the fifty words with its literal, so
-// an edit that moved one of them is a build failure here. The row is Live's
-// Default file through the one derivation (theme_roles.h's head), which the
-// loader runs for every theme file (the proof of 2026-11-06, on the tablet;
-// the theme files' of 2026-11-11, every row equal to the .ask reader's).
-// The lamp arc's one (2026-11-05 night) is Live's own word read
-// off the Default file: the clip lamp FF0A0A (StandardVuMeter / Maximum).
-// THE LIT KEY'S THREE (architect 2026-11-11, session 106: a lit key's face is
-// the accent, `cue` FFAD56; theme_roles.h's head): THE PRINT ON A LIT FACE
-// 070707, Default's StandbySelectionForeground (architect 2026-11-17,
-// session 140); and THE LIT-BUT-INERT
-// PAIR on Arc's own numbers (architect 2026-11-19, send Z: "let's do arcs
-// numbers"), a checked-but-disabled key's face 86623B — (the accent at 75 %
-// over the body tone 242424, C88B4A) at 60 % over the body tone — and its
-// glyph 2A221A, (the print at 80 % over C88B4A) at 60 % over the body
-// tone, dimmed with the button as GTK's opacity dims it — each per channel,
-// rounded half to even (the DERIVED block). THE RULER 393939 is the canvas's tone and THE CARDS'
-// INK 070707 the print's (architect 2026-11-17, session 140, ruling 3 and
-// D4). OUR OWN THREE ROLES (architect 2026-11-19, send Z; theme_roles.h's
-// THE FORMAT) are Default's own numbers: THE BODY TONE 242424, its
-// SurfaceArea; THE TITLE BAR'S TEXT and THE SIDEBAR TEXT B5B5B5, its
-// ControlForeground. THE ARC PAGE'S DERIVED THREE (the same day; the
-// DERIVED block): THE RULER'S DIGITS 7D7D7D, the text B5B5B5 at 55 % over
-// the ruler 393939, Arc's `.dim-label` (architect 2026-11-21, send GG); THE DISABLED KEY'S FACE 2E2E2E, the key face 363636 at
-// 55 % over the body tone 242424; ITS BORDER 272727, the well's border
-// 2A2A2A at 55 % over the body tone. THE LIST ROW'S HOVER 393939 (architect
-// 2026-11-21; the DERIVED block): the ruler 393939 itself, not
-// Arc's 3 % white over it — Default's key hover face 363636 is its key face
-// 363636, so no row hovers on the reference row, as no key does.
-// THE PLAYHEAD'S LINE
-// 81E1EA is FFFFFF + 0.5 · (head 03C3D5 − FFFFFF), per channel, rounded half
-// to even (architect 2026-11-12, session 113), the word a converted Default
-// file carries for our own PlayheadLine (send FF, 2026-11-21; theme_roles.h's
-// OUR OWN, THE WAVEFORM'S HOVER). THE WAVEFORM'S HOVER, our own four more of
-// send FF, is each Default's own number for the tone it stands beside: the
-// hover line 696969, Default's ScrollbarInnerHandle (opaque), a line of its
-// own that DOES SHOW on the reference row, over the canvas 393939 (the line
-// has no theme term, render.h's render_hover_line; its triangle in the
-// ruler wears it too); and the three lane tones, each its rest's own, so NO
-// MARKER HOVERS on the reference row: the hovered chip FFAD56, the accent;
-// the hovered disabled chip 5D5D5D, BackgroundClip; and
-// its label 757575, TextDisabled. THE ENABLED
-// CHIP'S FILL FFAD56 is the accent, Default's ViewCheckControlEnabledOn
-// (architect 2026-11-13, session 119; the ROLE-NAMED block). Every word
-// here is the row's own number, the one the install paints.
-// THE SELECTION PAIR'S TEXT 070707 is Default's
-// StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
-// partner of the StandbySelectionBackground bar; 111111,
-// ControlContrastFrame, until then — our mispairing). THE MAGNIFY CORE
-// 363636 is Default's SurfaceBackground, the key face (architect 2026-11-07,
-// session 83, his pick i4; 1E1E1E, his pick of 2026-11-04 night
-// and ControlBackground's number, until then — render.h's THE CORE).
-namespace gui_default_theme_proof {
-inline constexpr GuiThemeTones kDefault = kGuiReferenceThemeTones;
-// THE CHROME (materials.h's head: the ground, the text tones, the key, the
-// well's tones, the selection pair, the panes, the cards, the lamps).
-static_assert(kDefault.ground          == 0x242424);
-static_assert(kDefault.body_face       == 0x242424);
-static_assert(kDefault.text            == 0xB5B5B5);
-static_assert(kDefault.title_text      == 0xB5B5B5);
-static_assert(kDefault.sidebar_text    == 0xB5B5B5);
-static_assert(kDefault.text_dim        == 0x757575);
-static_assert(kDefault.inactive_cue_label_hover == 0x757575);
-static_assert(kDefault.text_on_lit     == 0x070707);
-static_assert(kDefault.key_dim_ink     == 0x5D5D5D);
-static_assert(kDefault.key_dim_face    == 0x2E2E2E);
-static_assert(kDefault.key_dim_border  == 0x272727);
-static_assert(kDefault.text_on_lit_dim == 0x2A221A);
-static_assert(kDefault.key_face        == 0x363636);
-static_assert(kDefault.key_hover_face  == 0x363636);
-static_assert(kDefault.list_hover_face == 0x393939);
-static_assert(kDefault.lit_dim_fill    == 0x86623B);
-static_assert(kDefault.ruler_face      == 0x393939);
-static_assert(kDefault.ruler_tick      == 0x919191);
-static_assert(kDefault.ruler_text      == 0x7D7D7D);
-static_assert(kDefault.lane_face       == 0x2A2A2A);
-static_assert(kDefault.trim_bar_face   == 0x242424);
-static_assert(kDefault.trim_span_face  == 0x696969);
-static_assert(kDefault.trim_span_hover_face == 0x696969);
-static_assert(kDefault.well_border     == 0x2A2A2A);
-static_assert(kDefault.selection_fill  == 0x637E86);
-static_assert(kDefault.selection_text  == 0x070707);
-static_assert(kDefault.score_pane_face == 0x191919);
-static_assert(kDefault.scale_trough    == 0x242424);
-static_assert(kDefault.scale_slider_border == 0x2A2A2A);
-static_assert(kDefault.tooltip_fill    == 0xFF363636);
-static_assert(kDefault.card_fill       == 0xFFE76942);
-static_assert(kDefault.card_standing_fill == 0xFFE76942);
-static_assert(kDefault.card_ink        == 0x070707);
-static_assert(kDefault.limiter_lamp    == 0xE76942);
-static_assert(kDefault.clip_lamp       == 0xFF0A0A);
-// THE PALETTE (the head's fifteen).
-static_assert(kDefault.waveform_canvas == 0x393939);
-static_assert(kDefault.waveform_ink    == 0x191919);
-static_assert(kDefault.waveform_core   == 0x363636);
-static_assert(kDefault.grid            == 0x303030);
-static_assert(kDefault.center          == 0x191919);
-static_assert(kDefault.cue             == 0xFFAD56);
-static_assert(kDefault.cue_fill        == 0xFFAD56);
-static_assert(kDefault.cue_hover       == 0xFFAD56);
-static_assert(kDefault.cue_outline     == 0x111111);
-static_assert(kDefault.inactive_cue    == 0x5D5D5D);
-static_assert(kDefault.inactive_cue_hover == 0x5D5D5D);
-static_assert(kDefault.playhead_head   == 0x03C3D5);
-static_assert(kDefault.playhead_line   == 0x81E1EA);
-static_assert(kDefault.hover_line      == 0x696969);
-static_assert(kDefault.scanner         == 0xFFFFFF);
-} // namespace gui_default_theme_proof

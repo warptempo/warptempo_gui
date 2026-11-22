@@ -3,7 +3,6 @@
 #include "input_handler.h"
 #include "render_output_naming.h"
 #include "device_config.h"
-#include "theme_roles.h"       // the themes' list: the `theme` value list, the commit's find
 #include "settings_io.h"
 #include "warp_frame_map_view.h"  // the target-view re-land's two translations
 #include "target_render.h"
@@ -293,7 +292,7 @@ std::string GuiSettingsEditor::setting_value(const std::string& key) const {
 // THE VALUE LISTS' ROWS (the domains at the declaration). Each arm is
 // its key's own domain owner read whole — the switch's
 // words, the noise's folder listing, the grow's quarters, the crossfade's
-// seconds, the themes' slugs — with every value in the writer's spelling, so
+// seconds — with every value in the writer's spelling, so
 // the row the tap commits is a value the key's grammar takes byte for byte
 // and the live value's row is found by a byte compare. A
 // row's text carries NO UNIT (architect 2026-10-28 night: "the units are not
@@ -306,9 +305,6 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     std::vector<std::string> out;
     if (key == "true_colors") {
         for (const char* word : kTrueColorsWords) out.emplace_back(word);
-    } else if (key == "theme") {
-        // The list's own order, `default` first (theme_roles.h).
-        for (const GuiTheme& t : gui_themes()) out.push_back(t.slug);
     } else if (key == "noise") {
         const std::filesystem::path home = noise_home();
         if (!home.empty()) {
@@ -328,29 +324,6 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     } else {
         assert(false && "a key with no value list");
     }
-    return out;
-}
-
-std::vector<GuiSettingsEditor::ValueListGroup>
-GuiSettingsEditor::value_list_groups(const std::string& key) const {
-    // The contract is at the declaration (settings_editor.h): `theme` one
-    // headed group per run of the list's group, in the list's order (the
-    // list keeps each group's rows together, theme_roles.h), the heading the
-    // group's own as it is spelled; every other key one headless group of
-    // value_choices.
-    std::vector<ValueListGroup> out;
-    if (key == "theme") {
-        const std::string* current = nullptr;
-        for (const GuiTheme& t : gui_themes()) {
-            if (current == nullptr || t.group != *current) {
-                current = &t.group;
-                out.push_back(ValueListGroup{t.group, {}});
-            }
-            out.back().values.push_back(t.slug);
-        }
-        return out;
-    }
-    out.push_back(ValueListGroup{std::string(), value_choices(key)});
     return out;
 }
 
@@ -770,14 +743,15 @@ void GuiSettingsEditor::commit() {
 // 2026-10-26, the glow settled at a constant, then retired with the LED,
 // 2026-11-01, and the tooltip's gap `tooltip_gap` for session 90 of
 // 2026-11-07, settled at 1 W in session 91, render.h's kTooltipGapW).
-// `theme` (2026-11-05, Live's themes whole; its namesake of
-// 2026-10-03..10-08, a chrome theme file read at launch, left with that key)
-// the same, at once and no card, its arm after true_colors'. (`icons` and
+// (`theme`, a theme's slug, had an arm after true_colors' 2026-11-05 to
+// 2026-11-21, send GG, gone with its key, one look since; its namesake of
+// 2026-10-03..10-08, a chrome theme file read at launch, left with that key.
+// `icons` and
 // `font` had arms here 2026-10-09..10-12; each left
 // with its key, and an `icons` arm of another meaning, the icon set, stood
 // 2026-11-17 to 2026-11-21; `waveform`, the color presets' key, 2026-10-14..11-01.) The
 // commit is the line editor's Enter for the keys whose row opens it,
-// and a list row's tap for the five keys with a value list
+// and a list row's tap for the four keys with a value list
 // (kSettingsValueListKeys, settings_editor.h), whose rows open the list and
 // never the line editor — ONE BODY BEHIND BOTH DOORS (apply_device_setting
 // below; the choice rows' list rows of 2026-10-07..10-14, which showed a
@@ -786,7 +760,7 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. The key is the open's, one
-// of the line editor's rows (architect 2026-11-19), so the five
+// of the line editor's rows (architect 2026-11-19), so the four
 // listed keys' arms below are reached through the list's door alone.
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
@@ -854,31 +828,6 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         if (*on == app.device_config->true_colors) return unchanged();
         app.device_config->true_colors = *on;
         input->apply_true_colors(*on);
-        (void)persist();
-        return applied();
-    }
-
-    // THE THEME (architect 2026-11-05, the theme arc; palette_file.h's head):
-    // the slug of a row of the themes' list (find_gui_theme, theme_roles.h —
-    // the list as the launch read it; a slug no row bears, which the value list
-    // never names, refused with kThemeGrammarReason, device_config.h: the
-    // reader's shape test is not this commit's, architect 2026-11-06), APPLIED
-    // LIVE AT THE COMMIT, which is the line editor's Enter or the value list's
-    // row tap, through the theme's own apply shape
-    // (GuiInputHandler::apply_theme — the palette reinstalled off the row, the
-    // icon rasters, the plate or the flag cache, the whole window), so NO
-    // CARD: the colors on screen are the answer; a failed
-    // write keeps the live value for the session, the card saying the persist
-    // failed, and the slug already in force is the unchanged no-op. The page
-    // opens its VALUE LIST (the slugs under their groups' headings, SYSTEM
-    // first, kSettingsValueListKeys), its one door (recall_gui_setting_value
-    // the list's seat, the slug verbatim).
-    if (key == "theme") {
-        const GuiTheme* theme = find_gui_theme(value);
-        if (theme == nullptr) return reject(kThemeGrammarReason);
-        if (value == app.device_config->theme) return unchanged();
-        app.device_config->theme = value;
-        input->apply_theme(*theme);
         (void)persist();
         return applied();
     }

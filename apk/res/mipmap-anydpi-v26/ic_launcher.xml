@@ -6,13 +6,12 @@
      breeze-icons' music-note-16th recolored, a `currentColor` drawing on a
      22 x 22 viewBox; the app's drawings are Papirus's, assets/icons/README.md),
      rendered by resvg at the art's height in the
-     `default` theme's text tone #D3DAE3 (apk/build_apk.sh's LAUNCHER_INK,
+     theme's text tone #D3DAE3 (apk/build_apk.sh's LAUNCHER_INK,
      given as resvg's user stylesheet) and centered over THE APP'S GROUND,
      FLAT: #2F343F (architect 2026-11-02: the icon wears the window's own
-     ground — the `default` theme's whatever theme the window runs,
-     2026-11-05; since 2026-11-18, send Y, Arc-Dark: "arc_dark and 75 will
-     be my default"; both READ by apk/build_apk.sh from the default's
-     source file, themes/system/arc_dark.theme, its SurfaceArea and
+     ground; Arc-Dark's since 2026-11-18, send Y, the one theme since
+     2026-11-21, send GG; both READ by apk/build_apk.sh from the one theme
+     file, themes/system/arc_dark.theme, its SurfaceArea and
      ControlForeground lines, that file the one owner, its slug read out of
      src/gui/gui_theme.h's kGuiDefaultThemeSourceSlug),
      one color over the whole

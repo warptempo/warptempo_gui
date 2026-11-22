@@ -15,8 +15,8 @@
 // CHROME paints, as ROLES. THE PROGRAM'S COLORS ARE THE PALETTE's (the
 // waveform, the flags, the playhead's line and the scanner; palette_file.h,
 // whose head owns the rule that parts the two) — the two tables fill ONE
-// struct off ONE theme row (GuiThemeTones, gui_theme.h — a row of the
-// themes' list, theme_roles.h; install_palette, render.cpp).
+// struct off THE theme row (GuiThemeTones, gui_theme.h — the one theme's,
+// Arc-Dark's, theme_roles.h; install_palette, render.cpp).
 //
 // THE CHROME INHERITS COOL EDIT (architect 2026-10-10: "the chrome color
 // should just be the Cool Edit theme color … we're getting rid of chrome
@@ -27,8 +27,7 @@
 // is one member of the installed theme's tones, named per role in the table
 // below (THE ONE OWNER of every chrome role's source; chrome_derive.h's
 // per-role derivation off the flat look's constants retired with the
-// constants), installed at every install — gui_main's launch and every
-// `theme` commit. THE CAPTION HAS NO ROLE: the app paints none since
+// constants), installed at gui_main's launch. THE CAPTION HAS NO ROLE: the app paints none since
 // 2026-10-24 (render.h's caption note); its six roles — the active and
 // inactive title's start, gradient end and text, a scheme's keys — were
 // removed 2026-10-21 with the 42 built-in captions and the `caption` key
@@ -177,6 +176,5 @@ static_assert(every_chrome_role_decided());
 // (THE ONE COLOUR GRAMMAR — `#rrggbb` or one of Windows' twenty always-solid
 // colours by name — was the theme files' and then the preset files' value
 // grammar, 2026-10-03..10-14, and left with the preset files, architect
-// 2026-10-14. The `theme` key of 2026-11-05 names a row of the themes' list
-// by slug — the theme files read at launch, theme_roles.h's find_gui_theme
-// — and spells no color.)
+// 2026-10-14. No key spells a color: the one theme's file is read at
+// launch, theme_roles.h's load_gui_theme.)
