@@ -7582,7 +7582,7 @@ struct AppState {
     //   90 s) is nine beats + 1 = 10 repaints at most, the landing's the
     //   last; nothing at rest, where both roads return before walking the
     //   laid-out cues (no Marker record, no hovered marker, no cue painted
-    //   lit: GuiPaintHandler::scan_lane_hovers).
+    //   lit: GuiPaintHandler::lane_cues_rest).
     //   NOT ON A LIVE THEME: the walk's theme term hovers no marker there,
     //   so nothing fades or is damaged.
     // THE LIST ROW'S HOVER (architect 2026-11-21; the look at

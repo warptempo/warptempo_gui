@@ -1898,7 +1898,7 @@ struct CueDraw {
 // the surface was painted at; `regions` its working vector. AND `hovered`,
 // THE COUNT OF `cues` PAINTED AT A HOVER WEIGHT OTHER THAN 0 (architect
 // 2026-11-21, send FF: the lanes' at-rest exit,
-// GuiPaintHandler::scan_lane_hovers): counted by paint_cues over the layout
+// GuiPaintHandler::lane_cues_rest): counted by paint_cues over the layout
 // it paints, 0 at cue_pass_keep_previous (`cues` emptied), kept by
 // cue_pass_sync_hover at each weight it writes — always the number of cues
 // the surface shows lit, read without a walk.
@@ -2833,7 +2833,7 @@ namespace {
 // and writing it at the tick changes nothing any frame shows. Without it
 // such a cue declares no region, so no frame comes to write it, and the
 // clock would walk the lane on every tick, never reaching the at-rest exit
-// (GuiPaintHandler::scan_lane_hovers). A cue with any pixel there is the
+// (GuiPaintHandler::lane_cues_rest). A cue with any pixel there is the
 // repaint's alone. False where no region is declared.
 bool cue_hover_regions(
         const std::function<double(const CueKey&)>& weight_of, bool write) {

@@ -5917,7 +5917,7 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
 //     marker's record whose cue is no longer on the lane.
 //   cue_pass_hovered_cues — how many laid-out cues the surface shows at a
 //     weight other than 0, kept beside the layout (no walk): the lanes'
-//     at-rest exit reads it (GuiPaintHandler::scan_lane_hovers).
+//     at-rest exit reads it (GuiPaintHandler::lane_cues_rest).
 //   cue_pass_hover_damage — THE COMPARE, the clock's (run on every 5 ms
 //     tick): every laid-out cue whose weight as painted is not `weight_of`'s
 //     now has its OWN EXTENT appended to `damage` — the region

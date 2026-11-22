@@ -9836,11 +9836,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      LINES, architect 2026-11-14).
         //   8. the SCANNER (waveform), solid.
         //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
-        //      digits — AND, in the same pass, the cursor's HEAD (the cyan
-        //      triangle on the ruler's bottom rows, over the ticks and
-        //      digits, its edge blended over them) and the MARKER LANE'S
-        //      panel face under the cues — on a frame with no audio the two
-        //      lanes' faces and lines alone (this branch's `else`).
+        //      digits — AND, in the same pass, the HOVER LINE'S TRIANGLE
+        //      (`hover_line`, over the ticks and digits, under the head;
+        //      render.h's render_hover_line, architect 2026-11-21, send GG),
+        //      then the cursor's HEAD (`playhead_head`, the triangle on the
+        //      ruler's bottom rows, over the ticks, the digits and the hover
+        //      line's triangle, its edge blended over them) and the MARKER
+        //      LANE'S panel face under the cues — on a frame with no audio the
+        //      two lanes' faces and lines alone (this branch's `else`).
         //  10. the FLAG BLIT — the cues.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only), then
         //      THE SWEEP HIGHLIGHT (paint_sweep_highlight, architect

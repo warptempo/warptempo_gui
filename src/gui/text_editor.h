@@ -392,11 +392,15 @@ struct State {
     // the flag editor's UP / DOWN when a step from an EMPTY text lands
     // (GuiFlagEditor::step_editor_text); while it stands every further step
     // walls against the cleared pair, and Enter commits the text's bound AND
-    // clears the other (GuiFlagEditor::commit_iter_bound_edit). IT FALLS WHEN
-    // THE TEXT IS EMPTY AGAIN — Backspace or a replacement emptying it (this
-    // module's two text-changing roads, drop_cleared_pair_on_empty) — so a
-    // number typed into an empty text with no step since commits against the
-    // stored partner, as typing always did; it never survives the session
+    // clears the other (GuiFlagEditor::commit_iter_bound_edit). IT FALLS
+    // WHENEVER THE TEXT IS EMPTY, EVEN IN PASSING (this module's two
+    // text-changing roads, drop_cleared_pair_on_empty): Backspace emptying it,
+    // and a whole-text replacement, whose selection's erase empties it before
+    // the insert — so "select all and type" commits as "erase and type" does,
+    // and a number typed into an empty text with no step since commits
+    // against the stored partner, as typing always did. The step's own
+    // rewrite is such a replacement, and the step sets the fact again after
+    // it (GuiFlagEditor::step_editor_text). It never survives the session
     // (enter / deactivate reset it). Meaningless on every other kind.
     bool iter_pair_cleared = false;
 

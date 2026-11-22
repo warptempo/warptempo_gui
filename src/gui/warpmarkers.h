@@ -497,10 +497,14 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // blanks either column's bracket writes one spelling.
 // THE CALLERS ARE THE BLANK'S OWN: the bound step's write site and the bound
 // editor's commit (its empty text, and the cleared pair a stepped erase
-// commits in, architect 2026-11-21, send GG). A marker that LOSES ITS CARRIER clears the tie
-// beside this call, at the THREE sites that can produce one — the flag
-// editor's payload commit and Ctrl+N's ref->pass and owner->pass conversions
-// — because those are carrier losses and not blanks.
+// commits in, architect 2026-11-21, send GG). Two callers clear the tie
+// beside this call because they end the session state whole: the grid
+// iterations mode's exit wipe, both columns (GuiFlagEditor::wipe_iter_state)
+// and the undo snapshot's strip (strip_iter_fields, below). A marker that
+// LOSES ITS CARRIER clears the tie beside this call too, at the THREE sites
+// that can produce one — the flag editor's payload commit and Ctrl+N's
+// ref->pass and owner->pass conversions — because those are carrier losses
+// and not blanks.
 inline void clear_iter_bracket(GuiWarpMarker& m) {
     m.iter_start_cents.reset();
     m.iter_end_cents.reset();
