@@ -1021,9 +1021,32 @@ struct GuiPaintHandler {
     // playheads' damage sites: damage follows the basis of the pixels it
     // erases. Read-only geometry, no state touched.
     std::optional<double> hover_line_x() const;
+    // THE HOVER LINE'S TRIANGLE'S PLACE, DERIVED (architect 2026-11-21, send
+    // GG; the rule at render.h's render_hover_line): hover_line_x's place
+    // where the stored gate answer is Tap, none otherwise — THE TRIANGLE
+    // STANDS IFF THE LINE IS A TAP'S (with the barrel held, Anchor, the line
+    // previews the zoom anchor's stem, which has no head: no triangle). ONE
+    // PLACE for the line and its triangle. What paint_ruler_row paints and
+    // the setter compares (AppState::HoverLine's `triangle_declared_x`).
+    std::optional<double> hover_triangle_x() const;
+    // THE RULER HEAD'S PAINTED BOX at the waveform's column `col` (offset
+    // from waveform_area's left edge) — ONE FUNCTION FOR THE PLAYHEAD'S HEAD
+    // AND THE HOVER LINE'S TRIANGLE, the same drawing (render.h's cue block,
+    // THE CHIP'S TWO EXTENTS): the columns [col − reach, col + reach) of the
+    // painted reach (cue_chip_paint_reach_px) cut to the waveform's columns
+    // on the plate's published width (the ruler walk's wave_w), over the
+    // ruler's last cue_chip_h_px rows; empty where no head can paint. The
+    // head's cull in paint_ruler_row, the triangle's cull and record there,
+    // and the triangle's damage (GuiInputHandler::set_hover_line). The
+    // column is the containing pixel of the place's exact x for the
+    // triangle (input_core.h's containing_pixel: the x within [col, col + 1),
+    // its real interval [x − H, x + H] inside [col − H, col + H + 1), inside
+    // the reach) and playhead_pixel_x's for the playhead's head (the x
+    // within half a px of it). PUBLIC for that setter.
+    GuiRect ruler_head_box(int col) const;
 
-    // THE LANES' TWO FACES AS PAINTED (architect 2026-11-21, send FF; the
-    // rule at AppState::FaceFades' THE LANES' TWO FACES). PUBLIC for the
+    // THE MARKER'S FACE AS PAINTED (architect 2026-11-21, send FF; the
+    // rule at AppState::FaceFades' THE MARKER'S FACE). PUBLIC for the
     // faces' clock (GuiInputHandler::tick_face_fades) and the pre-paint
     // hook (main.cpp), as hover_line_x is for the line's setter.
     //   cue_hover_of — THE LANE'S HOVER FOR A PASS (CueLaneHover, render.h):
@@ -1036,9 +1059,7 @@ struct GuiPaintHandler {
     //     (maybe_rebuild_flag_cache) and the two roads below.
     //   THE TWO ROADS OF ONE COMPARATOR — every cue the flag cache shows at
     //   a weight that is not its face's now, its own extent over the lane's
-    //   rows; and where the triangle's weight is not the one last declared
-    //   (`head_hover_declared_`), the triangle's painted box over the ruler's
-    //   rows (playhead_head_damage_rect) — nothing else:
+    //   rows — nothing else:
     //   damage_lane_hovers — THE CLOCK'S, at the end of every 5 ms tick
     //     (tick_face_fades): COMPARE AND DAMAGE ONLY (cue_pass_hover_damage)
     //     — no cue repainted, so while a cue's painted weight differs from
@@ -1065,35 +1086,19 @@ struct GuiPaintHandler {
     //     then replaces.
     //   Both only on a cache whose layout stands (the rebuild's record): a
     //   cache that does not is rebuilt whole, reading the weights, by the
-    //   next rebuild. BOTH RETURN AT ONCE FROM THE CUES' HALF AT REST
-    //   (scan_lane_hovers' `cues_rest`): no Marker record, no hovered
-    //   marker and no laid-out cue painted lit (cue_pass_hovered_cues) —
-    //   every weight is then 0 and every cue painted at 0 — so a resting app
-    //   walks neither the laid-out cues nor the records past the one walk
-    //   that also answers the triangle's weight.
-    //   scan_lane_hovers — that one walk of the records: whether the cues
-    //     rest (above) and the triangle's weight (hover_weight's own two
-    //     answers); damage_head_hover the triangle's compare, both roads'.
-    //   playhead_head_damage_rect — the triangle's painted box: the columns
-    //     [col − reach, col + reach) of its painted reach
-    //     (cue_chip_paint_reach_px) round the playhead's column on the plate
-    //     basis, cut to the waveform's columns, over the ruler's last
-    //     cue_chip_h_px rows — paint_ruler_row's own arithmetic; empty where
-    //     no head can paint.
+    //   next rebuild. BOTH RETURN AT ONCE AT REST (lane_cues_rest): no
+    //   Marker record, no hovered marker and no laid-out cue painted lit
+    //   (cue_pass_hovered_cues) — every weight is then 0 and every cue
+    //   painted at 0 — so a resting app walks neither the laid-out cues nor
+    //   the records past that one walk.
+    //   lane_cues_rest — that one walk of the records.
     CueLaneHover cue_hover_of();
     void         damage_lane_hovers();
     void         sync_lane_hovers();
-    GuiRect      playhead_head_damage_rect() const;
 
 private:
-    struct LaneHoverScan {
-        bool   cues_rest = false;
-        double head      = 0.0;
-    };
-    LaneHoverScan scan_lane_hovers() const;
-    void          damage_head_hover(double head);
+    bool lane_cues_rest() const;
     std::vector<std::pair<CueKey, double>> lane_hover_weights_;
-    double                                 head_hover_declared_ = 0.0;
     // THE DEBT (2026-10-13): set by owe_waveform_rebuild, cleared at the head
     // of force_synchronous_waveform_rebuild by whichever road runs it. While it
     // stands the worker's dirty-detect stands down (maybe_enqueue_waveform_render's
@@ -1255,14 +1260,19 @@ private:
     // the rects_intersect gates and calls these in place.
     void paint_flag_annotations(cairo_t* cr, const GuiRect& top_strip);
     // THE RULER LANE (top lane 5): Cool Edit's flipped ruler — its ground and
-    // bottom line, the timestamp ladder's ticks and digits and the playhead's
-    // head (the `playhead_head` role) — and the MARKER LANE'S panel face under the cues the flag
+    // bottom line, the timestamp ladder's ticks and digits, the hover line's
+    // triangle (the `hover_line` role, architect 2026-11-21, send GG) and
+    // over it the playhead's head (the `playhead_head` role) — and the
+    // MARKER LANE'S panel face under the cues the flag
     // blit lays over it. Reads the DISPLAYED plate basis, so it re-derives on
     // every pan/zoom along with the strip content it is painted beside; the
     // ticks, the head and the digits stand at their exact places (architect
     // 2026-11-14, send J; the rules at the definition).
     // PUBLISHES the head's hit at its exact place (AppState::playhead_head_hit,
-    // the head drag's target, 2026-10-09).
+    // the head drag's target, 2026-10-09), and RECORDS the hover line's
+    // triangle as painted (AppState::HoverLine's triangle pair), each by the
+    // one publishing rule (a run publishes only what its damage clip
+    // redrew).
     void paint_ruler_row(cairo_t* cr);
     // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went
     // 2026-10-21) — the ICON ROW (top lane 1 since 2026-10-22, row 4: the

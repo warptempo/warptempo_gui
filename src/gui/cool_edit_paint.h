@@ -72,11 +72,12 @@
 // flat look). The color is resolve_flag_face's for a cue (render.cpp, the
 // one table: `cue_fill`, a disabled chip's `inactive_cue`) and the
 // `playhead_head` for the playhead's head (the same chip, mock k1,
-// 2026-11-04) — A TONE, so a hovered chip and a hovered head are the mix of
-// their rest and hover tones as painted (materials.h's StampTone; architect
-// 2026-11-21, send FF: the lanes' hovers, resolve_flag_face's table and
-// AppState::FaceFades' THE LANES' TWO FACES), a resting one its plain color,
-// byte for byte.
+// 2026-11-04), `hover_line` for the hover line's triangle in the ruler
+// (architect 2026-11-21, send GG) — A TONE, so a hovered chip is the mix of
+// its rest and hover tones as painted (materials.h's StampTone; architect
+// 2026-11-21, send FF: the marker's hover, resolve_flag_face's table and
+// AppState::FaceFades' THE MARKER'S FACE), a resting one and both heads its
+// plain color, byte for byte.
 // PAINTED THROUGH THE COVERAGE STAMP (CoverageStampPass::chip, below): the
 // triangle's exact coverage of each pixel (coverage_of_triangle,
 // coverage_stamp.h), straight into the

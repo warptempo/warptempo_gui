@@ -351,6 +351,25 @@ void Viewport::invalidate_hover_line(std::optional<double> old_x,
     else if (new_x)     invalidate_scanner_line(*new_x, *new_x);
 }
 
+// The hover line's triangle's old box as painted and its new one (the rule
+// at the declaration), united where they touch: both stand on the ruler's
+// same rows, so they touch exactly when their column intervals overlap or
+// abut.
+void Viewport::invalidate_hover_triangle(const GuiRect& old_box,
+                                         const GuiRect& new_box) {
+    const bool has_old = old_box.w > 0 && old_box.h > 0;
+    const bool has_new = new_box.w > 0 && new_box.h > 0;
+    if (has_old && has_new &&
+        std::max(old_box.x, new_box.x) <=
+            std::min(old_box.x + old_box.w, new_box.x + new_box.w)) {
+        const GuiRect u = union_rect(old_box, new_box);
+        gui.invalidate_region(u.x, u.y, u.w, u.h);
+        return;
+    }
+    if (has_old) gui.invalidate_region(old_box.x, old_box.y, old_box.w, old_box.h);
+    if (has_new) gui.invalidate_region(new_box.x, new_box.y, new_box.w, new_box.h);
+}
+
 // The standing scanner's own rect, or the whole area unwired (the rule and
 // the two callers at the declaration, viewport.h).
 void Viewport::invalidate_standing_scanner() {

@@ -23,7 +23,7 @@
 # ScaleTrough, our own role (not Live's), added by hand: this file's ScrollbarInnerTrack, so nothing here changes look (send AA's stage D2, 2026-11-19)
 # ScaleSliderBorder, our own role (not Live's), added by hand: this file's ClipBorder, so nothing here changes look (send AA's stage D3, 2026-11-19)
 # ButtonHoverBackground and ScrollbarSliderHover, our own roles (not Live's), added by hand: ButtonHoverBackground this file's SurfaceBackground, ScrollbarSliderHover its ScrollbarInnerHandle, so no hover shows here (send CC, 2026-11-20)
-# PlayheadLine, HoverLine, CueHover, PlayheadHover, CueDisabledHover and CueDisabledLabelHover, our own roles (not Live's), added as tools/themes/ask_to_theme.py writes them: PlayheadLine white half way to this file's RangeDefault (the playhead's line as the derivation drew it), HoverLine its ScrollbarInnerHandle, CueHover its ViewCheckControlEnabledOn, PlayheadHover its RangeDefault, CueDisabledHover its BackgroundClip, CueDisabledLabelHover its TextDisabled, so the playhead's line keeps its look and no marker or playhead hover shows here (architect 2026-11-21, send FF)
+# PlayheadLine, HoverLine, CueHover, CueDisabledHover and CueDisabledLabelHover, our own roles (not Live's), added as tools/themes/ask_to_theme.py writes them: PlayheadLine white half way to this file's RangeDefault (the playhead's line as the derivation drew it), HoverLine its ScrollbarInnerHandle, CueHover its ViewCheckControlEnabledOn, CueDisabledHover its BackgroundClip, CueDisabledLabelHover its TextDisabled, so the playhead's line keeps its look and no marker hover shows here (architect 2026-11-21, send FF)
 SurfaceArea=1F2128
 Desktop=24262D
 SurfaceBackground=2E313A
@@ -59,6 +59,5 @@ ScrollbarSliderHover=5D6170
 PlayheadLine=EFF0E7
 HoverLine=5D6170
 CueHover=71A2B6
-PlayheadHover=DFE2CF
 CueDisabledHover=535763
 CueDisabledLabelHover=737581

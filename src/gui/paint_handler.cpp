@@ -4214,8 +4214,43 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             app.playhead_head_hit = GuiRectF{0.0, 0.0, 0.0, 0.0};
         }
     };
+    // THE HOVER LINE'S TRIANGLE IS RECORDED AS PAINTED BY THE SAME RULE
+    // (AppState::HoverLine's `triangle_painted_x`; architect 2026-11-21,
+    // send GG), for the same reason — but what it records is the cells the
+    // NEXT damage must erase, not a hit: `box` the triangle's painted box at
+    // the place this run derived (ruler_head_box at its containing column),
+    // empty where it paints nowhere. A triangle this run paints is recorded
+    // when the clip covers its box; a triangle that paints nowhere is
+    // recorded as none when the clip covers the box last recorded, whose
+    // pixels this run erased; a run under a rect that missed the box records
+    // nothing. Where it records, it declares the same (`triangle_declared_x`,
+    // the place derived, so the setter's next compare is against the place
+    // on the glass — none painted, the place derived all the same where it
+    // paints nowhere, so a place the ruler cannot paint asks for no frame
+    // again and again).
+    const auto record_hover_triangle = [&](std::optional<double> tri,
+                                           const GuiRect& box) {
+        AppState::HoverLine& h = app.hover_line;
+        if (box.w > 0 && box.h > 0) {
+            if (clip_covers_drawable(cr, app, box)) {
+                h.triangle_painted_x  = tri;
+                h.triangle_declared_x = tri;
+            }
+            return;
+        }
+        const GuiRect last =
+            h.triangle_painted_x
+                ? ruler_head_box(containing_pixel(*h.triangle_painted_x))
+                : GuiRect{0, 0, 0, 0};
+        if (last.w <= 0 || last.h <= 0 ||
+            clip_covers_drawable(cr, app, last)) {
+            h.triangle_painted_x.reset();
+            h.triangle_declared_x = tri;
+        }
+    };
     if (lane.w <= 0 || lane.h <= 0) {
         publish_head(GuiRectF{0.0, 0.0, 0.0, 0.0});
+        record_hover_triangle(hover_triangle_x(), GuiRect{0, 0, 0, 0});
         return;
     }
 
@@ -4263,6 +4298,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     const int sr = audio.sample_rate();
     if (basis.spp <= 0.0 || sr <= 0) {
         publish_head(GuiRect{0, 0, 0, 0});
+        record_hover_triangle(hover_triangle_x(), GuiRect{0, 0, 0, 0});
         cairo_restore(cr);
         return;
     }
@@ -4289,6 +4325,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
                                       basis.lattice_origin, sr, wave_w);
     if (!comb.valid) {
         publish_head(GuiRect{0, 0, 0, 0});
+        record_hover_triangle(hover_triangle_x(), GuiRect{0, 0, 0, 0});
         cairo_restore(cr);
         return;
     }
@@ -4442,6 +4479,43 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
     cairo_restore(cr);
 
+    // -- THE HOVER LINE'S TRIANGLE ---------------------------------------------
+    //
+    // THE WAVEFORM'S HOVER LINE HAS A HEAD IN THE RULER, AS THE PLAYHEAD DOES
+    // (architect 2026-11-21, send GG: "give the hover stem a triangle, same
+    // color as the hover stem. for symmetry"; render.h's render_hover_line,
+    // the rule): THE PLAYHEAD HEAD'S OWN DRAWING — the chip's triangle on the
+    // ruler's last cue_chip_h_px rows, its apex on the line's center on the
+    // ruler's foot, the same clip to the waveform's columns and the same
+    // half-head rule (the head block below) — in the palette's `hover_line`,
+    // FLAT (no fade), AT THE LINE'S EXACT PLACE (hover_triangle_x: the
+    // line's place where it is a tap's; none with the barrel held, the
+    // anchor's stem having no head). Painted HERE, after the digits and the
+    // ticks and IMMEDIATELY BEFORE THE PLAYHEAD'S HEAD, so where the two
+    // overlap the playhead's head shows. Painted whether or not the line
+    // itself yields to a coincident line on the canvas (paint_hover_line):
+    // at the playhead's own x it lies under the playhead's head and shows
+    // nothing; at a selection stem or the running scanner, which have no
+    // head in the ruler, it marks the place. Its cull and its record are
+    // ruler_head_box's at its containing column (record_hover_triangle,
+    // above).
+    {
+        const std::optional<double> tri = hover_triangle_x();
+        const GuiRect box = tri ? ruler_head_box(containing_pixel(*tri))
+                                : GuiRect{0, 0, 0, 0};
+        if (box.w > 0 && box.h > 0) {
+            const int rows = cue_chip_h_px();
+            cairo_save(cr);
+            cairo_rectangle(cr, cx, ruler_bottom - rows, wave_w, rows);
+            cairo_clip(cr);
+            paint_ce_cue_chip(cr, static_cast<double>(cx) + *tri,
+                              static_cast<double>(ruler_bottom),
+                              palette().hover_line);
+            cairo_restore(cr);
+        }
+        record_hover_triangle(tri, box);
+    }
+
     // -- THE PLAYHEAD'S HEAD ---------------------------------------------------
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
@@ -4473,7 +4547,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     //
     // The whole head is the RESTING CURSOR'S: the `h` view, the render player
     // and the audition reach it through this one block, and the scanner keeps
-    // its bare waveform line (paint_scanner).
+    // its bare waveform line (paint_scanner). THE HEAD HAS NO HOVER
+    // (architect 2026-11-21, send GG: "very hard to see ... very hard to
+    // stably trigger"): `playhead_head` flat, the hover line's triangle under
+    // it where the pen stands on it (the block above).
     //
     // THE HALF-HEAD RULE (2026-05-09, d4e4e04e; restored 2026-09-26, architect):
     // the head paints whenever any part of it overlaps the waveform's columns
@@ -4496,14 +4573,15 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         // The head's rows, the chip's height (render.h's cue_chip_h_px).
         const int rows  = cue_chip_h_px();
         // THE TWO EXTENTS (render.h's cue block): the painted reach, the
-        // columns [col − reach, col + reach) the head can touch — the cull
-        // here and the damage box's — and the hit extent [x − left,
-        // x + right) off the head's exact place, the published hit's.
-        const int reach = cue_chip_paint_reach_px();
+        // columns [col − reach, col + reach) the head can touch, cut to the
+        // waveform's columns — the cull here, ruler_head_box's, the one box
+        // of both ruler heads — and the hit extent [x − left, x + right) off
+        // the head's exact place, the published hit's.
+        const GuiRect head_box = ruler_head_box(col);
         const int left  = cue_chip_hit_left_px();
         const int right = cue_chip_hit_right_px();
         GuiRectF head_hit{0.0, 0.0, 0.0, 0.0};
-        if (col + reach > 0 && col - reach < wave_w) {
+        if (head_box.w > 0 && head_box.h > 0) {
             const int head_top = ruler_bottom - rows;
             // THE HEAD'S CLIP: the waveform's columns over the head's own
             // rows, the ruler's last `rows` — whole pixels, the stamp's clip
@@ -4511,21 +4589,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             cairo_save(cr);
             cairo_rectangle(cr, cx, head_top, wave_w, rows);
             cairo_clip(cr);
-            // ITS FILL AS PAINTED (architect 2026-11-21, send FF: "If the
-            // pen is in the ruler lane, maybe the playhead would light up
-            // somehow"): `playhead_head` toward `playhead_head_hover`
-            // (arc_dark A5ABB5 -> FFFFFF) by the triangle's hover weight,
-            // its face's stored mix (AppState::FaceFades' THE LANES' TWO
-            // FACES; the damage damage_lane_hovers' and sync_lane_hovers'),
-            // plain at rest. Over the digits as ever.
-            const double hover = app.face_fades.hover_weight(
-                AppState::FaceFades::Face{
-                    AppState::FaceFades::Surface::PlayheadHead, 0});
             paint_ce_cue_chip(cr, static_cast<double>(cx) + x,
                               static_cast<double>(ruler_bottom),
-                              StampTone(palette().playhead_head,
-                                        palette().playhead_head_hover,
-                                        hover));
+                              palette().playhead_head);
             cairo_restore(cr);
             // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
             // point_on_playhead_head, input_pointer.cpp): THE HEAD AT ITS
@@ -4668,8 +4734,16 @@ std::optional<double> GuiPaintHandler::hover_line_x() const {
                                 basis.lattice_origin);
 }
 
-// -- THE LANES' TWO FACES AS PAINTED (the contracts at the declarations,
-//    paint_handler.h; the rule at AppState::FaceFades' THE LANES' TWO FACES;
+// THE HOVER LINE'S TRIANGLE'S PLACE (the declaration): the line's own place
+// where it is a tap's, none with the barrel held or no line.
+std::optional<double> GuiPaintHandler::hover_triangle_x() const {
+    if (app.hover_line.place != AppState::HoverLine::Place::Tap)
+        return std::nullopt;
+    return hover_line_x();
+}
+
+// -- THE MARKER'S FACE AS PAINTED (the contracts at the declarations,
+//    paint_handler.h; the rule at AppState::FaceFades' THE MARKER'S FACE;
 //    architect 2026-11-21, send FF) ----------------------------------------
 
 // THE LANE'S HOVER FOR A PASS: the table of the marker faces that are not
@@ -4700,56 +4774,31 @@ CueLaneHover GuiPaintHandler::cue_hover_of() {
     return out;
 }
 
-// THE LANES' STATE IN ONE WALK OF THE RECORDS (the declaration): whether
-// any Marker record stands, and the triangle's weight by hover_weight's
-// own two answers — its record's stored Hover weight, else 1 for the
-// hovered face and 0 — read off the same walk.
-GuiPaintHandler::LaneHoverScan GuiPaintHandler::scan_lane_hovers() const {
+// THE CUES' REST IN ONE WALK OF THE RECORDS (the declaration): no Marker
+// record, no hovered marker and no laid-out cue painted lit.
+bool GuiPaintHandler::lane_cues_rest() const {
     using FaceFades = AppState::FaceFades;
     const FaceFades& h = app.face_fades;
-    const FaceFades::Face head{FaceFades::Surface::PlayheadHead, 0};
-    bool marker_record = false;
-    const FaceFades::Record* head_record = nullptr;
-    for (const FaceFades::Record& r : h.records) {
-        if (r.face.surface == FaceFades::Surface::Marker)
-            marker_record = true;
-        else if (head_record == nullptr && r.face == head)
-            head_record = &r;
-    }
-    LaneHoverScan out;
-    out.cues_rest = !marker_record &&
-                    h.hovered.surface != FaceFades::Surface::Marker &&
-                    cue_pass_hovered_cues() == 0;
-    out.head = head_record != nullptr ? head_record->mix[FaceLook::Hover]
-             : h.hovered == head      ? 1.0
-                                      : 0.0;
-    return out;
+    for (const FaceFades::Record& r : h.records)
+        if (r.face.surface == FaceFades::Surface::Marker) return false;
+    return h.hovered.surface != FaceFades::Surface::Marker &&
+           cue_pass_hovered_cues() == 0;
 }
 
-// THE TRIANGLE'S COMPARE (the declaration), on both roads.
-void GuiPaintHandler::damage_head_hover(double head) {
-    if (head == head_hover_declared_) return;
-    head_hover_declared_ = head;
-    const GuiRect r = playhead_head_damage_rect();
-    if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
-}
-
-// THE CLOCK'S COMPARE: the cues' half on a standing layout only (the cache's
+// THE CLOCK'S COMPARE: the cues on a standing layout only (the cache's
 // record, FlagCache::layout_stands), damage alone — but a changed cue with
 // no pixel on the waveform's columns, whose weight it retires
 // (cue_hover_regions).
 void GuiPaintHandler::damage_lane_hovers() {
-    const LaneHoverScan scan = scan_lane_hovers();
-    if (!scan.cues_rest && flag_cache.surface != nullptr &&
-        flag_cache.layout_stands) {
-        const CueLaneHover hover = cue_hover_of();
-        std::vector<GuiRect>& rects = flag_cache.hover_damage_scratch;
-        rects.clear();
-        cue_pass_hover_damage(hover.weight_of, rects);
-        for (const GuiRect& r : rects)
-            gui.invalidate_region(r.x, r.y, r.w, r.h);
-    }
-    damage_head_hover(scan.head);
+    if (lane_cues_rest() || flag_cache.surface == nullptr ||
+        !flag_cache.layout_stands)
+        return;
+    const CueLaneHover hover = cue_hover_of();
+    std::vector<GuiRect>& rects = flag_cache.hover_damage_scratch;
+    rects.clear();
+    cue_pass_hover_damage(hover.weight_of, rects);
+    for (const GuiRect& r : rects)
+        gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 
 // THE FRAME'S REPAINT: the same, the cues repainted into the cache — the
@@ -4757,32 +4806,26 @@ void GuiPaintHandler::damage_lane_hovers() {
 // paints into the cache the frame shows and, after a rebuild that read the
 // same weights, finds nothing to repaint.
 void GuiPaintHandler::sync_lane_hovers() {
-    const LaneHoverScan scan = scan_lane_hovers();
-    if (!scan.cues_rest && flag_cache.surface != nullptr &&
-        flag_cache.layout_stands) {
-        const CueLaneHover hover = cue_hover_of();
-        std::vector<GuiRect>& rects = flag_cache.hover_damage_scratch;
-        rects.clear();
-        cue_pass_sync_hover(flag_cache.surface, flag_cache.origin_y,
-                            hover.weight_of, rects);
-        for (const GuiRect& r : rects)
-            gui.invalidate_region(r.x, r.y, r.w, r.h);
-    }
-    damage_head_hover(scan.head);
+    if (lane_cues_rest() || flag_cache.surface == nullptr ||
+        !flag_cache.layout_stands)
+        return;
+    const CueLaneHover hover = cue_hover_of();
+    std::vector<GuiRect>& rects = flag_cache.hover_damage_scratch;
+    rects.clear();
+    cue_pass_sync_hover(flag_cache.surface, flag_cache.origin_y,
+                        hover.weight_of, rects);
+    for (const GuiRect& r : rects)
+        gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 
-// THE TRIANGLE'S PAINTED BOX (the declaration): paint_ruler_row's head
-// block's own numbers, on the plate basis it paints on.
-GuiRect GuiPaintHandler::playhead_head_damage_rect() const {
+// THE RULER HEAD'S PAINTED BOX (the declaration): paint_ruler_row's head
+// block's own numbers — the live lane and area, the plate's published width
+// the walk reads.
+GuiRect GuiPaintHandler::ruler_head_box(int col) const {
     const GuiRect lane = top_ruler_row_area(app);
     const GuiRect area = waveform_area(app);
     if (lane.w <= 0 || lane.h <= 0 || area.w <= 0) return GuiRect{0, 0, 0, 0};
-    const PlateViewportBasis basis = plate_viewport_basis();
-    if (basis.spp <= 0.0) return GuiRect{0, 0, 0, 0};
     const int wave_w = wf_cache.fp_area_w > 0 ? wf_cache.fp_area_w : area.w;
-    const int col = playhead_pixel_x(
-        app, static_cast<int64_t>(basis.vp_start), basis.spp,
-        basis.lattice_origin);
     const int reach = cue_chip_paint_reach_px();
     const int rows  = cue_chip_h_px();
     const int ruler_bottom = lane.y + std::min(ruler_h_px(), lane.h);

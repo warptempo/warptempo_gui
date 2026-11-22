@@ -76,9 +76,8 @@ struct GuiThemeTones {
     uint32_t inactive_cue;        // a disabled marker's chip fill (BackgroundClip)
     uint32_t inactive_cue_hover;  // a disabled marker's chip under the hovering pen (CueDisabledHover, our own role; arc_dark 90939B, Arc's `wm_icon_bg`, the titlebar glyph awake; a Live theme's BackgroundClip, the chip's own tone: no hover)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
-    uint32_t playhead_head_hover; // that triangle under the hovering pen, A BRIGHT TONE (PlayheadHover, our own role; arc_dark FFFFFF, Arc's selected text; a Live theme's RangeDefault, the triangle's own tone: no hover)
     uint32_t playhead_line;       // the playhead's canvas line, its stem, A BRIGHT TONE (PlayheadLine, our own role; arc_dark A5ABB5, Arc's `.h4` / `.category-label`; a Live theme's white half way to its RangeDefault)
-    uint32_t hover_line;          // the waveform's hover line (HoverLine, our own role, over the canvas; arc_dark 767B87, Arc's scrollbar slider; a Live theme's ScrollbarInnerHandle)
+    uint32_t hover_line;          // the waveform's hover line and its triangle in the ruler (HoverLine, our own role, over the canvas; arc_dark 767B87, Arc's scrollbar slider; a Live theme's ScrollbarInnerHandle)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
 
@@ -146,11 +145,10 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // THE PLAYHEAD'S LINE 81E1EA, our own PlayheadLine (send FF, 2026-11-21),
 // the word a converted Default file carries: white half way to its head
 // 03C3D5 (architect 2026-11-12, session 113: the mean of Live's fade) AND
-// THE WAVEFORM'S HOVER, our own five more of send FF, each Default's own
+// THE WAVEFORM'S HOVER, our own four more of send FF, each Default's own
 // number for the tone it stands beside, so the reference row shows no
-// marker or playhead hover: the hover line 696969 (its
-// ScrollbarInnerHandle, the pill's word, over the canvas), a hovered
-// chip's FFAD56 (the accent), the hovered triangle's 03C3D5 (the head), a
+// marker hover: the hover line 696969 (its ScrollbarInnerHandle, the
+// pill's word, over the canvas), a hovered chip's FFAD56 (the accent), a
 // hovered disabled chip's 5D5D5D (BackgroundClip) and its label's 757575
 // (TextDisabled, the inert label's ink) AND THE ENABLED CHIP'S FILL
 // FFAD56, the accent
@@ -223,7 +221,6 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x5D5D5D, // inactive_cue
     0x5D5D5D, // inactive_cue_hover
     0x03C3D5, // playhead_head
-    0x03C3D5, // playhead_head_hover
     0x81E1EA, // playhead_line
     0x696969, // hover_line
     0xFFFFFF, // scanner

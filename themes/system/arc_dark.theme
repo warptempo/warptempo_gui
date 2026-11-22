@@ -79,7 +79,7 @@
 #   CardStandingBackground      F04A50F2 $destructive_color, button.destructive-action (G3:216), at .95: a standing
 #                                       (critical) card, A BRIGHT TONE (its own F04A50 at the default bright_mix 100;
 #                                       C0444C at 75); its words and glyph StandbySelectionForeground FFFFFF
-# OUR OWN SIX MORE, send FF, 2026-11-21 (THE WAVEFORM'S HOVER and the playhead's stem: "just make sure they're all
+# OUR OWN FIVE MORE, send FF, 2026-11-21 (THE WAVEFORM'S HOVER and the playhead's stem: "just make sure they're all
 # colors from Arc, dark"; src/gui/theme_roles.h's OUR OWN, THE WAVEFORM'S HOVER). THE BRIGHTNESS ORDER ON THE WAVEFORM,
 # his: the scanner and the zoom anchor's stem FFFFFF ("the scanner should be this brightest one"), the playhead's stem
 # A5ABB5, the hover line 767B87 ("an even more dark and faint version of the playhead stem"):
@@ -87,11 +87,10 @@
 #                                       waveform, A BRIGHT TONE (send FF: "the stem is too bright" at the font color;
 #                                       the head wears it too since send GG, RangeDefault above)
 #   HoverLine                   767B87  Arc's scrollbar slider, `scrollbar slider { ... background-color: #767b87; }` (G3:956,
-#                                       ScrollbarInnerHandle's word above): the waveform's hover line
+#                                       ScrollbarInnerHandle's word above): the waveform's hover line and its triangle in
+#                                       the ruler (send GG)
 #   CueHover                    639FE5  `.documents-entry-tag:hover { ... background: #639fe5; }` (G3:1871), Arc's hover of a
 #                                       blue thing (the tag at rest 5294E2, the accent): a hovered marker's chip, A BRIGHT TONE
-#   PlayheadHover               FFFFFF  Arc's selected text, its pure white (`label selection { color: #ffffff; ... }`,
-#                                       G3:31): the hovered playhead triangle, A BRIGHT TONE
 #   CueDisabledHover            90939B  `@define-color wm_icon_bg #90939B;` (G3:2343): the titlebar glyph awake (its resting
 #                                       666A74, BackgroundClip above, is wm_icon_unfocused_bg, G3:2344, the same glyph of an
 #                                       unfocused, fully clickable window): a hovered disabled marker's chip
@@ -133,6 +132,5 @@ ScrollbarSliderHover=676B78
 PlayheadLine=A5ABB5
 HoverLine=767B87
 CueHover=639FE5
-PlayheadHover=FFFFFF
 CueDisabledHover=90939B
 CueDisabledLabelHover=9DA3AD

@@ -1669,7 +1669,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // render.h): the tail compares this pass's cues with it.
     cue_pass_keep_previous();
     // THE LANE'S HOVER (architect 2026-11-21, send FF; AppState::FaceFades'
-    // THE LANES' TWO FACES): the listing every cue's key is taken in and each
+    // THE MARKER'S FACE): the listing every cue's key is taken in and each
     // cue's hover weight as its face stores it now, the one reader of the
     // records (cue_hover_of) — so a rebuild paints every cue at the weight
     // the lanes' comparator would, and its tail's comparison of the two

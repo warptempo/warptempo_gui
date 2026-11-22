@@ -14,7 +14,7 @@
 // owner; architect 2026-11-11, session 110, THE THEME FILES: OUR OWN KEYED
 // FORMAT, the files in the repository and the APK). A theme is one file of
 // LIVE'S RAW ROLE VALUES — the roles THE DERIVATION below reads, under Live's
-// own role names, never a derived tone — PLUS SIXTEEN ROLES OF OUR OWN (THE
+// own role names, never a derived tone — PLUS FIFTEEN ROLES OF OUR OWN (THE
 // FORMAT, below), and the derivation, this file's, turns each into a row of
 // GuiThemeTones at the launch's read.
 //
@@ -26,13 +26,13 @@
 // of kThemeRoles (theme_roles.cpp; Live's role names, the one nested role
 // flattened to the key `StandardVuMeter/Maximum` — Live's own meter clip box,
 // the first `Maximum` inside the first `<StandardVuMeter>` block of an .ask —
-// AND OUR OWN SIXTEEN, WindowBackground, TitleForeground and
+// AND OUR OWN FIFTEEN, WindowBackground, TitleForeground and
 // SidebarForeground, the three fills TooltipBackground, CardBackground and
 // CardStandingBackground, ScaleTrough (send AA's stage D2),
 // ScaleSliderBorder (send AA's stage D3), the two hover tones
-// ButtonHoverBackground and ScrollbarSliderHover (send CC) and the six of
-// the waveform's hover PlayheadLine, HoverLine, CueHover, PlayheadHover,
-// CueDisabledHover and CueDisabledLabelHover (send FF), kOwnThemeRoles:
+// ButtonHoverBackground and ScrollbarSliderHover (send CC) and the five of
+// the waveform's hover PlayheadLine, HoverLine, CueHover, CueDisabledHover
+// and CueDisabledLabelHover (send FF), kOwnThemeRoles:
 // no Live role names them),
 // HEX 6 or 8 hex digits, case-blind on read (the converter writes uppercase),
 // an 8-digit word's last byte its straight alpha — kept raw, the derivation
@@ -65,10 +65,10 @@
 // copied, and of stage D3, its own ClipBorder, the
 // ROLE-NAMED block's OUR OWN; and our own two of send CC, 2026-11-20, each
 // file's own SurfaceBackground and ScrollbarInnerHandle copied, ARC'S HOVER
-// below; and our own six of send FF, 2026-11-21, written by a script
+// below; and our own five of send FF, 2026-11-21, written by a script
 // through the converter's own pair table and arithmetic — each file's own
 // RangeDefault white half way, its ScrollbarInnerHandle,
-// ViewCheckControlEnabledOn, RangeDefault, BackgroundClip and TextDisabled,
+// ViewCheckControlEnabledOn, BackgroundClip and TextDisabled,
 // THE WAVEFORM'S HOVER below; each header line the record; the converter
 // writes them the same way) —
 // AND `arc_dark`, WRITTEN BY HAND from the arc-theme sources, no .ask behind
@@ -294,7 +294,7 @@
 //                                     on the bar at all
 //   NEITHER IS A BRIGHT TONE: a surface's own face, never mixed toward the
 //   ground (THE BRIGHT MIX below).
-//   AND SIX MORE FOR THE WAVEFORM'S HOVER AND THE PLAYHEAD'S STEM
+//   AND FIVE MORE FOR THE WAVEFORM'S HOVER AND THE PLAYHEAD'S STEM
 //   (architect 2026-11-21, send FF: "just make sure they're all colors
 //   from Arc, dark"; the brightness order on the waveform his — the
 //   scanner and the zoom anchor's stem FFFFFF, "the scanner should be this
@@ -302,8 +302,8 @@
 //   more dark and faint version of the playhead stem"), arc_dark's file
 //   carrying Arc's numbers (gtk3.0-arc-dark.css, its header the record),
 //   each file but Arc's the word of the tone it stands beside, so on a
-//   Live theme the playhead's line keeps its look and NO MARKER OR PLAYHEAD
-//   HOVER SHOWS (kOwnThemeRoles' source and read). Each is read flat as its
+//   Live theme the playhead's line keeps its look and NO MARKER HOVER
+//   SHOWS (kOwnThemeRoles' source and read). Each is read flat as its
 //   neighbor is, the hover line alone composited over the canvas it is
 //   drawn on:
 //     playhead line          81E1EA = PlayheadLine (arc_dark A5ABB5, Arc's
@@ -324,7 +324,9 @@
 //                                     there until send FF. A BRIGHT TONE
 //     hover line             696969 = HoverLine over the canvas (arc_dark
 //                                     767B87, Arc's scrollbar slider): THE
-//                                     WAVEFORM'S HOVER LINE; a Live theme's
+//                                     WAVEFORM'S HOVER LINE AND ITS TRIANGLE
+//                                     IN THE RULER (architect 2026-11-21,
+//                                     send GG); a Live theme's
 //                                     ScrollbarInnerHandle, its trim bar's
 //                                     pill, a modest line there
 //     cue hover              FFAD56 = CueHover (arc_dark 639FE5,
@@ -333,11 +335,6 @@
 //                                     MARKER'S CHIP UNDER THE HOVERING PEN;
 //                                     a Live theme's ViewCheckControlEnabledOn,
 //                                     the chip's own tone. A BRIGHT TONE
-//     playhead head hover    03C3D5 = PlayheadHover (arc_dark FFFFFF, Arc's
-//                                     selected text, its pure white): THE
-//                                     PLAYHEAD'S TRIANGLE UNDER THE HOVERING
-//                                     PEN; a Live theme's RangeDefault, the
-//                                     head's own tone. A BRIGHT TONE
 //     inactive cue hover     5D5D5D = CueDisabledHover (arc_dark 90939B, Arc's
 //                                     `wm_icon_bg`, the titlebar glyph awake;
 //                                     its resting 666A74 `wm_icon_unfocused_
@@ -358,7 +355,7 @@
 //                                     INK UNDER THE HOVERING PEN, its rest the
 //                                     inert label's `text_dim`; a Live
 //                                     theme's TextDisabled, that tone itself
-//   THE PLAYHEAD'S LINE AND THE TWO HOVERS OF BRIGHT TONES ARE BRIGHT TONES
+//   THE PLAYHEAD'S LINE AND THE HOVERED CHIP ARE BRIGHT TONES
 //   (THE BRIGHT MIX below): a hover must not out-shine its rest at a lower
 //   mix. THE HOVER LINE AND THE DISABLED MARKER'S TWO ARE NOT — dim tones,
 //   as the inactive cue and the dim text are not.
@@ -618,12 +615,11 @@
 // carried alpha byte riding the mix untouched), the clip lamp
 // (StandardVuMeter/Maximum) and the selection fill
 // (StandbySelectionBackground) ("standby selection should get the rule";
-// a pressed list row wears it too), AND THREE OF SEND FF (architect
+// a pressed list row wears it too), AND TWO OF SEND FF (architect
 // 2026-11-21; OUR OWN, THE WAVEFORM'S HOVER above): the playhead's line
-// (PlayheadLine), mixed as its own word, and the two hovers of bright
-// tones, a hovered chip (CueHover) and the hovered triangle
-// (PlayheadHover) — their rests are bright tones, and a hover must not
-// out-shine its rest at a lower mix: NINE IN ALL. EVERY TONE DERIVED FROM A
+// (PlayheadLine), mixed as its own word, and the hover of a bright tone, a
+// hovered chip (CueHover) — its rest a bright tone, and a hover must not
+// out-shine its rest at a lower mix: EIGHT IN ALL. EVERY TONE DERIVED FROM A
 // BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
 // body): the cue fill — the markers wear the mixed accent — the lit dim
 // fill and the inert print over the mixed inert face. NEVER MIXED: the text tones ("never the glyph color itself":

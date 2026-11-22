@@ -1710,7 +1710,7 @@ struct FlagFace {
 // get a hover action ... if the pen is on the marker's lane, the marker
 // flags would light up"; every tone arc_dark's own, Arc's numbers): A CUE
 // THE HOVERING PEN IS ON — where a tap there would act on it, the faces'
-// gate (AppState::FaceFades' THE LANES' TWO FACES, which owns the gate, the
+// gate (AppState::FaceFades' THE MARKER'S FACE, which owns the gate, the
 // fade, the key and the damage) — wears, of each tone below, THE MIX OF ITS
 // REST AND ITS HOVER BY ITS FACE'S STORED WEIGHT (StampTone, materials.h;
 // Arc's 200 ms both ways, a reversal from the value reached):
@@ -3108,7 +3108,7 @@ void install_palette(const GuiTheme& theme, int bright_mix) {
     // BRIGHT MIX: its bright tones toward its ground at `bright_mix`, every
     // tone derived from them recomputed) and copied for the word readers
     // (installed_theme), its slug and group the list row's; then THE
-    // PROGRAM'S SIXTEEN off the palette's role table (palette_file.h), THE
+    // PROGRAM'S FIFTEEN off the palette's role table (palette_file.h), THE
     // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the mixed
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly

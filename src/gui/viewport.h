@@ -876,8 +876,10 @@ struct Viewport {
     // the stop's teardown, the seek's jump (its old place, then its new):
     // a move of the scanner's place by a move of the viewport or of the
     // plate's basis carries that mover's own full-area damage — AND THE ONE
-    // OTHER HEADLESS CANVAS LINE THAT MOVES BY ITSELF, the waveform's hover
-    // line (invalidate_hover_line below, its one road here). A playhead
+    // OTHER CANVAS LINE THAT MOVES BY ITSELF, the waveform's hover line
+    // (invalidate_hover_line below, its one road here; its triangle in the
+    // ruler, a separate box with a separate compare, takes its own road,
+    // invalidate_hover_triangle). A playhead
     // write is no caller of this: the cursor has a head, and its narrow
     // shape is invalidate_playhead_columns above.
     void invalidate_scanner_line(double old_x, double new_x);
@@ -892,9 +894,28 @@ struct Viewport {
     // the view's foot (an editor's open, which takes the line away) the
     // rect reaches under it, damage the keyboard's frame repaints anyway.
     // ONE CALLER, GuiInputHandler::set_hover_line, which calls it only where
-    // the line's place changed.
+    // the line's place changed. The line's cells alone: its triangle in the
+    // ruler is invalidate_hover_triangle's (below).
     void invalidate_hover_line(std::optional<double> old_x,
                                std::optional<double> new_x);
+    // THE HOVER LINE'S TRIANGLE'S DAMAGE (architect 2026-11-21, send GG;
+    // AppState::HoverLine's triangle pair, the state; render.h's
+    // render_hover_line, the rule): the triangle's box as last painted in
+    // the ruler and its box at its new place, each the ruler head's painted
+    // box (GuiPaintHandler::ruler_head_box: the head's painted reach round
+    // the place's column, cut to the waveform's columns, over the ruler's
+    // last cue_chip_h_px rows — 18 x 8 device px on the tablet) — united
+    // where they touch, an empty side declaring nothing. THE RULER'S ROWS
+    // ALONE, nothing of the canvas, the marker lane or the trim bar: the
+    // ruler's painter redraws under that clip alone (paint_ruler_row). A
+    // SIBLING of invalidate_hover_line, not an extension of it: the line's
+    // rect is the scanner's (scanner_invalidate_rect, the canvas's rows, its
+    // callers an enumerated list) and its compare the canvas list's, while
+    // the triangle's box is the ruler painter's, on the plate's published
+    // width, and its compare its own pair's. ONE CALLER,
+    // GuiInputHandler::set_hover_line, where the triangle's place changed.
+    void invalidate_hover_triangle(const GuiRect& old_box,
+                                   const GuiRect& new_box);
     // THE STANDING SCANNER'S DAMAGE (architect 2026-11-16, send Q: "number
     // 3, narrowing agree"): the scanner's own rect at its place as it stands
     // — invalidate_scanner_line(x, x), x from plate_scanner_x_, the place the

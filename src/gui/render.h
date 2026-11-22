@@ -336,7 +336,7 @@ struct TrimRange {
 //                 a scheme's start, gradient end and text, active and
 //                 inactive, 2026-10-05..10-21, then the skin's flat
 //                 constants and the border's ring-light line until then);
-//   THE PALETTE   the program's SIXTEEN (palette_file.h, 2026-10-07; one
+//   THE PALETTE   the program's FIFTEEN (palette_file.h, 2026-10-07; one
 //                 palette, Live's numbers, since 2026-11-01): the
 //                 waveform's canvas, ink and core (ROW 6, below; the view
 //                 bar's span wears none of them, materials.h's neutral trio
@@ -357,11 +357,11 @@ struct TrimRange {
 //                 canvas, our own PlayheadLine (send FF, 2026-11-21:
 //                 arc_dark A5ABB5, Arc's `.h4`; on a Live theme white half
 //                 way to its head, Default's 81E1EA; THE PLAYHEAD, below);
-//                 THE WAVEFORM'S HOVER's four (send FF, 2026-11-21) —
-//                 `hover_line` the waveform's hover line, `cue_hover` and
+//                 THE WAVEFORM'S HOVER's three (send FF, 2026-11-21) —
+//                 `hover_line` the waveform's hover line and its triangle
+//                 in the ruler (send GG), `cue_hover` and
 //                 `inactive_cue_hover` a hovered chip, enabled and
-//                 disabled, `playhead_head_hover` the hovered triangle,
-//                 each its rest's own tone on a Live theme (a hovered
+//                 disabled, each its rest's own tone on a Live theme (a hovered
 //                 disabled marker's label the chrome's
 //                 `inactive_cue_label_hover`); and the
 //                 `scanner` — the playback line AND THE ZOOM ANCHOR'S STEM,
@@ -537,7 +537,6 @@ struct GuiPalette {
     GuiColor inactive_cue;
     GuiColor inactive_cue_hover;
     GuiColor playhead_head;
-    GuiColor playhead_head_hover;
     GuiColor playhead_line;
     GuiColor hover_line;
     GuiColor scanner;
@@ -799,13 +798,12 @@ void install_true_colors(bool on);
 // (input_pointer.cpp), a cue over the head keeping the press; a plain press
 // there drags the playhead, every motion past the slop the ruler's
 // placement act at the pointer's place (ScrollDragState::head_drag).
-// UNDER THE HOVERING PEN THE HEAD LIGHTS (architect 2026-11-21, send FF: "If
-// the pen is in the ruler lane, maybe the playhead would light up somehow"):
-// where a press there would arm that drag, its fill goes from
-// `playhead_head` toward `playhead_head_hover` (arc_dark A5ABB5 -> FFFFFF)
-// over Arc's 200 ms and back, still over the digits — a face of the
-// FaceFades' clock (AppState::FaceFades' THE LANES' TWO FACES, the gate,
-// the fade and the damage: its painted box over the ruler's rows).
+// THE HEAD HAS NO HOVER (architect 2026-11-21, send GG, of send FF's lit
+// triangle: "very hard to see ... very hard to stably trigger"): it paints
+// `playhead_head` flat and nothing else, and nothing of it is damaged at
+// rest or under the pen. A motionless tap on it places the playhead as any
+// ruler tap does, so the waveform's hover line stands over it as over the
+// rest of the ruler, its triangle under this head (render_hover_line).
 // NO HOLD LAMP (architect 2026-10-05): the head paints the same whether or
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
@@ -923,7 +921,7 @@ void install_true_colors(bool on);
 // its label over Arc's 200 ms, a disabled one in its own pair, a grey chip
 // and a dimmer label;
 // architect 2026-11-21, send FF; the gate, the fade, the key and the damage
-// AppState::FaceFades' THE LANES' TWO FACES) — is resolve_flag_face's
+// AppState::FaceFades' THE MARKER'S FACE) — is resolve_flag_face's
 // head (render.cpp), the one resolver every cue goes through.
 //
 // THE LABEL'S SEGMENTS: the marker's payload label, then — while grid
@@ -2369,10 +2367,13 @@ inline double cue_line_box_h_px() {
 //     with x within half a px of col, so the pixels it can touch are the
 //     columns [col − H − 1, col + H + 1) — 9 each side on the tablet. ITS
 //     READERS, every CULL and DAMAGE BOX: the flag iterator's right cull
-//     (iterate_visible_flags_impl, render.cpp), the head's cull
-//     (paint_ruler_row), the playhead's cull (render_playhead) and its
-//     damage box (playhead_invalidate_rect, main.cpp), so no repaint can
-//     be narrower than what the head painted.
+//     (iterate_visible_flags_impl, render.cpp), the ruler heads' one box
+//     (GuiPaintHandler::ruler_head_box: the playhead's head's cull and the
+//     hover line's triangle's cull, record and damage, paint_ruler_row and
+//     GuiInputHandler::set_hover_line; architect 2026-11-21, send GG), the
+//     playhead's cull (render_playhead) and its damage box
+//     (playhead_invalidate_rect, main.cpp), so no repaint can be narrower
+//     than what a head painted.
 //   THE HIT EXTENT, cue_chip_hit_left_px = H − 1 left and
 //     cue_chip_hit_right_px = H right of the mark, 7 and 8 device px on
 //     the tablet at 200 %, 3 and 4 at 100 %: the box every PRESS AND
@@ -3384,7 +3385,7 @@ inline int level_travel_px() {
 //
 // A CUE'S IDENTITY ACROSS REBUILDS OF THE LANE — THE KEY A HOVERED MARKER'S
 // FADE IS RECORDED UNDER (architect 2026-11-21, send FF: the lanes' hovers;
-// AppState::FaceFades' THE LANES' TWO FACES, the rule). The marker stores
+// AppState::FaceFades' THE MARKER'S FACE, the rule). The marker stores
 // give a marker no stable id — a marker is its row in a frame-sorted
 // vector, and an insert or a delete anywhere before it renumbers it — so a
 // cue is named by WHAT ITS ROW SAYS AND NO NEIGHBOR'S DOES: its AUTHORED
@@ -3406,8 +3407,8 @@ struct CueKey {
     int      ordinal = 0;
     bool operator==(const CueKey&) const = default;
 };
-// THE LANE'S HOVER AS A PASS READS IT (AppState::FaceFades' THE LANES' TWO
-// FACES): the listing the pass's cues are keyed in, and each cue's HOVER
+// THE LANE'S HOVER AS A PASS READS IT (AppState::FaceFades' THE MARKER'S
+// FACE): the listing the pass's cues are keyed in, and each cue's HOVER
 // WEIGHT — the Hover look's weight in its face's stored mix, 0 at rest, 1
 // hovered, between them while it fades — answered by the one reader of the
 // faces' records (GuiPaintHandler::cue_hover_of), never a clock. An empty
@@ -4801,18 +4802,24 @@ void render_playhead(GuiCanvasSink& sink,
 // stem would be. And this would be ... a not as bright stem as the playhead
 // or the scanner" — "I would want it to be an even more dark and faint
 // version of the playhead stem." — "Cost is accepted. I keep the pen away
-// when I don't need it."; every other site points here).
+// when I don't need it."; AND ITS TRIANGLE, architect 2026-11-21, send GG:
+// "also i think we should give the hover stem a triangle, same color as the
+// hover stem. for symmetry" — "i agree on no triangle hover while barrel is
+// held"; every other site points here).
 //   WHAT IT IS: where a tap at the hovering pen's place would put the
 //     playhead, shown WHEREVER SUCH A TAP WOULD MOVE IT — the pen over the
 //     waveform (both halves: the lower half's tap auditions from the place,
-//     it moves where play starts), over the ruler off the playhead's
-//     triangle, over the marker lane where no marker is hit; never over a
-//     marker or the triangle (they hover on their own terms, AppState::
-//     FaceFades' THE LANES' TWO FACES — the walk's one hit,
+//     it moves where play starts), over the ruler — THE PLAYHEAD'S TRIANGLE
+//     INCLUDED: a motionless tap on it places the playhead as any ruler tap
+//     does (the head drag only adds the drag), and the triangle has no hover
+//     of its own (architect 2026-11-21, send GG) — over the marker lane
+//     where no marker is hit; never over a marker (it hovers on its own
+//     terms, AppState::FaceFades' THE MARKER'S FACE — the walk's one hit,
 //     GuiInputHandler::plain_lane_press_at, answers both), the trim bar,
 //     a key, a card or chrome the press router refuses. WITH THE BARREL
 //     HELD, over the waveform alone, where a tip-down would anchor the zoom
-//     (pointer_barrel_held_'s one exception, input_handler.h); once the zoom
+//     (pointer_barrel_held_'s one exception, input_handler.h), WITH NO
+//     TRIANGLE (the anchor's stem it previews has no head); once the zoom
 //     seats, the white anchor stem is the mark and no hover line is drawn.
 //     The gate — the pen in the plane with no contact, the pen latch not
 //     holding (no line after a lift until 18 W of motion or a leave: "it
@@ -4821,15 +4828,18 @@ void render_playhead(GuiCanvasSink& sink,
 //     (GuiInputHandler::walk_hover_line), its answer AppState::HoverLine; a
 //     finger never hovers, and nothing shows under an overlay, a question,
 //     an editor or the on-screen keyboard. During play it shows as at rest,
-//     the scanner over it.
+//     the scanner over it. The `h` view's lanes answer as the live ones
+//     (plain_lane_press_at serves both), so the line and its triangle show
+//     there too.
 //   ITS TONE, THE BRIGHTNESS ORDER ON THE WAVEFORM (his words above): the
 //     scanner and the zoom anchor's stem FFFFFF ("The scanner should be this
 //     brightest one. And I guess the zoom stem should also be quite bright.
 //     Same color as the scanner"), the playhead's line `playhead_line`
 //     (arc_dark A5ABB5), and this line `hover_line`, the theme's own
 //     HoverLine (arc_dark 767B87, Arc's scrollbar slider: "an even more dark
-//     and faint version of the playhead stem"); on every theme (every theme
-//     file carries a visible HoverLine; no theme term, unlike the faces).
+//     and faint version of the playhead stem"), ITS TRIANGLE THE SAME TONE
+//     ("same color as the hover stem"); on every theme (every theme file
+//     carries a visible HoverLine; no theme term, unlike the faces).
 //     The order is the theme's own numbers' (bright_mix 100): the stem is a
 //     bright tone and the line is not, so below about 60 % the mixed stem
 //     falls under the line (theme_roles.h's THE BRIGHT MIX, the numbers).
@@ -4837,9 +4847,18 @@ void render_playhead(GuiCanvasSink& sink,
 //     centered on its exact place `x` (device px from area.x), drawn wherever
 //     any of its real interval lies inside the strip and cut at both edges
 //     (waveform_line_span), at exact coverage, down THE CANVAS'S WHOLE
-//     HEIGHT and nothing above it — never through the ruler or the marker
-//     lane, so a pen move repaints no lane. NO FADE: it appears, moves and
-//     leaves at once, as the scanner does.
+//     HEIGHT and no line above it — not through the ruler or the marker
+//     lane. ITS TRIANGLE, THE PLAYHEAD'S HEAD'S OWN DRAWING (architect
+//     2026-11-21, send GG): the chip's triangle on the ruler's last
+//     cue_chip_h_px rows, its apex on the line's center on the ruler's foot,
+//     AT THE LINE'S EXACT PLACE — ONE PLACE for both
+//     (GuiPaintHandler::hover_triangle_x: the line's place where the line
+//     is a tap's) — in `hover_line`, flat, cut to the waveform's columns
+//     and painted where any part of its reach overlaps them (the head's
+//     half-head rule; paint_ruler_row). NO FADE: the line and its triangle
+//     appear, move and leave at once, as the scanner does; no gate, latch,
+//     fade or clock of the triangle's own — every edge that removes the
+//     line removes it.
 //   ITS ORDER: the canvas list's FIRST LINE, after the plate, the center
 //     lines and the stereo divider and under every other line — the lead-in
 //     ring, the playhead's line, the selection stems, the scanner, the zoom
@@ -4848,7 +4867,13 @@ void render_playhead(GuiCanvasSink& sink,
 //     drawn where a later line of the same width stands on its exact x
 //     (THE COINCIDENT LINES, paint_playheads' paragraph): the playhead's
 //     line — the pen back over the place it just tapped — a selection stem,
-//     the running scanner.
+//     the running scanner. ITS TRIANGLE, IN THE RULER: over the ticks and
+//     digits and UNDER THE PLAYHEAD'S HEAD, painted immediately before it
+//     (paint_ruler_row), so where the two overlap the playhead's shows. A
+//     YIELDED LINE STILL HAS ITS TRIANGLE (the rule): at the playhead's own
+//     x it lies under the playhead's head and shows nothing; at a selection
+//     stem or the running scanner, which have no head in the ruler, it
+//     marks the place there.
 //   ITS PLACE, THE TRUTHFUL ONE, derived at the paint
 //     (GuiPaintHandler::hover_line_x) from the stored gate answer, the pen's
 //     real place and the picture being painted: THE FRAME THE TAP WOULD
@@ -4888,9 +4913,19 @@ void render_playhead(GuiCanvasSink& sink,
 //   ITS DAMAGE (canvas_sink.h's contract; the scanner's shape): the line's
 //     cells as last painted and its new cells, each the hull of its span over
 //     the canvas's rows (scanner_invalidate_rect through
-//     Viewport::invalidate_hover_line), nothing above the canvas, and only
-//     where its place changed (GuiInputHandler::set_hover_line against the
-//     place last declared) — so a pen resting or away from the plane costs
+//     Viewport::invalidate_hover_line), and ITS TRIANGLE'S box as last
+//     painted in the ruler and its box at the new place, each the ruler
+//     head's painted box (GuiPaintHandler::ruler_head_box through
+//     Viewport::invalidate_hover_triangle: the head's painted reach over
+//     the ruler's last rows, 18 x 8 device px on the tablet) — a pen move
+//     now repaints those two small boxes of the ruler beside the line's
+//     cells (architect 2026-11-21, send GG, reversing send FF's "never
+//     through the ruler"), the ruler's painter redrawing under their clip
+//     alone (paint_ruler_row) — each only where its own place changed
+//     (GuiInputHandler::set_hover_line, two compares against the places
+//     last declared: the line's, and the triangle's, which carries whether
+//     it stands, so the barrel's Tap <-> Anchor edge at one x damages the
+//     triangle alone) — so a pen resting or away from the plane costs
 //     nothing and the app presents nothing; while the pen moves in hover
 //     range nearly every report that moves its real x moves the line (the
 //     Tap place where the x crosses a frame's edge, a frame being 1/20 px
@@ -4898,13 +4933,18 @@ void render_playhead(GuiCanvasSink& sink,
 //     beat (the cost accepted: architect 2026-11-21, send FF, "Cost is
 //     accepted"). Every edge that removes it (the leave, a contact, the latch's
 //     arm, a veil, a card, a load, a drag gone live, the zoom's seat, the
-//     pen onto a marker, the triangle, the trim bar or a key) damages its
-//     last painted cells the same way. THE OLD CELLS ARE AS PAINTED
+//     pen onto a marker, the trim bar or a key) damages its last painted
+//     cells and its triangle's the same way. THE OLD CELLS ARE AS PAINTED
 //     (AppState::HoverLine's `painted_x`, written by the painter at every
-//     list build), so no ghost can stand: the cells erased are always the
-//     ones the list on the glass holds; and THE PLACE COMPARED IS THE
-//     GLASS'S (`declared_x`, written by that build too), so a picture that
-//     moved under a still pen invites no frame after the one that drew it.
+//     list build; the triangle's `triangle_painted_x`, written by the
+//     ruler's painter by the head hit's publishing rule), so no ghost can
+//     stand: the cells erased are always the ones on the glass; and THE
+//     PLACE COMPARED IS THE GLASS'S (`declared_x` and `triangle_declared_x`,
+//     written by those painters too), so a picture that moved under a still
+//     pen invites no frame after the one that drew it — a camera move or a
+//     plate's publication damaging the viewport's lanes whole from their
+//     top row, the ruler among them, so the triangle is redrawn at its new
+//     place by that very repaint (AppState::HoverLine's WHY NO GHOST).
 void render_hover_line(GuiCanvasSink& sink,
                        GuiRect area,
                        double  x,
@@ -5861,7 +5901,7 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
 
 // THE LANE'S HOVER BETWEEN REBUILDS (architect 2026-11-21, send FF: the
 // marker's hover, a fade of about nine frames an edge, several at once on a
-// glide across a dense lane; AppState::FaceFades' THE LANES' TWO FACES).
+// glide across a dense lane; AppState::FaceFades' THE MARKER'S FACE).
 // The pass's kept layout (CuePassScratch) is the surface's content, cue for
 // cue, each laid out with THE HOVER WEIGHT IT WAS PAINTED AT; these four
 // read and repair it without a rebuild:

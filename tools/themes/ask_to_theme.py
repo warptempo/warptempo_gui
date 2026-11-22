@@ -43,9 +43,9 @@ CardStandingBackground its Alert; send AA's stage D2, 2026-11-19:
 ScaleTrough its ScrollbarInnerTrack; send AA's stage D3, 2026-11-19:
 ScaleSliderBorder its ClipBorder; send CC, 2026-11-20: ButtonHoverBackground its SurfaceBackground, ScrollbarSliderHover
 its ScrollbarInnerHandle; send FF, 2026-11-21: HoverLine its
-ScrollbarInnerHandle, CueHover its ViewCheckControlEnabledOn, PlayheadHover
-its RangeDefault, CueDisabledHover its BackgroundClip, CueDisabledLabelHover
-its TextDisabled), after the --set replacements, and a --set on an own role
+ScrollbarInnerHandle, CueHover its ViewCheckControlEnabledOn,
+CueDisabledHover its BackgroundClip, CueDisabledLabelHover its
+TextDisabled), after the --set replacements, and a --set on an own role
 itself wins. A pair's third member names HOW THE SOURCE IS READ: the copy
 unless named, and OwnRoleRead::WhiteHalfWay -- PlayheadLine's, of its
 RangeDefault (send FF) -- white half way to the source's word read flat,

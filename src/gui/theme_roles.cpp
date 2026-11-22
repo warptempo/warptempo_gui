@@ -23,7 +23,7 @@ namespace {
 // THE ROLE TABLE: the roles a theme file holds, each exactly once — EXACTLY
 // THE ROLES A TONE READS (the head's DERIVATION), Live's names, the one
 // nested role flattened to `StandardVuMeter/Maximum` (the head's THE
-// FORMAT), and last OUR OWN SIXTEEN (kOwnThemeRoles below). The converter
+// FORMAT), and last OUR OWN FIFTEEN (kOwnThemeRoles below). The converter
 // (tools/themes/ask_to_theme.py) reads the names out of this initializer,
 // so it is the one enumeration, and writes a file's lines in its order. Each was present in every stock and Sonic Bloom file
 // when it joined (StandbySelectionForeground 2026-11-06;
@@ -44,12 +44,11 @@ namespace {
 // ButtonHoverBackground and ScrollbarSliderHover, OUR OWN TWO FOR ARC'S HOVER
 // (architect 2026-11-18 / 2026-11-20, send CC: a key's face under the
 // hovering pen and the trim bar's pill under it), and PlayheadLine,
-// HoverLine, CueHover, PlayheadHover, CueDisabledHover and
-// CueDisabledLabelHover, OUR OWN SIX FOR THE WAVEFORM'S HOVER (architect
-// 2026-11-21, send FF: the playhead's stem, the waveform's hover line, a
-// hovered chip, the hovered playhead triangle, a hovered disabled marker's
-// chip and label; "just make sure they're all colors from Arc, dark"). A
-// role no tone reads is in no file.
+// HoverLine, CueHover, CueDisabledHover and CueDisabledLabelHover, OUR OWN
+// FIVE FOR THE WAVEFORM'S HOVER (architect 2026-11-21, send FF: the
+// playhead's stem, the waveform's hover line, a hovered chip, a hovered
+// disabled marker's chip and label; "just make sure they're all colors from
+// Arc, dark"). A role no tone reads is in no file.
 constexpr std::string_view kThemeRoles[] = {
     "SurfaceArea", "Desktop", "SurfaceBackground", "ControlContrastFrame",
     "ControlForeground", "TextDisabled", "BackgroundClip",
@@ -64,7 +63,7 @@ constexpr std::string_view kThemeRoles[] = {
     "TooltipBackground", "CardBackground", "CardStandingBackground",
     "ScaleTrough", "ScaleSliderBorder",
     "ButtonHoverBackground", "ScrollbarSliderHover",
-    "PlayheadLine", "HoverLine", "CueHover", "PlayheadHover",
+    "PlayheadLine", "HoverLine", "CueHover",
     "CueDisabledHover", "CueDisabledLabelHover",
 };
 constexpr std::size_t kThemeRoleCount = std::size(kThemeRoles);
@@ -85,12 +84,11 @@ constexpr std::size_t role_index(std::string_view name) {
 // cards' Alert, today's card face — opaque, as every source word is; the
 // two hover tones of send CC copy the tone each moves from, the key face's
 // SurfaceBackground and the pill's ScrollbarInnerHandle, so no hover shows
-// on a Live theme; the six of send FF, 2026-11-21, copy the tone each
-// stands beside, so the playhead's line keeps its look and no marker or
-// playhead hover shows on a Live theme: the hover line its
-// ScrollbarInnerHandle, a modest line there, the two chips' hovers the
-// chips' own ViewCheckControlEnabledOn and BackgroundClip, the triangle's
-// its RangeDefault, the disabled label's its TextDisabled). HOW THE SOURCE
+// on a Live theme; the five of send FF, 2026-11-21, copy the tone each
+// stands beside, so the playhead's line keeps its look and no marker hover
+// shows on a Live theme: the hover line its ScrollbarInnerHandle, a modest
+// line there, the two chips' hovers the chips' own ViewCheckControlEnabledOn
+// and BackgroundClip, the disabled label's its TextDisabled). HOW THE SOURCE
 // IS READ is the third member, the copy unless named: PlayheadLine alone is
 // WHITE HALF WAY TO ITS SOURCE RangeDefault — mix(white, the word read
 // flat, 0.5) per channel, rounded half to even, the derivation's mix (the
@@ -124,7 +122,6 @@ constexpr OwnThemeRole kOwnThemeRoles[] = {
     {"PlayheadLine",          "RangeDefault", OwnRoleRead::WhiteHalfWay},
     {"HoverLine",             "ScrollbarInnerHandle"},
     {"CueHover",              "ViewCheckControlEnabledOn"},
-    {"PlayheadHover",         "RangeDefault"},
     {"CueDisabledHover",      "BackgroundClip"},
     {"CueDisabledLabelHover", "TextDisabled"},
 };
@@ -274,7 +271,7 @@ Rgb unpacked(uint32_t word) {
                static_cast<int>(word & 0xFFu)};
 }
 
-// THE BRIGHT TONES, the head's BRIGHT MIX block's nine in the row's member
+// THE BRIGHT TONES, the head's BRIGHT MIX block's eight in the row's member
 // order: the one enumeration bright_mixed_tones walks. A word's top byte —
 // a CARRIED fill's opacity (the head's CARRIED block; the standing card's
 // red is the one bright tone among them) — rides the mix untouched.
@@ -286,7 +283,6 @@ constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
     &GuiThemeTones::cue,
     &GuiThemeTones::cue_hover,
     &GuiThemeTones::playhead_head,
-    &GuiThemeTones::playhead_head_hover,
     &GuiThemeTones::playhead_line,
 };
 
@@ -457,7 +453,7 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.cue_outline         = packed(contrast);
     t.inactive_cue        = packed(clip);
     t.playhead_head       = packed(range);
-    // THE PLAYHEAD'S STEM AND THE WAVEFORM'S HOVER, OUR OWN SIX (architect
+    // THE PLAYHEAD'S STEM AND THE WAVEFORM'S HOVER, OUR OWN FIVE (architect
     // 2026-11-21, send FF; the head's OUR OWN, THE WAVEFORM'S HOVER): each
     // read flat as the tone it stands beside is, the hover line alone
     // composited over the canvas it is drawn on (the COMPOSITED block's rule
@@ -465,7 +461,6 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     t.playhead_line       = packed(opaque(roles["PlayheadLine"]));
     t.hover_line          = packed(over(rgba(roles["HoverLine"]), canvas_a));
     t.cue_hover           = packed(opaque(roles["CueHover"]));
-    t.playhead_head_hover = packed(opaque(roles["PlayheadHover"]));
     t.inactive_cue_hover  = packed(opaque(roles["CueDisabledHover"]));
     t.inactive_cue_label_hover = packed(opaque(roles["CueDisabledLabelHover"]));
     t.scanner             = packed(white);
@@ -660,7 +655,7 @@ const GuiTheme& default_gui_theme() {
 }
 
 GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent) {
-    // The rule, the nine and the number are the head's BRIGHT MIX block
+    // The rule, the eight and the number are the head's BRIGHT MIX block
     // (theme_roles.h). Each bright tone moved toward the row's ground keeping
     // `percent` of itself — mix(tone, ground, 1 − percent / 100), the
     // derivation's own mix — then every tone derived from one recomputed off

@@ -7324,8 +7324,8 @@ struct AppState {
     // on-screen keyboard's keys — and the scrub's knob, AND A LIST'S ACTING
     // ROWS (the folder overlay's, architect 2026-11-21: "I'd like
     // to add hover"; Arc's `row.activatable:hover`; THE LIST ROW'S HOVER
-    // below), AND THE LANES' TWO FACES — A MARKER'S CUE AND THE PLAYHEAD'S
-    // TRIANGLE (architect 2026-11-21, send FF; THE LANES' TWO FACES below),
+    // below), AND THE LANES' ONE FACE, A MARKER'S CUE (architect 2026-11-21,
+    // send FF; THE MARKER'S FACE below),
     // each named by its
     // surface and its index there (a dialog button's and the knob's with the
     // stash's owner and session, a list row's with its listing, a marker's
@@ -7489,30 +7489,29 @@ struct AppState {
     // the trim bar, the cards, the tooltips, the time labels, the title bar,
     // a marker's stem and the canvas's lines (the hover line is its own,
     // AppState::HoverLine).
-    // THE LANES' TWO FACES (architect 2026-11-21, send FF: "The markers could
-    // get a hover action ... if the pen is on the marker's lane, the marker
-    // flags would light up ... If the pen is in the ruler lane, maybe the
-    // playhead would light up somehow"; "Cost is accepted. I keep the pen
-    // away when I don't need it."): A MARKER'S CUE (its chip and its label,
-    // `Surface::Marker`) and THE PLAYHEAD'S TRIANGLE in the ruler
-    // (`Surface::PlayheadHead`) are faces of TWO LOOKS, Rest and Hover, on
+    // THE MARKER'S FACE, THE LANES' ONE (architect 2026-11-21, send FF: "The
+    // markers could get a hover action ... if the pen is on the marker's
+    // lane, the marker flags would light up"; "Cost is accepted. I keep the
+    // pen away when I don't need it."): A MARKER'S CUE (its chip and its
+    // label, `Surface::Marker`) is a face of TWO LOOKS, Rest and Hover, on
     // the keys' clock and curve — INTO HOVER AND BACK TO REST 200 ms
-    // (duration_ms), a reversal from the value reached. THE TONES are
+    // (duration_ms), a reversal from the value reached. THE PLAYHEAD'S
+    // TRIANGLE IS NO FACE (architect 2026-11-21, send GG, of its hover:
+    // "very hard to see ... very hard to stably trigger"): a tap on it places
+    // the playhead as any ruler tap does, so the waveform's hover line and
+    // its triangle stand there (AppState::HoverLine). THE TONES are
     // resolve_flag_face's (render.cpp: the table's four hover pairs, a
     // disabled marker its own pair — a grey chip, a dimmer label —, the
-    // strike in the label's ink as
-    // mixed) and the head's `playhead_head` toward `playhead_head_hover`
-    // (paint_ruler_row); the painters take the Hover weight of the stored mix
-    // as a number (hover_weight below), never a clock, and START NO FADE —
-    // a lane face's two looks are the hover's alone, so the hover's setter
-    // turns them (set_hover_face), never as_painted.
+    // strike in the label's ink as mixed); the painter takes the Hover
+    // weight of the stored mix as a number (hover_weight below), never a
+    // clock, and STARTS NO FADE — a marker's two looks are the hover's
+    // alone, so the hover's setter turns them (set_hover_face), never
+    // as_painted.
     //   THE GATE: a face hovers where the pen's real place hits it AS A TAP
-    //   WOULD AND A TAP THERE WOULD ACT ON IT — the press routers' own hits,
-    //   in their order, read once per walk (GuiInputHandler::plain_lane_press_at:
-    //   a flag by hit_test_flag over the published stash, its chip's hit
-    //   extent or its label's box, the rightmost on top; else the triangle by
-    //   point_on_playhead_head in the ruler band; a cue never stands in the
-    //   ruler, so the two never answer together) — under the main page's
+    //   WOULD AND A TAP THERE WOULD ACT ON IT — the press router's own hit,
+    //   read once per walk (GuiInputHandler::plain_lane_press_at: a flag by
+    //   hit_test_flag over the published stash, its chip's hit extent or its
+    //   label's box, the rightmost on top) — under the main page's
     //   form of the pointer's gate (hover_admitted_on_main_page: the pen in
     //   the plane, no contact, the barrel not held, the latch not holding,
     //   no veil, no overlay, no card there, audio and no load, no live drag)
@@ -7520,8 +7519,8 @@ struct AppState {
     //   disabled, selected or not, struck or not, a live column's marker and
     //   every `h` view item alike (its press is the item's focus click).
     //   THE ONE HIT SERVES THE HOVER LINE TOO: the walk hands the same answer
-    //   to the line (walk_hover_face), whose "no line here" over a marker or
-    //   on the triangle is this "this face hovers".
+    //   to the line (walk_hover_face), whose "no line here" over a marker is
+    //   this "this face hovers".
     //   A MARKER'S FACE IS KEYED BY ITS CUE'S KEY (CueKey, render.h: the
     //   lane's listing in `dialog_session`, the cue's authored frame in
     //   `frame`, its rank among the listing's cues on that frame in `index`),
@@ -7535,7 +7534,7 @@ struct AppState {
     //   lower member, takes that member's rank — the same chip, on the same
     //   place.
     //   A ROW AT REST HOLDS NO RECORD, as a list row's: the hover's setter
-    //   seats a lane face's record at the look it shows (seat_at) and turns
+    //   seats a marker's record at the look it shows (seat_at) and turns
     //   it, the settle drops one that has landed at rest and is not the
     //   hovered face, and A FACE WITH NO RECORD SHOWS ITS LOOK AT ONCE (Hover
     //   if it is the hovered face, else Rest: hover_weight), the faces' rule
@@ -7550,12 +7549,12 @@ struct AppState {
     //   frame that showed it moved from under the pen, the fade out running
     //   from there; a cue still under the pen keeps the hover. Under a
     //   contact the hover ends as a key's does (the leave's fade out; no
-    //   press look), so a pressed, dragged marker and a dragged head wear
-    //   their resting look, fading to it over 200 ms from the touch.
+    //   press look), so a pressed, dragged marker wears its resting look,
+    //   fading to it over 200 ms from the touch.
     //   THE PAINT AND THE FRAMES: the cues are the flag cache's
     //   (paint_cues, the rebuild reading each cue's weight through
-    //   GuiPaintHandler::cue_hover_of) and the triangle the ruler's live
-    //   paint; WHEREVER A WEIGHT AS SHOWN DIFFERS FROM ITS FACE'S NOW — a
+    //   GuiPaintHandler::cue_hover_of); WHEREVER A WEIGHT AS SHOWN DIFFERS
+    //   FROM ITS FACE'S NOW — a
     //   clock step, a seat, a drop, a drop_all — THE ONE COMPARATOR, ON THE
     //   KEYS' FRAME RULE: AT THE CLOCK'S END (every 5 ms tick) it COMPARES
     //   AND DAMAGES ONLY (GuiPaintHandler::damage_lane_hovers) — each such
@@ -7568,9 +7567,7 @@ struct AppState {
     //   moment (GuiPaintHandler::sync_lane_hovers, cue_pass_sync_hover:
     //   their own extents, under the pass's cuts, never a rebuild) and
     //   damages the same extents, which the frame about to paint reads (the
-    //   hook runs before the damage list is read); the triangle's painted
-    //   box over the ruler's rows is damaged on either road where its weight
-    //   moved (its painter reads the weight live) — NOTHING ELSE OF THE
+    //   hook runs before the damage list is read) — NOTHING ELSE OF THE
     //   LANES, NOTHING OF THE CANVAS. A rebuild that ran in the same hook (a
     //   FOLLOW scroll's, any kick's) painted every cue at these very weights
     //   (cue_hover_of, its count `hovered` recounted), so the repaint after
@@ -7586,7 +7583,7 @@ struct AppState {
     //   last; nothing at rest, where both roads return before walking the
     //   laid-out cues (no Marker record, no hovered marker, no cue painted
     //   lit: GuiPaintHandler::scan_lane_hovers).
-    //   NOT ON A LIVE THEME: the walk's theme term hovers no lane face there,
+    //   NOT ON A LIVE THEME: the walk's theme term hovers no marker there,
     //   so nothing fades or is damaged.
     // THE LIST ROW'S HOVER (architect 2026-11-21; the look at
     // paint_handler.cpp's THE LIST VIEW, the tone theme_roles.h's
@@ -7631,8 +7628,8 @@ struct AppState {
     // EXTENT (face_extent: a roster key's painted box, a dialog button's box,
     // a keyboard key's face, the knob's disc, a list row's box cut to the
     // view — a linked key's box holds both
-    // its seam columns, materials.h's paint_linked_group; a lane face's step
-    // is its comparator's, THE LANES' TWO FACES above), and a seam's step
+    // its seam columns, materials.h's paint_linked_group; a marker's step
+    // is its comparator's, THE MARKER'S FACE above), and a seam's step
     // its own columns (seam_extent, inside each neighbor's extent), which
     // invites a frame on every beat (platform_android.cpp's kFrameBeat) until
     // the fade lands; the landing step is the last damage, and a landed face
@@ -7648,14 +7645,14 @@ struct AppState {
     // THE BOUND: `records` is reserved kCapacity at construction and never
     // grows past it — every roster key, the largest keyboard page's keys,
     // every dialog button and the knob, a seam each beside a linked key, and
-    // the few list rows, markers and the triangle that hover or fade (a
-    // resting one holds none), are a
+    // the few list rows and markers that hover or fade (a resting one holds
+    // none), are a
     // few hundred at most — so the clock and the painters allocate
     // nothing per tick or frame; a face past the bound paints its look at
     // once.
     struct FaceFades {
         enum class Surface : uint8_t { None, Roster, Dialog, Keyboard, Knob,
-                                       ListRow, Marker, PlayheadHead };
+                                       ListRow, Marker };
         // ONE FACE: its surface and its index there — Roster the roster
         // index (RedesignButton), Dialog the index into modal_dialog.buttons
         // with the stash's owner and session, Keyboard the key's index
@@ -7665,9 +7662,9 @@ struct AppState {
         // (FolderOverlay::listing: a rebuilt list is another listing, so its
         // rows are new faces), Marker its cue's key (CueKey, render.h: the
         // rank on its frame in `index`, the lane's listing in
-        // `dialog_session`, the authored frame in `frame`), PlayheadHead
-        // index 0 — or, with `seam`, THE SEAM ON THAT FACE'S LEFT
-        // (no list row and no lane face has one). Compared whole.
+        // `dialog_session`, the authored frame in `frame`) — or, with
+        // `seam`, THE SEAM ON THAT FACE'S LEFT (no list row and no marker
+        // has one). Compared whole.
         struct Face {
             Surface          surface        = Surface::None;
             int              index          = -1;
@@ -7684,11 +7681,9 @@ struct AppState {
             CueKey cue_key() const {
                 return CueKey{dialog_session, frame, index};
             }
-            // THE LANES' TWO FACES (the head's THE LANES' TWO FACES).
-            bool lane() const {
-                return surface == Surface::Marker ||
-                       surface == Surface::PlayheadHead;
-            }
+            // THE MARKER'S FACE, THE LANES' ONE (the head's THE MARKER'S
+            // FACE).
+            bool lane() const { return surface == Surface::Marker; }
             bool none() const { return surface == Surface::None; }
             Face left_seam() const {
                 Face f = *this;
@@ -7708,9 +7703,9 @@ struct AppState {
         // 0.45, 0.94) }`, the hovered row carrying none): INTO HOVER AT ONCE
         // (0 ms, the clock's next step), OUT OF IT kRowFadeMs on the same
         // curve. A row only ever records Rest and Hover (a lit row is no
-        // fading face, paint_list_view). THE LANES' TWO FACES record Rest
-        // and Hover alone too, on the keys' 200 ms both ways (the head's THE
-        // LANES' TWO FACES).
+        // fading face, paint_list_view). A MARKER'S FACE records Rest and
+        // Hover alone too, on the keys' 200 ms both ways (the head's THE
+        // MARKER'S FACE).
         static constexpr int64_t kCheckedFadeMs = 50;
         static constexpr int64_t kFadeMs        = 200;
         static constexpr int64_t kRowFadeMs     = 150;
@@ -7906,7 +7901,7 @@ struct AppState {
             seat_at(face, box, FaceLook::Rest);
         }
         // THE SAME SEAT AT THE LOOK THE FACE SHOWS WITH NO RECORD (the
-        // head's THE LANES' TWO FACES: a lane face with no record shows its
+        // head's THE MARKER'S FACE: a marker with no record shows its
         // look at once, Hover where it is the hovered face), so the setter's
         // turn starts from the picture on screen either way.
         void seat_at(const Face& face, const GuiRect& box, FaceLook look) {
@@ -7917,8 +7912,8 @@ struct AppState {
                                      .from   = FaceMix::of(look),
                                      .mix    = FaceMix::of(look)});
         }
-        // A LANE FACE'S HOVER WEIGHT AS IT IS TO BE PAINTED (the head's THE
-        // LANES' TWO FACES): its stored mix's Hover weight, or, with no
+        // A MARKER'S HOVER WEIGHT AS IT IS TO BE PAINTED (the head's THE
+        // MARKER'S FACE): its stored mix's Hover weight, or, with no
         // record, its look at once — 1 for the hovered face, else 0.
         double hover_weight(const Face& face) const {
             if (const Record* r = find(face)) return r->mix[FaceLook::Hover];
@@ -8038,9 +8033,14 @@ struct AppState {
     // could ... show where the cursor would be if I tapped or if I zoomed,
     // where ... the playhead or the zoom stem would be"; "an even more dark
     // and faint version of the playhead stem"; "Cost is accepted. I keep the
-    // pen away when I don't need it."). The look, its tone, its order in the
-    // canvas list and its place rule at render_hover_line (render.h), the
-    // one owner of the line; this record is its state alone. NOT ONE OF
+    // pen away when I don't need it."), AND ITS TRIANGLE IN THE RULER — the
+    // playhead head's drawing in the line's tone at the line's place
+    // (architect 2026-11-21, send GG: "give the hover stem a triangle, same
+    // color as the hover stem. for symmetry"), standing iff the line is a
+    // Tap's ("no triangle hover while barrel is held"). The look, its tone,
+    // its order in the canvas list and in the ruler and its place rule at
+    // render_hover_line (render.h), the one owner of the line and its
+    // triangle; this record is their state alone. NOT ONE OF
     // FaceFades' FACES and NO FADE: it appears, moves and leaves at once,
     // as the scanner does, so it needs no clock, no mix and no list — like
     // TrimBarHover, one value under the hover's gate, written by ONE WALK
@@ -8075,7 +8075,8 @@ struct AppState {
     //     drawn or yielded to a coincident line alike. THE OLD CELLS EVERY
     //     DAMAGE ERASES ARE THESE, so a picture that moved between two pen
     //     events can leave no ghost: the cells the list on the glass holds
-    //     are always the ones declared.
+    //     are always the ones declared. The line's alone: the canvas list
+    //     holds no triangle.
     //   `declared_x` THE PLACE THE GLASS IS OWED: written by BOTH its
     //     writers — the walk's setter (set_hover_line), where the place it
     //     derives now differs from this one, damaging the old cells as
@@ -8110,11 +8111,48 @@ struct AppState {
     //     same exact x), and the next build draws this one. A STILL PEN
     //     UNDER A STILL PICTURE derives the place both fields hold: nothing
     //     is damaged.
+    //   THE TRIANGLE'S TWO FIELDS, ITS OWN PAIR (architect 2026-11-21, send
+    //     GG), because the ruler is not the canvas list: cairo paints it into
+    //     the persistent backbuffer under each damage rect's clip, at its own
+    //     times, and a list build (which rewrites `declared_x`) repaints no
+    //     ruler cell — so the line's pair cannot speak for the triangle.
+    //   `triangle_painted_x` THE TRIANGLE AS LAST PAINTED IN THE RULER: its
+    //     exact place (the line's units) or none, written by paint_ruler_row
+    //     BY THE HEAD'S HIT'S PUBLISHING RULE (publish_head; its paragraph
+    //     there, record_hover_triangle): a run records only what its damage
+    //     clip redrew — a triangle painted, where the clip covers its box; a
+    //     triangle painted nowhere (none, or off the waveform's columns), as
+    //     none, where the clip covers the box last recorded. THE OLD CELLS
+    //     EVERY DAMAGE OF THE TRIANGLE ERASES ARE THESE (its box at that
+    //     place, GuiPaintHandler::ruler_head_box).
+    //   `triangle_declared_x` THE PLACE THE RULER IS OWED: the triangle's
+    //     derived place (GuiPaintHandler::hover_triangle_x — the line's place
+    //     where `place` is Tap, else none: THE DECLARED THING CARRIES WHETHER
+    //     THE TRIANGLE STANDS, so the barrel pressed or released over the
+    //     waveform under a still pen, Tap <-> Anchor at one x, is an edge
+    //     here though not the line's), written by BOTH writers as the line's
+    //     pair is — the setter, where the place it derives differs, damaging
+    //     the box as last painted and the box at the new place
+    //     (Viewport::invalidate_hover_triangle), and paint_ruler_row
+    //     wherever it records (the place it derived). WHY NO GHOST: every
+    //     change of the derived place is either the setter's (a pen report, a
+    //     gate edge — the walk runs at every pointer event, every tick and
+    //     ahead of every frame), which damages both boxes, or the picture's
+    //     (a camera move, a plate's publication, FOLLOW's scroll), whose
+    //     damage is the viewport's lanes whole from the lanes' top row
+    //     (damage_window_top_rows), the ruler among them, so the frame
+    //     repaints the ruler whole, erases the old triangle and records the
+    //     new; a picture change whose damage missed the ruler (none known) is
+    //     caught by the next walk's compare, the setter's damage, one frame
+    //     later. NOTHING AT REST: a still pen under a still picture derives
+    //     the place both fields hold, and a pen away holds none.
     struct HoverLine {
         enum class Place : uint8_t { None, Tap, Anchor };
         Place                 place = Place::None;
         std::optional<double> painted_x;
         std::optional<double> declared_x;
+        std::optional<double> triangle_painted_x;
+        std::optional<double> triangle_declared_x;
     };
     HoverLine hover_line;
 
