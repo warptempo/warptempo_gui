@@ -80,14 +80,6 @@ void erase_selection(State& s) {
     s.selection_anchor = -1;
 }
 
-// THE ERASE STEPPED FALLS WITH AN EMPTY TEXT (State::iter_pair_cleared, the
-// rule at the field): called on each of this module's two text-changing
-// roads — the replacement between its selection's erase and its insert,
-// Backspace after its erase.
-void drop_cleared_pair_on_empty(State& s) {
-    if (s.pending.empty()) s.iter_pair_cleared = false;
-}
-
 } // namespace
 
 // The contract (and its two callers) is at the declaration.
@@ -224,11 +216,6 @@ bool replace_selection(State& s, const std::string& raw) {
         return false;
     }
     if (has_selection(s)) erase_selection(s);
-    // The fact falls on an empty text even in passing: a whole-text selection
-    // replaced is an erase and then a typing, so it commits as "erase all,
-    // type" does (State::iter_pair_cleared). Once, here: an insert only grows
-    // the text, so it cannot leave empty what this check found non-empty.
-    drop_cleared_pair_on_empty(s);
     s.pending.insert(static_cast<size_t>(s.cursor_pos), clean);
     s.cursor_pos += ins;
     touch_blink(s);
@@ -246,7 +233,6 @@ void deactivate(State& s) {
     s.kind              = Kind::FlagPayload;
     s.iter_upper        = false;
     s.iter_hops         = false;
-    s.iter_pair_cleared = false;
     s.pending.clear();
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
@@ -275,7 +261,6 @@ void enter(State& s, int target,
     s.kind              = kind;
     s.iter_upper        = iter_upper;
     s.iter_hops         = iter_hops;
-    s.iter_pair_cleared = false;
     s.pending           = std::move(initial_pending);
     s.cursor_pos        = static_cast<int>(s.pending.size());
     s.selection_anchor  = -1;
@@ -463,7 +448,6 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                 s.cursor_pos = b;
             }
         }
-        drop_cleared_pair_on_empty(s);
         touch_blink(s);
         return KeyAction::Consumed;
     }

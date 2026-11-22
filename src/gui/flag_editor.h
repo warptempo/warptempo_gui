@@ -158,13 +158,10 @@ struct GuiFlagEditor {
     // adjust_iter_bound_cents / adjust_iter_bound_hops), the text's value the
     // start — an empty text the blank's 0 — clamped into the tie's window and
     // at the committed partner (iter_bound_step_landing_from and its phase
-    // twin), the wall silent. AN ERASED BOUND COUNTS AS THE CLEARED PAIR
-    // (architect 2026-11-21, send GG: an empty commit clears both bounds):
-    // from an empty text the partner walls as the blank's 0, not as stored,
-    // and a landed step from empty marks the session
-    // (text_editor::State::iter_pair_cleared), so later steps wall against
-    // the cleared pair too and Enter clears the other bound beside the
-    // text's (commit_iter_bound_edit).
+    // twin), the wall silent. AN EMPTY TEXT IS A COMMIT'S ZERO (architect
+    // 2026-11-21, send HH): where zero falls on the wrong side of the
+    // stored other bound the empty text is a refused commit, so the step
+    // cards the commit's partner sentence and the text stays empty.
     void step_editor_text(int delta);
     // THE PASS KEY: A TRUE TOGGLE INHERIT ON THE FLAG EDITOR'S TEXT — the
     // three arms of GuiWarpMarkersOps::toggle_inherits on the parsed flag: an
@@ -221,22 +218,21 @@ struct GuiFlagEditor {
     // at the callers, as the flag editor's open does.
     void enter_iter_bound_edit(char column, int idx, MarkerCell side);
     // Commit the open bound session, ON THE LIVE COLUMN (which is the open's
-    // column — the view cannot move under an open session): an EMPTY buffer
-    // CLEARS THE WHOLE BRACKET (one bound alone is not
-    // representable), a non-empty one must parse as that column's grammar —
+    // column — the view cannot move under an open session): AN EMPTY BUFFER
+    // IS THE NUMBER ZERO for its own bound, the other bound left as it
+    // stands (architect 2026-11-21, send HH: "erased bound should not affect
+    // the other one"), a non-empty one must parse as that column's grammar —
     // the signed two-decimal cent bound on warp, the signed whole hop on
-    // phase — and satisfy the walls, which are the partner bound plus the
-    // tempo window on warp and the partner bound plus the reset's HOP WINDOW
-    // on phase, else the editor stands, its text selected, and a card says which (an
+    // phase — and either must satisfy the walls, which are the partner bound
+    // plus the tempo window on warp and the partner bound plus the reset's
+    // HOP WINDOW on phase (zero always inside the window, so an erase is
+    // refused by the partner alone), else the editor stands, its text
+    // selected, and a card says which (an
     // editor-owned refusal: a bracket is session state no parser reads, its
     // backstops the sweep's inverted-bracket breach arm). On success
     // the pair is written through that column's one write site
     // (iter_bound_step_write / phase_iter_bound_step_write, so two zeroes
-    // clear there too). AFTER A STEP FROM AN ERASED BOUND
-    // (text_editor::State::iter_pair_cleared; architect 2026-11-21, send GG)
-    // the text is judged and written in the CLEARED pair — the partner wall
-    // reads 0 and the other bound is cleared in the same write, exactly what
-    // committing the erase, stepping and committing again leaves. NOTHING
+    // clear there too: an erase beside a zero bound is the blank). NOTHING
     // ELSE MOVES: no undo entry, no dirty
     // re-derive, no render — a bracket is outside the undo domain on both
     // columns, so the strip's damage is the whole tail — the editor closing on

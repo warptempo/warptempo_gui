@@ -86,6 +86,32 @@ constexpr const char* kCentBoundGrammar =
 constexpr const char* kHopBoundGrammar =
     "a hop bound is a sign and one digit, as +0";
 
+// THE BOUND COMMIT'S REFUSAL SENTENCE, one composer for its three readers:
+// both columns' commits and the bound editor's UP / DOWN from an empty text
+// (step_editor_text), which is refused as the commit it stands for.
+std::string range_bound_rejected(const std::string& why) {
+    return "Range bound rejected: " + why;
+}
+
+// A BOUND AGAINST ITS PARTNER, ONE JUDGE, both columns (warp cents and phase
+// hops, each exact in int64_t): the lower never rises above the upper, the
+// upper never falls below the lower, the partner the STORED other bound (0
+// for a blank bracket). Null where the bound stands, else the refusal's
+// reason. THREE READERS (architect 2026-11-21, send HH: "erased bound should
+// not affect the other one. card should disallow the erase if it would make
+// it invalid"): the two commits, a typed bound and an EMPTY TEXT alike — an
+// erased bound is judged as the number zero, the value it commits — and the
+// bound editor's UP / DOWN from an empty text, where a zero this refuses is a
+// refused commit with no start to step from (step_editor_text).
+const char* iter_bound_partner_refusal(MarkerCell side, int64_t value,
+                                       int64_t partner) {
+    if (side == MarkerCell::Lower && value > partner)
+        return "the lower bound cannot rise above the upper";
+    if (side == MarkerCell::Upper && value < partner)
+        return "the upper bound cannot fall below the lower";
+    return nullptr;
+}
+
 } // namespace
 
 // Flag-editor cluster: the marker lane's two editors (the flag's
@@ -360,7 +386,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
         // ONE COMPOSER, TWO READERS: the stderr line keeps the offending
         // token after the sentence; the card does not, that text standing
         // selected in the field the refusal leaves.
-        const std::string refusal = "Range bound rejected: " + why;
+        const std::string refusal = range_bound_rejected(why);
         std::fprintf(stderr, "warptempo_gui: %s: %s\n",
                      refusal.c_str(), next.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
@@ -368,71 +394,59 @@ void GuiFlagEditor::commit_iter_bound_edit() {
 
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[static_cast<size_t>(idx)];
-    // THE ERASE STEPPED COMMITS AS THE ERASE THEN THE STEP (architect
-    // 2026-11-21, send GG; text_editor::State::iter_pair_cleared): a text a
-    // landed step from an erased bound wrote is judged and written in the
-    // CLEARED pair — the empty commit's own blank below, first, so the
-    // partner reads 0 at the wall and at the write and the other bound
-    // leaves with the erase. One store write, as every commit here.
-    if (app.top_flag_editor.iter_pair_cleared) clear_iter_bracket(m);
-    if (next.empty()) {
-        // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
-        // one bound alone is not representable, so emptying either cell is
-        // the removal. IT IS THE BLANK AND NOT A DISSOLUTION — a tie stands
-        // through it, the leader's blank governing its followers' cells
-        // (clear_iter_bracket, warpmarkers.h).
-        clear_iter_bracket(m);
-    } else {
-        int64_t value = 0;
-        if (!parse_signed_2dp_cents(next, value)) {
-            refuse(kCentBoundGrammar);
-            return;
-        }
-        // THE WALLS, the landing owner's two, refused rather than clamped:
-        // THE TIE'S TEMPO WINDOW — every sweep cell renders base + delta for
-        // EVERY tied member, so each member's base plus either bound must stay
-        // inside the tempo bracket, and the interval is the tightest member's
-        // (iter_bound_tie_window, app_state.h, the step's own owner, so a
-        // typed bound and a stepped one are refused and clamped on ONE test
-        // and no sweep cell can ever refuse) — and the partner bound, the
-        // lower never above the upper and the upper never below the lower
-        // (0 for a blank bracket, the step's own start). Neither window nor
-        // tie can move under the bracket afterwards: while grid iterations
-        // stands the piece is locked and no base tempo can be authored
-        // (authoring_locked, app_state.h), which is what retired the
-        // retroactive clamp this refusal used to name.
-        //
-        // ONLY THE NOUN FORKS on whether a tie stands, the tie's own verdict
-        // owner's rule: the wall a typed bound broke may be another marker's.
-        const IterBoundWindow w = iter_bound_tie_window(mv_const, idx);
-        if (value < w.lo || value > w.hi) {
-            const bool tied = live.iter_tie_group != 0;
-            refuse(std::string(tied ? "a tied marker's base tempo"
-                                    : "the base tempo") +
-                   " plus the bound leaves the tempo bracket [" +
-                   format_tempo_cents(kTempoMinCents) + ", " +
-                   format_tempo_cents(kTempoMaxCents) + "]");
-            return;
-        }
-        // The partner is the PROPOSED row's: the stored one, or the cleared
-        // pair's 0 after a stepped erase (above).
-        const int64_t partner = side == MarkerCell::Upper
-                                    ? m.iter_start_cents.value_or(0)
-                                    : m.iter_end_cents.value_or(0);
-        if (side == MarkerCell::Lower && value > partner) {
-            refuse("the lower bound cannot rise above the upper");
-            return;
-        }
-        if (side == MarkerCell::Upper && value < partner) {
-            refuse("the upper bound cannot fall below the lower");
-            return;
-        }
-        // THE ONE WRITE SITE: the addressed side takes the value, the partner
-        // keeps what it had, and a pair landing on two zeroes clears — the
-        // same rule the arrows' step writes under, so a typed +0.00 pair and
-        // a stepped one mean one thing.
-        iter_bound_step_write(m, side, value);
+    // AN ERASED BOUND IS THE NUMBER ZERO (architect 2026-11-21, send HH:
+    // "erased bound should not affect the other one"): an empty text
+    // commits that bound as 0 and leaves the other as it stands, judged on
+    // the very walls a typed +0.00 meets — the window always admits it
+    // (iter_bound_tie_window's intersection holds 0), so where zero falls
+    // on the wrong side of the other bound the erase is refused on the
+    // partner's card, the editor standing on its empty text. Where the
+    // other bound is zero too the write's two-zeroes rule makes the pair
+    // the blank.
+    int64_t value = 0;
+    if (!next.empty() && !parse_signed_2dp_cents(next, value)) {
+        refuse(kCentBoundGrammar);
+        return;
     }
+    // THE WALLS, the landing owner's two, refused rather than clamped:
+    // THE TIE'S TEMPO WINDOW — every sweep cell renders base + delta for
+    // EVERY tied member, so each member's base plus either bound must stay
+    // inside the tempo bracket, and the interval is the tightest member's
+    // (iter_bound_tie_window, app_state.h, the step's own owner, so a
+    // typed bound and a stepped one are refused and clamped on ONE test
+    // and no sweep cell can ever refuse) — and the partner bound, the
+    // lower never above the upper and the upper never below the lower
+    // (0 for a blank bracket, the step's own start;
+    // iter_bound_partner_refusal, the one judge). Neither window nor
+    // tie can move under the bracket afterwards: while grid iterations
+    // stands the piece is locked and no base tempo can be authored
+    // (authoring_locked, app_state.h), which is what retired the
+    // retroactive clamp this refusal used to name.
+    //
+    // ONLY THE NOUN FORKS on whether a tie stands, the tie's own verdict
+    // owner's rule: the wall a typed bound broke may be another marker's.
+    const IterBoundWindow w = iter_bound_tie_window(mv_const, idx);
+    if (value < w.lo || value > w.hi) {
+        const bool tied = live.iter_tie_group != 0;
+        refuse(std::string(tied ? "a tied marker's base tempo"
+                                : "the base tempo") +
+               " plus the bound leaves the tempo bracket [" +
+               format_tempo_cents(kTempoMinCents) + ", " +
+               format_tempo_cents(kTempoMaxCents) + "]");
+        return;
+    }
+    const int64_t partner = side == MarkerCell::Upper
+                                ? live.iter_start_cents.value_or(0)
+                                : live.iter_end_cents.value_or(0);
+    if (const char* why = iter_bound_partner_refusal(side, value, partner)) {
+        refuse(why);
+        return;
+    }
+    // THE ONE WRITE SITE: the addressed side takes the value, the partner
+    // keeps what it had, and a pair landing on two zeroes clears — the
+    // same rule the arrows' step writes under, so a typed +0.00 pair and
+    // a stepped one mean one thing.
+    iter_bound_step_write(m, side, value);
 
     // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no store
     // bump — the shape every no-op commit in the product takes.
@@ -485,7 +499,7 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     auto refuse = [&](const std::string& why) {
         text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_top_strip();
-        const std::string refusal = "Range bound rejected: " + why;
+        const std::string refusal = range_bound_rejected(why);
         std::fprintf(stderr, "warptempo_gui: %s: %s\n",
                      refusal.c_str(), next.c_str());
         notifications.notify(AppState::NotificationClass::Normal, refusal);
@@ -493,76 +507,68 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
 
     std::vector<GuiPhaseResetMarker> proposed = pv_const;
     GuiPhaseResetMarker& m = proposed[static_cast<size_t>(idx)];
-    // THE ERASE STEPPED, the warp arm's rule (architect 2026-11-21, send GG):
-    // the cleared pair first, so the partner reads 0 and the other bound
-    // leaves with the erase.
-    if (app.top_flag_editor.iter_pair_cleared) clear_iter_bracket(m);
-    if (next.empty()) {
-        // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
-        // one bound alone is not representable, so emptying either cell is the
-        // removal — the blank, with the tie standing, exactly as the warp
-        // column's commit takes it (clear_iter_bracket, phaseresetmarkers.h).
-        clear_iter_bracket(m);
-    } else {
-        int value = 0;
-        if (!parse_signed_hops(next, value)) {
-            refuse(kHopBoundGrammar);
-            return;
-        }
-        // THE PARTNER, first and cheapest: the lower never rises above the
-        // upper and the upper never falls below the lower (0 for a blank
-        // bracket, the step's own start), read off the PROPOSED row — the
-        // stored pair, or the cleared one after a stepped erase.
-        const int partner = side == MarkerCell::Upper
-                                ? m.iter_start_hops.value_or(0)
-                                : m.iter_end_hops.value_or(0);
-        if (side == MarkerCell::Lower && value > partner) {
-            refuse("the lower bound cannot rise above the upper");
-            return;
-        }
-        if (side == MarkerCell::Upper && value < partner) {
-            refuse("the upper bound cannot fall below the lower");
-            return;
-        }
-        // THEN THE HOP WINDOW, refused rather than clamped: a cell that would
-        // push the reset before frame 0 or past the last frame is refused at
-        // authoring, like the tempo window. A NEIGHBOURING RESET IS NOT A
-        // WALL — two ranges may cross or meet and the sweep sorts each cell
-        // before the request (phase_reset_hop_window, warp_frame_map_view.h).
-        //
-        // ONLY ONE WALL CAN ARRIVE HERE, AND IT IS THE PIECE'S EDGE, so the
-        // refusal names it outright and the window hands back numbers alone:
-        // THE GRAMMAR BOUNDS THE DIGIT BEFORE THE WINDOW IS ASKED —
-        // parse_signed_hops takes a sign and ONE digit and the field cannot
-        // hold a third byte (kMaxPendingCharsIterHop, text_editor.h), so a
-        // committed value already lies inside [-kIterHopMax, kIterHopMax],
-        // the very interval the digit wall closes. A typed `+10` never reaches
-        // this test; it is refused as a full field or by the grammar sentence
-        // above. THE DIGIT CEILING ITSELF IS NOT DEAD — it survives as the
-        // NUMERIC bound the STEP clamps at, stopping at +/-9 there
-        // (phase_iter_bound_step_landing) — it simply has no typed road, which
-        // is why this site reads the interval and never a wall kind.
-        //
-        // AND IT IS THE TIE'S WINDOW (architect 2026-09-19): one cell
-        // displaces EVERY tied reset by the same hop count, so the interval is
-        // the tightest member's (phase_iter_bound_tie_window, app_state.h,
-        // the step's own owner, so a typed bound and a stepped one meet ONE
-        // test and no sweep cell can ever refuse). Only the noun forks on
-        // whether a tie stands — the edge a typed bound would run into may be
-        // another reset's.
-        const PhaseHopWindow w = phase_iter_bound_tie_window(app, audio, idx);
-        if (value < w.k_min || value > w.k_max) {
-            refuse(live.iter_tie_group != 0
-                       ? "the cell would take a tied reset out of the piece"
-                       : "the cell would leave the piece");
-            return;
-        }
-        // THE ONE WRITE SITE: the addressed side takes the value, the partner
-        // keeps what it had, and a pair landing on two zeroes clears — the
-        // same rule the arrows' step writes under, so a typed `+0` pair and a
-        // stepped one mean one thing.
-        phase_iter_bound_step_write(m, side, value);
+    // AN ERASED BOUND IS THE NUMBER ZERO, the warp arm's rule (architect
+    // 2026-11-21, send HH): an empty text commits that bound as 0 and leaves
+    // the other as it stands, judged on the very walls a typed `+0` meets —
+    // the hop window always admits it (phase_iter_bound_tie_window's
+    // intersection holds 0), so where zero falls on the wrong side of the
+    // other bound the erase is refused on the partner's card, the editor
+    // standing on its empty text; the other bound zero too, the write's
+    // two-zeroes rule makes the pair the blank.
+    int value = 0;
+    if (!next.empty() && !parse_signed_hops(next, value)) {
+        refuse(kHopBoundGrammar);
+        return;
     }
+    // THE PARTNER, first and cheapest: the lower never rises above the
+    // upper and the upper never falls below the lower (0 for a blank
+    // bracket, the step's own start; iter_bound_partner_refusal, the one
+    // judge).
+    const int partner = side == MarkerCell::Upper
+                            ? live.iter_start_hops.value_or(0)
+                            : live.iter_end_hops.value_or(0);
+    if (const char* why = iter_bound_partner_refusal(side, value, partner)) {
+        refuse(why);
+        return;
+    }
+    // THEN THE HOP WINDOW, refused rather than clamped: a cell that would
+    // push the reset before frame 0 or past the last frame is refused at
+    // authoring, like the tempo window. A NEIGHBOURING RESET IS NOT A
+    // WALL — two ranges may cross or meet and the sweep sorts each cell
+    // before the request (phase_reset_hop_window, warp_frame_map_view.h).
+    //
+    // ONLY ONE WALL CAN ARRIVE HERE, AND IT IS THE PIECE'S EDGE, so the
+    // refusal names it outright and the window hands back numbers alone:
+    // THE GRAMMAR BOUNDS THE DIGIT BEFORE THE WINDOW IS ASKED —
+    // parse_signed_hops takes a sign and ONE digit and the field cannot
+    // hold a third byte (kMaxPendingCharsIterHop, text_editor.h), so a
+    // committed value already lies inside [-kIterHopMax, kIterHopMax],
+    // the very interval the digit wall closes. A typed `+10` never reaches
+    // this test; it is refused as a full field or by the grammar sentence
+    // above. THE DIGIT CEILING ITSELF IS NOT DEAD — it survives as the
+    // NUMERIC bound the STEP clamps at, stopping at +/-9 there
+    // (phase_iter_bound_step_landing) — it simply has no typed road, which
+    // is why this site reads the interval and never a wall kind.
+    //
+    // AND IT IS THE TIE'S WINDOW (architect 2026-09-19): one cell
+    // displaces EVERY tied reset by the same hop count, so the interval is
+    // the tightest member's (phase_iter_bound_tie_window, app_state.h,
+    // the step's own owner, so a typed bound and a stepped one meet ONE
+    // test and no sweep cell can ever refuse). Only the noun forks on
+    // whether a tie stands — the edge a typed bound would run into may be
+    // another reset's.
+    const PhaseHopWindow w = phase_iter_bound_tie_window(app, audio, idx);
+    if (value < w.k_min || value > w.k_max) {
+        refuse(live.iter_tie_group != 0
+                   ? "the cell would take a tied reset out of the piece"
+                   : "the cell would leave the piece");
+        return;
+    }
+    // THE ONE WRITE SITE: the addressed side takes the value, the partner
+    // keeps what it had, and a pair landing on two zeroes clears — the
+    // same rule the arrows' step writes under, so a typed `+0` pair and a
+    // stepped one mean one thing.
+    phase_iter_bound_step_write(m, side, value);
 
     // A COMMIT THAT CHANGES NOTHING IS NOT A CHANGE: no undo entry, no store
     // bump — the shape every no-op commit in the product takes.
@@ -1110,18 +1116,29 @@ void GuiFlagEditor::step_editor_text(int delta) {
         // marker, the main page's two other refusals, cannot stand under
         // this editor (enter_iter_bound_edit refuses to open on either).
         //
-        // AN ERASED BOUND COUNTS AS THE CLEARED PAIR (architect 2026-11-21,
-        // send GG: the text read as if committed, and an empty commit clears
-        // both bounds): a step from an empty text, or from a text a landed
-        // step from the erase wrote (State::iter_pair_cleared, which a landing
-        // from empty sets), walls against the partner as cleared — the
-        // blank's 0 — not as stored. A wall remembers nothing.
+        // AN EMPTY TEXT STEPS ONLY WHERE IT WOULD COMMIT (architect
+        // 2026-11-21, send HH): read as if committed, an erased bound is the
+        // number zero and the other bound stays as stored
+        // (commit_iter_bound_edit), so where zero falls on the wrong side of
+        // the stored other bound the empty text is a refused commit with no
+        // start to step from — the step cards the commit's own sentence
+        // (iter_bound_partner_refusal, the one judge; the card alone, no
+        // stderr line, card_unparsed_editor_text's reason) and the text stays
+        // empty. Everywhere else the step starts from zero and walls at the
+        // stored partner as a step from any text does.
         const MarkerCell side = iter_bound_editor_side(ed);
-        const bool cleared = ed.pending.empty() || ed.iter_pair_cleared;
+        auto empty_text_refused = [&](int64_t partner) {
+            if (!ed.pending.empty()) return false;
+            const char* why = iter_bound_partner_refusal(side, 0, partner);
+            if (why == nullptr) return false;
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 range_bound_rejected(why));
+            return true;
+        };
         if (app.active_markers_view == 'P') {
-            if (idx < 0 ||
-                idx >= static_cast<int>(app.phaseresetmarkers.markers().size()))
-                return;
+            const std::vector<GuiPhaseResetMarker>& pv =
+                app.phaseresetmarkers.markers();
+            if (idx < 0 || idx >= static_cast<int>(pv.size())) return;
             int start = 0;
             if (!ed.pending.empty() && !parse_signed_hops(ed.pending, start)) {
                 card_unparsed_editor_text(
@@ -1129,11 +1146,15 @@ void GuiFlagEditor::step_editor_text(int delta) {
                     kHopBoundGrammar);
                 return;
             }
+            const GuiPhaseResetMarker& p = pv[static_cast<size_t>(idx)];
+            if (empty_text_refused(side == MarkerCell::Upper
+                                       ? p.iter_start_hops.value_or(0)
+                                       : p.iter_end_hops.value_or(0)))
+                return;
             const int landing = phase_iter_bound_step_landing_from(
-                app, audio, idx, side, start, delta, cleared);
+                app, audio, idx, side, start, delta);
             if (landing == start) return;   // the wall, silent
             rewrite_editor_text(format_signed_hops(landing));
-            app.top_flag_editor.iter_pair_cleared = cleared;
             return;
         }
         const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
@@ -1145,11 +1166,15 @@ void GuiFlagEditor::step_editor_text(int delta) {
                 kCentBoundGrammar);
             return;
         }
+        const GuiWarpMarker& w = mv[static_cast<size_t>(idx)];
+        if (empty_text_refused(side == MarkerCell::Upper
+                                   ? w.iter_start_cents.value_or(0)
+                                   : w.iter_end_cents.value_or(0)))
+            return;
         const int64_t landing =
-            iter_bound_step_landing_from(mv, idx, side, start, delta, cleared);
+            iter_bound_step_landing_from(mv, idx, side, start, delta);
         if (landing == start) return;   // the wall, silent
         rewrite_editor_text(format_signed_delta_cents(landing));
-        app.top_flag_editor.iter_pair_cleared = cleared;
         return;
     }
 

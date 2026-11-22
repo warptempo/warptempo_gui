@@ -386,24 +386,6 @@ struct State {
     // MOVE under an open session and so no session needs a stored column.
     bool iter_hops = false;
 
-    // THE ERASE STEPPED: AN IterBound SESSION'S PAIR COUNTS AS CLEARED
-    // (architect 2026-11-21, send GG — UP / DOWN read the text as if
-    // committed, and an erased bound, committed, clears both bounds). Set by
-    // the flag editor's UP / DOWN when a step from an EMPTY text lands
-    // (GuiFlagEditor::step_editor_text); while it stands every further step
-    // walls against the cleared pair, and Enter commits the text's bound AND
-    // clears the other (GuiFlagEditor::commit_iter_bound_edit). IT FALLS
-    // WHENEVER THE TEXT IS EMPTY, EVEN IN PASSING (this module's two
-    // text-changing roads, drop_cleared_pair_on_empty): Backspace emptying it,
-    // and a whole-text replacement, whose selection's erase empties it before
-    // the insert — so "select all and type" commits as "erase and type" does,
-    // and a number typed into an empty text with no step since commits
-    // against the stored partner, as typing always did. The step's own
-    // rewrite is such a replacement, and the step sets the fact again after
-    // it (GuiFlagEditor::step_editor_text). It never survives the session
-    // (enter / deactivate reset it). Meaningless on every other kind.
-    bool iter_pair_cleared = false;
-
     // Editable text — the whole of what the editor holds and the whole of what
     // its painter draws. A surface whose value has uneditable neighbours (the
     // marker's position and disabled bit for the flag payload) leaves them to

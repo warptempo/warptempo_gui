@@ -495,9 +495,12 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // cells exactly as a set bracket would). Its twin on the phase-reset column
 // is the same name over the hop pair (phaseresetmarkers.h), so a caller that
 // blanks either column's bracket writes one spelling.
-// THE CALLERS ARE THE BLANK'S OWN: the bound step's write site and the bound
-// editor's commit (its empty text, and the cleared pair a stepped erase
-// commits in, architect 2026-11-21, send GG). Two callers clear the tie
+// THE CALLERS ARE THE BLANK'S OWN: the bound step's write site
+// (iter_bound_step_write, app_state.h), which every authoring road onto a
+// bound reaches — the arrows' step, the value drag and the bound editor's
+// commit, whose empty text is the number zero for its own bound alone
+// (architect 2026-11-21, send HH) — and which blanks a pair landing on two
+// zeroes. Two callers clear the tie
 // beside this call because they end the session state whole: the grid
 // iterations mode's exit wipe, both columns (GuiFlagEditor::wipe_iter_state)
 // and the undo snapshot's strip (strip_iter_fields, below). A marker that
