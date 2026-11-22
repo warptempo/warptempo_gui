@@ -67,17 +67,10 @@
 // (its top byte FF), and the limiter lamp of send AA's stage D1 the same
 // day, the cards' face retired into them).
 //
-// THE ROWS ARE THE THEMES' OWN NUMBERS; THE PALETTE INSTALLED IS THE ROW
-// MIXED (architect 2026-11-13, session 119; theme_roles.h's THE BRIGHT
-// MIX): install_palette fills every member off the row with its bright
-// tones — of this table `cue`, `cue_fill`, the hovered chip `cue_hover`,
-// the playhead's two, of the
-// chrome's the lit key's inert face, the selection fill, the standing card
-// and the two lamps — mixed toward its ground at the
-// `bright_mix` key. Every "Default N"
-// below is the reference row's own number, the record; at the key's default
-// 100 (architect 2026-11-21, send FF: the theme's own numbers) the screen
-// shows exactly it; at 75, for one, the accent C88B4A where it says FFAD56.
+// THE ROWS ARE THE THEMES' OWN NUMBERS AND THE PALETTE INSTALLED IS THE ROW
+// AS IT IS (architect 2026-11-21, send GG: install_palette paints the
+// theme's own numbers). Every "Default N" below is the reference row's own
+// number, the record, and the screen shows exactly it.
 //
 // TWO TABLES FOR ONE STRUCT: THE PALETTE (kGuiPaletteRoles below) colors the
 // well, and THE CHROME'S ROLE TABLE (kGuiThemeRoles, theme_file.h) every
@@ -139,8 +132,7 @@
 //                            instead of icon glyph color, and we simply tune
 //                            the accent itself ... so that the accent shows
 //                            up everywhere as slightly darker for the dark
-//                            themes" — the tuning the bright mix,
-//                            theme_roles.h): the chip of every enabled cue,
+//                            themes"): the chip of every enabled cue,
 //                            selected or not, warp and phase reset alike,
 //                            and the `h` view's added and changed items
 //                            (resolve_flag_face) — the lit keys' face, so
@@ -149,7 +141,7 @@
 //                            own member)
 //   cue_hover        FFAD56  AN ENABLED MARKER'S CHIP UNDER THE HOVERING PEN
 //                            (architect 2026-11-21, send FF: the waveform's
-//                            hover), a bright tone (CueHover, our own role;
+//                            hover) (CueHover, our own role;
 //                            arc_dark 639FE5, Arc's hover of a blue thing,
 //                            `.documents-entry-tag:hover`; a Live theme's
 //                            ViewCheckControlEnabledOn, the chip's own tone,
@@ -202,8 +194,8 @@
 //   playhead_line    81E1EA  THE PLAYHEAD'S LINE IN THE CANVAS, ITS STEM
 //                            (architect 2026-11-04 night, mock n1, a static
 //                            tone after the measured cost of a fading line):
-//                            solid, one W, opaque, ONE STATIC TONE, a bright
-//                            tone (PlayheadLine, our own role since send FF,
+//                            solid, one W, opaque, ONE STATIC TONE
+//                            (PlayheadLine, our own role since send FF,
 //                            2026-11-21: arc_dark A5ABB5, Arc's `.h4` /
 //                            `.category-label` — "the stem is too bright"
 //                            at the font color, send FF; the head wears it
@@ -310,9 +302,7 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // its label 757575, TextDisabled. THE ENABLED
 // CHIP'S FILL FFAD56 is the accent, Default's ViewCheckControlEnabledOn
 // (architect 2026-11-13, session 119; the ROLE-NAMED block). Every word
-// here is the row's own number, k = 100 of THE BRIGHT MIX (theme_roles.h),
-// which the install applies to this row as to every row: no assert pins a
-// mixed word.
+// here is the row's own number, the one the install paints.
 // THE SELECTION PAIR'S TEXT 070707 is Default's
 // StandbySelectionForeground (architect 2026-11-06, session 75: Live's own
 // partner of the StandbySelectionBackground bar; 111111,

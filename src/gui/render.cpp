@@ -10,7 +10,6 @@
 #include "palette_file.h"   // kGuiPaletteRoles (the program's roles)
 #include "cool_edit_paint.h"   // the canvas column's painters and constants
 #include "theme_file.h"     // kGuiThemeRoles (the chrome's roles)
-#include "theme_roles.h"    // bright_mixed_tones (the install's mix)
 #include "materials.h"
 #include "value_format.h"
 #include "warp_frame_map_view.h"
@@ -1645,11 +1644,9 @@ struct FlagFace {
 //   ADDED     any         cue_fill      selected  sidebar    never
 //   CHANGED   any         cue_fill      selected  sidebar    per segment
 // — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
-// THE `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys' face, mixed
-// toward the ground at the `bright_mix` key as the keys are; architect
-// 2026-11-13, session 119: "we revert the rule so that markers get accent
-// color instead of icon glyph color, and we simply tune the accent
-// itself"; theme_roles.h's THE BRIGHT MIX), selected or not, WITH NO
+// THE `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys' face;
+// architect 2026-11-13, session 119: "we revert the rule so that markers
+// get accent color instead of icon glyph color"), selected or not, WITH NO
 // OUTLINE — the bare triangle of the nominal rows (architect 2026-11-19,
 // send AA, RULINGS §8 / §11: "I would consider removing the outline of the
 // chips because, for example, the scroll bar has no outline"; "I think I
@@ -3100,19 +3097,16 @@ WaveformPlateInks waveform_plate_inks() {
                              display_transform::display_rgb(t.waveform_core)};
 }
 
-void install_palette(const GuiTheme& theme, int bright_mix) {
+void install_palette(const GuiTheme& theme) {
     // The contract and the apply shape the live caller owes are at the
-    // declaration (render.h). THE ROW MIXED FIRST (theme_roles.h's THE
-    // BRIGHT MIX: its bright tones toward its ground at `bright_mix`, every
-    // tone derived from them recomputed) and copied for the word readers
-    // (installed_theme), its slug and group the list row's; then THE
+    // declaration (render.h). THE ROW COPIED FIRST, as it is, for the word
+    // readers (installed_theme); then THE
     // PROGRAM'S FIFTEEN off the palette's role table (palette_file.h), THE
-    // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the mixed
+    // CHROME'S THIRTY-FIVE off the chrome's (theme_file.h), each member the
     // row's tone, and THE PANEL'S FACE the theme's body tone `body_face`
     // (the ground of everything under the title bar, gui_theme.h) — the tables covering the struct exactly
     // (palette_file.cpp), so a role cannot be valued and not painted.
-    g_theme = GuiTheme{theme.slug, theme.group,
-                       bright_mixed_tones(theme.tones, bright_mix)};
+    g_theme = theme;
     const GuiThemeTones& t = g_theme.tones;
     for (const GuiPaletteRole& r : kGuiPaletteRoles)
         g_palette.*(r.member) = hex(t.*(r.tone));

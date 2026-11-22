@@ -197,8 +197,7 @@ struct TrimRange {
 // `theme` device key naming one row of the themes' list — the theme files
 // read at launch since 2026-11-11, theme_roles.h — the compiled reference
 // row, Live's Default, that measured palette to the byte but the selection
-// pair's text, gui_theme.h; every bright tone installed mixed toward the
-// ground at the `bright_mix` key, theme_roles.h's THE BRIGHT MIX); A
+// pair's text, gui_theme.h; every row installed at its own numbers); A
 // LIT OR PRESSED KEY'S FACE IS THE ACCENT, the palette's role `cue` (the
 // markers' chip the same word, `cue_fill`, 2026-11-13) — its inert face the
 // chrome's `lit_dim_fill` (architect 2026-11-11, session 106; Arc's states
@@ -382,8 +381,8 @@ struct TrimRange {
 // its words `sidebar_text`, ARC'S SHADOW outside it (the tooltip block's
 // THE TOOLTIP IS ARC'S and ARC'S TOOLTIP SHADOW); A NORMAL CARD notifyd's
 // grey `card_fill` (353945 at .95) under `sidebar_text`, A STANDING CARD
-// Arc's destructive red `card_standing_fill` (F04A50 at .95, a bright
-// tone) under `card_text` (= `card_ink`, the theme's
+// Arc's destructive red `card_standing_fill` (F04A50 at .95) under
+// `card_text` (= `card_ink`, the theme's
 // StandbySelectionForeground, the print on a lit face), radius 2 W, no
 // shadow (notifications.h's THE LOOK). On a Live theme the tooltip's fill
 // is its SurfaceBackground and both cards' its Alert, all opaque. THIS
@@ -520,7 +519,7 @@ struct GuiPalette {
     // word's top byte (tone_alpha below), painted at it over what lies under.
     GuiColor tooltip_fill;    // the tooltip's box (paint_shift_tooltip)
     GuiColor card_fill;       // a normal (timed) card's box (paint_notifications)
-    GuiColor card_standing_fill; // a standing (critical) card's box, a bright tone
+    GuiColor card_standing_fill; // a standing (critical) card's box
     GuiColor limiter_lamp;    // the title bar's limiter lamp, lit (Alert, its own tone since send AA's stage D1: the cards left Alert)
     GuiColor clip_lamp;       // the title bar's clip lamp, lit and not struck (THE TWO LAMPS, the title bar block)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (kGuiPaletteRoles,
@@ -558,9 +557,8 @@ struct GuiPalette {
 // (black), never painted.
 const GuiPalette& palette();
 
-// THE INSTALLED THEME'S ROW (the list's row mixed at the `bright_mix` key,
-// install_palette below; theme_roles.h's THE BRIGHT MIX) — the
-// sRGB WORDS behind palette(), for the few readers that need the word rather
+// THE INSTALLED THEME'S ROW (the list's row as it is, install_palette
+// below) — the sRGB WORDS behind palette(), for the few readers that need the word rather
 // than a GuiColor: the Breeze glyph road's tone (icons::draw_glyph; key_ink,
 // materials.h), the plate's two inks (waveform_plate_inks below). Every other
 // painter reads palette(). Before the first install it is the compiled
@@ -587,24 +585,19 @@ enum class GuiSurface {
 GuiColor surface_text(GuiSurface surface);
 
 // Install every color off ONE THEME'S ROW (`theme`, a row of the themes'
-// list, theme_roles.h; architect 2026-11-05, the theme arc) MIXED AT
-// `bright_mix` (the device key's whole percent; architect 2026-11-13,
-// session 119, theme_roles.h's THE BRIGHT MIX: the row's bright tones toward
-// its ground, every tone derived from them recomputed, bright_mixed_tones;
-// the list keeps the own numbers, so the mix happens here and at no other
-// site): THE PROGRAM'S members off the palette's role table
+// list, theme_roles.h; architect 2026-11-05, the theme arc) AT ITS OWN
+// NUMBERS (architect 2026-11-21, send GG: the row as the list holds it):
+// THE PROGRAM'S members off the palette's role table
 // (kGuiPaletteRoles, palette_file.h), THE CHROME'S off the chrome's
 // (kGuiThemeRoles, theme_file.h), the panel's `face` off the theme's body
 // tone (`body_face`, send Z)
 // — the tables covering the struct exactly (palette_file.cpp) — and THE
-// MIXED ROW COPIED as installed_theme(), under the list row's slug and group
+// ROW COPIED as installed_theme(), under the list row's slug and group
 // (architect 2026-11-06, session 75: the list is built once at launch and
 // immutable; the copy needs no lifetime argument and covers the
 // construction state before the load). Its callers: gui_main's startup,
-// before the window exists (the config's `theme` and `bright_mix`), and
-// GuiInputHandler::apply_theme, at every `theme` commit and every
-// `bright_mix` commit (the installed row's list entry again, found by
-// installed_theme().slug, at the new percent). It resolves and never
+// before the window exists (the config's `theme`), and
+// GuiInputHandler::apply_theme, at every `theme` commit. It resolves and never
 // refuses, and it bumps palette_generation below, the flag cache's
 // fingerprint term.
 // THE APPLY SHAPE THE CALLER OWES after a live install (apply_theme; the
@@ -621,8 +614,8 @@ GuiColor surface_text(GuiSurface surface);
 // v_words.x / .y; no color uniform), and the plate's two inks ride
 // waveform_plate_inks into the worker's job (waveform_cache.cpp) and its
 // fingerprint, so a theme that moves them rebuilds the plate and one that
-// keeps them re-renders nothing (the bright mix moves neither ink).
-void install_palette(const GuiTheme& theme, int bright_mix);
+// keeps them re-renders nothing.
+void install_palette(const GuiTheme& theme);
 
 // THE PALETTE'S GENERATION — a counter the install family bumps, so a
 // cached surface whose pixels carry palette colors keys the palette BY
@@ -891,10 +884,8 @@ void install_true_colors(bool on);
 // therefore allow the triangle chip to stand for selection/focus";
 // 2026-11-05, "only 1 playhead onscreen ever"): EVERY ENABLED CHIP'S FILL
 // the palette's `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys'
-// face, installed mixed toward the ground at the `bright_mix` key as the
-// keys' is; architect 2026-11-13, session 119: "we revert the rule so that
-// markers get accent color instead of icon glyph color, and we simply tune
-// the accent itself"; 2026-11-01: "one color for all markers" — every cue,
+// face; architect 2026-11-13, session 119: "we revert the rule so that
+// markers get accent color instead of icon glyph color"; 2026-11-01: "one color for all markers" — every cue,
 // the history's added and changed items and a struck marker's included),
 // NO OUTLINE (2026-11-19, send AA: the bare triangle of the nominal rows,
 // the cue block below), and THE SELECTED marker's mark THE STEM in the
@@ -4856,9 +4847,8 @@ void render_playhead(GuiCanvasSink& sink,
 //     and faint version of the playhead stem"), ITS TRIANGLE THE SAME TONE
 //     ("same color as the hover stem"); on every theme (every theme file
 //     carries a visible HoverLine; no theme term, unlike the faces).
-//     The order is the theme's own numbers' (bright_mix 100): the stem is a
-//     bright tone and the line is not, so below about 60 % the mixed stem
-//     falls under the line (theme_roles.h's THE BRIGHT MIX, the numbers).
+//     The order is the theme's own numbers' (theme_roles.h's THE SCANNER
+//     block).
 //   ITS FORM: the playhead's line's — a one-W line (waveform_line_px)
 //     centered on its exact place `x` (device px from area.x), drawn wherever
 //     any of its real interval lies inside the strip and cut at both edges

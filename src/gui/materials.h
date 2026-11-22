@@ -79,9 +79,7 @@
 // `text_on_lit_dim` (Arc's button:disabled:checked under the button's
 // opacity; theme_roles.h's DERIVED block). A SEAM BETWEEN TWO KEYS OF
 // DIFFERENT STATES WEARS THE LEFT KEY'S FACE, a lit key taking both its
-// seams (the kit's paint order, paint_linked_group). THE ACCENT IS
-// INSTALLED MIXED TOWARD THE GROUND at the `bright_mix` key, its inert face
-// derived from the mixed word (theme_roles.h's THE BRIGHT MIX).
+// seams (the kit's paint order, paint_linked_group).
 // EVERY CHECKED KEY WEARS THE ONE ACCENT: the state lamps (MAGNIFY, Read
 // Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
 // Drag), the render player's Repeat One, THE DOORS, the seven overlay
@@ -331,7 +329,7 @@
 // no border, Arc's shadow under it, its words `sidebar_text` (render.h's THE
 // TOOLTIP IS ARC'S); THE CARDS notifyd's bubble — a normal card
 // `card_fill` (353945 at .95) under `sidebar_text`, a standing card Arc's
-// destructive red `card_standing_fill` (F04A50 at .95, a bright tone) under
+// destructive red `card_standing_fill` (F04A50 at .95) under
 // `card_ink`, the print on a lit face (notifications.h's THE LOOK). On a
 // Live theme the tooltip's fill is its SurfaceBackground and both cards'
 // its Alert, opaque. THE LIMITER LAMP keeps Alert as `limiter_lamp`, its

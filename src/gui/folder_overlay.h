@@ -4,9 +4,9 @@
 // keyboard slot's band until 2026-10-14, the modal family's box since,
 // modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
-// SETTINGS PAGE's twenty-eight keys as `key=value` lines under two group
+// SETTINGS PAGE's twenty-seven keys as `key=value` lines under two group
 // rows (architect 2026-10-28, on a mock he verified on the glass: "yes" to
-// the list, "keep" to the group rows) — the twenty-six editable keys and,
+// the list, "keep" to the group rows) — the twenty-five editable keys and,
 // among the piece's lines, `scale` and `bpm` as disabled rows (architect
 // 2026-10-29) — and THE VALUE LIST, one listed key's
 // values, the page's row for that key's content (architect 2026-10-25: "maybe

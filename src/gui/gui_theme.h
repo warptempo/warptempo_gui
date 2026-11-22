@@ -20,12 +20,10 @@
 // Every sRGB word the GUI paints, one theme's (0xRRGGBB). Beside each member
 // what reads it and the Live role it comes from (the one owners: materials.h's
 // head, palette_file.h's role list, render.h's palette block; the derivation,
-// theme_roles.h's head). A row of the list holds the theme's own numbers; the
-// installed row its bright tones mixed toward its ground at the `bright_mix`
-// key and every tone derived from them recomputed (theme_roles.h's THE BRIGHT
-// MIX, bright_mixed_tones).
+// theme_roles.h's head). A row of the list holds the theme's own numbers,
+// and the installed row is that row as it is (install_palette, render.h).
 struct GuiThemeTones {
-    uint32_t ground;              // the flat ground everywhere outside the well and the keys (SurfaceArea); THE TITLE TONE on the Arc page, the bright mix's target and the launcher icon's ground
+    uint32_t ground;              // the flat ground everywhere outside the well and the keys (SurfaceArea); THE TITLE TONE on the Arc page and the launcher icon's ground
     uint32_t body_face;           // THE BODY TONE, the ground of everything under the title bar (WindowBackground, our own role; a Live theme's SurfaceArea): the palette's `face`, both icon rows, the status bar, the erase, the modal pane's and the keyboard's ground
     uint32_t text;                // every word, digit and drawing the chrome prints; `label` / `field_text` (ControlForeground)
     uint32_t title_text;          // the title bar's text and drawings (TitleForeground, our own role; a Live theme's ControlForeground; paint_title_bar)
@@ -60,9 +58,9 @@ struct GuiThemeTones {
     // whatever lies under the box — tone_alpha (render.h) reads it.
     uint32_t tooltip_fill;        // the tooltip's box (TooltipBackground, our own role; arc_dark 4B5162 at F2, Arc's $osd_bg_color at .95; a Live theme's SurfaceBackground, opaque)
     uint32_t card_fill;           // a normal (timed) card's box (CardBackground, our own role; arc_dark 353945 at F2, notifyd's bubble; a Live theme's Alert, opaque)
-    uint32_t card_standing_fill;  // a standing (critical) card's box, A BRIGHT TONE (CardStandingBackground, our own role; arc_dark F04A50 at F2, Arc's destructive red; a Live theme's Alert, opaque)
+    uint32_t card_standing_fill;  // a standing (critical) card's box (CardStandingBackground, our own role; arc_dark F04A50 at F2, Arc's destructive red; a Live theme's Alert, opaque)
     uint32_t card_ink;            // a standing card's words and class glyph; `card_text` (StandbySelectionForeground, the selection's text, the print on a lit face)
-    uint32_t limiter_lamp;        // the title bar's limiter lamp, lit (Alert, a bright tone: Arc's warning orange; the cards' face until send AA's stage D1)
+    uint32_t limiter_lamp;        // the title bar's limiter lamp, lit (Alert: Arc's warning orange; the cards' face until send AA's stage D1)
     uint32_t clip_lamp;           // the title bar's clip lamp, lit (StandardVuMeter / Maximum)
     uint32_t waveform_canvas;     // the canvas (DetailGridTiles over DetailViewBackground)
     uint32_t waveform_ink;        // the waveform, the plate's outer bar (WaveformColor over DetailViewBackground)
@@ -71,12 +69,12 @@ struct GuiThemeTones {
     uint32_t center;              // each channel's zero line (= the ink)
     uint32_t cue;                 // THE ACCENT: a lit or pressed key's face, every checked key's, NOISE's progress line, the on-screen keyboard's lit keys, the scrub's played part and its held knob, the flag editor's border (ViewCheckControlEnabledOn)
     uint32_t cue_fill;            // every enabled marker's chip fill, the `h` view's added and changed items' too (= the accent, cue)
-    uint32_t cue_hover;           // an enabled marker's chip under the hovering pen, A BRIGHT TONE (CueHover, our own role; arc_dark 639FE5, Arc's hover of a blue thing, `.documents-entry-tag:hover`; a Live theme's ViewCheckControlEnabledOn, the chip's own tone: no hover)
+    uint32_t cue_hover;           // an enabled marker's chip under the hovering pen (CueHover, our own role; arc_dark 639FE5, Arc's hover of a blue thing, `.documents-entry-tag:hover`; a Live theme's ViewCheckControlEnabledOn, the chip's own tone: no hover)
     uint32_t cue_outline;         // the selection stem, the lead-in ring (ControlContrastFrame)
     uint32_t inactive_cue;        // a disabled marker's chip fill (BackgroundClip)
     uint32_t inactive_cue_hover;  // a disabled marker's chip under the hovering pen (CueDisabledHover, our own role; arc_dark 90939B, Arc's `wm_icon_bg`, the titlebar glyph awake; a Live theme's BackgroundClip, the chip's own tone: no hover)
     uint32_t playhead_head;       // the playhead's triangle in the ruler (RangeDefault)
-    uint32_t playhead_line;       // the playhead's canvas line, its stem, A BRIGHT TONE (PlayheadLine, our own role; arc_dark A5ABB5, Arc's `.h4` / `.category-label`; a Live theme's white half way to its RangeDefault)
+    uint32_t playhead_line;       // the playhead's canvas line, its stem (PlayheadLine, our own role; arc_dark A5ABB5, Arc's `.h4` / `.category-label`; a Live theme's white half way to its RangeDefault)
     uint32_t hover_line;          // the waveform's hover line and its triangle in the ruler (HoverLine, our own role, over the canvas; arc_dark 767B87, Arc's scrollbar slider; a Live theme's ScrollbarInnerHandle)
     uint32_t scanner;             // the scanner and the zoom anchor's stem (FFFFFF, every theme)
 };
@@ -101,10 +99,8 @@ inline constexpr std::string_view kGuiThemeGroupUser   = "USER-DEFINED";
 // THE LIST'S OWN SLUGS (theme_roles.h's head). `default` is THE OPENING
 // THEME, the first row and the missing-theme fallback: a copy of the
 // shipped Arc-Dark (`arc_dark`, kGuiDefaultThemeSourceSlug, a file of
-// SYSTEM; architect 2026-11-18, send Y: "arc_dark and 75 will be my
-// default" — "let the remote session make that the default"; the bright
-// mix's default 100 since send FF, 2026-11-21, theme_roles.h's THE BRIGHT
-// MIX). The launcher
+// SYSTEM; architect 2026-11-18, send Y: "let the remote session make that
+// the default"). The launcher
 // icon reads the same file (apk/build_apk.sh, which takes the slug from
 // this line: keep it one line, `= "<slug>";`).
 // `default_dark_neutral_medium` is the compiled reference row below. A
@@ -167,10 +163,8 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // hovers nothing, so not Arc's 3 % white but the ruler 393939; architect
 // 2026-11-21), so no list row hovers either.
 // THE ROW IS LIVE'S OWN NUMBERS, THE RECORD (architect 2026-11-13, session
-// 119): like every row of the list it holds the theme's own numbers,
-// and the install mixes its bright tones at the `bright_mix` key as it mixes
-// every row's (theme_roles.h's THE BRIGHT MIX), so no number here is the
-// key's. palette_file.h's static_asserts pin every word. The pre-install
+// 119): like every row of the list it holds the theme's own numbers.
+// palette_file.h's static_asserts pin every word. The pre-install
 // palette's row too
 // (render.cpp's construction state, never painted).
 inline constexpr GuiThemeTones kGuiReferenceThemeTones = {

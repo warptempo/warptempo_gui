@@ -23,15 +23,17 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY-THREE keys since 2026-11-17, the
+// REQUIRED SET, every one of them (TWENTY-TWO keys since 2026-11-21, send
+// GG: the theme's highlights' mix toward its ground, the tuning key of
+// 2026-11-13 between `sweep_highlight` and `waveform_fade_px`, retired at
+// 100, the theme's own numbers, architect 2026-11-21; TWENTY-THREE from
+// 2026-11-17, the
 // icon set `icons` appended at the end — a permanent key, Breeze's or
 // Papirus's drawings, icons.h's head; TWENTY-TWO from 2026-11-14, the
 // plate's fade start `waveform_fade_px` appended at the end — a tuning key,
 // the bar width in device px at which the waveform's finer level starts to
 // appear;
-// TWENTY-ONE from 2026-11-13, the
-// bright tones' mix `bright_mix` appended at the end — a tuning key, how
-// much of itself each bright tone keeps toward the theme's ground; TWENTY
+// TWENTY-ONE from 2026-11-13, that mix's key appended at the end; TWENTY
 // from 2026-11-12, the
 // sweep highlight's alpha `sweep_highlight` appended at the end — a tuning
 // key, the canvas highlight's blend toward white while a sweep's pointer is
@@ -127,8 +129,7 @@ namespace {
 // two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night, and the
 // tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07, and the
 // sweep highlight's alpha, `sweep_highlight`, after it since 2026-11-12, and
-// the bright tones' mix, `bright_mix`, after it since 2026-11-13, and the
-// plate's fade start, `waveform_fade_px`, after it since 2026-11-14 (none
+// the plate's fade start, `waveform_fade_px`, after it since 2026-11-14 (none
 // stood from 2026-10-28 night,
 // when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
 // the permanent seconds key above).
@@ -169,7 +170,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "lamp_hold_ms",
     "tooltip_delay_ms",
     "sweep_highlight",
-    "bright_mix",
     "waveform_fade_px",
     "icons",
 };
@@ -292,14 +292,6 @@ std::string format_tooltip_delay_ms(int ms) {
 // The sweep highlight's alpha's canonical spelling (2026-11-12): `%d`, the
 // noise integers' road.
 std::string format_sweep_highlight(int percent) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", percent);
-    return std::string(buf);
-}
-
-// The bright tones' mix's canonical spelling (2026-11-13): `%d`, the noise
-// integers' road.
-std::string format_bright_mix(int percent) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", percent);
     return std::string(buf);
@@ -430,9 +422,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The sweep highlight's alpha's canonical integer
             // (format_sweep_highlight).
             s += format_sweep_highlight(cfg.sweep_highlight);
-        } else if (k == "bright_mix") {
-            // The bright tones' mix's canonical integer (format_bright_mix).
-            s += format_bright_mix(cfg.bright_mix);
         } else if (k == "waveform_fade_px") {
             // The fade start's canonical decimal
             // (format_waveform_fade_px).
@@ -687,17 +676,6 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kSweepHighlightGrammarReason);
             }
             out.sweep_highlight = *pct;
-            return {};
-        }
-        // THE BRIGHT TONES' MIX (2026-11-13, a tuning key): under its one
-        // grammar owner (parse_bright_mix, device_config.h), required like
-        // every key; any other spelling the launch's hard fail.
-        if (key == "bright_mix") {
-            const std::optional<int> pct = parse_bright_mix(value);
-            if (!pct) {
-                return bad_value(ln, key, value, kBrightMixGrammarReason);
-            }
-            out.bright_mix = *pct;
             return {};
         }
         // THE PLATE'S FADE START (2026-11-14, a tuning key): under its one

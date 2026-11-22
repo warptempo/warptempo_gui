@@ -8671,7 +8671,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            the text tone `text`
 //   the HIGHLIGHT         -> THE SELECTION PAIR across the view's whole
 //                            width: the bar `selected_fill` (arc_dark the
-//                            accent 5294E2, mixed at bright_mix) under the
+//                            accent 5294E2) under the
 //                            lit print `selected_text` (FFFFFF)
 //   PRESSED               -> THE SAME LOOK: Thunar is single-click, a
 //                            pressed row a selected one (the lighter press

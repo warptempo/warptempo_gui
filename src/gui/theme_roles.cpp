@@ -14,9 +14,9 @@
 #include <system_error>
 #include <utility>
 
-// The format, the groups, the order, the left-out files, THE DERIVATION and
-// THE BRIGHT MIX are at the declaration's head (theme_roles.h), the one
-// owner; this file is their code.
+// The format, the groups, the order, the left-out files and THE DERIVATION
+// are at the declaration's head (theme_roles.h), the one owner; this file
+// is their code.
 
 namespace {
 
@@ -263,36 +263,19 @@ uint32_t packed_carried(const std::string& word) {
 }
 
 // A row's word back to its three bytes: exactly the Rgb `packed` was given,
-// so a tone recomputed off a row's words is the one derive() computed off
-// the roles (fill_dependent_tones).
+// so a tone read off a row's words is the one derive() computed off the
+// roles (fill_dependent_tones).
 Rgb unpacked(uint32_t word) {
     return Rgb{static_cast<int>((word >> 16) & 0xFFu),
                static_cast<int>((word >> 8) & 0xFFu),
                static_cast<int>(word & 0xFFu)};
 }
 
-// THE BRIGHT TONES, the head's BRIGHT MIX block's eight in the row's member
-// order: the one enumeration bright_mixed_tones walks. A word's top byte —
-// a CARRIED fill's opacity (the head's CARRIED block; the standing card's
-// red is the one bright tone among them) — rides the mix untouched.
-constexpr uint32_t GuiThemeTones::* kBrightTones[] = {
-    &GuiThemeTones::selection_fill,
-    &GuiThemeTones::card_standing_fill,
-    &GuiThemeTones::limiter_lamp,
-    &GuiThemeTones::clip_lamp,
-    &GuiThemeTones::cue,
-    &GuiThemeTones::cue_hover,
-    &GuiThemeTones::playhead_head,
-    &GuiThemeTones::playhead_line,
-};
-
 // THE TONES DERIVED FROM A ROW'S OWN WORDS (the head's DERIVED block: the
 // lit key's inert face and the print on it, and the enabled chip's fill),
-// ONE BODY for both roads: derive() fills them off the theme's own numbers,
-// bright_mixed_tones off the mixed bright tones, so each formula is written
-// once. Every input is a word of the row — the body tone
-// (WindowBackground, never mixed), the print on a lit face
-// (StandbySelectionForeground, never mixed) and the accent — each the same
+// derive()'s last step, read off the words it has already filled. Every
+// input is a word of the row — the body tone (WindowBackground), the print
+// on a lit face (StandbySelectionForeground) and the accent — each the same
 // bytes derive() reads off the roles, so the doubles and their order are
 // the derivation's own (Python's, bit for bit).
 void fill_dependent_tones(GuiThemeTones& t) {
@@ -315,9 +298,9 @@ void fill_dependent_tones(GuiThemeTones& t) {
     t.cue_fill             = packed(on);
 }
 
-// One theme's tones AT ITS OWN NUMBERS (the head's DERIVATION; the bright
-// mix is the install's, bright_mixed_tones). Total: every tone is a role, a
-// composite or a mix (fill_dependent_tones).
+// One theme's tones AT ITS OWN NUMBERS (the head's DERIVATION), the row the
+// install paints as it is. Total: every tone is a role, a composite or a
+// mix (fill_dependent_tones).
 GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb ground   = opaque(roles["SurfaceArea"]);
     const Rgb body     = opaque(roles["WindowBackground"]);
@@ -652,22 +635,4 @@ const GuiTheme* find_gui_theme(std::string_view slug) {
 const GuiTheme& default_gui_theme() {
     assert(!themes_storage().empty() && "the themes are loaded at launch");
     return themes_storage().front();
-}
-
-GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent) {
-    // The rule, the eight and the number are the head's BRIGHT MIX block
-    // (theme_roles.h). Each bright tone moved toward the row's ground keeping
-    // `percent` of itself — mix(tone, ground, 1 − percent / 100), the
-    // derivation's own mix — then every tone derived from one recomputed off
-    // the mixed words (fill_dependent_tones, the one body). At 100 the mix
-    // moves no byte (a + 0 · (b − a) is a), so the row comes back as it is.
-    assert(percent >= 0 && percent <= 100);
-    GuiThemeTones t = own;
-    const Rgb ground = unpacked(own.ground);
-    const double toward_ground = 1.0 - percent / 100.0;
-    for (uint32_t GuiThemeTones::* m : kBrightTones)
-        t.*m = (own.*m & 0xFF000000u) |
-               packed(mix(unpacked(own.*m), ground, toward_ground));
-    fill_dependent_tones(t);
-    return t;
 }

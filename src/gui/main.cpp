@@ -4417,10 +4417,8 @@ int gui_main() {
     // CONFIG'S THEME (the `theme` key, architect 2026-11-05 — one of Live
     // 12's own, palette_file.h's head), its row found in the list
     // (find_gui_theme), and every member of the palette installed off it,
-    // the program's and the chrome's alike, its bright tones mixed at the
-    // config's `bright_mix` (install_palette, render.h; theme_roles.h's THE
-    // BRIGHT MIX). A
-    // SLUG NO ROW BEARS (the reader judged the shape alone: a user file
+    // the program's and the chrome's alike, at the row's own numbers
+    // (install_palette, render.h). A SLUG NO ROW BEARS (the reader judged the shape alone: a user file
     // removed) OPENS IN `default`, Arc-Dark's copy (architect
     // 2026-11-11, session 110, D6; Arc-Dark the default since 2026-11-18,
     // send Y), with one stderr line, the config's line
@@ -4454,7 +4452,7 @@ int gui_main() {
                          device_config.theme.c_str());
             theme = &default_gui_theme();
         }
-        install_palette(*theme, device_config.bright_mix);
+        install_palette(*theme);
     }
     // TRUE COLORS IS THE CONFIG'S TOO (the `true_colors` key, 2026-10-21;
     // display_transform.h's head): the switch's bit seeded here, before the

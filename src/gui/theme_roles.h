@@ -87,10 +87,8 @@
 // THE LIST — the value list's order, under THREE GROUPS, the headings exact
 // (gui_theme.h's kGuiThemeGroup*):
 //   SYSTEM        `default` FIRST — ARC-DARK (architect 2026-11-18, send
-//                 Y: "arc_dark and 75 will be my default" — "let the remote
-//                 session make that the default"; the mix's default 100
-//                 since send FF, THE BRIGHT MIX): a copy of `arc_dark`'s
-//                 row under the slug `default`, the opening theme and the
+//                 Y: "let the remote session make that the default"): a
+//                 copy of `arc_dark`'s row under the slug `default`, the opening theme and the
 //                 fallback below — then BY SLUG every file of
 //                 `themes/system/` (Live's stock themes; `arc_dark`, the
 //                 default's source, so after `angst_robot`; `immaterial_mod`,
@@ -172,10 +170,9 @@
 //                                     glyph color, and we simply tune the
 //                                     accent itself ... so that the accent
 //                                     shows up everywhere as slightly darker
-//                                     for the dark themes" — the tuning THE
-//                                     BRIGHT MIX below; filled beside the lit
-//                                     key's derived tones, so the install's
-//                                     chip is the mixed accent). immaterial_mod's
+//                                     for the dark themes"; filled beside the
+//                                     lit key's derived tones, the chip the
+//                                     accent's own word). immaterial_mod's
 //                                     file carries its shaded gold here, its
 //                                     header the recipe
 //     (radio lit fill        = ScaleAwareness, the radio keys' purple of
@@ -234,8 +231,7 @@
 //                                     "the darkest color would only apply to
 //                                     the top line, the title bar" (2026-11-18).
 //                                     THE GROUND (SurfaceArea) STAYS THE TITLE
-//                                     TONE, THE BRIGHT MIX'S TARGET and the
-//                                     launcher icon's ground; the palette's
+//                                     TONE and the launcher icon's ground; the palette's
 //                                     `face` is this tone since the send's
 //                                     stage B, and the lit-but-inert pairs
 //                                     below stand on it
@@ -292,8 +288,6 @@
 //                                     a Live theme's ScrollbarInnerHandle,
 //                                     where the theme's term shows no hover
 //                                     on the bar at all
-//   NEITHER IS A BRIGHT TONE: a surface's own face, never mixed toward the
-//   ground (THE BRIGHT MIX below).
 //   AND FIVE MORE FOR THE WAVEFORM'S HOVER AND THE PLAYHEAD'S STEM
 //   (architect 2026-11-21, send FF: "just make sure they're all colors
 //   from Arc, dark"; the brightness order on the waveform his — the
@@ -321,7 +315,7 @@
 //                                     true mean the half) — written into its
 //                                     file, kOwnThemeRoles' WhiteHalfWay read,
 //                                     so it is the tone the derivation drew
-//                                     there until send FF. A BRIGHT TONE
+//                                     there until send FF
 //     hover line             696969 = HoverLine over the canvas (arc_dark
 //                                     767B87, Arc's scrollbar slider): THE
 //                                     WAVEFORM'S HOVER LINE AND ITS TRIANGLE
@@ -334,7 +328,7 @@
 //                                     hover of a blue thing): AN ENABLED
 //                                     MARKER'S CHIP UNDER THE HOVERING PEN;
 //                                     a Live theme's ViewCheckControlEnabledOn,
-//                                     the chip's own tone. A BRIGHT TONE
+//                                     the chip's own tone
 //     inactive cue hover     5D5D5D = CueDisabledHover (arc_dark 90939B, Arc's
 //                                     `wm_icon_bg`, the titlebar glyph awake;
 //                                     its resting 666A74 `wm_icon_unfocused_
@@ -355,10 +349,6 @@
 //                                     INK UNDER THE HOVERING PEN, its rest the
 //                                     inert label's `text_dim`; a Live
 //                                     theme's TextDisabled, that tone itself
-//   THE PLAYHEAD'S LINE AND THE HOVERED CHIP ARE BRIGHT TONES
-//   (THE BRIGHT MIX below): a hover must not out-shine its rest at a lower
-//   mix. THE HOVER LINE AND THE DISABLED MARKER'S TWO ARE NOT — dim tones,
-//   as the inactive cue and the dim text are not.
 //   CARRIED (our own three fills, send AA's stage D1, architect 2026-11-19 —
 //   DESIGN §6 / §9, his "good to build" on the mock Z_07 and "if we
 //   can do the transparency, we might as well"): a fill PAINTED OVER
@@ -381,18 +371,14 @@
 //     card fill           FFE76942 = CardBackground (arc_dark 353945F2,
 //                                     xfce4-notifyd's bubble under Arc at .95;
 //                                     a Live theme's Alert, the orange it
-//                                     wore): A NORMAL (TIMED) CARD'S BOX.
-//                                     NOT A BRIGHT TONE — a surface, notifyd's
-//                                     grey at Arc's own number — so on a Live
-//                                     theme at a bright mix under 100 a normal
-//                                     card shows its Alert unmixed
+//                                     wore): A NORMAL (TIMED) CARD'S BOX, a
+//                                     surface, notifyd's grey at Arc's own
+//                                     number
 //     card standing fill  FFE76942 = CardStandingBackground (arc_dark
 //                                     F04A50F2, Arc's destructive red,
 //                                     button.destructive-action G3:216, at
 //                                     .95; a Live theme's Alert): A STANDING
-//                                     (CRITICAL) CARD'S BOX, A BRIGHT TONE
-//                                     (THE BRIGHT MIX below, its top byte
-//                                     riding the mix: arc_dark C0444C at 75)
+//                                     (CRITICAL) CARD'S BOX
 //   (notifications.h's THE LOOK, render.h's THE FLOATING SURFACES.)
 //   ROLE-NAMED, continued:
 //     core                   363636 = SurfaceBackground, THE KEY FACE, on
@@ -478,12 +464,9 @@
 //   (b − a) per channel, rounded half to even and clamped; "X at t over Y"
 //   is mix(Y, X, t)). The cue fill above and every tone below but the
 //   Arc page's three (the ruler's digits, the disabled key's face and
-//   border) and the list row's hover (no bright tone under any of them)
-//   are ONE BODY
-//   (fill_dependent_tones, theme_roles.cpp) reading the row's own words, so
-//   the install recomputes them off the mixed bright tones (THE BRIGHT MIX,
-//   below) — the inert prints among them, over the mixed inert faces, the
-//   print itself and the body tone never mixed:
+//   border) and the list row's hover are ONE BODY
+//   (fill_dependent_tones, theme_roles.cpp) reading the row's own words —
+//   the inert prints among them, over the inert faces:
 //     ruler text             7D7D7D = THE TEXT AT 55 % OVER THE RULER FACE,
 //                                     mix(ruler face, text, 0.55): THE RULER'S
 //                                     DIGITS, Arc's `.dim-label` (`opacity:
@@ -513,8 +496,8 @@
 //                                     LIST'S VIEW, rgba(255, 255, 255, 0.03)
 //                                     over the ruler face, per channel c +
 //                                     0.03 · (255 − c) rounded (derive(),
-//                                     beside the three above: no bright tone
-//                                     under it): A LIST ROW UNDER THE HOVERING
+//                                     beside the three above): A LIST ROW
+//                                     UNDER THE HOVERING
 //                                     PEN (architect 2026-11-21: "I'd
 //                                     like to add hover"; its tone Arc's own
 //                                     `row.activatable:hover`, gtk3.0-arc-
@@ -547,10 +530,9 @@
 //                                     AT 60 % OVER THE BODY TONE, mix(body,
 //                                     mix(body, cue, 0.75), 0.6), the inner
 //                                     word rounded (Default: FFAD56 over
-//                                     242424 -> C88B4A -> 86623B; Arc at 100
-//                                     5294E2 over 383C4A -> 4C7EBC -> 44648E,
-//                                     at 75 the mixed 497CB9 ->
-//                                     456C9D -> 40597C), the glyph DIMMED
+//                                     242424 -> C88B4A -> 86623B; Arc
+//                                     5294E2 over 383C4A -> 4C7EBC ->
+//                                     44648E), the glyph DIMMED
 //                                     WITH THE BUTTON, as GTK's `opacity`
 //                                     dims the label (DESIGN §3; send Z's
 //                                     stage B, 2026-11-19, correcting the
@@ -560,12 +542,9 @@
 //                                     ACCENT-AT-75 % FACE) AT 60 % OVER THE
 //                                     BODY TONE, mix(body, mix(mix(body, cue,
 //                                     0.75), text on lit, 0.8), 0.6) (Default
-//                                     070707 -> 2A221A; Arc FFFFFF -> 9AA1AF,
-//                                     at 75 99A0AB), per channel, rounded half
-//                                     to even and clamped. The body tone is
-//                                     the theme's own, never mixed; the accent
-//                                     the installed one, so the pair follows
-//                                     THE BRIGHT MIX. One rule on every theme,
+//                                     070707 -> 2A221A; Arc FFFFFF -> 9AA1AF),
+//                                     per channel, rounded half to even and
+//                                     clamped. One rule on every theme,
 //                                     a light one too (the Live light themes
 //                                     set aside, ruling 7 of 2026-11-17).
 //                                     Arc's insensitive-active of 2026-11-17,
@@ -585,80 +564,16 @@
 //     same rules, 2026-11-11 / 2026-11-19, RETIRED with their class
 //     2026-11-19, send Z's stage C: "we can let go of the green")
 //
-// THE BRIGHT MIX (architect 2026-11-13, session 119, on real tablet captures
-// of Riparian and Gunmetal: "the whole point of it is that it dims ... the
-// supposedly low contrast Ableton themes are still very high contrast with
-// the buttons. Now, buttons in Ableton are tiny. Here they have to be a lot
-// larger for the pen tab"; "I like all 75"; "a universal rule of 75 should
-// work"). THE LIST'S ROWS ARE EACH THEME'S OWN NUMBERS — the blocks above,
-// the compiled reference row Live's measured ones, the files untouched ("we
-// don't have to modify the Ableton imports. We just make the rule") — and
-// THE INSTALL PAINTS EACH ROW MIXED (install_palette, render.h): EVERY
-// BRIGHT TONE moved toward THE THEME'S GROUND, SurfaceArea — the window
-// ground, NOT the lane's Desktop ("towards ground, actual ground, because
-// the buttons are the largest ones, and they're the ones that are the
-// bigger problem. The marker chips are small, and they should follow to
-// match the buttons") — KEEPING k % OF ITSELF: tone + (1 − k / 100) ·
-// (ground − tone) per channel, rounded half to even and clamped like every
-// mix here, k THE `bright_mix` DEVICE KEY (device_config.h: whole percent
-// in [0, 100], 100 the theme's own numbers, 0 every bright tone the ground
-// itself; ITS DEFAULT 100, the theme's own numbers (architect 2026-11-21,
-// send FF, his tablet's line) — the key stays, its removal a later word of
-// his). ONE NUMBER FOR EVERY THEME, the light ones included, where the
-// mix lifts the tones toward a light ground (his "we can deal with that
-// when the time comes by just adjusting" the key; no per-theme value: "I
-// don't think it's worth redoing the presets so that each preset gets its
-// own value"). THE BRIGHT TONES, his list (kBrightTones, theme_roles.cpp):
-// the accent `cue`, the playhead head (RangeDefault), the limiter lamp
-// (Alert), the standing card's
-// fill (CardStandingBackground, Arc's destructive red, 2026-11-19 — its
-// carried alpha byte riding the mix untouched), the clip lamp
-// (StandardVuMeter/Maximum) and the selection fill
-// (StandbySelectionBackground) ("standby selection should get the rule";
-// a pressed list row wears it too), AND TWO OF SEND FF (architect
-// 2026-11-21; OUR OWN, THE WAVEFORM'S HOVER above): the playhead's line
-// (PlayheadLine), mixed as its own word, and the hover of a bright tone, a
-// hovered chip (CueHover) — its rest a bright tone, and a hover must not
-// out-shine its rest at a lower mix: EIGHT IN ALL. EVERY TONE DERIVED FROM A
-// BRIGHT ONE DERIVES FROM ITS MIXED WORD (fill_dependent_tones, the one
-// body): the cue fill — the markers wear the mixed accent — the lit dim
-// fill and the inert print over the mixed inert face. NEVER MIXED: the text tones ("never the glyph color itself":
-// the text, the dim text, the key dim ink, the title, sidebar and ruler
-// texts — the keys' glyphs, the markers' labels), the print on a lit face, the selection's text, the cards' words, the tooltip's and the normal card's fills
-// (surfaces, not highlights), the faces — a key's hover face and the pill's
-// among them (send CC), and a list row's hover face (architect 2026-11-21) —
-// the lanes (the trim
-// bar's trough and the well's lines among them, 2026-11-17), the Arc page's
-// tones (2026-11-19: the body tone, the title bar's text, the sidebar text,
-// the ruler's digits, the disabled key's face and border), the waveform's
-// tones, the cue outline, the inactive cue
-// (dark: "those weren't bright to begin with"), the waveform's hover line
-// and a hovered disabled marker's chip and label (send FF: dim tones, as
-// the inactive cue and the dim text are) and the scanner (below). SO THE
-// WAVEFORM'S BRIGHTNESS ORDER — the scanner, the playhead's stem, the hover
-// line (render.h's render_hover_line) — IS THE THEME'S OWN NUMBERS' ORDER
-// (mix 100, the default and his tablet's line; architect 2026-11-21, send
-// FF): the stem is mixed and the line is not, so at a lower mix the stem
-// falls toward the ground past the line — on Arc-Dark (bright_mixed_tones,
-// the code) the mixed stem stands under the line's 767B87 in all three
-// channels at 59 and below (at 50 6A707A), at 60 767B86, at 61 777D87 (at
-// or over it in every channel, the first percent that is), and over it in
-// every channel from 62. At 75,
-// for one, on the reference row: the accent FFAD56 -> C88B4A, the head
-// 03C3D5 -> 0B9BA9 and its line 81E1EA -> 6AB2B8 (bright_mixed_tones, the
-// code); on Arc-Dark the accent 5294E2 -> 497CB9 and its hover 639FE5 ->
-// 5684BC, the head A5ABB5 -> 888D98 and its hover FFFFFF -> CBCCCF, its
-// line A5ABB5 -> 888D98 (the head's own number since send GG), the
-// standing card F04A50 -> C0444C, the limiter lamp F27835 -> C16738; at the default 100 every row is painted at its
-// own numbers.
-//
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,
 // CANONICAL — Live itself paints its scanner white on every theme tested,
 // Default and the built-in themes included, so no theme's file carries it
 // (architect 2026-11-07, session 82: "it comes from all live themes tested -
 // including the default and builtin"; 2026-11-06: "a look online shows it's
 // canonically full white", his Live 12 reference shot). It is never proposed
-// as a role or a mix.
+// as a role or a mix. THE WAVEFORM'S BRIGHTNESS ORDER — the scanner, the
+// playhead's stem, the hover line (render.h's render_hover_line) — IS THE
+// THEME'S OWN NUMBERS' ORDER (architect 2026-11-21, send FF): on Arc-Dark
+// FFFFFF, A5ABB5, 767B87.
 //
 // Where a theme makes the lane, the trim bar's trough, the well's lines or
 // the dim text coincide with the ground, that is Live's own number —
@@ -706,10 +621,3 @@ const GuiTheme* find_gui_theme(std::string_view slug);
 // The `default` row, Arc-Dark's copy (the list's first; the
 // load must have answered no error).
 const GuiTheme& default_gui_theme();
-
-// THE ROW AS INSTALLED (the head's THE BRIGHT MIX): `own`, a row of the list
-// at its own numbers, with its bright tones mixed toward its ground keeping
-// `percent` of themselves (the `bright_mix` key, an integer in [0, 100]) and
-// every tone derived from them recomputed. At 100 it returns `own` byte for
-// byte. Pure; install_palette (render.cpp) is its one product caller.
-GuiThemeTones bright_mixed_tones(const GuiThemeTones& own, int percent);

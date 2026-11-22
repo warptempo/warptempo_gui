@@ -21,7 +21,7 @@
 // INVARIANT) — A NORMAL (timed) CARD notifyd's grey `card_fill` (arc_dark
 // 353945 at .95) with its words and glyph in `sidebar_text` (BAC3CF), A
 // STANDING (critical) CARD Arc's destructive red `card_standing_fill`
-// (F04A50 at .95, a bright tone: C0444C at bright_mix 75) with its words
+// (F04A50 at .95) with its words
 // and glyph in `card_text`, the print on a lit face (FFFFFF); on a Live
 // theme both fills its Alert, opaque. INSIDE IT notifyd's one padding
 // (kNotificationPadW, 14 W on all four sides), THE CLASS GLYPH in a

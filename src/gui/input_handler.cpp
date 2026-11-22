@@ -3639,11 +3639,11 @@ void GuiInputHandler::apply_true_colors(bool on) {
     viewport.invalidate_all();
 }
 
-void GuiInputHandler::apply_theme(const GuiTheme& theme, int bright_mix) {
+void GuiInputHandler::apply_theme(const GuiTheme& theme) {
     // The apply shape is at install_palette's declaration (render.h):
     // install_true_colors' two caches, for the same reason.
     const WaveformPlateInks before = waveform_plate_inks();
-    install_palette(theme, bright_mix);
+    install_palette(theme);
     icons::drop_rasters();
     app.face_fades.drop_all();   // every face its look at once (FaceFades)
     if (waveform_plate_inks() != before) viewport.kick_waveform_sync();
