@@ -1721,9 +1721,9 @@ struct GuiInputHandler {
     // open_settings_page.)
 
     // THE HOVER TOOLTIP'S HARD END (the model is at AppState::RedesignTooltip):
-    // hides the box at once, stops the wait, breaks the bypass chain and
-    // forgets the column, so the next walk that finds the pointer on one is an
-    // arrival waiting the delay. Its callers, re-derived by grep 2026-11-07:
+    // hides the box at once, stops the wait, breaks the chain and forgets
+    // the column, so the next walk that finds the pointer on one is an
+    // arrival waiting the full 500 ms. Its callers, re-derived by grep 2026-11-07:
     // every pointer press and every release, on_key's modal-opening end (a
     // key that raised a modal under a roster hint — keys themselves do not
     // hide it), the platform's close (the one modal opener no key or press
@@ -1752,18 +1752,15 @@ struct GuiInputHandler {
 
     // THE WAIT'S ONE WRITER, for both hover walks (the roster's and the modal
     // dialog's), handed the tooltip-bearing button whose COLUMN holds the
-    // pointer (index < 0: none) and the rect it was found in (its column,
-    // tooltip_column_rect), reading the pointer at
-    // app.last_mouse_x/y: an arrival starts the wait — or, while the bypass
-    // chain holds, shows the box at once — the same column restarts nothing,
-    // a held press or no column stops the wait, and the pointer leaving a
-    // standing box's column takes the box down and arms the chain. The
-    // owner's two-surface encoding and the model are at
+    // pointer (index < 0: none; tooltip_column_rect): an arrival starts the
+    // wait — GTK's 60 ms while the chain holds, its 500 ms otherwise — the
+    // same column restarts nothing, a held press or no column stops the
+    // wait, and the pointer leaving a standing box's column takes the box
+    // down and arms the chain. The owner's encoding and the model are at
     // AppState::RedesignTooltip.
-    void note_tooltip_hover(AppState::RedesignTooltip::Owner o,
-                            const GuiRect& column);
+    void note_tooltip_hover(AppState::RedesignTooltip::Owner o);
 
-    // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the bypass
+    // THE TOOLTIP'S CLOCK, on the run loop's tick (main.cpp): the
     // chain's lapse, and the wait's ripening showing the box off its owner's
     // face (under a top-row key, above every other; tooltip_box_rect). The
     // show damages once, the box's own rect as the painter
@@ -3528,7 +3525,7 @@ private:
     // coordinates, the tooltip's wait (the roster walk still names the
     // button whose column holds the pointer to note_tooltip_hover, so a hint
     // ripens exactly as without the latch, the tapped button's own after
-    // the delay — AppState::RedesignTooltip), the press claims and the
+    // its wait — AppState::RedesignTooltip), the press claims and the
     // lift's act all read the live pointer against the painted picture as
     // ever (ON SCREEN IS AS PAINTED), so a press after the lift is
     // unaffected.
@@ -3652,9 +3649,8 @@ private:
     // along the pen's axis as the tip rises — NOT THE HAND. 36 device px sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
     // the neighboring button, a key pitch (a linked group's, the face less
-    // its shared seam, 35 W, 70 device px on the tablet at key_width's
-    // default 36 — materials.h's key_link_pitch_px; a key_width under 19 W
-    // brings the pitch inside the slop while the width is tuned): HALF A
+    // its shared seam, 35 W, 70 device px on the tablet, the key 36 W wide
+    // — materials.h's key_link_pitch_px): HALF A
     // KEY'S 36 W BOX, so after a tap the tapped key shows no hover until
     // the pen has moved half a key across — by then it is on the neighbor
     // or off the key, or still on it only by a move as deliberate — and a
@@ -4212,46 +4208,6 @@ private:
     // row 7 deleted apply_font_size with the font_size key.
     void apply_gui_scale(int percent);
 
-    // THE KEY'S HEIGHT'S ONE LIVE ACT (the `key_height` tuning key,
-    // architect 2026-10-29; render.h's seat): push the height to the
-    // renderer (set_key_height_w) and run the scale's RELAYOUT TAIL
-    // (relayout_window below) — the key's height moves every strip boundary
-    // and the waveform area as a scale does, so the commit re-lays the whole
-    // window out at once. The key glyph's ink follows the height (paint_key_glyph); the icon
-    // caches key on the drawing and its ink px (icons.h's THE INK BOX), so
-    // a new size rasters fresh and nothing stale is shown. The touch slop is
-    // the scale's alone and does not move. The settings editor's
-    // `key_height=` commit is the sole caller; it gates the no-op, assigns
-    // the live config and persists it (apply_device_setting); the launch
-    // seeds the height before the window exists (main.cpp).
-    void apply_key_height(int w);
-
-    // THE KEY'S FACE WIDTH'S ONE LIVE ACT (the `key_width` tuning key,
-    // architect 2026-11-06; render.h's seat): push the width to the renderer
-    // (set_key_width_w) and run the RELAYOUT TAIL (relayout_window below) —
-    // the width moves every key surface's walk and seats (the band's runs,
-    // row 8's groups, the controls rows' clusters) and their hit boxes, so
-    // the commit re-lays the window out at once, the key_height act's shape
-    // (a sibling, not one body: each act pushes its own seat). The glyph
-    // follows the height alone, so no icon raster moves. The settings
-    // editor's `key_width=` commit is the sole caller; it gates the no-op,
-    // assigns the live config and persists it (apply_device_setting); the
-    // launch seeds the width before the window exists (main.cpp).
-    void apply_key_width(int w);
-
-    // THE RUN GAP'S ONE LIVE ACT (the `run_gap` tuning key, architect
-    // 2026-11-07, session 87; render.h's seat): push the gap to the renderer
-    // (set_run_gap_w) and run the RELAYOUT TAIL (relayout_window below) —
-    // the gap moves the band's runs and its left runs' clip, row 8's block,
-    // the controls rows' groups and the player rows' scrub and their hit
-    // boxes, so the commit re-lays the window out at once, the key_width
-    // act's shape (a sibling, not one body: each act pushes its own seat).
-    // No icon raster moves. The settings editor's `run_gap=` commit is the
-    // sole caller; it gates the no-op, assigns the live config and persists
-    // it (apply_device_setting); the launch seeds the gap before the window
-    // exists (main.cpp).
-    void apply_run_gap(int w);
-
     // THE KEYBOARD'S KEY BOX'S ONE LIVE ACT (the `osk_key_w` and `osk_key_h`
     // tuning keys, architect 2026-10-29; render.h's seat): push the box to
     // the renderer (set_osk_key_size_w), then every face's look at once
@@ -4299,34 +4255,13 @@ private:
     // the launch seeds the grow before the window exists (main.cpp).
     void apply_waveform_grow(int quarters);
 
-    // THE PLATE'S FADE START'S ONE LIVE ACT (the `waveform_fade_px`
-    // device key, architect 2026-11-14, send H; render.h's seat and THE
-    // PLATE'S BARS): push the hundredths to the renderer
-    // (set_waveform_fade_hundredths), KICK THE PLATE'S SYNCHRONOUS REBUILD
-    // (Viewport::kick_waveform_sync — whether the plate stands in the fade
-    // band, and there its fine row and the weight, are a function of F,
-    // so unlike the grow's commit the plate IS re-rendered; the start is a
-    // fingerprint field too,
-    // WaveformCache::fp_fade_hundredths, so no plate of another F is ever
-    // taken for the live one), then invalidate the whole window — the frame
-    // that pays the rebuild paints the new plate under the page that
-    // committed it. NO RELAYOUT, NO PROGRAM REBUILD AND NO OTHER CACHE: the
-    // start moves no lane, the shader reads the bars' pitch and weight from
-    // the draw list's records, and the flags stand on the displayed
-    // viewport, which F does not move. The settings editor's
-    // `waveform_fade_px=` commit
-    // (apply_device_setting) is the sole caller; it gates the no-op,
-    // assigns the live config and persists it; the launch seeds the start
-    // before the window exists (main.cpp).
-    void apply_waveform_fade_px(int hundredths);
-
-    // THE RELAYOUT TAIL, the shared last steps of its FOUR CALLERS, the live
-    // layout acts whose length moves a lane (apply_gui_scale,
-    // apply_key_height; 2026-10-29; apply_key_width, 2026-11-06;
-    // apply_run_gap, 2026-11-07): every face's look at once (FaceFades'
-    // drop_all), the full-window invalidate and the resize-path
-    // geometry-and-cache rebuild (GuiPaintHandler::on_resize). Run after the
-    // new length is pushed to the renderer, which every step reads. (The
+    // THE RELAYOUT TAIL, the last steps of its ONE CALLER, the one live
+    // layout act whose length moves a lane (apply_gui_scale; the key's box
+    // and the run gap are constexprs since 2026-11-22, render.h): every
+    // face's look at once (FaceFades' drop_all), the full-window invalidate
+    // and the resize-path geometry-and-cache rebuild
+    // (GuiPaintHandler::on_resize). Run after the new scale is pushed to the
+    // renderer, which every step reads. (The
     // on-screen keyboard's box and its coming and going move no lane, so
     // neither calls it: apply_osk_key_size above, onscreen_keyboard.h's
     // placement block.)
@@ -4457,7 +4392,7 @@ private:
     // the column is forgotten (the hard end's own body), so nothing is left
     // to ripen; from then on note_tooltip_hover keeps that state clear.
     // THE LIT EDGE STARTS NOTHING ITSELF: the next walk that finds the
-    // pointer on a column is an arrival, waiting the delay (the TIPS key's
+    // pointer on a column is an arrival, waiting 500 ms (the TIPS key's
     // own lift, the pen hovering on it, raises its hint so). The lamp's face
     // rides the per-tick comparator. History-less; silent.
     void set_show_tooltips(bool desired);

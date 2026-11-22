@@ -20,12 +20,12 @@
 // 20"): every one of Cool Edit's measurements (his Cool Edit
 // metrics, one capture px = one W) is taken at Cool Edit's own W
 // UNSCALED. THE BUTTON CASE IS NOT ONE OF THEM: the key's face is a skin
-// length, the `key_width` tuning key's W wide (36 its default, Arc's icon
-// button, send Z) by the `key_height` tuning key's W tall (28 its default;
-// render.h's case block, icon_case_w_px / icon_case_h_px), the face the
-// whole key, its neighbors one W of ground away (key_gap_px, architect
-// 2026-11-04, the unit); its glyph is centered on its face by its own
-// ink-box road, its size following the key's height (paint_key_glyph).
+// length, 36 W wide by 28 W tall (render.h's kKeyWidthW and kKeyHeightW,
+// Arc's icon button, send Z; its case block, icon_case_w_px /
+// icon_case_h_px), the box the whole key, its border included, a linked
+// group's neighbors sharing one seam column (materials.h's
+// key_link_pitch_px); its drawing a fixed 16 W box centered on it by its
+// own ink-box road (paint_key_glyph).
 // THE SIZE ON THE GLASS is gui_scale's (the device's choice, never this
 // header's).
 //
@@ -37,7 +37,7 @@
 // table render.h's blocks derive): THE BAND at the window's top — THE
 // TITLE BAR (28 W, render.h's title bar block), Arc's toolbar pad 7 W
 // above the keys and 7 W below (render.h's toolbar pads), its keys in plain
-// runs, the runs the `run_gap` tuning key's W apart (6 its default); then
+// runs, the runs kRunGapW apart (6 W, render.h); then
 // THE WELL, flat regions RUNNING THE PANEL'S WHOLE WIDTH, EDGE TO EDGE, its
 // lines one W of `well_border` (render.h's THE WELL'S EDGES) — the line
 // under the band, THE TRIM BAR (Arc's scrollbar: the 12-W trough, the pill
@@ -84,11 +84,10 @@
 // ROWS are render.h's (the well's lanes block): skin lengths, hairlines and
 // the faces' own metrics, each its own rounded part.
 struct ProgramSpec {
-    // (THE CASE HAS NO W TERM HERE: the key is render.h's case block, its
-    // width the `key_width` tuning key's, 2026-11-06, and its height the
-    // `key_height` tuning key's, 2026-11-03, its gap kKeyGapW, 2026-11-04.)
-    // (THE STRIPS' RUN GAP AND PADS are render.h's: the `run_gap` tuning
-    // key, the toolbar pads, the panel's inset kEdgeInsetW — THE EDGE RULE
+    // (THE CASE HAS NO W TERM HERE: the key is render.h's case block,
+    // kKeyWidthW x kKeyHeightW.)
+    // (THE STRIPS' RUN GAP AND PADS are render.h's: kRunGapW, the toolbar
+    // pads, the panel's inset kEdgeInsetW — THE EDGE RULE
     // at well_columns, the strips' seats paint_handler.cpp's icon_row_seats
     // and bottom_row_seats. THE TIME FIELDS are plain text (architect
     // 2026-11-19), the overlays' slots paint_handler.cpp's time_label_w_px

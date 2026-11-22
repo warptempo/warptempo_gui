@@ -55,10 +55,11 @@ void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
 // The shader takes each cell's coverage from them (its arm owns that
 // arithmetic). WHOLE EDGES GIVE {0, 0, w, h}, every cell's coverage exactly
 // 1: the percent alone on every cell, and at 100 percent the word itself,
-// an opaque rect's bytes. Nothing for an empty rect or a percent <= 0.
+// an opaque rect's bytes. Nothing for an empty rect. (Its callers
+// pass 100 or 3, so no percent outside [1, 100] has a producer.)
 void GuiCanvasSink::blended_rect(double x0, double y0, double x1, double y1,
                                  GuiColor toward, int percent) {
-    if (x1 <= x0 || y1 <= y0 || percent <= 0) return;
+    if (x1 <= x0 || y1 <= y0) return;
     GuiCanvasPrimitive p;
     p.kind  = GuiCanvasKind::Tint;
     p.r.x   = static_cast<int>(std::floor(x0));

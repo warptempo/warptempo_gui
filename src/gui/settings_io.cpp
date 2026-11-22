@@ -400,18 +400,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "noise_crossfade_s" && app.device_config != nullptr)
         return format_noise_crossfade_s(
             app.device_config->noise_crossfade_s);
-    // THE KEY'S HEIGHT (2026-10-29, a tuning key): through its one formatter
-    // (format_key_height, device_config.h), the writer's own spelling.
-    if (key == "key_height" && app.device_config != nullptr)
-        return format_key_height(app.device_config->key_height);
-    // THE KEY'S FACE WIDTH (2026-11-06, a tuning key): through its one
-    // formatter (format_key_width, device_config.h), the writer's own spelling.
-    if (key == "key_width" && app.device_config != nullptr)
-        return format_key_width(app.device_config->key_width);
-    // THE RUN GAP (2026-11-07, a tuning key): through its one formatter
-    // (format_run_gap, device_config.h), the writer's own spelling.
-    if (key == "run_gap" && app.device_config != nullptr)
-        return format_run_gap(app.device_config->run_gap);
     // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): through their
     // one formatter (format_osk_key_size, device_config.h).
     if (key == "osk_key_w" && app.device_config != nullptr)
@@ -422,23 +410,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // one formatter (format_osk_font_px, device_config.h).
     if (key == "osk_font_px" && app.device_config != nullptr)
         return format_osk_font_px(app.device_config->osk_font_px);
-    // THE TWO LAMPS' HOLD (2026-11-05 night, a tuning key): through its one
-    // formatter (format_lamp_hold_ms, device_config.h).
-    if (key == "lamp_hold_ms" && app.device_config != nullptr)
-        return format_lamp_hold_ms(app.device_config->lamp_hold_ms);
-    // THE TOOLTIP'S DELAY (2026-11-07, a tuning key): through its one
-    // formatter (format_tooltip_delay_ms, device_config.h).
-    if (key == "tooltip_delay_ms" && app.device_config != nullptr)
-        return format_tooltip_delay_ms(app.device_config->tooltip_delay_ms);
-    // THE SWEEP HIGHLIGHT'S ALPHA (2026-11-12, a tuning key): through its one
-    // formatter (format_sweep_highlight, device_config.h).
-    if (key == "sweep_highlight" && app.device_config != nullptr)
-        return format_sweep_highlight(app.device_config->sweep_highlight);
-    // THE PLATE'S FADE START (2026-11-14, a tuning key): through its one
-    // formatter (format_waveform_fade_px, device_config.h).
-    if (key == "waveform_fade_px" && app.device_config != nullptr)
-        return format_waveform_fade_px(
-            app.device_config->waveform_fade_hundredths);
 
     // Every other key — the piece's engine keys, `score_path`, a key none
     // of these files writes — recalls nothing here: the caller falls back to

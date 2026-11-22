@@ -749,8 +749,8 @@ inline constexpr Page page_after(Role role, Page page) {
 // half-unit edge stands on half a px, the key's face painted at that
 // coverage over the band's ground (the exact fill). THE
 // KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S face (architect
-// 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the key_width x
-// key_height face): their box is `osk_key_w` x `osk_key_h` alone, their gap
+// 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the kKeyWidthW x
+// kKeyHeightW face): their box is `osk_key_w` x `osk_key_h` alone, their gap
 // the program's. (The window-derived pitch — Plasma's ten keys
 // across the full width, the one unscaled dimension the product had — is
 // retired 2026-10-29, git history.)
@@ -1000,7 +1000,7 @@ inline bool stands(const AppState& a) {
 // the taskbar … they sit on top of the design": the keyboard and the dialog
 // laid over the window's foot at its whole width, one raised Hilight line
 // on top — ARE RETIRED, "we should stop doing that".)
-//   On the tablet (200 %, 2304 x 1440, key_height 28), across x 0..2303,
+//   On the tablet (200 %, 2304 x 1440, the key 28 W tall), across x 0..2303,
 //     the block of keys x 903..1550 (648 wide, its seat block_x_px; the
 //     grid's outer lines x 901..1552) at osk_key_w 24: AT osk_key_h 35 (his
 //     tuning's, the keys 48 x 70 device px) the surface 1048..1439 — the top
@@ -1075,12 +1075,12 @@ inline GuiRect slot_damage_rect(const AppState& a) {
 // line over the bar its lane's first rows) — so the show blanks and the hide
 // repaints every row that yields, whatever the tunings. Where the surface
 // reaches above both lanes, the union IS the surface: on the tablet (200 %,
-// key_height 28) the lanes stand on rows 1310..1439, under the surface's
-// top at osk_key_h 35 (1048) and at the defaults' 30 (1098), so no row is
-// added. Only where the surface stands shorter than the two lanes — the
-// in-range extremes (at 200 %, osk_key_h 12 with key_height 45..50, or 13
-// with 50; the lanes 2 · key_height + 74 rows against a 162- or 172-row
-// surface) — does the union reach above it, to the bottom icon row's top.
+// the key 28 W tall) the lanes stand on rows 1310..1439, under the
+// surface's top at osk_key_h 35 (1048) and at the defaults' 30 (1098), so
+// no row is added, nor at any osk_key_h in range (the lanes 130 rows
+// against at least a 162-row surface at osk_key_h 12). Were the surface
+// shorter than the two lanes, the union would reach above it, to the
+// bottom icon row's top.
 // The well's foot over that row yields nothing and is not owed.
 inline GuiRect edge_damage_rect(const AppState& a) {
     GuiRect out = surface_rect(a);

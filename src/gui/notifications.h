@@ -936,7 +936,7 @@ int notification_card_max_w_px(const AppState& a);
 // above every claim and veil), so a key, the struck clip lamp's square or
 // any chrome under it answers nothing while it stands there, and no key
 // under it starts a tooltip (recompute_redesign_button_hover's under_card).
-// WORKED ON THE TABLET (2304 x 1440 at 200 %, key_height 28; the advances
+// WORKED ON THE TABLET (2304 x 1440 at 200 %, the key 28 W tall; the advances
 // MEASURED off fonts/LiberationSans-Regular.ttf at 24 px the product's way —
 // unhinted hmtx advances and the GPOS `kern` pairs, each to 1/64 px, which
 // gives send BB's "2 warp markers coincide" its recorded 260.1 — the boxes

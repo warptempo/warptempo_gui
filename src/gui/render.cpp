@@ -195,8 +195,8 @@ void canvas_grid_lines(GuiCanvasSink& sink, const GuiRect& area,
     // channel's half height h / 2.0 and n the grid's divisions, k = 1 ..
     // n − 1 (the n-th on the band's edge not drawn), each line centered on
     // that real row (canvas_hline), so the lines go soft where the band's
-    // division falls between rows: on the tablet's 525-row band at
-    // key_height 25, 65.625, 131.25 and 196.875 rows from a zero on a row's
+    // division falls between rows: on a 525-row band, 65.625, 131.25 and
+    // 196.875 rows from a zero on a row's
     // middle. Each band is its well's interior (no inset, architect
     // 2026-10-09; the two wells 2026-10-16), so H is half a band, every
     // line inside it.
@@ -228,8 +228,8 @@ void canvas_center_lines(GuiCanvasSink& sink, const GuiRect& area,
     // channels' bands the plate's own (waveform_channel_band), so it is
     // TRULY CENTERED ON THE ZERO THE PLATE'S BARS STRADDLE (architect
     // 2026-11-14, send J): on an odd band half a row, a whole row and half
-    // a row; on an even band (the tablet's 526 rows at key_height 28, send
-    // Z) two whole rows. Through the canvas sink (2026-10-13).
+    // a row; on an even band (the tablet's 526 rows, the key 28 W tall,
+    // send Z) two whole rows. Through the canvas sink (2026-10-13).
     const int divider_px = waveform_divider_px();
     for (int ch = 0; ch < 2; ++ch) {
         const WaveformChannelBand band =
@@ -2964,16 +2964,6 @@ namespace {
     // read config before the first layout; none is a first-run value — the
     // shipped first-run value is the defaults file's (device_config.h's THE
     // FIRST-RUN VALUES, 2026-11-09).
-    // THE KEY'S HEIGHT in W (render.h's `key_height`
-    // seat), set by set_key_height_w from the same two application
-    // points.
-    int    g_key_height_w = kKeyHeightDefaultW;
-    // THE KEY'S FACE WIDTH in W (render.h's `key_width` seat), set by
-    // set_key_width_w from the same two application points.
-    int    g_key_width_w = kKeyWidthDefaultW;
-    // THE RUN GAP in W (render.h's `run_gap` seat), set by set_run_gap_w
-    // from the same two application points.
-    int    g_run_gap_w = kRunGapDefaultW;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (render.h's
     // `osk_key_w` / `osk_key_h` seat), set by set_osk_key_size_w from the
     // same two application points.
@@ -2987,10 +2977,6 @@ namespace {
     // `waveform_grow` seat, a permanent key), set by
     // set_waveform_grow_quarters from the same two application points.
     int    g_waveform_grow_quarters = kWaveformGrowDefaultQuarters;
-    // THE PLATE'S FADE START in hundredths of a device px (render.h's
-    // `waveform_fade_px` seat, a tuning key), set by
-    // set_waveform_fade_hundredths from the same two application points.
-    int    g_waveform_fade_hundredths = kWaveformFadeDefaultHundredths;
 } // namespace
 // A QUARTER OF A DEVICE PX IS ONE SUBCELL: the key's lattice is the grid's,
 // so the seat's number is the plate shader's GROW with no conversion.
@@ -3001,25 +2987,15 @@ static_assert(kWaveformGrowQuartersPerPx == kWaveformSubcells,
 // payload never depends on the live grow).
 static_assert(kWaveformBarHaloSubcells == kWaveformGrowMaxQuarters,
               "the plate's stored bars cover the waveform_grow key's top");
-// THE FADE KEY'S TOP IS THE SWITCH WIDTH (render.h's THE FADE BAND: the band
-// ends where the bars change level, so the key's top is a band of no
-// length, the fade off).
-static_assert(kWaveformFadeMaxHundredths == 100 * kWaveformSwitchPx,
-              "the waveform_fade_px key's top is the plate's switch width");
+// THE FADE'S START STANDS IN [1, 2) DEVICE PX (render.h's THE FADE BAND: the
+// band ends where the bars change level, so a start at the switch width is
+// a band of no length, the fade off; under 1 px it names a bar width no
+// rung draws).
+static_assert(kWaveformFadeHundredths >= 100 &&
+                  kWaveformFadeHundredths < 100 * kWaveformSwitchPx,
+              "the plate's fade starts in [1, 2) device px");
 
 void   set_gui_scale_percent(int percent) { g_gui_scale_percent = percent; }
-void   set_key_height_w(int w) {
-    g_key_height_w = w;
-}
-int    key_height_w() { return g_key_height_w; }
-void   set_key_width_w(int w) {
-    g_key_width_w = w;
-}
-int    key_width_w() { return g_key_width_w; }
-void   set_run_gap_w(int w) {
-    g_run_gap_w = w;
-}
-int    run_gap_w() { return g_run_gap_w; }
 void   set_osk_key_size_w(int w_w, int h_w) {
     g_osk_key_width_w = w_w;
     g_osk_key_height_w = h_w;
@@ -3032,10 +3008,6 @@ void   set_waveform_grow_quarters(int quarters) {
     g_waveform_grow_quarters = quarters;
 }
 int    waveform_grow_quarters() { return g_waveform_grow_quarters; }
-void   set_waveform_fade_hundredths(int hundredths) {
-    g_waveform_fade_hundredths = hundredths;
-}
-int    waveform_fade_hundredths() { return g_waveform_fade_hundredths; }
 
 int    gui_scale_percent() { return g_gui_scale_percent; }
 double gui_scale_factor()  {

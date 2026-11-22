@@ -641,8 +641,8 @@ void install_true_colors(bool on);
 // reversing the one device px at every scale of M5h; one W = 2 device px on
 // the tablet at 200 % since the rebase of 2026-11-05; the ruler's ticks and
 // every canvas line the same W, waveform_line_px). THE ROWS ON THE TABLET
-// (200 %; main.cpp's lane table the record; at key_height 28, its default
-// since send Z): rows 140 .. 141 the line under the top icon row, the
+// (200 %; main.cpp's lane table the record; the key 28 W tall,
+// kKeyHeightW): rows 140 .. 141 the line under the top icon row, the
 // trough 142 .. 165, rows 166 .. 167 its line, the ruler 168 .. 199, rows
 // 200 .. 201 its line, the marker lane 202 .. 233, rows 234 .. 235 its
 // line, the canvas 236 .. 1307, rows 1308 .. 1309 the well's foot
@@ -1182,65 +1182,24 @@ int    gui_scale_percent();
 // since the setting's grammar floor came down to 50 (architect 2026-08-10).
 double gui_scale_factor();
 
-// THE KEY'S HEIGHT, THE `key_height` TUNING KEY'S SEAT (architect
-// 2026-10-29, on five mock sheets varying only the keys' height: "around
-// 33"; its default 33 device px again since 2026-11-03, the retrofit, the
-// square key of 2026-11-02 reversed; 34 device px since 2026-11-04 night,
-// the face 70 x 34 on the tablet then): the live value IN W (scaled_px's
-// axis; 28 W = 56 device px at 200 %, Arc's icon button's height, send Z),
-// read by icon_case_h_px (the case paragraph below; the face's width is the
-// `key_width` tuning key's, its seat next) and by the line-box baselines of
-// the text on key-tall boxes — the entries (entry_baseline: the clock's,
-// the NOISE case's, the fields') and the word buttons' words, in
-// paint_handler.cpp — nothing else; the
-// key's drawing is a fixed 16 W box (paint_key_glyph). It is the scale's shape —
-// render.h's accessors are free functions with no AppState, so the value
-// lives as file-scope state in render.cpp, pushed by the same TWO
-// application points: gui_main's startup read of the device config, before
-// the window exists and so before the first layout, and the settings
-// editor's `key_height=` commit (GuiInputHandler::apply_key_height, which
-// re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_key_height); the construction state is 28 (kKeyHeightDefaultW),
-// the first-run value the shipped defaults file's (device_config.h's THE
-// FIRST-RUN VALUES). It settles into a constexpr once he rules the
-// number, and this pair goes.
-void set_key_height_w(int w);
-int  key_height_w();
-
-// THE KEY'S FACE WIDTH, THE `key_width` TUNING KEY'S SEAT (architect
-// 2026-11-06, session 78: the width a tuning key like the height until he
-// rules the number): the live value IN W (scaled_px's axis; 36 W = 72
-// device px at 200 %, Arc's icon button's width, send Z), read by
-// icon_case_w_px (the case paragraph below) and nothing else — every face's
-// width, walk and hit box reads that accessor; the drawing is a fixed 16 W
-// box whatever the key's size (paint_key_glyph). The key_height seat's
-// shape exactly — file-scope state in render.cpp, pushed by gui_main's
-// startup read of the device config before the window exists and by the
-// settings editor's `key_width=` commit (GuiInputHandler::apply_key_width,
-// which re-lays-out at once). The grammar and the range are
-// device_config.h's (parse_key_width); the construction state is 36
-// (kKeyWidthDefaultW), the first-run value the shipped defaults file's. It settles into a constexpr once he
-// rules the number, and this pair goes.
-void set_key_width_w(int w);
-int  key_width_w();
-
-// THE RUN GAP, THE `run_gap` TUNING KEY'S SEAT (architect 2026-11-07,
-// session 87, his "agree": the ground between two runs a tuning key like the
-// key's two sides until he rules the number): the live value IN W
-// (scaled_px's axis; 6 W = 12 device px at 200 %, Arc's gap between toolbar
-// groups, send Z), read by
-// program_run_gap_px (the run gap paragraph below) and nothing else — every
-// reader of the gap, the band's runs, row 8's groups, the render player's
-// row and the controls rows, takes that accessor. The key_width seat's shape
-// exactly — file-scope state in render.cpp, pushed by gui_main's startup
-// read of the device config before the window exists and by the settings
-// editor's `run_gap=` commit (GuiInputHandler::apply_run_gap, which
-// re-lays-out at once). The grammar and the range are device_config.h's
-// (parse_run_gap); the construction state is 6 (kRunGapDefaultW), the
-// first-run value the shipped defaults file's. It settles into a constexpr once he rules the number,
-// and this pair goes.
-void set_run_gap_w(int w);
-int  run_gap_w();
+// THE KEY'S BOX AND THE RUN GAP, IN W (architect 2026-11-22, send LL: "the
+// regular key height and key width are from Arc, and also the [run] gap I
+// think is from Arc ... okay to retire all of them"; the three tuning keys
+// `key_height`, `key_width` and `run_gap` retired here): ARC'S ICON BUTTON
+// AT 9 PT, ITS BORDER INCLUDED — 36 W wide by 28 W tall, 72 x 56 device px
+// on the tablet at 200 % (send Z, 2026-11-18 / 2026-11-19, 396ee71c and
+// b8f51998: "about 72 device pixel width ... the border is clickable";
+// materials.h's THE KEY owns its look) — and ARC'S GAP BETWEEN TOOLBAR
+// GROUPS, 6 W, 12 device px (send Z, DESIGN §3: the groups 6 W apart). The
+// box's one readers are icon_case_w_px and icon_case_h_px (the case
+// paragraph below) and the line-box baselines of the text on key-tall boxes
+// — the entries (entry_baseline: the clock's, the NOISE case's, the
+// fields') and the word buttons' words, in paint_handler.cpp; the gap's is
+// program_run_gap_px (the run gap paragraph below). The key's drawing is a
+// fixed 16 W box whatever the box (paint_key_glyph).
+inline constexpr int kKeyWidthW  = 36;
+inline constexpr int kKeyHeightW = 28;
+inline constexpr int kRunGapW    = 6;
 
 // THE ON-SCREEN KEYBOARD'S KEY BOX, THE `osk_key_w` AND `osk_key_h` TUNING
 // KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
@@ -1249,8 +1208,8 @@ int  run_gap_w();
 // else (osk_key_h moving the band's height and so the surface's top, which
 // stands over the app and moves no lane, architect 2026-11-20 — the band's
 // pads the bottom icon row's own, onscreen_keyboard::pad_top_px /
-// pad_foot_px, 2026-11-19). The key_height
-// seat's shape exactly — file-scope state in render.cpp,
+// pad_foot_px, 2026-11-19). The scale's
+// shape — file-scope state in render.cpp,
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
 // (GuiInputHandler::apply_osk_key_size, which repaints at once, no
@@ -1297,28 +1256,23 @@ int  osk_font_em_w();
 // no plate re-render, the tips do not move). The construction state is 1
 // (kWaveformGrowDefaultQuarters), the first-run value the shipped defaults
 // file's. A PERMANENT KEY, unlike the
-// three tuning seats above: this pair stays.
+// two tuning seats above: this pair stays.
 void set_waveform_grow_quarters(int quarters);
 int  waveform_grow_quarters();
 
-// THE PLATE'S FADE START, THE `waveform_fade_px` KEY'S SEAT (architect
-// 2026-11-14, send H; the rule at waveform_fade_band below, THE PLATE'S
-// BARS' fade band, the grammar device_config.h's parse_waveform_fade_px):
-// F, the bar width in DEVICE PX at which the finer level starts to appear,
-// held in HUNDREDTHS of a device px (100 .. 200, 200 off) — read on the GUI
-// thread alone, by the plate's render inputs
-// (GuiPaintHandler::compute_waveform_render_inputs, waveform_cache.cpp),
-// which snapshot it for the render and key the plate's fingerprint on it,
-// so the worker never reads this seat. The grow's seat's shape exactly —
-// file-scope state in render.cpp, pushed by gui_main's startup read of the
-// device config before the window exists and by the settings editor's
-// `waveform_fade_px=` commit (GuiInputHandler::apply_waveform_fade_px,
-// which re-renders the plate and repaints at once: the band's rows of bars
-// are a function of F). The construction state is 1 px
-// (kWaveformFadeDefaultHundredths), the first-run value the shipped
-// defaults file's. A TUNING KEY.
-void set_waveform_fade_hundredths(int hundredths);
-int  waveform_fade_hundredths();
+// THE PLATE'S FADE START (architect 2026-11-14, send H; THE FLOOR, THE
+// WHOLE DOUBLING, send K: "Wouldn't it be better to have a continuous fade
+// motion"; the `waveform_fade_px` tuning key retired here 2026-11-22, send
+// LL: "one is the ideal and it works well"): F, the bar width in DEVICE PX
+// at which the finer level starts to appear, held in HUNDREDTHS of a device
+// px — 100, ONE DEVICE PX, so the band runs from the landing on one level
+// to the switch to the next (the rule at waveform_fade_band below, THE
+// PLATE'S BARS' fade band). A start under 1 would name a bar width no rung
+// draws (a main rung's bars are a px or more wide); 2, the switch width,
+// would be a band of no length (render.cpp's static_assert binds F under
+// the switch). Read by waveform_fade_band alone, so the plate's render
+// carries no fade input and its fingerprint no fade field.
+inline constexpr int kWaveformFadeHundredths = 100;
 
 // A FACE AT THE LIVE SCALE AND SIZE (gui_font.h): what every painter and
 // every seat asks for its text — each use at the face-size table's size
@@ -1372,8 +1326,8 @@ inline GuiFont gui_font(GuiFace face) {
 // face metrics (gui_font.h: a font quantity is not a grid point, rounded at
 // the seat that reads it) and the ruler's unrounded pitch compare — are a
 // different concept and deliberately do not come through here. THIS IS THE
-// ONE ROAD: every W-authored constant in the tree (`k…W`, the `key_height`
-// and `osk_*` seats, program_spec.h's fields) and every older Windows-px
+// ONE ROAD: every W-authored constant in the tree (`k…W`, the `osk_*`
+// seats, program_spec.h's fields) and every older Windows-px
 // constant (`k…Px`) scale through it alike.
 inline int scaled_px(double authored) {
     return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
@@ -1521,8 +1475,9 @@ constexpr int kMinWindowHeightPx = 480;
 //     leftmost ink), so refresh_logo_legend's damage covers them whenever
 //     the percent moves.
 //     THE TRIGGERS AND THE HOLD (architect 2026-11-05 night, session 49:
-//     "a hold on both lamps, lamp_hold_ms a tuning key with a Settings row
-//     (default 100)" — REVERSING the same night's "no hold": the tick is
+//     "a hold on both lamps" — REVERSING the same night's "no hold"; the
+//     number 85 ms since 2026-11-22, send LL, the tuning key retired at the
+//     tablet's value: "The lamp hold can also be retired"): the tick is
 //     the platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms) while
 //     only the PRESENT waits for the vsync, one beat apart, 22.2 ms at the
 //     pinned 90 Hz (kFrameBeat, platform_android.cpp), so a
@@ -1530,15 +1485,14 @@ constexpr int kMinWindowHeightPx = 480;
 //     never be painted; the clip clamps a RUN of blocks and its lamp spans
 //     ticks, but the limiter's engaged frames are POINTS, and its one-tick
 //     lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR
-//     AT LEAST THE HOLD — the `lamp_hold_ms` device key, whole ms in
-//     [20, 1000], default 100, read live at every tick (device_config.h's
-//     grammar) — a tick that sees the lamp's event stamping now + the hold
+//     AT LEAST THE HOLD — kLampHoldMs, 85 ms, beside refresh_logo_lamps
+//     (main.cpp) — a tick that sees the lamp's event stamping now + the hold
 //     (AppState::clip_lamp_lit_until_ms, limiter_lamp_lit_until_ms), the
 //     lamp lit on that tick and on every tick before the stamp: an event
 //     re-arms it (a run of clamping blocks keeps the lamp lit until the hold
 //     after its last block), the dark edge lands on the first tick at or
-//     past the stamp, and 100 ms is about four and a half presents at the
-//     beat. NO TIMER OF ITS OWN: the tick is the clock. The bits on AppState
+//     past the stamp, and 85 ms is about three and four fifths presents at
+//     the beat. NO TIMER OF ITS OWN: the tick is the clock. The bits on AppState
 //     (clip_lamp_lit, limiter_lamp_lit) are written only by the tick's
 //     refresh_logo_lamps (main.cpp, beside refresh_logo_legend, on EVERY
 //     tick ahead of the early returns), each edge damaging its own square
@@ -1744,12 +1698,10 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 //
 // THE KEY IS ARC'S ICON BUTTON, ITS BOX BORDER INCLUDED (architect
 // 2026-11-18 / 2026-11-19, send Z; DESIGN §3; materials.h's THE KEY owns its
-// look): THE `key_width` TUNING KEY'S W WIDE (key_width_w, its seat above;
-// 36 its default) by THE `key_height` TUNING KEY'S W TALL (key_height_w,
-// its seat above; 28 its default — Arc's icon button, 36 x 28 W, architect
-// 2026-11-18: "about 72 device pixel width ... the border is clickable"),
-// both through scaled_px, rounded at the element: at the defaults, 72 x 56
-// device px on the tablet at 200 %. THE BOX IS THE WHOLE KEY, its one-W ring
+// look): kKeyWidthW WIDE by kKeyHeightW TALL (their seat above — Arc's
+// icon button, 36 x 28 W, architect 2026-11-18: "about 72 device pixel
+// width ... the border is clickable"), both through scaled_px, rounded at
+// the element: 72 x 56 device px on the tablet at 200 %. THE BOX IS THE WHOLE KEY, its one-W ring
 // included, and THE KEYS OF A GROUP ARE LINKED, NEIGHBORS SHARING ONE SEAM
 // COLUMN (materials.h's key_link_pitch_px and linked_group_w_px: the pitch
 // 70 device px on the tablet, a group of n 72 + 70 (n − 1)); the box is the
@@ -1758,8 +1710,7 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // the flat key.)
 // Every key carries its set's drawing, the 16 W canvas centered on its box
 // (paint_key_glyph, paint_handler.cpp; icons.h's THE KEYS), one size for
-// every key (send Z; the 9 / 17 share of `key_height` of 2026-11-04 night
-// retired). NO PRINTED LEGEND UNDER IT (retired 2026-11-18, send Z: "That's
+// every key (send Z). NO PRINTED LEGEND UNDER IT (retired 2026-11-18, send Z: "That's
 // from the hi-fi theme"); the tooltip names the act.
 //
 // THE BAND — THE TITLE BAR AND THE TOP ICON ROW (architect 2026-11-18 /
@@ -1767,7 +1718,7 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // above), then ARC'S TOOLBAR, ONE PAD ON BOTH SIDES OF THE FACES —
 // kToolbarPadW, 7 W above them and 7 W below (architect 2026-11-20:
 // symmetric on his word, the bottom icon row the same; ARC'S TOOLBAR PADS
-// below). At key_height 28: 28 + 7 + 28 + 7 = 70 W, 140 device rows on the
+// below). With the key 28 W tall: 28 + 7 + 28 + 7 = 70 W, 140 device rows on the
 // tablet at 200 % (the title bar 0 .. 55, the pad 56 .. 69, the faces 70 ..
 // 125, the pad 126 .. 139), on the body tone, no line between the title
 // bar and the row (a tone change only), the trim lane's first row the line
@@ -1789,17 +1740,16 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // bar's and the ruler's lines stood on, 2026-10-23 — RETIRED with the flat
 // well, 2026-11-02: the well's lines, its frame's since 2026-11-17, are the hairline
 // itself, the well's lanes block below.)
-// THE FACE'S WIDTH, the `key_width` tuning key's live value, and ITS
-// HEIGHT, the `key_height` tuning key's (their seats above; the case
-// paragraph): scaled_px, floored at three device px so a key never shrinks
+// THE FACE'S WIDTH, kKeyWidthW, and ITS HEIGHT, kKeyHeightW (their seat
+// above; the case paragraph): scaled_px, floored at three device px so a key never shrinks
 // to a sliver at a tiny scale. icon_case_w_px is THE ONE READER of the
 // width: every key surface's walk, seat and hit box takes it (or
 // key_link_pitch_px / linked_group_w_px, materials.h, built on it).
 inline int icon_case_w_px() {
-    return scaled_px(key_width_w(), 3);
+    return scaled_px(kKeyWidthW, 3);
 }
 inline int icon_case_h_px() {
-    return scaled_px(key_height_w(), 3);
+    return scaled_px(kKeyHeightW, 3);
 }
 // THE ONE W BETWEEN TWO FACES (architect 2026-11-04 night): kKeyGapW,
 // ONE W through scaled_px — 2 device px on the tablet at 200 %, 1 at 100 %
@@ -1845,30 +1795,27 @@ inline int band_case_top_offset_px() {
     return title_bar_h_px() + toolbar_pad_px();
 }
 // THE STRIP — the bottom icon row's: the pad, the case, the pad (7 + 28 + 7
-// = 42 W, 84 device rows on the tablet at key_height 28).
+// = 42 W, 84 device rows on the tablet).
 inline int strip_h_px() {
     return toolbar_pad_px() + icon_case_h_px() + toolbar_pad_px();
 }
 // THE BAND: the title bar, the pad, the case, the pad (28 + 7 + 28 + 7 = 70
-// W, 140 device rows on the tablet at key_height 28).
+// W, 140 device rows on the tablet).
 inline int icon_row_h_px() {
     return title_bar_h_px() + toolbar_pad_px() + icon_case_h_px() +
            toolbar_pad_px();
 }
-// THE GROUND BETWEEN TWO RUNS (architect 2026-10-22, the simple layout; the
-// hi-fi's gap again since 2026-11-03, the retrofit, reversing that
-// morning's "the strip pad"; 22 W since 2026-11-04 night; A TUNING KEY since
-// 2026-11-07, architect session 87, his "agree"): THE `run_gap` TUNING KEY'S
-// W (run_gap_w, its seat above; 6 its default since send Z, Arc's toolbar
-// groups 6 W apart) through scaled_px — 12 device px on the tablet at 200 %
-// at the default —
+// THE GROUND BETWEEN TWO RUNS (architect 2026-10-22, the simple layout;
+// Arc's toolbar groups 6 W apart since send Z, the tuning key retired
+// 2026-11-22, send LL): kRunGapW (its seat above) through scaled_px — 12
+// device px on the tablet at 200 % —
 // between two runs' FACES (the key is
 // its face since 2026-11-04), whatever the key's height: the band's runs and
 // the one run gap the left runs' clip stands short of the history opener,
 // row 8's runs packed right, and the controls rows' groups, the render
 // player's and the score viewer's group spaces included (paint_handler.cpp's
 // icon_row_seats, row8_lengths, player_row_layout and the score rows).
-// program_run_gap_px is THE ONE READER of the key: one key for every gap.
+// program_run_gap_px is THE ONE READER of kRunGapW: one gap for every gap.
 // A TOO-LARGE GAP is the band's overflow rule's, as a too-wide key is (THE
 // FIT at paint_icon_row's width math, paint_handler.cpp) — the left runs
 // clipped one run gap short of the history opener, the third run's keys
@@ -1877,7 +1824,7 @@ inline int icon_row_h_px() {
 // the score viewer's rows take the gap from the scrub's trough, which
 // their floor of two knobs drops whole when too little is left.
 inline int program_run_gap_px() {
-    return scaled_px(run_gap_w());
+    return scaled_px(kRunGapW);
 }
 
 // A BUTTON IS ARC'S BUTTON, ITS OUTER CORNERS ROUNDED (architect 2026-11-18
@@ -1904,7 +1851,7 @@ inline int program_run_gap_px() {
 //   THE TROUGH — kScaleTroughW, 5 W thick (10 device px on the tablet at
 //     200 %), a full pill (radius half its thickness), `scale_trough` (2D303B,
 //     its line of kArcDarkTones; the progress page's bar's too),
-//     CENTERED EXACTLY ON THE KEYS' ROWS (the tablet at key_height 28: keys
+//     CENTERED EXACTLY ON THE KEYS' ROWS (the tablet, the key 28 W tall: keys
 //     1324..1379, the trough rows 1347..1356), across the item's columns.
 //     THE PLAYED PART — Arc's `scale highlight` — from the trough's left end
 //     to the knob's center, THE ACCENT (`cue`, the progress bar's done
@@ -2037,7 +1984,7 @@ inline int program_run_gap_px() {
 // the grabs around them: THE TRIM BAR'S CAPS AND GRABS below. THE TRIM
 // LANE: the line under the top icon row, the trough and the line under it
 // (the line Arc's scrollbar draws in $borders_color on its content side):
-// 14 W, 28 device rows, rows 140 .. 167 at key_height 28 on the tablet, the
+// 14 W, 28 device rows, rows 140 .. 167 on the tablet, the
 // trough 142 .. 165. The modal family's box keeps its seat on the lane's
 // first row (modal_box.h); the cards stand at the window's top right over
 // whatever is there, notifyd's seat (notification_stack_bound, send BB,
@@ -2442,7 +2389,7 @@ WellColumns well_columns(const AppState& a);
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
 // (Switch Tab, Center, Left, Right and Play / Stop, the last case; architect
 // 2026-10-18) packed right, each one linked group, the run gap
-// (program_run_gap_px, the `run_gap` tuning key) of bare ground
+// (program_run_gap_px, kRunGapW) of bare ground
 // between two (kMarkerVerbGroup in paint_handler.cpp owns that group's
 // membership), all one lane over the status bar.
 //
@@ -2450,7 +2397,7 @@ WellColumns well_columns(const AppState& a);
 // 2026-11-19): THE PAD (7 W), the program's key (the
 // band's own, read from its accessors above so the rows cannot drift
 // apart), THE PAD AGAIN (7 W, symmetric, architect 2026-11-20) —
-// strip_h_px, at key_height 28 42 W, 84 device rows on the tablet at 200 %
+// strip_h_px, 42 W, 84 device rows on the tablet at 200 %
 // (14 + 56 + 14) — on the body tone, no
 // line, no bar and no border (Cool Edit's dock bar over it, its grippered
 // and then barred groups and the border under it stood 2026-10-09 to
@@ -2540,8 +2487,8 @@ inline int status_bar_lane_h_px() {
 
 // (THE PROGRAM'S STACK IN WINDOWS PX — chrome_stack_authored_h — LEFT
 // 2026-11-03: every lane above and below the well is a skin length or a
-// hairline, derived at the element. On the tablet at 200 % and key_height
-// 28 (send Z; the ruler and the marker lane 16 W since send AA): the band
+// hairline, derived at the element. On the tablet at 200 %, the key 28 W
+// tall (send Z; the ruler and the marker lane 16 W since send AA): the band
 // 140 device rows (56 + 14 + 56 + 14), the well's lanes above the canvas
 // 94 (28 + 34 + 32) and its foot line 2, the well's foot 2, the bottom icon
 // row 84 (14 + 56 + 14) and the status bar 46 (2 + 44): the canvas 1072
@@ -2680,7 +2627,7 @@ void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x,
 // EXACT ROWS LIKEWISE (the grid and the center lines, canvas_hline_span:
 // the band's zero is the middle of a row on an odd band, so a center line
 // is half a row, a whole row and half a row; on an even band, the tablet's
-// at key_height 28 (send Z), a row boundary, the line two whole rows).
+// with the key 28 W tall (send Z), a row boundary, the line two whole rows).
 // THE CUE'S CHIP AND THE PLAYHEAD'S HEAD STAND ON THE SAME EXACT PLACE,
 // their apex on the line's center (architect 2026-11-14 night, send J,
 // "Agree on both.", reopening 2026-11-06's "it should point at the right
@@ -3027,16 +2974,15 @@ inline double trim_grab_inside_px() {
 // cue's own (the palette block's playhead paragraph). Git history.)
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
-// seat's gap, its hover target (the key's column) and the bypass chain's
-// reach. They live out here, rather than with the rest of the tooltip's
+// seat's gap, its hover target (the key's column) and its three timeouts.
+// They live out here, rather than with the rest of the tooltip's
 // anatomy in paint_handler.cpp, because both the RUN LOOP and the input side
 // read them:
 // the words comparators run on the tick and damage the
 // band every seat of the box lies in (tooltip_damage_band, app_state.h), and
 // the one wait writer (note_tooltip_hover) and the two hover walks read the
-// column and the reach, and the seat's gap, which the seat and the damage band
-// both read. The one duration, the delay, is the `tooltip_delay_ms` tuning key
-// (device_config.h), read live.
+// column, the wait's writer and the tooltip's clock (tick_tooltip) the
+// timeouts, and the seat and the damage band both read the seat's gap.
 //
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from its lines' line boxes under its pads (paint_shift_tooltip; Arc's
@@ -3146,13 +3092,26 @@ inline int tooltip_gap_px() {
     return scaled_px(kTooltipGapW, 0);
 }
 
-// THE TIMING IS ONE DELAY, THE `tooltip_delay_ms` TUNING KEY (architect
-// 2026-11-07, session 87, the always-show model; device_config.h's grammar,
-// default 100 ms): every arrival on a key's column waits it, and it is the
-// bypass chain's window after a standing box is left. The model is stated
-// once, at AppState::RedesignTooltip. (Comctl32's three — the 500 ms initial
-// wait, the 100 ms reshow and the 5 s autopop — and the spent button retired
-// with the model, closed_questions.md.)
+// THE TIMING IS GTK'S OWN (architect 2026-11-22, send LL: "just use their
+// numbers, just like we do for hover"; the `tooltip_delay_ms` tuning key of
+// 2026-11-07 retired here): gtk-3-24's gtk/gtktooltip.c (identical in main),
+// its three #defines —
+//   * HOVER_TIMEOUT 500 — kTooltipHoverTimeoutMs: the wait of an arrival
+//     with no chain holding (gtk_tooltip_start_delay outside browse mode);
+//   * BROWSE_TIMEOUT 60 — kTooltipBrowseTimeoutMs: the wait of an arrival
+//     WHILE THE CHAIN HOLDS (GTK's browse mode, entered at a show);
+//   * BROWSE_DISABLE_TIMEOUT 500 — kTooltipBrowseDisableTimeoutMs: the
+//     chain, armed at a standing box's leave, lapses this long after that
+//     leave with no new box shown, TIME ALONE (gtk_tooltip_hide_tooltip
+//     arming tooltip_browse_mode_expired).
+// The model is stated once, at AppState::RedesignTooltip; the wait's writer
+// (note_tooltip_hover) and the clock (tick_tooltip) read these and nothing
+// else. (Comctl32's three — the 500 ms initial wait, the 100 ms reshow and
+// the 5 s autopop — and the spent button retired 2026-11-07,
+// closed_questions.md.)
+inline constexpr int64_t kTooltipHoverTimeoutMs         = 500;
+inline constexpr int64_t kTooltipBrowseTimeoutMs        = 60;
+inline constexpr int64_t kTooltipBrowseDisableTimeoutMs = 500;
 
 // THE KEY'S COLUMN — THE TOOLTIP'S HOVER TARGET (architect 2026-11-07,
 // session 87: "always show"; the model at AppState::RedesignTooltip): THE
@@ -3170,16 +3129,6 @@ inline GuiRect tooltip_column_rect(const GuiRect& box, int seam) {
     if (box.w <= 0 || box.h <= 0) return GuiRect{0, 0, 0, 0};
     const int s = std::clamp(seam, 0, box.w);
     return GuiRect{box.x + s, box.y, box.w - s, box.h};
-}
-
-// THE BYPASS CHAIN'S REACH (architect 2026-11-07, session 87): once a box
-// has stood, the leave of its column keeps the chain while the pen stays
-// within ONE W of that column (Chebyshev, on either axis), or for the delay
-// at any distance (the model at AppState::RedesignTooltip). One W through
-// scaled_px, 2 device px on the tablet at 200 %, floored at one device px.
-inline constexpr double kTooltipChainReachW = 1.0;
-inline int tooltip_chain_reach_px() {
-    return scaled_px(kTooltipChainReachW, 1);
 }
 
 // THE HOVER SLOP (architect 2026-09-29; the tooltip's wait read it until the
@@ -3574,7 +3523,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // ring's sides, the scanner and the zoom anchor's
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). On the tablet at 200 % and
-// key_height 28 (its default since send Z) the canvas is 1072 rows,
+// the key 28 W tall (send Z) the canvas is 1072 rows,
 // 236-1307 (main.cpp's lane table, the icon rows' pads 7 W each side,
 // architect 2026-11-20): the upper well's band 535 rows
 // (236-770), the divider rows 771-772 (one W), the lower well's band 535
@@ -3615,7 +3564,7 @@ inline WaveformDivider waveform_divider(int area_h) {
 // the plate's layout is one height). ITS ZERO IS y + h / 2.0, EXACT
 // (architect 2026-11-14, send J) — render_waveform_columns' centre
 // y + h · 0.5, a real row: the middle of a row where h is odd, a row
-// boundary where it is even (the tablet's 526 at key_height 28); its HALF
+// boundary where it is even (the tablet's 526); its HALF
 // HEIGHT H = h / 2.0, the grid's (row 6's canvas paragraph), runs from the
 // zero to the band's edge.
 // h is 0 only on a canvas under the divider and two rows.
@@ -3929,7 +3878,7 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // measurement there); architect
 // 2026-11-15, send O: THE TWO-PICTURE BLEND, "Agree to all." — the blend
 // ruled first and dropped 2026-11-14 (send H) REOPENED by him and built).
-// Inside a band of zoom before each split — from the key's start width up
+// Inside a band of zoom before each split — from the start width F up
 // to the switch, at F = 1 the whole way from one whole level to the next —
 // the plate holds BOTH RUNGS, EACH ITS OWN UNIFORM ROW, and the pixel is
 // THE MIX OF THEIR TWO PICTURES by a weight that is a function of THE ZOOM
@@ -3940,10 +3889,10 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // THE MAIN RUNG B for the step q is the rung above (waveform_bar_frames), its
 // pitch P = B / q in [1, 2). THE FINE RUNG b = B / 2 EXISTS iff B >= column
 // (B == column / 2 is the ladder's floor, where no finer level stands).
-// THE KEY F (device px; `waveform_fade_px`, whole hundredths Fh in [100,
-// 200], the seat waveform_fade_hundredths above) is THE BAR WIDTH AT WHICH
-// THE FINER LEVEL STARTS TO APPEAR; its floor 1 is THE WHOLE DOUBLING (a
-// rung's own bars are a px or more wide, so no band can start under it).
+// THE START F (device px; kWaveformFadeHundredths above, whole hundredths
+// Fh, 100: F = 1) is THE BAR WIDTH AT WHICH THE FINER LEVEL STARTS TO
+// APPEAR; 1 is ITS FLOOR, THE WHOLE DOUBLING (a rung's own bars are a px
+// or more wide, so no band can start under it).
 // THE PLATE IS IN THE BAND iff Fh < 200 AND the fine rung exists AND P > F
 // — exactly 100 · B > Fh · q, STRICT (architect 2026-11-14, send K), the
 // compare exact in doubles as the rung's is (B a multiple of a half frame,
@@ -4017,7 +3966,7 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // WHAT DOES NOT MOVE: the viewport, the lattice the marks stand on, the
 // producer and every bar's own numbers — and A WHOLE LEVEL IS
 // P = 1, OUT OF THE BAND, the one uniform row.
-// Pure and total: a degenerate q, column or key answers out of the band or
+// Pure and total: a degenerate q or column answers out of the band or
 // the weight 0, no error arm.
 inline constexpr float kWaveformFadeWeightTop = 0x1.fffffep-1f;
 struct WaveformFadeBand {
@@ -4025,11 +3974,10 @@ struct WaveformFadeBand {
     double w       = 1.0;    // the weight, [0, 1) in the band
     float  wf      = 1.0f;   // the float the draw takes: under 1 in the band, 1 out of it
 };
-inline WaveformFadeBand waveform_fade_band(double q, int64_t column,
-                                           int fade_hundredths) {
+inline WaveformFadeBand waveform_fade_band(double q, int64_t column) {
     WaveformFadeBand f;
     const double main_b = waveform_bar_frames(q, column);
-    const double fh     = static_cast<double>(fade_hundredths);
+    const double fh     = static_cast<double>(kWaveformFadeHundredths);
     const double sw     = static_cast<double>(kWaveformSwitchPx);
     if (!(main_b > 0.0) || !(fh < 100.0 * sw)) return f;
     if (main_b < static_cast<double>(column)) return f;
@@ -4188,9 +4136,8 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // EXACT FORM), and THE FADE BAND before the split (architect 2026-11-14, send H;
 // the two-picture blend, send O, 2026-11-15; waveform_fade_band) mixes the
 // parents' picture into the children's as the zoom approaches it — over
-// the whole doubling with the
-// `waveform_fade_px` key at 1, over its last log2(2 / F) at F; with the key
-// at 2, off, the picture steps there once. A pan moves the placement by
+// the whole doubling (the fade's start at 1 device px,
+// kWaveformFadeHundredths). A pan moves the placement by
 // whole device px, the stored range with it, and re-reads no column
 // differently. SO A FRAME ASKS THE PRODUCER ONLY FOR THE BARS THAT ENTER
 // (architect 2026-11-15, send L): on the synchronous route the bars a

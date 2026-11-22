@@ -78,7 +78,7 @@ namespace {
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
 // the authored gui_scale row heights (icon_row_h_px() — its key's rows, and
-// row 8's, the `key_height` tuning key's since 2026-10-29 —
+// row 8's, render.h's kKeyHeightW —
 // the well's four, its foot, plus bottom_row_h_px() —
 // the bottom icon row — and the status bar's), kRowGapPx and kFlagBottomLiftPx (see the
 // geometry helpers below); nothing is window-proportional, and since row 7
@@ -147,8 +147,8 @@ namespace {
 // window edge inward:
 // THE BAND (icon_row_h_px(), at the surface's top): THE TITLE BAR (28 W,
 // render.h's title bar block) and THE TOP ICON ROW (Arc's toolbar: 7 W, the
-// key — the `key_width` tuning key's W wide by the `key_height` tuning
-// key's W tall, 36 x 28 their defaults — and 7 W; render.h's band
+// key — kKeyWidthW wide by kKeyHeightW tall, 36 x 28 W, Arc's icon button
+// — and 7 W; render.h's band
 // paragraph), then FLEXIBLE GAP 1, then THE WELL — THE PROGRAM'S CANVAS
 // COLUMN, flat regions RUNNING THE PANEL'S WHOLE WIDTH (render.h's THE
 // WELL'S EDGES): the TRIM lane (trim_lane_h_px(), the line under the top
@@ -229,9 +229,8 @@ namespace {
 //
 // THE STACKS BELOW, THE ONE RECORD (re-derived from the lane table
 // 2026-11-20; every line one W, 2 device px on the tablet; the text
-// 12 W, the ruler's 10 W; the device rows below the tablet's at 200 % and
-// key_height 28 — a tune moves the band's and the bottom icon row's case
-// rows and the canvas by their difference; key_width moves no row). Every
+// 12 W, the ruler's 10 W; the device rows below the tablet's at 200 %, the
+// key 28 W tall). Every
 // lane is its own composite of rounded parts (scaled_px's rule), so the
 // device rows below are read off the lane accessors, never off a total
 // times the factor.
@@ -329,8 +328,8 @@ namespace {
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE BAND, the
-// title bar, the pad, the key (its height the `key_height` tuning
-// key, 2026-10-29) and the pad again (render.h's band paragraph,
+// title bar, the pad, the key (its height render.h's kKeyHeightW) and
+// the pad again (render.h's band paragraph,
 // icon_row_h_px), the well's four lanes the trim bar, the ruler, the marker
 // lane and the lane's foot line (render.h's well lanes block): 28 + 34 + 32
 // + 2 = 96 device rows on the tablet — THE WELL'S FOOT one W too
@@ -420,10 +419,10 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 200 and key_height 28 the lanes leave 1440 − 236 − 132 = 1072
+// gui_scale 200, the key 28 W tall, the lanes leave 1440 − 236 − 132 = 1072
 // device rows (re-derived 2026-11-20), the on-screen keyboard standing or
 // not.
-// No color moves a lane (the key's height, a tuning key, moves them). May
+// No color moves a lane. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
 // window height, exactly as every other geometry entry point does.
@@ -535,12 +534,12 @@ GuiRect waveform_area(const AppState& a) {
     // lane, each from its rounded parts, which is not one multiply of the
     // sum), the well's lines one W each (2026-11-04), and at the 1000 %
     // ceiling (architect 2026-10-05) they PASS the tablet's 1440 rows at
-    // key_height's default 28: the band (280 + 70 + 280 + 70 = 700) and the
+    // the key 28 W tall: the band (280 + 70 + 280 + 70 = 700) and the
     // bottom icon row (70 + 280 + 70 = 420) and the status bar (10 + 220)
     // take 1350 before the well's lanes, so the top of the vocabulary lands
     // on this floor (one W is 10 device px there). (The host runs far below
     // it: the tablet at 200 % on its 1440-tall surface, where they take 368
-    // at the default key and leave the waveform 1072, the stack record at the
+    // and leave the waveform 1072, the stack record at the
     // lane table above; re-derived 2026-11-20.) The guard does not rest on
     // that arithmetic, because the ceiling is a vocabulary the architect
     // moves — it has now moved four times — and the lane set is one the
@@ -743,8 +742,8 @@ GuiRect well_foot_area(const AppState& a) {
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
 // Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each one linked group,
-// the run gap of bare ground between two (render.h's program_run_gap_px, the
-// `run_gap` tuning key). It is BOTTOM LANE 1, over the status bar (lane 0)
+// the run gap of bare ground between two (render.h's program_run_gap_px,
+// kRunGapW). It is BOTTOM LANE 1, over the status bar (lane 0)
 // and under the well's foot (lane 2, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal family's controls row on its
 // rows and the on-screen keyboard over it while it stands are never lanes:
@@ -1677,14 +1676,13 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 // so a lamp lit for one 5 ms tick can be cleared before any
 // present and never be painted — the clip clamps a RUN of blocks and its
 // lamp spans ticks, but the limiter's engaged frames are POINTS, and its
-// one-tick lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD —
-// a tick whose test sees the event stamps now + lamp_hold_ms (the tuning
-// key, read live from the device config at every refresh, so a typed
-// change needs no apply), and the lamp's bit is the event seen this tick or
+// one-tick lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST
+// EVENT FOR AT LEAST THE HOLD — a tick whose test sees the event stamps now
+// + kLampHoldMs (below), and the lamp's bit is the event seen this tick or
 // now before the stamp. So an event re-arms the hold (a run of clamping
 // blocks keeps the lamp lit until the hold after its last block), the dark
-// edge lands on the first tick at or past the stamp, and 100 ms is about
-// four and a half presents at the beat. NO TIMER OF ITS OWN: the tick is the clock, the
+// edge lands on the first tick at or past the stamp, and 85 ms is about
+// three and four fifths presents at the beat. NO TIMER OF ITS OWN: the tick is the clock, the
 // stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
 // (architect 2026-11-05 night, session 49): the clip lamp's third bit,
 // GuiPlayback::device_unavailable() read on every tick — the error
@@ -1723,10 +1721,17 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 //   not test voids prev, so the next play seeds afresh. GUI-thread logic
 //   over the stored list, no atomic stamp. A lamp lit when the play stops
 //   keeps its hold out, dark at its stamp like any other.
+// THE HOLD IS 85 MS (architect 2026-11-22, send LL: "The lamp hold can also
+// be retired"): the `lamp_hold_ms` tuning key of 2026-11-05 night retired
+// at the tablet's own value, tuned on his glass from the key's construction
+// 100 and first recorded by the defaults snapshot of 2026-11-09 (23c12dd4);
+// about three and four fifths presents at the 22.2 ms beat, so a one-tick
+// limiter event is painted.
+inline constexpr int64_t kLampHoldMs = 85;
 void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
                         const GuiAudio& audio, const GuiPlayback& playback) {
     const int64_t now_ms  = monotonic_ms();
-    const int64_t hold_ms = app.device_config->lamp_hold_ms;
+    const int64_t hold_ms = kLampHoldMs;
 
     // THE CLIP LAMP.
     const uint64_t clipped = playback.clipped_blocks();
@@ -2589,7 +2594,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // shows only while its window is active): focus leaving or arriving is
     // the user acting elsewhere, not a pointer grazing a gap. hide_shift_tooltip carries its
     // own damage, and forgets the column, so a pointer still on one after
-    // the flip is an arrival at the next walk and waits the delay (the
+    // the flip is an arrival at the next walk and waits 500 ms (the
     // always-show model, 2026-11-07; nothing gates the walk on activation —
     // on the tablet a focus loss ends the pen's hover, end_pen_hover, so the
     // pointer has left). The hook fires only when the window's activation actually
@@ -3036,7 +3041,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // transition INTO and OUT OF a load is exactly a drift this must catch.
         // THE HOVER TOOLTIP'S CLOCK — the whole timer, two compares on a tick
         // that already runs (the always-show model, architect 2026-11-07:
-        // the bypass chain's lapse and the wait's ripening; the delay is read
+        // the chain's lapse and the wait's ripening; the timeout is chosen
         // where a wait starts). No timer object, no callback, no
         // per-frame damage: each edge damages once, inside the owner
         // (GuiInputHandler::tick_tooltip, whose body carries the damage rule).
@@ -4361,23 +4366,6 @@ int gui_main() {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE KEY'S HEIGHT RIDES THE SCALE'S ROAD (the `key_height` tuning key,
-    // architect 2026-10-29; render.h's seat): seeded here, before
-    // gui.init() and so before the first layout, the key's height in every
-    // lane and seat, and the key glyph's ink (paint_key_glyph), the first frame lays out; the other
-    // road is the settings editor's `key_height=` commit
-    // (GuiInputHandler::apply_key_height).
-    set_key_height_w(device_config.key_height);
-    // THE KEY'S FACE WIDTH THE SAME (the `key_width` tuning key, architect
-    // 2026-11-06; render.h's seat): seeded before the first layout, every
-    // key surface's face, walk and hit box; the other road is the settings
-    // editor's `key_width=` commit (GuiInputHandler::apply_key_width).
-    set_key_width_w(device_config.key_width);
-    // THE RUN GAP THE SAME (the `run_gap` tuning key, architect 2026-11-07;
-    // render.h's seat): seeded before the first layout, every run gap of the
-    // band, row 8 and the controls rows; the other road is the settings
-    // editor's `run_gap=` commit (GuiInputHandler::apply_run_gap).
-    set_run_gap_w(device_config.run_gap);
     // THE KEYBOARD'S KEY BOX RIDES THE SAME ROAD (the `osk_key_w` and
     // `osk_key_h` tuning keys, architect 2026-10-29; render.h's seat): seeded
     // before the first layout; the other road is the settings editor's two
@@ -4393,11 +4381,6 @@ int gui_main() {
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
-    // THE PLATE'S FADE START THE SAME (the `waveform_fade_px` tuning
-    // key, architect 2026-11-14, send H; render.h's seat): seeded before
-    // the first plate's render inputs read it; the other road is the
-    // settings editor's commit (GuiInputHandler::apply_waveform_fade_px).
-    set_waveform_fade_hundredths(device_config.waveform_fade_hundredths);
     // THE PALETTE, ONCE PER PROCESS (architect 2026-11-21, send GG: one
     // look, Arc-Dark, its tones compiled — kArcDarkTones, gui_theme.h):
     // every member installed off the row before there is a window, the

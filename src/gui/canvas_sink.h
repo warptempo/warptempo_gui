@@ -178,7 +178,7 @@
 // THE TINT (architect 2026-11-12, the sweep highlight; ITS REAL EDGES
 // architect 2026-11-14, send J, a line at its exact place)
 // blends toward `word` at the alpha `word2`, a WHOLE PERCENT in
-// [1, 100] (GuiCanvasSink::blended_rect admits no 0), THE RECT
+// [1, 100] (its callers' 100 and 3), THE RECT
 // `edges` = {x0, y0, x1, y1}, floats in device px FROM r's CORNER — r the
 // cells the real rect touches, its floor and ceiling
 // (GuiCanvasSink::blended_rect owns the arithmetic) — each cell's alpha
@@ -371,8 +371,8 @@ GuiCanvasDrawList& gui_canvas_frame();
 // applied here, the rects' word) at `percent` whole percent (at most 100)
 // times each cell's exact coverage (architect 2026-11-14, send J: a line
 // at its exact place is this record at 100 percent, the sweep highlight of
-// 2026-11-12 the same record at its key's percent) — nothing for an empty
-// rect or a percent <= 0.
+// 2026-11-12 the same record at Arc's 3, kSweepHighlightPct) — nothing for
+// an empty rect.
 class GuiCanvasSink {
 public:
     explicit GuiCanvasSink(GuiCanvasDrawList& list);

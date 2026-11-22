@@ -135,9 +135,8 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // ONLY ONTO THE ROWS IT WAS LAID OUT FOR (2026-10-14, ON SCREEN IS AS
     // PAINTED): a surface whose band — its origin row and its height — is
     // not the live band (top_ruler_row_area's top through the strip's
-    // bottom) is not blitted. A live gui_scale or key_height commit
-    // (apply_gui_scale, apply_key_height; both through relayout_window)
-    // moves the band at once and repaints the whole window, while the
+    // bottom) is not blitted. A live gui_scale commit (apply_gui_scale,
+    // through relayout_window) moves the band at once and repaints the whole window, while the
     // surface is rebuilt only at the next tick (maybe_rebuild_flag_cache);
     // a frame painted between the two blitted the old scale's cues at the
     // old origin, inside the new, taller toolbar band — a lane the rebuild's
@@ -319,7 +318,7 @@ static int label_w_px(GuiFace face, std::string_view specimen) {
 }
 static double entry_baseline(const GuiFont& font, const GuiRect& entry) {
     return line_box_baseline(font, static_cast<double>(entry.y),
-                             key_height_w());
+                             kKeyHeightW);
 }
 // NOISE's specimens and its box's width (the head above; architect
 // 2026-11-19, send AA, RULINGS §8): the case prints one decimal under 10 dB
@@ -517,11 +516,10 @@ std::optional<icons::Icon> render_player_button_icon(
 // THE SET'S DRAWING CANVAS AT kKeyDrawingBoxW, 16 W (architect 2026-11-19,
 // send Z; DESIGN §3: Papirus's 16-px drawings at their native size are the
 // design), 32 device px on the tablet — ONE
-// SIZE FOR EVERY KEY, no longer a share of `key_height` (the 9 / 17 ink of
-// 2026-11-04 night retired) — the drawing scaled as its whole canvas into
+// SIZE FOR EVERY KEY — the drawing scaled as its whole canvas into
 // that box (icons::ink_in_box: its ink's length and its offset in the box),
-// THE BOX CENTERED IN THE KEY'S BOX EXACTLY (+10 W, +6 W in a 36 x 28 W key:
-// 20 and 12 device px on the tablet; at another key size half the spare on
+// THE BOX CENTERED IN THE KEY'S BOX EXACTLY (+10 W, +6 W in the 36 x 28 W
+// key: 20 and 12 device px on the tablet; in another box half the spare on
 // each axis, a real place, the no-grid rule), the drawing rasterized at its
 // real place (icons::draw_glyph) in `tone`, the caller's — key_ink of the
 // key's state (materials.h), the on-screen keyboard's lit or rest print. The
@@ -788,8 +786,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // Arc's linked buttons (send Z, 2026-11-19: the sub-groups inside a run no
 // longer parted; materials.h's THE KEY and linked_group_w_px), NOISE's entry
 // a run gap after the third, and the run gap of ground between two
-// (render.h's program_run_gap_px, the `run_gap` tuning key's W, 6 its
-// default, 12 device px on the tablet; redesign_button_opens_icon_run,
+// (render.h's program_run_gap_px, kRunGapW, 6 W, 12 device px on the
+// tablet; redesign_button_opens_icon_run,
 // app_state.h, the runs' leaders); the right five — the history opener and
 // the two view pairs — ONE GROUP ending 6 W inside the panel's right edge,
 // the left walk starting 6 W inside its left edge (icon_row_seats;
@@ -1157,8 +1155,7 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // screen (on screen is as painted; paint_icon_row's walks). The widths at
 // which the band holds every run, and which member drops at each width
 // past them, are THE FIT at paint_icon_row's width math, its one
-// statement; the tablet does not reach the rule at its 200 % and the keys'
-// defaults (a key_width of 43 W does, with the default run gap).
+// statement; the tablet does not reach the rule at its 200 %.
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
     {{RedesignButton::ViewSource},
      {RedesignButton::ViewTarget}},
@@ -1814,11 +1811,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // too narrow for the row drops members whole otherwise, under the view pairs'
     // overflow rule — a width, never a state.
     //
-    // THE WIDTH MATH, AT THE DEFAULTS — the box the `key_width` tuning key's
-    // 36 W, a group's keys sharing one seam column each, the run gap the
-    // `run_gap` tuning key's 6 W (send Z, 2026-11-19: Arc's icon button,
-    // linked buttons and toolbar groups; the ends 6 W inside the panel,
-    // render.h's kEdgeInsetW; key_height moves none of it): in the tablet's
+    // THE WIDTH MATH — the box 36 W (kKeyWidthW), a group's keys sharing one
+    // seam column each, the run gap 6 W (kRunGapW; send Z, 2026-11-19: Arc's
+    // icon button, linked buttons and toolbar groups; the ends 6 W inside
+    // the panel, render.h's kEdgeInsetW): in the tablet's
     // device px at 200 % (one W = 2), each group of n keys 72 + 70 (n − 1)
     // (linked_group_w_px), 12 of ground (the run gap) between two groups;
     // the right group 352, its last box ending 12 px inside the panel's
@@ -1835,32 +1831,16 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     //   282 + 12 + 422 + 12 + 142 + 12 + 78 = 960.
     // A roster move restates these numbers.
     // THE FIT, the one statement every other site points to: outside the
-    // view the left walk must end a run gap short of the right group — on
-    // the tablet at 200 % 52 · key_width + 8 · run_gap device px against 2246
-    // — so at run_gap 6 it holds whole up to key_width 42 W (2232) and from
-    // 43 W the overflow rule (kIconRowViewPairs) answers: every member whose
-    // box would end past the left runs' limit (the right group's first box
-    // less the run gap, 2304 − 12 − linked_group_w_px(5) − 12) publishes the
-    // empty rect and paints nothing — no key is cut, so every ring closes
-    // whole — the right group whole, and every seat where it stood, the
-    // members after a dropped one keeping theirs. ON THE TABLET AT run_gap
-    // 6, outside the view, what stands at each key_width (the third group
-    // seated at 12 + linked_group_w_px(5) + linked_group_w_px(11) + 24):
-    //   36 .. 42 W  every member;
-    //   43, 44 W    NOISE dropped (its entry ends at 1896 / 1938 against
-    //               the limit 1858 / 1848);
-    //   45 W        TIPS too (its box ends at 1890 against 1838);
-    //   46, 47 W    SETUP too (1842 against 1828 at 46 W);
-    //   48, 49 W    SCORE too;
-    //   50 W        LOCK too, PLAYER alone left of its group (key_width's
-    //               ceiling).
-    // Inside the view (groups of 4, 6 and 2 and NOISE) nothing drops up to
-    // 50 W. FROM 46 W SETUP HAS NO BOX, a fact of the rule: committed from
-    // the settings page, the page stands and its rows and Close still work,
-    // but once it is closed nothing on glass opens it again (bare `;` has no
-    // other producer, the on-screen keyboard standing in the editors alone),
-    // so the `key_width` line is then reachable only from the device's
-    // config file.
+    // view the left walk must end a run gap short of the right group — the
+    // left runs' limit, the right group's first box less the run gap, 2304
+    // − 12 − linked_group_w_px(5) − 12 = 1928 on the tablet at 200 % — and
+    // there it ends at column 1601, so every member stands (inside the view
+    // the shorter walk the more so). On a window too narrow the overflow rule
+    // (kIconRowViewPairs) answers: every member whose box would end past the
+    // limit publishes the empty rect and paints nothing — no key is cut, so
+    // every ring closes whole — the right group whole, and every seat where
+    // it stood, the members after a dropped one keeping theirs, NOISE first
+    // (the walk's last member), then the third group's keys from its tail.
     // No assert stands on the fit: the empty publication is the whole answer
     // at every width.
     //
@@ -2164,7 +2144,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //
 // THE BUTTONS ARE THE BAND'S (the unification's point — "the same size as
 // the other icon buttons", bigger finger targets without stealing waveform
-// height): the program's key (70 x key_height, 2026-11-04 night) — read from
+// height): the program's key (36 x 28 W, render.h's kKeyWidthW x
+// kKeyHeightW) — read from
 // the band's own accessors (render.h's program block) so the rows cannot
 // drift apart — on THE ROW'S OWN GROUND, Arc's pad above the case and the
 // same pad below it (7 W each side, architect 2026-11-20; render.h's ARC'S
@@ -2669,7 +2650,7 @@ constexpr std::span<const TransportRowDef> kRow8Groups[kRow8GroupCount] = {
     kTransportStepWalkGroup, kTransportNudgePlayGroup};
 // THE ROW'S LENGTHS (the simple layout, 2026-10-22; Arc's linked groups
 // since 2026-11-19, send Z): the run gap between two groups (render.h's
-// program_run_gap_px, the `run_gap` tuning key, 6 W its default), each group
+// program_run_gap_px, kRunGapW, 6 W), each group
 // a linked group (materials.h's linked_group_w_px: its keys sharing one
 // seam column each).
 struct Row8Lengths {
@@ -2778,7 +2759,7 @@ static BottomLeftRun bottom_left_run(const AppState& app, const GuiRect& lane) {
     r.pen = static_cast<double>(well_columns(app).x +
                                 scaled_px(kBottomLeftPenW));
     r.baseline = line_box_baseline(font, static_cast<double>(seats.case_y),
-                                   key_height_w());
+                                   kKeyHeightW);
     r.pipe_pen = r.pen + m.time_w;
     const double top = r.baseline - static_cast<double>(scaled_px(lb.ascent));
     r.time_box = GuiRectF{r.pen, top, m.time_w,
@@ -2872,9 +2853,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (paint_bottom_strip).
     //
     // THE NUMBERS (send Z, 2026-11-19: Arc's linked groups; in the tablet's
-    // device px at 200 %, one W = 2), AT THE DEFAULTS — the 36-W box of
-    // key_width 36, a group's keys sharing one seam column each (72 + 70 (n −
-    // 1) a group of n, linked_group_w_px), the 6-W run gap of run_gap 6: the
+    // device px at 200 %, one W = 2) — the 36-W box (kKeyWidthW), a group's
+    // keys sharing one seam column each (72 + 70 (n − 1) a group of n,
+    // linked_group_w_px), the 6-W run gap (kRunGapW): the
     // block is 21 keys in five groups (the duo two, the skips two, the verbs
     // eight, the step-and-walk four, the nudge-and-play five), 142 + 142 +
     // 562 + 282 + 352 + 4 · 12 = 1528 px, its last box ending at the row's
@@ -2890,12 +2871,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // gap with it — Down and Up with them) the block is the two skips, one
     // verb, the walk pair and Switch Tab, Center and Older / Newer in the
     // nudge pair's seats, 142 + 72 + 142 + 282 + 3 · 12 = 674 px, from x
-    // 1618. THE WIDTH AND THE GAP TUNE THE BLOCK (the `key_width` and
-    // `run_gap` tuning keys): 42 · key_width − 32 + 8 · run_gap device px,
-    // from x 2324 − 42 · key_width − 8 · run_gap — at run_gap 6 it clears the
-    // timestamp's cell (x 27..135) up to the grammar's ceiling, 50 W (x 176),
-    // and walks over the tab's name from about key_width 49; at key_width 36
-    // and run_gap's ceiling, 44 W, it stands from x 460. THE ROW CARRIES NO
+    // 1618. THE ROW CARRIES NO
     // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
     // allowance recorded at kMinWindowWidthPx covers a narrow window.
     //
@@ -5747,6 +5723,10 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 
 // -- GuiPaintHandler::paint_sweep_highlight ------------------------------
 
+// THE SWEEP HIGHLIGHT'S PERCENT (the painter's paragraph below): Arc's own
+// row-hover white, 3 %.
+inline constexpr int kSweepHighlightPct = 3;
+
 // THE SWEEP HIGHLIGHT (architect 2026-11-12, session 114: "the add selection
 // relies on the marker stems, which are dark in color, and they don't show
 // exactly the bound that's being swept ... it could just be an alpha
@@ -5759,9 +5739,35 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 // (app_state.h — the real span, the formers and the empty states; its
 // damage sites read the same owner's cells, sweep_highlight_rect and
 // sweep_highlight_change),
-// blending it toward WHITE at the `sweep_highlight` device key's
-// whole percent (a tuning key, device_config.h; 0 paints nothing), read
-// here at every list build.
+// blending it toward WHITE at kSweepHighlightPct below.
+// THE PERCENT IS ARC'S OWN ROW-HOVER WHITE, 3 (architect 2026-11-22, send
+// LL: "just use their numbers, just like we do for hover"; the
+// `sweep_highlight` tuning key of 2026-11-12 retired here): Arc-Dark's
+// `row.activatable:hover { background-color: rgba(255, 255, 255, 0.03); }`,
+// the lists' hover face's own number (gui_theme.h's `list_hover_face`,
+// 404552 -> 464B57). THE BLEND IS THE TINT'S (gl_canvas.cpp's head):
+// G · (1 − a) + 255 · a per channel in float, a = float(3) / 100 on a
+// whole cell, rounded once to the byte. ON THE ROW'S BYTES (True Colors
+// off; with it on the same blend runs over the transformed words) the
+// swept tones are:
+//   the canvas `waveform_canvas` 404552 -> 464B57 (69.73, 74.58, 87.19);
+//   the plate's ink `waveform_ink` 262A33 -> 2D3039 (44.51, 48.39, 57.12);
+//   the MAGNIFY core `waveform_core` 444A58 -> 4A4F5D (73.61, 79.43,
+//     93.01);
+//   the quarter lines `grid` 393D49 -> 3F434E (62.94, 66.82, 78.46);
+//   the zero lines `center` 262A33 -> 2D3039, the ink's;
+//   the stereo divider `well_border` 2B2E39 -> 31343F (49.36, 52.27,
+//     62.94);
+//   the selection stems and the lead-in ring `cue_outline` 21252B ->
+//     282C31 (39.66, 43.54, 49.36);
+//   the playhead's line `playhead_line` A5ABB5 -> A8AEB7 (167.70, 173.52,
+//     183.22).
+// THE HOVER LINE NEVER STANDS UNDER A SWEEP: the sweep's pointer is down,
+// and the line's gate wants no press held (pen_hovers_unlatched). A TRIM
+// SWEEP STOPS PLAY at its first accepted write (write_trim_from_sweep), the
+// write that raises the highlight, so no scanner stands under it. AN ADD SEL
+// SWEEP plays on to the lift, so THE SCANNER `scanner` FFFFFF may stand
+// under it, FFFFFF -> FFFFFF (white toward white is white).
 // WHITE IS SPELLED HERE, no palette role and no theme tone: "a blend
 // towards white", the scanner's canonical white the precedent (render.h's
 // scanner paragraph).
@@ -5788,7 +5794,7 @@ void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
     const SweepHighlightColumns span = sweep_highlight_columns(app, audio);
     sink.blended_rect(span.x0, static_cast<double>(area.y), span.x1,
                       static_cast<double>(area.y + area.h), hex(0xFFFFFF),
-                      app.device_config->sweep_highlight);
+                      kSweepHighlightPct);
 }
 
 // -- GuiPaintHandler::paint_hover_line -----------------------------------
@@ -6320,8 +6326,8 @@ namespace {
 // design, built in send AA): between every two neighbors (the left
 // cluster → the scale's trough, the trough → the position, the position →
 // the length, the length → the transport) stands render.h's
-// program_run_gap_px, the band's run gap (the `run_gap` tuning key's W
-// since 2026-11-07, 6 its default since send Z); the score viewer's two
+// program_run_gap_px, the band's run gap (kRunGapW, 6 W, Arc's toolbar
+// groups' since send Z); the score viewer's two
 // rows, laid
 // in the player's shape, read it alike (score_row_layout,
 // score_media_row_layout). A wider gap is taken from the scrub's trough,
@@ -6675,7 +6681,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // touching"): a run's keys are ONE LINKED GROUP, sharing one seam column
     // each (send Z, 2026-11-19; materials.h's key_link_pitch_px), as the
     // band's and the bottom row's keys; THE GROUP SPACE between its items is
-    // the run gap (program_run_gap_px, the `run_gap` tuning key, 6 W its default;
+    // the run gap (program_run_gap_px, kRunGapW, 6 W;
     // architect 2026-11-03, mock dec7b,
     // and the retrofit's number; the head above the word rows). The press
     // reads the rects the button walk publishes from this layout
@@ -6697,7 +6703,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // 2026-11-18 / 19, send Z's design, built in send AA; his "it touches",
     // RULINGS §8): every pair of neighbors — the left group's ring, the
     // scale's trough, the position, the length, the transport's ring — one
-    // run gap apart (the `run_gap` key, 6 W on the tablet).
+    // run gap apart (kRunGapW, 6 W).
     l.field_w   = time_label_w_px();
     l.field_gap = group;
     const int clock_w = l.field_w + l.field_gap + l.field_w;
@@ -7712,8 +7718,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    SEPARATORS RETIRED (architect 2026-10-02; Sound Recorder and
         //    mplay32 have none, and the roster's etched separators of
         //    2026-10-06 did not reach this row): the groups stand the run
-        //    gap of bare face apart (program_run_gap_px, the `run_gap`
-        //    tuning key, 6 W its default) — the left cluster → the trough,
+        //    gap of bare face apart (program_run_gap_px, kRunGapW, 6 W) —
+        //    the left cluster → the trough,
         //    the trough → the position, the position → the length, the
         //    length → the transport, a GTK box at 6 W spacing (architect
         //    2026-11-18 / 19, send Z's design, built in send AA). THE
@@ -8110,7 +8116,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     static_cast<double>(box.x) +
                         (static_cast<double>(box.w) - run->width_px) * 0.5,
                     line_box_baseline(wfont, static_cast<double>(box.y),
-                                      key_height_w()));
+                                      kKeyHeightW));
                 cairo_restore(cr);
             }
             ++i;
@@ -9014,7 +9020,7 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 //     box left behind where a clip missed it — so where the record misses
 //     the spared rows no pixel of the tooltip stands there, and the check
 //     owes it nothing there unless the step can carry the box in. Owner by
-//     owner (the tablet's rows at key_height 28, the box 68 rows on one line
+//     owner (the tablet's rows, the key 28 W tall, the box 68 rows on one line
 //     and 96 on two, the gap 2):
 //       - A PENDING SHOW (show_pending) HOLDS BOTH CHECKS: nothing of the
 //         box is painted yet, and where it lands is read at paint time off

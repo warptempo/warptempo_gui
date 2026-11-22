@@ -50,16 +50,12 @@ struct WaveformJob {
     // bars' rung and stretches them (p = b / q); the worker must not
     // re-derive it from live state.
     double    painter_spp      = 0.0;
-    // THE BARS' TWO OTHER INPUTS (architect 2026-11-14, sends G and H;
-    // render.h's waveform_bar_frames and waveform_fade_band), snapshots like
-    // the rest: the audio's WORKING COLUMN, the ladder's unit
-    // (GuiAudio::working_column, fixed for the audio's life), and THE FADE'S
-    // START in hundredths of a device px (the `waveform_fade_px` key's seat
-    // as the GUI thread read it — the settings commit moves that seat
-    // without draining a job, the scale's own hazard below), also a
-    // fingerprint field (WaveformCache::fp_fade_hundredths).
+    // THE BARS' OTHER INPUT (architect 2026-11-14, send G; render.h's
+    // waveform_bar_frames and waveform_fade_band), a snapshot like the rest:
+    // the audio's WORKING COLUMN, the ladder's unit
+    // (GuiAudio::working_column, fixed for the audio's life). (The fade's
+    // start is the program's constexpr, render.h's kWaveformFadeHundredths.)
     int64_t   working_column   = 0;
-    int       fade_hundredths = 0;
     int       area_w           = 0;
     int       area_h           = 0;
     // THE STEREO DIVIDER'S HEIGHT (waveform_divider_px(), render.h), a
@@ -206,7 +202,7 @@ private:
 // that many bars, and writes the geometry into `dest` beside the columns
 // (`dest.width` x `dest.height` stays the plate's device-px size) — and IN
 // THE FADE BAND (architect 2026-11-14, send H; waveform_fade_band, from the
-// same step, the working column and `fade_hundredths`) each band holds the
+// same step and the working column) each band holds the
 // fine rung's own uniform row beside the main one, unmixed (the two-picture
 // blend, architect 2026-11-15, send O), its geometry and the band's weight
 // riding `dest` with the transform. The inks ride the paint instead (the
@@ -251,7 +247,6 @@ void render_waveform_to_plate_columns(
     int64_t lattice_origin,
     double  painter_spp,
     int64_t working_column,
-    int     fade_hundredths,
     bool    magnified,
     const std::vector<WarpFrameMapSegment>* warp_frame_map_or_null,
     WaveformKeptBars* kept_or_null,

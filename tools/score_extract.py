@@ -335,7 +335,7 @@ DIFF_W, DIFF_H = 480, 270
 # (score_viewer.cpp's feed_decoder), the line the pair is checked against:
 #   ACROSS: the box stands on the panel's columns (well_columns, render.h: the canvas edge to edge since send Z,
 #   2026-11-19), x 0 .. 2303, and its interior, the flat pane, is the box's whole width: x 0, WIDTH 2304.
-#   DOWN (at the keys' defaults, key_height 28 W = 56 device px): the box (modal_box_rect) runs from the trim lane's
+#   DOWN (the key 28 W tall = 56 device px, render.h's kKeyHeightW): the box (modal_box_rect) runs from the trim lane's
 #   first row (top_trim_row_area) to the controls row's top (modal_controls_row_rect, the bottom icon row's lane).
 #   The band above the trim lane is the title bar's 28 W (56), the pad's 7 W (14), the key's 28 W (56) and the
 #   pad's 7 W again (14; the icon rows' pads symmetric since 2026-11-20, send EE), 140 rows; under the box, the

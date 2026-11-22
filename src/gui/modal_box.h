@@ -37,8 +37,8 @@
 //      exception (below); no frame, no ring, no shadow (paint_modal_box,
 //      paint_handler.cpp);
 //   2. directly under it THE CONTROLS ROW, THE BOTTOM ICON ROW'S OWN ROWS —
-//      the pad 7 W, the key (key_width wide and key_height tall,
-//      render.h's icon_case_w_px / icon_case_h_px), the pad 7 W
+//      the pad 7 W, the key (36 W wide and 28 W tall, render.h's
+//      icon_case_w_px / icon_case_h_px), the pad 7 W
 //      (strip_h_px) — on the body tone, its outermost BOXES 6 W INSIDE THE
 //      PANEL (render.h's kEdgeInsetW; materials.h's THE KEY). THE ROW IS
 //      THE PAGE'S THAT STANDS IN THE VIEW (architect 2026-11-19, his "i
@@ -57,8 +57,8 @@
 //      and drops its selection count; BLANK while a batch's progress stands,
 //      status_bar_text), covered by the on-screen keyboard under every
 //      editor (below).
-// At the tablet's 2304 x 1440, 200 % and the keys' defaults (key_width 36,
-// key_height 28; the 56-row title bar), the keyboard standing or not: the box's line
+// At the tablet's 2304 x 1440 and 200 % (the key 36 x 28 W; the 56-row
+// title bar), the keyboard standing or not: the box's line
 // rows 140–141 and 1308–1309, THE VIEW x 0..2303 and y 142..1307 (1166
 // rows); the controls row 1310–1393, its face rows 1324–1379, its first
 // face's columns 12–83 and its last 2220–2291; the status bar 1394–1439
@@ -99,7 +99,7 @@
 // keyboard term. Under a value sub-page THE BOX KEEPS ITS WHOLE VIEW, the
 // keyboard over the view's foot, the bottom icon row and the status bar,
 // and what the box lays cut at the keyboard's top line (paint_modal_dialog).
-// On the tablet at key_height 28: the view y 142..1307 (1166 rows), the
+// On the tablet: the view y 142..1307 (1166 rows), the
 // entry rows 166..221 — far above
 // the keyboard's top line at his tuning (osk_key_w 24, osk_key_h 35: the
 // keyboard 1048–1439, the view's visible part 142..1047), at the defaults

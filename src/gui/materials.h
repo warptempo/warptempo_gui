@@ -47,9 +47,9 @@
 // DESIGN §3, the approved pictures Z_01 / Z_02 and the mock kit's
 // linked_group the reference; G3 `button`, `.linked`; paint_linked_group,
 // paint_word_button and paint_entry below): every key of the band, the
-// bottom icon row and the controls rows — A BOX 36 x 28 W at the defaults
-// (the `key_width` x `key_height` tuning keys, render.h's case block; 72 x
-// 56 device px on the tablet at 200 %), BORDER INCLUDED ("the border is
+// bottom icon row and the controls rows — A BOX 36 x 28 W (render.h's
+// kKeyWidthW x kKeyHeightW, its case block; 72 x 56 device px on the
+// tablet at 200 %), BORDER INCLUDED ("the border is
 // clickable"), in A ONE-W `well_border` RING (Default 2A2A2A, ClipBorder;
 // arc_dark 2B2E39) WITH 3 W OUTER CORNERS (kKeyCornerW, the faces' 2 W
 // inside it), its face `key_face` (Default 363636, SurfaceBackground;
@@ -545,9 +545,8 @@ inline StampTone word_button_ink_tone(const FaceMix& m) {
 }
 
 // THE KEY'S LENGTHS (the head's THE KEY; render.h's case block owns the
-// box): THE BOX the `key_width` x `key_height` tuning keys (icon_case_w_px /
-// icon_case_h_px, 36 x 28 W at the defaults, 72 x 56 device px on the tablet
-// at 200 %), BORDER INCLUDED ("the border is clickable"); THE BORDER one W
+// box): THE BOX kKeyWidthW x kKeyHeightW (icon_case_w_px /
+// icon_case_h_px, 36 x 28 W, 72 x 56 device px on the tablet at 200 %), BORDER INCLUDED ("the border is clickable"); THE BORDER one W
 // (hairline_px, the line rule: 2 device px on the tablet, floored at one);
 // THE OUTER CORNER kKeyCornerW, 3 W (Arc's button border-radius, G3), 6
 // device px, floored at one; the faces' corners inside the border the outer

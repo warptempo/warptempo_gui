@@ -13,7 +13,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Twenty keys live here and nowhere else,
+// piece (architect 2026-08-27). Thirteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -140,62 +140,6 @@
 //                            crossfade is a recording's relationship to
 //                            itself, so a later sound may want another
 //                            value; the first-run value the defaults file's
-//   key_height=<px>          THE KEY'S HEIGHT (architect 2026-10-29, a tuning
-//                            key, "around 33"; the square key of 2026-11-02
-//                            reversed 2026-11-03, the retrofit: the key's
-//                            face key_width wide (below) and this key its
-//                            height, 28 W as constructed — 72 x 56 device
-//                            px on the tablet at 36 x 28): the program's
-//                            key's height IN W
-//                            (one W = 2 device px on the tablet at 200 %,
-//                            render.h's scaled_px, the rebase of
-//                            2026-11-05; render.h's icon_case_h_px), the
-//                            key's drawing a fixed 16 W box whatever the
-//                            height (paint_key_glyph), an integer in [10, 50] in
-//                            canonical spelling (parse_key_height below),
-//                            live at the settings editor's Enter, the window
-//                            re-laid-out at once
-//                            (GuiInputHandler::apply_key_height); A TUNING
-//                            KEY with a Settings row, REQUIRED like every
-//                            key while it stands, which settles into a
-//                            constexpr once he rules the number (render.h's
-//                            case block), its key, grammar and row going
-//                            then; the first-run value the defaults file's
-//   key_width=<w>            THE KEY'S FACE WIDTH (architect 2026-11-06,
-//                            session 78, a tuning key like key_height):
-//                            the program's key's face width IN W, 36 W as
-//                            constructed — 72 device px on the tablet at 200 %
-//                            (render.h's icon_case_w_px, the band's,
-//                            the bottom icon row's and every controls row's
-//                            walk reading it; the drawing a fixed 16 W box),
-//                            an
-//                            integer in [10, 50] in canonical spelling
-//                            (parse_key_width below), live at the
-//                            settings editor's Enter, the window re-laid-out
-//                            at once (GuiInputHandler::apply_key_width);
-//                            A TUNING KEY with a Settings row, REQUIRED
-//                            like every key while it stands, which
-//                            settles into a constexpr once he rules the
-//                            number (render.h's case block), its key,
-//                            grammar and row going then; the first-run
-//                            value the defaults file's
-//   run_gap=<w>              THE RUN GAP (architect 2026-11-07, session 87,
-//                            his "agree", a tuning key like key_width): the
-//                            ground between two runs' faces IN W, 6 W as
-//                            constructed — 12 device px on the tablet at 200 %
-//                            (render.h's program_run_gap_px, its one
-//                            reader: the band's runs, row 8's groups, the
-//                            render player's and every controls row's group
-//                            spaces), an integer in [2, 44] in canonical
-//                            spelling (parse_run_gap below), live at the
-//                            settings editor's Enter, the window re-laid-out
-//                            at once (GuiInputHandler::apply_run_gap);
-//                            A TUNING KEY with a Settings row, REQUIRED
-//                            like every key while it stands, which
-//                            settles into a constexpr once he rules the
-//                            number (render.h's run gap paragraph), its
-//                            key, grammar and row going then; the first-run
-//                            value the defaults file's
 //   osk_key_w=<px>          THE ON-SCREEN KEYBOARD'S KEY BOX (architect
 //   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
 //                            centered, like a phone … chiclets, taller than
@@ -228,85 +172,59 @@
 //                            table's constexpr once he rules the number
 //                            (kGuiFaceSizes), its key, grammar and row going
 //                            then; the first-run value the defaults file's
-//   lamp_hold_ms=<ms>        THE TWO LAMPS' HOLD (architect 2026-11-05
-//                            night, session 49, "a hold on both lamps,
-//                            lamp_hold_ms a tuning key with a Settings row
-//                            (default 100)"; render.h's THE TWO LAMPS): the
-//                            least time either lamp by the battery stays
-//                            lit after its last event, in whole
-//                            MILLISECONDS, an integer in [20, 1000] in
-//                            canonical spelling (parse_lamp_hold_ms below);
-//                            read LIVE by the tick at every refresh
-//                            (refresh_logo_lamps, main.cpp), so a commit at
-//                            the settings editor's Enter takes effect at the
-//                            next tick with no live act; A TUNING KEY with a
-//                            Settings row, REQUIRED like every key while it
-//                            stands, which settles into a constexpr once he
-//                            rules the number, its key, grammar and row
-//                            going then; the first-run value the defaults
-//                            file's
-//   tooltip_delay_ms=<ms>    THE TOOLTIP'S DELAY (architect 2026-11-07,
-//                            session 87, the always-show model: "maybe a tiny
-//                            delay before showing it"; AppState::
-//                            RedesignTooltip): the wait from every arrival on
-//                            a key's column to its box, and the bypass's
-//                            window after a standing box is left, in whole
-//                            MILLISECONDS, an integer in [0, 1000] in
-//                            canonical spelling (parse_tooltip_delay_ms
-//                            below); read LIVE by the wait's writer and the
-//                            tooltip's clock (note_tooltip_hover,
-//                            tick_tooltip), so a commit at the settings
-//                            editor's Enter takes effect at the next arrival
-//                            with no live act; A TUNING KEY with a Settings
-//                            row, REQUIRED like every key while it stands,
-//                            which settles into a constexpr once he rules
-//                            the number, its key, grammar and row going
-//                            then; the first-run value the defaults file's
-//   sweep_highlight=<pct>    THE SWEEP HIGHLIGHT'S ALPHA (architect
-//                            2026-11-12, session 114: "an alpha overlay
-//                            with a config key for tuning"; "using the
-//                            config key as the alpha blend that i can
-//                            tune"; paint_sweep_highlight): the whole
-//                            PERCENT of the way to white the canvas's
-//                            highlight blends the swept span while a TRIM
-//                            or ADD SEL sweep's pointer is down, an integer
-//                            in [0, 100] in canonical spelling
-//                            (parse_sweep_highlight below), 0 painting no
-//                            highlight; read LIVE by the painter at every
-//                            list build, so a commit at the settings
-//                            editor's Enter takes effect at the next sweep
-//                            with no live act; A TUNING KEY with a Settings
-//                            row, REQUIRED like every key while it stands,
-//                            which settles into a constexpr once he rules the
-//                            number, its key, grammar and row going then;
-//                            the first-run value the defaults file's
-//   waveform_fade_px=<px>    THE PLATE'S FADE START (architect 2026-11-14,
-//                            send H: the fade at the level switch, one
-//                            pass; render.h's THE PLATE'S BARS, THE FADE
-//                            BAND): F, THE BAR WIDTH IN DEVICE PX AT WHICH
-//                            THE FINER LEVEL STARTS TO APPEAR — the bars
-//                            change level at a fixed 2 px
-//                            (kWaveformSwitchPx), and from F px to there
-//                            the plate draws both levels' bars, the finer
-//                            level's picture mixed over the coarser's by a
-//                            weight of the zoom alone; 2 = OFF, a band of
-//                            no length, 1, THE FLOOR, the whole doubling
-//                            from one level's landing to the next's switch
-//                            (architect 2026-11-14, send K) — a decimal in
-//                            [1, 2] with at most two fractional digits in
-//                            canonical spelling
-//                            (parse_waveform_fade_px below: `2`, `1.5`,
-//                            `1` — the integer part, then the fraction
-//                            only when it is not zero, with no trailing
-//                            zero), held as HUNDREDTHS; read at launch to
-//                            seat the start before the first plate and
-//                            applied LIVE at the settings editor's Enter, the
-//                            plate re-rendered and the window repainted, no
-//                            card (GuiInputHandler::
-//                            apply_waveform_fade_px); A TUNING KEY with a
-//                            Settings row, REQUIRED like every key while it
-//                            stands; the first-run value the defaults
-//                            file's
+//   (key_height=<w>, THE KEY'S HEIGHT IN W, a tuning key with a Settings
+//                            row 2026-10-29 to 2026-11-22, RETIRED (architect
+//                            2026-11-22, send LL: "the regular key height and
+//                            key width are from Arc") at 28 W, Arc's icon
+//                            button's height, border included (send Z) —
+//                            render.h's kKeyHeightW; an old line is the
+//                            ordinary unknown-key hard fail, the sync
+//                            script's setup removing it on the tablet)
+//   (key_width=<w>, THE KEY'S FACE WIDTH IN W, a tuning key with a Settings
+//                            row 2026-11-06 to 2026-11-22, RETIRED with
+//                            key_height at 36 W, Arc's icon button's width,
+//                            border included (send Z) — render.h's
+//                            kKeyWidthW; an old line is the ordinary
+//                            unknown-key hard fail, the sync script's setup
+//                            removing it on the tablet)
+//   (run_gap=<w>, THE GROUND BETWEEN TWO RUNS IN W, a tuning key with a
+//                            Settings row 2026-11-07 to 2026-11-22, RETIRED
+//                            with the key's two sides at 6 W, Arc's gap
+//                            between toolbar groups (send Z) — render.h's
+//                            kRunGapW; an old line is the ordinary
+//                            unknown-key hard fail, the sync script's setup
+//                            removing it on the tablet)
+//   (lamp_hold_ms=<ms>, THE TWO LAMPS' HOLD, a tuning key with a Settings
+//                            row 2026-11-05 night to 2026-11-22, RETIRED
+//                            (architect 2026-11-22, send LL: "The lamp hold
+//                            can also be retired") at 85 ms, the tablet's own
+//                            tuned value — main.cpp's kLampHoldMs; an old
+//                            line is the ordinary unknown-key hard fail, the
+//                            sync script's setup removing it on the tablet)
+//   (tooltip_delay_ms=<ms>, THE TOOLTIP'S ONE DELAY, a tuning key with a
+//                            Settings row 2026-11-07 to 2026-11-22, RETIRED
+//                            (architect 2026-11-22, send LL: "just use their
+//                            numbers") for GTK's own three timeouts, 500 / 60
+//                            / 500 ms — render.h's kTooltipHoverTimeoutMs,
+//                            kTooltipBrowseTimeoutMs and
+//                            kTooltipBrowseDisableTimeoutMs; an old line is
+//                            the ordinary unknown-key hard fail, the sync
+//                            script's setup removing it on the tablet)
+//   (sweep_highlight=<pct>, THE SWEEP HIGHLIGHT'S BLEND TOWARD WHITE, a
+//                            tuning key with a Settings row 2026-11-12 to
+//                            2026-11-22, RETIRED (architect 2026-11-22, send
+//                            LL) at 3 %, Arc's own row-hover white —
+//                            paint_handler.cpp's kSweepHighlightPct; an old
+//                            line is the ordinary unknown-key hard fail, the
+//                            sync script's setup removing it on the tablet)
+//   (waveform_fade_px=<px>, THE PLATE'S FADE START, a tuning key with a
+//                            Settings row 2026-11-14 to 2026-11-22, RETIRED
+//                            (architect 2026-11-22, send LL: "one is the
+//                            ideal and it works well") at 1 device px, the
+//                            whole doubling — render.h's
+//                            kWaveformFadeHundredths; an old line is the
+//                            ordinary unknown-key hard fail, the sync
+//                            script's setup removing it on the tablet)
 //   (audio_level=<dB>, THE PROJECT VOICE'S LEVEL, everything the program
 //                            itself played scaled by one level under THE
 //                            LEVEL GRAMMAR, set by the band's AUDIO case, a
@@ -407,66 +325,13 @@
 //                            flat look, materials.h); an old `text_shadow=` line is
 //                            the ordinary unknown-key hard fail)
 //
-// THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30;
-// the tuning phases' keys stood at the end from 2026-09-23 until the last of
-// them left 2026-09-27, below; `theme` APPENDED after last_project,
-// 2026-10-03, the colour keys that stood after it for a day gone, below;
-// `palette` APPENDED after `theme` 2026-10-07, the program's colors' own
-// file type; `theme` gone 2026-10-08, below; `scheme` placed before `palette`
-// 2026-10-08 ~18:15, the chrome's colors before the program's; `icons` and
-// `font` stood 2026-10-09 to 2026-10-12;
-// `scheme` (`caption` since 2026-10-13) gone and `palette` (`chrome` since
-// 2026-10-13) renamed `waveform` in its place 2026-10-21;
-// three tuning keys APPENDED at the end 2026-10-21, a tuning phase's
-// keys at the end as the 2026-09 phases' stood (`text_shadow` gone
-// 2026-10-22, `bevel_light` and `bevel_dark` 2026-10-23); `strip_pad`
-// appended 2026-10-22 and gone 2026-10-23, the LED glow's appended
-// 2026-10-23 and gone 2026-10-26, the cues' tuning keys after it 2026-10-26 and gone
-// that day — the
-// label's three in the morning, settled at 26, 14 and on, then four (the
-// triangle's rows and antialiasing, the label's size and gap past the
-// triangle) settled ~13:05 at 8 rows authored in the tablet's device px, the staircase, 22
-// and a gap of 8 (render.h's cue_triangle_rows and cue_label_lead_px,
-// cool_edit_paint.h's THE CUE'S CHIP, gui_font.h's Label size since 2026-11-01 night,
-// the gap 12 since 2026-11-02, the rows 9, the size 24 and the gap 13 on
-// 2026-11-03, today's numbers those owners'; an old line is the
-// ordinary unknown-key hard fail) — the tuning keys keeping the end; `true_colors` placed after `waveform` 2026-10-21, the two display
-// keys together; the level APPENDED after the permanent keys 2026-10-28,
-// and the crossfade after it — the two fade tuning keys after it
-// for part of that day, gone the same day; the two renamed `noise_level` and
-// `noise_crossfade_ms` the same day and `noise` placed before them, so the
-// noise's three follow `true_colors` (`role` stood between them 2026-10-10
-// to 2026-10-30, the head's list); the crossfade made `noise_crossfade_s`, in seconds and permanent,
-// that night, in its place at the end; the tuning key `key_height`
-// APPENDED after it 2026-10-29, the tuning keys keeping the end, and the
-// keyboard's two, `osk_key_w` and `osk_key_h`, after it the same
-// evening, and the keyboard's cap size `osk_font_px` after them that
-// night; the plate's grow `waveform_grow` placed after `true_colors`
-// 2026-10-31, the display keys' end, a permanent key before the noise's
-// three; the project voice's level placed before the noise's three
-// 2026-10-31 night and gone 2026-11-11 with the AUDIO case;
-// `waveform_column_px` appended at the end and gone within
-// 2026-11-01, `waveform` gone 2026-11-01, `true_colors` after
-// `last_project` since; `theme` placed after `true_colors` 2026-11-05, the
-// display keys together, and retired 2026-11-21, send GG (one look,
-// Arc-Dark); the noise's
-// attenuation `noise_attenuation_level` placed after `noise_level`
-// 2026-11-05 night, the noise's four — folder, level, attenuation,
-// crossfade; the lamps' hold `lamp_hold_ms` APPENDED after `osk_font_px`
-// the same night, the tuning keys keeping the end; the key's face width
-// `key_width` placed after `key_height` 2026-11-06, the key's two sides
-// together; the run gap `run_gap` placed after `key_width` 2026-11-07, the
-// band's lengths together; the tooltip's delay `tooltip_delay_ms` APPENDED
-// after `lamp_hold_ms` the same day, the tuning keys keeping the end, and
-// the tooltip's gap `tooltip_gap` appended after it in session 90 and gone
-// in session 91, settled at 1 W; the sweep highlight's alpha
-// `sweep_highlight` APPENDED after `tooltip_delay_ms` 2026-11-12, the
-// tuning keys keeping the end; the plate's fade start `waveform_fade_px`
-// APPENDED after it 2026-11-14, the tuning keys keeping the end (the key
-// standing between them from 2026-11-13 retired 2026-11-21, send GG); the icon set `icons`
-// appended after `waveform_fade_px` 2026-11-17 and retired 2026-11-21, send
-// GG (one set, Papirus), `waveform_fade_px` the file's end since);
-// the list above is this file's telling of it and
+// THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30):
+// the scale and the three of the projects first (gui_scale, projects_repo,
+// projects_path, last_project), then the display keys (`true_colors`,
+// `waveform_grow`), then the noise's four — folder, level, attenuation,
+// crossfade — and the tuning keys at the end, where the tuning phases' keys
+// have always stood (`osk_key_w`, `osk_key_h`, `osk_font_px`); the order's
+// succession is git's. The list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
 // WHY IT EXISTS. `gui_scale` was a `.settings` key until 2026-08-27, which
@@ -609,7 +474,7 @@
 // (architect 2026-11-08, session 95: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all twenty lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all thirteen lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -629,7 +494,7 @@
 // program-written — the first run stamps it from the defaults file and
 // every later commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the
-// twenty keys and each at most once, EVERY KEY REQUIRED (architect
+// thirteen keys and each at most once, EVERY KEY REQUIRED (architect
 // 2026-10-12, deferred, his "yes" 2026-10-14: "if one of these lines is not
 // in place, it means something's wrong with the config or the setup" — the
 // writer emits every line and the defaults file spells every key, so an absent
@@ -661,17 +526,9 @@
 // EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
 // SETTINGS PAGE's row (settings_editor.h) — its value list, or the line
 // editor holding the value alone (architect 2026-11-19, send AA) — for
-// `gui_scale`, `projects_repo`, `projects_path`,
-// `true_colors`, since 2026-10-31 `waveform_grow`,
-// since 2026-10-28 `noise`, since 2026-11-05 night
-// `noise_attenuation_level`, `noise_crossfade_s` and since 2026-10-29 the
-// tuning keys `key_height`, `osk_key_w` and `osk_key_h` and that night
-// `osk_font_px`, since 2026-11-05 night the tuning key `lamp_hold_ms`, and
-// since 2026-11-06 the tuning key `key_width`, and since 2026-11-07 the
-// tuning keys `run_gap` and `tooltip_delay_ms`, and since 2026-11-12 the
-// tuning key `sweep_highlight`, and since 2026-11-14 the tuning key
-// `waveform_fade_px`,
-// among them
+// `gui_scale`, `projects_repo`, `projects_path`, `true_colors`,
+// `waveform_grow`, `noise`, `noise_attenuation_level`, `noise_crossfade_s`
+// and the tuning keys `osk_key_w`, `osk_key_h` and `osk_font_px`
 // (kSettingsEditorKeys) — Tab recalling a key's current value and
 // completing the path key's folders, each committed through this file's
 // writer under the key's own grammar below. THE LEVEL,
@@ -732,16 +589,6 @@ struct DeviceConfig {
     double      noise_level             = -std::numeric_limits<double>::infinity();
     double      noise_attenuation_level = -9.0;
     int         noise_crossfade_s       = 4;
-    // THE KEY'S HEIGHT in W (2026-10-29, the head's list; a tuning key):
-    // required; the construction state is 28 (kKeyHeightDefaultW below).
-    int         key_height        = 28;
-    // THE KEY'S FACE WIDTH in W (2026-11-06, the head's list; a tuning
-    // key): required; the construction state is 36 (kKeyWidthDefaultW
-    // below).
-    int         key_width         = 36;
-    // THE RUN GAP in W (2026-11-07, the head's list; a tuning key):
-    // required; the construction state is 6 (kRunGapDefaultW below).
-    int         run_gap           = 6;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (2026-10-29, the head's list;
     // two tuning keys): required; the construction state is 24 x 30
     // (kOskKeyWDefaultW, kOskKeyHDefaultW below).
@@ -751,19 +598,6 @@ struct DeviceConfig {
     // head's list; a tuning key): required; the construction state is 12
     // (kOskFontPxDefaultW below).
     int         osk_font_px       = 12;
-    // THE TWO LAMPS' HOLD in ms (2026-11-05 night, the head's list; a tuning
-    // key): required; the construction state is 100.
-    int         lamp_hold_ms      = 100;
-    // THE TOOLTIP'S DELAY in ms (2026-11-07, the head's list; a tuning key):
-    // required; the construction state is 100.
-    int         tooltip_delay_ms  = 100;
-    // THE SWEEP HIGHLIGHT'S ALPHA in whole percent (2026-11-12, the head's
-    // list; a tuning key): required; the construction state is 10.
-    int         sweep_highlight   = 10;
-    // THE PLATE'S FADE START in hundredths of a device px (2026-11-14, the
-    // head's list; a tuning key): required; the construction state is
-    // 1 px (kWaveformFadeDefaultHundredths below).
-    int         waveform_fade_hundredths = 100;
 };
 
 // THE PROJECTS REPOSITORY AS CONSTRUCTED — AppState's `projects_repo`
@@ -817,9 +651,8 @@ inline constexpr const char* kDefaultProjectsRepo =
 // right-anchored run covers the runs to its left (the overflow rule at
 // kIconRowViewPairs, paint_handler.cpp). Where that is — the window widths
 // and the scales the tablet's 2304-px panel holds the row whole at, the
-// key's width (the `key_width` tuning key) and the run gap (the `run_gap`
-// tuning key, 2026-11-07) moving it and the key's height none of
-// it since 2026-11-03 — is THE FIT at paint_icon_row's width math (paint_handler.cpp),
+// key's width (render.h's kKeyWidthW) and the run gap (kRunGapW) moving it
+// and the key's height none of it — is THE FIT at paint_icon_row's width math (paint_handler.cpp),
 // its one statement. The
 // redesign carries no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
@@ -1066,102 +899,6 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
     return n;
 }
 
-// THE key_height GRAMMAR (architect 2026-10-29) — an integer in [10, 50] W
-// in canonical spelling (one W = 2 device px on the tablet; the rebase of
-// 2026-11-05 halved the 2026-11-04 bracket of [20, 100] device px), the one
-// owner the reader, the writer, the settings editor's commit and its recall
-// read (format_key_height, parse_key_height). The range brackets the
-// 2026-10-29 mocks' series round his "around 33" device px with room both
-// ways. kKeyHeightDefaultW IS CONSTRUCTION STATE ALONE, render.cpp's seat's
-// initializer, which gui_main's startup seeding overwrites before the first
-// layout; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES
-// above, 2026-11-09). Its 28 W, 56 device px, is ARC'S ICON BUTTON'S
-// HEIGHT (architect 2026-11-18 / 2026-11-19, send Z: the key 36 x 28 W,
-// border included; DESIGN §0). The settings page opens the LINE EDITOR on it, not a
-// value list (41 values is no short domain, kSettingsValueListKeys' rule).
-// A TUNING KEY: when he rules the number, the key, these functions
-// and its Settings row go, and the value becomes a constexpr behind
-// render.h's icon_case_h_px.
-inline constexpr int kKeyHeightMinW     = 10;
-inline constexpr int kKeyHeightMaxW     = 50;
-inline constexpr int kKeyHeightDefaultW = 28;
-inline constexpr const char* kKeyHeightGrammarReason =
-    "must be an integer in [10, 50] in canonical spelling";
-std::string format_key_height(int px);
-inline std::optional<int> parse_key_height(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kKeyHeightMinW || *n > kKeyHeightMaxW)
-        return std::nullopt;
-    return n;
-}
-
-// THE key_width GRAMMAR (architect 2026-11-06, session 78: the key's face
-// width a tuning key like key_height until he rules the number) — an
-// integer in [10, 50] W in canonical spelling, key_height's own range (the
-// key's two sides one bracket, symmetry), the one owner the reader, the
-// writer, the settings editor's commit and its recall read
-// (format_key_width, parse_key_width). kKeyWidthDefaultW IS CONSTRUCTION
-// STATE ALONE, render.cpp's seat's initializer, overwritten by gui_main's
-// startup seeding before the first layout; THE FIRST-RUN VALUE IS THE
-// DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 36 W, 72
-// device px on the tablet at 200 %, is ARC'S ICON BUTTON'S WIDTH, border
-// included (architect 2026-11-18, send Z: "about 72 device pixel width").
-// The width alone moves; the drawing is a fixed 16 W box (paint_key_glyph).
-// A width the band cannot hold brings its overflow rule — the left runs
-// clipped short of the right run, the third run's keys gone from its tail
-// (THE FIT at paint_icon_row's width math, paint_handler.cpp). The settings
-// page opens
-// the LINE EDITOR on it, not a value list (41 values is no short domain,
-// kSettingsValueListKeys' rule). A TUNING KEY: when he rules the number,
-// the key, these functions and its Settings row go, and the value becomes
-// a constexpr behind render.h's icon_case_w_px.
-inline constexpr int kKeyWidthMinW     = 10;
-inline constexpr int kKeyWidthMaxW     = 50;
-inline constexpr int kKeyWidthDefaultW = 36;
-inline constexpr const char* kKeyWidthGrammarReason =
-    "must be an integer in [10, 50] in canonical spelling";
-std::string format_key_width(int w);
-inline std::optional<int> parse_key_width(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kKeyWidthMinW || *n > kKeyWidthMaxW)
-        return std::nullopt;
-    return n;
-}
-
-// THE run_gap GRAMMAR (architect 2026-11-07, session 87, his "agree": the
-// ground between two runs a tuning key like key_width until he rules the
-// number) — an integer in [2, 44] W in canonical spelling, the one owner the
-// reader, the writer, the settings editor's commit and its recall read
-// (format_run_gap, parse_run_gap). THE RANGE IS THE PLANNER'S PICK: at least
-// two key gaps (kKeyGapW, render.h — a run gap no narrower than two faces'
-// ground, so two runs always read apart from a group's own gap), at most
-// twice 22 W. kRunGapDefaultW IS CONSTRUCTION STATE ALONE, render.cpp's
-// seat's initializer, overwritten by gui_main's startup seeding before the
-// first layout; THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN
-// VALUES above, 2026-11-09). Its 6 W, 12 device px on the tablet at 200 %,
-// is ARC'S GAP BETWEEN TOOLBAR GROUPS (send Z, DESIGN §3: the groups 6 W
-// apart, the outermost faces 6 W inside the panel). One key for every
-// reader (render.h's program_run_gap_px): the band's runs, the bottom icon
-// row's groups, the render player's and every controls row's group spaces
-// (THE FIT at paint_icon_row's width math, paint_handler.cpp). The settings
-// page opens the LINE EDITOR on it, not a
-// value list (43 values is no short domain, kSettingsValueListKeys' rule). A
-// TUNING KEY: when he rules the number, the key, these functions and its
-// Settings row go, and the value becomes a constexpr behind render.h's
-// program_run_gap_px.
-inline constexpr int kRunGapMinW     = 2;
-inline constexpr int kRunGapMaxW     = 44;
-inline constexpr int kRunGapDefaultW = 6;
-inline constexpr const char* kRunGapGrammarReason =
-    "must be an integer in [2, 44] in canonical spelling";
-std::string format_run_gap(int w);
-inline std::optional<int> parse_run_gap(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kRunGapMinW || *n > kRunGapMaxW)
-        return std::nullopt;
-    return n;
-}
-
 // THE osk_key_w AND osk_key_h GRAMMAR (architect 2026-10-29), ONE FOR THE
 // TWO — an integer in [12, 80] W in canonical spelling (the rebase of
 // 2026-11-05 halved the [24, 160] device px of 2026-10-29), the one owner
@@ -1231,90 +968,6 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
     return n;
 }
 
-// THE lamp_hold_ms GRAMMAR (architect 2026-11-05 night, session 49) — an
-// integer of whole MILLISECONDS in [20, 1000] in canonical spelling ("100",
-// never "0100" or "+100": the int tuning keys' grammar, key_height's), the
-// one owner the reader, the writer, the settings editor's commit and its
-// recall read (format_lamp_hold_ms, parse_lamp_hold_ms). THE FIRST-RUN
-// VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above; 100 ms, his
-// number of 2026-11-05 night, the template's until 2026-11-09: about four
-// and a half frames at the beat's 22.2 ms (kFrameBeat, platform_android.cpp),
-// the tick being the lamps' clock, refresh_logo_lamps, main.cpp; render.h's
-// THE TWO LAMPS). The range: 20 ms is under one beat, so a lamp lit for it
-// may stand between two due vsyncs and go unpainted, as a one-tick lamp
-// may; 1000 ms, a second, is past any meter's peak hold. The
-// settings page opens the LINE EDITOR on it, not a value list (981 values is
-// no short domain, kSettingsValueListKeys' rule). A TUNING KEY: when he
-// rules the number, the key, these functions and its Settings row go, and
-// the value becomes a constexpr beside refresh_logo_lamps.
-inline constexpr int kLampHoldMinMs = 20;
-inline constexpr int kLampHoldMaxMs = 1000;
-inline constexpr const char* kLampHoldGrammarReason =
-    "must be an integer in [20, 1000] in canonical spelling";
-std::string format_lamp_hold_ms(int ms);
-inline std::optional<int> parse_lamp_hold_ms(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kLampHoldMinMs || *n > kLampHoldMaxMs)
-        return std::nullopt;
-    return n;
-}
-
-// THE tooltip_delay_ms GRAMMAR (architect 2026-11-07, session 87) — an
-// integer of whole MILLISECONDS in [0, 1000] in canonical spelling ("100",
-// never "0100" or "+100": the int tuning keys' grammar, lamp_hold_ms's), the
-// one owner the reader, the writer, the settings editor's commit and its
-// recall read (format_tooltip_delay_ms, parse_tooltip_delay_ms). THE
-// FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above; 100
-// ms, the template's until 2026-11-09, his "maybe a tiny delay before
-// showing it": about four and a half frames at the beat's 22.2 ms
-// (kFrameBeat, platform_android.cpp), the run loop's tick being the
-// tooltip's clock, tick_tooltip; the model at
-// AppState::RedesignTooltip). The range: 0 is no
-// wait at all (the box at the arrival's next tick); 1000 ms, a second, twice
-// comctl32's old initial wait. The settings page opens the LINE EDITOR on it,
-// not a value list (1001 values is no short domain, kSettingsValueListKeys'
-// rule). A TUNING KEY: when he rules the number, the key, these functions
-// and its Settings row go, and the value becomes a constexpr at render.h's
-// tooltip block.
-inline constexpr int kTooltipDelayMinMs = 0;
-inline constexpr int kTooltipDelayMaxMs = 1000;
-inline constexpr const char* kTooltipDelayGrammarReason =
-    "must be an integer in [0, 1000] in canonical spelling";
-std::string format_tooltip_delay_ms(int ms);
-inline std::optional<int> parse_tooltip_delay_ms(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kTooltipDelayMinMs || *n > kTooltipDelayMaxMs)
-        return std::nullopt;
-    return n;
-}
-
-// THE sweep_highlight GRAMMAR (architect 2026-11-12, session 114) — an
-// integer of whole PERCENT in [0, 100] in canonical spelling ("10", never
-// "010" or "+10": the int tuning keys' grammar, lamp_hold_ms's), the one
-// owner the reader, the writer, the settings editor's commit and its recall
-// read (format_sweep_highlight, parse_sweep_highlight). The number is the
-// tint's alpha as it is (GuiCanvasSink::blended_rect, word2): the highlight
-// lays G · (1 − p / 100) + FFFFFF · p / 100 on every canvas pixel G inside
-// the swept span, and the pixel's covered share of p on one the span's real
-// edge crosses (architect 2026-11-14, send J). THE FIRST-RUN VALUE IS THE DEFAULTS FILE'S (THE FIRST-RUN VALUES
-// above; 10, the planner's first number for him to tune). The range: 0
-// paints no highlight (the sink appends no record); 100 paints the span
-// white. The settings page opens the LINE EDITOR on it, not a value list
-// (101 values is no short domain, kSettingsValueListKeys' rule). A TUNING
-// KEY: when he rules the number, the key, these functions and its Settings
-// row go, and the value becomes a constexpr at paint_sweep_highlight.
-inline constexpr int kSweepHighlightMinPct = 0;
-inline constexpr int kSweepHighlightMaxPct = 100;
-inline constexpr const char* kSweepHighlightGrammarReason =
-    "must be an integer in [0, 100] in canonical spelling";
-std::string format_sweep_highlight(int percent);
-inline std::optional<int> parse_sweep_highlight(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kSweepHighlightMinPct || *n > kSweepHighlightMaxPct)
-        return std::nullopt;
-    return n;
-}
-
 // THE waveform_grow GRAMMAR (architect 2026-10-31; the lattice quarters
 // since that afternoon's 4x ruling, render.h's kWaveformSubcells) — a
 // multiple of 0.25 DEVICE PX in [0, 2] in canonical spelling, held as
@@ -1351,57 +1004,6 @@ std::string format_waveform_grow(int quarters);
 inline std::optional<int> parse_waveform_grow(std::string_view v) {
     for (int n = kWaveformGrowMinQuarters; n <= kWaveformGrowMaxQuarters; ++n)
         if (format_waveform_grow(n) == v) return n;
-    return std::nullopt;
-}
-
-// THE waveform_fade_px GRAMMAR (architect 2026-11-14, send H, his ruling on
-// the fade at the level switch: the bar width in DEVICE px at which the
-// finer level starts to appear, 2 = off; THE FLOOR AND THE DEFAULT 1, THE
-// WHOLE DOUBLING (architect 2026-11-14, send K: "Wouldn't it be better to
-// have a continuous fade motion"); the rule it feeds at render.h's THE
-// PLATE'S BARS, THE FADE BAND) — a decimal of DEVICE PX in [1, 2] with at
-// most two fractional digits in canonical spelling, held as HUNDREDTHS in
-// [100, 200], the one owner the reader, the writer, the settings editor's
-// commit and its recall read
-// (format_waveform_fade_px, parse_waveform_fade_px). THE CANONICAL
-// SPELLING is the grow's (parse_waveform_grow above), the shortest exact
-// decimal: the integer part, then `.` and the fraction only when it is not
-// zero, with no trailing zero — `1`, `1.5`, `1.57`, `2` — and the reader
-// admits exactly the hundred and one strings the writer spells (it formats
-// each hundredth and compares), so `1.0`, `2.0`, `1.50`, `1.755` and
-// anything out of range are the launch's hard fail, as every other key's
-// off-spelling is.
-// THE RANGE: the number is F, the bar width at which the fade band begins —
-// the plate's bars change level at a fixed 2 device px (render.h's
-// kWaveformSwitchPx), and from F to there the plate draws the finer level's
-// bars too, half as wide, its picture mixed over the coarser's. THE TOP,
-// 2, IS OFF: the band ends at the switch width, so a start there is a band
-// of no length (render.cpp's static_assert binds this top to the switch
-// width). THE FLOOR, 1, IS THE WHOLE DOUBLING: a main rung's bars are a
-// px or more wide (the switch at 2 px halves them there), so a start under
-// 1 would name a bar width no rung draws; at 1 the band runs from the
-// landing on one level to the switch to the next. The band's fine bars
-// then stand over F / 2 device px apart, 1/2 px or more, the least pitch
-// the plate shader's bounds for the band's fine row (rung_px) stand on
-// (gl_canvas.cpp's static_assert).
-// kWaveformFadeDefaultHundredths, 1 px, IS CONSTRUCTION STATE ALONE —
-// render.cpp's seat's initializer, overwritten by gui_main's startup
-// seeding before the window exists; THE FIRST-RUN VALUE IS THE DEFAULTS
-// FILE'S (THE FIRST-RUN VALUES above). The settings page opens the LINE
-// EDITOR on it, not a value list (101 values is no short domain,
-// kSettingsValueListKeys' rule). A TUNING KEY.
-// (`waveform_switch_px` is retired, an unknown key: see kWaveformSwitchPx.)
-inline constexpr int kWaveformFadeMinHundredths     = 100;
-inline constexpr int kWaveformFadeMaxHundredths     = 200;
-inline constexpr int kWaveformFadeDefaultHundredths = 100;
-inline constexpr const char* kWaveformFadeGrammarReason =
-    "must be a decimal in [1, 2] with at most two fractional digits in "
-    "canonical spelling (1, 1.5, 2)";
-std::string format_waveform_fade_px(int hundredths);
-inline std::optional<int> parse_waveform_fade_px(std::string_view v) {
-    for (int n = kWaveformFadeMinHundredths;
-         n <= kWaveformFadeMaxHundredths; ++n)
-        if (format_waveform_fade_px(n) == v) return n;
     return std::nullopt;
 }
 
@@ -1560,42 +1162,16 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // (re-grepped 2026-10-21):
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — seventeen keys,
-// `projects_repo=`, `projects_path=`, since 2026-10-21
-// `true_colors=`, since 2026-10-31 `waveform_grow=` (its live act
-// GuiInputHandler::apply_waveform_grow), since 2026-10-28 `noise=` (its
-// GuiNoise::change_folder), since 2026-11-05 night `noise_attenuation_level=`
-// (its GuiNoise::set_attenuation_db) and `noise_crossfade_s=`, and since 2026-10-29 the tuning
-// keys `key_height=` (its live act GuiInputHandler::apply_key_height) and
+// which serves its ONE device-key body — ten keys, `projects_repo=`,
+// `projects_path=`, `true_colors=`, `waveform_grow=` (its live act
+// GuiInputHandler::apply_waveform_grow), `noise=` (its
+// GuiNoise::change_folder), `noise_attenuation_level=` (its
+// GuiNoise::set_attenuation_db), `noise_crossfade_s=`, and the tuning keys
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
-// and that night `osk_font_px=` (its GuiInputHandler::apply_osk_font_px),
-// since 2026-11-05 night `lamp_hold_ms=` (no live act: the tick reads
-// the live struct, refresh_logo_lamps), since 2026-11-06 `key_width=`
-// (its live act GuiInputHandler::apply_key_width), and since 2026-11-07
-// `run_gap=` (its live act GuiInputHandler::apply_run_gap) and
-// `tooltip_delay_ms=` (no live act: the tooltip's writer and clock read the
-// live struct, note_tooltip_hover / tick_tooltip), and since 2026-11-12
-// `sweep_highlight=` (no live act: the painter reads the live struct at
-// every list build, paint_sweep_highlight; no sweep stands under the
-// Settings page, so a commit owes no damage), and since 2026-11-14
-// `waveform_fade_px=` (its
-// live act GuiInputHandler::apply_waveform_fade_px) —
-// and the band's level case's end (GuiInputHandler::settle_level_case,
-// since 2026-11-05: `noise_level=`, its live act GuiNoise::set_level_db,
-// the typed line that wrote it too until 2026-11-05 night gone with its
-// row; the project voice's level beside it until 2026-11-11)
-// (the
-// noise's latter two `rain_level=` and
-// `rain_crossfade_ms=` earlier that day and the crossfade
-// `noise_crossfade_ms=` until that night, `rain_fade_in_ms=` and
-// `rain_fade_out_ms=` beside them; `bevel_light=` and `bevel_dark=`
-// 2026-10-21 to
-// 2026-10-23, `text_shadow=` until 2026-10-22, `strip_pad=` 2026-10-22 to
-// 2026-10-23, the LED glow's 2026-10-23 to 2026-10-26, `waveform=` until
-// 2026-11-01, `waveform_column_px=` for part of 2026-11-01, `tooltip_gap=`
-// for session 90 of 2026-11-07)
-// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp;
-// the path arm joined 2026-09-02); and
+// and `osk_font_px=` (its GuiInputHandler::apply_osk_font_px)
+// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp) — and the
+// band's level case's end (GuiInputHandler::settle_level_case:
+// `noise_level=`, its live act GuiNoise::set_level_db); and
 // gui_main's `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
 // each gates the no-op ahead of the write — so a file rewrite means a value

@@ -175,8 +175,7 @@ struct WaveformCache {
     // compare in waveform_cache.cpp walks exactly these, and the dispatch,
     // completion-swap and synchronous-publish sites copy exactly these):
     // vp_start, the LATTICE ORIGIN (fp_lattice_origin below, 2026-10-31),
-    // vp_end, area_w, area_h, divider_px, THE FADE'S START
-    // (fp_fade_hundredths below, 2026-11-14), the plate's two
+    // vp_end, area_w, area_h, divider_px, the plate's two
     // INKS, the GAIN field, target, and the warp_frame_map hash. Every one is
     // an input the plate's PIXELS depend on (the inks through its
     // publication), and each is keyed BY FIELD rather than through whatever else happens
@@ -194,8 +193,8 @@ struct WaveformCache {
     // mirror) — never the bars. The bars' own geometry (the first stored
     // bar, their width and count, the draw transform, the fade band's
     // weight and there the fine row's own range and transform) is a pure
-    // function of those fields, the painter's step, the working column and
-    // the fade's start (render.h's waveform_bar_geometry and
+    // function of those fields, the painter's step and the working column
+    // (render.h's waveform_bar_geometry and
     // waveform_fade_band), so it is no field: the producer derives it and
     // it rides the slot with the columns it describes
     // (GuiPlateColumns::first_bar and its neighbors), swapped and published
@@ -226,15 +225,6 @@ struct WaveformCache {
     // fingerprint field exists iff it is a render input (the type rule's
     // shape).
     int       fp_divider_px  = -1;
-    // THE FADE'S START the live plate was rendered under, in hundredths
-    // of a device px (the `waveform_fade_px` key's seat,
-    // waveform_fade_hundredths, render.h; architect 2026-11-14, send H):
-    // whether the plate stands in the fade band, and there its fine row and
-    // the weight, are a function of it (render.h's
-    // waveform_fade_band), so a commit of the key re-renders the plate BY
-    // FIELD, keyed directly like the divider's height. 0 before the first
-    // plate, a value the key's grammar never spells.
-    int       fp_fade_hundredths = 0;
     // THE TWO INKS the live plate is published with (the `waveform_ink` and
     // `waveform_core` roles, waveform_plate_inks, render.h): the sink
     // writes their words (GuiCanvasSink::plate), so a change that moves
@@ -284,7 +274,6 @@ struct WaveformCache {
     int       pending_fp_area_w      = 0;
     int       pending_fp_area_h      = 0;
     int       pending_fp_divider_px  = -1;
-    int       pending_fp_fade_hundredths = 0;
     WaveformPlateInks pending_fp_inks{};
     uint64_t  pending_fp_gain_hash = 0;
     bool      pending_fp_target      = false;
@@ -309,7 +298,6 @@ struct WaveformCache {
     int       supersede_area_w      = 0;
     int       supersede_area_h      = 0;
     int       supersede_divider_px  = 0;   // GUI-captured divider height
-    int       supersede_fade_hundredths = 0;  // GUI-captured fade start
     WaveformPlateInks supersede_inks{};    // GUI-captured plate inks
     uint64_t  supersede_gain_hash   = 0;   // GUI-captured gain field
     bool      supersede_target      = false;
@@ -385,7 +373,7 @@ struct WaveformCache {
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
 // foot) — the ruler lane, the marker lane and the foot line, 34 + 32 + 2 =
 // 68 device rows on the tablet at 200 % where the whole strip from row 0 is
-// 236 at key_height 28 (the icon rows' 7 W pads, architect 2026-11-20).
+// 236 (the key 28 W tall, the icon rows' 7 W pads, architect 2026-11-20).
 // Every cue pixel is
 // inside the marker lane's rows BY THE PAINTER'S OWN CLIP, not by a bound on
 // the font: paint_cues (render.cpp) paints every label's text and strike
@@ -405,8 +393,8 @@ struct WaveformCache {
 // (paint_flag_annotations) lands the surface at (top_strip.x, origin_y),
 // clipped to the top strip — AND ONLY WHILE ITS BAND IS THE LIVE BAND
 // (2026-10-14): origin_y and height equal to the ruler lane's live top and
-// the rows from it through the strip's bottom. A gui_scale or key_height
-// commit moves the band before the next tick rebuilds the surface, and a
+// the rows from it through the strip's bottom. A gui_scale commit moves
+// the band before the next tick rebuilds the surface, and a
 // surface blitted at its old origin would stamp the old layout's cues into the toolbar band,
 // above every lane the rebuild's damage repaints; the reasoning is at the
 // blit.
@@ -455,10 +443,9 @@ struct FlagCache {
     // every rebuild with the surface it describes; read by the blit, which
     // refuses a surface whose origin or height is not the live band's. KEYED
     // BY ITS OWN FIELD, fp_origin_y below: the rows above the ruler are the
-    // scale's lengths AND THE KEY CASE'S HEIGHT (the `key_height` tuning key,
-    // architect 2026-10-29, live through GuiInputHandler::apply_key_height),
-    // which moves the ruler's top while the band's height and every other
-    // field here stand.
+    // scale's lengths (the key's box among them, render.h's kKeyHeightW), so
+    // the ruler's top is keyed directly rather than through whatever moves
+    // it.
     int              origin_y = 0;
 
     int64_t   fp_vp_start            = 0;
@@ -482,8 +469,8 @@ struct FlagCache {
     // top_ruler_row_area's y), keyed BY FIELD: every painter works in client
     // coordinates through the -origin_y translation, and the hit rects and
     // stems this rebuild stages are client rows, so a moved origin is a new
-    // surface even where the band's width and height stand — a key_height
-    // commit moves it so (architect 2026-10-29; origin_y's comment).
+    // surface even where the band's width and height stand (origin_y's
+    // comment).
     int       fp_origin_y            = 0;
     bool      fp_target              = false;
     uint64_t  fp_warp_frame_map_hash        = 0;
@@ -800,9 +787,8 @@ struct GuiPaintHandler {
     //     this surface holds strip rows, not the waveform): fp_area_w the
     //     window's width (top_strip_area's), fp_area_h the band's height, the
     //     ruler lane's top through the top strip's bottom (2026-10-13,
-    //     FlagCache's head), and fp_origin_y that top's client row, which the
-    //     key case's height moves while the other two stand (the `key_height`
-    //     tuning key, architect 2026-10-29; 2026-11-02);
+    //     FlagCache's head), and fp_origin_y that top's client row, keyed
+    //     by its own field (2026-11-02);
     //   - THE SCALE, one field read live off render.h: fp_gui_scale_percent —
     //     every flag dimension rides gui_scale, so the axis is keyed BY FIELD
     //     rather than left to ride whichever strip dimension happens to move
@@ -1164,15 +1150,11 @@ private:
         // rung and placement — is defined in terms of it.
         // vp_end above stays: it is a FINGERPRINT input and unrelated to this.
         double   painter_spp   = 0.0;
-        // THE BARS' TWO OTHER INPUTS (architect 2026-11-14, sends G and H;
-        // render.h's waveform_bar_frames and waveform_fade_band), captured
-        // on the GUI thread like the rest: the audio's working column —
-        // fixed for the audio's life, so a render input and no fingerprint
-        // field — and the fade's start in hundredths of a device px off its
-        // seat (waveform_fade_hundredths), both a render input and a
-        // fingerprint field.
+        // THE BARS' OTHER INPUT (architect 2026-11-14, send G; render.h's
+        // waveform_bar_frames and waveform_fade_band), captured on the GUI
+        // thread like the rest: the audio's working column — fixed for the
+        // audio's life, so a render input and no fingerprint field.
         int64_t  working_column    = 0;
-        int      fade_hundredths = 0;
         int      area_w        = 0;
         int      area_h        = 0;
         // The stereo divider's height (waveform_divider_px(), render.h),

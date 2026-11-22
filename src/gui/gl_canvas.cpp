@@ -1177,10 +1177,10 @@ std::string list_fragment_source(int grow) {
 // span in bars (NO − 1 quarter px at a px or more a bar), keeps the pixel's
 // own subcolumns' brackets within the three bars from jF, and lets the
 // uniform arm's brackets roll one bar a step. THE FADE BAND'S FINE ROW'S,
-// 1/2 px — half the `waveform_fade_px` key's least
-// (kWaveformFadeMinHundredths, device_config.h: the fine row is drawn at
-// half the main rung's pitch, which is over the key's value there,
-// render.h's waveform_fade_band; architect 2026-11-14, send K) — is what
+// 1/2 px — half the fade's start (kWaveformFadeHundredths, render.h, one
+// device px, the floor: the fine row is drawn at half the main rung's
+// pitch, which is over the start there, render.h's waveform_fade_band;
+// architect 2026-11-14, send K) — is what
 // makes rung_px's NF = GROW + 4 its support (the span under GROW + 1.5
 // bars over 1/2 px a bar; architect 2026-11-15, send O), keeps the pixel's
 // own subcolumns' brackets within the four bars from jF, and lets its
@@ -1211,10 +1211,10 @@ static_assert(kWaveformSwitchPx == 2,
               "kListFragmentShader's NU, the uniform arm's three own bars "
               "and its rolling brackets spell a uniform row's least pitch, "
               "half the plate's switch width, as 1 px");
-static_assert(2 * kWaveformFadeMinHundredths == 200,
+static_assert(kWaveformFadeHundredths >= 100,
               "kListFragmentShader's NF, rung_px's four own bars and its "
               "rolling brackets spell the fine row's least pitch, half the "
-              "waveform_fade_px key's floor, as 1/2 px");
+              "fade's start at its floor, as 1/2 px");
 // THE RECORDS' KINDS ARE THE SHADERS' LITERALS (GuiCanvasKind,
 // canvas_sink.h): kListFragmentShader takes its plate arms at `kind == 1`
 // and the tint's at `kind == 2`, a rect's the fall-through — and the tint's

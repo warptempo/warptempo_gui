@@ -6900,7 +6900,7 @@ struct AppState {
     // and the seen count, the span's cursor aside, which three resets also
     // void (limiter_lamp_prev_frame, below): on every tick, ahead of the
     // tick's early returns, as the legend's refresh is) — each lamp LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD
-    // (the `lamp_hold_ms` tuning key, architect 2026-11-05 night, session
+    // (kLampHoldMs, 85 ms, main.cpp; architect 2026-11-05 night, session
     // 49: the one-tick limiter lamp was missed on his glass), an event
     // re-arming it, dark on the first tick at or past its stamp; the clip
     // lamp STRUCK while the device cannot sound; each edge of a bit damages
@@ -8154,9 +8154,10 @@ struct AppState {
     // 500 / 100 / 5000 ms and its spent button): with the TIPS lamp lit,
     // "always aggressively show tips — only the most basic thresh to prevent
     // flickering as I move the pen - maybe a tiny delay before showing it.
-    // otherwise, always show. that is the point of that lamp." ONE NUMBER,
-    // the `tooltip_delay_ms` tuning key (device_config.h, read live; render.h's
-    // tooltip block), and these rules:
+    // otherwise, always show. that is the point of that lamp." THREE
+    // NUMBERS, GTK'S OWN (architect 2026-11-22, send LL: "just use their
+    // numbers"; render.h's THE TIMING, gtktooltip.c's HOVER_TIMEOUT 500,
+    // BROWSE_TIMEOUT 60 and BROWSE_DISABLE_TIMEOUT 500 ms), and these rules:
     //   * THE TARGET IS THE KEY'S COLUMN (tooltip_column_rect, render.h): its
     //     box less the seam its linked neighbor owns — its hit box — so a
     //     group's columns tile with no hole and the pen sliding along a
@@ -8168,10 +8169,11 @@ struct AppState {
     //     (point_on_key's linked form).
     //     A CUE'S TARGET IS ITS PRESS TARGET (2026-11-09): the marker lane's
     //     published hit rects, no column (the Marker owner, below).
-    //   * EVERY ARRIVAL WAITS THE DELAY: the walk handing in an owner other
-    //     than the one before (another column, or a column after none), no
-    //     press held, starts the wait, `tooltip_delay_ms` from now. MOTION
-    //     INSIDE THE COLUMN RESTARTS NOTHING. A change of owner under a
+    //   * EVERY ARRIVAL WAITS: the walk handing in an owner other than the
+    //     one before (another column, or a column after none), no press
+    //     held, starts the wait — 500 ms from now (HOVER_TIMEOUT), or 60 ms
+    //     while the chain holds (BROWSE_TIMEOUT, below). MOTION INSIDE THE
+    //     COLUMN RESTARTS NOTHING. A change of owner under a
     //     resting pointer (a relayout, a surface closing under it) is an
     //     arrival like any other.
     //   * THE SHOW: the wait ripening shows its column's hint, the box SEATED
@@ -8187,22 +8189,23 @@ struct AppState {
     //     nothing.
     //   * LEAVING THE COLUMN HIDES AT ONCE: the walk handing in any other
     //     owner, or none, takes a standing box down in that same call.
-    //   * THE BYPASS — once a tip has shown, the next key needs no delay: the
-    //     leave of a column WHOSE BOX WAS STANDING arms the chain (that column,
-    //     `left_column`, and the leave's stamp, `left_ms`), and while the chain
-    //     holds the next arrival on any tooltip-bearing column shows its box AT
-    //     ONCE. It holds while the pointer stays within ONE W of the column it
-    //     left (Chebyshev, tooltip_chain_reach_px) OR for the delay since the
-    //     leave at any distance (a fast crossing of a run gap, the band to row
-    //     8); PAST BOTH AT ONCE it is broken — every walk and every tick asks —
-    //     and the next arrival waits the delay. A bypassed box is a standing
-    //     box, so its own leave re-arms the chain: along a run the columns
-    //     tile, so every move is a direct column-to-column arrival and is
-    //     bypassed once one box has shown there.
+    //   * THE CHAIN, GTK'S BROWSE MODE — once a tip has shown, the next key
+    //     waits the short wait: the leave of a column WHOSE BOX WAS STANDING
+    //     arms the chain (the leave's stamp, `left_ms`), and while the chain
+    //     holds the next arrival on any tooltip-bearing column waits 60 ms.
+    //     It lapses 500 ms after that leave with no new box shown
+    //     (BROWSE_DISABLE_TIMEOUT), TIME ALONE, wherever the pointer is —
+    //     every walk and every tick asks — and the next arrival waits 500 ms.
+    //     A box shown while the chain holds is a standing box, so its own
+    //     leave re-arms the chain: along a run the columns tile, so every
+    //     move is a direct column-to-column arrival waiting 60 ms once one
+    //     box has shown there. A wait started while the chain holds keeps its
+    //     60 ms deadline if the chain lapses before it ripens (the deliberate
+    //     difference from GTK, at note_tooltip_hover).
     //   * A HARD END hides at once, stops the wait, BREAKS THE CHAIN and
     //     forgets the column (GuiInputHandler::hide_shift_tooltip), so the next
-    //     walk that finds the pointer on a column is an arrival waiting the
-    //     delay: ANY POINTER PRESS OR RELEASE (a click hides the hint), a modal
+    //     walk that finds the pointer on a column is an arrival waiting 500
+    //     ms: ANY POINTER PRESS OR RELEASE (a click hides the hint), a modal
     //     opening with no press to carry it (the platform's close, the
     //     progress modal's open and its swap for the player), the pointer
     //     leaving the window or the pen's hover leaving the plane (every leave
@@ -8215,7 +8218,7 @@ struct AppState {
     //   * NO TOOLTIP UNDER A HELD PRESS: while the logical primary button is
     //     held (a finger or the pen in contact) no wait starts and no column is
     //     held. AFTER THE LIFT, with the pen hovering on a column, the box
-    //     comes back after the delay: the release forgot the column, so the
+    //     comes back after 500 ms: the release forgot the column, so the
     //     next walk — the S Pen's, at its lift point (the pen stays the pointer
     //     at its lift, architect 2026-10-07: the translation ends with a motion
     //     there, and the pen-lift hook re-walks) — is an arrival. A FINGER'S
@@ -8247,14 +8250,11 @@ struct AppState {
     //
     // THE WAIT: `hovered` is the tooltip-bearing button whose column holds the
     // pointer (no owner off every column, under a held press and after a hard
-    // end until the next walk), `hovered_column` the rect the walk found it in
-    // (the column or a cue's face) — the rect a
-    // standing box's leave hands the chain — and `wake_due_ms` the wait's
-    // deadline (0 = no wait runs). A standing box's owner is always `hovered`: a box shows only on
+    // end until the next walk) and `wake_due_ms` the wait's deadline (0 = no
+    // wait runs). A standing box's owner is always `hovered`: a box shows only on
     // it, and any other owner takes the box down first.
-    // THE CHAIN: `left_column` is the column of the last standing box the
-    // pointer left and `left_ms` that leave's stamp (0 = no chain: never
-    // armed, broken, or spent into a box). `button_held` is the logical
+    // THE CHAIN: `left_ms` is the stamp of the last standing box's leave
+    // (0 = no chain: never armed, lapsed, broken, or spent into a box). `button_held` is the logical
     // primary button's state as the last pointer event delivered it.
     //
     // AN OWNER NAMES ONE OF THREE SURFACES: the roster's keys, a dialog's
@@ -8274,8 +8274,8 @@ struct AppState {
     // of the diff flags are different owners and a slide between them is an
     // arrival. It is deliberately ONE
     // state rather than parallel tooltip states — there is at most one box in
-    // the product, one painter for it and one clock — so the delay, the
-    // arrival, the bypass chain (spanning keys and cues alike), the hard ends
+    // the product, one painter for it and one clock — so the timeouts, the
+    // arrival, the chain (spanning keys and cues alike), the hard ends
     // and the no-wait rule hold for a cue exactly as for a key.
     // A MARKER OWNER'S BOX: its one line, through one owner
     // (marker_tooltip_text, app_state.h — no second line, no source, no
@@ -8289,8 +8289,8 @@ struct AppState {
     // — raises no box and says no refusal; the `h` view's diff flags are the
     // History owner's, below); its
     // TARGET the cue's published hit rects, the press's own walk
-    // (marker_cue_hit over flag_hit_rects, no wider column), the rect handed
-    // to the chain their label box ∪ chip; its SEAT tooltip_box_rect's rule
+    // (marker_cue_hit over flag_hit_rects, no wider column); its SEAT
+    // tooltip_box_rect's rule
     // over THE CUE'S FACE — that same box, read from the live stash at paint
     // time (marker_cue_face), so the box stands above the marker lane (over
     // the ruler and the trim bar) — WITH ITS TEXT ON THE LABEL'S (architect
@@ -8382,10 +8382,8 @@ struct AppState {
         bool    show_pending   = false;
         // The wait.
         Owner   hovered{};
-        GuiRect hovered_column{0, 0, 0, 0};
         int64_t wake_due_ms    = 0;
         // The chain and the held button.
-        GuiRect left_column{0, 0, 0, 0};
         int64_t left_ms        = 0;
         bool    button_held    = false;
     };
@@ -11616,7 +11614,7 @@ int window_foot_y(const AppState& a);
 // the centering "looked odd", the box left-aligned on its face, the gap
 // ruled 1 W; the model at AppState::RedesignTooltip). THE SEAT DERIVES FROM
 // THE OWNER'S FACE ALONE,
-// NEVER THE PEN: the pen picks the owner (the column, the delay, the chain),
+// NEVER THE PEN: the pen picks the owner (the column, the wait, the chain),
 // and the box's place is a function of that owner's painted face and the
 // box's size, so it never moves while it stands and a chained show lands in
 // the same relation to its own key as the first. tooltip_box_rect IS THE
@@ -11636,7 +11634,7 @@ int window_foot_y(const AppState& a);
 //     face.h + gap; the gap 1 W, render.h's kTooltipGapW, 2 device px on the
 //     tablet at 200 %) — over the trim bar and the ruler while it stands; a
 //     bottom-row key, a controls row's button and a cue get it ABOVE (box.y
-//     = face.y − gap − h), as before. On the tablet at key_height 28 the
+//     = face.y − gap − h), as before. On the tablet, the key 28 W tall, the
 //     band's faces end on row 125, so a top-row key's box starts on row 128;
 //     the bottom row's faces start on row 1324, so its box ends on row 1321;
 //   * LEFT-ALIGNED ON THE FACE: box.x = face.x, one expression whether the
@@ -20796,8 +20794,8 @@ ItemViewportBasis item_viewport_basis(const AppState& app,
 //     edge for edge, the song's walls included: under the slider's box,
 //     the bounds' own places, the pill's ink the seat inside each bound
 //     (architect 2026-11-18, render.h's THE SLIDER'S BOX AND ITS CORE).
-// THE PAINTER lays the span through the sink's blended rect at the
-// `sweep_highlight` key's percent; THE DAMAGE SITES take
+// THE PAINTER lays the span through the sink's blended rect at Arc's
+// row-hover 3 % (kSweepHighlightPct, paint_handler.cpp); THE DAMAGE SITES take
 // sweep_highlight_rect, THE SPAN'S BOUNDING CELLS — its floor through its
 // ceiling over the canvas's rows, every cell the blend touches — where the
 // highlight leaves whole (the lift), and sweep_highlight_change, THE CELLS

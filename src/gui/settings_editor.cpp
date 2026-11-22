@@ -724,32 +724,9 @@ void GuiSettingsEditor::commit() {
 // `noise_attenuation_level` (2026-11-05 night) the same, at once and no
 // card, their arms after it (the level, `noise_level`, has no arm since
 // 2026-11-05 night: no Settings row, the band's NOISE case its one road,
-// kSettingsEditorKeys), and the
-// tuning keys `key_height` and the keyboard's `osk_key_w`, `osk_key_h` and
-// `osk_font_px` (2026-10-29) and the key's face width `key_width`
-// (2026-11-06, its arm after key_height's) and the run gap `run_gap`
-// (2026-11-07, its arm after key_width's) the same, their arms after
-// them, and the
-// lamps' hold `lamp_hold_ms` (2026-11-05 night) the same but for a live act,
-// having none, its arm after them, and the tooltip's delay
-// `tooltip_delay_ms` (2026-11-07) the same, no live act, its arm after it,
-// and the sweep highlight's alpha `sweep_highlight` (2026-11-12) the same,
-// no live act, its arm after it, and the plate's fade start
-// `waveform_fade_px` (2026-11-14) at once and no card, the plate
-// re-rendered, its arm last (the icon set `icons` stood after it
-// 2026-11-17 to 2026-11-21, send GG; `bevel_light` and `bevel_dark` stood after it
-// 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
-// settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
-// 2026-10-26, the glow settled at a constant, then retired with the LED,
-// 2026-11-01, and the tooltip's gap `tooltip_gap` for session 90 of
-// 2026-11-07, settled at 1 W in session 91, render.h's kTooltipGapW).
-// (`theme`, a theme's slug, had an arm after true_colors' 2026-11-05 to
-// 2026-11-21, send GG, gone with its key, one look since; its namesake of
-// 2026-10-03..10-08, a chrome theme file read at launch, left with that key.
-// `icons` and
-// `font` had arms here 2026-10-09..10-12; each left
-// with its key, and an `icons` arm of another meaning, the icon set, stood
-// 2026-11-17 to 2026-11-21; `waveform`, the color presets' key, 2026-10-14..11-01.) The
+// kSettingsEditorKeys), and the keyboard's three tuning keys `osk_key_w`,
+// `osk_key_h` and `osk_font_px` (2026-10-29) the same, their arms last
+// (every retired key's arm left with its key, the record git's). The
 // commit is the line editor's Enter for the keys whose row opens it,
 // and a list row's tap for the four keys with a value list
 // (kSettingsValueListKeys, settings_editor.h), whose rows open the list and
@@ -915,59 +892,6 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE KEY'S HEIGHT (architect 2026-10-29, a tuning key; render.h's
-    // `key_height` seat): an integer under its one grammar owner
-    // (parse_key_height, device_config.h), APPLIED LIVE AT THE COMMIT — the
-    // live struct, then the one live act (GuiInputHandler::apply_key_height:
-    // the renderer's seat and the window re-laid-out at once, the scale's
-    // relayout tail) — and persisted, so NO CARD: the keys on screen are the
-    // answer. The page opens the line editor on it (no value list, its 79
-    // values no short domain); Tab on an empty entry recalls the writer's
-    // spelling (recall_gui_setting_value).
-    if (key == "key_height") {
-        const std::optional<int> px = parse_key_height(value);
-        if (!px) return reject(kKeyHeightGrammarReason);
-        if (*px == app.device_config->key_height) return unchanged();
-        app.device_config->key_height = *px;
-        input->apply_key_height(*px);
-        (void)persist();
-        return applied();
-    }
-
-    // THE KEY'S FACE WIDTH (architect 2026-11-06, a tuning key; render.h's
-    // `key_width` seat): key_height's arm exactly — an integer under its one
-    // grammar owner (parse_key_width, device_config.h), APPLIED LIVE AT THE
-    // COMMIT (GuiInputHandler::apply_key_width: the renderer's seat and the
-    // window re-laid-out at once) and persisted, NO CARD. The page opens the
-    // line editor on it (no value list, its 41 values no short domain); Tab on
-    // an empty entry recalls the writer's spelling (recall_gui_setting_value).
-    if (key == "key_width") {
-        const std::optional<int> w = parse_key_width(value);
-        if (!w) return reject(kKeyWidthGrammarReason);
-        if (*w == app.device_config->key_width) return unchanged();
-        app.device_config->key_width = *w;
-        input->apply_key_width(*w);
-        (void)persist();
-        return applied();
-    }
-
-    // THE RUN GAP (architect 2026-11-07, session 87, a tuning key; render.h's
-    // `run_gap` seat): key_width's arm exactly — an integer under its one
-    // grammar owner (parse_run_gap, device_config.h), APPLIED LIVE AT THE
-    // COMMIT (GuiInputHandler::apply_run_gap: the renderer's seat and the
-    // window re-laid-out at once) and persisted, NO CARD. The page opens the
-    // line editor on it (no value list, its 43 values no short domain); Tab on
-    // an empty entry recalls the writer's spelling (recall_gui_setting_value).
-    if (key == "run_gap") {
-        const std::optional<int> w = parse_run_gap(value);
-        if (!w) return reject(kRunGapGrammarReason);
-        if (*w == app.device_config->run_gap) return unchanged();
-        app.device_config->run_gap = *w;
-        input->apply_run_gap(*w);
-        (void)persist();
-        return applied();
-    }
-
     // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning keys;
     // render.h's `osk_key_w` / `osk_key_h` seat): each an integer under the one
     // grammar owner (parse_osk_key_size, device_config.h), APPLIED LIVE AT THE
@@ -976,7 +900,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // repainted at once, the box moving the keyboard's surface alone, which
     // moves no lane) — and persisted, so NO CARD: the keyboard standing
     // under this very editor is the answer. The page opens the line editor
-    // on each (no value list, 137 values no short domain); Tab on an empty
+    // on each (no value list, 69 values no short domain); Tab on an empty
     // entry recalls the writer's spelling (recall_gui_setting_value).
     if (key == "osk_key_w" || key == "osk_key_h") {
         const std::optional<int> px = parse_osk_key_size(value);
@@ -998,7 +922,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
     // (GuiInputHandler::apply_osk_font_px: the renderer's seat and the window
     // repainted, no relayout) — and persisted, so NO CARD: the keyboard
     // standing under this very editor is the answer. The page opens the line
-    // editor on it (no value list, 37 values no short domain); Tab on an empty
+    // editor on it (no value list, 19 values no short domain); Tab on an empty
     // entry recalls the writer's spelling (recall_gui_setting_value).
     if (key == "osk_font_px") {
         const std::optional<int> px = parse_osk_font_px(value);
@@ -1006,86 +930,6 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         if (*px == app.device_config->osk_font_px) return unchanged();
         app.device_config->osk_font_px = *px;
         input->apply_osk_font_px(*px);
-        (void)persist();
-        return applied();
-    }
-
-    // THE TWO LAMPS' HOLD (architect 2026-11-05 night, session 49, a tuning
-    // key; render.h's THE TWO LAMPS): an integer of milliseconds under its one
-    // grammar owner (parse_lamp_hold_ms, device_config.h), STORED INTO THE LIVE
-    // STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT AND NO DAMAGE: nothing
-    // is laid out or painted by it; the tick reads
-    // app.device_config->lamp_hold_ms at every refresh (refresh_logo_lamps,
-    // main.cpp), so the commit takes effect at the next tick, the next event
-    // stamping its hold with the new number (a lamp lit under the old hold
-    // keeps the stamp it was given). The page opens the line editor on it (no
-    // value list, 981 values no short domain); Tab on an empty entry recalls
-    // the writer's spelling (recall_gui_setting_value).
-    if (key == "lamp_hold_ms") {
-        const std::optional<int> ms = parse_lamp_hold_ms(value);
-        if (!ms) return reject(kLampHoldGrammarReason);
-        if (*ms == app.device_config->lamp_hold_ms) return unchanged();
-        app.device_config->lamp_hold_ms = *ms;
-        (void)persist();
-        return applied();
-    }
-
-    // THE TOOLTIP'S DELAY (architect 2026-11-07, session 87, a tuning key; the
-    // model at AppState::RedesignTooltip): an integer of milliseconds under its
-    // one grammar owner (parse_tooltip_delay_ms, device_config.h), STORED INTO
-    // THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT AND NO
-    // DAMAGE: nothing is laid out or painted by it; the wait's writer reads
-    // app.device_config->tooltip_delay_ms at every arrival and the tooltip's
-    // clock at every tick (note_tooltip_hover, tick_tooltip), so a wait or a
-    // bypass window already running keeps the deadline it was given and the
-    // next one takes the new number. The page opens the line editor on it (no
-    // value list, 1001 values no short domain); Tab on an empty entry recalls
-    // the writer's spelling (recall_gui_setting_value).
-    if (key == "tooltip_delay_ms") {
-        const std::optional<int> ms = parse_tooltip_delay_ms(value);
-        if (!ms) return reject(kTooltipDelayGrammarReason);
-        if (*ms == app.device_config->tooltip_delay_ms) return unchanged();
-        app.device_config->tooltip_delay_ms = *ms;
-        (void)persist();
-        return applied();
-    }
-
-    // THE SWEEP HIGHLIGHT'S ALPHA (architect 2026-11-12, session 114, a tuning
-    // key; the picture at paint_sweep_highlight): an integer of whole percent
-    // under its one grammar owner (parse_sweep_highlight, device_config.h),
-    // STORED INTO THE LIVE STRUCT AND PERSISTED, so NO CARD — and NO LIVE ACT
-    // AND NO DAMAGE: the painter reads app.device_config->sweep_highlight at
-    // every list build, and no sweep stands under the Settings page (the folder
-    // overlay's veil refuses the sweep's begin), so nothing on screen wears the
-    // old number; the next sweep takes the new one. The page opens the line
-    // editor on it (no value list, 101 values no short domain); Tab on an empty
-    // entry recalls the writer's spelling (recall_gui_setting_value).
-    if (key == "sweep_highlight") {
-        const std::optional<int> pct = parse_sweep_highlight(value);
-        if (!pct) return reject(kSweepHighlightGrammarReason);
-        if (*pct == app.device_config->sweep_highlight) return unchanged();
-        app.device_config->sweep_highlight = *pct;
-        (void)persist();
-        return applied();
-    }
-
-    // THE PLATE'S FADE START (architect 2026-11-14, send H, a tuning key;
-    // render.h's `waveform_fade_px` seat and THE PLATE'S BARS): a decimal of
-    // device px under its one grammar owner (parse_waveform_fade_px,
-    // device_config.h), APPLIED LIVE AT THE COMMIT — the live struct, then the
-    // one live act (GuiInputHandler::apply_waveform_fade_px: the renderer's
-    // seat, the plate re-rendered — its row of bars is a function of the start
-    // — and the window repainted) — and persisted, so NO CARD: the waveform is
-    // the answer. The page opens the line editor on it (no value list, its 101
-    // values no short domain); Tab on an empty entry recalls the writer's
-    // spelling (recall_gui_setting_value).
-    if (key == "waveform_fade_px") {
-        const std::optional<int> hundredths = parse_waveform_fade_px(value);
-        if (!hundredths) return reject(kWaveformFadeGrammarReason);
-        if (*hundredths == app.device_config->waveform_fade_hundredths)
-            return unchanged();
-        app.device_config->waveform_fade_hundredths = *hundredths;
-        input->apply_waveform_fade_px(*hundredths);
         (void)persist();
         return applied();
     }

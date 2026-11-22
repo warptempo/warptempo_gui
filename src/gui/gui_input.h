@@ -117,9 +117,8 @@ constexpr int kHoldDelayMs = 300;
 // A CADENCE measures the gap between presses or the pace of a stream of
 // repeats, and none is a hand resting on a thing until it crosses into a held
 // meaning, which is what the hold delay times. (THE HOVER TOOLTIP reads
-// neither: its one wait is the `tooltip_delay_ms` tuning key, 100 ms at
-// first — architect 2026-11-07, the always-show model,
-// AppState::RedesignTooltip.)
+// neither: its waits are GTK's own, 500 and 60 ms — architect 2026-11-22,
+// send LL; render.h's THE TIMING, AppState::RedesignTooltip.)
 // FOUR READERS:
 //   * THE DOUBLE TAP'S WINDOW (kDoubleClickMs, app_state.h; architect
 //     2026-11-21, "an even 600") — the interval a deliberate SECOND

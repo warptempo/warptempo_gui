@@ -23,75 +23,13 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them (TWENTY keys since 2026-11-21, send GG:
-// the window's theme `theme`, the permanent key of 2026-11-05 after
-// `true_colors`, retired with the one look, Arc-Dark, palette_file.h's head;
-// TWENTY-ONE earlier that day, the icon set `icons`, the permanent key of
-// 2026-11-17 at the end, retired with the one set, Papirus, icons.h's head;
-// TWENTY-TWO earlier
-// that day, the theme's highlights' mix toward its ground, the tuning key of
-// 2026-11-13 between `sweep_highlight` and `waveform_fade_px`, retired at
-// 100, the theme's own numbers, architect 2026-11-21; TWENTY-THREE from
-// 2026-11-17, the
-// icon set `icons` appended at the end; TWENTY-TWO from 2026-11-14, the
-// plate's fade start `waveform_fade_px` appended at the end — a tuning key,
-// the bar width in device px at which the waveform's finer level starts to
-// appear;
-// TWENTY-ONE from 2026-11-13, that mix's key appended at the end; TWENTY
-// from 2026-11-12, the
-// sweep highlight's alpha `sweep_highlight` appended at the end — a tuning
-// key, the canvas highlight's blend toward white while a sweep's pointer is
-// down; NINETEEN from 2026-11-11, the
-// project voice's level `audio_level` retired with the AUDIO case — the
-// voice at 0 dB (architect, session 104); TWENTY from 2026-11-07, session 91,
-// the tooltip's gap `tooltip_gap` retired, settled at 1 W, render.h's
-// kTooltipGapW; TWENTY-ONE from session 90, that key appended at the end;
-// TWENTY earlier that day, the tooltip's delay `tooltip_delay_ms` appended
-// at the end — a tuning key, the wait from a key column's arrival to its box;
-// NINETEEN earlier still, the
-// run gap `run_gap` placed after `key_width` — a tuning key, the band's
-// lengths together; EIGHTEEN 2026-11-06, the
-// key's face width `key_width` placed after `key_height` — a tuning key,
-// the key's two sides together; SEVENTEEN 2026-11-05 night,
-// the lamps' hold `lamp_hold_ms` appended at the end — a tuning key, the
-// least time either lamp by the battery stays lit; SIXTEEN earlier that
-// night, the noise's fixed attenuation `noise_attenuation_level` placed
-// after `noise_level` — the bed at the case's number plus it; FIFTEEN
-// 2026-11-05,
-// the window's theme `theme` placed after `true_colors` — Live 12's own themes
-// through one key, palette_file.h; FOURTEEN 2026-11-01, the
-// `waveform` key retired with the color presets — one palette,
-// palette_file.h; FIFTEEN 2026-10-31 night, the
-// project voice's level `audio_level` placed before the noise's three;
-// FOURTEEN that day, the
-// plate's grow `waveform_grow` placed after `true_colors`; THIRTEEN
-// 2026-10-30, `role`
-// retired with the laptop GUI — one device, no mirror; FOURTEEN 2026-10-29
-// night, the keyboard's cap size `osk_font_px` appended at the end; THIRTEEN
-// that evening, the keyboard's two tuning keys `osk_key_w` and `osk_key_h`
-// appended at the end; ELEVEN that morning, the tuning key `key_height`
-// appended at the end; TEN from 2026-10-28, the noise's
-// three appended — `noise`, `noise_level` and `noise_crossfade_s`, all
-// permanent, the crossfade the tuning key `noise_crossfade_ms` until that
-// night; NINE earlier that day, the level and
-// the crossfade appended as `rain_level` and `rain_crossfade_ms` before the
-// rename and the folder key's arrival; ELEVEN for part of that day, two fade
-// tuning keys appended after the crossfade at ~11:30 and settled the same
-// day at 200 and 40 ms, noise.h's constexprs; SEVEN 2026-10-26, the LED
-// glow settled to a constant (retired with the LED, 2026-11-01); EIGHT 2026-10-23,
-// `strip_pad` settled to a constant, program_spec.h; nine that day, the
-// bevel pair gone and the LED glow's key appended; TEN 2026-10-21 evening,
-// `true_colors` placed after `waveform`, below; nine that afternoon, the three
-// tuning keys appended, `caption` gone and `chrome` renamed
-// `waveform`; seven 2026-10-12, `icons` and `font` gone;
-// nine 2026-10-10 evening, `role` appended; eight 2026-10-10,
-// `chrome` gone; nine 2026-10-09 ~21:20, `font` appended; eight 2026-10-09,
-// `icons` appended; seven 2026-10-08, `theme` gone; the
-// count's succession, up to seventeen with the tuning phases of
-// 2026-09-23..27 and nineteen with the colour keys of 2026-10-03..04, is the
-// header's record and git's). THE ORDER IS THE ARCHITECT'S OWN, given
-// with the fifth key (2026-08-30): gui_scale, projects_repo, projects_path,
-// last_project. The scanner takes it as a
+// REQUIRED SET, every one of them: THIRTEEN keys since 2026-11-22, send LL
+// (the seven tuning keys `key_height`, `key_width`, `run_gap`,
+// `lamp_hold_ms`, `tooltip_delay_ms`, `sweep_highlight` and
+// `waveform_fade_px` retired into the program's constexprs, device_config.h's
+// head naming each one's seat; the count's succession is git's). THE ORDER
+// IS THE ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
+// projects_repo, projects_path, last_project. The scanner takes it as a
 // SET: it checks that each key ARRIVED, never that it arrived here, so this
 // order is the writer's alone and the reader is order-insensitive (the header's
 // schema paragraph owns that ruling). ONE LIST SERVES BOTH, the writer's
@@ -119,36 +57,9 @@ namespace {
 // and its crossfade.
 //
 // THE TUNING KEYS stand after the permanent keys, where the tuning phases'
-// keys have always stood, each leaving when he settles its value:
-// `key_height` since 2026-10-29, the key's face width, `key_width`, after
-// it since 2026-11-06 (the key's two sides together), the run gap,
-// `run_gap`, after them since 2026-11-07 (the band's lengths together), the
-// on-screen keyboard's key box, `osk_key_w` and `osk_key_h`, after them since
-// 2026-10-29 evening, and the
-// keyboard's cap size, `osk_font_px`, after them since that night, and the
-// two lamps' hold, `lamp_hold_ms`, after it since 2026-11-05 night, and the
-// tooltip's delay, `tooltip_delay_ms`, after it since 2026-11-07, and the
-// sweep highlight's alpha, `sweep_highlight`, after it since 2026-11-12, and
-// the plate's fade start, `waveform_fade_px`, after it since 2026-11-14 (none
-// stood from 2026-10-28 night,
-// when `noise_crossfade_ms`, the crossfade's tuning key that day, was made
-// the permanent seconds key above).
-//
-// (The icon set `icons` followed `waveform_fade_px` 2026-11-17 to
-// 2026-11-21, send GG, the one permanent key past the tuning keys; the
-// window's theme `theme` followed `true_colors` 2026-11-05 to 2026-11-21,
-// send GG.)
-// (`rain_fade_in_ms` and `rain_fade_out_ms` stood after it one day,
-// 2026-10-28, settled at 200 and 40 ms, noise.h's kNoiseFadeInMs and
-// kNoiseFadeOutMs; the tooltip's gap `tooltip_gap` after `tooltip_delay_ms`
-// for session 90 of 2026-11-07, settled at 1 W in session 91, render.h's
-// kTooltipGapW; the LED glow's stood there 2026-10-23 to 2026-10-26,
-// settled at 4 device px (retired with the LED, 2026-11-01); `strip_pad` before it
-// 2026-10-22 to 2026-10-23, settled at a constant (19 W since 2026-11-04
-// night, render.h's strip_pad_px);
-// `bevel_light` and `bevel_dark` 2026-10-21 to 2026-10-23, `text_shadow`
-// beside them until 2026-10-22; the cues' seven after it 2026-10-26, settled
-// that day, the header's record.)
+// keys have always stood, each leaving when he settles its value: the
+// on-screen keyboard's key box, `osk_key_w` and `osk_key_h`, and its cap
+// size, `osk_font_px` (2026-10-29), the three left since 2026-11-22, send LL.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -160,16 +71,9 @@ constexpr const char* kDeviceConfigKeys[] = {
     "noise_level",
     "noise_attenuation_level",
     "noise_crossfade_s",
-    "key_height",
-    "key_width",
-    "run_gap",
     "osk_key_w",
     "osk_key_h",
     "osk_font_px",
-    "lamp_hold_ms",
-    "tooltip_delay_ms",
-    "sweep_highlight",
-    "waveform_fade_px",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no optional key since
 // 2026-10-26).
@@ -231,30 +135,6 @@ std::string format_noise_crossfade_s(int s) {
     return std::string(buf);
 }
 
-// The key's height's canonical spelling (2026-10-29): `%d`, the noise
-// integers' road.
-std::string format_key_height(int px) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", px);
-    return std::string(buf);
-}
-
-// The key's face width's canonical spelling (2026-11-06): `%d`, the noise
-// integers' road.
-std::string format_key_width(int w) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", w);
-    return std::string(buf);
-}
-
-// The run gap's canonical spelling (2026-11-07): `%d`, the noise integers'
-// road.
-std::string format_run_gap(int w) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", w);
-    return std::string(buf);
-}
-
 // The keyboard's key box's canonical spelling (2026-10-29), one for its two
 // keys: `%d`, the noise integers' road.
 std::string format_osk_key_size(int px) {
@@ -269,49 +149,6 @@ std::string format_osk_font_px(int px) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", px);
     return std::string(buf);
-}
-
-// The two lamps' hold's canonical spelling (2026-11-05 night): `%d`, the
-// noise integers' road.
-std::string format_lamp_hold_ms(int ms) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", ms);
-    return std::string(buf);
-}
-
-// The tooltip's delay's canonical spelling (2026-11-07): `%d`, the noise
-// integers' road.
-std::string format_tooltip_delay_ms(int ms) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", ms);
-    return std::string(buf);
-}
-
-// The sweep highlight's alpha's canonical spelling (2026-11-12): `%d`, the
-// noise integers' road.
-std::string format_sweep_highlight(int percent) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", percent);
-    return std::string(buf);
-}
-
-// The plate's fade start's canonical spelling (2026-11-14; the grammar's
-// words at parse_waveform_fade_px's head, device_config.h): the hundredths
-// as the shortest exact decimal — the integer part, then the two fraction
-// digits with a trailing zero cut, and no fraction at a whole number — the
-// grow's own shape below.
-std::string format_waveform_fade_px(int hundredths) {
-    char buf[32];
-    const int whole    = hundredths / 100;
-    const int fraction = hundredths % 100;
-    if (fraction == 0) {
-        std::snprintf(buf, sizeof(buf), "%d", whole);
-        return std::string(buf);
-    }
-    std::snprintf(buf, sizeof(buf), "%d.%02d", whole, fraction);
-    std::string s(buf);
-    while (s.back() == '0') s.pop_back();
-    return s;
 }
 
 // The plate's grow's canonical spelling (2026-10-31; the grammar's words at
@@ -386,15 +223,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "noise_crossfade_s") {
             // The crossfade's canonical integer (format_noise_crossfade_s).
             s += format_noise_crossfade_s(cfg.noise_crossfade_s);
-        } else if (k == "key_height") {
-            // The tuning key's canonical integer (format_key_height).
-            s += format_key_height(cfg.key_height);
-        } else if (k == "key_width") {
-            // The tuning key's canonical integer (format_key_width).
-            s += format_key_width(cfg.key_width);
-        } else if (k == "run_gap") {
-            // The tuning key's canonical integer (format_run_gap).
-            s += format_run_gap(cfg.run_gap);
         } else if (k == "osk_key_w") {
             // The keyboard's tuning keys' canonical integer
             // (format_osk_key_size).
@@ -405,21 +233,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The keyboard's cap size's canonical integer
             // (format_osk_font_px).
             s += format_osk_font_px(cfg.osk_font_px);
-        } else if (k == "lamp_hold_ms") {
-            // The lamps' hold's canonical integer (format_lamp_hold_ms).
-            s += format_lamp_hold_ms(cfg.lamp_hold_ms);
-        } else if (k == "tooltip_delay_ms") {
-            // The tooltip's delay's canonical integer
-            // (format_tooltip_delay_ms).
-            s += format_tooltip_delay_ms(cfg.tooltip_delay_ms);
-        } else if (k == "sweep_highlight") {
-            // The sweep highlight's alpha's canonical integer
-            // (format_sweep_highlight).
-            s += format_sweep_highlight(cfg.sweep_highlight);
-        } else if (k == "waveform_fade_px") {
-            // The fade start's canonical decimal
-            // (format_waveform_fade_px).
-            s += format_waveform_fade_px(cfg.waveform_fade_hundredths);
         }
         s += '\n';
     }
@@ -567,39 +380,6 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.noise_crossfade_s = *s;
             return {};
         }
-        // THE KEY'S HEIGHT (2026-10-29, a tuning key): under its one grammar
-        // owner (parse_key_height, device_config.h), required like every key;
-        // any other spelling the launch's hard fail.
-        if (key == "key_height") {
-            const std::optional<int> px = parse_key_height(value);
-            if (!px) {
-                return bad_value(ln, key, value, kKeyHeightGrammarReason);
-            }
-            out.key_height = *px;
-            return {};
-        }
-        // THE KEY'S FACE WIDTH (2026-11-06, a tuning key): under its one
-        // grammar owner (parse_key_width, device_config.h), required like
-        // every key; any other spelling the launch's hard fail.
-        if (key == "key_width") {
-            const std::optional<int> w = parse_key_width(value);
-            if (!w) {
-                return bad_value(ln, key, value, kKeyWidthGrammarReason);
-            }
-            out.key_width = *w;
-            return {};
-        }
-        // THE RUN GAP (2026-11-07, a tuning key): under its one grammar
-        // owner (parse_run_gap, device_config.h), required like every key;
-        // any other spelling the launch's hard fail.
-        if (key == "run_gap") {
-            const std::optional<int> w = parse_run_gap(value);
-            if (!w) {
-                return bad_value(ln, key, value, kRunGapGrammarReason);
-            }
-            out.run_gap = *w;
-            return {};
-        }
         // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): each under
         // the one grammar owner (parse_osk_key_size, device_config.h),
         // required like every key; any other spelling the launch's hard fail.
@@ -620,51 +400,6 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kOskFontPxGrammarReason);
             }
             out.osk_font_px = *px;
-            return {};
-        }
-        // THE TWO LAMPS' HOLD (2026-11-05 night, a tuning key): under its one
-        // grammar owner (parse_lamp_hold_ms, device_config.h), required like
-        // every key; any other spelling the launch's hard fail.
-        if (key == "lamp_hold_ms") {
-            const std::optional<int> ms = parse_lamp_hold_ms(value);
-            if (!ms) {
-                return bad_value(ln, key, value, kLampHoldGrammarReason);
-            }
-            out.lamp_hold_ms = *ms;
-            return {};
-        }
-        // THE TOOLTIP'S DELAY (2026-11-07, a tuning key): under its one
-        // grammar owner (parse_tooltip_delay_ms, device_config.h), required
-        // like every key; any other spelling the launch's hard fail.
-        if (key == "tooltip_delay_ms") {
-            const std::optional<int> ms = parse_tooltip_delay_ms(value);
-            if (!ms) {
-                return bad_value(ln, key, value, kTooltipDelayGrammarReason);
-            }
-            out.tooltip_delay_ms = *ms;
-            return {};
-        }
-        // THE SWEEP HIGHLIGHT'S ALPHA (2026-11-12, a tuning key): under its
-        // one grammar owner (parse_sweep_highlight, device_config.h),
-        // required like every key; any other spelling the launch's hard fail.
-        if (key == "sweep_highlight") {
-            const std::optional<int> pct = parse_sweep_highlight(value);
-            if (!pct) {
-                return bad_value(ln, key, value, kSweepHighlightGrammarReason);
-            }
-            out.sweep_highlight = *pct;
-            return {};
-        }
-        // THE PLATE'S FADE START (2026-11-14, a tuning key): under its one
-        // grammar owner (parse_waveform_fade_px, device_config.h), required
-        // like every key; any other spelling the launch's hard fail.
-        if (key == "waveform_fade_px") {
-            const std::optional<int> hundredths =
-                parse_waveform_fade_px(value);
-            if (!hundredths) {
-                return bad_value(ln, key, value, kWaveformFadeGrammarReason);
-            }
-            out.waveform_fade_hundredths = *hundredths;
             return {};
         }
         return warptempo_parse::prefix_line_error(

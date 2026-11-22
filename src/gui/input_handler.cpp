@@ -3566,27 +3566,6 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     relayout_window();
 }
 
-void GuiInputHandler::apply_key_height(int w) {
-    // The contract is at the declaration (input_handler.h): the push, then
-    // the scale's relayout tail; the commit's arm owns the persist.
-    set_key_height_w(w);
-    relayout_window();
-}
-
-void GuiInputHandler::apply_key_width(int w) {
-    // The contract is at the declaration (input_handler.h): the push, then
-    // the scale's relayout tail; the commit's arm owns the persist.
-    set_key_width_w(w);
-    relayout_window();
-}
-
-void GuiInputHandler::apply_run_gap(int w) {
-    // The contract is at the declaration (input_handler.h): the push, then
-    // the scale's relayout tail; the commit's arm owns the persist.
-    set_run_gap_w(w);
-    relayout_window();
-}
-
 void GuiInputHandler::apply_osk_key_size(int w_w, int h_w) {
     // The contract is at the declaration (input_handler.h): the push, then
     // every face's look at once and the whole window's damage, no relayout;
@@ -3608,15 +3587,6 @@ void GuiInputHandler::apply_waveform_grow(int quarters) {
     // The contract is at the declaration (input_handler.h): the push, then
     // the whole window's damage; the commit's arm owns the persist.
     set_waveform_grow_quarters(quarters);
-    viewport.invalidate_all();
-}
-
-void GuiInputHandler::apply_waveform_fade_px(int hundredths) {
-    // The contract is at the declaration (input_handler.h): the push, the
-    // plate's synchronous rebuild owed, then the whole window's damage; the
-    // commit's arm owns the persist.
-    set_waveform_fade_hundredths(hundredths);
-    viewport.kick_waveform_sync();
     viewport.invalidate_all();
 }
 

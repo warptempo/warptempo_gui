@@ -102,56 +102,20 @@ struct GuiInputHandler;
 // LISTS whose domain is no short list: the piece's `title`, `notes`, `url`
 // and `cover` and the score's folder `score_path`, and the per-device
 // config's `gui_scale` and every editable device key without a value list —
-// gui_scale and projects_repo, which left the sidecar 2026-08-27 and kept
-// this surface, since 2026-09-02 (architect) projects_path, which had been
-// hand-edited only, since 2026-11-05 night its fixed attenuation
-// noise_attenuation_level, and since 2026-10-29 (architect) the tuning key
-// key_height, the key case's height, and the same evening the on-screen
-// keyboard's key box's two tuning keys osk_key_w and osk_key_h, and that
-// night its cap size's tuning key osk_font_px, and since 2026-11-05 night
-// (architect) the two lamps' hold's tuning key lamp_hold_ms, and since
-// 2026-11-06 (architect) the tuning key key_width, the key case's face
-// width, and since 2026-11-07 (architect) the tuning key run_gap, the ground
-// between two runs, and the same day the tooltip's delay's tuning key
-// tooltip_delay_ms, and since 2026-11-12 (architect) the sweep highlight's
-// alpha's tuning key sweep_highlight, and since 2026-11-14 (architect) the
-// plate's fade start's tuning key waveform_fade_px; the four
-// keys with a value list — true_colors (since 2026-10-21), waveform_grow
-// (since 2026-10-31), the noise's folder noise and its crossfade
-// noise_crossfade_s (since 2026-10-28) — commit through this editor's own
-// body from their lists (the window's theme, listed 2026-11-05 to
-// 2026-11-21, left with its key, one look since, and the icon set icons,
-// listed 2026-11-17 to 2026-11-21, left with its key, one set since,
-// architect 2026-11-21, send GG; the color key waveform,
-// editable 2026-10-14..11-01, left with its key and the presets, one palette
-// since; the LED glow's tuning key, editable 2026-10-23..10-26, left with
-// its key, the glow settled at a constant, then retired with the LED,
-// 2026-11-01; the tooltip's gap's tuning key tooltip_gap, editable for
-// session 90 of 2026-11-07, left with its key in session 91, the gap settled
-// at 1 W (render.h's kTooltipGapW); the two levels, noise_level and the
-// project voice's (retired 2026-11-11 with its AUDIO case), editable
-// 2026-10-28 / 10-31 night to 2026-11-05 night, left the editor for the
-// band's cases — the main-page rule at kSettingsEditorKeys; the strip pad's
-// key, editable 2026-10-22..10-23, left with it, the pad settled at a
-// constant, 19 W since 2026-11-04 night (render.h's strip_pad_px); the two
-// bevel keys, editable 2026-10-21..10-23, left with theirs; text_shadow,
-// editable 2026-10-21..10-22, left with its key, the shadow one scaled px;
-// icons and font, editable 2026-10-09..10-12, the vocabulary chrome,
-// editable 2026-10-07..10-10, and theme, editable 2026-10-03..10-08, its
-// level and the twelve program colour keys, editable 2026-10-03..04, left
-// with their keys; the config's key last_project is the program's own and
-// has no editor; the waveform's height cap, editable 2026-09-13..10-07, left
-// with its key, the waveform being the lanes' leftover; the hold delay's
-// key, editable for its one-day tuning phase 2026-09-29, is struck, the
-// value hard-coded as kHoldDelayMs; `audio_player`, once the third editable
-// device key, retired whole 2026-08-28 with the in-app render player). It
+// projects_repo, projects_path, the noise's fixed attenuation
+// noise_attenuation_level, and the on-screen keyboard's three tuning keys,
+// its key box osk_key_w and osk_key_h and its cap size osk_font_px; the four
+// keys with a value list — true_colors, waveform_grow, the noise's folder
+// noise and its crossfade noise_crossfade_s — commit through this editor's
+// own body from their lists. (The config's key last_project is the
+// program's own and has no editor; the level noise_level is the band's
+// NOISE case's, the main-page rule at kSettingsEditorKeys; every retired
+// key's row left with its key, the record git's.) It
 // funnels each key into the SAME code its other door uses (no parallel
 // writers). commit() routes the open's key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
 //    true_colors, waveform_grow, noise, noise_attenuation_level,
-//    noise_crossfade_s, key_height, key_width, run_gap, osk_key_w,
-//    osk_key_h, osk_font_px, lamp_hold_ms, tooltip_delay_ms,
-//    sweep_highlight and waveform_fade_px — in ONE body,
+//    noise_crossfade_s, osk_key_w, osk_key_h and osk_font_px — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other, the four listed keys reaching it through the
 //    list alone): the key's own grammar owner in device_config.h decides (a
@@ -171,23 +135,10 @@ struct GuiInputHandler;
 //    noise's folder at once, the resident
 //    recordings freed and the new folder loaded under an audible level
 //    (GuiNoise::change_folder), no card (the NOISE case's face is the
-//    answer); the key's height at once,
-//    the window re-laid-out (GuiInputHandler::apply_key_height), no card
-//    (the keys on screen are the answer); the key's face width the same
-//    (GuiInputHandler::apply_key_width), and the run gap the same
-//    (GuiInputHandler::apply_run_gap); the keyboard's key box the same
+//    answer); the keyboard's key box at once, the window repainted
 //    (GuiInputHandler::apply_osk_key_size), no card (the keyboard standing
-//    under the editor is the answer); the keyboard's cap size the same, the
-//    window repainted (GuiInputHandler::apply_osk_font_px), no card; the
-//    lamps' hold stored and persisted alone, no live act and no card (the
-//    tick reads the live struct at its next refresh, refresh_logo_lamps);
-//    the tooltip's delay the same (the wait's writer and the tooltip's clock
-//    read the live struct, note_tooltip_hover / tick_tooltip); the sweep
-//    highlight's alpha the same (the painter reads the live struct at every
-//    list build, paint_sweep_highlight; no sweep stands under the Settings
-//    page, so the commit owes no damage); the plate's fade start at once, the plate re-rendered and the window
-//    repainted (GuiInputHandler::apply_waveform_fade_px), no card (the
-//    waveform is the answer).
+//    under the editor is the answer); the keyboard's cap size the same
+//    (GuiInputHandler::apply_osk_font_px), no card.
 // 2. `gui_scale` and `score_path` (commit_gui_setting): gui_scale, the one
 //    other editable device key, stays out of the body because it HAS a
 //    chokepoint of its own (apply_gui_scale, which writes the device config
@@ -229,34 +180,14 @@ struct GuiInputHandler;
 // 2026-11-05 with the band's two sliders and their decimal grammar,
 // kSettingsValueListKeys below, and their rows that night.)
 //
-// THE EDITABLE KEYS — ONE TABLE, THE TWENTY-THREE (the cues' four tuning
-// keys gone 2026-10-26 ~13:05 and the LED glow's that afternoon, settled;
-// `score_path` joined the same day; the noise's three 2026-10-28; the
-// tuning key `key_height` 2026-10-29, at the device keys' tail, and the
-// keyboard's `osk_key_w` and `osk_key_h` after it that evening, its
-// `osk_font_px` after them that night; the plate's grow `waveform_grow`
-// 2026-10-31, after `true_colors` as the config writes it; the color key
-// `waveform` gone 2026-11-01 with the presets; the window's `theme`
-// 2026-11-05, after `true_colors` as the config writes it, gone with its
-// key 2026-11-21, send GG; the two levels
-// (`noise_level` and the project voice's) gone 2026-11-05 night and the noise's
-// attenuation `noise_attenuation_level` joined after `noise`, as the config
-// writes it; the lamps' hold `lamp_hold_ms` the same night, at the device
-// keys' tail; the key's face width `key_width` 2026-11-06, after
-// `key_height` as the config writes it; the run gap `run_gap` 2026-11-07,
-// after `key_width` as the config writes it, and the tooltip's delay
-// `tooltip_delay_ms` the same day, at the device keys' tail; the tooltip's
-// gap `tooltip_gap` after it for session 90 that day, gone in session 91,
-// settled; the sweep highlight's alpha `sweep_highlight` 2026-11-12, at the
-// device keys' tail; the plate's fade start `waveform_fade_px`
-// 2026-11-14, at the device keys' tail; the icon set `icons` 2026-11-17 at
-// the device keys' tail, gone with its key 2026-11-21, send GG):
-// the five
+// THE EDITABLE KEYS — ONE TABLE, THE SIXTEEN (send LL, 2026-11-22, the
+// seven tuning keys that stood at the device keys' tail retired into
+// constexprs; the table's succession is git's): the five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's eighteen editable keys in that file's
+// CONFIG's eleven editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor, nor has the level, below). THE TABLE IS THE SETTINGS PAGE'S
 // EDITABLE ROSTER, EXACTLY, AND THE ONLY KEYS THIS EDITOR WRITES (architect
@@ -283,9 +214,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "true_colors",
     "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
-    "key_height", "key_width", "run_gap", "osk_key_w", "osk_key_h",
-    "osk_font_px", "lamp_hold_ms", "tooltip_delay_ms", "sweep_highlight",
-    "waveform_fade_px",
+    "osk_key_w", "osk_key_h", "osk_font_px",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two runs of rows split the table here, and the asserts pin
@@ -353,15 +282,10 @@ static_assert(settings_page_piece_keys_pinned());
 // knowledge"). THE LIST IS THE KEY'S ONE DOOR: its
 // row never opens the line editor (settings_page_commit), so its value
 // reaches apply_device_setting through the list's tap alone.
-// (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values
-// are no short domain, so its row opens the line editor; nor is its
-// sibling `key_width`, 41; nor the run gap `run_gap`, 43; nor are the
-// keyboard's `osk_key_w` and `osk_key_h`, 137 values each, nor its
-// `osk_font_px`, 37; nor the noise's attenuation, a decimal, whose row
-// opens the line editor; nor the lamps' hold `lamp_hold_ms`, 981 values;
-// nor the tooltip's delay `tooltip_delay_ms`, 1001; nor the sweep
-// highlight's alpha `sweep_highlight`, 101; nor the plate's fade start
-// `waveform_fade_px`, 101.)
+// (The keyboard's `osk_key_w` and `osk_key_h` are NOT here: their 69
+// values each are no short domain, so their rows open the line editor; nor
+// is its `osk_font_px`, 19; nor the noise's attenuation, a decimal, whose
+// row opens the line editor.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "waveform_grow", "noise", "noise_crossfade_s",
 };
@@ -398,8 +322,7 @@ struct GuiSettingsEditor {
     // the same shape as the viewport request_* callbacks). Used to reach the
     // live acts that live on GuiInputHandler: apply_gui_scale and the device
     // keys' apply_* (apply_true_colors, apply_waveform_grow,
-    // apply_key_height, apply_key_width, apply_run_gap, apply_osk_key_size,
-    // apply_osk_font_px, apply_waveform_fade_px).
+    // apply_osk_key_size, apply_osk_font_px).
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,
@@ -488,11 +411,8 @@ struct GuiSettingsEditor {
     // THE DEVICE KEYS' COMMIT — ONE BODY, TWO DOORS (architect 2026-10-25,
     // 2026-10-28 night for the value lists' keys): the line editor's commit
     // (commit_device_setting, below, the editor's door) for `projects_repo`,
-    // `projects_path`, `noise_attenuation_level` (2026-11-05 night), the
-    // tuning keys `key_height`, `osk_key_w`, `osk_key_h` and `osk_font_px`
-    // (2026-10-29), `lamp_hold_ms` (2026-11-05 night), `key_width`
-    // (2026-11-06), `run_gap` and `tooltip_delay_ms` (2026-11-07),
-    // `sweep_highlight` (2026-11-12) and `waveform_fade_px` (2026-11-14),
+    // `projects_path`, `noise_attenuation_level` (2026-11-05 night) and the
+    // tuning keys `osk_key_w`, `osk_key_h` and `osk_font_px` (2026-10-29),
     // and a VALUE LIST's pick
     // (GuiInputHandler::value_list_commit) for `true_colors`,
     // `waveform_grow` (2026-10-31), `noise` and
