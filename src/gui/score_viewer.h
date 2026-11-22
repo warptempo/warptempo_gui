@@ -445,8 +445,9 @@ inline bool score_viewer_button_enabled(const AppState& a,
 // tooltip's (score_viewer_button_hint below): PREV / NEXT
 // GoPreviousViewPage / GoNextViewPage (the page road, chevrons of their
 // own), BACK / FWD MediaSeekBackward / MediaSeekForward, RESET EditReset,
-// START ZoneIn, END ZoneOut (architect 2026-11-02, R15: the viewer's icons
-// stay as they are). PLAY / PAUSE's is the render player's Play key's, by its
+// START ZoneIn, the open book with its dot, END ZoneOut, the open book
+// (architect 2026-11-22, send II: his re-picks, the importer's table).
+// PLAY / PAUSE's is the render player's Play key's, by its
 // face (render_player_button_icon, paint_handler.cpp, which the painter
 // asks); this table's PlayPause the resting MediaPlaybackStart. The skips
 // keep one drawing for both forms (architect 2026-10-27), as the roster's

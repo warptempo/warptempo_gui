@@ -19599,11 +19599,12 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 
 // THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity;
 // THE ROSTER AS RULED, architect 2026-11-02, R12 / R14 / R15, and
-// Papirus's, 2026-11-17, session 140: EDIT, HISTORY, SOURCE, TARGET,
-// SESSION and LOCK one glyph each, no state swap; PLAYER the headphones;
-// BPM shares the logo's single note, SOURCE the wav rows' double notes and
-// LOAD the render player's LOAD checkmark (the same act; the word buttons
-// carry no drawing since 2026-11-18), all deliberate) —
+// Papirus's, 2026-11-17, session 140, twenty-one drawings re-picked by him
+// 2026-11-22, send II, rows of the importer's table: EDIT, HISTORY, SOURCE,
+// TARGET, SESSION and LOCK one glyph each, no state swap; PLAYER the
+// headphones; BPM shares the logo's single note, SOURCE the wav rows' disc
+// and LOAD the render player's LOAD checkmark (the same act; the word
+// buttons carry no drawing since 2026-11-18), all deliberate) —
 // the enumerator's drawing (icons.h's head, Papirus's) centered on
 // each roster key's box (paint_handler.cpp's paint_key_glyph), the act's
 // name the tooltip's (redesign_button_tooltip, above; the printed legend

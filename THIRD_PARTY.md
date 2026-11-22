@@ -8,9 +8,10 @@ The licence texts live in each pinned source; this file is the list. The faces a
 `fonts/README.md` and `assets/icons/README.md` (the icon SVGs) carry their provenance and licence texts. The face is packed into the
 APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1, the text in
 `fonts/LICENSE-Liberation-OFL.txt`). Every icon is packed into the APK too, ONE SET (`src/gui/icons.h`):
-papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, commit 33d971eb; GPL-3.0, the
-text in `assets/icons/LICENSE-GPL-3.txt`), recolored copies of its 16-px symbolic drawings and three of its 16-px
-`actions/` drawings written by `tools/icons/import_papirus.py` into `assets/icons/`, whose `README.md` holds their
+papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the drawings
+first imported at commit 33d971eb are byte-identical in it; GPL-3.0, the text in `assets/icons/LICENSE-GPL-3.txt`),
+recolored copies of its 16-px symbolic drawings and of drawings of its 16-px `actions/`, `devices/` and `panel/`
+trees (two of them mirrored or turned), written by `tools/icons/import_papirus.py` into `assets/icons/`, whose `README.md` holds their
 provenance; the launcher icon is one of them, the note `MusicNote16th.svg`, which `apk/build_apk.sh` renders into the
 launcher's layers.
 

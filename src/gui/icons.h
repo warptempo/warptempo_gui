@@ -5,10 +5,13 @@
 // architect 2026-11-21, send GG). An Icon is a drawing the GUI paints, ONE
 // FILE PER ENUMERATOR in ONE FLAT FOLDER, assets/icons/, each file NAMED BY
 // ITS ENUMERATOR (`<Name>.svg`; assets/icons/README.md the drawings, their
-// provenance and their licences): papirus-icon-theme 33d971eb, its 16-px symbolic set and three
-// drawings of its 16-px actions tree, written by
-// tools/icons/import_papirus.py, the roster the parked picks of session 123
-// with five re-picked by the architect 2026-11-17 (the importer's table).
+// provenance and their licences): papirus-icon-theme 20260801, its 16-px
+// symbolic set and drawings of its 16-px actions, devices and panel trees,
+// written by tools/icons/import_papirus.py, the roster the parked picks of
+// session 123 with two re-picked by the architect 2026-11-17 and twenty-one
+// 2026-11-22, send II (the importer's table; BboxPrev / BboxNext one source,
+// Prev's mirrored, and TransformMoveVertical turned, by the importer's
+// transform).
 // RECOLORED to `currentColor` by the one RECOLOR RULE (the README's; the
 // importer's one table the enumerator -> source list) and PAINTED IN
 // THE TEXT TONES — a lit key's in the print of its accent face —
@@ -31,14 +34,16 @@
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the title bar's note
 //   (MusicNote16th, BPM's glyph too) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_title_bar), the list rows'
-//   folder and double note (Folder / ViewMediaTrack, SOURCE's glyph too,
+//   folder and disc (Folder / ViewMediaTrack, SOURCE's glyph too,
 //   paint_folder_overlay), the cards' class glyphs (DialogInformation /
 //   DialogError, paint_notifications).
-// THE ROSTER IS AS RULED (2026-11-17, session 140); a re-pick is a row of
-// the importer's table and a rerun. EVERY FILE IS A DISTINCT DRAWING (by
-// realpath and path data; the icon theme's names are often symlinks, so one
-// drawing is one enumerator) — the score viewer's page keys,
-// GoPreviousViewPage / GoNextViewPage, are chevrons of their own. THE TWO
+// THE ROSTER IS AS RULED (2026-11-17, session 140; 2026-11-22, send II); a
+// re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
+// DISTINCT DRAWING (by the written path data and transform; the icon
+// theme's names are often symlinks, so one drawing is one enumerator) — the
+// score viewer's page keys, GoPreviousViewPage / GoNextViewPage, are
+// chevrons of their own; BboxPrev and BboxNext share one source file, two
+// drawings by the transform. THE TWO
 // CARDS, DialogError and DialogInformation, are imported, their discs
 // cutting the mark out so one color shows it (assets/icons/README.md's
 // provenance).

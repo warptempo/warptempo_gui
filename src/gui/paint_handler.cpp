@@ -8700,7 +8700,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // the view's left edge — a plain row's name, A GROUP HEADING'S NAME ON THE
 // ROWS' OWN PEN ("yes align"), and in a listing whose rows wear drawings
 // the drawing's canvas. A list row's drawing — Folder on a folder or
-// project row, ViewMediaTrack, the double notes, on a wav row (SOURCE's
+// project row, ViewMediaTrack, the disc, on a wav row (SOURCE's
 // drawing, architect 2026-11-02, R14 (4) / R15 (Q4)) — is the set's whole
 // 16 W canvas (kListDrawingBoxW) at the pen across and CENTERED IN THE LIST
 // ROW down, (row − canvas) / 2 = +4 W in the 24 W row (kListDrawingYW,
