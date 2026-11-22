@@ -160,7 +160,6 @@ TWENTY REQUIRED KEYS, no optional one (`kDeviceConfigKeys`, device_config.{h,cpp
 ## Next — ruled or owed, NOT built; nothing here is a go
 
 - Send GG part 4 (the dead code; the older history in the comments; then Sol over the whole send): paused on his word (2026-11-21: "stop the sweep"); it arrives from the Mac as a zip stacked on send HH's tree.
-- Send II (architect 2026-11-22, A GO; the spec `tmp/welcome_back_planner.md`): 21 icon re-picks (importer rows, two with a transform), a list's wav row wears the note (MusicNote16th) instead of SOURCE's drawing, the list's drawing-to-name gap `kListDrawingGapW` 3 -> 6 W; Opus planner and coders at high effort; one Sol round over these changes only.
 
 ## Never re-propose without his word
 
