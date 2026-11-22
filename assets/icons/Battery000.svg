@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" height="22" width="22">
-    <path style="fill:currentColor;fill-opacity:1;stroke:none" d="M1 5v12h19v-4h.5c.277 0 .5-.223.5-.5v-3c0-.277-.223-.5-.5-.5H20V5H1zm1 1h17v10H2V6z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
+ <path style="opacity:.35;fill:currentColor" d="M 6,1 V 2 H 3 V 14 C 3,14.554 3.446,15 4,15 H 11 V 6 H 13 V 2 H 10 V 1 Z"/>
+ <path style="fill:currentColor" d="M 12,7 V 11 L 12.25,13 H 13.75 L 14,11 V 7 Z M 12,14 V 16 H 14 V 14 Z"/>
 </svg>

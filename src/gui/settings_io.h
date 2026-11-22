@@ -165,8 +165,7 @@ std::string format_settings_text(
 // format_tooltip_delay_ms), or the sweep highlight's alpha
 // (`sweep_highlight`, 2026-11-12, a tuning key, through
 // format_sweep_highlight), or the plate's fade start (`waveform_fade_px`, 2026-11-14, a tuning key, through
-// format_waveform_fade_px), or the icon set's word (`icons`, 2026-11-17,
-// through format_icons), so the recall and the file can never diverge.
+// format_waveform_fade_px), so the recall and the file can never diverge.
 // (`last_project` is not editable and recalls nothing: it is
 // the program's own; nor does the level, `noise_level`, since 2026-11-05
 // night: set on the band's NOISE case alone, kSettingsEditorKeys.)

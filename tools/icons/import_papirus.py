@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""THE PAPIRUS IMPORTER (architect 2026-11-14, session 123: the icons get
-their own device key, `icons`, breeze | papirus, not tied to the theme;
-2026-11-17, session 140: "No breeze glyphs at all" -- his set is Papirus).
+"""THE PAPIRUS IMPORTER (architect 2026-11-17, session 140: his set is
+Papirus; 2026-11-21, send GG: the one set, src/gui/icons.h's head).
 
 A standalone tool, stdlib only, with no link path from any product target. Its
 ONE TABLE, ROSTER below, maps each `icons::Icon` enumerator (src/gui/icons.h)
@@ -9,8 +8,7 @@ to its papirus-icon-theme source drawing, a path under the checkout's
 `Papirus/16x16/` (the 16-px symbolic set, `symbolic/...-symbolic.svg`, save
 the three drawings of the 16-px `actions/` tree that set does not carry,
 re-picked by the architect 2026-11-17). For each row it writes
-assets/icons/papirus/<Enumerator>.svg by THE RECOLOR RULE, Breeze's own
-(tools/icons/import_breeze.py; assets/icons/README.md):
+assets/icons/<Enumerator>.svg by THE RECOLOR RULE (assets/icons/README.md):
 
   - every literal color in a `fill`, `stroke`, `stop-color`, `color`,
     `flood-color` or `lighting-color` attribute or `style` declaration becomes
@@ -25,7 +23,13 @@ painting resvg's default black (no fill on it or an ancestor) fails the run,
 naming it. EVERY ROW IS IMPORTED, the two cards included: Papirus's
 dialog-error / dialog-information already cut their mark out of the disc (the
 mark's subpaths wound against the disc's), so one color shows it and no hand
-transcription is needed (Breeze's two are; its importer's HAND list).
+transcription is needed.
+
+IT WRITES ONLY THE ROWS' FILES and removes nothing: the folder's other files
+-- AppIcon.svg (the launcher's drawing, breeze-icons' note), the two licence
+texts and README.md -- are never opened, so a rerun leaves them as they are.
+A row dropped from ROSTER leaves its old file behind, to be deleted by hand
+with its enumerator.
 
 Then it prints the README's provenance table: the enumerator, the source file
 (and the file a source symlink resolves to), the sha256 of the source bytes,
@@ -48,7 +52,7 @@ import xml.etree.ElementTree as ET
 
 PAPIRUS_COMMIT = '33d971eb'
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(REPO, 'assets', 'icons', 'papirus')
+OUT = os.path.join(REPO, 'assets', 'icons')
 
 # ENUMERATOR -> (source under Papirus/16x16/, note), in icons.h's enum order.
 # THE TABLE OF SESSION 123 (the parked importer's picks, the architect's

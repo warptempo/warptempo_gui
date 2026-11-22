@@ -464,8 +464,9 @@ void paint_level_case(cairo_t* cr, const GuiRect& entry, bool enabled,
     cairo_restore(cr);
 }
 
-// THE RENDER PLAYER'S GLYPHS (architect 2026-11-01, M7, Breeze's
-// roster as ruled, 2026-11-02, R12 / R14), by the act each key runs (its
+// THE RENDER PLAYER'S GLYPHS (architect 2026-11-01, M7; the acts'
+// drawings as ruled 2026-11-02, R12 / R14, icons.h's roster), by the act
+// each key runs (its
 // name the tooltip's, render_player_button_hint): the transport triple
 // PREV MediaSkipBackward, PLAY
 // MediaPlaybackStart, NEXT MediaSkipForward (the band's START / END's two,
@@ -515,7 +516,7 @@ std::optional<icons::Icon> render_player_button_icon(
 // with the program keys"); THE TOOLTIP names the act in words.
 // THE SET'S DRAWING CANVAS AT kKeyDrawingBoxW, 16 W (architect 2026-11-19,
 // send Z; DESIGN §3: Papirus's 16-px drawings at their native size are the
-// design, Breeze taking the same rule), 32 device px on the tablet — ONE
+// design), 32 device px on the tablet — ONE
 // SIZE FOR EVERY KEY, no longer a share of `key_height` (the 9 / 17 ink of
 // 2026-11-04 night retired) — the drawing scaled as its whole canvas into
 // that box (icons::ink_in_box: its ink's length and its offset in the box),
@@ -1565,22 +1566,10 @@ namespace {
 int title_cap_rows() {
     return gui_font_ink_band(gui_font(GuiFace::Bold), kLogoLegendInkSet).above;
 }
-// THE BATTERY'S INK LENGTH (render.h's THE BATTERY): the cap band's height
-// for Papirus's upright drawings (their larger side their height); for
-// Breeze's horizontal outline, whose larger side is its width, the length
-// that makes its HEIGHT the cap band.
-int logo_glyph_ink_px() {
-    const int cap = title_cap_rows();
-    if (icons::selected_set() == GuiIconSet::Papirus) return cap;
-    const icons::InkSize probe =
-        icons::glyph_ink_size(icons::Icon::Battery000, 64);
-    if (probe.h <= 0) return cap;
-    return static_cast<int>(std::lround(static_cast<double>(cap) * 64.0 /
-                                        static_cast<double>(probe.h) *
-                                        static_cast<double>(std::max(
-                                            probe.w, probe.h)) /
-                                        64.0));
-}
+// THE BATTERY'S INK LENGTH (render.h's THE BATTERY): the cap band's height,
+// the two drawings being upright (their larger side their height), so the
+// ink box's larger side at the cap band makes their height the cap band.
+int logo_glyph_ink_px() { return title_cap_rows(); }
 // THE GLYPH CELL: the two battery drawings' common ink box at the one
 // length, the larger of the two on each axis.
 icons::InkSize logo_glyph_cell() {
@@ -3710,7 +3699,7 @@ std::vector<text_shape::SharedRun> notification_text_lines(
 // in its class's carried fill AT ITS OPACITY over what lies under it
 // (paint_floating_box: a normal card `card_fill`, a standing one
 // `card_standing_fill`), no border, no shadow; notifyd's ONE PADDING, 14 W
-// (kNotificationPadW, send BB); THE CLASS GLYPH, the `icons` set's
+// (kNotificationPadW, send BB); THE CLASS GLYPH, icons.h's
 // DialogInformation or DialogError, its whole drawing in a 16 W box at the
 // left and top padding (icons::ink_in_box) — then the padding again, then
 // THE SENTENCE, Regular 12 W, one line centered on the glyph's box (its

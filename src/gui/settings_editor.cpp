@@ -325,8 +325,6 @@ std::vector<std::string> GuiSettingsEditor::value_choices(
     } else if (key == "noise_crossfade_s") {
         for (int s = kNoiseCrossfadeMinS; s <= kNoiseCrossfadeMaxS; ++s)
             out.push_back(format_noise_crossfade_s(s));
-    } else if (key == "icons") {
-        for (const char* word : kIconsWords) out.emplace_back(word);
     } else {
         assert(false && "a key with no value list");
     }
@@ -765,9 +763,8 @@ void GuiSettingsEditor::commit() {
 // and the sweep highlight's alpha `sweep_highlight` (2026-11-12) the same,
 // no live act, its arm after it, and the plate's fade start
 // `waveform_fade_px` (2026-11-14) at once and no card, the plate
-// re-rendered, its arm after them, and the icon set `icons` (2026-11-17) at
-// once and no card, the other set's drawings painted, its arm last
-// (`bevel_light` and `bevel_dark` stood after it
+// re-rendered, its arm last (the icon set `icons` stood after it
+// 2026-11-17 to 2026-11-21, send GG; `bevel_light` and `bevel_dark` stood after it
 // 2026-10-21 to 2026-10-23, `strip_pad` 2026-10-22 to 2026-10-23, the pad
 // settled at a constant, program_spec.h, and the LED glow's 2026-10-23 to
 // 2026-10-26, the glow settled at a constant, then retired with the LED,
@@ -777,10 +774,10 @@ void GuiSettingsEditor::commit() {
 // 2026-10-03..10-08, a chrome theme file read at launch, left with that key)
 // the same, at once and no card, its arm after true_colors'. (`icons` and
 // `font` had arms here 2026-10-09..10-12; each left
-// with its key, and an `icons` arm of another meaning, the icon set, joined
-// 2026-11-17; `waveform`, the color presets' key, 2026-10-14..11-01.) The
+// with its key, and an `icons` arm of another meaning, the icon set, stood
+// 2026-11-17 to 2026-11-21; `waveform`, the color presets' key, 2026-10-14..11-01.) The
 // commit is the line editor's Enter for the keys whose row opens it,
-// and a list row's tap for the six keys with a value list
+// and a list row's tap for the five keys with a value list
 // (kSettingsValueListKeys, settings_editor.h), whose rows open the list and
 // never the line editor — ONE BODY BEHIND BOTH DOORS (apply_device_setting
 // below; the choice rows' list rows of 2026-10-07..10-14, which showed a
@@ -789,7 +786,7 @@ void GuiSettingsEditor::commit() {
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
 // with its text selected, or the editor closed. The key is the open's, one
-// of the line editor's rows (architect 2026-11-19), so the six
+// of the line editor's rows (architect 2026-11-19), so the five
 // listed keys' arms below are reached through the list's door alone.
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,
                                               const std::string& value) {
@@ -1140,27 +1137,6 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
             return unchanged();
         app.device_config->waveform_fade_hundredths = *hundredths;
         input->apply_waveform_fade_px(*hundredths);
-        (void)persist();
-        return applied();
-    }
-
-    // THE ICON SET (architect 2026-11-14, session 123: its own key, not the
-    // theme's; 2026-11-17, session 140: his set Papirus): one of the two words
-    // under its one owner (parse_icons, device_config.h), APPLIED LIVE AT THE
-    // COMMIT, which is the line editor's Enter or the value list's row tap,
-    // through the set's one live act (GuiInputHandler::apply_icons — the set
-    // chosen, the icon rasters dropped, the whole window), so NO CARD: the
-    // glyphs on screen are the answer; a failed write keeps the live value for
-    // the session, the card saying the persist failed, and the set already in
-    // force is the unchanged no-op. The page opens its VALUE LIST (`breeze`,
-    // `papirus`, kSettingsValueListKeys), its one door
-    // (recall_gui_setting_value the list's seat, the writer's word).
-    if (key == "icons") {
-        const std::optional<GuiIconSet> set = parse_icons(value);
-        if (!set) return reject(kIconsGrammarReason);
-        if (*set == app.device_config->icons) return unchanged();
-        app.device_config->icons = *set;
-        input->apply_icons(*set);
         (void)persist();
         return applied();
     }

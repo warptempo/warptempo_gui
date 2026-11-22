@@ -6419,8 +6419,8 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
 // first `=` (a key carries none). On the row of a key with a value list
 // (settings_key_has_value_list — `true_colors`, `theme`,
-// `waveform_grow`, `noise`, `noise_crossfade_s`, `icons` (2026-11-17); the
-// two levels' lists left
+// `waveform_grow`, `noise`, `noise_crossfade_s`; the icon set's list left
+// 2026-11-21 with its key, the two levels' lists left
 // 2026-11-05 with the decimal grammar and their rows that night under the
 // main-page rule (kSettingsEditorKeys), the band's case the noise's one
 // editing surface) THAT

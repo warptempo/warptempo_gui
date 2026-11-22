@@ -4370,23 +4370,6 @@ private:
     // (main.cpp), with nothing cached to rebuild.
     void apply_theme(const GuiTheme& theme);
 
-    // THE ICON SET'S ONE LIVE ACT (the `icons` device key, architect
-    // 2026-11-14, session 123: the icons' own key, not the theme's;
-    // 2026-11-17, session 140: his set Papirus; icons.h's head): the
-    // settings editor's `icons=` commit and its value list's tap (one body,
-    // apply_device_setting) choose the set every painter draws
-    // (icons::select_set) and run the theme's apply shape for the glyphs
-    // alone: the icon rasters dropped (a raster and its fit are the set's
-    // drawing's) and the whole window invalidated — every surface that
-    // wears a glyph, the title bar's battery cell (its seat the set's,
-    // render.h's title bar block) and the extents it moves among them. NO
-    // PALETTE, NO PLATE, NO FLAG CACHE: the set moves no color and nothing
-    // on the canvas. It cards nothing: the screen is the answer. The commit
-    // gates the no-op and writes the device config; the launch chooses the
-    // config's set before the window exists (main.cpp), with nothing cached
-    // to drop.
-    void apply_icons(GuiIconSet set);
-
     // The read-only bit's one setter (2026-09-04, after two roads had
     // drifted apart on damage). One road writes the bit in-app: bare `o` on
     // the active tab, which the icon row's Read-Only button reaches by

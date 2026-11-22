@@ -26,11 +26,9 @@
 // theme both fills its Alert, opaque. INSIDE IT notifyd's one padding
 // (kNotificationPadW, 14 W on all four sides), THE CLASS GLYPH in a
 // kNotificationGlyphBoxW drawing box at the left —
-// THE `icons` SET'S (icons.h's head): DialogInformation on a normal card,
-// DialogError on a standing one, each the mark cut out of its shape
-// (Papirus's i and ! cut out of a disc, Breeze's i and X out of a filled
-// square, the 10-10 cut-out transcriptions), the mark showing the card's
-// face through one color — then the same padding again, then THE CLAUSE,
+// icons.h's: DialogInformation on a normal card, DialogError on a standing
+// one, each the mark cut out of its shape (the i and the ! cut out of a
+// disc), the mark showing the card's face through one color — then the same padding again, then THE CLAUSE,
 // Regular 12 W, one line box (14 W) a line, a single line centered on the
 // glyph's box (its baseline +26 W), wrapped lines from the top pad (the
 // first baseline +25 W). THE WHOLE CARD IS ONE BUTTON (architect 2026-10-01,

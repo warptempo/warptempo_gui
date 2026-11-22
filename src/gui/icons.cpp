@@ -18,15 +18,13 @@
 namespace icons {
 namespace {
 
-// -- The loaded sets and their rasters ----------------------------------------
+// -- The loaded set and its rasters -------------------------------------------
 //
-// A SET: per drawing, in enum order, the load's check parse — resvg's
+// THE SET: per drawing, in enum order, the load's check parse — resvg's
 // default black for a `currentColor` file, which the fits measure (the fit
 // is alpha alone) — and a BOUND file's bytes (one naming `currentColor`,
-// icons.h's head), kept for its parses per color; BOTH SETS loaded once by
-// load_set before the window exists and never changed after, the `icons`
-// key's choosing which one every draw reads (select_set; the other's
-// caches simply stand idle).
+// icons.h's head), kept for its parses per color; loaded once by load_set
+// before the window exists and never changed after.
 //
 // THE BOUND PARSES: per (drawing, color) the tree resvg built under that
 // color, made the first time a draw asks — at most the tones a glyph's
@@ -75,39 +73,28 @@ struct LoadedSet {
     std::map<std::pair<int, int>, InkInBox>     in_box;
 };
 
-static_assert(static_cast<int>(GuiIconSet::Breeze) == 0 &&
-              static_cast<int>(GuiIconSet::Papirus) == 1);
-// THE TWO SETS, indexed by GuiIconSet, and the one chosen (icons.h's
-// select_set; Papirus, his set, until the launch chooses the config's).
-std::array<std::optional<LoadedSet>, 2>& loaded_sets() {
-    static std::array<std::optional<LoadedSet>, 2> sets;
-    return sets;
-}
-GuiIconSet& chosen_set() {
-    static GuiIconSet set = GuiIconSet::Papirus;
+// THE SET, empty until load_set fills it.
+std::optional<LoadedSet>& loaded_set() {
+    static std::optional<LoadedSet> set;
     return set;
 }
-std::optional<LoadedSet>& loaded_set() {
-    return loaded_sets()[static_cast<size_t>(chosen_set())];
-}
 
-// ONE SET'S LOAD (load_set's body per set): every enumerator's file found
-// in `files` and parsed, `prefix` the folder the error names ("" for
-// Breeze's assets/icons/, "papirus/" for Papirus's).
-std::expected<LoadedSet, std::string> load_one(
-        const std::map<std::string, std::string>& files,
-        const std::string& prefix) {
+// THE SET'S LOAD (load_set's body): every enumerator's file found in `files`
+// and parsed; a file of any other name in the folder (AppIcon.svg, the
+// README, the licence text) is never looked up.
+std::expected<LoadedSet, std::string> load_files(
+        const std::map<std::string, std::string>& files) {
     LoadedSet loaded;
     for (int i = 0; i < kIconCount; ++i) {
         const std::string file = std::string(kIconNames[i]) + ".svg";
         const auto found = files.find(file);
         if (found == files.end())
-            return std::unexpected(prefix + file + ": missing");
+            return std::unexpected(file + ": missing");
         // Every file is parsed here, the error arm's one producer; a BOUND
         // file (one naming `currentColor`, icons.h's head) also keeps its
         // bytes for its parses per color (document, above).
         auto doc = svg_icon::parse(found->second);
-        if (!doc) return std::unexpected(prefix + file + ": " + doc.error());
+        if (!doc) return std::unexpected(file + ": " + doc.error());
         loaded.docs[static_cast<size_t>(i)] = std::move(*doc);
         if (found->second.find("currentColor") != std::string::npos)
             loaded.bound[static_cast<size_t>(i)] = found->second;
@@ -192,27 +179,18 @@ std::optional<std::string> load_set() {
     const std::string label = "icons: ";
     auto bundle = GuiPlatform::bundled_icon_files();
     if (!bundle) return label + bundle.error();
-    auto breeze = load_one(bundle->breeze, "");
-    if (!breeze) return label + breeze.error();
-    auto papirus = load_one(bundle->papirus, "papirus/");
-    if (!papirus) return label + papirus.error();
-    loaded_sets()[static_cast<size_t>(GuiIconSet::Breeze)] = std::move(*breeze);
-    loaded_sets()[static_cast<size_t>(GuiIconSet::Papirus)] =
-        std::move(*papirus);
+    auto set = load_files(*bundle);
+    if (!set) return label + set.error();
+    loaded_set() = std::move(*set);
     return std::nullopt;
 }
 
-void select_set(GuiIconSet set) { chosen_set() = set; }
-
-GuiIconSet selected_set() { return chosen_set(); }
-
 void drop_rasters() {
-    for (std::optional<LoadedSet>& set : loaded_sets()) {
-        if (!set) continue;
-        set->fits.clear();
-        set->glyphs.clear();
-        set->in_box.clear();
-    }
+    std::optional<LoadedSet>& set = loaded_set();
+    if (!set) return;
+    set->fits.clear();
+    set->glyphs.clear();
+    set->in_box.clear();
 }
 
 InkSize glyph_ink_size(Icon icon, int ink_px) {

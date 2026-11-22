@@ -80,7 +80,7 @@
 // (architect 2026-11-20 / 21; THE EDITOR'S EXTRA KEYS below); A STICKY
 // SHIFT, a latch (a press lights it, a second puts it out; lit, the
 // letters type capital and LEFT / RIGHT extend the
-// selection — THE SELECTION'S ONE ROAD); and GLYPHS, the `icons` set's, on the function keys that act on the text
+// selection — THE SELECTION'S ONE ROAD); and GLYPHS, icons.h's, on the function keys that act on the text
 // (Tab, Bksp, Enter, Copy, Paste, LEFT, RIGHT, UP, DOWN, the pass key;
 // cap_word).
 //
@@ -528,11 +528,10 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 //
 // THE GLYPH KEYS (architect 2026-11-08, sessions 95 / 96, reversing "no
 // glyphs" of 2026-08-27 / 2026-09-01 / 2026-10-29 night): the function keys
-// that act on the text wear A GLYPH, the `icons` set's (Breeze's names
-// here) — Tab `format-indent-more`
-// (FormatIndentMore), Bksp `edit-clear` (EditClear, the leftward key with
-// its X), Enter `key-enter` (KeyEnter), Copy and Paste row 8's EditCopy /
-// EditPaste, LEFT and RIGHT the chevrons GoPrevious / GoNext, the pass key
+// that act on the text wear A GLYPH, icons.h's — Tab FormatIndentMore,
+// Bksp EditClear (the leftward key with its X), Enter KeyEnter, Copy and
+// Paste row 8's EditCopy /
+// EditPaste, LEFT and RIGHT the arrows GoPrevious / GoNext, the pass key
 // the INHERIT key's InsertLink (redesign_button_icon's IconMarkerInherit
 // arm: the same act, Toggle Inherit, architect 2026-11-20 / 21), UP and
 // DOWN the main page's UP / DOWN keys' GoUp / GoDown (redesign_button_icon's

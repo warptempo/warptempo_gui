@@ -2154,7 +2154,7 @@ enum class RedesignButton {
     // ("history cannot edit trim"). Its tooltip is "Toggle Trim Sweep", the
     // lamp rule's name. No modifier, no repeat, no long-press act.
     IconTrimArm,
-    // THE PRESETS KEY (architect 2026-10-28 night; PRESETS and Breeze's
+    // THE PRESETS KEY (architect 2026-10-28 night; PRESETS and the
     // bookmarks since 2026-11-07, the TRIM name and the scissors going to
     // the arm lamp before it), the zoom group's TAIL,
     // directly after the TRIM arm lamp and ahead of the iteration group (no
@@ -3103,7 +3103,7 @@ enum class RedesignButton {
     // vocabulary, so the derived partition answers live.
     TransportSwitchTab,
     // (THE HOLD-COLUMN NUDGES — Ctrl+Left and Ctrl+Right, the Left / Right
-    // step with the held-column camera, wearing Breeze's snap-nodes-midpoint
+    // step with the held-column camera, wearing a snap-nodes-midpoint drawing
     // turned a quarter left and right — stood here from 2026-09-22 until the
     // architect deleted them 2026-09-23 with their chords and their glyph:
     // the held column is a posture an explicit centring arms, read by the
@@ -6031,7 +6031,7 @@ struct AppState {
         // glyph, 1 the second, 2 and 3 Save's Pull and Check) — the third
         // stashed term.
         int     glyph         = 0;
-        // THE PAINTED GLYPH (2026-11-02: the key's Breeze drawing names the
+        // THE PAINTED GLYPH (2026-11-02: the key's drawing names the
         // act its next press runs, redesign_button_icon's stateful
         // overload) — the fourth stashed term, the drawing the comparator
         // holds against the live overload. The index above does not carry
@@ -7464,9 +7464,9 @@ struct AppState {
     // PAINTED FOR THE FIRST TIME OR RE-LAID paints its look at once (no record,
     // or its box not the record's: a dialog, an overlay's row, the keyboard
     // appearing or changing its page, a relayout); THE WHOLE LIST IS DROPPED
-    // on a relayout and on a theme, icon set, True Colors or
+    // on a relayout and on a theme, True Colors or
     // on-screen keyboard key size commit (GuiInputHandler::relayout_window,
-    // apply_theme, apply_icons, apply_true_colors, apply_osk_key_size:
+    // apply_theme, apply_true_colors, apply_osk_key_size:
     // drop_all), so every face paints its look at once;
     // A SURFACE THAT LEAVES drops its faces (settle_face_fades: the keyboard
     // gone or on another page, a dialog stash's owner or session no longer
@@ -9359,7 +9359,7 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the twenty-five keys the
+    // 2026-10-28: the Settings button and bare `;`; the twenty-four keys the
     // settings editor recalls, one `key=value` row each under two inert group
     // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
     // open act the editor opened on the row's key, PREFILLED with its value
@@ -9368,8 +9368,8 @@ struct AppState {
     // list swapped in under the same session); and the VALUE LIST
     // (2026-10-28 night for `true_colors`,
     // `noise` and `noise_crossfade_s`, 2026-10-31 for `waveform_grow`,
-    // 2026-11-05 for `theme`, 2026-11-17 for `icons`; the two levels'
-    // lists went 2026-11-05 with
+    // 2026-11-05 for `theme`; the icon set's of 2026-11-17 went with its key
+    // 2026-11-21; the two levels' lists went 2026-11-05 with
     // their decimal grammar, their rows opening the line editor; reached
     // through the page's row for its key alone; the key's values as rows, the open act
     // the value's commit through the typed line's own body, then the return
@@ -9957,7 +9957,7 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's twenty-five keys as
+    // (architect 2026-10-28), with the settings editor's twenty-four keys as
     // `key=value` lines under two group rows and `scale` and `bpm` as
     // disabled lines (2026-10-29); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
@@ -9965,8 +9965,9 @@ struct AppState {
     // it in every time" — "brief it as a scrolling list", "Yes"), since
     // 2026-10-28 night `true_colors`'s two words, the folders under
     // `noise/`, the 31 levels and the 30 crossfades, and since 2026-10-31
-    // the grow's nine quarters, and since 2026-11-17 the icon set's two
-    // words — the page's row for that key's content; and
+    // the grow's nine quarters (the icon set's two words 2026-11-17 to
+    // 2026-11-21, gone with its key) — the page's row for that key's
+    // content; and
     // since 2026-10-28 night THE TRIM PRESETS LIST, the piece's named trim
     // windows (`trim/presets.txt`, trim_presets_file.h), the TRIM key's; and
     // since 2026-10-29 THE BPM FORM, the sweep's three values as `key=value`
@@ -10105,7 +10106,7 @@ struct AppState {
     //     output.
     // THE PRODUCERS: the render player Folder and Wav rows; the project
     // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its twenty-five editable key lines and the two
+    // rows (its two headings, its twenty-four editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
@@ -19616,23 +19617,21 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
     return {nullptr, nullptr};
 }
 
-// THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity:
-// "Breeze is committed"; THE ROSTER AS RULED, architect 2026-11-02, R12 /
-// R14 / R15: the draft won on EDIT, HISTORY, SOURCE, TARGET, SESSION and
-// LOCK — one glyph, no state swap — the last Breeze drawing elsewhere,
-// PLAYER the headphones; BPM shares the logo's single note, SOURCE the
-// wav rows' double notes and LOAD the render player's LOAD checkmark (the
-// same act; the word buttons carry no drawing since 2026-11-18), all
-// deliberate) —
-// the enumerator's drawing in the `icons` set (Breeze's or Papirus's,
-// icons.h's head; one enumerator per key whatever the set) centered on
+// THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity;
+// THE ROSTER AS RULED, architect 2026-11-02, R12 / R14 / R15, and
+// Papirus's, 2026-11-17, session 140: EDIT, HISTORY, SOURCE, TARGET,
+// SESSION and LOCK one glyph each, no state swap; PLAYER the headphones;
+// BPM shares the logo's single note, SOURCE the wav rows' double notes and
+// LOAD the render player's LOAD checkmark (the same act; the word buttons
+// carry no drawing since 2026-11-18), all deliberate) —
+// the enumerator's drawing (icons.h's head, Papirus's) centered on
 // each roster key's box (paint_handler.cpp's paint_key_glyph), the act's
 // name the tooltip's (redesign_button_tooltip, above; the printed legend
 // under the key retired 2026-11-18, send Z). THIS TABLE IS EACH KEY'S RESTING GLYPH; THE PAINTERS READ THE
 // STATEFUL OVERLOAD BELOW. A re-pick is a row here (and, for a drawing not
-// yet imported, a row of both importers' tables, tools/icons/
-// import_breeze.py and import_papirus.py, and a rerun); a re-pick of one
-// set's drawing alone is a row of its importer's table.
+// yet imported, a row of the importer's table, tools/icons/
+// import_papirus.py, and a rerun); a re-pick of the drawing alone is a row
+// of the importer's table.
 // (The rows' comments name a key by its short name, OPEN, SAVE ….)
 inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
     using icons::Icon;
@@ -19649,7 +19648,7 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::IconFollow:                return Icon::GoJump;
         case RedesignButton::IconRestrict:              return Icon::TimelineUseZoneOn;
         // TRIM wears the scissors PRESETS wore until 2026-11-07 (architect,
-        // session 87); PRESETS wears Breeze's bookmarks, his pick.
+        // session 87); PRESETS wears the bookmarks, his pick.
         case RedesignButton::IconTrimArm:               return Icon::EditCut;
         case RedesignButton::IconTrimPresets:           return Icon::Bookmarks;
         case RedesignButton::IconBpm:                   return Icon::MusicNote16th;
@@ -19689,7 +19688,7 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::IconOpenTextEditor:        return Icon::DocumentEdit;
         case RedesignButton::IconAddToSelection:        return Icon::EditSelect;
         case RedesignButton::IconCopyPhaseResets:       return Icon::EditCopy;
-        // PASTE wears Breeze's edit-paste (architect 2026-11-08, session 93),
+        // PASTE wears edit-paste (architect 2026-11-08, session 93),
         // COPY's edit-copy beside it: a distinct drawing by realpath and path
         // data (assets/icons/README.md's provenance).
         case RedesignButton::IconPastePhaseResets:      return Icon::EditPaste;
@@ -19810,7 +19809,7 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // kRenderCancelLabel "Cancel" — are DELETED producer-less with the row's
 // painter; the architect's same-day ruling kept media-record for BOTH of
 // Render's idle meanings, "the context makes it clear"). WHAT SAYS STATE
-// ON THE ROW NOW is the key's Breeze glyph (architect 2026-10-25 for the
+// ON THE ROW NOW is the key's glyph (architect 2026-10-25 for the
 // printed word, 2026-11-02 for the drawing: it names the act the key's next
 // press runs — redesign_button_icon's stateful overload above, Save's
 // COMMIT / PULL / CHECK and Render's CANCEL among it); the GLYPH INDEX

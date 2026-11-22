@@ -215,8 +215,9 @@ shopt -s nocaseglob
 #      tooltip_gap, settled 2026-11-07 at 1 W, audio_level, the project
 #      voice's level, retired 2026-11-11 with the AUDIO case,
 #      waveform_switch_px, the plate's switch width, a tuning key for part of
-#      2026-11-14, fixed at 2 device px (waveform_fade_px in its seat), and
-#      bright_mix, retired 2026-11-21 with the mix fixed at 100
+#      2026-11-14, fixed at 2 device px (waveform_fade_px in its seat),
+#      bright_mix, retired 2026-11-21 with the mix fixed at 100, and icons,
+#      the icon set's key, retired 2026-11-21 with one set, Papirus
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
 #   6. THE NOISE AND THEMES FOLDERS (2026-10-28; the themes flat since
@@ -336,7 +337,8 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # program (src/gui/render.h's kWaveformSwitchPx); and bright_mix, the
 # theme's highlights' mix toward its ground, a tuning key of 2026-11-13
 # retired 2026-11-21: the mix fixed at 100, the program paints each theme's
-# own numbers. A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
+# own numbers; and icons, the icon set's key of 2026-11-17, retired
+# 2026-11-21: one set, Papirus, the program's drawings. A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level line (the defaults
 # file's) takes its place, so the planner renames the two lines by hand at the
 # install, on both devices, the program not running; a crossfade in ms comes
@@ -355,7 +357,7 @@ RETIRED_KEYS=(sync_path theme_level
               noise_crossfade_ms role
               waveform_column_px waveform chrome
               tooltip_gap audio_level waveform_switch_px
-              bright_mix)
+              bright_mix icons)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE slider plays.

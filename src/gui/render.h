@@ -227,8 +227,8 @@ struct TrimRange {
 // text tones, the well's tones — the trim bar, its frame, the ruler, its
 // ticks, the marker lane — the panes and the selection pair; members of the
 // struct since 2026-11-05) — or
-// THE BREEZE GLYPHS (architect 2026-11-01, M7: every drawing a Breeze glyph):
-// each file is recolored to `currentColor` and painted in THE TONE the
+// THE GLYPHS (architect 2026-11-01, M7; every drawing Papirus's, icons.h's
+// head): each file is recolored to `currentColor` and painted in THE TONE the
 // caller passes as the installed theme's sRGB word (installed_theme():
 // `text`, `key_dim_ink` on a disabled key, `text_on_lit` on a lit key's
 // accent face and `text_on_lit_dim` on a lit disabled one's dimmed face,
@@ -559,7 +559,7 @@ const GuiPalette& palette();
 
 // THE INSTALLED THEME'S ROW (the list's row as it is, install_palette
 // below) — the sRGB WORDS behind palette(), for the few readers that need the word rather
-// than a GuiColor: the Breeze glyph road's tone (icons::draw_glyph; key_ink,
+// than a GuiColor: the glyph road's tone (icons::draw_glyph; key_ink,
 // materials.h), the plate's two inks (waveform_plate_inks below). Every other
 // painter reads palette(). Before the first install it is the compiled
 // Default row (construction state, as palette()'s black), never painted.
@@ -570,7 +570,7 @@ const GuiTheme& installed_theme();
 // is the theme's recorded pair" — read by the words painted there, the one
 // owner of the choice a later vocabulary with roles of its own would fork
 // (no glyph reads it since 2026-10-09: the project's drawings wear their
-// own inks, and the keys' Breeze glyphs the tone their caller passes,
+// own inks, and the keys' glyphs the tone their caller passes,
 // icons.h's head):
 //   ListRow          the list's text pair, resting and lit — the field's
 //   ListRowLit       text and the selection's; the folder overlay's and
@@ -1517,7 +1517,7 @@ constexpr int kMinWindowHeightPx = 480;
 // and the lamps stand on. No shadow (the flat look). paint_title_bar paints it; its right
 // group's layout is logo_legend_layout (paint_handler.cpp), the painter's
 // and the tick's damage's one road.
-//   ON THE LEFT, THE NOTE: the `icons` set's MusicNote16th (the BPM key's
+//   ON THE LEFT, THE NOTE: MusicNote16th (the BPM key's
 //     drawing) IN A 12 W DRAWING BOX (architect 2026-11-19: "the logo should
 //     take the same font size as the body" — the mocks' 16 W box was sized
 //     for 16 W text, 16 · 12 / 16 = 12 W), on the ink-box road (icons.h):
@@ -1527,8 +1527,8 @@ constexpr int kMinWindowHeightPx = 480;
 //     INK'S LEFT EDGE kTitleNoteInsetW = 8 W inside the panel (16 device px;
 //     architect 2026-11-19, send AA, RULINGS §9: "the note in the logo looks
 //     good now. It looks like it's aligned with the buttons"), ITS INK
-//     CENTERED ON THE BAR'S ROWS EXACTLY (both sets' notes ink symmetrically
-//     in their canvas, so this is the box centered, its top +8 W; on the
+//     CENTERED ON THE BAR'S ROWS EXACTLY (the note inks symmetrically in
+//     its canvas, so this is the box centered, its top +8 W; on the
 //     tablet the ink 17.5 .. 38.5). THEN THE BRAND, "Warptempo" (kLogoBrand,
 //     a constant), ITS PEN kTitleNoteGapW = 6 W AFTER THE NOTE'S INK'S RIGHT
 //     EDGE (architect 2026-11-19, send AA: "Maybe one more W spacing between
@@ -1651,14 +1651,13 @@ constexpr int kMinWindowHeightPx = 480;
 //     every arm (arm_clip_lamp_press). Unstruck, the square claims nothing.
 //   THE BATTERY, ONE CELL WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
-//     move"): the `icons` set's Battery000Charging (any power source
+//     move"): Battery000Charging (any power source
 //     attached, and a host with no battery; GuiLogoGlyph's rule) or
 //     Battery000 (discharging, or the plug state unknown), on the ink-box
 //     road, ITS INK BOX THE CAP BAND'S HEIGHT (send Z, DESIGN §2) — the
 //     larger side of Papirus's upright batteries (11 x 15 and 10 x 14 user
-//     units; architect 2026-11-17, session 140) is their height; Breeze's
-//     horizontal outline is wider than tall, so under Breeze the cap band is
-//     its height and its width follows — ITS TOP ON THE CAP BAND'S TOP; THE
+//     units; architect 2026-11-17, session 140) is their height
+//     (logo_glyph_ink_px, paint_handler.cpp) — ITS TOP ON THE CAP BAND'S TOP; THE
 //     CELL the larger of the two drawings' ink boxes on each axis, each
 //     drawing centered in it exactly. On the tablet the cell 17 rows tall
 //     (rows 19 .. 35, the baseline the edge under row 35).

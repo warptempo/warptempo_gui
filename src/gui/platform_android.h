@@ -106,30 +106,25 @@ public:
     // it has always set.
     static std::expected<DeviceConfig, std::string> device_config_defaults();
 
-    // THE BUNDLED ICONS' FILES, THE TWO SETS (icons.h's head; the `icons`
-    // device key chooses, architect 2026-11-14, session 123, and
-    // 2026-11-17, session 140) — Breeze's drawings of assets/icons/ and
-    // Papirus's of assets/icons/papirus/, each a map from FILE NAME
-    // (`<Enumerator>.svg`, icons.h's kIconNames; no folder) to the file's
-    // whole bytes, every `.svg` of the bundle's folder. Read by the
-    // launch's icon load alone (icons::load_set, icons.h), IN PLACE: nothing
-    // is copied into the config folder (nobody authors an icon on the
-    // device). The bundle is the APK's `icons/` and `icons/papirus/` assets
-    // — the repository's two folders' `*.svg`, links dereferenced, which
-    // build_apk.sh's asset step packs — listed and read through the
-    // activity's AAssetManager, reached off the backend's one file-scope
-    // pointer (g_android_app), which android_main parks before gui_main
-    // asks, the road device_config_defaults takes. STATIC, asked before any
-    // window exists, like the template above. THE ERROR ARM'S PRODUCER IS IO
-    // (an asset that will not open): the system's words, which the load
-    // carries to the launch's hard fail; an absent asset directory lists
-    // empty (read_asset_dir), so a set missing from the package reaches the
-    // load as its first missing file.
-    struct BundledIconFiles {
-        std::map<std::string, std::string> breeze;
-        std::map<std::string, std::string> papirus;
-    };
-    static std::expected<BundledIconFiles, std::string> bundled_icon_files();
+    // THE BUNDLED ICONS' FILES (icons.h's head; ONE SET, Papirus, architect
+    // 2026-11-21, send GG) — the drawings of assets/icons/, a map from FILE
+    // NAME (`<Enumerator>.svg`, icons.h's kIconNames; no folder) to the
+    // file's whole bytes, every `.svg` of the bundle's folder (the
+    // launcher's AppIcon.svg among them, which the load never looks up).
+    // Read by the launch's icon load alone (icons::load_set, icons.h), IN
+    // PLACE: nothing is copied into the config folder (nobody authors an
+    // icon on the device). The bundle is the APK's `icons/` assets — the
+    // repository's folder's `*.svg`, which build_apk.sh's asset step packs —
+    // listed and read through the activity's AAssetManager, reached off the
+    // backend's one file-scope pointer (g_android_app), which android_main
+    // parks before gui_main asks, the road device_config_defaults takes.
+    // STATIC, asked before any window exists, like the template above. THE
+    // ERROR ARM'S PRODUCER IS IO (an asset that will not open): the system's
+    // words, which the load carries to the launch's hard fail; an absent
+    // asset directory lists empty (read_asset_dir), so a folder missing from
+    // the package reaches the load as its first missing file.
+    static std::expected<std::map<std::string, std::string>, std::string>
+    bundled_icon_files();
     // THE BUNDLED THEMES' FILES (architect 2026-11-11, session 110, THE
     // THEME FILES; theme_roles.h's head) — the repository's themes/system/
     // and themes/extra/, each a map from FILE NAME (`<slug>.theme`, no

@@ -4343,21 +4343,16 @@ int gui_main() {
         device_config = *cfg;
     }
     // THE ICONS ARE LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
-    // load_set): BOTH SETS, assets/icons/ and assets/icons/papirus/, read
-    // in place from the bundle and every drawing parsed before the window
-    // exists, so no paint meets a half-loaded set and the `icons` key's live
-    // switch meets a parsed one. A file missing from either set or not
-    // well-formed SVG is a build defect, the validation doctrine's class
-    // (1): the same road, one line naming the file and the error, and no
-    // window. THE CONFIG'S SET is chosen here (the `icons` key, architect
-    // 2026-11-14 / 2026-11-17; icons::select_set), before any glyph is
-    // fitted; the other road is the settings editor's `icons=` commit and
-    // its value list's tap (GuiInputHandler::apply_icons).
+    // load_set): THE ONE SET, assets/icons/ (Papirus's, architect
+    // 2026-11-21, send GG), read in place from the bundle and every drawing
+    // parsed before the window exists, so no paint meets a half-loaded set.
+    // A file missing or not well-formed SVG is a build defect, the
+    // validation doctrine's class (1): the same road, one line naming the
+    // file and the error, and no window.
     if (const std::optional<std::string> err = icons::load_set()) {
         std::fprintf(stderr, "warptempo_gui: %s\n", err->c_str());
         return 1;
     }
-    icons::select_set(device_config.icons);
     // THIS IS THE SCALE'S INIT ROAD, and it runs BEFORE
     // gui.init(): the two pushes here install the scale into the renderer and
     // the input core, so the FIRST configure and the FIRST painted frame are

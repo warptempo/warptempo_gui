@@ -112,31 +112,24 @@ for f in $FONT_FILES; do
     cp -f "$FONT_DIR/$f" "$ASSETS/$f"
     wt_say "asset: $f ($(stat -c%s "$ASSETS/$f") bytes)"
 done
-# THE BUNDLED ICONS, THE TWO SETS (icons.h's head; the `icons` device key
-# chooses, architect 2026-11-14, session 123, and 2026-11-17, session 140):
-# every `.svg` of the repository's assets/icons/ (Breeze's) copied into the
-# package's assets/icons/, and every `.svg` of assets/icons/papirus/
-# (Papirus's, tools/icons/import_papirus.py) into assets/icons/papirus/,
-# which aapt2 link's -A packs (deflated) as the APK's `icons/` and
-# `icons/papirus/` asset directories (an asset listing names files alone, so
-# the Breeze folder's listing never sees the subfolder). THE ONE SYMLINK in
-# the repository (assets/icons/AppIcon.svg -> MusicNote16th.svg, the
-# launcher's drawing, Breeze's note under either set, which the app does not
-# read); cp -L copies the file it names, so the APK holds regular files
-# alone. The app reads both sets in place at launch, never copying them out
-# (icons.h's load_set; GuiPlatform::bundled_icon_files,
-# platform_android.cpp). An empty folder is a build defect and stops the
-# script here.
+# THE BUNDLED ICONS, ONE SET (icons.h's head; Papirus alone, architect
+# 2026-11-21, send GG): every `.svg` of the repository's assets/icons/
+# (tools/icons/import_papirus.py's drawings, and AppIcon.svg, the launcher's
+# drawing, which the app does not read) copied into the package's
+# assets/icons/, which aapt2 link's -A packs (deflated) as the APK's `icons/`
+# asset directory. The folder holds regular files alone (cp -L stays: a link
+# would be copied as the file it names). The app reads the set in place at
+# launch, never copying it out (icons.h's load_set;
+# GuiPlatform::bundled_icon_files, platform_android.cpp). An empty folder is
+# a build defect and stops the script here.
 ICON_DIR="$APPDIR/../assets/icons"
-for sub in "" /papirus; do
-    shopt -s nullglob
-    ICON_FILES=("$ICON_DIR$sub"/*.svg)
-    shopt -u nullglob
-    [ "${#ICON_FILES[@]}" -gt 0 ] || wt_die "no .svg files under $ICON_DIR$sub"
-    mkdir -p "$ASSETS/icons$sub"
-    cp -fL "${ICON_FILES[@]}" "$ASSETS/icons$sub/"
-    wt_say "assets: icons$sub, ${#ICON_FILES[@]} files"
-done
+shopt -s nullglob
+ICON_FILES=("$ICON_DIR"/*.svg)
+shopt -u nullglob
+[ "${#ICON_FILES[@]}" -gt 0 ] || wt_die "no .svg files under $ICON_DIR"
+mkdir -p "$ASSETS/icons"
+cp -fL "${ICON_FILES[@]}" "$ASSETS/icons/"
+wt_say "assets: icons, ${#ICON_FILES[@]} files"
 # THE BUNDLED THEMES (architect 2026-11-11, session 110, THE THEME FILES;
 # src/gui/theme_roles.h's head): every `.theme` of the repository's
 # themes/system/ and themes/extra/ copied into the package's
@@ -211,12 +204,12 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # adaptive-icon XML res/mipmap-anydpi-v26/ic_launcher.xml, tracked, and its two
 # PNG layers per density, RENDERED HERE AT EVERY BUILD from the drawing
 # into a staged copy of res/ under the package tree,
-# which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.svg, read
-# through its link: BREEZE'S NOTE, AppIcon.svg -> MusicNote16th.svg (the
-# logo lane's note; architect 2026-11-01, M7: Breeze only, everywhere —
-# the project's quaver of 2026-10-23 retired; BREEZE'S WHATEVER `icons`
-# SET THE TABLET RUNS, the icon one picture as its ground is, below:
-# 2026-11-17, session 141), a `currentColor` drawing
+# which aapt2 compiles. THE DRAWING is assets/icons/AppIcon.svg, a regular
+# file: BREEZE'S NOTE (breeze-icons' music-note-16th, the launcher's
+# picture since 2026-11-01, M7; kept when the app's drawings became
+# Papirus's alone, architect 2026-11-21, send GG — the app paints Papirus's
+# MusicNote16th.svg, never this file; assets/icons/README.md its
+# provenance), a `currentColor` drawing
 # painted LAUNCHER_INK, the logo's text tone, through resvg's user
 # stylesheet (below). THE FRAMING
 # (Android's adaptive mask demands a full-bleed square): the FOREGROUND the
@@ -238,12 +231,12 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # square, which the launcher's mask cuts to its shape. Per density f, the 52 dp art A = 52f px on the 108 dp canvas C = 108f
 # px (ic_launcher.xml's head holds the table and the safe-zone arithmetic).
 # Byte-stable: -strip drops the date chunks. Cairo paints the
-# chrome and the glyphs onto the backbuffer (the `icons` set's SVGs rasterised
+# chrome and the glyphs onto the backbuffer (Papirus's SVGs rasterised
 # by resvg, svg_icon.cpp, each copied by cairo); the canvas interior and the
 # score page are the GPU's (canvas_sink.h); the app declares no @string, no style, no res/values. aapt2 compile turns the
 # staged directory into res.zip, which link takes as a positional input.
 APP_ICON="$ICON_DIR/AppIcon.svg"
-[ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, a link to MusicNote16th.svg)"
+[ -f "$APP_ICON" ] || wt_die "missing $ICON_DIR/AppIcon.svg (the launcher icon's drawing, Breeze's note)"
 # THE ICON'S TWO COLORS ARE READ, NEVER SPELLED HERE: the `default` theme's
 # source file, themes/system/<slug>.theme (src/gui/theme_roles.h's THE
 # FORMAT and THE LIST; Arc-Dark's arc_dark.theme since 2026-11-18, send Y),

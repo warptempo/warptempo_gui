@@ -440,13 +440,13 @@ inline bool score_viewer_button_enabled(const AppState& a,
     return false;
 }
 
-// THE KEYS' GLYPHS (architect 2026-11-01, M9; Breeze's roster as ruled
-// 2026-11-02), on each key's face, the act's name the tooltip's (score_viewer_button_hint below): PREV / NEXT GoPreviousViewPage /
-// GoNextViewPage (the page road), BACK / FWD MediaSeekBackward /
-// MediaSeekForward, RESET EditReset, START ZoneIn, END ZoneOut (architect
-// 2026-11-02, R15: the viewer's icons stay as they
-// are; the page PREV / NEXT keep the chevrons LEFT / RIGHT wear, a
-// deliberate share — "the left/right arrows mean 'step 1'"). PLAY / PAUSE's is the render player's Play key's, by its
+// THE KEYS' GLYPHS (architect 2026-11-01, M9; the acts' drawings as ruled
+// 2026-11-02, icons.h's roster), on each key's face, the act's name the
+// tooltip's (score_viewer_button_hint below): PREV / NEXT
+// GoPreviousViewPage / GoNextViewPage (the page road, chevrons of their
+// own), BACK / FWD MediaSeekBackward / MediaSeekForward, RESET EditReset,
+// START ZoneIn, END ZoneOut (architect 2026-11-02, R15: the viewer's icons
+// stay as they are). PLAY / PAUSE's is the render player's Play key's, by its
 // face (render_player_button_icon, paint_handler.cpp, which the painter
 // asks); this table's PlayPause the resting MediaPlaybackStart. The skips
 // keep one drawing for both forms (architect 2026-10-27), as the roster's

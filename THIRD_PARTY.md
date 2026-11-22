@@ -5,17 +5,16 @@ laptop builds the CLI (`CMakeLists.txt`), which links the distribution's fftw al
 cross-builds the APK's libraries into the gitignored `deps/prebuilt/` (`deps/`, each source tarball pinned by sha256
 in `deps/common.sh`, provenance in `docs/engineering/android_notes.md` §6); the APK is installed on one tablet only.
 The licence texts live in each pinned source; this file is the list. The faces and the icons are data, not code:
-`fonts/README.md` and `assets/icons/README.md` (the icon SVGs, the launcher's drawing among them: `AppIcon.svg`,
-the logo lane's note through its symlink) carry their provenance and licence texts. The face is packed into the
+`fonts/README.md` and `assets/icons/README.md` (the icon SVGs and the launcher's drawing, `AppIcon.svg`) carry their
+provenance and licence texts. The face is packed into the
 APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1, the text in
-`fonts/LICENSE-Liberation-OFL.txt`). Every icon is packed into the APK too, in two sets the `icons` device key
-chooses between (`src/gui/icons.h`): KDE's breeze-icons (6.31.0; LGPL-3.0-or-later, the text in
-`assets/icons/LICENSE-LGPL-3.txt`), recolored copies of its dark theme's 22-px drawings written by
-`tools/icons/import_breeze.py` into `assets/icons/`; and papirus-icon-theme
-(https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, commit 33d971eb; GPL-3.0, the text in
-`assets/icons/papirus/LICENSE-GPL-3.txt`), recolored copies of its 16-px symbolic drawings and three of its 16-px
-`actions/` drawings written by `tools/icons/import_papirus.py` into `assets/icons/papirus/`. Both provenance tables
-are in `assets/icons/README.md`.
+`fonts/LICENSE-Liberation-OFL.txt`). Every icon is packed into the APK too, ONE SET (`src/gui/icons.h`):
+papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, commit 33d971eb; GPL-3.0, the
+text in `assets/icons/LICENSE-GPL-3.txt`), recolored copies of its 16-px symbolic drawings and three of its 16-px
+`actions/` drawings written by `tools/icons/import_papirus.py` into `assets/icons/`. The launcher icon's note alone
+is KDE's breeze-icons (6.31.0; LGPL-3.0-or-later, the text in `assets/icons/LICENSE-LGPL-3.txt`): `AppIcon.svg`, a
+recolored copy of its dark theme's 22-px `music-note-16th`, which `apk/build_apk.sh` renders into the launcher's
+layers. Both provenances are in `assets/icons/README.md`.
 
 ## The themes
 

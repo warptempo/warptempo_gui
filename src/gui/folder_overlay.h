@@ -4,9 +4,9 @@
 // keyboard slot's band until 2026-10-14, the modal family's box since,
 // modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
-// SETTINGS PAGE's twenty-seven keys as `key=value` lines under two group
+// SETTINGS PAGE's twenty-six keys as `key=value` lines under two group
 // rows (architect 2026-10-28, on a mock he verified on the glass: "yes" to
-// the list, "keep" to the group rows) — the twenty-five editable keys and,
+// the list, "keep" to the group rows) — the twenty-four editable keys and,
 // among the piece's lines, `scale` and `bpm` as disabled rows (architect
 // 2026-10-29) — and THE VALUE LIST, one listed key's
 // values, the page's row for that key's content (architect 2026-10-25: "maybe
@@ -16,8 +16,9 @@
 // it as a scrolling list", "Yes"; this widget as it stands, no new chrome) —
 // since 2026-10-28 night for `true_colors`, `noise` and
 // `noise_crossfade_s`, since 2026-10-31 for `waveform_grow` and since
-// 2026-11-05 for `theme` and since 2026-11-17 for `icons`
-// (kSettingsValueListKeys, settings_editor.h; the color
+// 2026-11-05 for `theme`
+// (kSettingsValueListKeys, settings_editor.h; the icon set's of
+// 2026-11-17 went with its key 2026-11-21; the color
 // presets' list of 2026-10-25 went with the presets 2026-11-01, the two
 // levels' lists 2026-11-05 with the band's sliders) — a SUB-PAGE of the settings
 // page, whose Cancel and commit return to the page on that key's row
