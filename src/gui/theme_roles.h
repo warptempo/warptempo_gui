@@ -183,7 +183,11 @@
 //                                     the class and the role 2026-11-19, send
 //                                     Z's stage C: "we can let go of the
 //                                     green")
-//     playhead head          03C3D5 = RangeDefault
+//     playhead head          03C3D5 = RangeDefault (arc_dark A5ABB5, the
+//                                     stem's color, PlayheadLine's number:
+//                                     "the triangle for the playhead should
+//                                     probably become the same color as the
+//                                     stem", architect 2026-11-21, send GG)
 //     selection fill         637E86 = StandbySelectionBackground
 //     selection text, text on lit, card ink
 //                            070707 = StandbySelectionForeground — THE
@@ -303,10 +307,10 @@
 //   neighbor is, the hover line alone composited over the canvas it is
 //   drawn on:
 //     playhead line          81E1EA = PlayheadLine (arc_dark A5ABB5, Arc's
-//                                     `.h4` / `.category-label`; of the
-//                                     playhead, "the triangle should remain
-//                                     the font color ... but the stem is too
-//                                     bright"): THE PLAYHEAD'S STEM ON THE
+//                                     `.h4` / `.category-label`; "the stem is
+//                                     too bright" at the font color, send FF;
+//                                     the head wears it too since send GG):
+//                                     THE PLAYHEAD'S STEM ON THE
 //                                     WAVEFORM, its one static tone
 //                                     (render_playhead). A Live theme's WHITE
 //                                     HALF WAY TO ITS RangeDefault,
@@ -483,13 +487,14 @@
 //   the install recomputes them off the mixed bright tones (THE BRIGHT MIX,
 //   below) — the inert prints among them, over the mixed inert faces, the
 //   print itself and the body tone never mixed:
-//     ruler text             9C9C9C = THE TEXT AT 80 % OVER THE RULER FACE,
-//                                     mix(ruler face, text, 0.8): THE RULER'S
-//                                     DIGITS on the Arc page, Arc's column
-//                                     header (Thunar's; arc_dark D3DAE3 over
-//                                     404552 -> B6BCC6; architect 2026-11-18,
-//                                     send Z: "we can go as very truthful,
-//                                     which I think is what we've done here")
+//     ruler text             7D7D7D = THE TEXT AT 55 % OVER THE RULER FACE,
+//                                     mix(ruler face, text, 0.55): THE RULER'S
+//                                     DIGITS, Arc's `.dim-label` (`opacity:
+//                                     0.55`, G3:35) of the font color over
+//                                     the ruler's ground (arc_dark D3DAE3
+//                                     over 404552 -> 9197A2: under the
+//                                     triangle A5ABB5, over the hover line
+//                                     767B87; architect 2026-11-21, send GG)
 //     key dim face           2E2E2E = THE KEY FACE AT 55 % OVER THE BODY TONE,
 //                                     mix(body, key face, 0.55): A DISABLED
 //                                     KEY'S FACE on the Arc page, Arc's
@@ -646,9 +651,9 @@
 // for one, on the reference row: the accent FFAD56 -> C88B4A, the head
 // 03C3D5 -> 0B9BA9 and its line 81E1EA -> 6AB2B8 (bright_mixed_tones, the
 // code); on Arc-Dark the accent 5294E2 -> 497CB9 and its hover 639FE5 ->
-// 5684BC, the head D3DAE3 -> AAB0BA and its hover FFFFFF -> CBCCCF, its
-// line A5ABB5 -> 888D98, the standing card F04A50 -> C0444C, the limiter
-// lamp F27835 -> C16738; at the default 100 every row is painted at its
+// 5684BC, the head A5ABB5 -> 888D98 and its hover FFFFFF -> CBCCCF, its
+// line A5ABB5 -> 888D98 (the head's own number since send GG), the
+// standing card F04A50 -> C0444C, the limiter lamp F27835 -> C16738; at the default 100 every row is painted at its
 // own numbers.
 //
 // THE SCANNER IS NEITHER A ROLE NOR A DERIVED TONE: FFFFFF on every theme,

@@ -506,7 +506,7 @@ struct GuiPalette {
     GuiColor lit_dim_fill;    // a checked-but-disabled key's face, Arc's lit-and-inert
     GuiColor ruler_face;      // the ruler; Arc's entry's fill (paint_entry, materials.h) and the flag editor's (render_flag_editor_box)
     GuiColor ruler_tick;      // the ruler's ticks
-    GuiColor ruler_text;      // the ruler's digits on the Arc page (the text at 80 % over the ruler)
+    GuiColor ruler_text;      // the ruler's digits (the text at 55 % over the ruler, Arc's `.dim-label`)
     GuiColor lane_face;       // the marker lane
     GuiColor trim_bar_face;   // the trim bar's trough (render_trim_flags)
     GuiColor trim_span_face;  // the trim bar's pill at rest, the span
@@ -744,8 +744,9 @@ void install_true_colors(bool on);
 // RULER'S FOOT, the major 2 W and the minor 1 W (4 and 2 device rows at
 // 200 %, scaled_px), overlaying its bottom pad, NO SHADOW; THE DIGITS the
 // ruler face (GuiFace::Small, BOLD 10 W, 20 device px at 200 %, Arc's
-// `font-size: smaller`) in `ruler_text` (the text at 80 % over the ruler,
-// Thunar's column header; architect 2026-11-19, send Z), bare, ON THE
+// `font-size: smaller`) in `ruler_text` (the text at 55 % over the ruler,
+// Arc's `.dim-label` of the font color, arc_dark 9197A2: under the head
+// A5ABB5, over the hover line 767B87; architect 2026-11-21, send GG), bare, ON THE
 // LINE-BOX BASELINE between Thunar's 3 W pads (ruler_baseline_px, the
 // ruler block below); then THE WELL'S LINE, one W, the ruler lane's last
 // (ruler_lane_h_px).
@@ -801,7 +802,7 @@ void install_true_colors(bool on);
 // UNDER THE HOVERING PEN THE HEAD LIGHTS (architect 2026-11-21, send FF: "If
 // the pen is in the ruler lane, maybe the playhead would light up somehow"):
 // where a press there would arm that drag, its fill goes from
-// `playhead_head` toward `playhead_head_hover` (arc_dark D3DAE3 -> FFFFFF)
+// `playhead_head` toward `playhead_head_hover` (arc_dark A5ABB5 -> FFFFFF)
 // over Arc's 200 ms and back, still over the digits — a face of the
 // FaceFades' clock (AppState::FaceFades' THE LANES' TWO FACES, the gate,
 // the fade and the damage: its painted box over the ruler's rows).
@@ -810,10 +811,12 @@ void install_true_colors(bool on);
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
 // history.)
 // THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head, Live's
-// cyan 03C3D5 (arc_dark D3DAE3, Arc's text), and `playhead_line` its line,
+// cyan 03C3D5 (arc_dark A5ABB5, the stem's own number: "the triangle for
+// the playhead should probably become the same color as the stem",
+// architect 2026-11-21, send GG), and `playhead_line` its line,
 // our own PlayheadLine (send FF, 2026-11-21: arc_dark A5ABB5, Arc's `.h4` /
-// `.category-label`, his "the triangle should remain the font color ... but
-// the stem is too bright"; on a Live theme white half way to the head,
+// `.category-label`, his "the stem is too bright" at the font color; on a
+// Live theme white half way to the head,
 // 81E1EA on Default, architect 2026-11-12, session 113: the mean of Live's
 // fade, the playhead's two tones); neither is
 // lent to a marker (the selection is the

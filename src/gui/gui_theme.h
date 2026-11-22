@@ -43,7 +43,7 @@ struct GuiThemeTones {
     uint32_t lit_dim_fill;        // a checked-but-disabled key's face: (the accent at 75 % over the body tone) at 60 % over the body tone, Arc's numbers
     uint32_t ruler_face;          // the ruler, Arc's entry's fill and the flag editor's (= the canvas, waveform_canvas: DetailGridTiles over DetailViewBackground)
     uint32_t ruler_tick;          // the ruler's ticks (DetailViewRulerMarkings over the ruler face, the canvas)
-    uint32_t ruler_text;          // the ruler's digits (the text at 80 % over the ruler face, theme_roles.h's DERIVED block; paint_ruler_row)
+    uint32_t ruler_text;          // the ruler's digits (the text at 55 % over the ruler face, Arc's `.dim-label`, theme_roles.h's DERIVED block; paint_ruler_row)
     uint32_t lane_face;           // the marker lane (Desktop)
     uint32_t trim_bar_face;       // the trim bar's trough, the 12-W lane under the pill (ScrollbarInnerTrack over the ground)
     uint32_t trim_span_face;      // the trim bar's pill at rest, the span (ScrollbarInnerHandle over Desktop)
@@ -139,7 +139,8 @@ inline constexpr std::string_view kGuiReferenceThemeSlug     = "default_dark_neu
 // OUR OWN, each Default's own existing number (architect 2026-11-19, send
 // Z): THE BODY TONE 242424 (SurfaceArea), THE TITLE BAR'S TEXT and THE
 // SIDEBAR TEXT B5B5B5 (ControlForeground) AND THE ARC PAGE'S DERIVED THREE:
-// THE RULER'S DIGITS 9C9C9C, the text at 80 % over the ruler 393939; THE
+// THE RULER'S DIGITS 7D7D7D, the text at 55 % over the ruler 393939
+// (Arc's `.dim-label`; architect 2026-11-21, send GG); THE
 // DISABLED KEY'S FACE 2E2E2E, the key face 363636 at 55 % over the body
 // tone, and ITS BORDER 272727, the well's border 2A2A2A at 55 % over it AND
 // THE PLAYHEAD'S LINE 81E1EA, our own PlayheadLine (send FF, 2026-11-21),
@@ -193,7 +194,7 @@ inline constexpr GuiThemeTones kGuiReferenceThemeTones = {
     0x86623B, // lit_dim_fill
     0x393939, // ruler_face
     0x919191, // ruler_tick
-    0x9C9C9C, // ruler_text
+    0x7D7D7D, // ruler_text
     0x2A2A2A, // lane_face
     0x242424, // trim_bar_face
     0x696969, // trim_span_face

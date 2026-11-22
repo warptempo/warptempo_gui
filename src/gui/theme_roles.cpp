@@ -368,10 +368,12 @@ GuiThemeTones derive(const ThemeRoles& roles) {
     const Rgb border     = over(rgba(roles["ClipBorder"]), ground_a);
     // The app's own tones over the body tone and the ruler (the head's
     // DERIVED block; architect 2026-11-19, send Z, the Arc page): THE
-    // RULER'S DIGITS the text at 80 % over the ruler (Arc's column header);
+    // RULER'S DIGITS the text at 55 % over the ruler, Arc's `.dim-label`
+    // (`opacity: 0.55`, G3:35) of the font color over the ruler's ground
+    // (architect 2026-11-21, send GG; arc_dark 9197A2);
     // THE DISABLED KEY'S FACE the key face at 55 % over the body tone and
     // ITS BORDER the well's border at 55 % over it (Arc's button:disabled).
-    const Rgb ruler_fg   = mix(canvas, text, 0.8);
+    const Rgb ruler_fg   = mix(canvas, text, 0.55);
     const Rgb dim_face   = mix(body, face, 0.55);
     const Rgb dim_border = mix(body, border, 0.55);
     const Rgb white    = Rgb{255, 255, 255};

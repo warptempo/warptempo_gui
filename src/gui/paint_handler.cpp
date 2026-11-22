@@ -4317,8 +4317,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // THE DIGITS: THUNAR'S COLUMN HEADER (architect 2026-11-19, send Z;
     // DESIGN §4) — THE RULER FACE (gui_font.h's table, `Small`: BOLD 10 W,
     // Arc's `font-size: smaller`, 20 device px on the tablet) in
-    // `ruler_text` (the text tone at .8 over the ruler's face, Arc's column
-    // header; arc_dark B6BCC6), BARE, ON THE LINE-BOX BASELINE, +11 W of
+    // `ruler_text` (the text tone at .55 over the ruler's face, Arc's
+    // `.dim-label`; arc_dark 9197A2, architect 2026-11-21, send GG), BARE,
+    // ON THE LINE-BOX BASELINE, +11 W of
     // the ruler's 16 (render.h's ruler_baseline_px: 22 rows on the tablet).
     const GuiFont font = gui_font(GuiFace::Small);
     const double baseline =
@@ -4453,8 +4454,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     // 2026-11-14 night, send J: "I think the chips should also go
     // anti-aliased", "Agree on both."; cool_edit_paint.h's THE CUE'S CHIP
     // owns the drawing, render.h's cue block its lengths) — its fill the
-    // palette's `playhead_head` (Live's cyan 03C3D5 since 2026-11-01), NO
-    // SHADOW (2026-11-02), the head's own tone apart from the line's static
+    // palette's `playhead_head` (Live's cyan 03C3D5 since 2026-11-01;
+    // arc_dark A5ABB5, the stem's color, architect 2026-11-21, send GG), NO
+    // SHADOW (2026-11-02), the head's own role beside the line's static
     // `playhead_line` (render_playhead), THE TRIANGLE ON THE RULER'S LAST
     // cue_chip_h_px DEVICE ROWS (200 %: rows 192 .. 199), its apex on THE
     // BOTTOM EDGE OF THE RULER'S FOOT ROW, over the ticks' feet (2026-10-09
@@ -4512,7 +4514,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             // ITS FILL AS PAINTED (architect 2026-11-21, send FF: "If the
             // pen is in the ruler lane, maybe the playhead would light up
             // somehow"): `playhead_head` toward `playhead_head_hover`
-            // (arc_dark D3DAE3 -> FFFFFF) by the triangle's hover weight,
+            // (arc_dark A5ABB5 -> FFFFFF) by the triangle's hover weight,
             // its face's stored mix (AppState::FaceFades' THE LANES' TWO
             // FACES; the damage damage_lane_hovers' and sync_lane_hovers'),
             // plain at rest. Over the digits as ever.

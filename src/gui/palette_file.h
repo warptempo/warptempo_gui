@@ -197,7 +197,9 @@
 //                            beside the inert label's `text_dim`)
 //   playhead_head    03C3D5  THE PLAYHEAD'S HEAD, the triangle in the ruler,
 //                            Live's playhead triangle (render.h's playhead
-//                            paragraph), the head's alone (RangeDefault)
+//                            paragraph), the head's alone (RangeDefault;
+//                            arc_dark A5ABB5, the stem's color, architect
+//                            2026-11-21, send GG)
 //   playhead_head_hover
 //                    03C3D5  THAT TRIANGLE UNDER THE HOVERING PEN (send FF,
 //                            2026-11-21), a bright tone (PlayheadHover, our
@@ -210,9 +212,9 @@
 //                            solid, one W, opaque, ONE STATIC TONE, a bright
 //                            tone (PlayheadLine, our own role since send FF,
 //                            2026-11-21: arc_dark A5ABB5, Arc's `.h4` /
-//                            `.category-label` — of the playhead, "the
-//                            triangle should remain the font color ... but
-//                            the stem is too bright"; a Live theme's white
+//                            `.category-label` — "the stem is too bright"
+//                            at the font color, send FF; the head wears it
+//                            too since send GG; a Live theme's white
 //                            half way to its head, the mean of Live's fade,
 //                            architect 2026-11-12, session 113;
 //                            render_playhead's paragraph, theme_roles.h's
@@ -292,8 +294,8 @@ inline constexpr std::size_t kGuiPaletteRoleCount = std::size(kGuiPaletteRoles);
 // THE FORMAT) are Default's own numbers: THE BODY TONE 242424, its
 // SurfaceArea; THE TITLE BAR'S TEXT and THE SIDEBAR TEXT B5B5B5, its
 // ControlForeground. THE ARC PAGE'S DERIVED THREE (the same day; the
-// DERIVED block): THE RULER'S DIGITS 9C9C9C, the text B5B5B5 at 80 % over
-// the ruler 393939; THE DISABLED KEY'S FACE 2E2E2E, the key face 363636 at
+// DERIVED block): THE RULER'S DIGITS 7D7D7D, the text B5B5B5 at 55 % over
+// the ruler 393939, Arc's `.dim-label` (architect 2026-11-21, send GG); THE DISABLED KEY'S FACE 2E2E2E, the key face 363636 at
 // 55 % over the body tone 242424; ITS BORDER 272727, the well's border
 // 2A2A2A at 55 % over the body tone. THE LIST ROW'S HOVER 393939 (architect
 // 2026-11-21; the DERIVED block): the ruler 393939 itself, not
@@ -346,7 +348,7 @@ static_assert(kDefault.list_hover_face == 0x393939);
 static_assert(kDefault.lit_dim_fill    == 0x86623B);
 static_assert(kDefault.ruler_face      == 0x393939);
 static_assert(kDefault.ruler_tick      == 0x919191);
-static_assert(kDefault.ruler_text      == 0x9C9C9C);
+static_assert(kDefault.ruler_text      == 0x7D7D7D);
 static_assert(kDefault.lane_face       == 0x2A2A2A);
 static_assert(kDefault.trim_bar_face   == 0x242424);
 static_assert(kDefault.trim_span_face  == 0x696969);

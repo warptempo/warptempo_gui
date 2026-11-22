@@ -16,7 +16,8 @@
 // part); the colors the installed theme's — the flat look's tones
 // (materials.h's THE WELL) and the palette's, every one read from palette(). THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, Live's cyan 03C3D5 since
-// 2026-11-01 — and `playhead_line` — the line's one static tone in the
+// 2026-11-01, arc_dark A5ABB5, the stem's color (architect 2026-11-21,
+// send GG) — and `playhead_line` — the line's one static tone in the
 // canvas, the theme's own PlayheadLine (send FF, 2026-11-21; arc_dark
 // A5ABB5, Arc's `.h4`; Default's 81E1EA, white half way to its head) —
 // palette_file.h's role table, as the

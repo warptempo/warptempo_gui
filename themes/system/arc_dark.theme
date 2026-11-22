@@ -14,10 +14,11 @@
 # THE CLOSE RED: Arc-Dark's xfwm4 / headerbar close disc, wm_button_close_bg CC575D (hover D7787D,
 # pressed BE3841), on THE CLIP LAMP ALONE (architect 2026-11-14, session 123: red reads as a warning
 # or a close; the limiter lamp stays Arc's warning orange — the cards wear notifyd's grey and Arc's
-# destructive red, below). The playhead's head is Arc's
-# fg D3DAE3, the icon glyph color; the markers' chips the accent, Arc's selection blue 5294E2
-# (architect 2026-11-17, session 140: "the marker should take selection blue ... the playhead can be the
-# glyph color"), Arc's own numbers at bright_mix 100, the default (architect 2026-11-21, send FF: the theme's own
+# destructive red, below). The playhead's head wears its stem's color, Arc's `.h4` / `.category-label`
+# A5ABB5, the same number as PlayheadLine (architect 2026-11-21, send GG: "the triangle for the playhead
+# should probably become the same color as the stem"); the markers' chips the accent, Arc's selection blue
+# 5294E2 (architect 2026-11-17, session 140: "the marker should take selection blue"), Arc's own numbers at
+# bright_mix 100, the default (architect 2026-11-21, send FF: the theme's own
 # numbers; a lower percent mixes them toward the ground, src/gui/theme_roles.h's THE BRIGHT MIX). THE CANVAS ON ARC'S CONTENT BASE 404552,
 # Thunar's list (architect 2026-11-17: "Thunar's is the official"; the ruler wears the canvas's tone, a
 # derivation rule, not this file).
@@ -31,7 +32,8 @@
 #   TextDisabled                7E838F  $insensitive_fg_color (fg at 45 % alpha) over $bg_color, read flat
 #   BackgroundClip              666A74  $wm_icon_unfocused_bg, the titlebar glyph of an unfocused window
 #   ViewCheckControlEnabledOn   5294E2  $selected_bg_color, THE ACCENT
-#   RangeDefault                D3DAE3  $fg_color: the playhead's head, near-white (above)
+#   RangeDefault                A5ABB5  Arc's `.h4, .category-label { color: #a5abb5; }` (G3:2123): the playhead's head,
+#                                       the stem's color, PlayheadLine's number (above; architect 2026-11-21, send GG)
 #   StandbySelectionBackground  5294E2  $selected_bg_color (Arc has one selection)
 #   StandbySelectionForeground  FFFFFF  $selected_fg_color
 #   Alert                       F27835  $warning_color: the limiter lamp
@@ -82,8 +84,8 @@
 # his: the scanner and the zoom anchor's stem FFFFFF ("the scanner should be this brightest one"), the playhead's stem
 # A5ABB5, the hover line 767B87 ("an even more dark and faint version of the playhead stem"):
 #   PlayheadLine                A5ABB5  Arc's `.h4, .category-label { color: #a5abb5; }` (G3:2123): the playhead's stem on the
-#                                       waveform, A BRIGHT TONE ("the triangle should remain the font color ... but the
-#                                       stem is too bright")
+#                                       waveform, A BRIGHT TONE (send FF: "the stem is too bright" at the font color;
+#                                       the head wears it too since send GG, RangeDefault above)
 #   HoverLine                   767B87  Arc's scrollbar slider, `scrollbar slider { ... background-color: #767b87; }` (G3:956,
 #                                       ScrollbarInnerHandle's word above): the waveform's hover line
 #   CueHover                    639FE5  `.documents-entry-tag:hover { ... background: #639fe5; }` (G3:1871), Arc's hover of a
@@ -104,7 +106,7 @@ ControlForeground=D3DAE3
 TextDisabled=7E838F
 BackgroundClip=666A74
 ViewCheckControlEnabledOn=5294E2
-RangeDefault=D3DAE3
+RangeDefault=A5ABB5
 StandbySelectionBackground=5294E2
 StandbySelectionForeground=FFFFFF
 Alert=F27835
