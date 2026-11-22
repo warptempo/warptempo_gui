@@ -10071,13 +10071,15 @@ struct AppState {
     //                 rides it: a shift or ctrl press on a row is a consumed
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph, its ink and whether it acts: Folder
-    // wears the folder glyph, Wav the wav glyph, PLAIN NONE (architect
+    // wears the folder glyph, Wav the wav glyph (the note), PLAIN ITS
+    // LISTING'S OPENER KEY'S DRAWING (architect 2026-11-22, send KK: the
+    // settings page's and the value lists' rows SETUP's gear, the trim
+    // presets' PRESETS' bookmark, the BPM form's BPM's note;
+    // paint_handler.cpp's THE LIST VIEW, list_row_drawing; architect
     // 2026-10-28: a settings page row is
     // the line the editor opens with, `true_colors=on`, and a value list's
-    // rows the value as the config spells it, `-9`, `4`; a listing
-    // with no glyph row starting its text 12 W in, the drawing lists' 6 W
-    // margin and 6 W gap with the 16 W slot dropped, architect 2026-11-22,
-    // paint_handler.cpp's THE LIST VIEW), and DISABLED NONE, AND IT IS
+    // rows the value as the config spells it, `-9`, `4`), and DISABLED the
+    // same drawing in its dim print, AND IT IS
     // INERT (architect 2026-10-29, the settings page's `scale` and `bpm`:
     // "bpm and scale should be viewable but disabled. they are useful for
     // notes"): a key line in the dim print, never highlighted, never opened,
@@ -10090,8 +10092,8 @@ struct AppState {
     //     listing. It has no producer and is not here.
     //   * TEXT — no glyph, no act — carried the one-day history picker's rows
     //     (to 2026-08-29) and then the AV Sync Stats panel's lines
-    //     (2026-09-03..30), and went with the panel. Plain is glyph-less as
-    //     it was, but a row with an act.
+    //     (2026-09-03..30), and went with the panel. Plain is a row with an
+    //     act.
     //   * GROUP — an inert title row over a run of rows — went 2026-11-22
     //     with the lists' titles (architect: "the user is expected to have
     //     expert knowledge").

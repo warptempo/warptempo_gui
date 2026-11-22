@@ -3065,7 +3065,7 @@ private:
     //       editor.h), the device keys first and then the piece rows
     //       (kSettingsPagePieceKeys, with
     //       `scale` and `bpm` shown as DISABLED rows, architect
-    //       2026-10-29); each key a glyph-less row whose text is the line
+    //       2026-10-29); each key a row wearing SETUP's gear whose text is the line
     //       the editor would open with, `key=value`
     //       (GuiSettingsEditor::setting_line), Plain for an editable key,
     //       each disabled row inert
@@ -3103,7 +3103,7 @@ private:
     //   the piece; the Settings key stays lit throughout, and its press (bare
     //   `;`) closes the whole panel, as over the page.
     //     build_value_list_rows: the key's values
-    //       (GuiSettingsEditor::value_choices), one glyph-less Plain row each,
+    //       (GuiSettingsEditor::value_choices), one Plain row each (SETUP's gear),
     //       its text what it shows and its `value` what it commits, both
     //       the key's value as written, `on`, `4`; the key recorded on the overlay (`value_key`); the band
     //       opens on the LIVE value's row, centered in the band

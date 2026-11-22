@@ -53,18 +53,19 @@
 // hit cannot describe different rows. The ROW TABLE ITSELF is
 // AppState::folder_overlay (app_state.h), where its every field is described.
 //
-// WHAT IT IS. A flat list of rows — FOLDER rows and WAV rows, each an
-// icon and a name; glyph-less PLAIN rows, a name alone (the value list's
-// values since 2026-10-25, the settings page's key lines since 2026-10-28,
-// the trim presets since 2026-10-28 night, the BPM form's three lines since
-// 2026-10-29); and the INERT rows, which the
+// WHAT IT IS. A flat list of rows, EVERY ROW A DRAWING AND A NAME —
+// FOLDER rows and WAV rows; PLAIN rows wearing their listing's opener key's
+// drawing (architect 2026-11-22, send KK: the value list's values since
+// 2026-10-25 and the settings page's key lines since 2026-10-28 SETUP's
+// gear, the trim presets since 2026-10-28 night PRESETS' bookmark, the BPM
+// form's three lines since 2026-10-29 BPM's note; paint_list_view's
+// list_row_drawing); and the INERT rows, which the
 // highlight never stands on (row_is_inert, the walk below): the page's
-// DISABLED rows in the dim print (`text_dim`), the `scale` and `bpm` lines
-// (architect 2026-10-29). NO LIST CARRIES A TITLE ROW (architect
-// 2026-11-22). A LISTING IN WHICH NO ROW WEARS A DRAWING starts its text
-// 12 W in, not past an empty icon column — the drawing lists' 6 W margin
-// and 6 W gap, the 16 W slot dropped (architect 2026-10-28 night and
-// 2026-11-22; the painter's names' column, paint_list_view) (a glyph-less
+// DISABLED rows, drawing and name in the dim print (`text_dim`), the `scale`
+// and `bpm` lines (architect 2026-10-29). NO LIST CARRIES A TITLE ROW
+// (architect 2026-11-22). Every list seats its rows alike: the drawing's box
+// 6 W in, the name at 28 W, cut 6 W inside the right edge (the painter's
+// names' column, paint_list_view) (a glyph-less
 // TEXT kind went with
 // the AV Sync Stats panel on 2026-09-30, and an UP row, `..`, was a kind
 // until 2026-09-01, when
@@ -236,8 +237,8 @@ namespace folder_overlay {
 // row height, the row's face and baseline (kListRowFace,
 // row_baseline_px) and the head pad derived from them (head_pad_px); the
 // row's drawing and its pens stand at the painter's own constants
-// (paint_handler.cpp's THE LIST VIEW, kListDrawing*), the right cut on THE
-// PAGE MARGIN (modal_box.h).
+// (paint_handler.cpp's THE LIST VIEW, kListDrawing*), the right cut too
+// (the box's 6 W margin's twin, architect 2026-11-22, send KK).
 
 // THE CARDS' FOOT MARGIN (notifications.cpp, its one reader since
 // 2026-10-23): ONE W, the line rule's hairline_px (render.h: 2 device px on

@@ -6464,7 +6464,8 @@ void GuiInputHandler::settings_page_commit(int index) {
 // that page (return_to_settings_page).
 
 // THE LIST: the key's values (GuiSettingsEditor::value_choices, the
-// domains' one owner), one glyph-less Plain row per value, no title row,
+// domains' one owner), one Plain row per value (wearing SETUP's gear,
+// paint_list_view's list_row_drawing), no title row,
 // the value both what the row shows and what the tap commits; the overlay
 // records THE KEY (`value_key`), which the commit routes the value to. The
 // band opens on THE LIVE VALUE — the row whose value is the key's current
@@ -6572,7 +6573,8 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
     viewport.invalidate_all();
 }
 
-// THE ROWS: one glyph-less Plain row per preset, in the list's order — THE
+// THE ROWS: one Plain row per preset (wearing PRESETS' bookmark,
+// paint_list_view's list_row_drawing), in the list's order — THE
 // MUSIC'S ORDER (trim_preset_before, trim_presets_file.h; architect
 // 2026-10-28 night), the overlay's presets kept sorted by the read and the
 // write road (persist_trim_presets) — the text THE PRESET'S NAME ALONE

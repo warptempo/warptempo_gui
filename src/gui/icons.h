@@ -34,12 +34,16 @@
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the title bar's note
 //   (MusicNote16th) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_title_bar), the list rows'
-//   folder and note (Folder / MusicNote16th, paint_folder_overlay), the
+//   folder and note (Folder / MusicNote16th) and, on every other list's
+//   rows, the opener key's drawing — SETUP's gear (SettingsConfigure) on the
+//   settings page and its value lists, PRESETS' bookmark (Bookmarks) on the
+//   trim presets, BPM's note on the BPM form (architect 2026-11-22, send KK;
+//   paint_list_view's list_row_drawing), the
 //   cards' class glyphs (DialogInformation / DialogError,
-//   paint_notifications). THE NOTE IS SHARED THREE WAYS (architect
-//   2026-11-22, send II): the title bar, the BPM key and the wav rows (the
-//   launcher's art too, below); SOURCE's disc, ViewMediaTrack, is the key's
-//   alone.
+//   paint_notifications). THE NOTE IS SHARED FOUR WAYS (architect
+//   2026-11-22, sends II and KK): the title bar, the BPM key, the wav rows
+//   and the BPM form's rows (the launcher's art too, below); SOURCE's disc,
+//   ViewMediaTrack, is the key's alone.
 // THE ROSTER IS AS RULED (2026-11-17, session 140; 2026-11-22, send II); a
 // re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
 // DISTINCT DRAWING (by the written path data and transform; the icon

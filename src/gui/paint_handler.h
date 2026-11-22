@@ -1557,7 +1557,8 @@ private:
     // THE FOLDER OVERLAY (2026-08-28, the render player): the keyboard-slot
     // list panel, Thunar's list under Arc in the modal family's view
     // (architect 2026-11-19, send AA; folder_overlay.h's THE FACES) — folder
-    // and wav rows with their drawings, the glyph-less plain rows, the
+    // and wav rows with their drawings, the plain rows with their opener
+    // key's (paint_handler.cpp's list_row_drawing), the
     // page's disabled rows in the dim print (`text_dim`), the
     // highlighted row and the row under a press one flat fill in the
     // selection pair, all under the band's

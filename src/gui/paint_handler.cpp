@@ -8625,9 +8625,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // ONE PAINTER FOR EVERY CONTENT —
 // the render player's folders and wavs, the Open project picker's project
 // folders, the settings page's `key=value` lines (2026-10-28; no title
-// row, 2026-11-22), the value list's values (2026-10-28 night; glyph-less
-// rows, a value as the config spells it), the trim presets and the BPM
-// form. Contract and gate are at the declaration; the geometry, the scroll
+// row, 2026-11-22), the value list's values (2026-10-28 night; a value as
+// the config spells it), the trim presets and the BPM form. Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay.
@@ -8673,44 +8672,50 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            name in `text_dim` (7E838F)
 // NO FOCUS FRAME (architect 2026-10-23): the lit row is the only sign of
 // the highlight.
-// THE ROW'S DRAWING AND NAME — THE LIST'S OWN LEFT SEATS (architect
-// 2026-11-22, send JJ: "pages without a glyph dont change" / "no it loses
-// the 16w slot but keeps the margin"; the row and its drawing Thunar's at
-// 9 pt, measured on his shot; the lists take their left seats here, not
-// modal_box.h's kPageMarginPenW, whose right cut they keep): IN A LISTING
-// WHOSE ROWS WEAR DRAWINGS (the render player, the project picker) THE
-// DRAWING'S 16 W BOX STANDS kListDrawingMarginW = 6 W FROM THE VIEW'S LEFT
-// EDGE, measured on the box, never on the drawing's ink (the ink keeps its
-// own offset inside the box, icons::ink_in_box), and the name 6 W after the
-// box (kListDrawingGapW): the name's pen 6 + 16 + 6 = 28 W, 56 device px
-// on the tablet. IN A LISTING WHERE NO ROW WEARS A DRAWING (the settings
-// page, the value lists, the trim presets, the BPM form) the 16 W slot is
-// dropped and the margin and the gap kept: the name's pen 6 + 6 = 12 W,
-// 24 device px on the tablet ("all lists that don't have the player's
-// icons hold an empty space for an icon that doesn't exist", architect
-// 2026-10-28 night). A list row's drawing — Folder on a folder or
-// project row, MusicNote16th, THE NOTE, on a wav row (architect 2026-11-22,
-// send II: "render player actually plays target audio, not source. but it
-// should take the bpm note aka the logo"; the title bar's note and BPM's
-// drawing, shared three ways, icons.h's head) — is the set's whole
+// THE ROW'S DRAWING AND NAME — THE LIST'S OWN SEATS (architect 2026-11-22,
+// send KK: "we add icons for the trim presets. We add the little bookmark.
+// For BPM, we add the little note. And for the settings, we add the gear.
+// But this also goes for presets, for settings sub pages, like true colors.
+// Text inputs don't get an icon."; the row and its drawing Thunar's at 9 pt,
+// measured on his shot; the lists take their seats here, not modal_box.h's
+// kPageMarginPenW): EVERY ROW OF EVERY LIST WEARS A DRAWING, its 16 W box
+// kListDrawingMarginW = 6 W FROM THE VIEW'S LEFT EDGE, measured on the box,
+// never on the drawing's ink (the ink keeps its own offset inside the box,
+// icons::ink_in_box), and the name 6 W after the box (kListDrawingGapW,
+// architect 2026-11-22, send II: "increase the distance b/w icon and text in
+// lists, eg player", "6 w"): the name's pen 6 + 16 + 6 = 28 W, 56 device px
+// on the tablet. THE DRAWING IS THE ROW'S (list_row_drawing, below, the one
+// seat): a folder or project row Folder, a wav row MusicNote16th, THE NOTE
+// (architect 2026-11-22, send II: "render player actually plays target
+// audio, not source. but it should take the bpm note aka the logo"; the
+// title bar's note and BPM's drawing, icons.h's head); every other row its
+// LISTING'S OPENER KEY'S drawing (is_folder_overlay_opener's pairs, read off
+// redesign_button_icon so the row can never drift from its key) — the
+// settings page and its four value lists SETUP's gear, the trim presets
+// PRESETS' bookmark, the BPM form BPM's note. THE VALUE SUB-PAGE IS A TEXT
+// INPUT AND WEARS NONE (paint_value_page). The drawing is the set's whole
 // 16 W canvas (kListDrawingBoxW) at the margin across and CENTERED IN THE
 // LIST ROW down, (row − canvas) / 2 = +4 W in the 24 W row (kListDrawingYW,
 // derived from folder_overlay::kListRowW, never a second authored number;
-// architect 2026-11-21), in the TEXT TONE on every face (the drawing unchanged
-// under the highlight, as Thunar's), its name 6 W after the canvas
-// (kListDrawingGapW, architect 2026-11-22, send II: "increase the distance
-// b/w icon and text in lists, eg player", "6 w"; the name's pen and its
-// mask's left end are this column's only readers — the press and the hover
-// take the whole row, folder_overlay::row_at); the name Regular 12 W
-// (GuiFace::Body) on its row's line-box baseline, +16 W of the 24
-// (folder_overlay::kListRowFace / row_baseline_px, the seat the head pad
-// reads too). NOTHING STANDS CLOSER THAN modal_box.h's PAGE MARGIN, 12 W
-// (kPageMarginPenW), TO THE VIEW'S RIGHT EDGE: a name is cut there on its
-// own mask. THE LIT ROW'S BAR KEEPS THE VIEW'S WHOLE WIDTH. Every length a
-// whole W through scaled_px (a composite the sum of its rounded parts);
-// every seat at the row's real place under the real scroll offset (the
-// no-grid arc, 2026-11-15); the first row's capitals 13 W under the view's
-// top at scroll 0 by the list's head pad (folder_overlay::head_pad_px).
+// architect 2026-11-21), in the TEXT TONE on every acting row's face (the
+// drawing unchanged under the highlight, as Thunar's) and, ON AN INERT ROW
+// (the settings page's `scale` and `bpm`), in that row's own dim print,
+// `text_dim`, the tone its name paints in — the drawing follows its row's
+// print (architect 2026-11-22, send KK). The name's pen and its mask's ends
+// are this column's only readers — the press and the hover take the whole
+// row, folder_overlay::row_at; the name Regular 12 W (GuiFace::Body) on its
+// row's line-box baseline, +16 W of the 24 (folder_overlay::kListRowFace /
+// row_baseline_px, the seat the head pad reads too). THE RIGHT CUT IS THE
+// BOX'S MARGIN'S TWIN: a name is cut kListDrawingMarginW = 6 W inside the
+// view's right edge on its own mask (architect 2026-11-22, send KK: "it
+// should be 6W, since on the left, the icon will be in the 6W. So on the
+// right, the text should be clipped at 6W."); the questions, the progress
+// page and the value sub-page keep the page margin's 12 W. THE LIT ROW'S BAR
+// KEEPS THE VIEW'S WHOLE WIDTH. Every length a whole W through scaled_px (a
+// composite the sum of its rounded parts); every seat at the row's real
+// place under the real scroll offset (the no-grid arc, 2026-11-15); the
+// first row's capitals 13 W under the view's top at scroll 0 by the list's
+// head pad (folder_overlay::head_pad_px).
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT (the
 // row Load in place and the highlight pair act on) and the TRANSPORT'S
 // ITEM, which its row does not mark (architect 2026-10-23).
@@ -8721,9 +8726,42 @@ static constexpr double kListDrawingYW =
 static_assert(kListDrawingYW == static_cast<double>(static_cast<int>(kListDrawingYW)),
               "the list row's drawing centered in its row, a whole W down");
 static constexpr double kListDrawingGapW = 6.0;
-static_assert(kListDrawingMarginW + kListDrawingGapW == 12.0,
-              "a glyphless list's names stand 12 W in: the drawing lists' "
-              "margin and gap, the 16 W slot dropped (architect 2026-11-22)");
+
+// A LIST ROW'S DRAWING, THE ONE SEAT (the block above): a Folder row the
+// folder, a Wav row the note, and a Plain or Disabled row its listing's
+// opener key's resting drawing (is_folder_overlay_opener's pairs; none of
+// the three keys swaps its drawing, redesign_button_icon's stateful
+// overload). THE PRODUCERS (AppState::FolderOverlayRow's THE PRODUCERS):
+// Plain and Disabled rows stand under the settings page, the value lists,
+// the trim presets and the BPM form alone; the render player and the
+// project picker list Folder and Wav rows alone, and no list stands under
+// Owner::None.
+static icons::Icon list_row_drawing(AppState::FolderOverlay::Owner owner,
+                                    AppState::FolderOverlayRow::Kind kind) {
+    using Kind  = AppState::FolderOverlayRow::Kind;
+    using Owner = AppState::FolderOverlay::Owner;
+    switch (kind) {
+        case Kind::Folder: return icons::Icon::Folder;
+        case Kind::Wav:    return icons::Icon::MusicNote16th;
+        case Kind::Plain:
+        case Kind::Disabled:
+            break;
+    }
+    switch (owner) {
+        case Owner::SettingsPage:
+        case Owner::ValueList:
+            return redesign_button_icon(RedesignButton::IconSettings);
+        case Owner::TrimPresets:
+            return redesign_button_icon(RedesignButton::IconTrimPresets);
+        case Owner::BpmForm:
+            return redesign_button_icon(RedesignButton::IconBpm);
+        case Owner::None:
+        case Owner::Player:
+        case Owner::ProjectPicker:
+            break;
+    }
+    std::unreachable();
+}
 
 // ONE LIST VIEW: the rows of `ov` in the band `band` under the scroll
 // offset `scroll`, clipped to the band (whole pixels: a row the band cuts is
@@ -8731,7 +8769,8 @@ static_assert(kListDrawingMarginW + kListDrawingGapW == 12.0,
 // the caller laid), per row under the exposure; a row under a press
 // lights. STATE-AXIS: the face is decided
 // ONCE per row from the highlight and the press arm, the drawing from the
-// row's kind alone.
+// row's kind and the listing's owner (list_row_drawing), its ink from the
+// row's print.
 static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                             const AppState::FolderOverlay& ov,
                             const GuiRect& band, double scroll,
@@ -8743,21 +8782,13 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
     cairo_clip(cr);
     const GuiPalette&    pal = palette();
     const GuiThemeTones& t   = kArcDarkTones;
-    // THE NAMES' COLUMN, ONE PER LISTING (the block above), derived from the
-    // rows themselves.
-    const bool wears_drawings = std::any_of(
-        ov.rows.begin(), ov.rows.end(),
-        [](const AppState::FolderOverlayRow& row) {
-            return row.kind == AppState::FolderOverlayRow::Kind::Folder ||
-                   row.kind == AppState::FolderOverlayRow::Kind::Wav;
-        });
-    const int right_cut      = page_margin_pen_px();
+    // THE NAMES' COLUMN AND THE RIGHT CUT, ONE FOR EVERY LIST (the block
+    // above): every row wears a drawing, the cut the box's margin's twin.
     const int drawing_margin = scaled_px(kListDrawingMarginW);
     const int drawing_box    = scaled_px(kListDrawingBoxW, 1);
     const int drawing_gap    = scaled_px(kListDrawingGapW);
-    const int name_dx =
-        wears_drawings ? drawing_margin + drawing_box + drawing_gap
-                       : drawing_margin + drawing_gap;
+    const int right_cut      = drawing_margin;
+    const int name_dx        = drawing_margin + drawing_box + drawing_gap;
     folder_overlay::for_each_row(
         ov, band, scroll,
         [&](int index, const AppState::FolderOverlayRow& row,
@@ -8811,18 +8842,16 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
             }
             // THE ROW'S TEXT SEAT: the rows' face, its baseline the row's
             // real top plus the rows' depth (folder_overlay.h's one
-            // definition, the head pad's too), and the right cut, the page
-            // margin inside the view's right edge (the block above).
+            // definition, the head pad's too), and the right cut, the box's
+            // 6 W margin inside the view's right edge (the block above).
             const GuiFont font = gui_font(folder_overlay::kListRowFace);
             const double baseline = r.y + folder_overlay::row_baseline_px();
             const double text_end =
                 r.x + r.w - static_cast<double>(right_cut);
-            if (row.kind == AppState::FolderOverlayRow::Kind::Folder ||
-                row.kind == AppState::FolderOverlayRow::Kind::Wav) {
-                const icons::Icon glyph =
-                    row.kind == AppState::FolderOverlayRow::Kind::Wav
-                        ? icons::Icon::MusicNote16th
-                        : icons::Icon::Folder;
+            // THE ROW'S DRAWING (list_row_drawing), in the row's print: the
+            // text tone on an acting row, the dim print on an inert one.
+            {
+                const icons::Icon glyph = list_row_drawing(ov.owner, row.kind);
                 const icons::InkInBox fit =
                     icons::ink_in_box(glyph, drawing_box);
                 if (fit.ink_px > 0)
@@ -8831,9 +8860,9 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                         r.x + static_cast<double>(drawing_margin) + fit.left,
                         r.y + static_cast<double>(scaled_px(kListDrawingYW)) +
                             fit.top,
-                        fit.ink_px, t.text);
+                        fit.ink_px, inert ? t.text_dim : t.text);
             }
-            // THE NAME, cut the page margin inside the view's right edge on
+            // THE NAME, cut the box's margin inside the view's right edge on
             // its own mask (text_shape::show_shaped_run_within: no clip per
             // row).
             const text_shape::ShapedRun run =

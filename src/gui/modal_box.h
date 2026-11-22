@@ -184,9 +184,10 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
 //   kPageMarginPenW 12 W     a text's PEN from the view's left edge, its ink
 //                            then about 13 W in (the face's own left
 //                            bearing) — THE XFCE APPEARANCE DIALOG'S INK,
-//                            MEASURED 13 on his desktop; and NOTHING STANDS
-//                            CLOSER THAN THE SAME 12 W TO THE VIEW'S RIGHT
-//                            EDGE (a text is cut there);
+//                            MEASURED 13 on his desktop; and on a page
+//                            (not a list, below) NOTHING STANDS CLOSER THAN
+//                            THE SAME 12 W TO THE VIEW'S RIGHT EDGE (a text
+//                            is cut there);
 //   kPageMarginCapTopW 13 W  the first line's CAP TOP under the view's top,
 //                            whatever that line's kind — OURS, RULED: GTK
 //                            lays its margin to the line box, which leaves
@@ -204,11 +205,11 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
 // device px on the tablet at 200 %). A FILL ACROSS THE VIEW KEEPS THE VIEW'S
 // WHOLE WIDTH (a list's lit row, x 0..2303 on the tablet): the margin seats
 // ink, not faces. ITS READERS: the lists — the pad over a list's first row
-// that seats its caps (folder_overlay.h's head_pad_px) and the rows' right
-// cut (paint_handler.cpp's THE LIST VIEW); A LIST'S LEFT SEATS ARE THE LIST
-// VIEW'S OWN CONSTANTS, not kPageMarginPenW (architect 2026-11-22: the
-// drawing's box 6 W in, a glyphless name 12 W in, kListDrawingMarginW and
-// kListDrawingGapW) — and the three pages, a question's, the progress page
+// that seats its caps (folder_overlay.h's head_pad_px); A LIST'S SIDE SEATS
+// ARE THE LIST VIEW'S OWN CONSTANTS, not kPageMarginPenW (architect
+// 2026-11-22, sends JJ and KK: every row's drawing box 6 W in, its name at
+// 28 W, cut 6 W inside the right edge; paint_handler.cpp's THE LIST VIEW,
+// kListDrawingMarginW and kListDrawingGapW) — and the three pages, a question's, the progress page
 // and the value sub-page (modal_page_lines below), which keep the 12 W pen;
 // the value sub-page's entry box stands kPageMarginPenW from the view's left
 // AND its top, a box measured to its border (the cap-top rule is a text
