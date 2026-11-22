@@ -657,21 +657,17 @@ static GuiRect flag_hit_rect_face(const FlagHitRect& r) {
     return GuiRect{ix0, iy0, ix1 - ix0, iy1 - iy0};
 }
 
-int marker_cue_hit(const AppState& app, double x, double y,
-                   GuiRect* face_out) {
+int marker_cue_hit(const AppState& app, double x, double y) {
     if (app.history_mode.active) return -1;
     const FlagHitRect* r = topmost_flag_rect(app, x, y);
     if (!r || r->marker_index < 0) return -1;
-    if (face_out) *face_out = flag_hit_rect_face(*r);
     return r->marker_index;
 }
 
-int history_cue_hit(const AppState& app, double x, double y,
-                    GuiRect* face_out) {
+int history_cue_hit(const AppState& app, double x, double y) {
     if (!app.history_mode.active) return -1;
     const FlagHitRect* r = topmost_flag_rect(app, x, y);
     if (!r || r->marker_index < 0) return -1;
-    if (face_out) *face_out = flag_hit_rect_face(*r);
     return r->marker_index;
 }
 

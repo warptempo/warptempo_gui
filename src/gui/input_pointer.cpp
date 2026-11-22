@@ -7083,8 +7083,8 @@ void GuiInputHandler::recompute_redesign_button_hover() {
         // the published rects (marker_cue_hit) — is the owner when it has
         // words (marker_tooltip_text non-empty: its resolved value where the
         // value copy would act on it, or, architect 2026-11-17, send U, its
-        // whole flag line where the painted label is cut), the rect handed
-        // to the chain its face. Under the same gates as a key: no
+        // whole flag line where the painted label is cut). Under the same
+        // gates as a key: no
         // veil, no card over it, the no-wait rule (a cue's under every
         // overlay, the lane covered there); the P column answers no live
         // cue through the two owners. IN THE `h` VIEW THE ITEM UNDER THE PEN
@@ -7098,7 +7098,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
             !cue_wait_refused) {
             if (app.history_mode.active) {
                 const int item = history_cue_hit(
-                    app, app.last_mouse_rx, app.last_mouse_ry, nullptr);
+                    app, app.last_mouse_rx, app.last_mouse_ry);
                 if (item >= 0 &&
                     !history_cue_tooltip_text(app, item).empty()) {
                     note_tooltip_hover(
@@ -7107,7 +7107,7 @@ void GuiInputHandler::recompute_redesign_button_hover() {
                 }
             } else {
                 const int cue = marker_cue_hit(
-                    app, app.last_mouse_rx, app.last_mouse_ry, nullptr);
+                    app, app.last_mouse_rx, app.last_mouse_ry);
                 if (cue >= 0 &&
                     !marker_tooltip_text(app, audio, cue).empty()) {
                     note_tooltip_hover(

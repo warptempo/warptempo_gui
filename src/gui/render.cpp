@@ -2988,9 +2988,9 @@ static_assert(kWaveformGrowQuartersPerPx == kWaveformSubcells,
 static_assert(kWaveformBarHaloSubcells == kWaveformGrowMaxQuarters,
               "the plate's stored bars cover the waveform_grow key's top");
 // THE FADE'S START STANDS IN [1, 2) DEVICE PX (render.h's THE FADE BAND: the
-// band ends where the bars change level, so a start at the switch width is
-// a band of no length, the fade off; under 1 px it names a bar width no
-// rung draws).
+// band ends where the bars change level, so a start at the switch width
+// would be a band of no length; under 1 px it names a bar width no rung
+// draws).
 static_assert(kWaveformFadeHundredths >= 100 &&
                   kWaveformFadeHundredths < 100 * kWaveformSwitchPx,
               "the plate's fade starts in [1, 2) device px");

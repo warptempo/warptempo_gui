@@ -9349,9 +9349,11 @@ struct AppState {
     // and it works fine". FIVE CONTENTS: the OPEN PROJECT PICKER (the Open
     // Project button, Ctrl+O; the valid project folders as rows, the open act a
     // REOPEN through gui_main's loop); THE SETTINGS PAGE (architect
-    // 2026-10-28: the Settings button and bare `;`; the twenty-three keys the
-    // settings editor recalls, one `key=value` row each under two inert group
-    // rows, with `scale` and `bpm` as inert disabled rows (2026-10-29), the
+    // 2026-10-28: the Settings button and bare `;`; the keys of
+    // kSettingsEditorKeys, settings_editor.h, one `key=value` row each, the
+    // device keys then the piece rows (kSettingsPagePieceKeys), no group or
+    // title row (2026-11-22), with `scale` and `bpm` as inert disabled rows
+    // among the piece rows (2026-10-29), the
     // open act the editor opened on the row's key, PREFILLED with its value
     // (2026-11-19), once
     // the page has closed — or, on the row of a key with a value list, that
@@ -9947,8 +9949,9 @@ struct AppState {
     // fills it. SIX CONTENTS FILL IT: the RENDER PLAYER, with the project's
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
-    // (architect 2026-10-28), with the settings editor's twenty-three keys as
-    // `key=value` lines and `scale` and `bpm` as
+    // (architect 2026-10-28), with the keys of kSettingsEditorKeys
+    // (settings_editor.h) as `key=value` lines and, among the piece rows
+    // (kSettingsPagePieceKeys), `scale` and `bpm` as
     // disabled lines (2026-10-29), no title row (2026-11-22); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
     // drop down would make it quicker, because I don't like having to type
@@ -21047,17 +21050,16 @@ MarkerTooltipText marker_tooltip_text(const AppState& app,
 // marker_cue_hit — THE TARGET: the cue under the real point (x, y) by the PRESS'S OWN WALK
 // and arbitration (hit_test_flag's topmost_flag_rect over the published
 // AppState::flag_hit_rects, chips over labels, the last painted on top), its
-// marker index or −1 — and `face_out`, when a cue is hit, that rect's FACE:
-// the bounding box of its label box ∪ its chip, the label box starting at
-// the chip's left edge on the marker lane's rows (FlagHitRect, render.h). −1
-// in the `h` view (the indices there are the diff flags'). No wider column
-// than the cue: the key's column is a key-surface rule (tooltip_column_rect).
-int marker_cue_hit(const AppState& app, double x, double y,
-                   GuiRect* face_out);
+// marker index or −1: the hit is the published rect's label box ∪ its chip,
+// the label box starting at the chip's left edge on the marker lane's rows
+// (FlagHitRect, render.h). −1 in the `h` view (the indices there are the
+// diff flags'). No wider column than the cue: the key's column is a
+// key-surface rule (tooltip_column_rect).
+int marker_cue_hit(const AppState& app, double x, double y);
 // marker_cue_face — THE SEAT'S FACE, read from the LIVE stash so a cue that
-// moved (FOLLOW scrolling, a relayout) is read where it is painted: the face
-// (as marker_cue_hit's) of the topmost published rect naming store index
-// `idx`, or the zero rect where none does or in the `h` view — the painter
+// moved (FOLLOW scrolling, a relayout) is read where it is painted: the
+// bounding box of the label box ∪ the chip of the topmost published rect
+// naming store index `idx`, or the zero rect where none does or in the `h` view — the painter
 // then paints nothing and the walk's next pass ends the box. The face is the
 // box's VERTICAL seat and the damage band's (tooltip_owner_face); its
 // horizontal seat is the label's text, below.
@@ -21074,7 +21076,7 @@ GuiRect marker_cue_face(const AppState& app, int idx);
 // the panel's clamp (still winning near the panel's edges) and
 // the window's top. A cue with no painted label segment keeps the first
 // seat, the box's left on the chip's left. The target is untouched — the
-// chain's rect and the hit stay label box ∪ chip (marker_cue_hit). The zero
+// hit stays label box ∪ chip (marker_cue_hit). The zero
 // rect where no published rect names `idx`. The box is exact
 // (tooltip_box_rect: `w` and `h` real, the answer a GuiRectF).
 GuiRectF marker_tooltip_box_rect(const AppState& app, int idx, int text_inset,
@@ -21118,10 +21120,9 @@ struct HistoryCueTooltipText {
 HistoryCueTooltipText history_cue_tooltip_text(const AppState& app, int idx);
 // history_cue_hit — THE TARGET: the item under (x, y) by the press's own walk
 // (topmost_flag_rect over the published rects, which the history painter
-// fills with diff-flag indices while the mode stands), and `face_out` its
-// face, as marker_cue_hit's; −1 with the mode down.
-int history_cue_hit(const AppState& app, double x, double y,
-                    GuiRect* face_out);
+// fills with diff-flag indices while the mode stands), the hit as
+// marker_cue_hit's; −1 with the mode down.
+int history_cue_hit(const AppState& app, double x, double y);
 // history_cue_face — THE SEAT'S FACE off the live stash, as marker_cue_face's;
 // the zero rect with the mode down or no rect naming `idx`.
 GuiRect history_cue_face(const AppState& app, int idx);

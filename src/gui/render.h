@@ -3893,7 +3893,7 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // Fh, 100: F = 1) is THE BAR WIDTH AT WHICH THE FINER LEVEL STARTS TO
 // APPEAR; 1 is ITS FLOOR, THE WHOLE DOUBLING (a rung's own bars are a px
 // or more wide, so no band can start under it).
-// THE PLATE IS IN THE BAND iff Fh < 200 AND the fine rung exists AND P > F
+// THE PLATE IS IN THE BAND iff the fine rung exists AND P > F
 // — exactly 100 · B > Fh · q, STRICT (architect 2026-11-14, send K), the
 // compare exact in doubles as the rung's is (B a multiple of a half frame,
 // q of a sixteenth, Fh whole). AT P == F THE PLATE IS OUT OF THE BAND, at
@@ -3905,9 +3905,7 @@ inline WaveformBasis waveform_bar_basis(const WaveformBarGeometry& g) {
 // under FOLLOW's scroll, at whatever offset the viewport's origin gives it.
 // So at F = 1 a whole level is the one zoom of each doubling off the band.
 // OUT OF THE BAND the plate is rung B's uniform bars in every
-// respect — the row, the transform and the bytes — and Fh == 200 IS OFF
-// for every q: the band ends at the switch width, so a start there is a
-// band of no length.
+// respect — the row, the transform and the bytes.
 // THE WEIGHT, the finer picture's share: w = log2(P / F) / log2(2 / F),
 // LINEAR IN THE ZOOM'S LOGARITHM (an even pinch, an even fade; no key),
 // clamped at 0 from below (a rounding of the quotient), in [0, 1): 0 at
@@ -3979,7 +3977,7 @@ inline WaveformFadeBand waveform_fade_band(double q, int64_t column) {
     const double main_b = waveform_bar_frames(q, column);
     const double fh     = static_cast<double>(kWaveformFadeHundredths);
     const double sw     = static_cast<double>(kWaveformSwitchPx);
-    if (!(main_b > 0.0) || !(fh < 100.0 * sw)) return f;
+    if (!(main_b > 0.0)) return f;
     if (main_b < static_cast<double>(column)) return f;
     if (100.0 * main_b <= fh * q) return f;
     const double start = fh / 100.0;
