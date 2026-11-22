@@ -696,8 +696,9 @@ void install_true_colors(bool on);
 // (architect: "waveform height ok to take from"; "it's okay if it takes
 // away from the waveform height", 2026-11-18).
 //
-// THE TRIM BAR IS ARC'S SCROLLBAR (render_trim_flags owns the drawing,
-// trim_lane_h_px the rows; architect 2026-11-17, session 140, ruling 4 and
+// THE TRIM BAR IS ARC'S SCROLLBAR (render_trim_flags owns the pill's
+// drawing, paint_trim's ground step the trough and the lines, trim_lane_h_px
+// the rows; architect 2026-11-17, session 140, ruling 4 and
 // D1, reversing 2026-11-03's overview bar of two flat fills): under the
 // line under the top icon row, THE TROUGH (trim_trough_h_px, 12 W, 24 device rows at
 // 200 %) across the waveform area's columns in `trim_bar_face` (Live's
@@ -2107,6 +2108,20 @@ inline int trim_pill_h_px() {
 inline int trim_lane_h_px() {
     return hairline_px() + trim_trough_h_px() + hairline_px();
 }
+// THE TROUGH'S RECT, THE ONE STATEMENT OF ITS ROWS AND COLUMNS: under the
+// trim lane's first row (the line under the top icon row) its
+// trim_trough_h_px rows, cut to the lane's rows less that line, on the
+// columns [lane_x, lane_x + lane_w) — the waveform area's x and the lane's
+// painted width. Read by paint_trim's ground step, which lays the trough's
+// FLAT `trim_bar_face` on every frame class (architect 2026-11-21, send
+// GG), and by render_trim_flags for the pill's seat on it; empty (w or h
+// not positive) on a lane too short or too narrow to hold one.
+inline GuiRect trim_trough_rect(const GuiRect& trim_lane, int lane_x,
+                                int lane_w) {
+    const int px = hairline_px();
+    return GuiRect{lane_x, trim_lane.y + px, lane_w,
+                   std::min(trim_trough_h_px(), trim_lane.h - px)};
+}
 // THE RULER'S TICKS (architect 2026-11-01 night, M5b / M5c / M5h; the major
 // 2026-11-03; the width one W since 2026-11-04, the unit): ONE CANVAS LINE
 // WIDE — waveform_line_px, the line rule's W, 2 device px on the tablet at
@@ -2421,9 +2436,10 @@ inline int cue_chip_hit_right_px() {
 // paint_well_frame_rows (paint_handler.cpp), called by each painter that
 // owns rows of the well — paint_trim (the trim lane), paint_ruler_row (the
 // ruler and marker lanes) and paint_canvas_column_frame (the foot line and
-// the well's foot) — after its own fills; on a frame with no audio loaded,
-// whose lanes those painters leave as the body tone, on_redraw paints the
-// upper lanes' share itself.
+// the well's foot) — after its own fills, on every frame class: on a frame
+// with no audio loaded paint_trim and paint_ruler_row run their ground
+// steps alone, so the three upper lanes wear their own grounds, empty, under
+// their lines (architect 2026-11-21, send GG).
 inline int lane_foot_line_h_px() {
     return hairline_px();
 }
@@ -5285,11 +5301,11 @@ struct TrimBarTones {
 };
 TrimBarTones trim_bar_tones(const TrimBarLook& look);
 
-// Draws THE TRIM BAR — the trough and the pill on it, between the frame's
+// Draws THE TRIM BAR'S SPAN — the pill on the trough, between the frame's
 // two lines (architect 2026-10-09, the program is Cool Edit; ARC'S
 // SCROLLBAR since 2026-11-17, session 140; the well paragraph for its look,
-// trim_lane_h_px for its rows): the trough's flat `trim_bar_face` across the
-// waveform area's columns, then THE SPAN AS THE PILL — the trim window from
+// trim_lane_h_px for its rows): on the trough paint_trim's ground step laid
+// (trim_trough_rect, its rows the pill's seat), THE SPAN AS THE PILL — the trim window from
 // the begin bound's exact place through the end bound's, sliding off an
 // edge like any content (architect 2026-10-05: an out-of-view bound reads as
 // the window running on) — the slider's box, the pill's ink the seat inside
@@ -5301,8 +5317,9 @@ TrimBarTones trim_bar_tones(const TrimBarLook& look);
 // (CoverageStampPass::rounded_rect_bands; THE TRIM BAR'S CAPS AND GRABS),
 // every tone `look`'s through
 // the one table (trim_bar_tones above); no playhead
-// (the well paragraph above, 2026-10-09 ~14:30). The lane's two lines and
-// its ground are paint_trim's. The lane band is
+// (the well paragraph above, 2026-10-09 ~14:30). The lane's ground, its
+// trough and its two lines are paint_trim's ground step, on every frame
+// class (architect 2026-11-21, send GG). The lane band is
 // the `trim_bar` PARAMETER — the caller passes top_trim_row_area(app), and
 // the band painted in is published as TrimBarHit::lane, the y-gate both
 // trim hits read, so paint and hit take the band as one value;

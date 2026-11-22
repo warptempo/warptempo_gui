@@ -1273,7 +1273,11 @@ private:
     // triangle as painted (AppState::HoverLine's triangle pair), each by the
     // one publishing rule (a run publishes only what its damage clip
     // redrew).
-    void paint_ruler_row(cairo_t* cr);
+    // `content` false — a frame with no audio, on_redraw's `plate_branch`
+    // false (architect 2026-11-21, send GG) — paints the GROUND STEP alone
+    // (the two lanes' faces and their lines) and publishes cold: no head,
+    // no triangle.
+    void paint_ruler_row(cairo_t* cr, bool content);
     // THE TWO REDESIGNED BUTTON ROWS (the MENU ROW, top lane 1, went
     // 2026-10-21) — the ICON ROW (top lane 1 since 2026-10-22, row 4: the
     // thirty-one view/mode/action buttons (re-counted 2026-10-29 off
@@ -1403,8 +1407,12 @@ private:
     // — render_background erases every exposed top-strip pixel, so a
     // strip-only damage (hover text, a flag change) must repaint the live view
     // bar too; the outer Cairo damage clip bounds the actual work. See the
-    // definition for the basis contract.
-    void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip);
+    // definition for the basis contract. `content` false — a frame with no
+    // audio, on_redraw's `plate_branch` false (architect 2026-11-21, send
+    // GG) — paints the GROUND STEP alone (the lane's face, its trough and
+    // its lines) and publishes the stash cold: nothing to grab.
+    void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip,
+                    bool content);
     // THE SELECTION STEM (architect 2026-11-05, his pick a2 of session 42,
     // reversing 2026-11-04's coincidence stem) — the per-frame waveform
     // overlay: on every published entry, a SOLID ONE-W `cue_outline` line

@@ -4143,9 +4143,10 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
 // whole width (well_columns) — all flat `well_border`, whole cells. (The
 // frame's two side lines retired with the frame.) Each painter that owns
 // rows of the well calls it over its own rows after its fills (paint_trim,
-// paint_ruler_row, paint_canvas_column_frame; on_redraw over the upper
-// lanes on a frame with no audio), so a line's cells in a lane's rows are
-// repainted wherever that lane's damage reaches. The caller's clip holds.
+// paint_ruler_row, paint_canvas_column_frame — the first two on every frame
+// class, their ground steps alone on a frame with no audio), so a line's
+// cells in a lane's rows are repainted wherever that lane's damage reaches.
+// The caller's clip holds.
 namespace {
 void paint_well_frame_rows(cairo_t* cr, const AppState& app, int y0, int y1) {
     const WellColumns well = well_columns(app);
@@ -4182,7 +4183,7 @@ void paint_well_frame_rows(cairo_t* cr, const AppState& app, int y0, int y1) {
 }
 } // namespace
 
-void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
+void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     const GuiRect lane   = top_ruler_row_area(app);
     const GuiRect marker = top_marker_row_area(app);
     // THE HEAD'S HIT IS PUBLISHED AS PAINTED (AppState::playhead_head_hit;
@@ -4255,12 +4256,24 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
     }
 
     cairo_save(cr);
-    // THE LANES (architect 2026-11-01 night, the flat well; render.h's well
-    // paragraph): the ruler FLAT `ruler_face` across the waveform area's
-    // columns — the panel's whole width since 2026-11-19 (send Z, edge to
-    // edge), so the body tone `face` laid first shows nowhere on a full
-    // window; the marker lane FLAT `lane_face` across them; then THE WELL'S
-    // LINE under the ruler, the ruler lane's last row (paint_well_frame_rows).
+    // THE GROUND STEP — THE LANES (architect 2026-11-01 night, the flat well;
+    // render.h's well paragraph): the ruler FLAT `ruler_face` across the
+    // waveform area's columns over the ruler's rows — the panel's whole
+    // width since 2026-11-19 (send Z, edge to edge), so the body tone `face`
+    // laid first shows nowhere on a full window; the marker lane FLAT
+    // `lane_face` across them; then THE WELL'S LINE under the ruler, the
+    // ruler lane's last row (paint_well_frame_rows). The faces read the LIVE
+    // area, as the lines do; the walk below reads the plate's width.
+    // ON EVERY FRAME CLASS, BEFORE EVERY EARLY RETURN (architect 2026-11-21,
+    // send GG: "on loading a project, the trim/ruler/marker lane don't use
+    // their own bg but a different color. all of them should be empty but
+    // have their actual bg color"): on_redraw calls this pass on a frame
+    // with no audio too (no source, or a load running: its `plate_branch`
+    // false), with `content` false — this step alone, then the cold
+    // publish below: no digit, tick, head or hover triangle, nothing to
+    // grab; the cues are the flag blit's, which runs on a frame with a piece
+    // alone. A cold basis on a frame with a piece leaves the same empty
+    // lanes. So the frame at the load's end changes only the content.
     const GuiPalette& pal = palette();
     const int ruler_h = ruler_h_px();
     const GuiRect lanes_area = waveform_area(app);
@@ -4282,11 +4295,24 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
             paint_cell_rect(cr, GuiRect{in0, marker.y, in1 - in0, marker.h},
                             palette().lane_face);
     }
+    paint_cell_rect(cr, GuiRect{well_x0, lane.y, well_x1 - well_x0,
+                                std::min(ruler_h, lane.h)},
+                    pal.ruler_face);
     // THE FRAME over the two lanes' rows (the head of this block).
     {
         const int rows_end =
             marker.h > 0 ? marker.y + marker.h : lane.y + lane.h;
         paint_well_frame_rows(cr, app, lane.y, rows_end);
+    }
+    // THE NO-AUDIO FRAME'S PUBLISH: no head painted, none to grab; no
+    // triangle painted, and the place derived is none (hover_triangle_x:
+    // the hover line's walk sets no place with no audio or a load running,
+    // main_page_takes_press_at_pointer's refusal).
+    if (!content) {
+        publish_head(GuiRectF{0.0, 0.0, 0.0, 0.0});
+        record_hover_triangle(hover_triangle_x(), GuiRect{0, 0, 0, 0});
+        cairo_restore(cr);
+        return;
     }
 
     // THE DISPLAYED BASIS, not the live viewport: the ruler must agree with the
@@ -4329,14 +4355,6 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr) {
         cairo_restore(cr);
         return;
     }
-    // THE RULER'S FACE (the head of this body): flat `ruler_face` across the
-    // waveform area's columns over the ruler's rows, the lane's last row the
-    // well's line laid above. The face reads the LIVE area, as the frame
-    // does (paint_well_frame_rows); the walk below reads the plate's width.
-    paint_cell_rect(cr, GuiRect{well_x0, lane.y, well_x1 - well_x0,
-                                std::min(ruler_h, lane.h)},
-                    palette().ruler_face);
-
     const int64_t step   = comb.step;
     const double  end_ms = comb.end_ms();
 
@@ -5304,12 +5322,22 @@ void GuiPaintHandler::phase_reset_ring_damage(
 // at (0,0), so its screen and former cache-local coords coincide; the waveform
 // rect carries its real screen x/y).
 void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
-                                 const GuiRect& top_strip) {
+                                 const GuiRect& top_strip, bool content) {
     // No trim gate: the window is ALWAYS set (2026-07-30), so the bar always
-    // paints — at the full window the pill spans the whole lane between the
-    // song's edges. Its caps are a state's, not the bar's: at rest the bare
-    // pill, the caps only while a part is hovered or held or a TRIM sweep
-    // moves an end (trim_bar_tones' table, render.h).
+    // paints on a frame with a piece — at the full window the pill spans the
+    // whole lane between the song's edges. Its caps are a state's, not the
+    // bar's: at rest the bare pill, the caps only while a part is hovered or
+    // held or a TRIM sweep moves an end (trim_bar_tones' table, render.h).
+    //
+    // THE LANE'S GROUND ON EVERY FRAME CLASS (architect 2026-11-21, send GG:
+    // "on loading a project, the trim/ruler/marker lane don't use their own
+    // bg but a different color. all of them should be empty but have their
+    // actual bg color"): on_redraw calls this pass on a frame with no audio
+    // too (no source, or a load running: its `plate_branch` false), with
+    // `content` false — the GROUND STEP below alone, then the cold publish
+    // of the early returns: no pill, no caps, nothing to grab. The ground is
+    // this one step on both frame classes, so the frame at the load's end
+    // changes only the content.
     //
     // THIS PASS PUBLISHES THE TRIM BAR'S HIT GEOMETRY (AppState::trim_bar_hit,
     // architect 2026-09-24 — strictly as-painted): hit_test_trim_endcap and
@@ -5328,31 +5356,44 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // so the frame that
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
-    // nothing to grab.
-    // THE TRIM LANE'S OWN GROUND (the palette's `face`, the theme's body
-    // tone `body_face`), across the panel's whole width, and over it THE
-    // WELL'S LINES' share of the lane — its top line on the lane's first
-    // row, its line under the trough on the last (paint_well_frame_rows;
-    // architect 2026-11-17, session 140; edge to edge since 2026-11-19);
-    // the trough and the pill render_trim_flags', on the waveform area's
-    // columns. The lines paint before the early returns below, so they stand
-    // whatever the bar does.
+    // nothing to grab — the no-audio frame's `content` false among them.
     const GuiRect trim_row = top_trim_row_area(app);
+    // The ITEM basis (free owner; the member plate_viewport_basis is the other
+    // epoch — see the header comment above), read ahead of the ground and
+    // the gate below because the trough and the covering test measure the
+    // lane at its painted width. ONLY ON A FRAME WITH A PIECE: with no audio
+    // there is no working column to derive a viewport from
+    // (samples_per_pixel_at asserts one), and the lane's width is then the
+    // live waveform area's — the basis's own answer while nothing is
+    // displayed (item_viewport_basis's cold arm), which every frame with no
+    // audio is (a fresh project set's, main.cpp's open hold).
+    const ItemViewportBasis basis =
+        content ? item_viewport_basis(app, audio) : ItemViewportBasis{};
+    const int lane_w = content ? basis.area_w : area.w;
+    // THE GROUND STEP: THE TRIM LANE'S OWN GROUND (the palette's `face`, the
+    // theme's body tone `body_face`), across the panel's whole width; THE
+    // TROUGH on the waveform area's columns at the lane's painted width
+    // (trim_trough_rect, render.h: the line under the top icon row above
+    // it, a FLAT `trim_bar_face`; architect 2026-11-17, session 140, ruling
+    // 4 and D1); and over them THE WELL'S LINES' share of the lane — its top
+    // line on the lane's first row, its line under the trough on the last
+    // (paint_well_frame_rows; architect 2026-11-17, session 140; edge to
+    // edge since 2026-11-19). The pill and its caps are render_trim_flags'.
+    // The ground paints before the early returns below, so it stands
+    // whatever the bar does, on every frame class.
     if (trim_row.w > 0 && trim_row.h > 0) {
         paint_cell_rect(cr, trim_row, palette().face);
+        paint_cell_rect(cr, trim_trough_rect(trim_row, area.x, lane_w),
+                        palette().trim_bar_face);
         paint_well_frame_rows(cr, app, trim_row.y, trim_row.y + trim_row.h);
     }
-    // The ITEM basis (free owner; the member plate_viewport_basis is the other
-    // epoch — see the header comment above), read ahead of the gate below
-    // because the covering test measures the lane at its painted width.
-    const ItemViewportBasis basis = item_viewport_basis(app, audio);
     TrimBarHit* const out_hit =
         clip_covers_drawable(cr, app,
                              GuiRect{area.x, trim_row.y,
-                                     std::max(basis.area_w, 0), trim_row.h})
+                                     std::max(lane_w, 0), trim_row.h})
             ? &app.trim_bar_hit : nullptr;
-    if (area.w <= 0 || area.h <= 0 || top_strip.w <= 0 || top_strip.h <= 0 ||
-        basis.area_w <= 0 || basis.spp <= 0.0) {
+    if (!content || area.w <= 0 || area.h <= 0 || top_strip.w <= 0 ||
+        top_strip.h <= 0 || basis.area_w <= 0 || basis.spp <= 0.0) {
         if (out_hit) *out_hit = TrimBarHit{};
         return;
     }
@@ -9585,18 +9626,6 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     that moves nothing keeps the backbuffer and its bytes.
     {
         paint_canvas_column_frame(cr, app, canvas_paint);
-        // THE WELL'S LINES OVER THE UPPER LANES ON A FRAME WITH NO AUDIO
-        // (render.h's THE WELL'S LINES): their own painters (paint_trim,
-        // paint_ruler_row) run in the plate branch alone, so here, where
-        // render_background left those lanes the body tone, the lines' share
-        // of the trim lane's top through the marker lane's foot is painted
-        // here, and the lines stand whole in every frame class.
-        if (!plate_branch) {
-            const GuiRect trim_lane = top_trim_row_area(app);
-            const GuiRect marker_lane = top_marker_row_area(app);
-            paint_well_frame_rows(cr, app, trim_lane.y,
-                                  marker_lane.y + marker_lane.h);
-        }
         if (canvas_paint_whole) {
             if (!canvas_clear_narrow) {
                 cairo_save(cr);
@@ -9795,7 +9824,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      render.h's render_hover_line) -> phase-reset overlay ring.
         //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
         //      Edit's view bar and its span (2026-10-09; no cursor mark in
-        //      the bar, ~14:30).
+        //      the bar, ~14:30) — on a frame with no audio its ground step
+        //      alone, the trim lane's ground, trough and lines (this
+        //      branch's `else`, architect 2026-11-21, send GG).
         //   6. the CURSOR's CANVAS LINE (paint_playheads, solid, the
         //      palette's static `playhead_line` — the head is the ruler
         //      pass's, step 9).
@@ -9808,7 +9839,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      digits — AND, in the same pass, the cursor's HEAD (the cyan
         //      triangle on the ruler's bottom rows, over the ticks and
         //      digits, its edge blended over them) and the MARKER LANE'S
-        //      panel face under the cues.
+        //      panel face under the cues — on a frame with no audio the two
+        //      lanes' faces and lines alone (this branch's `else`).
         //  10. the FLAG BLIT — the cues.
         //  11. the strip-drag anchor stem (waveform, mid-gesture only), then
         //      THE SWEEP HIGHLIGHT (paint_sweep_highlight, architect
@@ -9897,13 +9929,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // Cairo damage clip bounds the actual work either way.
         if (rects_intersect(exposed, wave_paint) ||
             rects_intersect(exposed, top_strip)) {
-            paint_trim(cr, area, top_strip);
+            paint_trim(cr, area, top_strip, /*content=*/true);
         }
 
         if (rects_intersect(exposed, top_strip)) {
             // The ruler paints BEFORE the flags: it lays the marker lane's
             // panel face, which the flag blit's cues stand on.
-            paint_ruler_row(cr);
+            paint_ruler_row(cr, /*content=*/true);
             paint_flag_annotations(cr, top_strip);
             // The selection stem's head segment, over the blitted chips
             // (paint_marker_stem_heads; the rule at paint_marker_stems).
@@ -9911,6 +9943,28 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
 
         if (band_cuts) cairo_restore(cr);
+    } else if (const GuiRect top_strip = top_strip_area(app);
+               rects_intersect(exposed_rect, top_strip)) {
+        // THE LANES' OWN GROUNDS ON A FRAME WITH NO AUDIO (architect
+        // 2026-11-21, send GG: "on loading a project, the trim/ruler/marker
+        // lane don't use their own bg but a different color. all of them
+        // should be empty but have their actual bg color"): no source, or a
+        // load running — in practice the open hold's one frame, a fresh
+        // project set's (main.cpp) — the trim lane, the ruler and the marker
+        // lane wear THE GROUNDS THEIR OWN PAINTERS LAY, EMPTY: the same two
+        // passes with `content` false run their ground steps alone (the
+        // trim lane's face, its trough and its lines; the ruler's face, the
+        // marker lane's face and their lines) and publish cold (no trim
+        // zone, no head, no hover triangle), on the same columns and rows
+        // as the plate branch's, so the frame at the load's end changes only
+        // the content. No flag blit and no stem head: no cue stands. Gated
+        // on the strip's exposure as the plate branch's ruler is (the lanes
+        // stand in the strip alone); UNDER AN OVERLAY, A QUESTION OR THE
+        // PROGRESS PAGE they are covered as the plate branch's are, by
+        // paint order — the keyboard slot and the modal dialog below paint
+        // over them (step 12 and 13 of the paint order above).
+        paint_trim(cr, waveform_area(app), top_strip, /*content=*/false);
+        paint_ruler_row(cr, /*content=*/false);
     }
 
     // THE KEYBOARD SLOT (the on-screen keyboard since 2026-08-27, the folder

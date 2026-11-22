@@ -2774,11 +2774,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     !plate_branch arm; the GL canvas's list the same, its
             //     build_canvas_list arm), in the well's ground
             //     (paint_canvas_column_frame).
-            //   * THE TOP STRIP — the trim bar, the ruler, the marker lane —
-            //     BARE: every pass of it (paint_trim's trim bar, the ruler
-            //     with the marker lane's face and the cursor's head, the
-            //     flag blit) is the plate branch's, so the lanes show the
-            //     window's ground (render_background).
+            //   * THE TOP STRIP — the trim lane, the ruler, the marker lane —
+            //     IN THEIR OWN GROUNDS, EMPTY (architect 2026-11-21, send
+            //     GG): paint_trim and paint_ruler_row run their ground steps
+            //     alone (on_redraw's !plate_branch arm) — the trim lane's
+            //     face and trough, the ruler's face, the marker lane's face,
+            //     their lines — with no pill, digit, tick, head or cue (the
+            //     flag blit is the plate branch's), and nothing published
+            //     to grab.
             //   * THE BOTTOM ICON ROW: the timestamp empty and no tab
             //     name (clock_time_text and paint_bottom_row_buttons_and_clock's
             //     no-piece arms); THE STATUS BAR empty (no progress text, no

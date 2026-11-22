@@ -1101,24 +1101,22 @@ void render_trim_flags(cairo_t* cr,
     // THE BAR'S COLUMNS ARE THE WAVEFORM AREA'S: waveform_area's x and its
     // effective width, the panel's whole width (send Z, 2026-11-19: edge to
     // edge; render.h's well_columns), across which paint_trim paints the
-    // lane and its lines.
+    // lane, its trough and its lines.
     const int lane_x   = waveform_area.x;
     const int lane_w   = waveform_area.w;   // the effective width
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
     // THE TROUGH (render.h's well paragraph; architect 2026-11-17, session
-    // 140, ruling 4 and D1): under the frame's top line, the trough's rows
-    // (trim_trough_h_px, 12 W) a FLAT `trim_bar_face` across the waveform
-    // area's columns; the frame's line under it paint_trim's.
-    const int px = hairline_px();
-    const int trough_y = lane_y + px;
-    const int trough_h = std::min(trim_trough_h_px(), lane_h - px);
+    // 140, ruling 4 and D1): its rows (trim_trough_rect, the one statement)
+    // the pill's seat below; its FLAT `trim_bar_face` and the lane's lines
+    // are paint_trim's ground step, laid before this pass on every frame
+    // class (architect 2026-11-21, send GG).
+    const GuiRect trough_r = trim_trough_rect(trim_bar, lane_x, lane_w);
+    const int trough_y = trough_r.y;
+    const int trough_h = trough_r.h;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    if (trough_h > 0)
-        paint_cell_rect(cr, GuiRect{lane_x, trough_y, lane_w, trough_h},
-                        palette().trim_bar_face);
     cairo_rectangle(cr, lane_x, lane_y, lane_w, lane_h);
     cairo_clip(cr);
 
@@ -1170,7 +1168,7 @@ void render_trim_flags(cairo_t* cr,
     // write's and drag edge's damage (top_trim_row_area), hold it. Painted
     // at each pixel's exact coverage through the coverage stamp
     // (CoverageStampPass, cool_edit_paint.h; coverage_of_rounded_rect,
-    // coverage_stamp.h) over the trough laid above. ITS TONE and whether
+    // coverage_stamp.h) over the trough paint_trim laid. ITS TONE and whether
     // the caps show are `look`'s through the one table (trim_bar_tones,
     // render.h): at rest `trim_span_face` (ScrollbarInnerHandle, Arc's
     // slider) and no caps. No outline. NO PLAYHEAD IN THE BAR (architect
