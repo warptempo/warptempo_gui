@@ -1,8 +1,8 @@
 #pragma once
 
 // THE DISPLAY TRANSFORM (architect 2026-10-08 ~05:15): EVERY AUTHORED COLOR IS
-// AN sRGB BYTE TRIPLE — a palette role, a chrome role (Windows' own scheme
-// bytes are sRGB records), a catalog theme's byte, an
+// AN sRGB BYTE TRIPLE — a palette member, the compiled row's word
+// (kArcDarkTones, gui_theme.h), a named literal, an
 // icon's own inks — "if I open that image in the web browser, it would have
 // the identical color on the GUI". A screenshot he lifts a hex from is
 // unprofiled, which a browser and GIMP take as sRGB.

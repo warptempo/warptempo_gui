@@ -136,9 +136,10 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // the tooltip's words and a normal card's words and glyph (send Z; the
     // floaters' since send AA's stage D1, 2026-11-19).
     .sidebar_text = 0xBAC3CF,
-    // THE DIM TEXT: Arc's insensitive text, `button:disabled label { color:
-    // rgba(211, 218, 227, 0.45); }` read flat — the font color D3DAE3 at
-    // 45 % over the body tone 383C4A -> 7E838F. The inert rows, the
+    // THE DIM TEXT: Arc's insensitive text, $insensitive_fg_color (the font
+    // color at 45 % alpha), `button:disabled label { color: rgba(211, 218,
+    // 227, 0.45); }` read flat — the font color D3DAE3 at 45 % over the body
+    // tone 383C4A -> 7E838F. The inert rows, the
     // tooltip's hint line, a disabled marker's label at rest and its strike
     // bar, a disabled word button's word (word_button_ink, materials.h).
     .text_dim = 0x7E838F,
@@ -177,7 +178,9 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     .text_on_lit_dim = 0x9AA1AF,
     // A KEY'S AND A WORD BUTTON'S FACE AT REST, the two lamps at rest, the
     // scrub's knob: Arc's $button_bg, lighten($base_color, 2%) (`scale
-    // slider { background-color: #444a58; }`).
+    // slider { background-color: #444a58; }`); the near number beside it, a
+    // headerbar button, 40 % lighten($header_bg, 22%) over $header_bg, is
+    // 424958.
     .key_face = 0x444A58,
     // THAT FACE UNDER THE HOVERING PEN, the hover's far end — a key's, a word
     // button's, an on-screen keyboard key's, the scrub's knob's: Arc's
@@ -195,8 +198,8 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // under on two channels, 454A57, reasoned, not measured — the formula
     // taken; paint_handler.cpp's THE LIST VIEW).
     .list_hover_face = 0x464B57,
-    // A CHECKED-BUT-DISABLED KEY'S FACE (a lamp on a locked tab, a lit key
-    // under an overlay): Arc's `button:disabled:checked { background-color:
+    // A CHECKED-BUT-DISABLED KEY'S FACE (a lamp on a locked tab or under grid
+    // iterations, a lit key under an overlay): Arc's `button:disabled:checked { background-color:
     // rgba(82, 148, 226, 0.75); opacity: 0.6; }` — the accent 5294E2 at
     // 75 % over the body tone 383C4A -> 4C7EBC, at 60 % over the body tone
     // -> 44648E (architect 2026-11-19, send Z: "let's do arcs numbers";

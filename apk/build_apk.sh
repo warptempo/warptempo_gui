@@ -192,7 +192,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # Papirus's alone, architect 2026-11-21, send GG — the app paints Papirus's
 # MusicNote16th.svg, never this file; assets/icons/README.md its
 # provenance), a `currentColor` drawing
-# painted LAUNCHER_INK, the logo's text tone, through resvg's user
+# painted LAUNCHER_INK, the font color (the row's `.text`), through resvg's user
 # stylesheet (below). THE FRAMING
 # (Android's adaptive mask demands a full-bleed square): the FOREGROUND the
 # drawing fitted to the 52 dp art square

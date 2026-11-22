@@ -1167,7 +1167,7 @@ void render_trim_flags(cairo_t* cr,
     // (CoverageStampPass, cool_edit_paint.h; coverage_of_rounded_rect,
     // coverage_stamp.h) over the trough paint_trim laid. ITS TONE and whether
     // the caps show are `look`'s through the one table (trim_bar_tones,
-    // render.h): at rest `trim_span_face` (ScrollbarInnerHandle, Arc's
+    // render.h): at rest `trim_span_face` (Arc's scrollbar
     // slider) and no caps. No outline. NO PLAYHEAD IN THE BAR (architect
     // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
     //

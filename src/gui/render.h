@@ -140,8 +140,8 @@ struct GuiColor {
 };
 
 // Build a GuiColor from a 0xRRGGBB word, converting each 8-bit channel to an
-// exact [0,1] double — the one road from a byte triple (a theme role's, a
-// named literal's) to a colour. RGB only: the
+// exact [0,1] double — the one road from a byte triple (a word of the
+// row, kArcDarkTones, or a named literal's) to a colour. RGB only: the
 // palette composites nothing (its head, below), and the renderer hands colours
 // to cairo through set_palette_source and set_waveform_source.
 inline constexpr GuiColor hex(uint32_t rgb) {
@@ -272,8 +272,8 @@ struct TrimRange {
 //
 // A HEX HERE IS AN sRGB BYTE TRIPLE, AS EVERY SCREENSHOT RECORDS IT
 // (architect 2026-10-08 ~05:15: "if I open that image in the web
-// browser, it would have the identical color on the GUI") — a palette role, a
-// chrome role, a catalog theme's byte. The tablet's window
+// browser, it would have the identical color on the GUI") — a palette
+// member, the compiled row's word (kArcDarkTones), a named literal. The tablet's window
 // is a Display-P3 layer (GuiPlatform::adopt_window, platform_android.cpp), so
 // THE TABLET CONVERTS sRGB -> DISPLAY-P3 AT THE PAINTER'S ENTRY
 // (display_color; the math and every converting site at
@@ -566,9 +566,11 @@ GuiColor surface_text(GuiSurface surface);
 // the chrome's, the program's and the panel's `face` alike, through the
 // fill table (kGuiPaletteFill, palette_file.h, proven to cover the struct
 // exactly). Its one caller: gui_main's startup, before the window and every
-// cache exist, so it owes no apply shape. It is a call rather than a
-// constant palette for its bump: it opens palette_generation below at 1, so
-// no cache's construction-state fingerprint (0) matches a painted palette.
+// cache exist, so it owes no apply shape. It bumps palette_generation below,
+// as install_true_colors does: the launch's two installs (this one, then
+// install_true_colors, gui_main) leave the generation past the construction
+// state's 0, so no cache's construction-state fingerprint matches a painted
+// palette.
 // The few readers that need the sRGB WORD rather than a GuiColor (the glyph
 // road's tone, key_ink in materials.h; the carried fills' opacity,
 // tone_alpha; the plate's two inks, waveform_plate_inks below) read
@@ -652,8 +654,8 @@ void install_true_colors(bool on);
 // the rows; architect 2026-11-17, session 140, ruling 4 and
 // D1, reversing 2026-11-03's overview bar of two flat fills): under the
 // line under the top icon row, THE TROUGH (trim_trough_h_px, 12 W, 24 device rows at
-// 200 %) across the waveform area's columns in `trim_bar_face` (Live's
-// ScrollbarInnerTrack, Arc's $_scrollbar_bg_color), and on it THE SPAN AS
+// 200 %) across the waveform area's columns in `trim_bar_face` (Arc's scrollbar
+// trough, its line of kArcDarkTones), and on it THE SPAN AS
 // ARC'S SLIDER, A PILL (trim_pill_h_px, 6 W, centered, the seat of trough above
 // and below), the trim window from the begin bound's exact place to the end
 // bound's (architect 2026-11-14, send J) — THE SLIDER'S BOX, the pill its core
@@ -672,7 +674,7 @@ void install_true_colors(bool on);
 // no dots on the trim bar"). THE BAR'S STATES AND ITS TWO CAPS (architect
 // 2026-11-19 / 2026-11-20; THE TRIM BAR'S CAPS AND GRABS in the
 // lanes block below, the one table at trim_bar_tones): at rest the pill
-// alone in `trim_span_face` (ScrollbarInnerHandle, Arc's slider), as Arc
+// alone in `trim_span_face` (Arc's scrollbar slider), as Arc
 // and Kdenlive draw it; under the hovering pen, the bar's own press or a
 // TRIM sweep that wrote, A CAP AT EACH END OF THE PILL — the pill's own end
 // cut by one vertical line, ours — and the part under the pen or the press
@@ -760,15 +762,12 @@ void install_true_colors(bool on);
 // not AppState::camera_hold stands. (WordPad's ruler marker in the chrome's
 // four roles stood 2026-10-05 to 2026-10-09; a solid line before it; git
 // history.)
-// THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head, Live's
-// cyan 03C3D5 (arc_dark A5ABB5, the stem's own number: "the triangle for
-// the playhead should probably become the same color as the stem",
-// architect 2026-11-21, send GG), and `playhead_line` its line,
-// our own PlayheadLine (send FF, 2026-11-21: arc_dark A5ABB5, Arc's `.h4` /
-// `.category-label`, his "the stem is too bright" at the font color; on a
-// Live theme white half way to the head,
-// 81E1EA on Default, architect 2026-11-12, session 113: the mean of Live's
-// fade, the playhead's two tones); neither is
+// THE PLAYHEAD WEARS ITS TWO COLORS: `playhead_head` is its head, A5ABB5,
+// the stem's own number ("the triangle for the playhead should probably
+// become the same color as the stem", architect 2026-11-21), and
+// `playhead_line` its line, A5ABB5 (architect 2026-11-21: "the stem is too
+// bright" at the font color; the source at their lines of kArcDarkTones,
+// gui_theme.h); neither is
 // lent to a marker (the selection is the
 // chip's, THE MARKER LANE below). THE STEMS THAT BELONG TO THE
 // CONTROLS ARE WHITE, ONE ROLE, `scanner` (architect 2026-10-09: "the zoom
@@ -1035,10 +1034,10 @@ void install_true_colors(bool on);
 // rule is at render_waveform_columns' declaration), THE OUTER IN THE INK AND
 // THE INNER A SOLID FILL OVER IT in the `waveform_core` role (architect
 // 2026-11-04, mock f1, THE CORE below; antialiased with its shape on the GPU
-// since 2026-10-30) — LIVE'S SurfaceBackground, THE KEY FACE, on every
-// theme (architect 2026-11-07, session 83): on Default 363636 over the
-// 191919 ink on the 393939 canvas, one step under the canvas (the tone's
-// record at THE CORE below; palette_file.h). THE PLATE WEARS THE INK AND THE
+// since 2026-10-30) — the row's `waveform_core`, THE KEY FACE (architect
+// 2026-11-07): 444A58 over the 262A33 ink on the 404552 canvas, one step
+// over the canvas (THE CORE below; the number's source at its line of
+// kArcDarkTones, gui_theme.h). THE PLATE WEARS THE INK AND THE
 // CORE AS PUBLISHED (the sink writes their words, GuiCanvasSink::plate),
 // so the pair rides the cache's fingerprint (waveform_plate_inks) and
 // publishes with the plate; the canvas is laid live under the plate's
@@ -1458,8 +1457,8 @@ constexpr int kMinWindowHeightPx = 480;
 // did". THE BAR IS kTitleBarW, 28 W through scaled_px (56 device px on the
 // tablet at 200 %), whatever the key's height (title_bar_h_px), the top of
 // the top strip's lane 0, the top icon row under it with no line between
-// (a tone change only). IT ALONE WEARS THE TITLE TONE `ground` (Live's
-// SurfaceArea; arc_dark 2F343F, Arc's $header_bg): "the darkest color
+// (a tone change only). IT ALONE WEARS THE TITLE TONE `ground` (2F343F,
+// its line of kArcDarkTones): "the darkest color
 // would only apply to the top line, the title bar" — everything under it is
 // the body tone `body_face`. INERT CHROME: no hit, no tooltip, no gesture —
 // THE ONE EXCEPTION the struck clip lamp's tap (THE TWO LAMPS below).
@@ -1903,8 +1902,8 @@ inline int program_run_gap_px() {
 // and its page road's face alike) carry ONE SCRUB, GTK's `scale` under Arc
 // (G3's scale, C4g), one widget:
 //   THE TROUGH — kScaleTroughW, 5 W thick (10 device px on the tablet at
-//     200 %), a full pill (radius half its thickness), `scale_trough` (our
-//     own ScaleTrough, arc_dark 2D303B; the progress page's bar's too),
+//     200 %), a full pill (radius half its thickness), `scale_trough` (2D303B,
+//     its line of kArcDarkTones; the progress page's bar's too),
 //     CENTERED EXACTLY ON THE KEYS' ROWS (the tablet at key_height 28: keys
 //     1324..1379, the trough rows 1347..1356), across the item's columns.
 //     THE PLAYED PART — Arc's `scale highlight` — from the trough's left end
@@ -1914,9 +1913,8 @@ inline int program_run_gap_px() {
 //     extent", M7).
 //   THE KNOB — kScaleKnobW, a 17 W DISC (34 device px), centered on the
 //     trough's center row (the tablet: rows 1335..1368), its fill
-//     `key_face` in a ONE-W RIM of `scale_slider_border` (our own
-//     ScaleSliderBorder, Arc's slider border 262933 on arc_dark; a Live
-//     theme's ClipBorder, its well_border); HELD — the owner's ScrubDrag
+//     `key_face` in a ONE-W RIM of `scale_slider_border` (Arc's
+//     slider border 262933, its line of kArcDarkTones); HELD — the owner's ScrubDrag
 //     armed ON THE KNOB (RenderPlayer::ScrubDrag::on_thumb, the score
 //     viewer's the same; a press on the trough beside it carries the knob
 //     at rest) — THE WHOLE DISC THE ACCENT, no rim (Arc's slider:active);

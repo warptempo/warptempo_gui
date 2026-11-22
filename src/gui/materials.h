@@ -131,7 +131,7 @@
 // going to mess with the fade"): UNDER THE HOVERING PEN A RESTING KEY'S
 // FACE IS `key_hover_face`
 // (Arc's button:hover background, arc_dark 505666 on the 444A58 face, gtk3
-// CSS line 136; our own role ButtonHoverBackground), THE BORDER, THE DRAWING AND THE WORD
+// CSS line 136; its line of kArcDarkTones), THE BORDER, THE DRAWING AND THE WORD
 // UNCHANGED — on a key of both icon rows and of the controls rows, a word
 // button (a question's answers among them), an
 // on-screen keyboard key, and the scrub's
@@ -266,9 +266,7 @@
 // palette's `waveform_canvas`), its stereo divider the lines' tone.
 // Every Default number is Live's, measured on his Live 12 shots (the
 // ruler's ticks the time ruler's, the lane the clip view's marker lane; the
-// ruler's face the canvas's). Where a theme makes the lane, the trough, the lines or the dim
-// text coincide with the ground, that is Live's own number — ACCEPTED, not
-// a bug, no backstop (architect 2026-11-05).
+// ruler's face the canvas's).
 // ARC'S ENTRY (NOISE's case, the value sub-page's field; paint_entry below):
 // the ruler's — the canvas's — tone in a one-W `well_border` ring; the
 // marker lane's cell editor the same fill in the accent's square border.
@@ -318,10 +316,9 @@
 // TOOLTIP IS ARC'S); THE CARDS notifyd's bubble — a normal card
 // `card_fill` (353945 at .95) under `sidebar_text`, a standing card Arc's
 // destructive red `card_standing_fill` (F04A50 at .95) under
-// `card_ink`, the print on a lit face (notifications.h's THE LOOK). On a
-// Live theme the tooltip's fill is its SurfaceBackground and both cards'
-// its Alert, opaque. THE LIMITER LAMP keeps Alert as `limiter_lamp`, its
-// own tone.
+// `card_ink`, the print on a lit face (notifications.h's THE LOOK). THE
+// LIMITER LAMP wears `limiter_lamp`, its own tone (Arc's warning orange,
+// its line of kArcDarkTones, gui_theme.h).
 
 // -- ARC'S BUTTON: THE KEY'S STATES, ITS LINKED GROUP, THE WORD BUTTON AND
 //    THE ENTRY (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §3, the

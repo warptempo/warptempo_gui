@@ -158,8 +158,8 @@
 // — the transport, the scrub, the buttons — stands on the body tone. A
 // resting row paints no fill at all, and the highlighted row — and the row
 // under a press, the same look (Thunar is single-click) — is a flat fill in
-// the theme's selection pair across the view's whole width. A ROW A TAP
-// WOULD ACT ON HOVERS under the pen (architect 2026-11-21: "I'd like to
+// the selection pair (`selection_fill` under `selection_text`) across the
+// view's whole width. A ROW A TAP WOULD ACT ON HOVERS under the pen (architect 2026-11-21: "I'd like to
 // add hover"): across the same width, `list_hover_face`, ARC'S OWN
 // `row.activatable:hover`, 3 % white over the view's tone (the same day: "I
 // prefer to go more truthful. It just needs to be very subtle."; its line

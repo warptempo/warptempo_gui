@@ -3089,11 +3089,10 @@ private:
     //
     //   THE VALUE LIST (architect 2026-10-25: "maybe a drop
     //   down would make it quicker, because I don't like having to type it
-    //   in every time" — "brief it as a scrolling list", "Yes"; 2026-10-28
-    //   night for `true_colors`, `noise` and `noise_crossfade_s`, the same
-    //   shape; 2026-10-31 for `waveform_grow`; 2026-11-05 for `theme`; the
-    //   two levels' lists of 2026-10-28 / 10-31 night gone 2026-11-05 and
-    //   their rows that night, the band's cases their one road)
+    //   in every time" — "brief it as a scrolling list", "Yes"; the four
+    //   keys of kSettingsValueListKeys in the same shape: `true_colors`,
+    //   `noise` and `noise_crossfade_s` 2026-10-28 night, `waveform_grow`
+    //   2026-10-31)
     //   — THE SETTINGS PAGE'S ROW'S
     //   CONTENT for a key of kSettingsValueListKeys, its one road, and A
     //   SUB-PAGE OF THE SETTINGS PAGE (architect 2026-10-28 night: "the

@@ -22,9 +22,8 @@
 // 353945 at .95) with its words and glyph in `sidebar_text` (BAC3CF), A
 // STANDING (critical) CARD Arc's destructive red `card_standing_fill`
 // (F04A50 at .95) with its words
-// and glyph in `card_text`, the print on a lit face (FFFFFF); on a Live
-// theme both fills its Alert, opaque. INSIDE IT notifyd's one padding
-// (kNotificationPadW, 14 W on all four sides), THE CLASS GLYPH in a
+// and glyph in `card_text`, the print on a lit face (FFFFFF). INSIDE IT
+// notifyd's one padding (kNotificationPadW, 14 W on all four sides), THE CLASS GLYPH in a
 // kNotificationGlyphBoxW drawing box at the left —
 // icons.h's: DialogInformation on a normal card, DialogError on a standing
 // one, each the mark cut out of its shape (the i and the ! cut out of a

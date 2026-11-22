@@ -436,7 +436,7 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 // greys: a load, an overlay, the on-screen keyboard standing, a question's
 // page or the progress page; roster_greyed_whole, architect 2026-11-20): THE
 // NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry, the
-// kit's; the mix per channel of the installed words, rounded) and NO LINE.
+// kit's; the mix per channel of the row's words, rounded) and NO LINE.
 // The run shaped through the memo (memoized_run: a few dozen spellings).
 // THE REPAINT: every change of the case's level damages its box explicitly
 // (GuiInputHandler::apply_level_case) — the per-tick comparator watches no
@@ -1671,8 +1671,8 @@ LogoLampRects logo_lamp_rects(const AppState& app, const GuiLogoLegend& legend) 
 
 void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     // THE TITLE BAR (render.h's title bar block, every length scaled_px):
-    // its own flat fill in the title tone `ground` (Live's SurfaceArea,
-    // arc_dark 2F343F: "the darkest color would only apply to the top line,
+    // its own flat fill in the title tone `ground` (2F343F,
+    // its line of kArcDarkTones: "the darkest color would only apply to the top line,
     // the title bar", architect 2026-11-18, send Z), then the note, the
     // brand and the right group in `title_text`. NO SHADOW (the flat look).
     const GuiRect lane{band.x, band.y, band.w,
@@ -5360,7 +5360,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
         content ? item_viewport_basis(app, audio) : ItemViewportBasis{};
     const int lane_w = content ? basis.area_w : area.w;
     // THE GROUND STEP: THE TRIM LANE'S OWN GROUND (the palette's `face`, the
-    // theme's body tone `body_face`), across the panel's whole width; THE
+    // body tone `body_face`), across the panel's whole width; THE
     // TROUGH on the waveform area's columns at the lane's painted width
     // (trim_trough_rect, render.h: the line under the top icon row above
     // it, a FLAT `trim_bar_face`; architect 2026-11-17, session 140, ruling
@@ -6080,7 +6080,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE'S GROUND, ON EVERY FRAME WHATEVER STANDS OVER IT: THE BODY
-    // TONE (the palette's `face`, the theme's `body_face`; send Z,
+    // TONE (the palette's `face`, the row's `body_face`; send Z,
     // 2026-11-19), the lane the window's width over the status bar — laid
     // under the on-screen keyboard too, which covers it in the same pass
     // (paint_keyboard_slot paints after this, opaque) — laid whole because
@@ -6384,8 +6384,8 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
 }
 
 // THE PROGRESS BAR (GTK's, the design's §G; the progress page's, its seat
-// modal_box.h's ModalPageLines::bar): the trough `scale_trough` (our
-// own ScaleTrough, arc_dark 2D303B) on [x0, x1) x [y, y + h), fully rounded
+// modal_box.h's ModalPageLines::bar): the trough `scale_trough` (2D303B,
+// its line of kArcDarkTones) on [x0, x1) x [y, y + h), fully rounded
 // (radius h / 2: 3 W), the done part `cue`, the accent, from x0 over `frac`
 // of the length (at least the trough's height, so its two round ends stand
 // whole), rounded the same; at exact coverage on the stamp.
