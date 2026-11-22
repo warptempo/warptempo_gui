@@ -12713,12 +12713,19 @@ inline IterBoundWindow iter_bound_tie_window(
 // which is not yet the store's, against the same tie window and the same
 // committed partner the step and the commit read. The store form is the
 // `_from` form started at the bound's resting value.
+//
+// `partner_cleared` WALLS AGAINST THE CLEARED PAIR (architect 2026-11-21,
+// send GG): the partner read as the blank's 0 instead of as stored — the
+// bound editor's step from an erased text, an erased bound counting as the
+// commit that would clear both (text_editor::State::iter_pair_cleared). The
+// store form never passes it.
 inline int64_t iter_bound_step_landing_from(
         const std::vector<GuiWarpMarker>& mv, int idx, MarkerCell side,
-        int64_t start, int64_t delta_cents) {
+        int64_t start, int64_t delta_cents, bool partner_cleared = false) {
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return 0;
     const GuiWarpMarker& m = mv[static_cast<size_t>(idx)];
-    const int64_t partner = side == MarkerCell::Upper
+    const int64_t partner = partner_cleared ? 0
+                          : side == MarkerCell::Upper
                                 ? m.iter_start_cents.value_or(0)
                                 : m.iter_end_cents.value_or(0);
     const IterBoundWindow w = iter_bound_tie_window(mv, idx);
@@ -12853,15 +12860,18 @@ inline PhaseHopWindow phase_iter_bound_tie_window(const AppState& app,
 // stays the order, the pair being kept ordered by the partner clamp.
 // THE `_from` FORM TAKES THE START AS AN ARGUMENT, the warp twin's
 // (iter_bound_step_landing_from: the bound editor's UP / DOWN on its text,
-// architect 2026-11-20 / 21).
+// architect 2026-11-20 / 21), `partner_cleared` the warp twin's too (the
+// partner read as the blank's 0; architect 2026-11-21, send GG).
 inline int phase_iter_bound_step_landing_from(const AppState& app,
                                               const GuiAudio& audio, int idx,
                                               MarkerCell side, int start,
-                                              int delta_hops) {
+                                              int delta_hops,
+                                              bool partner_cleared = false) {
     const std::vector<GuiPhaseResetMarker>& pv = app.phaseresetmarkers.markers();
     if (idx < 0 || idx >= static_cast<int>(pv.size())) return 0;
     const GuiPhaseResetMarker& m = pv[static_cast<size_t>(idx)];
-    const int partner = side == MarkerCell::Upper
+    const int partner = partner_cleared ? 0
+                      : side == MarkerCell::Upper
                             ? m.iter_start_hops.value_or(0)
                             : m.iter_end_hops.value_or(0);
     const PhaseHopWindow w = phase_iter_bound_tie_window(app, audio, idx);

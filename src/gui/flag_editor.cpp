@@ -368,6 +368,13 @@ void GuiFlagEditor::commit_iter_bound_edit() {
 
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[static_cast<size_t>(idx)];
+    // THE ERASE STEPPED COMMITS AS THE ERASE THEN THE STEP (architect
+    // 2026-11-21, send GG; text_editor::State::iter_pair_cleared): a text a
+    // landed step from an erased bound wrote is judged and written in the
+    // CLEARED pair — the empty commit's own blank below, first, so the
+    // partner reads 0 at the wall and at the write and the other bound
+    // leaves with the erase. One store write, as every commit here.
+    if (app.top_flag_editor.iter_pair_cleared) clear_iter_bracket(m);
     if (next.empty()) {
         // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
         // one bound alone is not representable, so emptying either cell is
@@ -407,9 +414,11 @@ void GuiFlagEditor::commit_iter_bound_edit() {
                    format_tempo_cents(kTempoMaxCents) + "]");
             return;
         }
+        // The partner is the PROPOSED row's: the stored one, or the cleared
+        // pair's 0 after a stepped erase (above).
         const int64_t partner = side == MarkerCell::Upper
-                                    ? live.iter_start_cents.value_or(0)
-                                    : live.iter_end_cents.value_or(0);
+                                    ? m.iter_start_cents.value_or(0)
+                                    : m.iter_end_cents.value_or(0);
         if (side == MarkerCell::Lower && value > partner) {
             refuse("the lower bound cannot rise above the upper");
             return;
@@ -484,6 +493,10 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
 
     std::vector<GuiPhaseResetMarker> proposed = pv_const;
     GuiPhaseResetMarker& m = proposed[static_cast<size_t>(idx)];
+    // THE ERASE STEPPED, the warp arm's rule (architect 2026-11-21, send GG):
+    // the cleared pair first, so the partner reads 0 and the other bound
+    // leaves with the erase.
+    if (app.top_flag_editor.iter_pair_cleared) clear_iter_bracket(m);
     if (next.empty()) {
         // AN EMPTY COMMIT CLEARS THE WHOLE BRACKET: a bracket is a pair and
         // one bound alone is not representable, so emptying either cell is the
@@ -498,10 +511,11 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
         }
         // THE PARTNER, first and cheapest: the lower never rises above the
         // upper and the upper never falls below the lower (0 for a blank
-        // bracket, the step's own start).
+        // bracket, the step's own start), read off the PROPOSED row — the
+        // stored pair, or the cleared one after a stepped erase.
         const int partner = side == MarkerCell::Upper
-                                ? live.iter_start_hops.value_or(0)
-                                : live.iter_end_hops.value_or(0);
+                                ? m.iter_start_hops.value_or(0)
+                                : m.iter_end_hops.value_or(0);
         if (side == MarkerCell::Lower && value > partner) {
             refuse("the lower bound cannot rise above the upper");
             return;
@@ -1095,7 +1109,15 @@ void GuiFlagEditor::step_editor_text(int delta) {
         // be the bound commit's grammar. The tie follower and the ineligible
         // marker, the main page's two other refusals, cannot stand under
         // this editor (enter_iter_bound_edit refuses to open on either).
+        //
+        // AN ERASED BOUND COUNTS AS THE CLEARED PAIR (architect 2026-11-21,
+        // send GG: the text read as if committed, and an empty commit clears
+        // both bounds): a step from an empty text, or from a text a landed
+        // step from the erase wrote (State::iter_pair_cleared, which a landing
+        // from empty sets), walls against the partner as cleared — the
+        // blank's 0 — not as stored. A wall remembers nothing.
         const MarkerCell side = iter_bound_editor_side(ed);
+        const bool cleared = ed.pending.empty() || ed.iter_pair_cleared;
         if (app.active_markers_view == 'P') {
             if (idx < 0 ||
                 idx >= static_cast<int>(app.phaseresetmarkers.markers().size()))
@@ -1108,9 +1130,10 @@ void GuiFlagEditor::step_editor_text(int delta) {
                 return;
             }
             const int landing = phase_iter_bound_step_landing_from(
-                app, audio, idx, side, start, delta);
+                app, audio, idx, side, start, delta, cleared);
             if (landing == start) return;   // the wall, silent
             rewrite_editor_text(format_signed_hops(landing));
+            app.top_flag_editor.iter_pair_cleared = cleared;
             return;
         }
         const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
@@ -1123,9 +1146,10 @@ void GuiFlagEditor::step_editor_text(int delta) {
             return;
         }
         const int64_t landing =
-            iter_bound_step_landing_from(mv, idx, side, start, delta);
+            iter_bound_step_landing_from(mv, idx, side, start, delta, cleared);
         if (landing == start) return;   // the wall, silent
         rewrite_editor_text(format_signed_delta_cents(landing));
+        app.top_flag_editor.iter_pair_cleared = cleared;
         return;
     }
 

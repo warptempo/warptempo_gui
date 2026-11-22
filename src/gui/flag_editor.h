@@ -158,7 +158,13 @@ struct GuiFlagEditor {
     // adjust_iter_bound_cents / adjust_iter_bound_hops), the text's value the
     // start — an empty text the blank's 0 — clamped into the tie's window and
     // at the committed partner (iter_bound_step_landing_from and its phase
-    // twin), the wall silent.
+    // twin), the wall silent. AN ERASED BOUND COUNTS AS THE CLEARED PAIR
+    // (architect 2026-11-21, send GG: an empty commit clears both bounds):
+    // from an empty text the partner walls as the blank's 0, not as stored,
+    // and a landed step from empty marks the session
+    // (text_editor::State::iter_pair_cleared), so later steps wall against
+    // the cleared pair too and Enter clears the other bound beside the
+    // text's (commit_iter_bound_edit).
     void step_editor_text(int delta);
     // THE PASS KEY: A TRUE TOGGLE INHERIT ON THE FLAG EDITOR'S TEXT — the
     // three arms of GuiWarpMarkersOps::toggle_inherits on the parsed flag: an
@@ -226,7 +232,12 @@ struct GuiFlagEditor {
     // backstops the sweep's inverted-bracket breach arm). On success
     // the pair is written through that column's one write site
     // (iter_bound_step_write / phase_iter_bound_step_write, so two zeroes
-    // clear there too) and NOTHING ELSE MOVES: no undo entry, no dirty
+    // clear there too). AFTER A STEP FROM AN ERASED BOUND
+    // (text_editor::State::iter_pair_cleared; architect 2026-11-21, send GG)
+    // the text is judged and written in the CLEARED pair — the partner wall
+    // reads 0 and the other bound is cleared in the same write, exactly what
+    // committing the erase, stepping and committing again leaves. NOTHING
+    // ELSE MOVES: no undo entry, no dirty
     // re-derive, no render — a bracket is outside the undo domain on both
     // columns, so the strip's damage is the whole tail — the editor closing on
     // every path except the refusal.

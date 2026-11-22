@@ -496,7 +496,8 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // is the same name over the hop pair (phaseresetmarkers.h), so a caller that
 // blanks either column's bracket writes one spelling.
 // THE CALLERS ARE THE BLANK'S OWN: the bound step's write site and the bound
-// editor's empty commit. A marker that LOSES ITS CARRIER clears the tie
+// editor's commit (its empty text, and the cleared pair a stepped erase
+// commits in, architect 2026-11-21, send GG). A marker that LOSES ITS CARRIER clears the tie
 // beside this call, at the THREE sites that can produce one — the flag
 // editor's payload commit and Ctrl+N's ref->pass and owner->pass conversions
 // — because those are carrier losses and not blanks.

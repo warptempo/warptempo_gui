@@ -80,6 +80,13 @@ void erase_selection(State& s) {
     s.selection_anchor = -1;
 }
 
+// THE ERASE STEPPED FALLS WITH AN EMPTY TEXT (State::iter_pair_cleared, the
+// rule at the field): called after each of this module's two text-changing
+// roads, the replacement and Backspace.
+void drop_cleared_pair_on_empty(State& s) {
+    if (s.pending.empty()) s.iter_pair_cleared = false;
+}
+
 } // namespace
 
 // The contract (and its two callers) is at the declaration.
@@ -218,6 +225,7 @@ bool replace_selection(State& s, const std::string& raw) {
     if (has_selection(s)) erase_selection(s);
     s.pending.insert(static_cast<size_t>(s.cursor_pos), clean);
     s.cursor_pos += ins;
+    drop_cleared_pair_on_empty(s);
     touch_blink(s);
     return true;
 }
@@ -233,6 +241,7 @@ void deactivate(State& s) {
     s.kind              = Kind::FlagPayload;
     s.iter_upper        = false;
     s.iter_hops         = false;
+    s.iter_pair_cleared = false;
     s.pending.clear();
     s.cursor_pos        = 0;
     s.selection_anchor  = -1;
@@ -261,6 +270,7 @@ void enter(State& s, int target,
     s.kind              = kind;
     s.iter_upper        = iter_upper;
     s.iter_hops         = iter_hops;
+    s.iter_pair_cleared = false;
     s.pending           = std::move(initial_pending);
     s.cursor_pos        = static_cast<int>(s.pending.size());
     s.selection_anchor  = -1;
@@ -448,6 +458,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
                 s.cursor_pos = b;
             }
         }
+        drop_cleared_pair_on_empty(s);
         touch_blink(s);
         return KeyAction::Consumed;
     }
