@@ -4,9 +4,10 @@
 // keyboard slot's band until 2026-10-14, the modal family's box since,
 // modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER PLAYER's output folders
 // and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
-// SETTINGS PAGE's twenty-five keys as `key=value` lines under two group
-// rows (architect 2026-10-28, on a mock he verified on the glass: "yes" to
-// the list, "keep" to the group rows) — the twenty-three editable keys and,
+// SETTINGS PAGE's twenty-five keys as `key=value` lines, no title row
+// (architect 2026-10-28, on a mock he verified on the glass: "yes" to
+// the list; the titles gone 2026-11-22: "the user is expected to have
+// expert knowledge") — the twenty-three editable keys and,
 // among the piece's lines, `scale` and `bpm` as disabled rows (architect
 // 2026-10-29) — and THE VALUE LIST, one listed key's
 // values, the page's row for that key's content (architect 2026-10-25: "maybe
@@ -32,7 +33,7 @@
 // Save As, Delete and Close, one cluster flush right (his word: "we would be
 // breaking symmetry if we did it differently"); and THE BPM FORM (architect
 // 2026-10-29: "since settings has a multiline page, we should make bpm a
-// form like settings"), the settings page's shape — one group row and the
+// form like settings"), the settings page's shape — the
 // sweep's three `key=value` lines, `beats=`, `low=` and `high=`, a row's tap
 // opening the line editor on it — its controls row RENDER and Cancel in the
 // trim list's cluster.
@@ -57,14 +58,14 @@
 // values since 2026-10-25, the settings page's key lines since 2026-10-28,
 // the trim presets since 2026-10-28 night, the BPM form's three lines since
 // 2026-10-29); and the INERT rows, which the
-// highlight never stands on (row_is_inert, the walk below): the page's and
-// the BPM form's GROUP rows, a heading each (Thunar's section header, in
-// the text tone, Bold), and the page's DISABLED rows in the dim print
-// (`text_dim`), the `scale` and `bpm` lines (architect 2026-10-29). A
-// LISTING IN WHICH NO ROW WEARS A DRAWING starts its text at its own
-// column, not past an empty icon column
-// (architect 2026-10-28 night; the painter's names' column,
-// paint_folder_overlay) (a glyph-less TEXT kind went with
+// highlight never stands on (row_is_inert, the walk below): the page's
+// DISABLED rows in the dim print (`text_dim`), the `scale` and `bpm` lines
+// (architect 2026-10-29). NO LIST CARRIES A TITLE ROW (architect
+// 2026-11-22). A LISTING IN WHICH NO ROW WEARS A DRAWING starts its text
+// 12 W in, not past an empty icon column — the drawing lists' 6 W margin
+// and 6 W gap, the 16 W slot dropped (architect 2026-10-28 night and
+// 2026-11-22; the painter's names' column, paint_list_view) (a glyph-less
+// TEXT kind went with
 // the AV Sync Stats panel on 2026-09-30, and an UP row, `..`, was a kind
 // until 2026-09-01, when
 // the player moved inside `tmp/` and going up became a button on its modal
@@ -135,16 +136,16 @@
 //     row since 2026-10-14. The content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
 //   * THE ROW IS THUNAR'S DETAILS ROW, GIVEN AIR (architect 2026-11-19:
-//     "use tunar"; the two heights ours, architect 2026-11-21): a row 24 W,
-//     a group heading 28 W, edge to edge, no gap (kListRowW and
-//     kListHeadingW below, where Thunar's own and the air are told). A
+//     "use tunar"; the height ours, architect 2026-11-21): a row 24 W,
+//     edge to edge, no gap (kListRowW below, where Thunar's own and the air
+//     are told). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
 //     ("project and file names will be short"), the painter cutting it THE
 //     PAGE MARGIN inside the view's right edge (modal_box.h, 12 W; architect
 //     2026-11-20). (The AV Sync Stats panel's text rows stood at a
 //     monospace line's pitch, the row geometry's one fork, from 2026-09-03
 //     until the panel's deletion on 2026-09-30.)
-// The panel's own authored numbers are the two row heights below; the head
+// The panel's own authored number is the row height below; the head
 // pad is derived (head_pad_px), the margin's two numbers modal_box.h's.
 //
 // THE FACES ARE THUNAR'S LIST UNDER ARC (architect 2026-11-19, his approval
@@ -230,13 +231,13 @@ namespace folder_overlay {
 //
 // THE ROW IS THUNAR'S DETAILS ROW AT 9 pt, GIVEN AIR (architect 2026-11-19,
 // "use tunar", his approval of the picture Z_04; the overlays' design, its
-// §B, at 12 W text, the mock kit's list_row / group_heading the reference;
-// THE TWO HEIGHTS OURS, architect 2026-11-21, below): the panel owns the
-// two row heights, the row's face and baseline (row_face,
+// §B, at 12 W text, the mock kit's list_row the reference;
+// THE HEIGHT OURS, architect 2026-11-21, below): the panel owns the
+// row height, the row's face and baseline (kListRowFace,
 // row_baseline_px) and the head pad derived from them (head_pad_px); the
 // row's drawing and its pens stand at the painter's own constants
-// (paint_handler.cpp's THE LIST VIEW, kListDrawing*) on THE PAGE MARGIN
-// (modal_box.h).
+// (paint_handler.cpp's THE LIST VIEW, kListDrawing*), the right cut on THE
+// PAGE MARGIN (modal_box.h).
 
 // THE CARDS' FOOT MARGIN (notifications.cpp, its one reader since
 // 2026-10-23): ONE W, the line rule's hairline_px (render.h: 2 device px on
@@ -244,20 +245,18 @@ namespace folder_overlay {
 // they stand edge to edge across the view under the head pad (below).
 inline int pad_px()               { return hairline_px(); }
 
-// THE TWO ROW HEIGHTS — OURS, architect 2026-11-21 ("the lists
+// THE ROW HEIGHT — OURS, architect 2026-11-21 ("the lists
 // look too crowded ... Whenever there's like a single entry text box, that
 // looks good ... We don't have to make the list height that tall, but you
 // know, I think a little more than what we have now would be good"): A
 // LIST ROW kListRowW = 24 W (48 device px on the tablet at 200 %) — a
 // little more than Thunar's 20 W, not as tall as the entry's 28 W (the
 // value sub-page's, kEntryHeightW); its 14 W line box with 5 W of air above
-// and below — and A GROUP HEADING ROW kListHeadingW = 28 W (56 device px),
-// the same 4 W over a row (7 + 14 + 7). Each ONE NAMED NUMBER, so his glass
-// moves it in one line; each through scaled_px, rounded at the element,
+// and below. ONE NAMED NUMBER, so his glass
+// moves it in one line; through scaled_px, rounded at the element,
 // floored at one. (Thunar's own, measured on his shot at 9 pt: the row
-// 20 W, 3 + 14 + 3, and its side-pane section header 24 W, 5 + 14 + 5 —
-// ours each 4 W taller, 2 W more air above and below.) EVERYTHING ELSE OF
-// THE LIST FOLLOWS FROM THESE TWO: the baseline (row_baseline_px), the
+// 20 W, 3 + 14 + 3 — ours 4 W taller, 2 W more air above and below.)
+// EVERYTHING ELSE OF THE LIST FOLLOWS FROM IT: the baseline (row_baseline_px), the
 // head pad (head_pad_px), the content's height and so the scroll ceiling, every
 // row's rect and so the walks, the centering, the hit test and the damage,
 // and the row's drawing, centered in the list row (paint_handler.cpp's
@@ -265,65 +264,44 @@ inline int pad_px()               { return hairline_px(); }
 // EDGE TO EDGE ACROSS THE VIEW: no inset at its sides, no gap between rows
 // (Thunar's list draws none) — so the lit row's bar runs the view's whole
 // width — and over the first row THE HEAD PAD (head_pad_px below), the one
-// length of the list that is no row. EVERY LIST STANDS ON THEM — the render player's
-// folders and wavs, the project picker, the settings page, its value lists,
-// the trim presets, the BPM form — the heading the Group rows' (the
-// settings page's DEVICE / PIECE, the BPM form's one); every other kind a
-// list row.
-inline constexpr double kListRowW     = 24.0;
-inline constexpr double kListHeadingW = 28.0;
-inline int list_row_height_px()     { return scaled_px(kListRowW, 1); }
-inline int list_heading_height_px() { return scaled_px(kListHeadingW, 1); }
-// A ROW'S HEIGHT BY ITS KIND: a Group row the heading's, every other kind
-// the list row's.
-inline int row_height_px(const AppState::FolderOverlayRow& row) {
-    return row.kind == AppState::FolderOverlayRow::Kind::Group
-               ? list_heading_height_px()
-               : list_row_height_px();
-}
+// length of the list that is no row. EVERY LIST AND EVERY ROW KIND STANDS
+// ON IT — the render player's folders and wavs, the project picker, the
+// settings page, its value lists, the trim presets, the BPM form; no list
+// carries a title row (architect 2026-11-22).
+inline constexpr double kListRowW = 24.0;
+inline int list_row_height_px() { return scaled_px(kListRowW, 1); }
 // IS A ROW OF THIS KIND INERT (the walk's row_is_inert below asks it of an
-// index): a Group or a Disabled row.
+// index): a Disabled row.
 inline bool row_kind_is_inert(AppState::FolderOverlayRow::Kind kind) {
-    return kind == AppState::FolderOverlayRow::Kind::Group ||
-           kind == AppState::FolderOverlayRow::Kind::Disabled;
+    return kind == AppState::FolderOverlayRow::Kind::Disabled;
 }
 
 // A ROW'S TEXT SEAT, ONE DEFINITION FOR THE PAINTER AND THE HEAD PAD: its
-// FACE by its kind — a Group heading the Bold 12 W, every other kind the
-// Regular 12 W (gui_font.h) — and its BASELINE'S DEPTH UNDER THE ROW'S TOP
-// by the line-box rule in the row's own height (render.h's
-// line_box_baseline: the 14 W line box 5 W down in the 24 W row, +16 W,
-// and 7 W down in the 28 W heading, +18 W; one whole-W offset, 32 and 36
-// device px on the tablet at 200 %). The painter seats the row's
-// text at its real top plus this depth (paint_handler.cpp's
-// paint_list_view); the head pad below reads the same depth, so the pad
-// cannot seat a baseline the painter does not draw.
-inline GuiFace row_face(AppState::FolderOverlayRow::Kind kind) {
-    return kind == AppState::FolderOverlayRow::Kind::Group ? GuiFace::Bold
-                                                           : GuiFace::Body;
-}
-inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
-    return line_box_baseline(
-        gui_font(row_face(kind)), 0.0,
-        static_cast<int>(kind == AppState::FolderOverlayRow::Kind::Group
-                             ? kListHeadingW
-                             : kListRowW));
+// FACE, the Regular 12 W (GuiFace::Body, gui_font.h), every kind alike —
+// and its BASELINE'S DEPTH UNDER THE ROW'S TOP by the line-box rule in the
+// row's height (render.h's line_box_baseline: the 14 W line box 5 W down in
+// the 24 W row, +16 W; one whole-W offset, 32 device px on the tablet at
+// 200 %). The painter seats the row's text at its real top plus this depth
+// (paint_handler.cpp's paint_list_view); the head pad below reads the same
+// depth, so the pad cannot seat a baseline the painter does not draw.
+inline constexpr GuiFace kListRowFace = GuiFace::Body;
+inline double row_baseline_px() {
+    return line_box_baseline(gui_font(kListRowFace), 0.0,
+                             static_cast<int>(kListRowW));
 }
 
 // THE HEAD PAD (architect 2026-11-20; THE PAGE MARGIN's top,
 // modal_box.h, the rule's owner: "the ink stands 13 W from the view's top
-// and from its left; the list's head pad follows its first row's kind" —
-// "1 agree" / "2 agree"): A PAD OF CONTENT OVER THE FIRST ROW that puts THE
-// FIRST LINE'S CAP TOP kPageMarginCapTopW (13 W) UNDER THE VIEW'S TOP at
-// scroll 0, WHATEVER THE FIRST ROW'S KIND. THE RULE IS THE CAP TOP AND THE
+// and from its left" — "1 agree" / "2 agree"): A PAD OF CONTENT OVER THE
+// FIRST ROW that puts THE FIRST LINE'S CAP TOP kPageMarginCapTopW (13 W)
+// UNDER THE VIEW'S TOP at scroll 0. THE RULE IS THE CAP TOP AND THE
 // PAD IS DERIVED, never an authored number (modal_box.h's
 // page_margin_head_pad_px, the arithmetic's one definition, the two pages'
 // first line reading it too): the margin's 13 W less the cap
-// top's depth inside the first row — that row's baseline (row_baseline_px)
+// top's depth inside the first row — the row's baseline (row_baseline_px)
 // less its face's cap band (gui_font_cap_px, the file's own unhinted "H",
-// the metric every placement reads) — so it FOLLOWS THE FIRST ROW'S KIND: a
-// heading's caps stand deeper in its taller row, and its pad is that much
-// shorter.
+// the metric every placement reads); every row being one height and one
+// face, the pad is one length for every list.
 // A WHOLE NUMBER OF DEVICE PX, ROUNDED AT THE ELEMENT (std::nearbyint): the
 // pad is a layout length — the rows under it are whole-pixel boxes at rest
 // (the hit test, the clip and the damage read them; a lit row's bar fills
@@ -333,15 +311,12 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
 // band to whole rows, which is what the slight hinter does to the "H"
 // (gui_font_bundled.cpp's head), so the painted capitals' first row stands
 // at the margin exactly. ON THE TABLET (200 %; the cap band 16.51 px of the
-// 24-px em in both files, 17 rows as hinted; the view's top row 142, the
-// margin row 168; the rows of 2026-11-21, 24 W and 28 W):
-//   a list row first (the picker, the player, the trim presets, a value
-//     list): the caps 32 − 16.51 = 15.49 px deep, the pad
-//     26 − 15.49 = 10.51 -> 11 px; the first row 153..200, its baseline 185,
-//     the painted caps' first row 168 (the unhinted band's top 168.49);
-//   a heading first (the settings page, the BPM form): the caps 36 − 16.51 = 19.49 px deep, the pad 6.51 -> 7 px;
-//     the heading's row 149..204, its baseline 185, the caps' first row
-//     168; the next row 205..252.
+// 24-px em, 17 rows as hinted; the view's top row 142, the margin row 168;
+// the row of 2026-11-21, 24 W), every list alike — the picker, the player,
+// the settings page, a value list, the trim presets, the BPM form: the caps
+// 32 − 16.51 = 15.49 px deep, the pad 26 − 15.49 = 10.51 -> 11 px; the
+// first row 153..200, its baseline 185, the painted caps' first row 168
+// (the unhinted band's top 168.49).
 // IT IS CONTENT, AND IT SCROLLS WITH THE ROWS (GTK's padding inside the
 // scrolled content): the content's height counts it (content_height_px),
 // the one walk starts under it (for_each_row), so the scroll ceiling, every
@@ -355,9 +330,7 @@ inline double row_baseline_px(AppState::FolderOverlayRow::Kind kind) {
 // last row may end on the view's foot. An empty listing has none.
 inline int head_pad_px(const AppState::FolderOverlay& ov) {
     if (ov.rows.empty()) return 0;
-    const AppState::FolderOverlayRow::Kind kind = ov.rows.front().kind;
-    return page_margin_head_pad_px(gui_font(row_face(kind)),
-                                   row_baseline_px(kind));
+    return page_margin_head_pad_px(gui_font(kListRowFace), row_baseline_px());
 }
 
 // (THE BAND OWNS NO LINE OF ITS OWN — the lines above and below the view are
@@ -384,8 +357,7 @@ inline bool stands(const AppState& a) {
 // past the band.
 inline int content_height_px(const AppState::FolderOverlay& ov) {
     int h = head_pad_px(ov);
-    for (const AppState::FolderOverlayRow& row : ov.rows) h += row_height_px(row);
-    return h;
+    return h + static_cast<int>(ov.rows.size()) * list_row_height_px();
 }
 inline int content_height_px(const AppState& a) {
     return content_height_px(a.folder_overlay);
@@ -417,8 +389,8 @@ inline int content_height_px(const AppState& a) {
 // first preset is saved or over a file read as malformed (the player refuses with
 // "Nothing to play: no renders under tmp/", the project picker
 // always lists at least the project that is open, the settings page its
-// key rows under two group rows (the editable keys plus the inert `scale` and
-// `bpm`), the BPM form its four, and every other value list its key's
+// key rows (the editable keys plus the inert `scale` and
+// `bpm`), the BPM form its three, and every other value list its key's
 // whole domain).
 // THE KEYBOARD NEVER STANDS UNDER IT (the record at onscreen_keyboard::stands),
 // so the surface is the box's panel over the lanes, nothing of the
@@ -476,8 +448,8 @@ inline void clamp_scroll(AppState& a) {
 // THE ONE WALK OVER THE ROWS, and the reason paint and hit cannot drift: both
 // go through it. `fn(index, row, rect)` is called for every row of `ov` in
 // listing order with its painted rect in the band `band` under the scroll
-// offset `scroll` — the band's whole width, each row its kind's height
-// (row_height_px), THE FIRST ROW UNDER THE HEAD PAD (head_pad_px of `ov`,
+// offset `scroll` — the band's whole width, each row the list row's height
+// (list_row_height_px), THE FIRST ROW UNDER THE HEAD PAD (head_pad_px of `ov`,
 // content that scrolls with the rows: at scroll 0 the first row's top is
 // the band's top plus the pad), the next row on its foot. A REAL RECT (architect
 // 2026-11-15, the no-grid arc): its columns and its height whole, its rows
@@ -493,9 +465,9 @@ inline void for_each_row(const AppState::FolderOverlay& ov,
                          const GuiRect& band, double scroll, Fn&& fn) {
     const int n = static_cast<int>(ov.rows.size());
     double y = static_cast<double>(band.y + head_pad_px(ov)) - scroll;
+    const int h = list_row_height_px();
     for (int i = 0; i < n; ++i) {
         const AppState::FolderOverlayRow& row = ov.rows[static_cast<size_t>(i)];
-        const int h = row_height_px(row);
         fn(i, row,
            GuiRectF{static_cast<double>(band.x), y,
                     static_cast<double>(band.w), static_cast<double>(h)});
@@ -549,9 +521,10 @@ inline int row_at(const AppState& a, double x, double y) {
 }
 
 // DOES ROW `index` HEAD THE LISTING: no acting row stands above it — row 0,
-// or the first acting row under the inert rows that open the listing (the
-// settings page's and the BPM form's first key line under its heading, a
-// grouped value list's first value). It is the highest row a seat or a
+// or the first acting row under any inert rows that open the listing (no
+// content opens with one today: the settings page's first row is an
+// editable key, its disabled rows among the piece rows below). It is the
+// highest row a seat or a
 // walk can name (set_highlight seats no inert row), so it is where "the
 // top of the list" is shown (scroll_showing_row below).
 inline bool row_heads_listing(const AppState::FolderOverlay& ov, int index) {
@@ -569,7 +542,7 @@ inline bool row_heads_listing(const AppState::FolderOverlay& ov, int index) {
 // THE ROW THAT HEADS THE LISTING SHOWS WITH THE LISTING'S HEAD (architect
 // 2026-11-20, the head pad's rule: bringing the first row into
 // view shows the pad too): for row_heads_listing's row the answer is SCROLL
-// 0 — the head pad and whatever heading stands over the row in view with
+// 0 — the head pad and whatever inert row stands over the row in view with
 // it, the list as it rests — wherever the row stands whole in the band at
 // that offset (always, in a view taller than the listing's head); a seat
 // or a walk onto any other row keeps the least move.
@@ -618,8 +591,8 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // call it after their seat (the project picker's, the settings page's, the
 // value list's and the BPM form's builds, the trim presets list's open, the render
 // player's every rebuild, each a
-// fresh listing — the page's first key row, row 1, lands under its heading
-// at the listing's head, scroll 0, the clamp ruling a centered row 1 out,
+// fresh listing — the page's first key row, row 0, lands at the listing's
+// head, scroll 0, the clamp ruling a centered row 0 out,
 // and a value list's return seats the page on that key's row); the
 // highlight pair's walk keeps scroll_row_into_view's least-move rule (an
 // arrow step scrolls by one row, every list widget's rule), and a tap
@@ -647,15 +620,14 @@ inline bool scroll_row_centered(AppState& a, int index) {
 // anywhere else: what the band MEANS is the owner's, where it can sit is
 // here.
 
-// IS ROW `index` INERT? (architect 2026-10-28, the settings page's group
-// rows: "keep"; 2026-10-29, its disabled `scale` and `bpm` lines) — a Group
-// or a Disabled row, THE ONE PREDICATE every refusal of the highlight and
+// IS ROW `index` INERT? (architect 2026-10-29, the settings page's disabled
+// `scale` and `bpm` lines) — a Disabled row, THE ONE PREDICATE every refusal of the highlight and
 // the open asks: set_highlight below will not seat one, the
 // walk steps over them (move_highlight_target), and the row press's
 // motionless lift on one is a consumed nothing
 // (finish_folder_overlay_release). Its press still arms, the same press
 // being the band's scroll drag; the painter keeps it unlit
-// (paint_folder_overlay). False outside the listing.
+// (paint_list_view). False outside the listing.
 // ON A GIVEN PAGE: the same answer over `ov`, the standing overlay's.
 inline bool row_is_inert(const AppState::FolderOverlay& ov, int index) {
     const int n = static_cast<int>(ov.rows.size());
@@ -737,12 +709,12 @@ inline int walk_origin_row(const AppState& a) {
 // THE ROW A WALK OF `delta` ROWS LANDS ON, or -1 for an empty listing (the
 // step's one owner: move_highlight below seats it, and
 // move_highlight_actionable asks whether it would change the highlight).
-// THE INERT ROWS' ONE SKIP (architect 2026-10-28, the settings page's group
-// rows): a landing on an inert row (row_is_inert) steps on past it in the
-// walk's direction (a zero delta stepping down) to the first acting row;
-// where none lies that way the walk is CLAMPED AT THE ACTING ROWS' END,
-// stepping back from the landing to the nearest acting row — so Up from the
-// page's first key row stays there, its group row above it never seated.
+// THE INERT ROWS' ONE SKIP (architect 2026-10-29, the settings page's
+// disabled rows): a landing on an inert row (row_is_inert) steps on past it
+// in the walk's direction (a zero delta stepping down) to the first acting
+// row; where none lies that way the walk is CLAMPED AT THE ACTING ROWS' END,
+// stepping back from the landing to the nearest acting row — so a step onto
+// `scale` lands past `bpm` on the next editable key, never on either.
 // A content with no inert row lands where the clamp lands, unchanged. A
 // listing of inert rows alone has no producer and answers -1, as an empty
 // one does.
@@ -779,8 +751,7 @@ inline bool move_highlight(AppState& a, int delta) {
 // starting FROM row 0 (walk_origin_row) and applying its delta exactly as the
 // arrow keys do: Down lands on row 1, Up on row 0. It reads the one landing
 // owner, so it agrees with the walk about the inert rows: a step that the
-// skip clamps back onto the highlight's own row (Up from the settings page's
-// first key row) is no step. The band's scroll-into-view
+// skip clamps back onto the highlight's own row is no step. The band's scroll-into-view
 // alone (a highlight already on the wall row but partly out of view) is not
 // asked: that is a repaint of the band, not a step of the highlight.
 // (The page form answers over `ov`, row_is_inert's page form's reason.)

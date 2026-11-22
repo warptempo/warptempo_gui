@@ -4219,8 +4219,8 @@ bool GuiInputHandler::finish_folder_overlay_release(
     // both halves in this one delivery, so no frame paints between them. A
     // lift elsewhere is a consumed nothing, and so is a
     // lift on an INERT row (folder_overlay::row_is_inert, the settings page's
-    // group rows, architect 2026-10-28, and its disabled `scale` and `bpm`
-    // lines, 2026-10-29): neither half, the row being no choice.
+    // disabled `scale` and `bpm` lines, architect 2026-10-29): neither half,
+    // the row being no choice.
     if (folder_overlay::row_at(app, at.rx, at.ry) != press.row) return true;
     if (folder_overlay::row_is_inert(app, press.row)) return true;
     folder_overlay_highlight_row(press.row);
@@ -7235,8 +7235,8 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //     claim_folder_overlay_press under the modals' veil, so no question, no
 //     editor, no progress page; the list standing and painted (no question's
 //     page or progress page in its place, modal_page_stands), the face's
-//     listing the standing one; the row an acting one (not a Group heading,
-//     not a Disabled row: the lift's open refuses both) and NOT LIT — not
+//     listing the standing one; the row an acting one (not a Disabled row:
+//     the lift's open refuses it) and NOT LIT — not
 //     the highlight, no press standing (a lit row is unchanged by hover).
 bool GuiInputHandler::hover_face_live(
         const AppState::FaceFades::Face& face) const {

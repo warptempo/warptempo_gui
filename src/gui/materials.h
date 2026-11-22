@@ -297,7 +297,7 @@
 // 2026-11-05, Live's SelectionBackground under SelectionForeground,
 // retired with it): the row a press stands on — the feint's inside bit,
 // FolderOverlayPress's — in every list of the folder overlay; an inert row
-// (Group, Disabled) shows no press — its press arms the scroll drag alone;
+// (a Disabled row) shows no press — its press arms the scroll drag alone;
 // a press that has become the scroll drag presses no row
 // (paint_handler.cpp's paint_list_view).
 //

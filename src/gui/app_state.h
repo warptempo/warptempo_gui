@@ -6234,7 +6234,7 @@ struct AppState {
     // ARE FULL PAGES — the view the page, their answers word buttons on the
     // family's controls row (architect 2026-11-20; paint_handler.cpp's
     // THE QUESTION PAGE AND THE PROGRESS PAGE); a line editor is A SUB-PAGE
-    // — the view the page, its label and one entry on it, no button, the
+    // — the view the page, one entry alone on it, no label, no button, the
     // on-screen keyboard its one control (the same ruling;
     // paint_handler.cpp's THE VALUE SUB-PAGE); the
     // render player, the picker and the score viewer stand on the family's
@@ -7587,7 +7587,7 @@ struct AppState {
     // the one curve (duration_ms, kRowFadeMs). A ROW HOVERS IFF A TAP ON IT
     // WOULD ACT (hover_face_live's ListRow arm: the press's own hit, row_at
     // — never the head pad or the empty view under a short list — on an
-    // acting row, not a Group heading or a Disabled row) AND ITS LIST IS THE
+    // acting row, not a Disabled row) AND ITS LIST IS THE
     // LIVE SURFACE (the overlay standing, no question's page or progress
     // page in its place, no editor, its listing the one the face names);
     // THE LIT ROW — the highlight, a row under press — IS NO FADING FACE:
@@ -9372,8 +9372,8 @@ struct AppState {
     // 2026-11-19), the player's
     // controls row — the highlight pair, Save, Save As, Delete, Close);
     // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
-    // the sweep's ladder; one inert group row and the three `key=value`
-    // lines `beats=`, `low=` and `high=`, the open act the line editor
+    // the sweep's ladder; the three `key=value` lines `beats=`, `low=` and
+    // `high=`, no title row, the open act the line editor
     // opened PREFILLED on the row's value once the form has closed, its
     // controls row RENDER · Cancel, BpmFormButtonAct).
     // The struct keeps its shape rather
@@ -9950,8 +9950,8 @@ struct AppState {
     // output folders and their wavs; the OPEN PROJECT PICKER, with the
     // valid project folders under `projects_path`; THE SETTINGS PAGE
     // (architect 2026-10-28), with the settings editor's twenty-three keys as
-    // `key=value` lines under two group rows and `scale` and `bpm` as
-    // disabled lines (2026-10-29); and the
+    // `key=value` lines and `scale` and `bpm` as
+    // disabled lines (2026-10-29), no title row (2026-11-22); and the
     // VALUE LIST, one listed key's values (architect 2026-10-25: "maybe a
     // drop down would make it quicker, because I don't like having to type
     // it in every time" — "brief it as a scrolling list", "Yes"), since
@@ -9963,7 +9963,7 @@ struct AppState {
     // since 2026-10-28 night THE TRIM PRESETS LIST, the piece's named trim
     // windows (`trim/presets.txt`, trim_presets_file.h), the TRIM key's; and
     // since 2026-10-29 THE BPM FORM, the sweep's three values as `key=value`
-    // lines under one group row, the BPM key's (architect: "since settings
+    // lines, no title row, the BPM key's (architect: "since settings
     // has a multiline page, we should make bpm a form like settings. then we
     // make @ and [] not necessary"). (The AV Sync Stats panel's text lines stood
     // 2026-09-03..30 and were deleted with the panel; the `h` view's history
@@ -10075,18 +10075,15 @@ struct AppState {
     // 2026-10-28: a settings page row is
     // the line the editor opens with, `true_colors=on`, and a value list's
     // rows the value as the config spells it, `-9`, `4`; a listing
-    // with no glyph row starting its text at the glyph's own column,
-    // 2026-10-28 night, paint_folder_overlay's names' column), and GROUP
-    // NONE, AND IT IS INERT
-    // (architect 2026-10-28, the settings page's "DEVICE" and "PIECE"): never
-    // highlighted, never opened, stepped over by the walk, its text in the
-    // dim print (`text_dim`); and DISABLED NONE, INERT AS GROUP IS
-    // (architect 2026-10-29, the settings page's `scale` and `bpm`: "bpm and
-    // scale should be viewable but disabled. they are useful for notes"):
-    // a key line in the dim print, never highlighted, never opened,
+    // with no glyph row starting its text 12 W in, the drawing lists' 6 W
+    // margin and 6 W gap with the 16 W slot dropped, architect 2026-11-22,
+    // paint_handler.cpp's THE LIST VIEW), and DISABLED NONE, AND IT IS
+    // INERT (architect 2026-10-29, the settings page's `scale` and `bpm`:
+    // "bpm and scale should be viewable but disabled. they are useful for
+    // notes"): a key line in the dim print, never highlighted, never opened,
     // stepped over by the walk. The kind says what a row IS; what its open
     // MEANS is the owner's (folder_overlay_open_row). A KIND EXISTS
-    // IFF A CONTENT PRODUCES IT, which is why this enum has lost two:
+    // IFF A CONTENT PRODUCES IT, which is why this enum has lost three:
     //   * UP — the `..` row, the folder glyph over the parent — went on
     //     2026-09-01, when the player moved inside `tmp/` and going up became a
     //     BUTTON on the modal row (PlayerButtonAct::Up) instead of a row in the
@@ -10094,23 +10091,25 @@ struct AppState {
     //   * TEXT — no glyph, no act — carried the one-day history picker's rows
     //     (to 2026-08-29) and then the AV Sync Stats panel's lines
     //     (2026-09-03..30), and went with the panel. Plain is glyph-less as
-    //     it was, but a row with an act; Group is a heading, not a line of
-    //     output.
+    //     it was, but a row with an act.
+    //   * GROUP — an inert title row over a run of rows — went 2026-11-22
+    //     with the lists' titles (architect: "the user is expected to have
+    //     expert knowledge").
     // THE PRODUCERS: the render player Folder and Wav rows; the project
-    // picker Folder rows alone; the SETTINGS PAGE Group, Plain and Disabled
-    // rows (its two headings, its twenty-three editable key lines and the two
+    // picker Folder rows alone; the SETTINGS PAGE Plain and Disabled
+    // rows (its twenty-three editable key lines and the two
     // the BPM key writes, build_settings_page_rows);
     // the value list Plain rows (build_value_list_rows), each carrying
     // in `value` the key's spelling the tap commits, its `name` the same
     // words; the trim presets list Plain rows alone
     // (build_trim_presets_rows), row i the overlay's preset i, its text the
-    // preset's name alone (architect 2026-10-28 night); the BPM form a Group
-    // row and three Plain rows (build_bpm_form_rows), row f + 1 the field f
-    // (GuiBpmField), its text the field's line. A Plain or Group
+    // preset's name alone (architect 2026-10-28 night); the BPM form three
+    // Plain rows (build_bpm_form_rows), row f the field f
+    // (GuiBpmField), its text the field's line. A Plain
     // row's `path` and `entry` stay empty, as a Disabled row's do, and
     // `value` is set on a value list's rows alone.
     struct FolderOverlayRow {
-        enum class Kind { Folder, Wav, Plain, Group, Disabled };
+        enum class Kind { Folder, Wav, Plain, Disabled };
         Kind                       kind = Kind::Wav;
         std::string                name;
         std::filesystem::path      path;
@@ -10171,31 +10170,28 @@ struct AppState {
     };
     FolderOverlay folder_overlay;
 
-    // THE VALUE SUB-PAGE'S TWO WORDS OF STATE (architect 2026-11-20;
-    // paint_handler.cpp's THE VALUE SUB-PAGE). THE THREE OPENERS OF A
+    // THE VALUE SUB-PAGE'S ONE WORD OF STATE (architect 2026-11-20;
+    // paint_handler.cpp's THE VALUE SUB-PAGE; the page carries no label,
+    // architect 2026-11-22). THE THREE OPENERS OF A
     // LINE EDITOR — the settings page's row
     // (GuiInputHandler::settings_page_commit), the trim presets list's Save
     // As (trim_presets_save_as) and the BPM form's row (bpm_form_commit) —
     // each close the list (the overlay and the keyboard
     // never both stand) and write here, first (seat_value_page), what the
-    // sub-page shows that the editor's buffer does not hold:
-    //   `name`    THE LABEL'S TEXT, the painter adding the colon: the row's
-    //             key — the line's text before its `=` — or, for the trim
-    //             preset's name, the act's own name, "Save As";
+    // editor's buffer does not hold:
     //   `opener`  THE LIST THE PAGE WAS OPENED FROM, its owner tag: the
     //             roster's lit bit reads it (roster_face_page_owner), so
     //             that list's opener key stays lit — and inert, the whole
     //             roster greyed while the keyboard stands
     //             (redesign_button_enabled's first arm).
     // Read only while a line editor stands; the next opener overwrites
-    // both. PAINT ALONE: the list the editor's Enter or Esc returns to is
+    // it. PAINT ALONE: the list the editor's Enter or Esc returns to is
     // rebuilt by the editor's key route from the route's own seats
     // (GuiInputHandler::handle_settings_editor_key: the settings page on the
     // open's key, the trim presets list on the name, the BPM form on the
     // field), none of them read from here.
     struct ValuePage {
         FolderOverlay::Owner opener = FolderOverlay::Owner::None;
-        std::string          name;
     };
     ValuePage value_page;
 

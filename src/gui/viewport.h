@@ -733,7 +733,7 @@ struct Viewport {
     // the text, its scroll offset, the selection and the caret, all inside
     // the entry (paint_value_page: the text cut at the
     // entry's inner edges, the caret at its padding box). Nothing outside it
-    // moves with an edit: the label is the open's; a refusal's or a full
+    // moves with an edit: a refusal's or a full
     // field's card damages its own
     // stack (GuiNotifications::notify); the on-screen keyboard's keys and
     // lamps damage their own band.

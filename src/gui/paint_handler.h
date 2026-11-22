@@ -1558,8 +1558,7 @@ private:
     // list panel, Thunar's list under Arc in the modal family's view
     // (architect 2026-11-19, send AA; folder_overlay.h's THE FACES) — folder
     // and wav rows with their drawings, the glyph-less plain rows, the
-    // settings page's and the BPM form's group rows as Bold headings in the
-    // text tone, the page's disabled rows in the dim print (`text_dim`), the
+    // page's disabled rows in the dim print (`text_dim`), the
     // highlighted row and the row under a press one flat fill in the
     // selection pair, all under the band's
     // clip and the live scroll offset. Gated whole on folder_overlay::stands

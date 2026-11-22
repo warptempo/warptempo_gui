@@ -2082,10 +2082,10 @@ struct GuiInputHandler {
     // picker cluster below, private beside its openers); public for that one
     // caller, exactly as the editors' body above is.
     void close_picker();
-    // THE VALUE SUB-PAGE'S TWO WORDS (AppState::value_page): the label's
-    // `name` and the standing list's owner tag, written by the three openers
-    // of a line editor before their close.
-    void seat_value_page(std::string name);
+    // THE VALUE SUB-PAGE'S ONE WORD (AppState::value_page): the standing
+    // list's owner tag, written by the three openers of a line editor before
+    // their close.
+    void seat_value_page();
 
     // THE RELEASE-TIME ARMS, DROPPED TOGETHER AT THE BUTTON-LOST EDGE
     // — THE DEFECT IS WHY THIS EXISTS, and it is worth stating before the
@@ -3048,8 +3048,8 @@ private:
     //       both completions (main.cpp's run_project).
     //
     //   THE SETTINGS PAGE (architect 2026-10-28, on a mock he verified on
-    //   the glass: the list "yes", the group rows "keep", the roster the
-    //   editor's table, "plain press only. retire long press") — the
+    //   the glass: the list "yes", the roster the editor's table, "plain
+    //   press only. retire long press"; no title rows, 2026-11-22) — the
     //   Settings button and bare `;`, one chord (the button's plain press
     //   dispatches it at the lift; it admits no modifier, and Shift+; binds
     //   nothing). It authors nothing itself — its rows open the editor,
@@ -3062,18 +3062,19 @@ private:
     //       and the Settings key, the editor's open key from the line
     //       editor's return (handle_settings_editor_key).
     //     build_settings_page_rows: kSettingsEditorKeys exactly (settings_
-    //       editor.h), the DEVICE keys under a "DEVICE" group row and then
-    //       the PIECE rows under a "PIECE" one (kSettingsPagePieceKeys, with
+    //       editor.h), the device keys first and then the piece rows
+    //       (kSettingsPagePieceKeys, with
     //       `scale` and `bpm` shown as DISABLED rows, architect
     //       2026-10-29); each key a glyph-less row whose text is the line
     //       the editor would open with, `key=value`
     //       (GuiSettingsEditor::setting_line), Plain for an editable key,
-    //       each group row and disabled row inert
+    //       each disabled row inert
     //       (folder_overlay::row_is_inert). THE SEAT is
     //       `seat_key`'s row, centered as far as the listing's ends allow
     //       (scroll_row_centered) — a value list's or the line editor's
     //       return seating the key it showed; with no seat key — `;` and the
-    //       Settings key — the FIRST KEY ROW, at the top (that clamp).
+    //       Settings key — the FIRST KEY ROW, row 0, at the top (that
+    //       clamp).
     //     settings_page_commit: THE OPEN ACT on row `index` — the row's tap,
     //       its one road: on the row of a key with a value list
     //       (settings_key_has_value_list, settings_editor.h) THAT KEY'S VALUE
@@ -3206,8 +3207,8 @@ private:
     //   settings has a multiline page, we should make bpm a form like
     //   settings. then we make @ and [] not necessary") — the BPM key and
     //   Ctrl+B, past the sweep's ten-arm ladder and enter_bpm_mode (the
-    //   Ctrl+B arm, input_key_dispatch.cpp). THE SETTINGS PAGE'S SHAPE: one
-    //   inert Group row "BPM" and three Plain rows, `beats=`, `low=` and
+    //   Ctrl+B arm, input_key_dispatch.cpp). THE SETTINGS PAGE'S SHAPE:
+    //   three Plain rows, no title row, `beats=`, `low=` and
     //   `high=` with the value each holds — BLANK at every open, the mode's
     //   entry and exit wiping the owner. THE BPM MODE IS EXACTLY THE FORM'S
     //   SESSION (AppState::bpm_mode_enabled): the form standing, or the line
@@ -3225,8 +3226,8 @@ private:
     //     bpm_form_commit: THE OPEN ACT on row `index` — the row's tap, its
     //       one road: the form closes (close_picker, the mode STANDING — the
     //       overlay and the on-screen keyboard never both stand) and THE
-    //       LINE EDITOR opens PREFILLED with the row's VALUE, the key its
-    //       sub-page's label (architect 2026-11-19 and 2026-11-20), the
+    //       LINE EDITOR opens PREFILLED with the row's VALUE alone, no label
+    //       (architect 2026-11-19, 2026-11-20 and 2026-11-22), the
     //       caret at its end, on the line editor's buffer
     //       (text_editor::Kind::BpmField, `target` the field). Its commit is
     //       GuiFlagEditor::commit_bpm_field; its Enter and Esc return to the
@@ -3440,7 +3441,7 @@ private:
     //     LIST'S RESTING ROW A TAP WOULD ACT ON — every list of the folder
     //     overlay (the render player's, the project picker's, the settings
     //     page's, a value list's, the trim presets', the BPM form's), never
-    //     a Group heading, a Disabled row, the head pad or the empty view
+    //     a Disabled row, the head pad or the empty view
     //     under a short list, never the lit row (the highlight, a row under
     //     press), only while its list is the live surface (no question's
     //     page, progress page or editor in its place) — wears

@@ -88,9 +88,9 @@
 // while one of the three line editors stands (the settings editor's buffer:
 // a settings value, the trim preset's name, a BPM field —
 // AppState::dialog_editor_session) THE BOX STANDS and THE VIEW IS ONE FLAT
-// PAGE in the lists' tone with THE LABEL AND ONE ARC ENTRY alone on it,
-// top-aligned ON THE PAGE MARGIN (below; modal_page_lines' `entry`): no
-// title bar, no frame, no shadow, no button, no list behind. The painter and
+// PAGE in the lists' tone with ONE ARC ENTRY alone on it, top-aligned ON
+// THE PAGE MARGIN (below; modal_page_lines' `entry`): no label (architect
+// 2026-11-22), no title bar, no frame, no shadow, no button, no list behind. The painter and
 // the rule's owner: paint_handler.cpp's THE VALUE SUB-PAGE.
 //
 // THE ON-SCREEN KEYBOARD STANDS OVER THE PAGE, AND NOTHING IS RELAID FOR IT
@@ -100,7 +100,7 @@
 // keyboard over the view's foot, the bottom icon row and the status bar,
 // and what the box lays cut at the keyboard's top line (paint_modal_dialog).
 // On the tablet at key_height 28: the view y 142..1307 (1166 rows), the
-// label's line box rows 163..190 and the entry rows 203..258 — far above
+// entry rows 166..221 — far above
 // the keyboard's top line at his tuning (osk_key_w 24, osk_key_h 35: the
 // keyboard 1048–1439, the view's visible part 142..1047), at the defaults
 // (osk_key_h 30: 1098–1439) and at the tallest keyboard the keys' range
@@ -196,19 +196,23 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
 //                            the ink as the left is.
 //   kPageLabelGapW 6 W       A LABEL TO THE CONTROL UNDER IT, line box to
 //                            box — THE XFCE APPEARANCE DIALOG'S, 6 px
-//                            between a heading and its control (his "1
+//                            between a label and its control (his "1
 //                            agree" on "a label to its control 6 W"): the
 //                            progress page's sentence to its bar and the bar
-//                            to its count, and the value sub-page's label to
-//                            its entry.
+//                            to its count.
 // Each a whole W through scaled_px, rounded at the element (24, 26 and 12
 // device px on the tablet at 200 %). A FILL ACROSS THE VIEW KEEPS THE VIEW'S
 // WHOLE WIDTH (a list's lit row, x 0..2303 on the tablet): the margin seats
 // ink, not faces. ITS READERS: the lists — the pad over a list's first row
-// that seats its caps (folder_overlay.h's head_pad_px), the rows' pens and
-// their right cut (paint_handler.cpp's THE LIST VIEW) — and the three pages,
-// a question's, the progress page and the value sub-page (modal_page_lines
-// below). The score viewer's page is a picture on its mat and takes none.
+// that seats its caps (folder_overlay.h's head_pad_px) and the rows' right
+// cut (paint_handler.cpp's THE LIST VIEW); A LIST'S LEFT SEATS ARE THE LIST
+// VIEW'S OWN CONSTANTS, not kPageMarginPenW (architect 2026-11-22: the
+// drawing's box 6 W in, a glyphless name 12 W in, kListDrawingMarginW and
+// kListDrawingGapW) — and the three pages, a question's, the progress page
+// and the value sub-page (modal_page_lines below), which keep the 12 W pen;
+// the value sub-page's entry box stands kPageMarginPenW from the view's left
+// AND its top, a box measured to its border (the cap-top rule is a text
+// line's). The score viewer's page is a picture on its mat and takes none.
 inline constexpr double kPageMarginPenW    = 12.0;
 inline constexpr double kPageMarginCapTopW = 13.0;
 inline constexpr double kPageLabelGapW     = 6.0;
@@ -230,7 +234,8 @@ inline int page_label_gap_px()      { return scaled_px(kPageLabelGapW); }
 // first row stands at the margin exactly and the line under the pad stands
 // on a whole baseline (the reasoning in full at its first reader,
 // folder_overlay.h's head_pad_px). Its two readers: a list's head pad and
-// the three pages' first line (modal_page_lines).
+// the sentence of a question's page and the progress page
+// (modal_page_lines; the value sub-page has no line, its entry a box).
 inline int page_margin_head_pad_px(const GuiFont& face,
                                    double baseline_depth_px) {
     return static_cast<int>(std::nearbyint(
@@ -244,8 +249,7 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 // toplaigned"; paint_handler.cpp's THE QUESTION PAGE AND THE PROGRESS PAGE
 // and THE VALUE SUB-PAGE the painters and the rules' owners). In the view
 // (modal_box_interior_rect), every length THE PAGE MARGIN's:
-//   THE SENTENCE — a question, the progress page's "Rendering...", or the
-//     value sub-page's LABEL (the value's name and a colon) — one
+//   THE SENTENCE — a question or the progress page's "Rendering..." — one
 //     line of Regular 12 W (GuiFace::Body, the lists' rows' face), its PEN
 //     kPageMarginPenW from the view's left, its line box (the face's 14 W,
 //     gui_font_line_box_w) under the head pad that seats ITS CAP TOP
@@ -257,16 +261,19 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 //     SENTENCE'S LINE BOX;
 //   THE COUNT ("3 of 11"; Regular 10 W, GuiFace::Caption, GTK's "small") at
 //     the same pen, ITS LINE BOX (13 W) kPageLabelGapW UNDER THE BAR;
-//   THE ENTRY (the value sub-page's; Arc's, materials.h's paint_entry) from
-//     the pen's column to the right cut — 12 W inside the view's left edge
-//     to 12 W inside its right — kEntryHeightW (28 W, Arc's) tall, ITS TOP
-//     kPageLabelGapW UNDER THE LABEL'S LINE BOX: a fact of the view alone,
-//     whatever the text, so the entry never moves or grows with an edit.
+//   THE ENTRY (the value sub-page's, alone on its page, no label; Arc's,
+//     materials.h's paint_entry) from the pen's column to the right cut —
+//     12 W inside the view's left edge to 12 W inside its right —
+//     kEntryHeightW (28 W, Arc's) tall, ITS TOP kPageMarginPenW (12 W)
+//     UNDER THE VIEW'S TOP, the box at the page margin on both sides of its
+//     corner (measured to its border, as its left edge is): a fact of the
+//     view alone, whatever the text, so the entry never moves or grows with
+//     an edit.
 // ON THE TABLET (200 %; the view x 0..2303, y 142..1307): the pen x 24, the
 // cut x 2280; the head pad 26 − (22 − 16.51) = 20.51 -> 21 px, so the
 // sentence's line box rows 163..190, its baseline 185, the painted caps'
 // first row 168; the bar x 24..2279, rows 203..214; the count's line box
-// rows 227..252, its baseline 247; the entry x 24..2279, rows 203..258
+// rows 227..252, its baseline 247; the entry x 24..2279, rows 166..221
 // (1128 x 28 W), its text's pen x 42 (kEntryPenW).
 // `sentence_line` and `count_line` are the two texts' line boxes' rows
 // across the view's whole width (every row their ink can stand on: the
@@ -314,7 +321,8 @@ inline ModalPageLines modal_page_lines(const AppState& a) {
     l.count_line = GuiRect{l.view.x, count_top, l.view.w, scaled_px(cb.line())};
     l.step = GuiRect{l.view.x, bar_y, l.view.w,
                      count_top + l.count_line.h - bar_y};
-    l.entry = GuiRect{l.pen_x, bar_y, std::max(0, l.text_end_x - l.pen_x),
+    l.entry = GuiRect{l.pen_x, l.view.y + page_margin_pen_px(),
+                      std::max(0, l.text_end_x - l.pen_x),
                       scaled_px(kEntryHeightW)};
     return l;
 }

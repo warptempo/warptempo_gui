@@ -244,7 +244,7 @@ struct GuiFlagEditor {
     // `target` the field, GuiBpmField) judged and written onto the BPM
     // owner's field. THE BUFFER IS THE FIELD'S VALUE ALONE, the key the
     // row's own (kBpmFieldKeys; architect 2026-11-19, the line editor's
-    // value under the field's label); an EMPTY value CLEARS the
+    // value alone, its sub-page no label, 2026-11-22); an EMPTY value CLEARS the
     // field (zero, its unset sentinel); any other value is judged by THE
     // FIELD'S OWN READER (read_bpm_beats, read_bpm_tempo — warpmarkers.h). A
     // refusal leaves the editor standing, its value selected whole, one

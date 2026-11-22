@@ -1221,7 +1221,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // line_box_baseline, GTK's seat; send Z, 2026-11-19): the face's line box
 // centered in a box of whole W, the baseline its ascent under the box's
 // top — the bottom icon row's left run, the render player's and the score
-// viewer's time labels and page cell, the lists' rows and headings, the
+// viewer's time labels and page cell, the lists' rows, the
 // pages' lines, the word buttons' words and the value sub-page's entry, the
 // status bar, the cards, the tooltip, the
 // NOISE number, the ruler's digits (render.h's ruler_baseline_px) and the
@@ -6219,8 +6219,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //   over the entries done, the count, and Cancel alone on the controls row,
 //   unfocused as a prompt's buttons are.
 // A LINE EDITOR IS A SUB-PAGE OF ITS OWN (architect 2026-11-20; THE VALUE
-// SUB-PAGE above, paint_value_page): the view one flat page with the
-// value's label and Arc's focused entry alone on it, ONE LINE that SCROLLS
+// SUB-PAGE above, paint_value_page): the view one flat page with Arc's
+// focused entry alone on it, ONE LINE that SCROLLS
 // SIDEWAYS, GTK's way (architect 2026-11-19: "The pen does have a
 // good way to scroll, and those are the left and right arrows of the
 // keyboard. That's exactly why they're there."), NO BUTTON — the on-screen
@@ -6470,40 +6470,33 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 // subpages to accomodate that. the osk should essentially stop all other
 // activity and become the only active element when it's onscreen."; "we
 // shuold remove the popups - it seems those come from gnome and xfce just
-// inherited them"; to "the sub-page's content: the setting's name as a label
-// above the entry, nothing else": "subpage yes"; on the mocks: "settings
-// prefer toplaigned"; to "the pen still seats the caret in an editor's
-// text": "keep - i meant only live element aside from the text edit box";
-// on the page margin: "1 agree").
+// inherited them"; on the mocks: "settings prefer toplaigned"; to "the pen
+// still seats the caret in an editor's text": "keep - i meant only live
+// element aside from the text edit box"; on the page margin: "1 agree";
+// 2026-11-22: "Yes, remove the title in text input pages, like for example
+// the key width" — "the user is expected to have expert knowledge").
 // WHILE ONE OF THE THREE LINE EDITORS STANDS (the settings editor's buffer:
 // a settings value, the trim preset's name, a BPM field —
 // AppState::dialog_editor_session) THE VIEW (the box's interior,
 // modal_box_interior_rect: on the tablet rows 142..1307, the panel's whole
 // width) IS ONE FLAT PAGE in the lists' tone (`ruler_face`, the box
-// paint_modal_dialog lays) AND ON IT, TOP-ALIGNED, NOTHING BUT (every seat
-// modal_box.h's modal_page_lines, THE PAGE MARGIN):
-//   THE LABEL — the value's name and a colon (AppState::value_page's `name`:
-//     the settings row's key, "projects_path:"; the BPM field's key; under
-//     the trim preset's name editor the act's own name, "Save As:"), plain
-//     Regular 12 W in the lists' rows' tone
-//     (surface_text(GuiSurface::ListRow)), its pen 12 W from the view's
-//     left, ITS CAP BAND'S TOP 13 W UNDER THE VIEW'S TOP (a label with no
-//     capital seats by the face's cap band all the same), cut 12 W inside
-//     the view's right edge on its own mask, never wrapped;
+// paint_modal_dialog lays) AND ON IT, TOP-ALIGNED, NOTHING BUT (its seat
+// modal_box.h's modal_page_lines, THE PAGE MARGIN) — NO LABEL, NO TITLE:
 //   ONE SINGLE-LINE ARC ENTRY, FOCUSED (materials.h's paint_entry: the
 //     canvas's tone in a one-W `well_border` ring, the inner one-W line of
 //     the accent — Arc's entry:focus, the entry holding the focus for as
 //     long as the page stands), from 12 W inside the view's left edge to
-//     12 W inside its right, kEntryHeightW (28 W) tall, ITS TOP 6 W UNDER
-//     THE LABEL'S LINE BOX; its text the buffer — the value alone
+//     12 W inside its right, kEntryHeightW (28 W) tall, ITS TOP 12 W UNDER
+//     THE VIEW'S TOP (kPageMarginPenW, the box at the page margin on both
+//     sides of its corner, measured to its border as its left edge is);
+//     its text the buffer — the value alone
 //     (settings_editor.h's head), the BPM field's value, the preset's name —
 //     Regular 12 W at pen kEntryPenW (9 W) inside its left edge on the
 //     line-box baseline (+18 W of its 28), the caret one W in the field's
 //     text tone over the line box's rows, ALWAYS SHOWN (its blink the
 //     tick's), the selection the selection pair.
-// ON THE TABLET (200 %): the label's pen x 24, its line box rows 163..190,
-// its baseline 185, the painted caps' first row 168; the entry x 24..2279,
-// rows 203..258 (1128 x 28 W), its text's pen x 42, its inner width
+// ON THE TABLET (200 %; the view's top row 142): the entry x 24..2279,
+// rows 166..221 (1128 x 28 W), its text's pen x 42, its inner width
 // 42..2261.
 // THE ENTRY IS ONE LINE AND SCROLLS SIDEWAYS, GTK'S WAY (architect
 // 2026-11-19: "The pen does have a good way to scroll, and those
@@ -6535,8 +6528,8 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 // keyboard_modal_editor_active). THE TOP ICON ROW greys whole, the opener
 // of the list the page was opened from — SETUP, PRESETS or BPM — lit and
 // inert (roster_greyed_whole, roster_face_page_owner; app_state.h), fading
-// as standing keys do (AppState::FaceFades); the label and the entry are no
-// faces and fade nothing. THE BOTTOM ICON ROW AND THE STATUS BAR are under
+// as standing keys do (AppState::FaceFades); the entry is no face and
+// fades nothing. THE BOTTOM ICON ROW AND THE STATUS BAR are under
 // the keyboard (paint_bottom_strip's and paint_status_bar's yield).
 // NO LINE EDITOR OPENS WHILE A QUESTION OR THE PROGRESS PAGE STANDS, AND
 // NEITHER RISES OVER ONE: each of the three openers is a list's row or
@@ -6548,9 +6541,8 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 // while its keyboard stands.
 //
 // THE PAINT AND THE PUBLICATION for the line editor `ed`, on the view the
-// caller has just laid: the label and the entry under the frame's own clip
-// (the label reshaped only where the clip meets its line: an edit's and the
-// blink's damage is the entry's box alone), and into app.modal_dialog the
+// caller has just laid: the entry under the frame's own clip (an edit's and
+// the blink's damage is the entry's box alone), and into app.modal_dialog the
 // owner (Editor), NO BUTTON, and `field` — THE ENTRY'S BOX, border
 // included: the caret's press region (active_editor_text,
 // input_pointer.cpp) and the damage of an edit, a scroll step and the blink
@@ -6568,17 +6560,6 @@ void paint_value_page(cairo_t* cr, AppState& app, text_editor::State* ed) {
     cairo_save(cr);
     cairo_rectangle(cr, l.view.x, l.view.y, l.view.w, l.view.h);
     cairo_clip(cr);
-    // THE LABEL, the value's name and a colon, cut at the page margin
-    // inside the view's right edge.
-    const std::string& name = app.value_page.name;
-    if (!name.empty() && clip_meets(cr, l.sentence_line)) {
-        const double pen = static_cast<double>(l.pen_x);
-        const text_raster::XSpan span{pen, static_cast<double>(l.text_end_x)};
-        set_palette_source(cr, surface_text(GuiSurface::ListRow));
-        text_shape::show_shaped_run_within(
-            cr, text_shape::shape_text_run(body, name + ":"), pen,
-            l.sentence_baseline, &span, 1);
-    }
     // THE ENTRY, focused.
     const GuiRect entry    = l.entry;
     const int     pen_dx   = scaled_px(kEntryPenW);
@@ -7107,7 +7088,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // CUT AT THE KEYBOARD'S TOP LINE (the block at kb_covers above): the box
     // and its two lines. The cheaper truthful answer of the two — the
     // keyboard is painted before this body (on_redraw's order), so covering
-    // would mean painting it twice. The sub-page's label and entry stand at
+    // would mean painting it twice. The sub-page's entry stands at
     // the view's head, clear of the surface at every tuning of the keys
     // (modal_box.h's head), so the cut takes nothing of them.
     if (kb_covers) {
@@ -7148,8 +7129,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // THE PAGE'S LINES on the view just laid: the question, or the progress
     // page's sentence, bar and count (paint_modal_page).
     if (page_up) paint_modal_page(cr, app, prompt_up);
-    // THE VALUE SUB-PAGE on the view just laid: the label and the entry,
-    // and NOTHING ELSE OF THIS BODY — no controls row is planned, painted
+    // THE VALUE SUB-PAGE on the view just laid: the entry alone, and
+    // NOTHING ELSE OF THIS BODY — no controls row is planned, painted
     // or published under it (THE VALUE SUB-PAGE's head). THE STASH: the
     // owner and the entry's box are the page's own (paint_value_page); the
     // session is stamped here with them, and `box` is the modal family's
@@ -8643,8 +8624,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // THE LIST PANEL (2026-08-28; the modal family's box since 2026-10-14),
 // ONE PAINTER FOR EVERY CONTENT —
 // the render player's folders and wavs, the Open project picker's project
-// folders, the settings page's `key=value` lines under its group headings
-// (2026-10-28), the value list's values (2026-10-28 night; glyph-less
+// folders, the settings page's `key=value` lines (2026-10-28; no title
+// row, 2026-11-22), the value list's values (2026-10-28 night; glyph-less
 // rows, a value as the config spells it), the trim presets and the BPM
 // form. Contract and gate are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
@@ -8653,10 +8634,10 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //
 // THE VIEW IS THUNAR'S DETAILS LIST UNDER ARC (architect 2026-11-19: "use
 // tunar", his approval of the picture Z_04; the design at 12 W text, the
-// mock kit's list_row / group_heading / list_view the reference): THE VIEW the
+// mock kit's list_row / list_view the reference): THE VIEW the
 // canvas's tone (`ruler_face`, Arc's $base_color 404552) between the box's
 // two lines (paint_modal_box), edge to edge, NO SCROLLBAR, no row
-// separator; the rows on folder_overlay.h's heights, and the faces:
+// separator; the rows on folder_overlay.h's height, and the faces:
 //   a RESTING row         -> NO FILL: the view shows through, the name in
 //                            the text tone `text`
 //   the HIGHLIGHT         -> THE SELECTION PAIR across the view's whole
@@ -8689,41 +8670,42 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            no fill at rest, so the resting picture is
 //                            the one without the hover, byte for byte
 //   an INERT row          -> never lit, never hovered: a Disabled row's
-//                            name in `text_dim` (7E838F), A GROUP HEADING
-//                            Thunar's section header in the text tone, Bold
-//                            12 W
+//                            name in `text_dim` (7E838F)
 // NO FOCUS FRAME (architect 2026-10-23): the lit row is the only sign of
 // the highlight.
-// THE ROW'S DRAWING AND NAME, ON THE PAGE MARGIN (architect 2026-11-20;
-// modal_box.h's THE PAGE MARGIN the rule's owner, its 12 W pen
-// kPageMarginPenW; the row and its drawing Thunar's at 9 pt, measured on
-// his shot): EVERY ROW'S FIRST THING STANDS AT THE MARGIN'S PEN, 12 W from
-// the view's left edge — a plain row's name, A GROUP HEADING'S NAME ON THE
-// ROWS' OWN PEN ("yes align"), and in a listing whose rows wear drawings
-// the drawing's canvas. A list row's drawing — Folder on a folder or
+// THE ROW'S DRAWING AND NAME — THE LIST'S OWN LEFT SEATS (architect
+// 2026-11-22, send JJ: "pages without a glyph dont change" / "no it loses
+// the 16w slot but keeps the margin"; the row and its drawing Thunar's at
+// 9 pt, measured on his shot; the lists take their left seats here, not
+// modal_box.h's kPageMarginPenW, whose right cut they keep): IN A LISTING
+// WHOSE ROWS WEAR DRAWINGS (the render player, the project picker) THE
+// DRAWING'S 16 W BOX STANDS kListDrawingMarginW = 6 W FROM THE VIEW'S LEFT
+// EDGE, measured on the box, never on the drawing's ink (the ink keeps its
+// own offset inside the box, icons::ink_in_box), and the name 6 W after the
+// box (kListDrawingGapW): the name's pen 6 + 16 + 6 = 28 W, 56 device px
+// on the tablet. IN A LISTING WHERE NO ROW WEARS A DRAWING (the settings
+// page, the value lists, the trim presets, the BPM form) the 16 W slot is
+// dropped and the margin and the gap kept: the name's pen 6 + 6 = 12 W,
+// 24 device px on the tablet ("all lists that don't have the player's
+// icons hold an empty space for an icon that doesn't exist", architect
+// 2026-10-28 night). A list row's drawing — Folder on a folder or
 // project row, MusicNote16th, THE NOTE, on a wav row (architect 2026-11-22,
 // send II: "render player actually plays target audio, not source. but it
 // should take the bpm note aka the logo"; the title bar's note and BPM's
 // drawing, shared three ways, icons.h's head) — is the set's whole
-// 16 W canvas (kListDrawingBoxW) at the pen across and CENTERED IN THE LIST
-// ROW down, (row − canvas) / 2 = +4 W in the 24 W row (kListDrawingYW,
+// 16 W canvas (kListDrawingBoxW) at the margin across and CENTERED IN THE
+// LIST ROW down, (row − canvas) / 2 = +4 W in the 24 W row (kListDrawingYW,
 // derived from folder_overlay::kListRowW, never a second authored number;
 // architect 2026-11-21), in the TEXT TONE on every face (the drawing unchanged
 // under the highlight, as Thunar's), its name 6 W after the canvas
 // (kListDrawingGapW, architect 2026-11-22, send II: "increase the distance
-// b/w icon and text in lists, eg player", "6 w"; the pen 12 + 16 + 6 =
-// 34 W, 68 device px on the tablet; the name's pen and its mask's left end
-// are this column's only readers — the press and the hover take the whole
-// row, folder_overlay::row_at); the name
-// Regular 12 W (GuiFace::Body) at the margin's pen itself in a listing
-// where no row wears a drawing (the settings page, the value lists, the
-// trim presets, the BPM form: "all lists that don't have the player's
-// icons hold an empty space for an icon that doesn't exist", architect
-// 2026-10-28 night), a heading's name Bold 12 W (GuiFace::Bold) at that
-// pen in every listing; each on its row's line-box baseline, +16 W of the
-// 24 and +18 W of the 28 (folder_overlay::row_face / row_baseline_px, the
-// seat the head pad reads too). NOTHING STANDS CLOSER THAN THE SAME 12 W
-// TO THE VIEW'S RIGHT EDGE: a name and a heading are cut there on their
+// b/w icon and text in lists, eg player", "6 w"; the name's pen and its
+// mask's left end are this column's only readers — the press and the hover
+// take the whole row, folder_overlay::row_at); the name Regular 12 W
+// (GuiFace::Body) on its row's line-box baseline, +16 W of the 24
+// (folder_overlay::kListRowFace / row_baseline_px, the seat the head pad
+// reads too). NOTHING STANDS CLOSER THAN modal_box.h's PAGE MARGIN, 12 W
+// (kPageMarginPenW), TO THE VIEW'S RIGHT EDGE: a name is cut there on its
 // own mask. THE LIT ROW'S BAR KEEPS THE VIEW'S WHOLE WIDTH. Every length a
 // whole W through scaled_px (a composite the sum of its rounded parts);
 // every seat at the row's real place under the real scroll offset (the
@@ -8732,12 +8714,16 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT (the
 // row Load in place and the highlight pair act on) and the TRANSPORT'S
 // ITEM, which its row does not mark (architect 2026-10-23).
-static constexpr double kListDrawingBoxW = 16.0;
+static constexpr double kListDrawingMarginW = 6.0;
+static constexpr double kListDrawingBoxW    = 16.0;
 static constexpr double kListDrawingYW =
     (folder_overlay::kListRowW - kListDrawingBoxW) / 2.0;
 static_assert(kListDrawingYW == static_cast<double>(static_cast<int>(kListDrawingYW)),
               "the list row's drawing centered in its row, a whole W down");
 static constexpr double kListDrawingGapW = 6.0;
+static_assert(kListDrawingMarginW + kListDrawingGapW == 12.0,
+              "a glyphless list's names stand 12 W in: the drawing lists' "
+              "margin and gap, the 16 W slot dropped (architect 2026-11-22)");
 
 // ONE LIST VIEW: the rows of `ov` in the band `band` under the scroll
 // offset `scroll`, clipped to the band (whole pixels: a row the band cuts is
@@ -8765,11 +8751,13 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
             return row.kind == AppState::FolderOverlayRow::Kind::Folder ||
                    row.kind == AppState::FolderOverlayRow::Kind::Wav;
         });
-    const int margin      = page_margin_pen_px();
-    const int drawing_box = scaled_px(kListDrawingBoxW, 1);
+    const int right_cut      = page_margin_pen_px();
+    const int drawing_margin = scaled_px(kListDrawingMarginW);
+    const int drawing_box    = scaled_px(kListDrawingBoxW, 1);
+    const int drawing_gap    = scaled_px(kListDrawingGapW);
     const int name_dx =
-        wears_drawings ? margin + drawing_box + scaled_px(kListDrawingGapW)
-                       : margin;
+        wears_drawings ? drawing_margin + drawing_box + drawing_gap
+                       : drawing_margin + drawing_gap;
     folder_overlay::for_each_row(
         ov, band, scroll,
         [&](int index, const AppState::FolderOverlayRow& row,
@@ -8821,27 +8809,14 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                     }
                 }
             }
-            // THE ROW'S TEXT SEAT: its kind's face, its baseline the row's
-            // real top plus the kind's depth (folder_overlay.h's one
+            // THE ROW'S TEXT SEAT: the rows' face, its baseline the row's
+            // real top plus the rows' depth (folder_overlay.h's one
             // definition, the head pad's too), and the right cut, the page
             // margin inside the view's right edge (the block above).
-            const GuiFont font = gui_font(folder_overlay::row_face(row.kind));
-            const double baseline =
-                r.y + folder_overlay::row_baseline_px(row.kind);
-            const double text_end = r.x + r.w - static_cast<double>(margin);
-            if (row.kind == AppState::FolderOverlayRow::Kind::Group) {
-                // THE HEADING: Bold 12 W in the text tone on the rows' pen,
-                // its line-box baseline in the heading's own row.
-                const text_shape::ShapedRun run =
-                    text_shape::shape_text_run(font, row.name);
-                const text_raster::XSpan head_span{r.x, text_end};
-                set_palette_source(cr, pal.text);
-                if (head_span.x1 > head_span.x0)
-                    text_shape::show_shaped_run_within(
-                        cr, run, r.x + static_cast<double>(margin), baseline,
-                        &head_span, 1);
-                return;
-            }
+            const GuiFont font = gui_font(folder_overlay::kListRowFace);
+            const double baseline = r.y + folder_overlay::row_baseline_px();
+            const double text_end =
+                r.x + r.w - static_cast<double>(right_cut);
             if (row.kind == AppState::FolderOverlayRow::Kind::Folder ||
                 row.kind == AppState::FolderOverlayRow::Kind::Wav) {
                 const icons::Icon glyph =
@@ -8853,7 +8828,7 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
                 if (fit.ink_px > 0)
                     icons::draw_glyph(
                         cr, glyph,
-                        r.x + static_cast<double>(margin) + fit.left,
+                        r.x + static_cast<double>(drawing_margin) + fit.left,
                         r.y + static_cast<double>(scaled_px(kListDrawingYW)) +
                             fit.top,
                         fit.ink_px, t.text);

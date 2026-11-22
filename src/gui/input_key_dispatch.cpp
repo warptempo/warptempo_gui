@@ -6350,30 +6350,26 @@ void GuiInputHandler::open_settings_page(std::string_view seat_key) {
 // since 2026-11-05 night, the main-page rule) EXCEPT the two the BPM key
 // writes, `scale` and `bpm`, listed
 // as DISABLED rows (architect 2026-10-29: "bpm and scale should be viewable
-// but disabled. they are useful for notes"); the DEVICE keys first and the
-// PIECE rows after (the mock he verified), these in the settings file's
-// order (kSettingsPagePieceKeys, settings_editor.h), each group under its
-// inert Group row. Every key's text is ITS `key=value` LINE
+// but disabled. they are useful for notes"); the device keys first and the
+// piece rows after (the mock he verified), these in the settings file's
+// order (kSettingsPagePieceKeys, settings_editor.h), NO TITLE ROW OVER
+// EITHER (architect 2026-11-22: "the user is expected to have expert
+// knowledge"). Every key's text is ITS `key=value` LINE
 // (GuiSettingsEditor::setting_line, the recall's one owner), an editable
 // key's on a Plain row, a disabled one's on an inert Disabled row, which is
 // never seated and opens nothing (folder_overlay::row_is_inert). THE SEAT is
 // `seat_key`'s row — a value list's return (return_to_settings_page) seats
 // the key it was showing, the line editor's return (open_settings_page from
 // handle_settings_editor_key) the key it was opened with — and, with no seat
-// key (`;` and the Settings key), THE FIRST KEY ROW, row 1; either through
+// key (`;` and the Settings key), THE FIRST KEY ROW, row 0; either through
 // the one set_highlight, the landing centering it as far as the listing's
-// ends allow (scroll_row_centered), which for row 1 is the top.
+// ends allow (scroll_row_centered), which for row 0 is the top.
 void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov       = AppState::FolderOverlay{};
     ov.owner = AppState::FolderOverlay::Owner::SettingsPage;
-    int seat = 1;
-    const auto group = [&](const char* heading,
-                           std::span<const char* const> keys) {
-        AppState::FolderOverlayRow head;
-        head.kind = AppState::FolderOverlayRow::Kind::Group;
-        head.name = heading;
-        ov.rows.push_back(std::move(head));
+    int seat = 0;
+    const auto list = [&](std::span<const char* const> keys) {
         for (const char* key : keys) {
             const bool editable = is_settings_editor_key(key);
             if (editable && !seat_key.empty() && seat_key == key)
@@ -6386,8 +6382,8 @@ void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
         }
     };
     const std::span<const char* const> keys(kSettingsEditorKeys);
-    group("DEVICE", keys.subspan(kSettingsEditorPieceKeyCount));
-    group("PIECE", kSettingsPagePieceKeys);
+    list(keys.subspan(kSettingsEditorPieceKeyCount));
+    list(kSettingsPagePieceKeys);
     folder_overlay::clamp_scroll(app);
     folder_overlay::set_highlight(app, seat);
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
@@ -6433,7 +6429,7 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // AND THE SETTINGS EDITOR
 // OPENS ON THE ROW'S KEY, ITS ENTRY THE VALUE THE KEY HOLDS, the caret at its
 // end (GuiSettingsEditor::open; architect 2026-11-19: "One,
-// agree." — the value alone, the key the sub-page's label), THE VALUE
+// agree." — the value alone; no label, architect 2026-11-22), THE VALUE
 // SUB-PAGE (architect 2026-11-20; paint_handler.cpp): the on-screen
 // keyboard's Enter and Esc reopen this page on the row's key
 // (handle_settings_editor_key, architect 2026-10-28 night).
@@ -6452,9 +6448,9 @@ void GuiInputHandler::settings_page_commit(int index) {
         viewport.invalidate_all();
         return;
     }
-    // THE SUB-PAGE'S LABEL AND ITS LIST'S OPENER (AppState::value_page):
-    // the row's key, and the settings page.
-    seat_value_page(key);
+    // THE SUB-PAGE'S LIST'S OPENER (AppState::value_page): the settings
+    // page.
+    seat_value_page();
     close_picker();
     settings_editor.open(key);
 }
@@ -6468,7 +6464,7 @@ void GuiInputHandler::settings_page_commit(int index) {
 // that page (return_to_settings_page).
 
 // THE LIST: the key's values (GuiSettingsEditor::value_choices, the
-// domains' one owner), one glyph-less Plain row per value, no heading row,
+// domains' one owner), one glyph-less Plain row per value, no title row,
 // the value both what the row shows and what the tap commits; the overlay
 // records THE KEY (`value_key`), which the commit routes the value to. The
 // band opens on THE LIVE VALUE — the row whose value is the key's current
@@ -6670,9 +6666,9 @@ void GuiInputHandler::trim_presets_save_as() {
             ? ov.trim_presets[static_cast<std::size_t>(h)].name
             : std::string();
     trim_name_presets_ = ov.trim_presets;
-    // THE SUB-PAGE'S LABEL AND ITS LIST'S OPENER (AppState::value_page):
-    // the act's own name, the button's word, and the trim presets list.
-    seat_value_page("Save As");
+    // THE SUB-PAGE'S LIST'S OPENER (AppState::value_page): the trim presets
+    // list.
+    seat_value_page();
     close_picker();
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
@@ -6882,21 +6878,18 @@ void GuiInputHandler::open_bpm_form(GuiBpmField seat) {
     viewport.invalidate_all();
 }
 
-// THE ROWS: the settings page's shape — one inert Group row, "BPM", then one
-// Plain row per field in GuiBpmField's order, its text the field's key and
+// THE ROWS: the settings page's shape — one Plain row per field in
+// GuiBpmField's order, no title row (architect 2026-11-22: "the user is
+// expected to have expert knowledge"), its text the field's key and
 // value, `<key>=<value>` (bpm_field_text: an unset field the empty value,
 // `beats=`; the line editor opens on the value past the `=` alone,
-// bpm_form_commit), so row f + 1 is field f. THE SEAT is `seat`'s row,
+// bpm_form_commit), so row f is field f. THE SEAT is `seat`'s row,
 // through the one set_highlight, landed centered as far as the listing's
 // ends allow (scroll_row_centered), the settings page's landing.
 void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov       = AppState::FolderOverlay{};
     ov.owner = AppState::FolderOverlay::Owner::BpmForm;
-    AppState::FolderOverlayRow head;
-    head.kind = AppState::FolderOverlayRow::Kind::Group;
-    head.name = "BPM";
-    ov.rows.push_back(std::move(head));
     const auto& mv = app.warpmarkers.markers();
     const GuiWarpMarker& owner = mv[bpm_owner_index(mv)];
     for (int f = 0; f < kBpmFieldCount; ++f) {
@@ -6907,21 +6900,20 @@ void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
         ov.rows.push_back(std::move(row));
     }
     folder_overlay::clamp_scroll(app);
-    folder_overlay::set_highlight(app, static_cast<int>(seat) + 1);
+    folder_overlay::set_highlight(app, static_cast<int>(seat));
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
 }
 
 // THE OPEN ACT on row `index` — the row's tap (the overlay's own
 // press-and-lift), its one road (no Enter reaches a row): THE FORM CLOSES
 // (close_picker, the mode standing) AND THE LINE EDITOR OPENS PREFILLED WITH
-// THE ROW'S VALUE as painted — its line past the first `=`, the key the
-// sub-page's label (architect 2026-11-19: the value alone under the
-// field's label; the sub-page 2026-11-20) — the caret at its end, the
+// THE ROW'S VALUE as painted — its line past the first `=`, the value alone
+// (architect 2026-11-19; the sub-page 2026-11-20, no label 2026-11-22) —
+// the caret at its end, the
 // settings editor's open (GuiSettingsEditor::open): an empty session, then
 // the value through the one incoming filter, silent on capacity (the text is
 // the product's own recall, within its field's cap by the reader's own
-// spelling). The inert
-// group row opens nothing. The editor's modal stop is a no-op, playback
+// spelling); row `index` is field `index`. The editor's modal stop is a no-op, playback
 // stopped at the form's open; it is spelled for the opener's shape
 // (trim_presets_save_as's).
 void GuiInputHandler::bpm_form_commit(int index) {
@@ -6930,17 +6922,15 @@ void GuiInputHandler::bpm_form_commit(int index) {
         AppState::FolderOverlay::Owner::BpmForm) return;
     const int n = static_cast<int>(app.folder_overlay.rows.size());
     if (index < 0 || index >= n) return;
-    if (folder_overlay::row_is_inert(app, index)) return;
     const std::string line =
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
     const std::size_t eq = line.find('=');
-    // THE SUB-PAGE'S LABEL AND ITS LIST'S OPENER (AppState::value_page):
-    // the row's key, and the BPM form.
-    seat_value_page(line.substr(0, eq));
+    // THE SUB-PAGE'S LIST'S OPENER (AppState::value_page): the BPM form.
+    seat_value_page();
     close_picker();
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
-                       /*target=*/index - 1,
+                       /*target=*/index,
                        /*initial_pending=*/"",
                        text_editor::Kind::BpmField);
     (void)text_editor::replace_selection(
@@ -7129,12 +7119,11 @@ void GuiInputHandler::picker_move_highlight(int delta) {
     }
 }
 
-// THE VALUE SUB-PAGE'S TWO WORDS (AppState::value_page, the contract
-// there): the label's name and the standing list's owner tag — written by
-// the three openers of a line editor just before their close_picker.
-void GuiInputHandler::seat_value_page(std::string name) {
+// THE VALUE SUB-PAGE'S ONE WORD (AppState::value_page, the contract
+// there): the standing list's owner tag — written by the three openers of a
+// line editor just before their close_picker.
+void GuiInputHandler::seat_value_page() {
     app.value_page.opener = app.folder_overlay.owner;
-    app.value_page.name   = std::move(name);
 }
 
 // THE ONE CLOSE BODY (the caller inventory is at the

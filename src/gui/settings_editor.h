@@ -30,9 +30,9 @@ struct GuiInputHandler;
 // "a subpage where if the user clicks on a value a single line text input is
 // shown ... on that page, the only controls are the osk's esc and enter";
 // paint_handler.cpp's THE VALUE SUB-PAGE, the owner): the box's view one
-// flat page, on it the row's key and a colon as the label and under it the
-// value in Arc's focused entry across the view, NOTHING ELSE — no title, no
-// frame, no button, no list behind — the top icon row greyed whole, SETUP
+// flat page, on it the value in Arc's focused entry across the view,
+// NOTHING ELSE — no title, no label (architect 2026-11-22), no frame, no
+// button, no list behind — the top icon row greyed whole, SETUP
 // lit and inert (redesign_button_enabled's first arm,
 // roster_face_page_owner, app_state.h), the on-screen
 // keyboard over the view's foot, the bottom icon row and the status bar
@@ -219,8 +219,8 @@ struct GuiInputHandler;
 // make them Windows identical, but now we don't have the responsibility";
 // `true_colors`, `noise` and `noise_crossfade_s` since 2026-10-28 night,
 // the same shape; `waveform_grow` since 2026-10-31; `theme` 2026-11-05 to
-// 2026-11-21, its list under inert group rows, and `icons` 2026-11-17 to
-// 2026-11-21, each gone with its key. A
+// 2026-11-21 and `icons` 2026-11-17 to 2026-11-21, each gone with its
+// key. A
 // list is no choice editor and no drop-down: the VALUE LIST, the folder
 // overlay's content behind the settings page's row for its key, whose row
 // tap commits at once — apply_device_setting, this editor's own road. THE
@@ -275,10 +275,10 @@ struct GuiInputHandler;
 // row, no arm, no recall — and stays REQUIRED in the config,
 // persisted by the case's lift and written by the config's writer with
 // every key.
-// GuiInputHandler::build_settings_page_rows lists the device keys under a
-// "DEVICE" group row in this table's order, the split at
-// kSettingsEditorPieceKeyCount, and then the PIECE group's rows in
-// kSettingsPagePieceKeys' order.
+// GuiInputHandler::build_settings_page_rows lists the device keys first in
+// this table's order, the split at kSettingsEditorPieceKeyCount, and then
+// the piece rows in kSettingsPagePieceKeys' order, no title row over either
+// (architect 2026-11-22).
 inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "true_colors",
@@ -288,7 +288,7 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "waveform_fade_px",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
-// config's. The page's two groups split the table here, and the asserts pin
+// config's. The page's two runs of rows split the table here, and the asserts pin
 // the boundary to its two names so a key added on the wrong side fails the
 // build.
 inline constexpr std::size_t kSettingsEditorPieceKeyCount = 5;
@@ -314,7 +314,7 @@ inline constexpr bool is_settings_editor_key(std::string_view key) {
 // GuiSettingsEditor::setting_line spells it, in the dim print (`text_dim`), never
 // seated and taking no press (folder_overlay::row_is_inert). The assert pins
 // the table's editable keys to the editor table's piece keys, in order, so
-// the page's two groups and the editor's roster cannot drift apart.
+// the page's piece rows and the editor's roster cannot drift apart.
 inline constexpr const char* kSettingsPagePieceKeys[] = {
     "title", "scale", "bpm", "notes", "url", "cover", "score_path",
 };
@@ -348,9 +348,9 @@ static_assert(settings_page_piece_keys_pinned());
 // 2026-10-28 night). Every other page row opens the line editor. Each is a device
 // key with a short domain the list can show whole: the two words, the
 // folders under `noise/`, the crossfade's 30 whole seconds and the grow's
-// 9 quarters. A LIST IS FLAT, its rows the values alone, no heading row
-// (the themes' list under inert group rows stood 2026-11-05 to 2026-11-21,
-// gone with its key, send GG). THE LIST IS THE KEY'S ONE DOOR: its
+// 9 quarters. A LIST IS FLAT, its rows the values alone, no title row
+// (architect 2026-11-22: "the user is expected to have expert
+// knowledge"). THE LIST IS THE KEY'S ONE DOOR: its
 // row never opens the line editor (settings_page_commit), so its value
 // reaches apply_device_setting through the list's tap alone.
 // (`key_height`, the tuning key of 2026-10-29, is NOT here: its 79 values

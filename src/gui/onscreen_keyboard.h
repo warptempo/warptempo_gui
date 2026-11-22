@@ -965,7 +965,7 @@ inline bool stands(const AppState& a) {
 //     Viewport::invalidate_status_bar_area);
 //   * THE BOX UNDER A LINE EDITOR'S VALUE SUB-PAGE — its view's fill and
 //     its foot line: cut at the surface's top line (paint_modal_dialog's
-//     clip), the page's label and entry at the view's head, far above the
+//     clip), the page's entry at the view's head, far above the
 //     surface (modal_box.h's head);
 //   * THE CARDS' ROOM (notification_stack_bound): its foot above the
 //     surface's top line.
@@ -991,7 +991,7 @@ inline bool stands(const AppState& a) {
 // BUTTON TONES WITH SHARED LINES (his K2 ruling; the design's §E;
 // paint_onscreen_keyboard). Under a line editor the modal family's box
 // stands down to the bottom icon row, its view the value sub-page, the
-// keyboard over the box's foot, the page's label and entry at the view's
+// keyboard over the box's foot, the page's entry at the view's
 // head (modal_box.h's head); under the flag editor, the one editor with no
 // page of its own, the main page stands under it, its canvas cut at the
 // surface's top line. UNDER AN OVERLAY THE KEYBOARD NEVER STANDS (stands'

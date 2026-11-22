@@ -26,14 +26,13 @@
 // (architect 2026-11-20: GTK's "large" is a popup's — "the oversized text
 // is the clue").
 // THE USES: BODY 12 (the lists, the cards, a question's and the progress
-// page's sentence, the value sub-page's label and entry, the word buttons,
+// page's sentence, the value sub-page's entry, the word buttons,
 // the NOISE number, the status bar), PROGRAM 12 (the
 // clocks — the bottom icon row's timestamp and the render player's two
 // time labels — the tab's name and the tooltip's name line), LABEL 12 (the cues'
 // labels and the lane's editors, the history lane's labels with them),
 // HINT 12 (the tooltip's hint line), BOLD 12 (THE TITLE BAR: the brand and
-// its right group, render.h's title bar block; the lists' group headings,
-// send AA's stage D2), SMALL 10 (the ruler's
+// its right group, render.h's title bar block), SMALL 10 (the ruler's
 // digits), KEYS 12 (the on-screen keyboard's caps — the default of the
 // one LIVE size, the `osk_font_px` tuning key's, GuiFont below) and
 // CAPTION 10 (the progress page's count, above). The rows
@@ -43,9 +42,9 @@
 // REGULAR FOR BODY TEXT — Body, Program, Label, Hint, Caption, and the
 // on-screen keyboard's caps (Keys; Regular since send AA's stage D2, the
 // design's §E and the approved Z_06, the Bold they wore before) — and THE
-// BOLD FOR THE TITLE BAR AND THE LISTS' HEADINGS (Bold) AND
-// THE RULER'S DIGITS (Small), as GTK Arc sets them (xfwm's title, Thunar's
-// column and section headers bold, every other text regular).
+// BOLD FOR THE TITLE BAR (Bold) AND
+// THE RULER'S DIGITS (Small), as GTK Arc sets them (xfwm's title bold,
+// every other text regular).
 // (The printed legends under the keys, the Legend row, retired with the
 // legends, architect 2026-11-18: "That's from the hi-fi theme".)
 // Every length authored round the text follows these sizes (each length's
@@ -97,8 +96,7 @@
 #include <iterator>
 #include <string_view>
 
-// THE USES (the head's table): the body (`Body`), the title bar and the
-// lists' group headings (`Bold`), the
+// THE USES (the head's table): the body (`Body`), the title bar (`Bold`), the
 // ruler's digits (`Small`), the clocks, the tab's name and the
 // tooltip's name line (`Program`), the on-screen keyboard's caps (`Keys`),
 // the tooltip's hint line (`Hint`), the cues' labels with the lane's
@@ -112,21 +110,20 @@ inline constexpr std::size_t kGuiFaceCount = 8;
 // initializer, so a file added here is packed with no second list; the
 // backend hands the bytes in in this order, and a use names its file by its
 // index here — the Regular read by the body text and the keyboard's caps,
-// the Bold by the title bar, the lists'
-// headings and the ruler's digits (the head). Both
+// the Bold by the title bar and the ruler's digits (the head). Both
 // are TrueType
 // (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "LiberationSans-Regular.ttf", // 0: the body text
-    "LiberationSans-Bold.ttf",    // 1: the title bar, the ruler, the headings
+    "LiberationSans-Bold.ttf",    // 1: the title bar, the ruler
 };
 
 // THE PIXEL TABLE (the head): per use, in GuiFace's order, the file it is
 // drawn from and its em in W (one W = one px at 100 %, 2 device px on the
 // tablet at 200 %; render.h's scaled_px): 12 W everywhere but the ruler's
 // 10 and the progress page's count, the Regular for body text and the
-// keyboard's caps, the Bold for the title bar, the lists' headings and the
+// keyboard's caps, the Bold for the title bar and the
 // ruler (architect 2026-11-18 / 2026-11-19, send Z).
 struct GuiFaceSize {
     std::size_t file = 0;
@@ -134,8 +131,7 @@ struct GuiFaceSize {
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 12.0},   // Body: the lists, the cards, the pages, the status bar
-    {1, 12.0},   // Bold: the title bar (the brand and its right group),
-                 // the lists' group headings
+    {1, 12.0},   // Bold: the title bar (the brand and its right group)
     {1, 10.0},   // Small: the ruler's digits
     {0, 12.0},   // Program: the clocks, the tab's name, the tooltip's name
     {0, 12.0},   // Keys: the on-screen keyboard's caps (the default of

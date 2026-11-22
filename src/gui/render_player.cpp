@@ -384,7 +384,6 @@ void GuiRenderPlayer::open_row(int index, bool tapped) {
             return;
         }
         case Row::Kind::Plain:
-        case Row::Kind::Group:
         case Row::Kind::Disabled:
             return;   // the pickers' kinds; no player listing carries them
     }
@@ -484,7 +483,6 @@ int render_player_highlight_act_row(const AppState& a) {
         case Row::Kind::Wav:
             return r.path == a.render_player.item ? -1 : ov.highlight_row;
         case Row::Kind::Plain:
-        case Row::Kind::Group:
         case Row::Kind::Disabled:
             return -1;   // the pickers' kinds; no player listing carries them
     }
