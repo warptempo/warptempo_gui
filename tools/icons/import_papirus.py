@@ -10,10 +10,12 @@ either papirus-icon-theme's, a path under the checkout's `Papirus/16x16/`
 architect's pick lives there, the 16-px `actions/`, `devices/` and `panel/`
 trees), or, on a path that starts with OWN, OURS: a hand-made drawing in
 this repository's tools/icons/own/, derived from a Papirus drawing and
-named so in its own XML comment (architect 2026-11-22, send MM: the marker
-pair's arrow to a line, from Papirus's go-first; the one such file). Both
-kinds take the same road: for each row it writes
-assets/icons/<Enumerator>.svg by THE RECOLOR RULE (assets/icons/README.md):
+named so in its own XML comment (two such files: the marker pair's arrow to
+a line, from Papirus's go-first, architect 2026-11-22, send MM; and Value
+Drag's double arrow, go-first's arrow upright with a head each way,
+architect 2026-11-23, send NN). Both kinds take the same road: for each row
+it writes assets/icons/<Enumerator>.svg by THE RECOLOR RULE
+(assets/icons/README.md):
 
   - every literal color in a `fill`, `stroke`, `stop-color`, `color`,
     `flood-color` or `lighting-color` attribute or `style` declaration becomes
@@ -93,11 +95,13 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # ZoomPrevious, KeyframePrevious, KeyframeNext, DeepHistory, ZoneIn, ZoneOut,
 # DocumentSave, BlackSum and Merge, most from the 16-px actions, devices and
 # panel trees; AND EIGHT OF THOSE RE-PICKED AGAIN BY HIM 2026-11-22, send MM:
-# TransformMoveVertical (kdenlive-object-height, no transform), BlackSum,
+# TransformMoveVertical (re-picked once more, below), BlackSum,
 # GoJump, TimelineUseZoneOn (go-first-rtl / go-first, the one arrow and dot
 # each way), DeepHistory, Merge, and BboxPrev / BboxNext (our own drawing,
-# OWN + 'BboxPrev.svg', Next's mirrored). A note names a pick that is not the
-# enumerator's own name and the date of a re-pick.
+# OWN + 'BboxPrev.svg', Next's mirrored); AND TransformMoveVertical RE-PICKED
+# AGAIN BY HIM 2026-11-23, send NN, his pick "B3" off the mock (our own
+# drawing, OWN + 'TransformMoveVertical.svg', no transform). A note names a
+# pick that is not the enumerator's own name and the date of a re-pick.
 SYM = 'symbolic/'
 ROSTER = [
     ('DocumentOpen', SYM + 'actions/document-open-symbolic.svg', ''),
@@ -196,9 +200,9 @@ ROSTER = [
      'a flag and a turning arrow (re-picked 2026-11-22)'),
     ('DocumentEdit', SYM + 'actions/document-edit-symbolic.svg', ''),
     ('EditSelect', SYM + 'actions/edit-select-symbolic.svg', ''),
-    ('TransformMoveVertical', 'actions/kdenlive-object-height.svg',
-     'no transform-move-vertical; kdenlive-object-height, two triangles '
-     'pointing up and down (re-picked 2026-11-22, send MM)'),
+    ('TransformMoveVertical', OWN + 'TransformMoveVertical.svg',
+     'no transform-move-vertical; ours, go-first\'s arrow upright, one head '
+     'up and one down on one stem (re-picked 2026-11-23, send NN)'),
     ('GoDown', SYM + 'actions/go-down-symbolic.svg', ''),
     ('GoUp', SYM + 'actions/go-up-symbolic.svg', ''),
     ('BboxPrev', OWN + 'BboxPrev.svg',

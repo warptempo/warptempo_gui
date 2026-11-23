@@ -9,9 +9,11 @@
 // symbolic set and drawings of its 16-px actions, devices and panel trees,
 // written by tools/icons/import_papirus.py, the roster the parked picks of
 // session 123 with two re-picked by the architect 2026-11-17, twenty-one
-// 2026-11-22, send II, and eight of those again the same day, send MM (the
-// importer's table) — BboxPrev / BboxNext OUR OWN drawing from Papirus's
-// go-first, one source, Next's mirrored by the importer's transform.
+// 2026-11-22, send II, eight of those again the same day, send MM, and one
+// of the eight once more 2026-11-23, send NN (the importer's table) —
+// BboxPrev / BboxNext OUR OWN drawing from Papirus's go-first, one source,
+// Next's mirrored by the importer's transform, and TransformMoveVertical OUR
+// OWN double arrow from the same go-first.
 // RECOLORED to `currentColor` by the one RECOLOR RULE (the README's; the
 // importer's one table the enumerator -> source list) and PAINTED IN
 // THE TEXT TONES — a lit key's in the print of its accent face —
@@ -47,14 +49,15 @@
 //   (architect 2026-11-22, send MM): the PLAYER key and the render player's
 //   wav rows; SOURCE's disc, ViewMediaTrack, is the key's alone.
 // THE ROSTER IS AS RULED (2026-11-17, session 140; 2026-11-22, sends II and
-// MM); a re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
+// MM; 2026-11-23, send NN); a re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
 // DISTINCT DRAWING (by the written shapes and transforms; the icon
 // theme's names are often symlinks, so one drawing is one enumerator) — the
 // score viewer's page keys, GoPreviousViewPage / GoNextViewPage, are
 // chevrons of their own; BboxPrev and BboxNext share one source file, two
-// drawings by the transform. EVERY DRAWING IS PAPIRUS'S BUT THE MARKER PAIR,
-// OURS from Papirus's go-first (architect 2026-11-22, send MM; the
-// importer's own source, tools/icons/own/). THE TWO
+// drawings by the transform. EVERY DRAWING IS PAPIRUS'S BUT THE MARKER PAIR
+// AND VALUE DRAG, OURS from Papirus's go-first (architect 2026-11-22, send
+// MM; 2026-11-23, send NN; the importer's own sources, tools/icons/own/).
+// THE TWO
 // CARDS, DialogError and DialogInformation, are imported, their discs
 // cutting the mark out so one color shows it (assets/icons/README.md's
 // provenance).

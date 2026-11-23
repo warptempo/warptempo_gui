@@ -9,17 +9,18 @@ Files of other names here (this README, the licence text) are never looked up.
 
 ## Papirus, recolored
 
-EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT THE MARKER PAIR'S, OURS FROM PAPIRUS'S `go-first` (THE OWN DRAWING,
-below): papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the
+EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT THE MARKER PAIR'S AND VALUE DRAG'S, OURS FROM PAPIRUS'S `go-first`
+(THE OWN DRAWINGS, below): papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the
 drawings first imported at commit 33d971eb are byte-identical in it), its 16-px symbolic set (`Papirus/16x16/symbolic/`, whose names are mostly links
 into the 16-px `actions/`, `apps/` and `panel/` trees) and drawings of the 16-px `actions/`, `devices/` and `panel/`
 trees where his pick lives there. THE ROSTER is the parked picks of session 123 (his sheets of session 140) WITH ROWS
 RE-PICKED BY HIM: 2026-11-17 ("the first alternative for each one"), TAB (`TabDetach`) `focus-windows`, two windows,
 and the picker's Up (`GoParentFolder`) `actions/go-parent-folder.svg`; 2026-11-22 (send II, off the alternates
 sheet; eight of them re-picked again the same day, send MM, each marked so), TWENTY-ONE ROWS — Previous / Next Marker
-(`BboxPrev` / `BboxNext`) OUR OWN arrow to a line (send MM, THE OWN DRAWING below), Next's mirrored to point right;
+(`BboxPrev` / `BboxNext`) OUR OWN arrow to a line (send MM, THE OWN DRAWINGS below), Next's mirrored to point right;
 Score (`ViewMediaLyrics`) `folder-music`, two beamed notes; Source (`ViewMediaTrack`) `media-optical`, a disc; Value
-Drag (`TransformMoveVertical`) `kdenlive-object-height`, two triangles pointing up and down (send MM); Follow
+Drag (`TransformMoveVertical`) OUR OWN double arrow, one head up and one down on one stem (re-picked once more
+2026-11-23, send NN, THE OWN DRAWINGS below); Follow
 (`GoJump`) `go-first-rtl`, an arrow right to a dot, and Restrict (`TimelineUseZoneOn`) `go-first`, its exact mirror
 (send MM); Jump to Defining (`GoJumpDeclaration`) `go-jump-declaration`; Grid Iterations (`Mathmode`)
 `insert-math-expression`; Target (`ViewMediaVisualization`) `kdenlive-show-audiothumb`; Magnification (`ZoomInY`)
@@ -44,7 +45,7 @@ HEADPHONES TWO (architect 2026-11-22, send MM): the PLAYER key and the render pl
 ViewMediaTrack, is the key's alone.
 
 THE IMPORTER, `tools/icons/import_papirus.py` (standalone, stdlib only, no link path from any product target), holds the
-one table, enumerator to source file under `Papirus/16x16/` (or, for the own drawing, under `tools/icons/own/`), and
+one table, enumerator to source file under `Papirus/16x16/` (or, for an own drawing, under `tools/icons/own/`), and
 writes each `<Enumerator>.svg` here by THE RECOLOR RULE (below); the checkout is its one argument and is read as data, nothing in it run
 (`python3 -I tools/icons/import_papirus.py <papirus-icon-theme checkout>`), and it prints the provenance table below.
 It writes only its rows' files and removes nothing, so a rerun leaves the licence text and this README as they are.
@@ -52,21 +53,26 @@ THE TWO CARDS ARE IMPORTED AS PAPIRUS DRAWS THEM: Papirus's `dialog-information`
 mark (an i, an !) out of a filled disc, the mark's subpaths wound against the disc's, so one color shows it.
 EVERY FILE IS A DISTINCT DRAWING, by its written shapes and transforms rather than by name (the importer flags a
 share; there is none — the score viewer's page keys wear chevrons of their own, not GoPrevious's / GoNext's arrows).
-ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM: `BboxPrev` and `BboxNext` are both the own drawing, Prev's as drawn
+ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM: `BboxPrev` and `BboxNext` are both the marker pair's own drawing, Prev's as drawn
 and Next's mirrored (the importer notes the shared source).
 
-THE OWN DRAWING (architect 2026-11-22, send MM, his pick off the mock, "gap 0"), `tools/icons/own/BboxPrev.svg`, the
-one source that is no Papirus file: Papirus's `actions/go-first.svg` with its dot turned into a line 2 of 16 wide (the
-arrow stem's thickness), rows 2 to 14 with square ends, the arrow's tip touching it, the whole ink re-centered in the
-16 canvas (shifted 1.5 left, ink x 1.5 to 14.5); the arrow's path data is go-first's verbatim. Every shape already
-paints `currentColor`, and the importer reads it through the same recolor rule and check as a Papirus file; its XML
-comment, which names its derivation, rides into both written files.
+THE OWN DRAWINGS, the two sources that are no Papirus file, both made from Papirus's `actions/go-first.svg`. THE MARKER
+PAIR'S (architect 2026-11-22, send MM, his pick off the mock, "gap 0"), `tools/icons/own/BboxPrev.svg`: go-first with
+its dot turned into a line 2 of 16 wide (the arrow stem's thickness), rows 2 to 14 with square ends, the arrow's tip
+touching it, the whole ink re-centered in the 16 canvas (shifted 1.5 left, ink x 1.5 to 14.5); the arrow's path data is
+go-first's verbatim. VALUE DRAG'S (architect 2026-11-23, send NN, his pick off the mock, "B3"),
+`tools/icons/own/TransformMoveVertical.svg`: go-first's arrow turned upright, one head up and one head down
+superimposed on one stem, the stroke kept at 2 of 16, the arms shortened — each head 10 wide and 6.5 deep (go-first's
+head corner 6 in from the tip -> 5), tip to tip 16 (ink y 0 to 16, x 3 to 13), the heads 3 of 16 apart — drawn as
+the two arrows' union, one outline. Every shape of both already paints `currentColor`, and the importer reads each
+through the same recolor rule and check as a Papirus file; each one's XML comment, which names its derivation, rides
+into its written files.
 
 THE TRANSFORM (architect 2026-11-22, send II). A row of the importer's table may name one, `mirror` (left-right, the
 one kind); the importer then wraps every child of the drawing's root `<svg>` in one `<g transform="...">` about the
 center of the drawing's box (its viewBox, else its width and height) — `matrix(-1 0 0 1 16 0)` for a 16-px drawing —
-and resvg applies it at the parse. The path data inside stays verbatim. One row wears it: `BboxNext`, the own drawing
-mirrored (send MM).
+and resvg applies it at the parse. The path data inside stays verbatim. One row wears it: `BboxNext`, the marker
+pair's own drawing mirrored (send MM).
 
 THE RECOLOR RULE. Every literal color in a `fill`, `stroke`, `stop-color`, `color`, `flood-color` or `lighting-color`
 attribute or `style` declaration is `currentColor`; `none`, `currentColor`, `inherit` and `url(...)` stay, and every
@@ -91,7 +97,7 @@ band's top (`src/gui/render.h`'s title bar block, THE BATTERY).
 ### Provenance
 
 The source column is the file under the checkout's `Papirus/16x16/` (a source that is a symlink names the file it
-resolves to), or, for the own drawing, its path in this repository; the sha256 is of the source's bytes, in
+resolves to), or, for an own drawing, its path in this repository; the sha256 is of the source's bytes, in
 papirus-icon-theme 20260801 (the run's checkout its installed package's icon root; every row kept from 33d971eb has
 the same bytes there) or in this repository. The files here are their recolored transcriptions, with no path data
 changed, one of them wrapped in its transform.
@@ -155,7 +161,7 @@ changed, one of them wrapped in its transform.
 | `GoJumpDeclaration` | `actions/go-jump-declaration.svg` | `4609b9c197a31baa689783c251237a3df8fff24a11d3930e899596850280fef7` | a flag and a turning arrow (re-picked 2026-11-22) |
 | `DocumentEdit` | `symbolic/actions/document-edit-symbolic.svg (-> actions/edit.svg)` | `673e07a25559e0014fd3409139f92436771c2014e09a3514edc4a42d3f90ba7b` |  |
 | `EditSelect` | `symbolic/actions/edit-select-symbolic.svg (-> actions/edit-select.svg)` | `02def4b01e5b9111bf52eaba120513f64894f320434845a75ecfc0fa4f330f67` |  |
-| `TransformMoveVertical` | `actions/kdenlive-object-height.svg` | `7b39d70d9fcb08a525e0774771a1f54632cebb235a7a4a0a380a19a0953fbbe0` | no transform-move-vertical; kdenlive-object-height, two triangles pointing up and down (re-picked 2026-11-22, send MM) |
+| `TransformMoveVertical` | `tools/icons/own/TransformMoveVertical.svg` | `1c5b587f66dc0b07785f1550963f96826cafa2979171c2ceaa419cad7c120a7a` | no transform-move-vertical; ours, go-first's arrow upright, one head up and one down on one stem (re-picked 2026-11-23, send NN) |
 | `GoDown` | `symbolic/actions/go-down-symbolic.svg (-> actions/go-down.svg)` | `7b77fae327f734c80faea8980ef6ad68e36fac56df2ac09b01c8448f35fecec1` |  |
 | `GoUp` | `symbolic/actions/go-up-symbolic.svg (-> actions/go-up.svg)` | `86b31dec3b65c47c5f0c8965da8463c35365cf0f1046c6a391a9a8083ff2d938` |  |
 | `BboxPrev` | `tools/icons/own/BboxPrev.svg` | `07195df200437a8a9a6380560b434b493a1c694983fd30cab23ec691df419b42` | no bboxprev; ours, go-first's arrow to a line 2 wide, as drawn, pointing left (re-picked 2026-11-22, send MM) |
@@ -193,8 +199,9 @@ look's tones, `kArcDarkTones` in `src/gui/gui_theme.h` (its `.text` and `.ground
 ## Licence
 
 Papirus's icons are licensed under the GNU General Public License, version 3 — GPL-3.0; copyright the papirus-icon-theme
-authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above), the marker pair's of our own drawing, itself
-a modified copy of Papirus's `go-first` under the same licence (`tools/icons/own/BboxPrev.svg`). The licence text is
+authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above), the marker pair's and
+Value Drag's of our own drawings, each itself a modified copy of Papirus's `go-first` under the same licence
+(`tools/icons/own/BboxPrev.svg`, `tools/icons/own/TransformMoveVertical.svg`). The licence text is
 `LICENSE-GPL-3.txt` (the checkout's `LICENSE`, verbatim), the same licence as the repository's own `LICENSE`.
 
 The drawings are data, read at run time (the launcher's at build time) and never linked or compiled into the

@@ -1,3 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
- <path style="fill:currentColor" d="M 8 0 L 4 6.9375 L 12 6.9375 C 12 7 8 0 8 0 z M 4 9 L 8 16 L 12 9 L 4 9 z"/>
+ <!-- VALUE DRAG'S DRAWING, OURS (architect 2026-11-23, send NN, his pick
+      off the mock, "B3"): Papirus's actions/go-first.svg
+      (papirus-icon-theme 20260801) with its arrow turned upright, one head
+      up and one head down superimposed on one stem, the stroke kept at 2 of
+      16 (go-first's stem), the arms shortened: each head 10 wide and 6.5
+      deep (go-first's head corner 6 in from the tip -> 5), tip to tip 16
+      (the ink y 0 to 16, x 3 to 13), the two heads 3 of 16 apart. The two
+      arrows are drawn as their union, one outline. Value Drag
+      (TransformMoveVertical) wears it as drawn (tools/icons/import_papirus.py).
+      A modified copy of a papirus-icon-theme drawing, GPL-3.0
+      (assets/icons/LICENSE-GPL-3.txt). -->
+ <path style="fill:currentColor" d="M 8,0 13,5 11.5,6.5 9,4 9,12 11.5,9.5 13,11 8,16 3,11 4.5,9.5 7,12 7,4 4.5,6.5 3,5 Z"/>
 </svg>

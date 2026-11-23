@@ -221,7 +221,8 @@ struct TrimRange {
 // ticks, the marker lane — the panes and the selection pair; members of the
 // struct since 2026-11-05) — or
 // THE GLYPHS (architect 2026-11-01, M7; every drawing Papirus's but the
-// marker pair's, ours, icons.h's head): each file is recolored to
+// marker pair's and Value Drag's, ours, icons.h's head): each file is
+// recolored to
 // `currentColor` and painted in THE TONE the
 // caller passes as the row's sRGB word (kArcDarkTones, gui_theme.h:
 // `text`, `key_dim_ink` on a disabled key, `text_on_lit` on a lit key's

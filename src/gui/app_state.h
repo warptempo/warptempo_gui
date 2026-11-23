@@ -19601,8 +19601,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE ROSTER AS RULED, architect 2026-11-02, R12 / R14 / R15, and
 // Papirus's, 2026-11-17, session 140, twenty-one drawings re-picked by him
 // 2026-11-22, send II, and eight of those again the same day, send MM (the
-// marker pair our own, from Papirus's go-first), rows of the importer's
-// table: EDIT, HISTORY, SOURCE,
+// marker pair our own, from Papirus's go-first), DRAG's once more
+// 2026-11-23, send NN (our own double arrow, from the same go-first), rows
+// of the importer's table: EDIT, HISTORY, SOURCE,
 // TARGET, SESSION and LOCK one glyph each, no state swap; PLAYER the
 // headphones, shared with the render player's wav rows (architect
 // 2026-11-22, send MM); BPM shares the logo's single note with the BPM
