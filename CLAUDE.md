@@ -159,7 +159,7 @@ THIRTEEN REQUIRED KEYS, no optional one (`kDeviceConfigKeys`, device_config.{h,c
 
 ## Next — ruled or owed, NOT built; nothing here is a go
 
-- `srgb_word_from_p3` (display_transform.h): no caller, kept on purpose by its comment as the one-time converter of a color picked on the P3 panel; `tools/mockup/road.py` carries its own inverse. Its removal waits on his word (send GG part 4's handoff, 2026-11-23).
+- Nothing is ruled or owed.
 
 ## Never re-propose without his word
 

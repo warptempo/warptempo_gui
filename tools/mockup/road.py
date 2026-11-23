@@ -87,7 +87,7 @@ def srgb_to_p3(arr):
 
 
 def p3_to_srgb(arr):
-    """The app's srgb_word_from_p3 (clips outside the sRGB gamut, as it does)."""
+    """The tool's own inverse of srgb_to_p3 (clips outside the sRGB gamut)."""
     return _transform(arr, P3_TO_SRGB)
 
 

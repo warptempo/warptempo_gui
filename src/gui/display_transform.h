@@ -39,24 +39,15 @@
 //        kSrgbToP3 = | 0.8224619687  0.1775380313  0.0000000000 |
 //                    | 0.0331941989  0.9668058011  0.0000000000 |
 //                    | 0.0170826307  0.0723974407  0.9105199286 |
-//        kP3ToSrgb = | 1.2249401763 -0.2249401763  0.0000000000 |
-//                    |-0.0420569547  1.0420569547  0.0000000000 |
-//                    |-0.0196375546 -0.0786360456  1.0982736001 |
 //      (each row sums to 1: a neutral maps to the same neutral, so a gray is
 //      byte-identical through the transform).
 //   3. ENCODE back through the same curve and round to the nearest byte:
 //      the byte is the count of the 255 decision levels decode((k + 0.5) /
 //      255) at or below the linear value (encode_byte) — exactly
 //      nearbyint(255 * encode(L)) but for an exact half, which measures zero;
-//      below 0 is 0 and above 1 is 255 (sRGB lies inside P3, so the forward
-//      transform leaves only float dust outside [0, 1]; the inverse CLIPS a
-//      P3 color outside sRGB to the sRGB gamut's edge, channel by channel).
+//      below 0 is 0 and above 1 is 255 (sRGB lies inside P3, so the
+//      transform leaves only float dust outside [0, 1]).
 // Worked: sRGB 3FF3A2 -> P3 7CF0A9, 3AD884 -> 6ED58C, D4D0C8 -> D3D0C9.
-//
-// THE INVERSE (srgb_word_from_p3) runs nowhere in the product: it is here so a
-// color picked by eye as the P3 byte the panel showed can be converted once
-// to the sRGB byte that presents the same color — kP3ToSrgb above is its
-// matrix, the curve the same.
 //
 // THE SWITCH (active) IS TWO BITS, both true for the transform to run:
 //   * THE WINDOW'S SPACE (set_window_display_p3) — GuiPlatform::
@@ -153,7 +144,6 @@ inline constexpr Mat3 kSrgbToXyz =
 inline constexpr Mat3 kP3ToXyz =
     rgb_to_xyz(0.680, 0.320, 0.265, 0.690, 0.150, 0.060, 0.3127, 0.3290);
 inline constexpr Mat3 kSrgbToP3 = mul(inverse(kP3ToXyz), kSrgbToXyz);
-inline constexpr Mat3 kP3ToSrgb = mul(inverse(kSrgbToXyz), kP3ToXyz);
 
 // The sRGB curve's decode of v / 255, for every byte v.
 inline const std::array<double, 256>& decode_table() {
@@ -208,10 +198,6 @@ inline uint32_t transform_word(const Mat3& m, uint32_t rgb) {
 // the same color.
 inline uint32_t p3_word_from_srgb(uint32_t srgb) {
     return transform_word(kSrgbToP3, srgb);
-}
-// THE INVERSE (the head: the one-time conversion of a P3-picked color).
-inline uint32_t srgb_word_from_p3(uint32_t p3) {
-    return transform_word(kP3ToSrgb, p3);
 }
 
 // THE SWITCH'S TWO BITS (the head).
