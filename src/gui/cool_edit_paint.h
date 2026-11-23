@@ -36,7 +36,7 @@
 
 // (THE QUAVER'S PAINTER — paint_quaver, the mock's vector, the
 // caption's icon and the lists' row glyph for the morning of 2026-10-23 — is
-// retired with his pick; the title bar's and the lists' note is
+// retired with his pick; the title bar's and the BPM form's rows' note is
 // MusicNote16th, icons.h's THE INK BOX.)
 
 // (Every time field is plain text, no box: paint_handler.cpp's THE TIME

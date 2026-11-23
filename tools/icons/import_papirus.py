@@ -4,12 +4,16 @@ Papirus; 2026-11-21, send GG: the one set, src/gui/icons.h's head).
 
 A standalone tool, stdlib only, with no link path from any product target. Its
 ONE TABLE, ROSTER below, maps each `icons::Icon` enumerator (src/gui/icons.h)
-to its papirus-icon-theme source drawing, a path under the checkout's
-`Papirus/16x16/` (the 16-px symbolic set, `symbolic/...-symbolic.svg`, or,
-where the architect's pick lives there, the 16-px `actions/`, `devices/` and
-`panel/` trees) and, on a row that names one, A TRANSFORM. For each row it
-writes assets/icons/<Enumerator>.svg by THE RECOLOR RULE
-(assets/icons/README.md):
+to its source drawing and, on a row that names one, A TRANSFORM. A source is
+either papirus-icon-theme's, a path under the checkout's `Papirus/16x16/`
+(the 16-px symbolic set, `symbolic/...-symbolic.svg`, or, where the
+architect's pick lives there, the 16-px `actions/`, `devices/` and `panel/`
+trees), or, on a path that starts with OWN, OURS: a hand-made drawing in
+this repository's tools/icons/own/, derived from a Papirus drawing and
+named so in its own XML comment (architect 2026-11-22, send MM: the marker
+pair's arrow to a line, from Papirus's go-first; the one such file). Both
+kinds take the same road: for each row it writes
+assets/icons/<Enumerator>.svg by THE RECOLOR RULE (assets/icons/README.md):
 
   - every literal color in a `fill`, `stroke`, `stop-color`, `color`,
     `flood-color` or `lighting-color` attribute or `style` declaration becomes
@@ -20,19 +24,20 @@ writes assets/icons/<Enumerator>.svg by THE RECOLOR RULE
   - the path data and the drawing's own viewBox are kept verbatim (no seat).
 
 THE TRANSFORM (architect 2026-11-22, send II: one source turned to serve a
-second act): a row's fourth field, 'mirror' (left-right) or 'cw' (90 degrees
-clockwise), wraps every child of the root <svg> in ONE
-`<g transform="...">` about the center of the drawing's box (its viewBox,
-else its width and height): mirror `matrix(-1 0 0 1 2cx 0)`, cw
-`rotate(90 cx cy)`. The path data inside stays verbatim; resvg applies the
-group at the parse. A row with no fourth field is written untransformed.
+second act): a row's fourth field, 'mirror' (left-right, the one kind),
+wraps every child of the root <svg> in ONE `<g transform="...">` about the
+center of the drawing's box (its viewBox, else its width and height),
+`matrix(-1 0 0 1 2cx 0)`. The path data inside stays verbatim; resvg
+applies the group at the parse. A row with no fourth field is written
+untransformed. One row wears it: BboxNext, the own marker drawing mirrored
+(send MM).
 
 A written file (the transform's group included) that would leave a literal
 color, a class, a style block, or a shape painting resvg's default black (no
-fill on it or an ancestor) fails the run, naming it. EVERY ROW IS IMPORTED, the two cards included: Papirus's
-dialog-error / dialog-information already cut their mark out of the disc (the
-mark's subpaths wound against the disc's), so one color shows it and no hand
-transcription is needed.
+fill on it or an ancestor) fails the run, naming it. THE CARDS ARE IMPORTED
+AS PAPIRUS DRAWS THEM: Papirus's dialog-error / dialog-information already
+cut their mark out of the disc (the mark's subpaths wound against the
+disc's), so one color shows it and no hand transcription is needed.
 
 IT WRITES ONLY THE ROWS' FILES and removes nothing: the folder's other files
 -- the licence text and README.md -- are never opened, so a rerun leaves
@@ -41,18 +46,19 @@ A row dropped from ROSTER leaves its old file behind, to be deleted by hand
 with its enumerator.
 
 Then it prints the README's provenance table: the enumerator, the source file
-(and the file a source symlink resolves to), the sha256 of the source bytes,
-and a note on a pick whose name is not the enumerator's (the parked run's
-flags, session 123), on a re-pick, on two rows sharing one drawing (the
-written path data and transform, so a mirrored row is not its source's
-twin), or on two rows sharing one source file turned into two drawings.
+(and the file a source symlink resolves to; an own source by its repository
+path), the sha256 of the source bytes, and a note on a pick whose name is
+not the enumerator's (the parked run's flags, session 123), on a re-pick,
+on two rows sharing one drawing (the written shapes, their geometry and
+every transform, so a mirrored row is not its source's twin), or on two
+rows sharing one source file turned into two drawings.
 Re-pick a drawing by editing ROSTER and rerunning against the checkout
 (PAPIRUS_SOURCE below):
 
     python3 -I tools/icons/import_papirus.py <papirus-icon-theme checkout>
 
 THE CHECKOUT IS DATA: nothing in it is run; the tool reads its SVG files and
-nothing else.
+nothing else (and of this repository's tools/icons/own/, the rows' files).
 """
 
 import hashlib
@@ -65,25 +71,33 @@ import xml.etree.ElementTree as ET
 # package's icon root, /usr/share/icons, serves as the checkout: it holds
 # Papirus/16x16/). The rows kept from the import at commit 33d971eb are
 # byte-identical in it, source and written file alike; the re-picks of
-# 2026-11-22 are its own.
+# 2026-11-22 are its own. An own source (OWN below) is no Papirus file; the
+# table names it by its repository path.
 PAPIRUS_SOURCE = 'papirus-icon-theme 20260801'
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(REPO, 'assets', 'icons')
+# THE OWN SOURCES (the module's head): a ROSTER path starting with OWN names a
+# file of this folder instead of the checkout's.
+OWN = 'own:'
+OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 
-# ENUMERATOR -> (source under Papirus/16x16/, note[, transform]), in icons.h's
-# enum order. THE TABLE OF SESSION 123 (the parked importer's picks, the
-# architect's sheets of session 140) WITH TWO ROWS RE-PICKED BY HIM
-# 2026-11-17, session 140 ("the first alternative for each one"): TabDetach
-# and GoParentFolder (the 16-px actions tree, no symbolic twin); AND
-# TWENTY-ONE ROWS RE-PICKED BY HIM
-# 2026-11-22, send II, off the alternates sheet: BboxPrev / BboxNext (one
-# source, BboxPrev mirrored), ViewMediaLyrics, ViewMediaTrack,
-# TransformMoveVertical (turned clockwise), GoJump, TimelineUseZoneOn,
+# ENUMERATOR -> (source under Papirus/16x16/ or OWN + a file of
+# tools/icons/own/, note[, transform]), in icons.h's enum order. THE TABLE OF
+# SESSION 123 (the parked importer's picks, the architect's sheets of session
+# 140) WITH TWO ROWS RE-PICKED BY HIM 2026-11-17, session 140 ("the first
+# alternative for each one"): TabDetach and GoParentFolder (the 16-px actions
+# tree, no symbolic twin); AND TWENTY-ONE ROWS RE-PICKED BY HIM 2026-11-22,
+# send II, off the alternates sheet: BboxPrev / BboxNext, ViewMediaLyrics,
+# ViewMediaTrack, TransformMoveVertical, GoJump, TimelineUseZoneOn,
 # GoJumpDeclaration, Mathmode, ViewMediaVisualization, ZoomInY, Speedometer,
 # ZoomPrevious, KeyframePrevious, KeyframeNext, DeepHistory, ZoneIn, ZoneOut,
 # DocumentSave, BlackSum and Merge, most from the 16-px actions, devices and
-# panel trees. A note names a pick that is not the enumerator's own name and
-# the date of a re-pick.
+# panel trees; AND EIGHT OF THOSE RE-PICKED AGAIN BY HIM 2026-11-22, send MM:
+# TransformMoveVertical (kdenlive-object-height, no transform), BlackSum,
+# GoJump, TimelineUseZoneOn (go-first-rtl / go-first, the one arrow and dot
+# each way), DeepHistory, Merge, and BboxPrev / BboxNext (our own drawing,
+# OWN + 'BboxPrev.svg', Next's mirrored). A note names a pick that is not the
+# enumerator's own name and the date of a re-pick.
 SYM = 'symbolic/'
 ROSTER = [
     ('DocumentOpen', SYM + 'actions/document-open-symbolic.svg', ''),
@@ -113,11 +127,12 @@ ROSTER = [
     ('ZoomInY', 'actions/audio-volume-high.svg',
      'no zoom-in-y; audio-volume-high, a speaker and its waves '
      '(re-picked 2026-11-22)'),
-    ('GoJump', 'actions/footsteps.svg',
-     'footsteps, his pick over go-jump (re-picked 2026-11-22)'),
-    ('TimelineUseZoneOn', 'actions/measure.svg',
-     'no timeline-use-zone-on; measure, a ruler over two arrows '
-     '(re-picked 2026-11-22)'),
+    ('GoJump', SYM + 'actions/go-first-rtl-symbolic.svg',
+     'go-first-rtl, an arrow right to a dot, his pick over go-jump '
+     '(re-picked 2026-11-22, send MM)'),
+    ('TimelineUseZoneOn', 'actions/go-first.svg',
+     'no timeline-use-zone-on; go-first, an arrow left to a dot, '
+     'go-first-rtl\'s exact mirror (re-picked 2026-11-22, send MM)'),
     ('EditCut', SYM + 'actions/edit-cut-symbolic.svg', ''),
     ('Bookmarks', SYM + 'actions/bookmarks-symbolic.svg', ''),
     ('MusicNote16th', SYM + 'actions/music-note-single-symbolic.svg',
@@ -125,8 +140,9 @@ ROSTER = [
     ('Mathmode', 'actions/insert-math-expression.svg',
      'no mathmode; insert-math-expression, an f of x '
      '(re-picked 2026-11-22)'),
-    ('Merge', 'actions/merge.svg',
-     'two blocks joined (re-picked 2026-11-22)'),
+    ('Merge', SYM + 'actions/tool-brush-symbolic.svg',
+     'tool-brush, a brush, his pick over merge and edit-paste-style '
+     '(re-picked 2026-11-22, send MM)'),
     ('AudioHeadphones', SYM + 'devices/audio-headphones-symbolic.svg', ''),
     ('Lock', SYM + 'actions/lock-symbolic.svg', ''),
     ('SettingsConfigure', SYM + 'actions/settings-symbolic.svg',
@@ -138,12 +154,12 @@ ROSTER = [
      '(re-picked 2026-11-22)'),
     ('ShallowHistory', SYM + 'actions/recent-symbolic.svg',
      'no shallow-history; recent (a clock)'),
-    ('DeepHistory', 'panel/network-wireless-offline.svg',
-     'no deep-history; network-wireless-offline, a faded fan and a cross '
-     '(re-picked 2026-11-22)'),
-    ('BlackSum', 'actions/office-chart-line-forecast.svg',
-     'no black_sum; office-chart-line-forecast, a line run on dashed '
-     '(re-picked 2026-11-22)'),
+    ('DeepHistory', 'panel/network-unavailable.svg',
+     'no deep-history; network-unavailable, a faded network port and a '
+     'cross (re-picked 2026-11-22, send MM)'),
+    ('BlackSum', 'actions/games-difficult.svg',
+     'no black_sum; games-difficult, three bars rising '
+     '(re-picked 2026-11-22, send MM)'),
     ('DocumentRevert', SYM + 'actions/document-revert-symbolic.svg', ''),
     ('KeyframePrevious', 'actions/keyframe-previous.svg',
      'a stopwatch and a triangle back (re-picked 2026-11-22)'),
@@ -180,17 +196,17 @@ ROSTER = [
      'a flag and a turning arrow (re-picked 2026-11-22)'),
     ('DocumentEdit', SYM + 'actions/document-edit-symbolic.svg', ''),
     ('EditSelect', SYM + 'actions/edit-select-symbolic.svg', ''),
-    ('TransformMoveVertical', 'actions/transform-move-horizontal.svg',
-     'no transform-move-vertical; transform-move-horizontal turned 90 '
-     'degrees clockwise, arrows up and down (re-picked 2026-11-22)', 'cw'),
+    ('TransformMoveVertical', 'actions/kdenlive-object-height.svg',
+     'no transform-move-vertical; kdenlive-object-height, two triangles '
+     'pointing up and down (re-picked 2026-11-22, send MM)'),
     ('GoDown', SYM + 'actions/go-down-symbolic.svg', ''),
     ('GoUp', SYM + 'actions/go-up-symbolic.svg', ''),
-    ('BboxPrev', 'actions/debug-execute-to-cursor.svg',
-     'no bboxprev; debug-execute-to-cursor, an arrow into a bar, mirrored '
-     'left-right to point left (re-picked 2026-11-22)', 'mirror'),
-    ('BboxNext', 'actions/debug-execute-to-cursor.svg',
-     'no bboxnext; debug-execute-to-cursor, an arrow into a bar, as drawn, '
-     'pointing right (re-picked 2026-11-22)'),
+    ('BboxPrev', OWN + 'BboxPrev.svg',
+     'no bboxprev; ours, go-first\'s arrow to a line 2 wide, as drawn, '
+     'pointing left (re-picked 2026-11-22, send MM)'),
+    ('BboxNext', OWN + 'BboxPrev.svg',
+     'no bboxnext; ours, go-first\'s arrow to a line 2 wide, mirrored '
+     'left-right to point right (re-picked 2026-11-22, send MM)', 'mirror'),
     ('TabDetach', SYM + 'actions/focus-windows-symbolic.svg',
      'no tab-detach; focus-windows, two windows (re-picked 2026-11-17)'),
     ('ZoomOriginal', SYM + 'actions/zoom-original-symbolic.svg', ''),
@@ -227,6 +243,8 @@ PAINT_PROPS = ('fill', 'stroke', 'stop-color', 'color', 'flood-color',
                'lighting-color')
 KEEP_VALUES = ('none', 'currentcolor', 'inherit')
 SHAPES = ('path', 'rect', 'circle', 'ellipse', 'polygon', 'polyline', 'line')
+GEOMETRY = ('d', 'x', 'y', 'width', 'height', 'cx', 'cy', 'r', 'rx', 'ry',
+            'points', 'x1', 'y1', 'x2', 'y2')
 SVG_NS = '{http://www.w3.org/2000/svg}'
 
 
@@ -304,17 +322,13 @@ def transform(name, text, kind):
     root = ET.fromstring(text)
     box = root.get('viewBox')
     if box:
-        x, y, w, h = (float(v) for v in box.replace(',', ' ').split())
+        x, _, w, _ = (float(v) for v in box.replace(',', ' ').split())
     else:
-        x, y = 0.0, 0.0
-        w, h = float(root.get('width')), float(root.get('height'))
-    cx, cy = x + w / 2, y + h / 2
-    if kind == 'mirror':
-        matrix = 'matrix(-1 0 0 1 %s 0)' % num(2 * cx)
-    elif kind == 'cw':
-        matrix = 'rotate(90 %s %s)' % (num(cx), num(cy))
-    else:
+        x, w = 0.0, float(root.get('width'))
+    cx = x + w / 2
+    if kind != 'mirror':
         sys.exit('%s: no transform %r' % (name, kind))
+    matrix = 'matrix(-1 0 0 1 %s 0)' % num(2 * cx)
     head = re.search(r'<svg\b[^>]*>', text)
     tail = text.rindex('</svg>')
     return (text[:head.end()] + '\n <g transform="%s">' % matrix
@@ -322,11 +336,18 @@ def transform(name, text, kind):
 
 
 def drawing_digest(text):
-    """The written drawing, its path data and transforms with whitespace
-    dropped: two rows with one digest are one drawing whatever their names,
-    and a transformed row is not its source's twin."""
-    data = ''.join(re.findall(r'\s(?:d|transform)="([^"]*)"', text))
-    return hashlib.sha256(re.sub(r'\s+', '', data).encode()).hexdigest()
+    """The written drawing, every shape's kind and geometry and every
+    element's transform, in document order, with whitespace dropped: two
+    rows with one digest are one drawing whatever their names, and a
+    transformed row is not its source's twin."""
+    parts = []
+    for el in ET.fromstring(text).iter():
+        tag = el.tag.replace(SVG_NS, '')
+        names = ('transform',) + (GEOMETRY if tag in SHAPES else ())
+        parts.append(tag + ''.join('%s=%s;' % (n, el.get(n))
+                                   for n in names if el.get(n) is not None))
+    data = re.sub(r'\s+', '', '|'.join(parts))
+    return hashlib.sha256(data.encode()).hexdigest()
 
 
 def main():
@@ -344,7 +365,9 @@ def main():
     for row in ROSTER:
         enum, rel, note = row[:3]
         kind = row[3] if len(row) > 3 else ''
-        src = os.path.join(root, rel)
+        own = rel.startswith(OWN)
+        src = (os.path.join(OWN_DIR, rel[len(OWN):]) if own
+               else os.path.join(root, rel))
         real = os.path.realpath(src)
         if not os.path.isfile(real):
             sys.exit('%s: no source %s' % (enum, rel))
@@ -364,12 +387,16 @@ def main():
                     note, 'one source with %s, another drawing by the '
                     'transform' % sources[real]) if x)
         sources.setdefault(real, enum)
-        shown = rel
-        if real != os.path.abspath(src):
-            shown += ' (-> %s)' % os.path.relpath(real, root)
+        if own:
+            shown = os.path.relpath(real, REPO)
+        else:
+            shown = rel
+            if real != os.path.abspath(src):
+                shown += ' (-> %s)' % os.path.relpath(real, root)
         rows.append((enum, shown, hashlib.sha256(data).hexdigest(), note))
-    print('| Enumerator | Source (Papirus/16x16/, %s) '
-          '| sha256 of the source | Note |' % PAPIRUS_SOURCE)
+    print('| Enumerator | Source (Papirus/16x16/, %s; or ours, '
+          'its repository path) | sha256 of the source | Note |'
+          % PAPIRUS_SOURCE)
     print('|---|---|---|---|')
     for enum, shown, digest, note in rows:
         print('| `%s` | `%s` | `%s` | %s |' % (enum, shown, digest, note))

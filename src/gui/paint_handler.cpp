@@ -1690,9 +1690,8 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     const double baseline = title_baseline(lane);
 
     // THE NOTE (MusicNote16th on the ink-box road — the BPM key's drawing
-    // and the wav rows' too, a deliberate share, architect 2026-11-02,
-    // R14 (4); 2026-11-22, send II, icons.h's head) IN ITS 12 W
-    // BOX (architect 2026-11-19, send Z): ITS INK'S LEFT EDGE
+    // and the BPM form's rows' too, a deliberate share, icons.h's head) IN
+    // ITS 12 W BOX (architect 2026-11-19, send Z): ITS INK'S LEFT EDGE
     // kTitleNoteInsetW inside the panel (architect 2026-11-19, send AA), its
     // ink centered on the bar's rows exactly.
     const icons::InkInBox note = icons::ink_in_box(
@@ -8691,10 +8690,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // architect 2026-11-22, send II: "increase the distance b/w icon and text in
 // lists, eg player", "6 w"): the name's pen 6 + 16 + 6 = 28 W, 56 device px
 // on the tablet. THE DRAWING IS THE ROW'S (list_row_drawing, below, the one
-// seat): a folder or project row Folder, a wav row MusicNote16th, THE NOTE
-// (architect 2026-11-22, send II: "render player actually plays target
-// audio, not source. but it should take the bpm note aka the logo"; the
-// title bar's note and BPM's drawing, icons.h's head); every other row its
+// seat): a folder or project row Folder, a wav row AudioHeadphones, THE
+// HEADPHONES (architect 2026-11-22, send MM: PLAYER's drawing, the
+// render player's opener, icons.h's head); every other row its
 // LISTING'S OPENER KEY'S drawing (is_folder_overlay_opener's pairs, read off
 // redesign_button_icon so the row can never drift from its key) — the
 // settings page and its four value lists SETUP's gear, the trim presets
@@ -8734,7 +8732,7 @@ static_assert(kListDrawingYW == static_cast<double>(static_cast<int>(kListDrawin
 static constexpr double kListDrawingGapW = 6.0;
 
 // A LIST ROW'S DRAWING, THE ONE SEAT (the block above): a Folder row the
-// folder, a Wav row the note, and a Plain or Disabled row its listing's
+// folder, a Wav row the headphones, and a Plain or Disabled row its listing's
 // opener key's resting drawing (is_folder_overlay_opener's pairs; none of
 // the three keys swaps its drawing, redesign_button_icon's stateful
 // overload). THE PRODUCERS (AppState::FolderOverlayRow's THE PRODUCERS):
@@ -8748,7 +8746,7 @@ static icons::Icon list_row_drawing(AppState::FolderOverlay::Owner owner,
     using Owner = AppState::FolderOverlay::Owner;
     switch (kind) {
         case Kind::Folder: return icons::Icon::Folder;
-        case Kind::Wav:    return icons::Icon::MusicNote16th;
+        case Kind::Wav:    return icons::Icon::AudioHeadphones;
         case Kind::Plain:
         case Kind::Disabled:
             break;

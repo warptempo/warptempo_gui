@@ -10072,7 +10072,8 @@ struct AppState {
     //                 rides it: a shift or ctrl press on a row is a consumed
     //                 no-op, and nothing on a row reads kHoldBeatMs.
     // A ROW'S KIND decides its glyph, its ink and whether it acts: Folder
-    // wears the folder glyph, Wav the wav glyph (the note), PLAIN ITS
+    // wears the folder glyph, Wav the wav glyph (the headphones, the player's
+    // opener's; architect 2026-11-22, send MM), PLAIN ITS
     // LISTING'S OPENER KEY'S DRAWING (architect 2026-11-22, send KK: the
     // settings page's and the value lists' rows SETUP's gear, the trim
     // presets' PRESETS' bookmark, the BPM form's BPM's note;
@@ -19599,12 +19600,16 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 // THE KEY'S GLYPH (architect 2026-11-01 / 2026-11-02, the Ableton parity;
 // THE ROSTER AS RULED, architect 2026-11-02, R12 / R14 / R15, and
 // Papirus's, 2026-11-17, session 140, twenty-one drawings re-picked by him
-// 2026-11-22, send II, rows of the importer's table: EDIT, HISTORY, SOURCE,
+// 2026-11-22, send II, and eight of those again the same day, send MM (the
+// marker pair our own, from Papirus's go-first), rows of the importer's
+// table: EDIT, HISTORY, SOURCE,
 // TARGET, SESSION and LOCK one glyph each, no state swap; PLAYER the
-// headphones; BPM shares the logo's single note with the wav rows (icons.h's
-// head) and LOAD the render player's LOAD checkmark (the same act; the word
+// headphones, shared with the render player's wav rows (architect
+// 2026-11-22, send MM); BPM shares the logo's single note with the BPM
+// form's rows (icons.h's head) and LOAD the render player's LOAD checkmark
+// (the same act; the word
 // buttons carry no drawing since 2026-11-18), all deliberate) —
-// the enumerator's drawing (icons.h's head, Papirus's) centered on
+// the enumerator's drawing (icons.h's head) centered on
 // each roster key's box (paint_handler.cpp's paint_key_glyph), the act's
 // name the tooltip's (redesign_button_tooltip, above; the printed legend
 // under the key retired 2026-11-18, send Z). THIS TABLE IS EACH KEY'S RESTING GLYPH; THE PAINTERS READ THE

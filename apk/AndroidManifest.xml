@@ -31,7 +31,7 @@
 
   <!-- android:icon is the launcher and recents icon: Papirus's note,
        assets/icons/MusicNote16th.svg (the title bar's, the BPM key's and
-       the wav rows' drawing, its 16 x 16 box 46 dp tall), rendered by resvg in the font color #D3DAE3 over its flat
+       the BPM form's rows' drawing, its 16 x 16 box 46 dp tall), rendered by resvg in the font color #D3DAE3 over its flat
        ground #2F343F (Arc-Dark's compiled row, src/gui/gui_theme.h), the
        adaptive icon's
        background layer

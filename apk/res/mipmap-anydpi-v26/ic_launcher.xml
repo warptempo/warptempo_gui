@@ -2,7 +2,7 @@
 <!-- THE LAUNCHER ICON (the manifest's android:icon; the launcher and the
      recents card). Its picture (architect 2026-11-21, send HH): PAPIRUS'S
      NOTE, assets/icons/MusicNote16th.svg, the drawing the app paints in its
-     title bar, on the BPM key and on the lists' wav rows
+     title bar, on the BPM key and on the BPM form's rows
      (assets/icons/README.md its provenance), a
      `currentColor` drawing on a 16 x 16 box (width and height, no viewBox),
      rendered by resvg at the art's height in the

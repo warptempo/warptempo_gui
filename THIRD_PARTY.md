@@ -11,7 +11,8 @@ APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1,
 papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the drawings
 first imported at commit 33d971eb are byte-identical in it; GPL-3.0, the text in `assets/icons/LICENSE-GPL-3.txt`),
 recolored copies of its 16-px symbolic drawings and of drawings of its 16-px `actions/`, `devices/` and `panel/`
-trees (two of them mirrored or turned), written by `tools/icons/import_papirus.py` into `assets/icons/`, whose `README.md` holds their
+trees, and the marker pair's arrow to a line, ours, modified from its `go-first` (`tools/icons/own/BboxPrev.svg`, one
+of the two mirrored), written by `tools/icons/import_papirus.py` into `assets/icons/`, whose `README.md` holds their
 provenance; the launcher icon is one of them, the note `MusicNote16th.svg`, which `apk/build_apk.sh` renders into the
 launcher's layers.
 

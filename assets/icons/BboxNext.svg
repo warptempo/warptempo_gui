@@ -1,3 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
- <path style="fill:currentColor" d="M 9 1 L 9 3 L 11 3 L 11 13 L 9 13 L 9 15 L 15 15 L 15 13 L 13 13 L 13 3 L 15 3 L 15 1 L 9 1 z M 6 4 L 6 7 L 3 7 L 3 5 L 1 5 L 1 11 L 3 11 L 3 9 L 6 9 L 6 12 L 10 8 L 6 4 z"/>
+ <g transform="matrix(-1 0 0 1 16 0)">
+ <!-- THE MARKER PAIR'S DRAWING, OURS (architect 2026-11-22, send MM, his
+      pick off the mock, "gap 0"): Papirus's actions/go-first.svg
+      (papirus-icon-theme 20260801) with its dot turned into a line 2 of 16
+      wide, the arrow stem's thickness, rows 2 to 14 with square ends, the
+      arrow's tip touching it, the whole ink re-centered in the 16 canvas
+      (shifted 1.5 left, its ink x 1.5 to 14.5). The arrow's path data is
+      go-first's verbatim. Previous Marker (BboxPrev) wears it as drawn and
+      Next Marker (BboxNext) its exact left-right mirror, the importer's
+      transform (tools/icons/import_papirus.py). A modified copy of a
+      papirus-icon-theme drawing, GPL-3.0 (assets/icons/LICENSE-GPL-3.txt). -->
+ <g transform="translate(-1.5,0)">
+  <path style="fill:currentColor" d="M 16,7 H 9 L 12.5,3.5 11,2 5,8 11,14 12.5,12.5 9,9 H 16 Z"/>
+  <rect style="fill:currentColor" x="3" y="2" width="2" height="12"/>
+ </g>
+ </g>
 </svg>

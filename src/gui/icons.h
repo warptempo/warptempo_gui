@@ -8,10 +8,10 @@
 // provenance and their licences): papirus-icon-theme 20260801, its 16-px
 // symbolic set and drawings of its 16-px actions, devices and panel trees,
 // written by tools/icons/import_papirus.py, the roster the parked picks of
-// session 123 with two re-picked by the architect 2026-11-17 and twenty-one
-// 2026-11-22, send II (the importer's table; BboxPrev / BboxNext one source,
-// Prev's mirrored, and TransformMoveVertical turned, by the importer's
-// transform).
+// session 123 with two re-picked by the architect 2026-11-17, twenty-one
+// 2026-11-22, send II, and eight of those again the same day, send MM (the
+// importer's table) — BboxPrev / BboxNext OUR OWN drawing from Papirus's
+// go-first, one source, Next's mirrored by the importer's transform.
 // RECOLORED to `currentColor` by the one RECOLOR RULE (the README's; the
 // importer's one table the enumerator -> source list) and PAINTED IN
 // THE TEXT TONES — a lit key's in the print of its accent face —
@@ -34,23 +34,27 @@
 //   THE SEATS OFF THE KEYS (2026-11-02, M7): the title bar's note
 //   (MusicNote16th) and its battery + clock legend's glyph
 //   (Battery000Charging / Battery000) (paint_title_bar), the list rows'
-//   folder and note (Folder / MusicNote16th) and, on every other list's
+//   folder and headphones (Folder / AudioHeadphones; the wav rows wear
+//   PLAYER's drawing, architect 2026-11-22, send MM) and, on every other list's
 //   rows, the opener key's drawing — SETUP's gear (SettingsConfigure) on the
 //   settings page and its value lists, PRESETS' bookmark (Bookmarks) on the
 //   trim presets, BPM's note on the BPM form (architect 2026-11-22, send KK;
 //   paint_list_view's list_row_drawing), the
 //   cards' class glyphs (DialogInformation / DialogError,
-//   paint_notifications). THE NOTE IS SHARED FOUR WAYS (architect
-//   2026-11-22, sends II and KK): the title bar, the BPM key, the wav rows
-//   and the BPM form's rows (the launcher's art too, below); SOURCE's disc,
-//   ViewMediaTrack, is the key's alone.
-// THE ROSTER IS AS RULED (2026-11-17, session 140; 2026-11-22, send II); a
-// re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
-// DISTINCT DRAWING (by the written path data and transform; the icon
+//   paint_notifications). THE NOTE IS SHARED THREE WAYS (architect
+//   2026-11-22, sends II and KK): the title bar, the BPM key and the BPM
+//   form's rows (the launcher's art too, below); THE HEADPHONES TWO
+//   (architect 2026-11-22, send MM): the PLAYER key and the render player's
+//   wav rows; SOURCE's disc, ViewMediaTrack, is the key's alone.
+// THE ROSTER IS AS RULED (2026-11-17, session 140; 2026-11-22, sends II and
+// MM); a re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
+// DISTINCT DRAWING (by the written shapes and transforms; the icon
 // theme's names are often symlinks, so one drawing is one enumerator) — the
 // score viewer's page keys, GoPreviousViewPage / GoNextViewPage, are
 // chevrons of their own; BboxPrev and BboxNext share one source file, two
-// drawings by the transform. THE TWO
+// drawings by the transform. EVERY DRAWING IS PAPIRUS'S BUT THE MARKER PAIR,
+// OURS from Papirus's go-first (architect 2026-11-22, send MM; the
+// importer's own source, tools/icons/own/). THE TWO
 // CARDS, DialogError and DialogInformation, are imported, their discs
 // cutting the mark out so one color shows it (assets/icons/README.md's
 // provenance).

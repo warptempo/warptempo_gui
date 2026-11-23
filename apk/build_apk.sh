@@ -187,7 +187,7 @@ wt_say "classes.dex: $(stat -c%s "$DEXDIR/classes.dex") bytes"
 # into a staged copy of res/ under the package tree,
 # which aapt2 compiles. THE DRAWING is assets/icons/MusicNote16th.svg,
 # PAPIRUS'S NOTE, the one the app paints in its title bar, on the BPM key and
-# on the lists' wav rows (architect 2026-11-21, send HH: one drawing, one file, read in place, no
+# on the BPM form's rows (architect 2026-11-21, send HH: one drawing, one file, read in place, no
 # copy; assets/icons/README.md its provenance), a `currentColor` drawing
 # painted LAUNCHER_INK, the font color (the row's `.text`), through resvg's user
 # stylesheet (below). THE FRAMING
