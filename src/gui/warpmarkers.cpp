@@ -67,9 +67,8 @@ std::string format_warpmarkers_text(
         // THE BASE IS DERIVED AT warp_tempo_run (warpmarkers.h) AND NOWHERE
         // ELSE (architect approval 2026-09-18; the rationale for writing the
         // TOTAL and re-deriving the base is at that owner). This serializer
-        // was its home until 2026-09-19, when it and the flag composers'
-        // private twin of the same loop became one body: the file and the flag
-        // are one spelling, and one body is what makes them one.
+        // and the flag composers call that one body (2026-09-19): the file
+        // and the flag are one spelling, and one body is what makes them one.
         // A PASS AND A REF CARRY NO CHAIN BY GRAMMAR (the load refuses one,
         // and every GUI road that writes either form clears the vector), so
         // neither arm below branches on it: the chain lives on the numeric
@@ -110,7 +109,7 @@ bool GuiWarpMarkers::save(const std::string& path,
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx) {
     // Bounds-guarded GUI face of the ONE participation verdict,
     // marker_effectively_disabled (warp_frame_map_build.h; the marker's own
-    // flag alone since 2026-10-29) — the same
+    // flag alone, 2026-10-29) — the same
     // verdict the resolver's keep mask publishes, instantiated over
     // GuiWarpMarker so paint-loop callers pay no slice copy.
     if (idx < 0 || idx >= static_cast<int>(markers.size())) return false;

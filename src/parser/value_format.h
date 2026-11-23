@@ -51,12 +51,9 @@
 // and the bpm bracket's own parse plus the bpm derivation's refusal — so an
 // out-of-bracket value on disk is a state the GUI can never produce, and it
 // hard-fails the load (stderr, first error only).
-// COMMENT-ONLY CORRECTION, 2026-08-12 (architect approval 2026-08-12; frozen
-// file, comments only, no code bytes changed): both enforcer lists above used
-// to name a Ctrl+wheel / "constructive wheel clamp" tempo enforcer. That was
-// a FOSSIL of a pointer-wheel tempo gesture deleted long ago — there is no
-// tempo wheel anywhere in the product; bare Up/Down is the whole tempo-step
-// surface and its clamp lives at GuiWarpMarkersOps::adjust_tempo_cents.
+// Bare Up/Down is the whole tempo-step surface and its clamp lives at
+// GuiWarpMarkersOps::adjust_tempo_cents (architect approval 2026-08-12,
+// comment only).
 inline constexpr int64_t kTempoMinCents = 25;  // marker tempo, derived base tempo
 inline constexpr int64_t kTempoMaxCents = 400;
 inline constexpr double kScaleMin = 0.5;    // marker scale, settings scale

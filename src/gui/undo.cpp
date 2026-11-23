@@ -39,12 +39,12 @@ namespace {
 //
 // THE STORES ARE THE WHOLE CONTENT the question has to consider, and the
 // entry's THIRD payload — its engine settings block — needs no term of its own:
-// the three coalescing kinds (GestureKind, undo.h, re-grepped 2026-09-23: the
+// the three coalescing kinds (GestureKind, undo.h: the
 // TWO position nudges — warp and phase reset — and the tempo cent step)
 // write no engine setting, and no engine-settings writer can run between a
 // burst's opener and a merged press without killing the stamp the merge was
-// verdicted on. There are three of them, re-grepped at this writing
-// (`app.engine_settings =`): the typed engine commit pushes an 'S' entry
+// verdicted on. There are three of them (grep
+// `app.engine_settings =`): the typed engine commit pushes an 'S' entry
 // (push_settings_undo), the render-entry load in place pushes a both-columns
 // entry (push_undo_both) — and EVERY push helper clears the stamp — while a
 // file load resets the history whole. So entry.settings is provably the live
@@ -110,17 +110,14 @@ void Undo::recompute_dirty() {
     app.dirty = app.warp_dirty || app.phase_reset_dirty || app.settings_dirty;
     // THE DIRTY FLAG HAS ONE DERIVE-OWNER. This is where app.dirty is derived,
     // so every mutation, save and undo/redo transition passes through here.
-    // EVERY ENTRY COUNTS (architect 2026-09-10): the walks above used to skip
-    // the three session-only iteration-bracket entries, because a bracket
-    // never reaches a sidecar. The bracket left the undo domain whole —
-    // nothing pushes it and every push strips it from its snapshot — so
-    // nothing about a bracket reaches the history and nothing about it
-    // reaches the flag. There is no class left to skip.
+    // EVERY ENTRY COUNTS (architect 2026-09-10): the iteration bracket is
+    // outside the undo domain whole — nothing pushes it and every push strips
+    // it from its snapshot — so nothing about a bracket reaches the history
+    // and nothing about it reaches the flag. There is no class to skip.
     // ITS ONE PICTURE IS SAVE'S FACE (architect 2026-10-05, SAVE IS THE DIRTY
     // MARK: plain_save_actionable, app_state.h), which the roster's per-tick
     // face comparator repaints on a transition (main.cpp), so this body owes
-    // no damage. (Row 8's `*`, whose transition this tail invalidated, is
-    // retired.)
+    // no damage.
 }
 
 // THE PUSH HELPERS ALL STRIP THE SESSION-ONLY ITERATION BRACKET from
@@ -213,8 +210,8 @@ void Undo::stamp_top_entry_with_landing_view() {
     top.tab        = app.active_tab_view;
     top.audio_view = app.active_audio_view;
     // The column tag too — the live column, P after the paste's landing (the
-    // column writer refuses no column since 2026-10-12, and the paste stays
-    // in its audio view since 2026-10-14); op_mode keeps naming the store the
+    // column writer refuses no column, 2026-10-12, and the paste stays
+    // in its audio view, 2026-10-14); op_mode keeps naming the store the
     // entry changed (UndoEntry::landing_column).
     if (top.op_mode != 'S') top.landing_column = app.active_markers_view;
 }
@@ -254,16 +251,11 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     const bool stamp_matches =
         last_gesture_kind_ == kind && !app.history.undo_stack.empty();
 
-    // (TWO KIND-SPECIFIC SUBJECT TERMS STOOD HERE — the ADDRESSED CELL from
-    // 2026-09-04 and the W/P COLUMN from 2026-09-09, each read by
-    // GestureKind::IterBoundStep alone, that kind's subject being a FIELD of
-    // the selection on one of TWO stores rather than the selection itself.
-    // Both went with the kind on 2026-09-10, when the iteration bracket left
-    // the undo domain: the bound step pushes nothing, so it has no entry for a
-    // later tap to merge into and no subject to keep apart. The three kinds
-    // standing now (GestureKind, undo.h, re-grepped 2026-09-23: WarpNudge,
-    // PhaseResetNudge, TempoStep) are one-body kinds whose subject the
-    // selection carries whole.)
+    // (NO KIND-SPECIFIC SUBJECT TERM: the three kinds (GestureKind, undo.h:
+    // WarpNudge, PhaseResetNudge, TempoStep) are one-body kinds whose subject
+    // the selection carries whole; the iteration bound step pushes nothing,
+    // the bracket being outside the undo domain (2026-09-10), so it has no
+    // entry for a later tap to merge into.)
 
     bool merge = false;
     if (stamp_matches) {
@@ -279,8 +271,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // so a synthesized repeat STRUCTURALLY
             // CANNOT arrive after another INPUT-BORNE command ran — and the
             // held-BUTTON producer beside it (tick_chrome_press_repeat, whose
-            // repeat-eligible members are the four cardinal arrows and, since
-            // 2026-09-13, Undo / Redo, whose
+            // repeat-eligible members are the four cardinal arrows and
+            // Undo / Redo, whose
             // restores push nothing through this body and clear the stamp
             // (restore_history_entry) — the membership is kToolbarChords' own
             // `repeats` column, never a second list) buys the same property
@@ -303,10 +295,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // WINDOW: no clock is needed, and none is asked. THE SUBJECT IS
             // NOT bought by them — see (c) below. Keeping it clock-free is
             // deliberate: a hold must coalesce at ANY platform repeat delay or
-            // rate, and that independence is the whole reason repeat identity
-            // replaced the retired kGestureCoalesceMs.
+            // rate, and that independence is the whole reason the repeat arm
+            // reads no clock.
             //
-            // (c) AND THE SUBJECT IS TESTED ANYWAY, since 2026-08-29 — the tap
+            // (c) AND THE SUBJECT IS TESTED ANYWAY (2026-08-29) — the tap
             // arm's own subject terms, minus the clock. Halves (a) and (b)
             // argue
             // that no COMMAND runs between a burst's opener and its repeats,
@@ -316,8 +308,8 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             // natural-end branch calls switch_active_tab_view_to, which clears
             // the selection and runs the coincidence auto-select). A held
             // Up/Down straddling that switch would otherwise step the OTHER
-            // tab's marker with no push of its own, so one Ctrl+Z reverted two
-            // markers on two tabs — the exact two-subject composition the
+            // tab's marker with no push of its own, so one Ctrl+Z would revert
+            // two markers on two tabs — the exact two-subject composition the
             // arrival-invalidate below was written to kill, arriving on the
             // repeat side through the one edge the premise did not cover. A
             // MISMATCH OPENS A NEW ENTRY; a legitimate burst still merges,
@@ -356,12 +348,10 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     the last press was authored in the other. THE COLUMN NEEDS NO
             //     TERM OF ITS OWN: switching it clears the selection, and each of
             //     the three has ONE BODY over ONE store, so there is no second body
-            //     on the other column for a tap to merge into. (The iteration bound
-            //     step was the one kind that had one, and it left the undo domain
-            //     on 2026-09-10 with the bracket.)
+            //     on the other column for a tap to merge into.
             // The comparison runs on the clock's OWN duration, never on a
             // whole-millisecond count: duration_cast truncates toward zero, so
-            // counting first would have admitted every real interval inside
+            // counting first would admit every real interval inside
             // the millisecond ABOVE the window as if it were the window's own
             // last one. Compared directly, the boundary is exactly
             // kTapCoalesceMs.
@@ -374,49 +364,46 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
         }
     }
 
-    // AN ELIGIBLE PHYSICAL PRESS INVALIDATES THE STAMP ON ARRIVAL (converted
-    // 2026-07-29, and it survives the hybrid by moving BELOW the verdict) — this
+    // AN ELIGIBLE PHYSICAL PRESS INVALIDATES THE STAMP ON ARRIVAL (2026-07-29;
+    // BELOW the verdict under the hybrid) — this
     // query's one side effect, and the reason it is not const. Every eligible route
     // asks this question past the refusals ITS BUTTON GREYS ON and ahead of every
     // other, so a press that goes on to REFUSE for a reason the face cannot see
     // leaves the stamp INVALID; a press that COMMITS re-stamps it
     // in record_gesture, which is why clearing here costs the tap arm nothing.
-    // THE DEFECT THIS CLOSES, as derived: a physical press can REFUSE without
-    // committing (the eligible refusals left here are the ineligible tempo
-    // steps — a label ref, or in target view a coincident member;
-    // the WALL refusals moved out from under this
-    // call, see below, and the async displayed-map flip that made the phase
-    // twin's wall test the concrete producer went with them, every survivor
-    // needing a COMMAND to flip),
-    // which pushes nothing and so cleared nothing; if the refusal then FLIPS
-    // mid-hold the first synthesized repeat commits
-    // and finds the stale same-kind stamp from a DIFFERENT subject's burst, skipping
+    // WHAT IT PREVENTS: a physical press can REFUSE without
+    // committing (the eligible refusals here are the ineligible tempo
+    // steps — a label ref, or in target view a coincident member, each
+    // needing a COMMAND to flip; the WALL refusals run ahead of this
+    // call, below),
+    // which pushes nothing and so clears nothing; if the refusal then FLIPS
+    // mid-hold the first synthesized repeat would commit
+    // and find a stale same-kind stamp from a DIFFERENT subject's burst, skipping
     // its own push and refreshing that older entry's touched_live. One Ctrl+Z would
     // then revert two separate holds, with snapshot and live identity hints naming
     // different markers. Clearing on stack-top changes alone could not see this: the
     // intervening acts (a pointer selection command, or the refusing press's OWN
     // focus collapse under the focus-act prologue) change no stack top.
     //
-    // A WALL NO-OP TOUCHES NOTHING, AND THAT SUPERSEDES THE "EVERY REFUSED
-    // PRESS SPLITS THE RUN" CLAUSE FOR THE WALL CLASS (planner-ruled
-    // 2026-08-31 on the refinement arc's own logic; it was "at its ENTRY, before its own refusals run" from
-    // 2026-07-29). THE PROBLEM WAS TWO SURFACES, ONE WALL: the truthful-buttons
+    // A WALL NO-OP TOUCHES NOTHING: for the wall class a refused press does
+    // not split the run (planner-ruled 2026-08-31). TWO SURFACES, ONE WALL:
+    // the truthful-buttons
     // ruling greys a button wherever its press would change nothing, and a
     // greyed press never dispatches — so with the wall test BEHIND this call
-    // the key poisoned the stamp and the button did not, and one Ctrl+Z after
-    // "step to the wall, press again, step back" undid a different amount
-    // depending on which surface was used. THE THREE WALL ROUTES now run their
+    // the key would poison the stamp and the button would not, and one Ctrl+Z
+    // after "step to the wall, press again, step back" would undo a different
+    // amount depending on which surface was used. THE THREE WALL ROUTES run their
     // wall test AHEAD of this call and refuse without reaching it: the position
     // nudges' shared prologue (through marker_nudge_actionable, which is the
     // Left / Right face's own term), the singleton cent step (through
     // tempo_cent_step_direction_actionable) and the group cent step (through
     // tempo_cent_step_group_actionable). THE DISCRIMINATOR IS THE FACE, NOT THE
     // CARD: a refusal the button greys on runs ahead of the stamp — the group
-    // step's card moves with it, and since 2026-09-13 so does the singleton
+    // step's card moves with it, and so does the singleton
     // cent step's carded KIND refusal, asked just ahead of its wall — while a
     // refusal that keeps a LIVE face stays behind it, so both surfaces poison
     // alike there.
-    // WHAT IT COSTS, accepted: a refused wall press no longer ends the previous
+    // WHAT IT COSTS, accepted: a refused wall press does not end the previous
     // burst, so a later press of the same kind can merge into it (the tap arm
     // within kTapCoalesceMs, or a repeat behind a mid-hold flip). That is
     // exactly what the greyed button already gave, and the merged run is
@@ -424,23 +411,22 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
     // both runs restores the same state two entries would. The composition this
     // invalidate exists to kill — merging into ANOTHER subject's burst — is
     // killed regardless by the subject terms both arms carry (the tab, the
-    // audio view and the selection; clause (c) above on the repeat arm since
-    // 2026-08-29).
+    // audio view and the selection; clause (c) above on the repeat arm).
     // THE ORDER IS THE WHOLE TRICK under the hybrid: verdict first, invalidate
-    // second. Invalidating first (the pre-2026-08-01 shape) would have killed the
-    // very stamp a tap needs to read, so the tap arm would never have fired.
+    // second. Invalidating first would kill the
+    // very stamp a tap needs to read, so the tap arm would never fire.
     // ONE SITE, DELIBERATELY: the invalidate lives HERE rather than being spelled at
     // each of the eligible routes, so a route cannot forget it and no enumeration
     // has to be kept in sync — the standing "one authoritative site per concept"
     // preference. The routes are the nudges' shared prologue and both arms of
     // the Up/Down cent step (grep this function's callers; the Up/Down BOUND
-    // step was among them until 2026-09-10, when the iteration bracket left
-    // the undo domain and that step stopped asking any verdict at all).
+    // step asks no verdict, the iteration bracket being outside the undo
+    // domain).
     if (!synthesized_repeat) last_gesture_kind_ = GestureKind::None;
 
     // NO ACCEPTED DELTA REMAINS on either arm. record_gesture runs AFTER the push
-    // at every eligible route — FOUR routes over THREE call sites, re-grepped
-    // 2026-09-23 (the warp and phase-reset position nudges through their
+    // at every eligible route — FOUR routes over THREE call sites
+    // (the warp and phase-reset position nudges through their
     // shared commit tail, and the singleton and group arms of the Up/Down cent
     // step) — and ONLY
     // on the
@@ -466,13 +452,10 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // zoom sits OFF the grid and Right+Left lands it ON the grid, up to half a
     // column from where it started — a real change, whose entry then correctly
     // stays and whose Save correctly stays lit),
-    // which is how a tap Right then a tap Left inside kTapCoalesceMs left the
+    // so a tap Right then a tap Left inside kTapCoalesceMs would leave the
     // burst's surviving entry byte-equal to the live store: one Ctrl+Z that
-    // changed nothing at all, and Save lit over a store equal to the
-    // file. The same hole stood on all four coalesce-eligible kinds. On the
-    // iteration bound step it is what retires a tap up then a tap down on a
-    // blank bracket: the step's own [0, 0] clearing rule puts the store back
-    // byte for byte (iter_bound_step_write, app_state.h), so the entry goes.
+    // changes nothing at all, and Save lit over a store equal to the
+    // file — on all three coalesce-eligible kinds alike.
     //
     // SO THE MERGE TAIL ASKS THE PRODUCERS' OWN QUESTION, and it asks it
     // POST-MUTATION because that is the only place the answer exists — the
@@ -480,22 +463,20 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
     // press lands. When the burst's entry would restore the stores that are
     // already live, the entry comes back OFF the stack and the stamp is
     // cleared, so the burst dissolves as if it had never happened and the NEXT
-    // press opens its own entry. THIS IS NOT A NEW RULE and it narrows nothing:
-    // direction-blind merging stays exactly as it was (Left×5 then Right×5
-    // still merge — they now merge into nothing), and the kind, the window and
-    // the subject terms are untouched.
+    // press opens its own entry. IT NARROWS NOTHING: direction-blind merging
+    // stands (Left×5 then Right×5 merge — into nothing), and the kind, the
+    // window and the subject terms are untouched.
     //
     // ONE SEAM FOR EVERY KIND: every eligible route reaches this call
-    // post-mutation on its accepted path — FOUR routes over THREE call sites,
-    // re-grepped 2026-09-23: the warp and phase-reset position nudges through
+    // post-mutation on its accepted path — FOUR routes over THREE call
+    // sites: the warp and phase-reset position nudges through
     // their shared commit tail, and the singleton and group arms of the
     // Up/Down cent step — so the equality question has ONE owner here
     // rather than four copies; the
     // per-column readers it uses are the row enumerations at the head of this
-    // file. (The Up/Down BOUND step was a fifth route over a fourth call site
-    // until 2026-09-10, when the iteration bracket left the undo domain: it
-    // pushes nothing now, so it has no entry to pop and no kind to stamp, and
-    // the row comparators dropped the iter fields with it.)
+    // file. (The Up/Down BOUND step pushes nothing — the iteration bracket is
+    // outside the undo domain — so it has no entry to pop and no kind to
+    // stamp, and the row comparators read no iter field.)
     // IT CANNOT FIRE ON A NO-OP PRESS: a route reaches this call only past its
     // own refusals and past its own mutation, and a press refused AT A WALL
     // never even asks the coalesce verdict (the wall-before-stamp order,
@@ -522,8 +503,9 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
         // call: the pop is what puts a saved baseline back at distance 0, and a
         // net-zero wobble over a saved file must read CLEAN again. The callers'
         // own call right after is then a same-state re-ask, and costs nothing:
-        // recompute_dirty damages row 8 only on a TRANSITION, and this one has
-        // already happened here.
+        // recompute_dirty owes no damage (its one picture, Save's face,
+        // repaints at the per-tick face comparator on a TRANSITION), and the
+        // transition has already happened here.
         recompute_dirty();
         return;
     }
@@ -543,17 +525,16 @@ void Undo::record_gesture(GestureKind kind, bool merged) {
 void Undo::note_saved() {
     // THE SAVE ENDS THE TAP WINDOW (architect 2026-09-02). The tap arm's
     // merge test reads the clock and the subject terms, and a Ctrl+S changes
-    // none of them and no stack top — so before this a save inside a burst
-    // left the stamp standing, and the next
-    // press inside kTapCoalesceMs MERGED: the store mutated with no push, the
-    // reference (just rebound to 0, the burst's live state) stayed at 0, and
-    // recompute_dirty read CLEAN over a store that no longer matched the file.
-    // The byte-equal pop then gave the wobble a second face — Right, save,
-    // Left popped the entry and stepped the reference 0 → +1 over an EMPTY
-    // redo stack, clean again with the file holding the post-Right state —
-    // and a quit read the flag and exited with no prompt.
+    // none of them and no stack top — so a stamp left standing would let the
+    // next press inside kTapCoalesceMs MERGE across the save: the store
+    // mutated with no push, the reference (just rebound to 0, the burst's live
+    // state) staying at 0, and recompute_dirty reading CLEAN over a store that
+    // no longer matches the file (and the byte-equal pop giving the wobble a
+    // second face — Right, save, Left popping the entry and stepping the
+    // reference 0 → +1 over an EMPTY redo stack) — and a quit would read the
+    // flag and exit with no prompt.
     //
-    // THE FIX IS ONE CLEAR AT THE OWNER, beside the reference move it belongs
+    // ONE CLEAR AT THE OWNER, beside the reference move it belongs
     // to, so no caller can move the reference and forget the stamp: the next
     // eligible press finds no burst to merge into and PUSHES the pre-press
     // snapshot — the state the file holds — and the reference steps to −1
@@ -568,9 +549,9 @@ void Undo::note_saved() {
     app.history.mark_saved();
     last_gesture_kind_ = GestureKind::None;
     // THE MARK IS RE-DERIVED HERE, by the owner that moved the reference — the
-    // same shape as the byte-equal pop above. recompute_dirty also owns the
-    // damage for it (row 8's cell, on the transition alone), so the save itself
-    // asks for none.
+    // same shape as the byte-equal pop above. Its one picture, Save's face,
+    // repaints at the roster's per-tick face comparator on the transition
+    // (recompute_dirty's head), so the save itself asks for no damage.
     recompute_dirty();
 }
 
@@ -599,10 +580,8 @@ namespace {
 // are all stated there.
 //
 // THE TOUCHED SET WINS UNCONDITIONALLY, THE EMPTY CASE INCLUDED — an empty set
-// EMPTIES the selection rather than leaving the prior one standing, and the
-// world changed under the old fall-through: it used to preserve "whatever the
-// user had", which was a defensible thing to keep. Since the never-parked
-// selection ruling (architect 2026-07-29) the entry's TAB SWITCH
+// EMPTIES the selection rather than leaving the prior one standing. Under the
+// never-parked selection ruling (architect 2026-07-29) the entry's TAB SWITCH
 // (restore_history_entry runs it before the stores are restored) ends in
 // COINCIDENCE AUTO-SELECT, so what a fall-through preserves is a MACHINE GUESS
 // — the destination tab's stored cursor happening to stand on a marker — and
@@ -642,9 +621,9 @@ void apply_post_restore_rules_impl(Selection& selection,
     // Through the Selection mutator (the whole-set replace, focus on the
     // earliest touched member): the focus write is the mutator's own, which
     // is what resets the addressed cell (Selection::seat_focus) — a restore
-    // is not a marker press, so the restored focus rests on its payload
-    // unless the entry itself names a cell, which restore_history_entry's
-    // tail writes back behind this call. The mutator's two clears are the
+    // is not a marker press, so the restored focus rests on its payload (no
+    // entry names a cell, restore_history_entry's tail). The mutator's two
+    // clears are the
     // ones sanitize already made, and its top-strip damage is inside the
     // restore's whole-window repaint.
     const int focus = *target_set.begin();
@@ -656,8 +635,7 @@ void apply_post_restore_rules_impl(Selection& selection,
 void Undo::apply_post_restore_rules_warp(const UndoEntry& entry,
                                          const std::vector<GuiWarpMarker>& before) {
     // The row equality basis is the shared enumeration at the head of this
-    // file — this matcher's own field list until 2026-09-01, when the net-zero
-    // pop became its second reader.
+    // file, which the net-zero pop reads too.
     apply_post_restore_rules_impl(
         selection, entry, before, app.warpmarkers.markers(),
         warp_row_fields_differ);
@@ -687,8 +665,8 @@ void Undo::apply_post_restore_rules_phase_reset(
 // the tab makes the history reachable again with nothing lost.
 //
 // THE TEST ITSELF LIVES OUT AT history_step_actionable (app_state.h) and this
-// delegates to it, because the Undo / Redo buttons (the icon row's, since the
-// 2026-08-12 relayout dissolved the toolbar row) must GREY on
+// delegates to it, because the Undo / Redo keys (the top icon row's) must
+// GREY on
 // exactly the fact these guards refuse on — one predicate, two readers, no way
 // for the face and the action to disagree. The rationale above stays here,
 // where the guard is run.
@@ -799,17 +777,16 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     translates the playhead and both tabs' viewports through it, so a
     //     switch run ahead of the swap mints the destination domain's numbers
     //     under a map the restore is about to throw away: undoing a `scale`
-    //     edit typed in target view translated under the POST-edit scale and
-    //     the result was then read under the PRE-edit one, carrying the
+    //     edit typed in target view would translate under the POST-edit scale
+    //     and read the result under the PRE-edit one, carrying the
     //     playhead and the camera off the instant they stood on. While the
     //     swap lands, the view standing over it sees a MAP CHANGE, which is a
     //     shape the product already owns (the re-land below); the domain flip
     //     is a separate act and runs after it, on the finished map.
-    //   * THE COLUMN AFTER THE DATA, its old reason having gone with the move:
-    //     it stood ahead of the swap so clear_selection's stem and flag damage
-    //     would resolve against the LEAVING column's painted pixels, and this
-    //     body's tail invalidates the whole waveform area and re-renders the
-    //     plate synchronously either way, so that damage was already subsumed.
+    //   * THE COLUMN AFTER THE DATA, freely: its selection clear's stem and
+    //     flag damage need not resolve against the LEAVING column's painted
+    //     pixels, because this body's tail invalidates the whole waveform area
+    //     and re-renders the plate synchronously either way.
     //   * THE SELECTION SETTLED BEFORE THE AUDIO VIEW, because the switch
     //     RE-EXPRESSES A SURVIVING FOCUS through the store — an INDEX into the
     //     marker vector — so it has to read the selection the entry restores
@@ -826,7 +803,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // PREVIEW dispatched against a state this same restore replaces, and that
     // is what the data-first order closes: the audio view's target readiness
     // ask (GuiTargetRender::ensure_ready, at the tail of
-    // switch_active_audio_view_to) now reads the restored map, so the tail's
+    // switch_active_audio_view_to) reads the restored map, so the tail's
     // own unconditional trigger() is a same-state re-derive rather than a
     // correction of one.
     if (entry.tab != app.active_tab_view) {
@@ -855,9 +832,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // vector and an 'S' entry restores both unchanged — and the assigns are unconditional: a
     // field-only restore (a disabled toggle, a tempo, a label) moves no row but
     // must still land its values, and markers_mut's generation bump reports it
-    // either way. No row-identity comparison rides these replaces any more: the
-    // per-column structural bumps that stood here existed for the parked
-    // selections' liveness rule, and both died 2026-07-29.
+    // either way. No row-identity comparison rides these replaces.
     app.warpmarkers.markers_mut()    = std::move(entry.snapshot);
     app.phaseresetmarkers.markers_mut() = std::move(entry.phase_reset_snapshot);
 
@@ -869,8 +844,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // keep-visible edge-align. The family's other members take the reseat's
     // edge-align; this one does not, because the restore's camera answers to
     // the markers it restores and never to the playhead — through the reseat,
-    // an OFFSCREEN playhead dragged the viewport to where its instant now
-    // painted, the "random spot" a target-view undo used to land on. TARGET
+    // an OFFSCREEN playhead would drag the viewport to where its instant now
+    // paints, a "random spot" for a target-view undo to land on. TARGET
     // VIEW ONLY: in source view the swap changes no domain and the cursor's
     // number already names its own instant. It carries the cursor across the
     // re-warp, so the audio-view switch below — and the visual tail after it —
@@ -890,8 +865,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // THE W/P RESTORE, through the `p` chokepoint's own writer
     // (GuiActiveViews::switch_active_markers_view_to, which Undo reaches like
     // the tab's — the column switch's selection clear and the seated pinch's
-    // anchor clear are that helper's, not a hand-kept copy of it; the hand-kept
-    // copy that used to stand at this spot went with the move onto the owner).
+    // anchor clear are that helper's, not a hand-kept copy of it).
     // THE COLUMN WRITTEN IS THE ENTRY'S LANDING COLUMN, never its op_mode
     // (UndoEntry::landing_column, app_state.h, which carries the split and its
     // inventory), and the lamp's verdict reads the same tag. Gated off 'S'
@@ -901,9 +875,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // EVERY ENTRY TAKES ITS COLUMN FIRST AND ITS AUDIO VIEW AFTER (below),
     // whichever column it names: both columns pair with both audio views
     // (architect 2026-10-12, S+P's return), so the writer refuses no column
-    // for the audio view standing. (A 'P' entry took its audio view first
-    // from 2026-09-21 until then, while the writer refused 'P' outside
-    // target view.)
+    // for the audio view standing.
     if (entry.op_mode != 'S') {
         active_views.switch_active_markers_view_to(entry.landing_column);
     }
@@ -941,9 +913,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // settings COMMIT, which clears both at its own chokepoint
     // (settings_editor.cpp); GUI-kind keys are history-less, so 'S' is the only
     // settings entry kind there is and the pair covers the whole surface. Together
-    // they are what let the never-span-less ENFORCEMENT be deleted — these were its
-    // last two producers, and closing them symmetrically means no collapse protocol
-    // is owed. It does not
+    // they leave no selection standing across a settings change, so no collapse
+    // protocol is owed. It does not
     // violate the 'S' gate's no-SELECT half: emptying a selection is not selecting.
     // The non-'S' entries need nothing here — they re-select the touched set.
     //
@@ -951,12 +922,12 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // so that EVERY entry kind reaches that switch with a SETTLED selection.
     // The switch re-expresses the playhead through a surviving focus
     // (switch_active_audio_view_to, input_handler.h), so an 'S' entry that also
-    // flips the audio view used to move the cursor through a focus this very
-    // line then cleared — the one path on which "an 'S' restore selects nothing
-    // and lands nothing" was not literally true. The five-axis restore order is
-    // untouched (tab, data with its re-land, column, audio view, addressed
-    // cell): the selection is not one of those axes, and both the marker arms
-    // and this one now write it in the same place.
+    // flips the audio view would otherwise move the cursor through a focus this
+    // very line then clears — and "an 'S' restore selects nothing and lands
+    // nothing" holds literally. The restore order of the view's axes stands
+    // (tab, data with its re-land, column, audio view): the selection is
+    // not one of those axes, and both the marker arms
+    // and this one write it in the same place.
     if (entry.op_mode == 'S') selection.clear_selection();
 
     // THE S/T RESTORE, through the set-to spelling of the `t` chokepoint (the
@@ -965,16 +936,15 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // just as it carries the tab — and the chokepoint's own same-view early
     // return is what makes that free. It is BEST-EFFORT in exactly one direction:
     // entering target view can refuse its validity gate (the tripwire class,
-    // unreachable from program-written input, silent on screen since
+    // unreachable from program-written input, silent on screen,
     // 2026-08-30), and a refusal leaves the audio view where it stands while
     // the rest of the restore proceeds — there is no aborting a restore whose
     // entry is already popped.
     //
     // NO RESTORE SYNTHESIZES A VIEW THE USER WAS NEVER IN. With all three axes
     // recorded, a restore lands the combination the op LANDED in — S+P among
-    // the four since its return (architect 2026-10-12). Before this tag
-    // existed the restore MANUFACTURED S+P out of a T+P entry undone from
-    // S+W, which is the defect it closed.
+    // the four (architect 2026-10-12) — and never manufactures S+P out of a
+    // T+P entry undone from S+W.
     if (input) input->switch_active_audio_view_to(entry.audio_view);
 
     // VISUAL TAIL (architect 2026-07-25 — undo/redo adopts the group visual
@@ -1002,8 +972,8 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     (frame_span_into_view with margin, input_handler.cpp), never in —
     //     the land and this camera one body, land_and_frame_active_markers
     //     (input_handler.cpp),
-    //     which the phase-reset pastes' landing shares (architect 2026-11-17,
-    //     send U);
+    //     which the phase-reset pastes' landing shares (architect
+    //     2026-11-17);
     //   * NO MARKER (a removal, or an entry that touched nothing in this
     //     column) moves NO CAMERA: the only cursor write such a restore makes
     //     is the map-change re-land's translation above, which scrolls
@@ -1052,10 +1022,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // (architect 2026-09-29): a restore that crosses the tab arrives with the
     // hold that tab's picture says (hold_derived_on_arrival), the switch's
     // answer and not the restore's; one that crosses the audio view arrives
-    // dark, the S/T switch deriving nothing. (From 2026-09-23 to 2026-09-25
-    // the restore kept the bit across its land and let the landing owner
-    // decide, so an on-screen singleton left the cursor off the held column
-    // with the hold still standing.)
+    // dark, the S/T switch deriving nothing.
     //
     // Runs AFTER sanitize_selection_after_restore so the land sees the final
     // membership, after the tab / data / column / audio-view restores so it
@@ -1068,9 +1035,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //
     // A SETTINGS-ONLY ('S') restore lands nothing and moves no camera: it
     // selects nothing (the clear above), touches no marker, and the whole
-    // land/camera block is gated off it. (The restore hid the trim region
-    // overlay until 2026-08-19 at its own site and through the land until the
-    // resting overlay was deleted on 2026-09-22; trim is outside the undo
+    // land/camera block is gated off it. (Trim is outside the undo
     // stacks by ruling.)
     if (entry.op_mode != 'S') {
         const size_t sel_size = app.selected_markers.size();
@@ -1142,8 +1107,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
             }
         } else if (sel_size >= 2) {
             // GROUP: LAND the playhead on the restore's FOCUS and FRAME THE
-            // RESTORED SET (architect 2026-07-25, its region half retired
-            // 2026-07-30 with the SPAN FORM), the group visual language's one
+            // RESTORED SET (architect 2026-07-25), the group visual language's one
             // body, land_and_frame_active_markers (input_handler.cpp; its
             // contract at the declaration, input_handler.h): THE HOLD DROPPED
             // there explicitly (the rule above), the land on the set's
@@ -1165,13 +1129,11 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
         // stays where it stands.
     }
 
-    // (AN ADDRESSED-CELL WRITE-BACK STOOD HERE from 2026-09-05 to 2026-09-10:
-    // a bracket-only entry carried the cell it changed, and this tail put the
-    // restored focus back on the bound the undo had moved. The bracket left
-    // the undo domain, so no entry carries a cell, and every restore comes to
-    // rest on the payload — which is exactly what the selection writes above
-    // have already seated, each of them going through Selection::seat_focus.
-    // The axis survives as session state; only its ride on an entry is gone.)
+    // (No entry carries an addressed cell — the iteration bracket is outside
+    // the undo domain — so every restore comes to rest on the payload, which
+    // is exactly what the selection writes above have already seated, each of
+    // them going through Selection::seat_focus. The addressed cell is session
+    // state.)
 
     recompute_dirty();
     viewport.invalidate_waveform_area();
@@ -1186,17 +1148,14 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // synchronously so the restored markers and the waveform land together. A
     // single keystroke, so bounded — the drag-time async-warp_frame_map policy is about
     // the marker-drag torrent, not discrete events. kick_waveform_sync's damage
-    // duplicates invalidate_waveform_area above (harmless); the (now plain)
+    // duplicates invalidate_waveform_area above (harmless); the plain
     // trigger below owns target-buffer freshness when target view is available.
     viewport.kick_waveform_sync();
-    // NO 'S' RE-LAND, and none is possible: the map-change re-land that sat here
-    // (target view only, onto a surviving selection's focus, because the restored
-    // map moved that focus's image out from under the cursor) died with the 'S'
-    // selection clear above — architect 2026-07-29. An 'S' restore leaves
-    // no lane and no focus, so the resting cursor is the whole playhead and keeps
-    // its own value. The engine-key settings COMMIT's twin re-land died the same way
-    // (settings_editor.cpp). Every other op_mode still lands through the visual tail
-    // above, on its restored focus in both arms.
+    // NO 'S' RE-LAND onto a focus (architect 2026-07-29): an 'S' restore
+    // clears the selection above, so it leaves no focus, and the resting
+    // cursor is the whole playhead and keeps its own value. Every other
+    // op_mode lands through the visual tail above, on its restored focus in
+    // both arms.
     viewport.invalidate_clock_area();
     // Unconditional by ruling — rationale at GuiTargetRender::trigger; an
     // undo/redo restoring only normalization-inert state (e.g. a disabled-
@@ -1210,7 +1169,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
 // Shift+Z dispatch arm asks history_step_actionable ahead of these calls so
 // it can NAME which of its two terms refused — an empty stack, or a top entry
 // belonging to the locked other tab — and one press owes one card, so the
-// authoritative guard below stays the belt it always was.
+// authoritative guard below stays a belt.
 //
 // The bail leaves the entry on the stack, the view unchanged and the screen
 // unmarked.

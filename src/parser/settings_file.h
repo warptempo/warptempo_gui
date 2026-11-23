@@ -207,7 +207,7 @@ struct SettingsFile {
     char   active_tab_view         = 'A';   // A | B
     // (NINE FIELDS LEFT THIS STRUCT WITH THEIR KEYS — the retired-key record
     // is at kCanonicalSettingsKeys, settings_file.cpp. `font_size` went with
-    // row 7's monospace deletion, architect approval 2026-08-01; `gui_scale`,
+    // the text face it sized, architect approval 2026-08-01; `gui_scale`,
     // `audio_player`, `projects_repo` and `playback_speed` went 2026-08-27,
     // architect approval 2026-08-27 — the first three to the GUI's per-device
     // config (src/gui/device_config.h, which owns their types, their grammars
@@ -323,7 +323,7 @@ struct GuiSettingValue {
 // boundaries (the load-side trim past-EOF walls live in
 // first_past_eof_wall_defect). The whole-file reader below (load-fatal) is
 // its one caller: the GUI settings editor types no GUI-kind key since
-// 2026-11-19 (send AA, its line the value of the row's own key alone —
+// 2026-11-19 (its line the value of the row's own key alone —
 // settings_editor.h's head), every such key written by its own button or
 // gesture. Returns std::nullopt when `key` is not a GUI-kind key (the caller
 // falls through to its own unknown-key handling, mirroring try_engine_key); an

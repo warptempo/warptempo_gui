@@ -16,26 +16,24 @@
 #include <vector>
 
 // THE GL CANVAS'S OWNER (the class's head, gl_canvas.h): the programs, the
-// textures and the frame's GL calls, in their own object (2026-10-14) the
-// platform's present drives. The calls, their order and their arguments are
-// the tablet's of 2026-10-13, the build the GL canvas's identity proof
-// covered (docs/engineering/gpu_canvas_2026_10.md §5). One reduction since,
-// pixel-neutral by its
-// key: the plate's bounds texture is re-sent only when its key moved
-// (upload_list, 2026-10-14). Two additions: the score viewer's page drawn by
-// the GPU (2026-10-27, the page program and its textures; the design record's
-// §3.13), THE WAVEFORM'S ANTIALIASING (architect 2026-10-30): the plate's
+// textures and the frame's GL calls, in their own object the platform's
+// present drives (the GL canvas's identity proof:
+// docs/engineering/gpu_canvas_2026_10.md §5). The plate's bounds texture is
+// re-sent only when its key moved (upload_list), pixel-neutral by its key.
+// The score viewer's page is drawn by the GPU (2026-10-27, the page program
+// and its textures; the design record's §3.13). THE WAVEFORM'S ANTIALIASING
+// (architect 2026-10-30): the plate's
 // fragment rasterizes the bars' tips at exact coverage — the bars stretched
 // at their pitch from a fourth, float instance attribute (architect
-// 2026-11-14, send G), and in the fade band before a level switch the
+// 2026-11-14), and in the fade band before a level switch the
 // finer level's row drawn too, from a fifth, and the two pictures mixed by
-// that fourth attribute's weight (send H; the two-picture blend, architect
-// 2026-11-15, send O) — and blends
+// that fourth attribute's weight (the two-picture blend, architect
+// 2026-11-15) — and blends
 // source-over (kListFragmentShader's head; the rule at
 // render_waveform_columns' head, render.h), and THE TINT (architect
 // 2026-11-12, the sweep highlight), the canvas's second blend, a rect
 // blended source-over toward its word under the same blend function — A
-// RECT WITH REAL EDGES (architect 2026-11-14, send J), each pixel's alpha
+// RECT WITH REAL EDGES (architect 2026-11-14), each pixel's alpha
 // scaled by the exact area of it the rect covers, the canvas's lines at
 // their exact places its records at 100 percent.
 
@@ -74,8 +72,8 @@ constexpr const char* kCanvasVertexShader =
 // there. THREE MODES, u_over (present_frame's THE TEXTURE'S DRAW):
 //   0 — THE UNBLENDED DRAW: every other texel placed as above, its alpha
 //       written 1 — the draw of every frame whose floaters' hulls meet no
-//       part of the canvas clip, the same bytes it always was;
-//   2 — THE UNBLENDED DRAW BESIDE THE HULLS (send BB, 2026-11-19): mode 0,
+//       part of the canvas clip;
+//   2 — THE UNBLENDED DRAW BESIDE THE HULLS (2026-11-19): mode 0,
 //       but A PARTLY TRANSPARENT TEXEL IS DISCARDED TOO (t.a under .998, a
 //       threshold between the two highest bytes' fetches, 254 / 255 = .99608
 //       and 255 / 255 = 1, so a partial byte is and an opaque one is not
@@ -83,11 +81,11 @@ constexpr const char* kCanvasVertexShader =
 //       partial texel is ever written as opaque: inside the clip such
 //       texels stand only inside a hull (the transparency invariant), where
 //       mode 1 draws them over the list's pixel this draw left untouched;
-//   1 — THE BLENDED DRAW INSIDE A HULL (send AA's stage D1, the tooltip's
-//       .95 fill and its shadow, the cards' .95 fills;
-//       confined to the hulls since send BB): the texel goes out as cairo
-//       holds it, PREMULTIPLIED (t.bgr, t.a), under the blend present_frame
-//       enables for this draw — the fixed state's premultiplied source-over
+//   1 — THE BLENDED DRAW INSIDE A HULL (2026-11-19: the tooltip's
+//       .95 fill and its shadow, the cards' .95 fills): the texel goes out
+//       as cairo holds it, PREMULTIPLIED (t.bgr, t.a), under the blend
+//       present_frame enables for this draw — the fixed state's premultiplied
+//       source-over
 //       — so a partly covered texel over the canvas composites over what the
 //       list drew there, G · (1 − a) + texel, rounded once, the framebuffer's
 //       alpha staying 1 (the list and the clear leave it 1, and a + 1 ·
@@ -119,7 +117,7 @@ constexpr const char* kCanvasFragmentShader =
 // outside the instance's rect is discarded (the quad's float edges never
 // decide coverage); a RECT (kind 0) writes its word; THE TINT (kind 2,
 // architect 2026-11-12, the sweep highlight; its real edges architect
-// 2026-11-14, send J, the canvas's lines at their exact places) writes its
+// 2026-11-14, the canvas's lines at their exact places) writes its
 // word premultiplied by its alpha a with alpha a, (word · a, a), so the
 // blend glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA) lays G · (1 − a) +
 // word · a on the pixel beneath, G — whatever the earlier records drew
@@ -142,12 +140,11 @@ constexpr const char* kCanvasFragmentShader =
 // does (src · 1 + dst · 0); THE PLATE (kind 1) is
 // THE WAVEFORM'S ANTIALIASING (architect 2026-10-30;
 // the rule at render_waveform_columns' head, render.h; the grow's key
-// 2026-10-31, the 4x grid ruled for good that afternoon at render.h's
-// kWaveformSubcells; THE CORE a solid fill of the grown inner since
-// 2026-11-04; THE BARS ANCHORED TO THE AUDIO AND DRAWN STRETCHED at their
-// pitch, architect 2026-11-14, send G, render.h's THE PLATE'S BARS; THE
-// FADE BAND'S TWO PICTURES MIXED, architect 2026-11-15, send O, the blend
-// arm below), an
+// 2026-10-31, the 4x grid at render.h's kWaveformSubcells; THE CORE a solid
+// fill of the grown inner, 2026-11-04; THE BARS ANCHORED TO THE AUDIO AND
+// DRAWN STRETCHED at their pitch, architect 2026-11-14, render.h's THE
+// PLATE'S BARS; THE FADE BAND'S TWO PICTURES MIXED, architect 2026-11-15,
+// the blend arm below), an
 // INTEGER ALGORITHM over the bounds texture
 // (an isampler2D over GL_RGBA16I: row `period` holds, per BAR of the
 // record's row, the four QUARTER-ROW tips {o_top, o_bot, i_top, i_bot}, the
@@ -160,7 +157,7 @@ constexpr const char* kCanvasFragmentShader =
 // (kWaveformGrowMaxQuarters; the key's seat is render.h's
 // waveform_grow_quarters, the list carries it as
 // GuiCanvasDrawList::plate_grow):
-//   * THE SPECIALIZATION RULE (2026-10-31 afternoon): the grow is baked into
+//   * THE SPECIALIZATION RULE (2026-10-31): the grow is baked into
 //     the shader's text as `#define GROW <r>` (list_fragment_source: the
 //     literal's one substitution point) and THE PROGRAM IS REBUILT WHEN THE
 //     KEY CHANGES — ensure_programs builds it at the default grow,
@@ -172,18 +169,14 @@ constexpr const char* kCanvasFragmentShader =
 //     comparison of constants and every array index a loop variable, so
 //     after unrolling no array is indexed by a runtime value and the masks
 //     are registers. A BAR IS A SCALAR FOR THE SAME REASON (architect
-//     2026-11-14, send G): which bar a subcolumn reads is a runtime value —
+//     2026-11-14): which bar a subcolumn reads is a runtime value —
 //     it follows the draw transform — so a bar is an ivec4 fetched at a
 //     runtime TEXTURE coordinate into a scalar, never an element of a local
-//     array. The same algorithm with the grow as a uniform (the
-//     2026-10-31 morning road, 19657fb7, on the 8x grid: runtime bounds, a
-//     while that walked g(j), a continue guard over arrays of 56 and 24
-//     wide words) spilled the masks to scratch memory and measured ~300 ms
-//     of GPU time a plate frame on the tablet against the 11 ms budget of
-//     the panel then pinned at 90 Hz; this
-//     road replaced it the same day, and the grid went back to 4x that
-//     afternoon (the measurements at kWaveformSubcells, render.h: the
-//     specialized 8x shader still cost 16 .. 110 ms a frame).
+//     array. The same algorithm with the grow as a uniform (runtime bounds,
+//     a while that walked g(j), a continue guard over arrays of wide words)
+//     spills the masks to scratch memory: measured ~300 ms of GPU time a
+//     plate frame on the tablet (2026-10-31, on the 8x grid; the grid's own
+//     measurements at kWaveformSubcells, render.h).
 //   * THE WINDOW is ONE WORD of 32 bits, a uint: bit b the subrow 4y −
 //     PIX0 + b, the pixel's own subrows 4y .. 4y + 3 bits 14 .. 17 (PIX0 =
 //     14). Every mask is honest where every bit it was computed from is:
@@ -197,18 +190,18 @@ constexpr const char* kCanvasFragmentShader =
 //     of them. The argument reads nothing of where a base came from: a base
 //     is a union of runs range_bits clipped to the word, whichever bars and
 //     weights gave the runs.
-//   * THE BARS AND A SUBCOLUMN'S BRACKETS (architect 2026-11-14, send G;
+//   * THE BARS AND A SUBCOLUMN'S BRACKETS (architect 2026-11-14;
 //     render.h's THE PLATE'S BARS owns the geometry): the record's rect is
 //     the band's DEVICE-PX rect and its row holds BARS — the first n =
 //     v_bars.z texels, bar j's centre X_j = x0 + j · p device px from the
 //     rect's left edge (THE DRAW TRANSFORM: x0 = v_bars.x, the first bar's
 //     centre, and p = v_bars.y, the pitch, the fourth instance attribute's
 //     floats). THE ROW'S WEIGHT is that attribute's fourth float, v_bars.w
-//     (architect 2026-11-14, send H; render.h's THE FADE BAND), AND IT PICKS
+//     (architect 2026-11-14; render.h's THE FADE BAND), AND IT PICKS
 //     THE ARM. Exactly 1 is A UNIFORM ROW, drawn by THE UNIFORM ARM: this
 //     paragraph and every one below through THE COST are that arm's, each
 //     claim said of a uniform row, WHOSE BARS STAND A PX OR MORE APART
-//     (architect 2026-11-14, send I): the switch width is a fixed 2 px, so a
+//     (architect 2026-11-14): the switch width is a fixed 2 px, so a
 //     rung's own pitch p is 1 or more — up to 2, and past it under the
 //     ladder's floor (render.h's waveform_bar_frames) — no MAIN row, the row
 //     this arm draws, is under a px, and the arm's bounds are proved for p >=
@@ -222,7 +215,7 @@ constexpr const char* kCanvasFragmentShader =
 //     EVALUATED IN HIGHP FLOAT AS ((float(s) + 0.5) * 0.25 − x0) / p —
 //     the centre's product exact, then ONE subtraction and ONE divide by
 //     the row's pitch, each rounded once (bar_u, the one expression every
-//     site calls; architect 2026-11-15, send O: the per-pixel divide back,
+//     site calls; architect 2026-11-15: the per-pixel divide,
 //     "I agree to both your points there"; the two terms are never scaled
 //     apart and u is never stepped by addition) — with j0 = floor(u) and
 //     f = u − j0 in [0, 1] (that subtraction is exact but where −1 < u <
@@ -271,7 +264,7 @@ constexpr const char* kCanvasFragmentShader =
 //     max(B_a, B_b) − 1; and b256 − t256 >= 256 (each bar has B − T >= 1)
 //     leaves a subrow between them.
 //     THE CORE is a bar's own full-height line, ONE DEVICE PX wide and
-//     centred on the bar's centre (architect 2026-11-14, send G): a bracket
+//     centred on the bar's centre (architect 2026-11-14): a bracket
 //     that exists covers the subcolumn iff −0.5 <= xs − X_j < 0.5,
 //     half-open — a iff f · p < 0.5, b iff (1 − f) · p <= 0.5, on the
 //     unquantized f, in float — and a covering bar gives its own subrows
@@ -287,7 +280,7 @@ constexpr const char* kCanvasFragmentShader =
 //     BIT FOR BIT — the own bar whole in its pixel's four subcolumns and the
 //     contour to the nearer neighbor in eighths, own : neighbor 5:3, 7:1,
 //     7:1, 5:3, subrow k in it iff (t8 + 3) / 8 <= k <= (b8 − 4) / 8, the
-//     plate's silhouette of 2026-10-30, so a landing keeps that picture's
+//     one-bar-a-pixel silhouette, so a landing keeps that picture's
 //     bytes. xs − x0 is then a multiple of 1/8, exact in float, THE PITCH
 //     IS EXACTLY 1 and the divide returns its operand, so u is that
 //     difference itself:
@@ -319,18 +312,18 @@ constexpr const char* kCanvasFragmentShader =
 //     GROW − g(j) grows and grown g(j) times after, the j-walk's own order
 //     (A_j = grow_{g(j−1) − g(j)}(A_{j−1}) ∪ H_j) with its g(j) never
 //     computed. At GROW 2 the scheme is grow2(c) | grow1(l1 |
-//     r1) | l2 | r2, the 2026-10-30 shader's dilate. Each bar's dilation is
+//     r1) | l2 | r2. Each bar's dilation is
 //     taken at the pixel's four subcolumns alone and folded into the count
 //     at once, never kept.
 //   * THE COVERAGE per pixel, in sixteenths (pop16 over the four
 //     subcolumns' pixel nibbles packed into one 16-bit word — bitCount is
 //     GLSL ES 3.10's, not 3.00's): n_o = |(outer ∪ inner) ∩ pixel|, the
 //     grown bars' union, and n_i = |inner ∩ pixel|, THE GROWN INNER's.
-//   * THE COMPOSITE, THE CORE OVER THE INK (architect 2026-11-04, mock f1:
+//   * THE COMPOSITE, THE CORE OVER THE INK (architect 2026-11-04:
 //     the inner a solid `waveform_core` fill over the outer's
 //     `waveform_ink`), source-over in byte space, THE AREA-CORRECT
 //     COMPOSITE OF THE TWO OPAQUE SHAPES on the subcell grid (architect
-//     2026-11-07, session 83): the ink over the union less the inner, the
+//     2026-11-07): the ink over the union less the inner, the
 //     core over the inner, the alpha the union's coverage — wi ⊆ wo by the
 //     OR, so the fragment writes the PREMULTIPLIED source
 //     ink · (cov_o − cov_i) + core · cov_i  with alpha cov_o, and the blend
@@ -338,29 +331,28 @@ constexpr const char* kCanvasFragmentShader =
 //     the pixel beneath, G: the result is G · (1 − cov_o) + ink · (cov_o −
 //     cov_i) + core · cov_i, rounded once to a byte. THE TWO ARMS: that
 //     expression where the inner reaches a pixel the union does not fill
-//     (n_i > 0, n_o < 16); elsewhere the former nested expression, ink ·
+//     (n_i > 0, n_o < 16); elsewhere THE NESTED EXPRESSION, ink ·
 //     cov_o · (1 − cov_i) + core · cov_i with alpha 1 − (1 − cov_o)(1 −
 //     cov_i), KEPT LITERALLY — there it is algebraically the same (cov_i = 0
-//     or cov_o = 1), and the former source is retained literally to preserve
-//     its existing evaluation; the bytes outside the fringe were verified
-//     unchanged by two-build tablet captures (Default and Immaterial,
-//     2026-11-07, session 84). The nested form counts the inner's subcells
+//     or cov_o = 1), and its literal source keeps its evaluation, the bytes
+//     outside the fringe verified by two-build tablet captures
+//     (2026-11-07). The nested form counts the inner's subcells
 //     twice where 0 < cov_i and cov_o < 1: it differs from the exact result
 //     by cov_i · (1 − cov_o) · (ink − G) per channel, at most |ink − G| / 4
 //     (cov_i ≤ cov_o) — a dark fringe at the core's edges of up to 8 levels
-//     on Default's canvas (393939 − 191919 = 32, over 4) before byte
-//     rounding, hence the first arm. Where a bar covers whole
+//     (waveform_ink 262A33 over waveform_canvas 404552: 31 on blue, over 4)
+//     before byte rounding, hence the first arm. Where a bar covers whole
 //     (cov_o = 1, cov_i 0 or 1) the factors are exactly 1 and 0 and the
 //     word lands exactly — the ink, or the core; where nothing covers (n_o
 //     = 0) the fragment discards and the plate stays transparent there.
 //     With the MAGNIFY lamp dark no inner is present (n_i = 0), and the
 //     picture is the grown outer in the ink alone.
-//   * THE EXACT FAST PATHS (2026-10-31 night: smooth coarse zoom and pan
+//   * THE EXACT FAST PATHS (2026-10-31: smooth coarse zoom and pan
 //     with the magnify lamp lit outranks everything but the picture's
 //     bytes, which these paths leave untouched — each is a SUFFICIENT
 //     certificate, a provable subset of the rule above, every pixel's word
 //     the rule's byte for byte at every grow, pitch and offset; the
-//     certificates are send G's, architect 2026-11-14: a bar stands in a
+//     certificates architect 2026-11-14: a bar stands in a
 //     pixel's subcolumns only where its core or the contour puts it, so
 //     neither lemma leans on "the own bar").
 //     THE SUPPORT'S BARS: the dilation at the pixel's four subcolumns reads
@@ -369,7 +361,7 @@ constexpr const char* kCanvasFragmentShader =
 //     .. jB — jA the first subcolumn's j0, jB the last's j0 + 1 (u grows
 //     with s: bar_u's subtraction and its divide by a positive pitch each
 //     keep the order). THEY ARE AT MOST NU = (NO − 1) / 4 + 3
-//     (architect 2026-11-14, send I): the support's centres span (NO − 1) /
+//     (architect 2026-11-14): the support's centres span (NO − 1) /
 //     4 px, so at a px or more a bar the last u exceeds the first by (NO −
 //     1) / (4p) <= (NO − 1) / 4, the floors of two numbers d apart differ
 //     by at most floor(d) + 1, so with both lower brackets and the last
@@ -411,7 +403,7 @@ constexpr const char* kCanvasFragmentShader =
 //     is each one's other bracket, so the pixel is full exactly where the
 //     own bar holds it. In the arm's order:
 //     (a) DISCARD when neither reaches: n_o = 0.
-//     (b) THE OPAQUE INTERSECTION (architect 2026-11-14, send I), BY THE
+//     (b) THE OPAQUE INTERSECTION (architect 2026-11-14), BY THE
 //     OWN BARS ALONE, before any own subcolumn is placed: where the inner
 //     of all three bars from jF holds the pixel, the core's word; where no
 //     inner reaches and the outer of all three holds it, the ink's word.
@@ -422,7 +414,7 @@ constexpr const char* kCanvasFragmentShader =
 //     fails the test, never passes it. The interior of a solid passage ends
 //     here; a pixel it does not catch goes on to (c).
 //     THE OWN SUBCOLUMNS' CERTIFICATES ARE REACH-GATED (architect
-//     2026-11-14, send I): a family that does not reach the pixel cannot be
+//     2026-11-14): a family that does not reach the pixel cannot be
 //     full there — a bar that holds the pixel is in the hull — so each
 //     family's flag starts at its reach and its sub_full is evaluated only
 //     while the flag stands.
@@ -453,7 +445,7 @@ constexpr const char* kCanvasFragmentShader =
 //     practice but no constant of the source: the specialization rule holds
 //     inside every road.
 //   THE COST, a fragment of a uniform row, by where it ends (architect
-//   2026-11-14, send I; a place is one bar_u, its one divide since send O,
+//   2026-11-14; a place is one bar_u, its one divide,
 //   2026-11-15): AT THE DISCARD OR THE OPAQUE
 //   INTERSECTION, the support's bars — NU fetches in the one branch-free
 //   loop, the hulls, the three own bars and the walk's two seeds out of it —
@@ -476,15 +468,13 @@ constexpr const char* kCanvasFragmentShader =
 //   measurement of 2026-11-16 there) — on the tablet is measured there
 //   (SurfaceFlinger's timestats), not argued here. The
 //   window and the level-indexed dilation schemes are modeled bit for bit
-//   in Python against the brief's forward model
+//   in Python against the forward model
 //   (the grow model's mask / morph / down at SS = 4) at every
-//   grow 0 .. 8, 2026-10-31, and are that text still; the fast paths, each
+//   grow 0 .. 8 (2026-10-31); the fast paths, each
 //   a subset of the rule, change no result.
-//   * THE BLEND ARM (architect 2026-11-15, send O: THE TWO-PICTURE BLEND,
-//     "Agree to all." — the blend ruled first and dropped 2026-11-14, send
-//     H, REOPENED by him and built; its band send H's fade at the level
-//     switch and send K's over the whole doubling; render.h's THE FADE BAND
-//     owns the band, the weight and the rows). A plate record of weight w <
+//   * THE BLEND ARM (architect 2026-11-15: THE TWO-PICTURE BLEND,
+//     "Agree to all."; its band the whole doubling, render.h's THE FADE BAND
+//     owning the band, the weight and the rows). A plate record of weight w <
 //     1 carries TWO ROWS, each a rung's own uniform row as the producer gave
 //     it: THE MAIN ROW, texture row v_param.y, its floats {x0_A, P, N, w}
 //     in v_bars — rung B's, P in (1, 2) — and THE FINE ROW, texture row
@@ -551,15 +541,16 @@ constexpr const char* kCanvasFragmentShader =
 //     at GROW 4; a byte-identical tighter twin for A is the named first
 //     recourse on the tablet's measurement, not built) — then on an edge
 //     pixel each picture's walk and dilations; the solid interior and the
-//     empty rows end at the fast paths in both pictures. Where the key is at
-//     1 the blend arm draws every zoom between two whole levels, the uniform
-//     arm the landings alone. Whether the band's frames hold the beat's
+//     empty rows end at the fast paths in both pictures. With the fade's
+//     start at 1 device px (kWaveformFadeHundredths, render.h) the blend arm
+//     draws every zoom between two whole levels, the uniform arm the
+//     landings alone. Whether the band's frames hold the beat's
 //     22.2 ms (kFrameBeat, platform_android.cpp) on the tablet is measured
 //     there: on 2026-11-16, flat 45, a lit pan between levels GPU p50 / max
 //     20 / 21 ms, a pan's step 22 ms with one or two of 33 ms per 12 s.
-//   * WHAT IS PROMISED (architect 2026-11-15, send O: the per-pixel divide
-//     back with the blend's shader work, "I agree to both your points
-//     there"). NOTHING OF THE TRUTH IS SPENT IN THIS SHADER: every
+//   * WHAT IS PROMISED (architect 2026-11-15: the per-pixel divide with
+//     the blend's shader work, "I agree to both your points there").
+//     NOTHING OF THE TRUTH IS SPENT IN THIS SHADER: every
 //     subcolumn is placed by the quotient, one divide by its row's pitch,
 //     and every decision after it (a floor, the nearer, a core, a quantum
 //     step) is the rule's own. A WHOLE LEVEL AT A WHOLE OFFSET — p = 1 on a
@@ -577,10 +568,10 @@ constexpr const char* kCanvasFragmentShader =
 //     the count — at every pixel, ties, row ends and absent bars included.
 //     EACH PLACE IS TAKEN WHERE IT IS NEEDED: the staged reuse of the
 //     support's brackets — each subcolumn located once, six held at
-//     constant indices and finished only where its f is wanted — was built
-//     (send I, patch 03) and measured SLOWER on the tablet's compiler (the
-//     lit fade pan 10.2 ms against 9.3 ms a frame, post-to-acquire,
-//     2026-11-14), so each bracket is located where it is needed, as here.
+//     constant indices and finished only where its f is wanted — measured
+//     SLOWER on the tablet's compiler (the lit fade pan 10.2 ms against
+//     9.3 ms a frame, post-to-acquire, 2026-11-14), so each bracket is
+//     located where it is needed.
 // A word is cairo's 0xAARRGGBB with A = 255, written as (R, G, B, 1) at
 // k / 255 per channel for every record but the plate's fringe and the tint,
 // which the RGBA8 framebuffer stores as k — the texture triangle's own
@@ -662,8 +653,8 @@ constexpr const char* kListFragmentShader =
     // the screen subcolumn s of the rect, x0 the row's first bar's centre and
     // p its pitch — the one expression every site of the uniform rule
     // evaluates, the uniform arm's and rung_px's. THE ARITHMETIC IS THE
-    // PICTURE'S (architect 2026-11-15, send O: the per-pixel divide back,
-    // "I agree to both your points there"): the centre's product exact, then
+    // PICTURE'S (architect 2026-11-15: the per-pixel divide, "I agree to
+    // both your points there"): the centre's product exact, then
     // ONE subtraction and ONE divide, each rounded once — never the two terms
     // scaled apart, never a u stepped by addition; on a whole level p is
     // exactly 1 and u is the difference.
@@ -723,7 +714,7 @@ constexpr const char* kListFragmentShader =
     // every index a loop variable of a constant-bounded loop, so the
     // unrolled accesses are constant and the arrays are registers.
     "const int NO = 4 + 2 * GROW;\n"
-    // THE UNIFORM ARM'S SUPPORT AT MOST (architect 2026-11-14, send I): a
+    // THE UNIFORM ARM'S SUPPORT AT MOST (architect 2026-11-14): a
     // uniform row's bars stand A PX OR MORE apart — the switch width is a
     // fixed 2 px, so a rung's own pitch is 1 or more (render.h's
     // waveform_bar_frames; the static_assert after the source) — so the NO
@@ -735,9 +726,9 @@ constexpr const char* kListFragmentShader =
     // is odd, so that span is a quarter bar or more short of another bar,
     // far past any float's rounding. NU >= 3 at every grow.
     "const int NU = (NO - 1) / 4 + 3;\n"
-    // RUNG_PX'S SUPPORT AT MOST (the head's blend arm; architect 2026-11-15,
-    // send O): a row's bars stand OVER 1/2 PX apart — the fade band's fine
-    // row is the finer rung at half a main pitch over the key's start, and a
+    // RUNG_PX'S SUPPORT AT MOST (the head's blend arm; architect 2026-11-15):
+    // a row's bars stand OVER 1/2 PX apart — the fade band's fine
+    // row is the finer rung at half a main pitch over the fade's start, and a
     // main row is a px or more (the static_asserts after the source) — so
     // the NO subcolumns' centres, (NO − 1) / 4 px end to end, span under
     // (NO − 1) / 2 = GROW + 1.5 bars: the last lower bracket is at most
@@ -784,7 +775,7 @@ constexpr const char* kListFragmentShader =
     "    return int((v + (v >> 8)) & 0x1Fu);\n"
     "}\n"
     // THE UNIFORM RULE AT ANY PITCH OVER 1/2 PX (the head's blend arm;
-    // architect 2026-11-15, send O): the premultiplied pixel of one row's
+    // architect 2026-11-15): the premultiplied pixel of one row's
     // uniform picture — row the row's texture row, n its bar count, x0 and
     // p its transform, i and y the pixel in the rect and the plate — and
     // vec4(0.0) where nothing covers. THE UNIFORM ARM'S TEXT STATEMENT FOR
@@ -937,8 +928,8 @@ constexpr const char* kListFragmentShader =
     "    if (px < v_rect.x || px >= v_rect.x + v_rect.z ||\n"
     "        py < v_rect.y || py >= v_rect.y + v_rect.w) discard;\n"
     "    int kind = v_param.x;\n"
-    // THE BLEND ARM (the head's blend arm paragraph; architect 2026-11-15,
-    // send O): a plate of weight under 1, the fade band's — A the uniform
+    // THE BLEND ARM (the head's blend arm paragraph; architect 2026-11-15):
+    // a plate of weight under 1, the fade band's — A the uniform
     // picture of the main row, C that of the fine row (texture row
     // v_param.w, transform and count v_fine), each by rung_px, and the
     // pixel A + (C − A) · w in that form; nothing where both are nothing.
@@ -1007,7 +998,7 @@ constexpr const char* kListFragmentShader =
     // the full inner, the core opaque, (d) the full outer and (e) the ink
     // opaque.
     "        if (!reach_o && !reach_i) discard;\n"
-    // THE OPAQUE INTERSECTION (architect 2026-11-14, send I; an exact early
+    // THE OPAQUE INTERSECTION (architect 2026-11-14; an exact early
     // return that stands on its own — without it the certificates below
     // give the same words): where the inner of ALL THREE bars from jF holds
     // the pixel it is full in the inner family, the core's word; where no
@@ -1032,7 +1023,7 @@ constexpr const char* kListFragmentShader =
     // The pixel's own four subcolumns: full in a family where each is
     // (sub_full); e the subcolumn's lower bracket from jF, 0 or 1 at a px
     // or more a bar — another certifies nothing and takes the roads. THE
-    // CERTIFICATES ARE REACH-GATED (architect 2026-11-14, send I): a family
+    // CERTIFICATES ARE REACH-GATED (architect 2026-11-14): a family
     // that does not reach the pixel cannot be full there (a bar that holds
     // the pixel is in the hull), so each flag starts at its reach and a
     // family's sub_full is evaluated only while its flag stands.
@@ -1171,7 +1162,7 @@ std::string list_fragment_source(int grow) {
 // this is the binding. kWaveformSubcells is the 4 of `4 * y` and `4 * i`,
 // the 0.25 and the 0.5 of a subcolumn's centre (bar_u), the pixel's nibble
 // and the 16 of the coverage; EACH BOUND'S PITCH FLOOR IS ITS OWN (architect
-// 2026-11-14, send I). A UNIFORM ROW'S, 1 px — half the switch width
+// 2026-11-14). A UNIFORM ROW'S, 1 px — half the switch width
 // (kWaveformSwitchPx, render.h's waveform_bar_frames: a rung's own bars
 // stand a px or more apart) — is what makes NU's (NO − 1) / 4 the support's
 // span in bars (NO − 1 quarter px at a px or more a bar), keeps the pixel's
@@ -1180,9 +1171,9 @@ std::string list_fragment_source(int grow) {
 // 1/2 px — half the fade's start (kWaveformFadeHundredths, render.h, one
 // device px, the floor: the fine row is drawn at half the main rung's
 // pitch, which is over the start there, render.h's waveform_fade_band;
-// architect 2026-11-14, send K) — is what
+// architect 2026-11-14) — is what
 // makes rung_px's NF = GROW + 4 its support (the span under GROW + 1.5
-// bars over 1/2 px a bar; architect 2026-11-15, send O), keeps the pixel's
+// bars over 1/2 px a bar; architect 2026-11-15), keeps the pixel's
 // own subcolumns' brackets within the four bars from jF, and lets its
 // brackets roll one bar a step; the grow's disc is GROW's
 // (disc_rows: the largest g with g² + dx² <= r², the level the Horner
@@ -1228,7 +1219,7 @@ static_assert(sizeof(GuiCanvasPrimitive::edges) == 4 * sizeof(float),
               "a tint's edges are the four floats of the instance's bars "
               "attribute");
 
-// THE PAGE PROGRAM (architect 2026-10-27, "1 a"; GuiCanvasPage,
+// THE PAGE PROGRAM (architect 2026-10-27; GuiCanvasPage,
 // canvas_sink.h): the texture triangle's vertex shader over the whole
 // viewport under the scissor to the box's interior (the list's clip), and at
 // each fragment's own integer pixel — the column int(gl_FragCoord.x), the row
@@ -1270,16 +1261,16 @@ constexpr int kPageUploadsPerPresent = 1;
 // 0), {kind, period, origin, fine row} (location 1: `period` re-pointed at
 // the plate's texture row, the fourth its fine row's in the fade band, 0
 // elsewhere), {word, word2} (location 2), every coordinate in surface px
-// (the GUI's own px: the app paints no window frame since 2026-10-24, so
+// (the GUI's own px: the app paints no window frame, so
 // the two are one), THE PLATE'S BARS (location 3, floats; architect
-// 2026-11-14, sends G and H): {x, pitch, bars, weight} — the main row's
+// 2026-11-14): {x, pitch, bars, weight} — the main row's
 // first bar's centre in device px from the rect's left edge, its bars'
 // pitch in device px, its bar count and the plate's weight
 // (GuiCanvasPrimitive's bars_x0, bars_pitch, bars and bars_weight) — on A
 // TINT THE SAME FOUR FLOATS ARE ITS REAL EDGES {x0, y0, x1, y1} in device px
-// from the rect's corner (architect 2026-11-14, send J;
+// from the rect's corner (architect 2026-11-14;
 // GuiCanvasPrimitive's edges), and zero on a rect — and THE FINE ROW
-// (location 4, floats; architect 2026-11-15, send O, the two-picture
+// (location 4, floats; architect 2026-11-15, the two-picture
 // blend): {x, pitch, bars, 0}, the fade band's fine row's own transform
 // and count (GuiCanvasPrimitive's bars2_x0, bars2_pitch and bars2), zero on
 // every other record. 72 bytes: rect at 0, param at 16, words at 32, bars
@@ -1365,9 +1356,9 @@ void GuiGlCanvas::build_list_program(int grow) {
 // tests, and THE BLEND IS OFF AT REST — its function set once here, the
 // premultiplied source-over the plate's fringe and the tint need
 // (kListFragmentShader's composite and tint arm), and enabled for the canvas list's draw (present_frame,
-// 2026-10-30) and for the texture's draw inside the floaters' hulls (send
-// AA's stage D1, 2026-11-19; the hulls send BB's, kCanvasFragmentShader's
-// mode 1) alone — so a texel and an opaque list word reach the framebuffer
+// 2026-10-30) and for the texture's draw inside the floaters' hulls
+// (2026-11-19, kCanvasFragmentShader's mode 1) alone — so a texel and an
+// opaque list word reach the framebuffer
 // as written.
 void GuiGlCanvas::bind_fixed_state() {
     glDisable(GL_DITHER);
@@ -1503,8 +1494,8 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // interior while the score viewer's page stands, 2026-10-27 — the platform
 // computes no GUI geometry), split into up to four rects, because the
 // backbuffer holds nothing there but zeros the texture already holds —
-// EXCEPT WHERE IT MEETS A FLOATER'S HULL OF THIS WALK OR OF THE LAST (send
-// BB, 2026-11-19; GuiCanvasDrawList::floaters, the hulls cut to the clip and
+// EXCEPT WHERE IT MEETS A FLOATER'S HULL OF THIS WALK OR OF THE LAST
+// (2026-11-19; GuiCanvasDrawList::floaters, the hulls cut to the clip and
 // united where two overlap, so no part goes up twice): there the rect's
 // part goes up too — a floater's pixels over the canvas this walk, and the
 // zeros a departed or moved one leaves (its leave damages its old pixels,
@@ -1534,7 +1525,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // source-over, bind_fixed_state): the plate's antialiased fringe blends
 // with the ground and the grid drawn before it, a tint blends over what
 // lies beneath by its percent and each pixel's coverage (a line at its
-// exact place, the sweep highlight; architect 2026-11-14, send J), and
+// exact place, the sweep highlight; architect 2026-11-14), and
 // every pixel written at alpha 1 — an opaque rect's, a tint's at 100
 // percent where it covers the pixel whole — lands exactly as it would
 // unblended (2026-10-30) — its
@@ -1547,8 +1538,8 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // pixel is the backbuffer's (kCanvasFragmentShader) — AND INSIDE THE
 // FLOATERS' HULLS drawn under the premultiplied blend, so the tooltip's
 // and the cards' translucent pixels composite over the canvas
-// the list drew (send AA's stage D1, 2026-11-19; confined to the hulls by
-// send BB the same day, THE TEXTURE'S DRAW below). The frame is
+// the list drew (2026-11-19; confined to the hulls, THE TEXTURE'S DRAW
+// below). The frame is
 // cleared first, opaque black: with discards a pixel neither draw writes
 // would otherwise hold a recycled buffer's bytes, though by the
 // invariant none exists (the list's first record is the canvas's ground,
@@ -1569,7 +1560,7 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // plate's fringe their coverage blend, and under a tint the blend toward
 // its word (kListFragmentShader).
 //
-// THE WHOLE DRAW (architect 2026-11-16 night, send S; the platform's half,
+// THE WHOLE DRAW (architect 2026-11-16; the platform's half,
 // the plain swap, at GuiPlatform::present): EVERY FRAME IS DRAWN WHOLE —
 // the clear, the list or the page under the clip's scissor, the texture
 // over the whole surface — whatever its damage, so every presented frame
@@ -1581,16 +1572,15 @@ void GuiGlCanvas::ensure_texture(int w, int h) {
 // be shown at all; an undeclared one shows with the next presented frame,
 // whole.
 // DRAWN INTO THE WINDOW'S OWN BUFFER, NO OFFSCREEN FRAME (architect
-// 2026-11-15, send N: "my leaning is to make use of the additional headroom
+// 2026-11-15: "my leaning is to make use of the additional headroom
 // to go as truthful as we can"): a partly covered pixel's blend rounds as the
-// window's RGBA_8888 buffer rounds it, the picture of every capture before
-// 2026-11-15, where a persistent offscreen target composed and copied out
-// rounded one or two levels the other way on those pixels (measured on the
-// tablet 2026-11-15, about 1.4 % of the canvas). Each frame is composed in
-// the window buffer it presents, on the beat's 22.2 ms (kFrameBeat,
-// platform_android.cpp).
-// THE FRAME'S CANVAS in surface px (the GUI's own: no window frame since
-// 2026-10-24): an empty clip — no list yet, or a paint area the modal
+// window's RGBA_8888 buffer rounds it; a persistent offscreen target
+// composed and copied out rounds one or two levels the other way on those
+// pixels (measured on the tablet 2026-11-15, about 1.4 % of the canvas).
+// Each frame is composed in the window buffer it presents, on the beat's
+// 22.2 ms (kFrameBeat, platform_android.cpp).
+// THE FRAME'S CANVAS in surface px (the GUI's own: the app paints no window
+// frame): an empty clip — no list yet, or a paint area the modal
 // family's box emptied (the folder overlay, a question's or the progress
 // page, a value sub-page) — leaves nothing out of any upload and draws no
 // list.
@@ -1659,9 +1649,9 @@ bool GuiGlCanvas::ready(cairo_surface_t* back) const {
            cairo_image_surface_get_data(back) != nullptr;
 }
 
-// THE UNDESCRIBED CHANGE (2026-11-04, session 33; its reader since
-// architect 2026-11-16 night, send S, GuiPlatform::present's NOTHING
-// VISIBLE CHANGED rule): the frame changes pixels its damage does not name
+// THE UNDESCRIBED CHANGE (2026-11-04; its reader GuiPlatform::present's
+// NOTHING VISIBLE CHANGED rule, architect 2026-11-16): the frame changes
+// pixels its damage does not name
 // — the texture has had no walk since it was made (a remade texture, the
 // first frame), the canvas clip differs from the last walk's (a keyboard, a
 // folder overlay, a modal box or the score viewer came or went: every pixel
@@ -1811,9 +1801,8 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
         glDisable(GL_SCISSOR_TEST);
     }
     // THE TEXTURE'S DRAW, BLENDED ONLY INSIDE THE FLOATERS' HULLS
-    // (kCanvasFragmentShader's three modes; the blend send AA's stage D1,
-    // its confinement send BB, 2026-11-19). WHERE NO HULL MEETS THE CLIP,
-    // ONE UNBLENDED DRAW (mode 0) — today's draw of a frame with no
+    // (kCanvasFragmentShader's three modes; 2026-11-19). WHERE NO HULL MEETS
+    // THE CLIP, ONE UNBLENDED DRAW (mode 0) — the draw of a frame with no
     // floater, texel for texel, whatever floater stands beside the canvas
     // (over chrome every floater's pixel is opaque: cairo composites it
     // over the opaque chrome). WHERE ONE DOES, TWO PASSES: the unblended
@@ -1822,13 +1811,13 @@ bool GuiGlCanvas::present_frame(cairo_surface_t* back,
     // opaque, and under it the list's pixel stands untouched — then, under
     // a scissor to each hull's part in the clip (disjoint, so no texel is
     // blended twice), the blended draw (mode 1), which lays each partial
-    // texel over the list's pixel exactly as the whole-surface blend did,
+    // texel over the list's pixel exactly as a whole-surface blend would,
     // rewrites each opaque texel with its own bytes and discards the alpha-0
     // ones. Outside the parts no partial texel exists (canvas_sink.h's THE
     // TRANSPARENCY INVARIANT: inside the clip a partial alpha is a floater's,
     // inside its hull; outside the clip every pixel is opaque), so mode 2
-    // is mode 0 there and every pixel is the bytes of the whole-surface
-    // blend this replaces.
+    // is mode 0 there and every pixel is the bytes a whole-surface blend
+    // would give.
     glUseProgram(program_);
     glUniform1i(height_uniform_, texture_h_);
     if (n_blend_parts == 0) {
@@ -2000,9 +1989,9 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // A plate record's `period` is re-pointed at its row of THE PLATE'S BOUNDS
 // TEXTURE — ONE ROW PER STORED ROW (2026-10-30; a fade-band record's TWO
 // CONSECUTIVE ROWS, its main row then its fine row, the fine row's index in
-// the instance's fourth integer, architect 2026-11-15, send O), THE ROW'S
+// the instance's fourth integer, architect 2026-11-15), THE ROW'S
 // BARS left to right from texel 0, `bars` of them (`bars2` the fine row's;
-// architect 2026-11-14, send G: the row is the band's stored bars, more or
+// architect 2026-11-14: the row is the band's stored bars, more or
 // fewer than its rect's device columns),
 // each texel the bar's four quarter-row tips {o_top, o_bot, i_top, i_bot} as
 // render_waveform_columns gathered them (GL_RGBA16I: a plate row times four
@@ -2015,7 +2004,7 @@ void GuiGlCanvas::draw_page(GuiCanvasPage& page, const int clip[4]) {
 // kColumnsCapacityStep texels, and its height the most rows any has (the
 // tablet's plate, at most 2 · (2252 + 6) = 4516 bars in the fade band's
 // fine row just past a landing and up to four rows, settles at 5120 x 4;
-// architect 2026-11-14, send K; send O, 2026-11-15);
+// architect 2026-11-15);
 // a growth reallocates with no data (glTexImage2D, a handful of times in a
 // context's life) inside the pack that asked it, and every pack then
 // writes, by one glTexSubImage2D, its rows by its own widest row, zero past

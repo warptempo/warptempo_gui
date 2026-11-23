@@ -14,7 +14,7 @@
 
 // Owns an audio file's sample buffer, a fixed-stride min/max peak pyramid
 // (int16 cache levels on a powers-of-4 stride ladder) and the waveform
-// picture's continuous gain curve. No knowledge of X11, Cairo, or progress UI.
+// picture's continuous gain curve. No knowledge of Cairo or progress UI.
 // Synchronous loader with a progress callback that the caller wires up to its
 // UI; the gain curve alone is derived after the load on a thread of its own
 // (gain_curve_ready below).
@@ -63,8 +63,8 @@ public:
     // for this audio's lifetime (the rule at working_column_frames,
     // app_state.h). Nothing reads it before a load: the no-audio state greys
     // every face, and the one fork that reaches the map
-    // (overview_command_target — Zoom to Fit's tooltip and, since
-    // 2026-11-02, its glyph) answers its no-op first there; the assert is
+    // (overview_command_target — Zoom to Fit's tooltip and its glyph,
+    // 2026-11-02) answers its no-op first there; the assert is
     // that claim.
     int64_t working_column()  const {
         assert(working_column_ > 0);
@@ -176,8 +176,8 @@ public:
     // tablet routes to logcat with every other stderr line) and sets the
     // ready flag. Nothing needs the curve at load — the magnification lamp is
     // dark at every open — so the load does not wait out the derivation and
-    // THE LIT SUMMARY built inside it (waveform_gain.h; architect 2026-11-15,
-    // send O; the derivation alone was measured at ~115 ms on the tablet, the
+    // THE LIT SUMMARY built inside it (waveform_gain.h; architect 2026-11-15;
+    // the derivation alone was measured at ~115 ms on the tablet, the
     // summary's build about as much again by the Mac's measure).
     //
     // THE READY FLAG's one reader outside this class is
@@ -211,7 +211,7 @@ private:
     // load() refuses a source it cannot stat, so both fields are valid
     // whenever a source is loaded.
     // THE STAT PRECEDES THE DECODE, and there is a hair of a window in it
-    // (recorded 2026-09-02): if the source file were REPLACED between the stat
+    // (2026-09-02): if the source file were REPLACED between the stat
     // and wav_read_full's own open, this identity would name the old file
     // while the buffer held the new samples, and a render's fingerprint would
     // then attest the wrong pair. It is startup-only — the identity is

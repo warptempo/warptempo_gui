@@ -7,8 +7,8 @@
 // bottom new border remaining"). THE BOX STANDS FOR THE OVERLAYS: the render
 // player and the project picker (the folder overlay's contents,
 // folder_overlay.h, with the settings page, the value list, the trim presets
-// and the BPM form it swaps in) and THE SCORE VIEWER (since 2026-10-26,
-// score_viewer.h, its page the box's interior); and for THE THREE PAGES, a
+// and the BPM form it swaps in) and THE SCORE VIEWER (score_viewer.h, its
+// page the box's interior); and for THE THREE PAGES, a
 // QUESTION'S, THE PROGRESS PAGE and THE VALUE SUB-PAGE, a line editor's
 // (architect 2026-11-20; below).
 //
@@ -18,8 +18,8 @@
 // them the whole roster greys (roster_greyed_whole, architect 2026-11-20) —
 // the rule recorded at redesign_button_enabled's head, app_state.h.)
 //
-// THE BOX TAKES THE VIEW (architect 2026-11-18 / 2026-11-19, the overlays'
-// design, its §A): the title bar and the top icon row
+// THE BOX TAKES THE VIEW (architect 2026-11-19): the title bar and the top
+// icon row
 // above it stay as the main window paints them, the top icon row wearing
 // the face of the page in the view (under an overlay that page's, its opener
 // lit; under a question, the progress page or a value sub-page every key
@@ -119,7 +119,7 @@
 #include <cstdint>
 
 // DOES ANY MEMBER'S BOX STAND — the folder overlay's, THE SCORE VIEWER'S
-// (2026-10-26; score_viewer.h: the page in the interior, paint_modal_dialog's
+// (score_viewer.h: the page in the interior, paint_modal_dialog's
 // score branch), A QUESTION'S OR THE PROGRESS PAGE (architect 2026-11-20;
 // modal_page_stands, app_state.h: the view is the page) or THE
 // VALUE SUB-PAGE, which stands exactly while a line editor of the settings
@@ -143,7 +143,7 @@ inline GuiRect modal_controls_row_rect(const AppState& a) {
 }
 
 // THE BOX (item 1), its outer rect: across, THE PANEL'S COLUMNS (render.h's
-// well_columns, the panel's own since 2026-11-19, send Z: edge to edge);
+// well_columns, the panel's own, architect 2026-11-19: edge to edge);
 // down, the trim lane's first row (the line under the top icon row) to the
 // controls row's top (its last rows the line over the bottom icon row, the
 // well's foot) — the lane table's rows, the on-screen keyboard standing or
@@ -158,7 +158,7 @@ inline GuiRect modal_box_rect(const AppState& a) {
     return box;
 }
 
-// THE VIEW (architect 2026-11-19, send Z; send AA's stage D2): THE INTERIOR
+// THE VIEW (architect 2026-11-19): THE INTERIOR
 // is the box less ONE HAIRLINE above and below (hairline_px: 2 device px on
 // the tablet at 200 %, 1 at 100 %; those rows the box's lines), across the
 // panel's own columns, 0 .. 2303 on the tablet — the lists' rows stand
@@ -207,7 +207,7 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
 // ink, not faces. ITS READERS: the lists — the pad over a list's first row
 // that seats its caps (folder_overlay.h's head_pad_px); A LIST'S SIDE SEATS
 // ARE THE LIST VIEW'S OWN CONSTANTS, not kPageMarginPenW (architect
-// 2026-11-22, sends JJ and KK: every row's drawing box 6 W in, its name at
+// 2026-11-22: every row's drawing box 6 W in, its name at
 // 28 W, cut 6 W inside the right edge; paint_handler.cpp's THE LIST VIEW,
 // kListDrawingMarginW and kListDrawingGapW) — and the three pages, a question's, the progress page
 // and the value sub-page (modal_page_lines below), which keep the 12 W pen;
@@ -329,8 +329,7 @@ inline ModalPageLines modal_page_lines(const AppState& a) {
 }
 
 // THE SCORE VIEWER'S PANE — THE ONE DELIBERATE EXCEPTION to the view's tone
-// (architect 2026-11-01 night, M9 A2, "THE SCORE VIEWER IS
-// SETTLED": "not lighter, preferably from ableton palette directly"): the
+// (architect 2026-11-01, "THE SCORE VIEWER IS SETTLED": "not lighter"): the
 // palette's `score_pane_face`, THE WAVEFORM'S INK (262A33, Arc's
 // $header_border; its line of kArcDarkTones, gui_theme.h), the one tone
 // reused.
@@ -343,8 +342,8 @@ inline ModalPageLines modal_page_lines(const AppState& a) {
 // page is the view's own tone, as over every other page (the head).
 
 // THE PANEL: everything the modal takes ABOVE the controls row — THE BOX
-// itself, the panel's whole width since send Z (the ground margins beside
-// it retired with the well's frame). The fill a member's painter lays
+// itself, the panel's whole width (architect 2026-11-19: edge to edge, no
+// margin beside it). The fill a member's painter lays
 // (paint_modal_box), the rect its content's damage erases and the outer
 // claim of a press on the box.
 inline GuiRect modal_panel_rect(const AppState& a) {

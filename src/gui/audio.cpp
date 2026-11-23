@@ -59,19 +59,18 @@ namespace {
 //
 // Quantization: v in [-1, 1] -> int16 nearbyint(clamp(v) * 32767), computed
 // in DOUBLE — quantize_unit below, where the rule is stated in full.
-// Out-of-range source peaks clip at the boundary. A file older than v9 was
-// written by the retired float `std::lround(v * 32767.0f)` path, whose values
-// differ on more than ties, which is why that change moved the version: one
-// version number may never name two different bodies.
+// Out-of-range source peaks clip at the boundary. A file older than v9 holds
+// a float `std::lround(v * 32767.0f)` quantization, whose values differ on
+// more than ties, so it carries another version: one version number may
+// never name two different bodies.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
 // Bumped whenever the BYTES CHANGE MEANING — the ladder's shape or the values
-// on it. v5 densified the ladder to powers of four, v6 extended it to nine
-// rungs, v7 to thirteen; v9 leaves the ladder alone and moves the quantizer
-// (float lround -> double nearbyint, quantize_unit below), so the same rungs
-// carry different int16 words. VERSION 8 IS SKIPPED: it named a different body
-// in a build that was withdrawn, files of it may rest on disk, and it is never
-// reused. An older file therefore fails
+// on it. v9's body is the thirteen-rung powers-of-four ladder carrying
+// quantize_unit's (double nearbyint) int16 words; an older version holds a
+// sparser ladder or the float quantizer's words. VERSION 8 IS NEVER USED: it
+// named a different body in a withdrawn build and files of it may rest on
+// disk. An older file therefore fails
 // the version compare and takes the ordinary STALE path — logged, rebuilt,
 // never partially accepted and never surfaced to the user as an error.
 //
@@ -83,12 +82,11 @@ constexpr char     kCacheMagic[8]         = "WTPEAKS";
 // any change to the quantizer, which leaves the framing intact and would
 // otherwise leave two sets of values under one version number.
 //
-// The rebuild writes a larger sidecar (the pair count is ~1/16 + 1/64 + ... of
-// the raw frames instead of ~1/32 + ...): architect-granted 2026-07-26, "ok to
-// bump cache file size", the cost of the smoother zoom ladder. Every rung past
-// the first costs a quarter of the one before it, so the deep tail is free in
-// practice — on 13.2M-frame material the four rungs v7 added hold about 4, 1, 1
-// and 1 pairs.
+// The sidecar's pair count is ~1/16 + 1/64 + ... of the raw frames
+// (architect 2026-07-26: "ok to bump cache file size", the cost of the
+// smoother zoom ladder). Every rung past the first costs a quarter of the one
+// before it, so the deep tail is free in practice — on 13.2M-frame material
+// the four deepest rungs hold about 4, 1, 1 and 1 pairs.
 constexpr uint16_t kCacheVersion          = 9;
 constexpr int      kStreamFramesPerChunk  = 65536;
 // Bounds the owner-discriminator string so a corrupt header is a cheap cache
@@ -152,16 +150,15 @@ static_assert([] {
 // therefore by every rung (the deeper levels fold the quantized words and never
 // requantize): clamp to [-1, 1], scale by 32767, round with std::nearbyint —
 // the project's rounding rule, banker's under the default mode — in DOUBLE, a
-// float caller promoting at the call. It replaced a float
-// `std::lround(v * kQuantScale)` (half-away-from-zero, a residue from before
-// the rounding rule). The change reaches MORE THAN TIES: the old path
-// multiplied in FLOAT, whose product can land ON a half that the exact double
-// product is just under — a representable float near 1.5259e-5 gives 0.5f in
-// float but 0.49999999953 in double, so old 1, new 0. Accepted deliberately:
-// the lattice is DISPLAY-ONLY, no audio path reads a pyramid, and every reader
-// either dequantizes stored extrema (get_peak_range) or folds them by min/max
-// (the deeper levels above), so no consumer assumes either rounding rule. The
-// old values rest in older sidecars, which is what kCacheVersion 9 is for.
+// float caller promoting at the call. WHY DOUBLE: a FLOAT product can land ON
+// a half that the exact double product is just under — a representable float
+// near 1.5259e-5 gives 0.5f in float but 0.49999999953 in double, so a float
+// `std::lround(v * kQuantScale)` (half-away-from-zero) answers 1 where this
+// answers 0, a difference beyond ties. The lattice is DISPLAY-ONLY, no audio
+// path reads a pyramid, and every reader either dequantizes stored extrema
+// (get_peak_range) or folds them by min/max (the deeper levels above), so no
+// consumer assumes either rounding rule. Float-quantized words rest in older
+// sidecars, which is what kCacheVersion 9 is for.
 inline int16_t quantize_unit(double v) {
     if (v < -1.0) v = -1.0;
     if (v >  1.0) v =  1.0;

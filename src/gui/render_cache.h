@@ -48,8 +48,8 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // serializes, in order: the content version; source path + source file
 // identity; sample rate; every EngineSettings field (full-recipe key — the
 // exhaustive decision switch in the serializer is the single drift guard); the
-// trim bounds (a NOT-trimmed render — the full window — writing the pre-always-set
-// unset bytes, so it hashes like a pre-arc untrimmed render); and the
+// trim bounds (a NOT-trimmed render — the full window — writing the untrimmed
+// encoding, so it hashes like every untrimmed render); and the
 // RESOLVED marker state — the exact engine inputs, not the raw stores:
 // resolve_warp_markers_for_render's survivors (per marker: frame, resolved
 // tempo cents, typed scale, label def/ref — precisely the MarkerForRender
@@ -60,9 +60,9 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // translated, RANGE-FILTERED list whenever a trim plan survives — the trimmer
 // filters out-of-window resets out of the engine input entirely (the column
 // asymmetry recorded at trimmer.h), so under a sub-window an out-of-window
-// reset provably cannot move a byte and no longer moves the key either. Raw
+// reset provably cannot move a byte and does not move the key either. Raw
 // disabled markers, dropped fields, collapsed duplicates, and out-of-window
-// resets therefore no longer move the key: two states normalization or the
+// resets therefore do not move the key: two states normalization or the
 // trim window proves render-identical share a fingerprint.
 // CALLERS OWN THE RESOLVE AND THE TRIM ARM: this function is pure
 // serialization; each call site either threads an already-resolved product
@@ -71,8 +71,8 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // lines (compute_live_render_fingerprint). GUI-only marker session scratch
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
 // by construction. Same inputs always produce byte-identical output WITHIN ONE
-// LIBRARY EPOCH — the library-environment term is retired (2026-08-09, record
-// at render_cache.cpp's version block), so a reuse crossing a glibc or FFTW upgrade may differ at
+// LIBRARY EPOCH — the key carries no library-environment term (2026-08-09,
+// render_cache.cpp's version block), so a reuse crossing a glibc or FFTW upgrade may differ at
 // the accepted inaudible class rather than byte-exactly; the
 // result is hashed to name a cache file and stored verbatim for an
 // exact-compare confirm on lookup.
@@ -134,7 +134,7 @@ bool read_file_bytes(const std::string& path, std::vector<char>& out);
 // LIMITER'S ENGAGED FRAMES in the wav's own frame domain (do_render's trim
 // post crop applied), decimal, single spaces, strictly ascending, the text
 // after the `=` EMPTY when the limiter engaged nowhere. The list is the
-// orange lamp's data (render.h's THE TWO LAMPS): the target view's reuse
+// limiter lamp's data (render.h's THE TWO LAMPS): the target view's reuse
 // rungs and the render player's item bind read it back from here, so a wav
 // whose record is missing or of an earlier layout lights nothing until it is
 // rendered again. The frames are the only thing a person has no reason to
@@ -293,11 +293,10 @@ public:
     // thread launches) or at the writer thread's post-encode re-check
     // (before anything becomes externally observable). limiter_frames as
     // insert's: the list rides the job and lands in the pair's sidecar.
-    // THE LIST HAS ONE OWNER, THE PAIR (the coder's call, 2026-11-05, on
-    // the planner's recommendation): the in-memory map that once kept the
-    // list beside the index — inserted synchronously ahead of the blob's
-    // job, so an entry could stand without a blob and the same-hash
-    // overwrite needed a rule of its own — is retired; the sidecar's
+    // THE LIST HAS ONE OWNER, THE PAIR (2026-11-05): no in-memory map keeps
+    // the list beside the index (one filled ahead of the blob's job would
+    // let an entry stand without a blob and give the same-hash overwrite a
+    // rule of its own); the sidecar's
     // limiter line is the one record, on disk beside the blob, and the
     // cache's hit reads it through the same parse every other reader uses.
     void insert_master_floats(const std::vector<uint8_t>& fingerprint,

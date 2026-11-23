@@ -17,7 +17,7 @@
 // it to a target. Its unit is the painted column at WORKING ZOOM — the
 // placement-instrument zoom, where one column is the device's WORKING COLUMN
 // (working_column_frames, app_state.h, handed in by the caller: 46 frames on
-// the tablet at 44.1 kHz; the constants were tuned at the laptop's 55) —
+// the tablet at 44.1 kHz; the constants were tuned at a 55-frame column) —
 // which carries two numbers read
 // in one pass over the samples:
 // its PEAK, the plate renderer's own min/max reduced to one number (the
@@ -51,16 +51,16 @@
 //   at the column's centre frame, each times the column's own expander
 //   multiplier) and clamps them to [-1, 1]; a plate bar's tips are the least
 //   and the greatest of those magnified samples over its span, whatever
-//   working columns it crosses (architect 2026-11-15, send O, "Agree to
+//   working columns it crosses (architect 2026-11-15, "Agree to
 //   all."; render_waveform_columns' contract, THE EXACT FORM, owns the
 //   definition): THE OUTER BAR, the levelled, expanded one, painted
-//   first in the plate's own ink (the `waveform_ink` role). Over it the lit
+//   first in the plate's own ink (the `waveform_ink` tone). Over it the lit
 //   lamp paints
 //   THE INNER BAR, the source's own bar through the same expander, THE
 //   COMPRESSOR and THE FOREGROUND GAIN below instead of the gain, raw x c x
-//   1/2 x E, a solid fill in the `waveform_core` role over the outer's ink
+//   1/2 x E, a solid fill in the `waveform_core` tone over the outer's ink
 //   (architect 2026-11-04, render.h's THE CORE) — both bars from the same
-//   reads (architect 2026-09-25), the inks render.h's row-6 block's. The
+//   reads (architect 2026-09-25), the inks render.h's THE WAVEFORM block's. The
 //   gain decides
 //   the outer's height and
 //   never a colour.
@@ -68,38 +68,36 @@
 //   picture: a transient-rich window whose peaks overshoot the edge paints
 //   its outer flat.
 //
-// WHY THE MEASURE CHANGED (architect 2026-09-24). THE PEAK LEVELER
-// (2026-09-23 to 2026-09-24, a superseded record): L was the MAXIMUM of the
-// gated column peaks in the window, d = -L / 6.02 doublings, g = 2^d — pure
-// peak normalization per window, the window's loudest column brought to the
-// edge with nothing clipping. It was a step function: the gain dropped the
-// instant ONE loud column entered the window, 1.5 s before an entry, and
-// 4.8 % of hops jumped by more than 1 dB on the 40th's first movement,
-// drawing a line across the picture that is not in the music. The RMS gain
-// moves as the entry's energy fills the window, so the same dip arrives as a
-// ramp (1.7 % of hops over 1 dB). Of the dynamics stages weighed after the
-// leveler on 2026-09-24, the DOWNWARD EXPANDER IS BUILT (THE EXPANDER below);
-// the rest are RULED OUT (the list below).
+// WHY LOUDNESS AND NOT PEAK (architect 2026-09-24). A PEAK LEVELER — L the
+// MAXIMUM of the gated column peaks in the window, g = 2^(-L / 6.02), the
+// window's loudest column brought to the edge with nothing clipping — is a
+// step function: the gain drops the instant ONE loud column enters the
+// window, 1.5 s before an entry, and 4.8 % of hops jump by more than 1 dB on
+// the 40th's first movement, drawing a line across the picture that is not
+// in the music. The RMS gain moves as the entry's energy fills the window,
+// so the same dip arrives as a ramp (1.7 % of hops over 1 dB). Of the
+// dynamics stages weighed beside the leveler (2026-09-24), the DOWNWARD
+// EXPANDER IS BUILT (THE EXPANDER below); the rest are RULED OUT (the list
+// below).
 //
 // RULED OUT, never to be re-proposed (architect 2026-09-23 unless dated):
 // classification, absorption, boundary placement, forward look-ahead,
 // smoothing, hysteresis, a dead zone, a second window, a percentile of the
-// column peaks (the order statistic was a key for one day, 2026-09-23, 0.90
-// the marker regime's; superseded with the peak measure) — and an expander ON
+// column peaks — and an expander ON
 // L (a threshold and a ratio, each dB of the WINDOW'S LOUDNESS under the
-// threshold earning ratio dB of gain), tried and rejected 2026-09-23 after
-// the architect eyeballed it against the plain leveler: the contrast he
-// wanted came from the window alone at 3 s. (THE EXPANDER below is another
+// threshold earning ratio dB of gain), rejected by the architect's eye
+// against the plain leveler: the contrast he wants comes from the window
+// alone at 3 s. (THE EXPANDER below is another
 // stage: it reads each working column's LEVELED PEAK, never the window's L.)
-// THE UPWARD COMPRESSOR (2026-09-24, one day, four keys): a
+// THE UPWARD COMPRESSOR (2026-09-24): a
 // static curve applied per column at working zoom acts on each oscillation —
-// a column is half a cycle at 440 Hz — so it lifted the zero crossings of low
+// a column is half a cycle at 440 Hz — so it lifts the zero crossings of low
 // notes into a solid fill, and upward compression divides the floor's
-// contrast by the ratio where relief was wanted. K-WEIGHTING stays out (the
+// contrast by the ratio where relief is wanted. K-WEIGHTING stays out (the
 // picture is amplitude, not the ear); the RELATIVE GATE and TRUE-PEAK
 // OVERSAMPLING stay out (programme-loudness machinery; the clamp is a
-// sample-peak clip, right for a picture). Ruled out 2026-09-24 with the
-// expander's arrival: A CLIPPER as a make-up stage (the leveler's own sparing
+// sample-peak clip, right for a picture). Ruled out 2026-09-24: A CLIPPER
+// as a make-up stage (the leveler's own sparing
 // clip is the right kind — about 0.1 % of columns); A DOWNWARD COMPRESSOR
 // WITH MAKE-UP ON THE MAGNIFIED BAR, a per-column stage (measured: it
 // flattened the swell before an onset from 4.0 to 1.9 dB, the opposite of
@@ -108,29 +106,27 @@
 // INNER bar alone, with no make-up, and reopens nothing else here: smoothing,
 // hysteresis and a second window stay out (the inner is one more per-hop
 // multiplier on the same reads, as the expander is one more per-column one)
-// — the gained second pyramid, ruled out here 2026-09-23, is REOPENED by the
-// architect 2026-11-15 (send O) and built at the working column as THE LIT
-// SUMMARY below — and the upward compressor's per-oscillation
-// fault cannot arise, c reading L and never the column; LOOKAHEAD and A NONZERO ATTACK
-// in the expander; HYSTERESIS; a separate envelope window (Hold and Release
-// were the envelope; since their deletion the expander has none). Ruled out
-// the same day by the architect's eye on the 40th, each set to zero and
+// — the gained second pyramid is built at the working column as THE LIT
+// SUMMARY below (architect 2026-11-15) — and the upward compressor's
+// per-oscillation fault cannot arise, c reading L and never the column;
+// LOOKAHEAD and A NONZERO ATTACK
+// in the expander; HYSTERESIS; a separate envelope window (the expander has
+// no envelope). Ruled out
+// 2026-09-24 by the architect's eye on the 40th, each set to zero and
 // preferred there, each small alone and adding up: THE RANGE (a floor steadied
 // the sustained body; a truly quiet column is drawn quiet); THE KNEE (it
 // softened the contrast between the peaks and the valleys it should sharpen);
 // THE HOLD (it extended the body of a sustained note, and onsets, not
 // sustained notes, are what the picture is for); THE RELEASE (its fade
-// steadied the body after every crest). With Hold and Release gone the attack
-// and lookahead rulings have nothing left to rule on. A PER-COLUMN SHADE ON
+// steadied the body after every crest). With no Hold and no Release the
+// attack and lookahead rulings have nothing to rule on. A PER-COLUMN SHADE ON
 // EITHER BAR is out, and with it DRAWING THE GAIN AS A TINT or a plotted
-// curve: the shade by the leveler's gain on the old BACKGROUND bar
-// (2026-09-24, struck 2026-09-25) was a second reading laid over the picture
-// and fighting it, and THE CORE SHADE BY THE BAR GAP (2026-09-25, one
-// commit: the inner's ink a per-hop blend toward kdenlive's teal, linear in
-// dB of g / c between 6 and 20 dB, a third per-hop array) IS STRUCK — "it
-// doesn't work" (architect 2026-09-26). Both lit inks are flat. A
+// curve: a shade by the leveler's gain is a second reading laid over the
+// picture and fighting it, and A CORE SHADE BY THE BAR GAP (the inner's ink
+// blended per hop toward a teal by the dB of g / c) is out — "it doesn't
+// work" (architect 2026-09-26). Both lit inks are flat. A
 // SUGGESTED-MARKER FINDER on the magnification (troughs of the leveled peak
-// as Live's transient-style gray triangles) is PARKED (architect 2026-11-04,
+// as grey suggestion triangles) is PARKED (architect 2026-11-04,
 // closed_questions.md): his warp markers sit on envelope minima but the dips
 // are too shallow for any prominence rule, 7–20 suggestions per marker of
 // his at every setting.
@@ -171,7 +167,7 @@
 //   multiplier is 10^(-reduction / 20), stored as a float in [0, 1], so
 //   THE PAINTER DOES NO POW.
 //
-//   THE PAINTER'S RULE (architect 2026-11-15, send O, "Agree to all."):
+//   THE PAINTER'S RULE (architect 2026-11-15, "Agree to all."):
 //   EVERY WORKING COLUMN TAKES ITS OWN MULTIPLIER, into both tips of BOTH
 //   lit bars — beside the gain on the outer, beside the compressor on the
 //   inner (architect 2026-09-25: both stages on both bars) — before each
@@ -206,7 +202,7 @@
 // 3 s window, the 0.1 s hop, the half-window ramps).
 //
 //   DERIVED FROM THE UNCLAMPED L, never from the gain: above the target the
-//   gain is clamped to x1 and L is no longer readable from it. A hop whose
+//   gain is clamped to x1 and L is not readable from it. A hop whose
 //   window is too quiet to measure takes the L of the NEARER audible hop, as
 //   its gain does (one picked L feeds both), and an all-silent song takes
 //   c = 1 everywhere beside its x8 (times the half below, as every hop is).
@@ -217,7 +213,7 @@
 //   PAINTER'S INNER BAR is raw x c x 1/2 x the expander's multiplier, the
 //   one clamp, the >=1px floor; with the expander on BOTH bars the gap
 //   between them is g / (c x 1/2), a pure function of L, and since
-//   c x 1/2 <= 1/2 < 1 <= g the inner can no longer exceed the outer in
+//   c x 1/2 <= 1/2 < 1 <= g the inner cannot exceed the outer in
 //   height about the centre row (a column wholly on one side of zero has its
 //   outer pushed outward past the inner — render_waveform_columns' declaration). The
 //   reading is the source's bar over a levelled bar behind it, the core's
@@ -227,9 +223,8 @@
 //   loudest 5 % of hops, the quiet parts untouched, monotone by
 //   construction. T -24 dBFS and R 2 are the gentlest ratio that holds it in
 //   all three K550 movements with margin (the measured map is at the two
-//   constants, waveform_gain.cpp, at unit gain), settled by eye 2026-09-25
-//   when the inner was a solid bar and reconfirmed by eye 2026-09-27 with the
-//   inner drawn as an outline; the half below widens every gap by 6.02 dB.
+//   constants, waveform_gain.cpp, at unit gain), settled by eye (architect
+//   2026-09-27); the half below widens every gap by 6.02 dB.
 //
 //   RULED OUT with the stage, never to be re-proposed (architect
 //   2026-09-25..27): three bars; the inner without the expander; a
@@ -240,35 +235,17 @@
 // THE FOREGROUND GAIN (architect 2026-09-27): a FLAT LINEAR gain of exactly
 // ONE HALF (kForegroundGain 0.5, waveform_gain.cpp) on the INNER bar alone,
 // folded into the inner's per-hop scale at the derivation; the outer is
-// untouched. Drawn as an outline over the outer's own ink, the inner at unit
-// gain sat too close to the lane top in the tuttis; the architect picked
-// -6.02 dB by eye in a one-day tuning phase and asked for the "actual half",
-// so the constant is 0.5 itself, never a decibel power. A flat level on the
-// inner was ruled out 2026-09-25, when the inner was a solid bar in its own
-// ink over the outer; reopened for that phase, it is SETTLED at one half
-// (2026-09-27).
-//
-// THE LIT PLATE'S TWO LEVELS (a SUPERSEDED RECORD, 2026-09-25, one day):
-// before the compressor the inner was the raw bar at a flat +2 dB and the
-// outer the levelled bar at a flat -2 dB, two device keys; the outer's peak
-// sits at the lane edge in every window, so it carried no dynamics, and the
-// ~4 dB separation hid it in the tuttis and left a fringe in the crescendos.
-// Both bars were at 0 dB by construction from then and the two keys are
-// struck (device_config.h keeps the record); THE FOREGROUND GAIN above is
-// the inner's flat level since 2026-09-27.
+// untouched. At unit gain the inner stands too close to the lane top in the
+// tuttis; the architect picked -6.02 dB by eye and asked for the "actual
+// half", so the constant is 0.5 itself, never a decibel power. It is the
+// inner's one flat level, SETTLED at one half; the outer takes none (its
+// peak sits at the lane edge in every window).
 //
 // THE TEN VALUES ARE HARD-CODED: the leveler's five, the expander's two,
 // the compressor's two and the foreground gain are constexpr constants in
 // waveform_gain.cpp, each with its reason, beside the hop, the gain floor and
-// the column. They were
-// device config keys for a tuning phase — `waveform_gain_*` (2026-09-23) and
-// `waveform_expander_*` (2026-09-24), closed 2026-09-24, and
-// `waveform_compressor_threshold_db` / `waveform_compressor_ratio`,
-// hard-coded, the phase closed 2026-09-25 (architect, by eye on the laptop),
-// then keys again with `waveform_foreground_gain_db` beside them for a
-// second phase, closed 2026-09-27 the same way.
-// The phases are closed because every project should share ONE FRAME OF
-// REFERENCE — the values are set once and left, and a retune is a
+// the column (architect 2026-09-27). No key: every project shares ONE FRAME
+// OF REFERENCE — the values are set once and left, and a retune is a
 // recompile, by design. THE PRINCIPLE FOR ANY RETUNE:
 // every number is FORCED by a criterion and never tuned to one spot — a free
 // constant carries its reason, a derived one its derivation — and a passage
@@ -278,10 +255,10 @@
 // Pure: no application state, no audio object, no allocation that outlives
 // the call.
 
-// THE LIT SUMMARY (architect 2026-11-15, send O, "Agree to all." — the
-// gained second pyramid, ruled out 2026-09-23, REOPENED by him and built at
-// the working column): THE LIT PICTURE OF EVERY WORKING COLUMN, STORED, with
-// a range structure over it, so a plate bar over many working columns reads
+// THE LIT SUMMARY (architect 2026-11-15, "Agree to all." — the gained
+// second pyramid, built at the working column): THE LIT PICTURE OF EVERY
+// WORKING COLUMN, STORED, with a range structure over it, so a plate bar over
+// many working columns reads
 // their hull in a bounded number of entries instead of a read and two scales
 // a column (render_waveform_columns' contract, THE EXACT FORM, owns what a
 // bar is and when the summary is read).
@@ -309,7 +286,7 @@
 //   ten constants; one per GuiAudio, both views reading it (the target view
 //   draws the source through the map), the lamp choosing whether it is read.
 //   WHY int16: a step is 1/32767 of the lane's half height, about 0.016 of a
-//   quarter row on the tablet's band, under the pyramid's own slack.
+//   quarter row on the tablet's channel band, under the pyramid's own slack.
 //   MEMORY: 8 bytes a channel a working column at the base, about 4/3 of
 //   that with the levels — measured 2026-11-15 on the Mac at the tablet's
 //   46-frame column, 12.3 MB for a ten-minute piece at 44.1 kHz (575 218
@@ -358,7 +335,7 @@ double waveform_gain_at(const WaveformGainCurve& curve, int64_t frame);
 // nearest hops, the ends held. 1.0 for an empty curve.
 double waveform_inner_scale_at(const WaveformGainCurve& curve, int64_t frame);
 
-// THE COLUMN'S TWO SCALES (architect 2026-11-15, send O; THE PAINTER'S RULE
+// THE COLUMN'S TWO SCALES (architect 2026-11-15; THE PAINTER'S RULE
 // above): working column k's outer scale, the gain at its centre times its
 // own expander multiplier, and its inner scale, the inner bar's scale at the
 // same centre times the same multiplier — the centre k x column_frames +
@@ -387,27 +364,12 @@ WaveformLitHull waveform_lit_summary_hull(const WaveformGainCurve& curve, int ch
                                           int64_t ka, int64_t kb);
 
 // The derivation's identity for the plate fingerprint: bump on any change to
-// the rule above (16 since the lit rule's exact form, architect 2026-11-15,
-// send O: every working column at its own scales, a bar the hull of its
-// columns' magnified samples — THE PAINTER'S RULE; 15 was the analysis
-// column becoming the device's working
-// column, 2026-09-27, handed in by the load — the column itself is no
-// fingerprint term: the plates live in memory, the cache is per project and
-// the column is fixed for its lifetime; 14 was the inner bar's three numbers
-// hard-coded, the same day, the foreground gain at the exact half — the
-// fingerprint's formula back to the version alone; 13 was the three as tuning keys, hashed
-// with the version, the same day; 12 was the core shade's third per-hop
-// array struck, 2026-09-26; 11 was the core shade joining, 2026-09-25; 10 was the
-// compressor's two numbers hard-coded, the same day —
-// the same numbers, but the fingerprint's formula changed from
-// the version hashed with the two keys back to the version alone; 9 was the
-// compressor joining as the inner bar's stage, the same day; 8 was the
-// expander's Range, Knee, Hold and Release deleted and the seven values
-// hard-coded, 2026-09-24; 7 was the downward expander joining after the
-// leveler, the same day; 6 was the short-term loudness measure replacing the
-// window's peak and the upward compressor's deletion, the same day; 5 was the
-// upward compressor's threshold, knee and range, 4 the fixed percentile and
-// the ratio alone, 3 the restored leveler, 2 the expander on L's). The ten
+// the rule above (the lit rule's exact form, architect 2026-11-15: every
+// working column at its own scales, a bar the hull of its columns' magnified
+// samples — THE PAINTER'S RULE). The fingerprint is the version alone: the
+// analysis column, the device's working column handed in by the load, is no
+// fingerprint term, since the plates live in memory, the cache is per
+// project and the column is fixed for its lifetime. The ten
 // constants are part of the rule, so a change to any of them bumps it too.
 // Nothing derived from the gain outlives the process — the curve is derived
 // at every load (the `.peaks` sidecar carries no curve) and the plates live

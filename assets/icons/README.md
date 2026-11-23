@@ -106,7 +106,6 @@ changed, one of them wrapped in its transform.
 |---|---|---|---|
 | `DocumentOpen` | `symbolic/actions/document-open-symbolic.svg (-> actions/document-open.svg)` | `f1917ee23fee2eb4cb5af289f6210cb945d97eb739c5a6c71f5ed94b38680867` |  |
 | `DocumentSave` | `devices/media-floppy.svg` | `d3fad61e83d95be524bb5273b30079ac40da971fd042028fa9830a3ce3927c41` | media-floppy, a floppy disk, his pick over document-save (re-picked 2026-11-22) |
-| `DocumentSaveAs` | `symbolic/actions/document-save-as-symbolic.svg (-> actions/document-save-as.svg)` | `a34c9bff6657763e2da384006ba70db0654b7cd441018c390b55757d90db8581` |  |
 | `VcsPull` | `symbolic/actions/arrow-pointing-at-line-down-symbolic.svg` | `cac4c212c16b35932194517e326ae706a458b89dbdbab477325ff8e7db27f238` | no vcs-pull; an arrow down onto a line |
 | `NetworkConnect` | `symbolic/status/network-transmit-receive-symbolic.svg (-> panel/network-transmit-receive.svg)` | `5b97c62c89249267a0c190fa81503ef84b46a7148f7c422f6cd0d539d6e10d81` | no network-connect; the two-way network arrows |
 | `VcsCommit` | `symbolic/actions/arrow-pointing-away-from-line-up-symbolic.svg` | `18b60022d01e028e9243c5c34479b286b958ad8164e762d097b24715bc90b03b` | no vcs-commit; an arrow up from a line |
@@ -176,9 +175,7 @@ changed, one of them wrapped in its transform.
 | `EditReset` | `symbolic/actions/object-rotate-left-symbolic.svg (-> actions/object-rotate-left.svg)` | `d99b6f9e536672447d619a3d789b7b459a0bb2f0accd9e4c5c0a4570775a005b` | no edit-reset; the counter-clockwise arrow |
 | `ZoneIn` | `actions/view-readermode-active.svg` | `04727ace22235ef7066825fb910949500ac8bf924f71648fde357d99c1fb57af` | view-readermode-active, an open book and a dot, his pick over zone-in (re-picked 2026-11-22) |
 | `ZoneOut` | `actions/view-readermode.svg` | `82c7174d12e1636afb96658e288e6ca9c2452575820ca551b23d22efa43c1999` | view-readermode, an open book, his pick over zone-out (re-picked 2026-11-22) |
-| `WindowClose` | `symbolic/actions/window-close-symbolic.svg (-> actions/window-close.svg)` | `290fa132ddfa8ce774fa7000485a624a9a01e30e3e6707bba3c4a73e98189ee3` |  |
 | `EditClear` | `symbolic/actions/edit-clear-symbolic.svg (-> actions/edit-clear.svg)` | `c51332adb04993f9984a1e2c49aa6fd1ba8657f3e298c340a90b97a9b5256e69` |  |
-| `ViewRefresh` | `symbolic/actions/view-refresh-symbolic.svg (-> actions/view-refresh.svg)` | `3b61cbe0cba68155db98b395c16f3c520ebd601a18ba4e4f7e31507041cad329` |  |
 | `Folder` | `symbolic/places/folder-symbolic.svg` | `7820cddb76eb60b759d9c82dd35036898363588e7b3de8f0f8643d9e7de4dff3` |  |
 | `DialogInformation` | `symbolic/status/dialog-information-symbolic.svg (-> panel/state-information.svg)` | `2b8d444c6d5b27562d3b9042bd6c0e0e404eb941fa18dd58d7a18a885f35c9a1` |  |
 | `DialogError` | `symbolic/status/dialog-error-symbolic.svg (-> panel/state-error.svg)` | `32754a7cb6bcaeaf760fde0cb2c3d3ab4c1d9d820aab7358b04035fd33e34536` |  |

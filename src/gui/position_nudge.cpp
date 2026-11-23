@@ -17,10 +17,10 @@
 // full doctrine
 // (horizontal movement is a focus act; the group-verb doctrine it instances) and
 // the step-by-step ordering rationale live at the declarations in
-// position_nudge.h. THE WALL-REGIME MIDDLE IS SHARED FLESH TOO since
-// 2026-08-31 — position_nudge_landing below, one owner for every column, the
-// twins' two verbatim copies collapsed into it when the Left / Right buttons'
-// face needed the landing as a const owner to compare against. What stays in
+// position_nudge.h. THE WALL-REGIME MIDDLE IS SHARED FLESH TOO (2026-08-31)
+// — position_nudge_landing below, one owner for every column, because the
+// Left / Right buttons' face needs the landing as a const owner to compare
+// against. What stays in
 // each twin is its own STORE read and its post-clamp identity no-op; the stop
 // lives in the prologue.
 
@@ -30,7 +30,7 @@ PositionNudgePrologue position_nudge_prologue(
     Viewport& viewport, Undo& undo,
     GestureKind kind, bool synthesized_repeat, HorizontalArrowStep step) {
     PositionNudgePrologue r;
-    // EVERY REFUSAL HERE IS SILENT BUT ONE, AND EACH FOR ITS OWN REASON (re-derived
+    // EVERY REFUSAL HERE IS SILENT BUT ONE, AND EACH FOR ITS OWN REASON (judged
     // 2026-08-30 under the strictness ruling "a card for every silent
     // refusal" — none of these is one): the loading / empty-audio pair is the
     // on_key loading gate's card one level up; the empty selection is
@@ -41,15 +41,15 @@ PositionNudgePrologue position_nudge_prologue(
     // against degenerate state. An error arm exists iff a producer exists
     // (the type rule), so the reason channel this pair's callers use
     // (GuiOpRefusal, warpmarkers_ops.h) carries nothing from here — and
-    // nothing from the WALL either since 2026-08-31, when that one-day card
-    // retired into a silence with a greyed button beside it. THE ONE THAT
+    // nothing from the WALL either (2026-08-31): a wall is a silence with a
+    // greyed button beside it. THE ONE THAT
     // SPEAKS is the painted-edge term (2026-09-26, below): a landing past the
     // last column at this zoom has a producer — a Right press on a marker in
     // the song's last columns — and is no state the user can see.
     //
     // THE WHOLE REFUSAL SET IS ONE PREDICATE, AND IT IS THE FACE'S OWN
-    // (2026-08-31): the seven guards
-    // this prologue used to spell — loading, empty audio, empty selection, no
+    // (2026-08-31): the guards
+    // this prologue needs — loading, empty audio, empty selection, no
     // focus, a dead sample rate, a degenerate samples-per-pixel, a stale
     // focused index — plus each twin's WALL are exactly the terms of
     // marker_nudge_actionable (app_state.h), the Left / Right buttons' own
@@ -57,20 +57,19 @@ PositionNudgePrologue position_nudge_prologue(
     // second spelling of it. The store the predicate reads is the ACTIVE
     // column's, which IS the calling twin's store: the one dispatch that
     // reaches either twin picks it by app.active_markers_view
-    // (input_handler.cpp's marker-lane branch), so the index belt is the same
-    // belt it always was.
+    // (input_handler.cpp's marker-lane branch), so the index belt guards the
+    // store the twin writes.
     // AND ITS PLACEMENT AHEAD OF THE COALESCE CALL IS THE POINT: a WALL NO-OP
     // TOUCHES NOTHING (architect's arc logic, planner-ruled 2026-08-31). A
     // physical press invalidates the coalescing stamp inside coalesce_gesture,
-    // so a wall test BEHIND that call made a refused KEY press split an undo
-    // run while the same press on the now-GREYED button never dispatched and
-    // left the run whole — pointer and keyboard coalescing differently at the
-    // same wall. The discriminator is the FACE, not the card: a refusal the
+    // so a wall test BEHIND that call would make a refused KEY press split an
+    // undo run while the same press on the GREYED button never dispatches and
+    // leaves the run whole — pointer and keyboard coalescing differently at
+    // the same wall. The discriminator is the FACE, not the card: a refusal the
     // button greys on runs BEFORE the stamp (neither surface touches it), a
     // refusal that keeps a live face stays behind it (both surfaces poison
-    // alike). Every term here greys, so the whole set moved ahead. The
-    // supersession of the "an early call must poison for a press that goes on
-    // to refuse" clause is recorded at Undo::coalesce_gesture.
+    // alike). Every term here greys, so the whole set runs ahead (the rule at
+    // Undo::coalesce_gesture).
     // AND IT IS ASKED OF THIS PRESS'S OWN STEP, not of a bare sign: the
     // predicate takes the step in its unit and the act hands it the one it is
     // about to commit — the same step the FACE hands it, both asking
@@ -85,7 +84,7 @@ PositionNudgePrologue position_nudge_prologue(
         r.off_edge = verdict == MarkerNudgeVerdict::OffEdge;
         return r;
     }
-    // The undo-coalescing verdict, now the FIRST thing past the refusals. It
+    // The undo-coalescing verdict, the FIRST thing past the refusals. It
     // reads the press's own repeat bit to pick its arm — a held key's
     // continuation presses carry synthesized_repeat and merge by identity, a
     // rapid MANUAL re-tap merges on the tap arm's fixed window plus its
@@ -236,10 +235,10 @@ void finish_position_nudge(
     // both halves of a moved marker — the flag box (a top-strip pixel, blitted
     // from the flag cache) and its stem (a waveform pixel, painted live from the
     // same pass's stash). (The flag cache's rebuild, run at this tail's end,
-    // damages the moved cue and its stem's two places itself since
-    // 2026-11-16, maybe_rebuild_flag_cache's tail; the full call stays — a
-    // nudge is a discrete write, and the beats narrowed the gestures' own
-    // motions alone.) Verified 2026-08-01 (both nudge twins
+    // damages the moved cue and its stem's two places itself,
+    // maybe_rebuild_flag_cache's tail; the full call stays — a nudge is a
+    // discrete write, and the narrow damage serves the gestures' own motions
+    // alone.) Verified 2026-08-01 (both nudge twins
     // reach here; the marker-moving routes were re-grepped against this rule and
     // every one of them — drop, delete, the disabled/inherits toggles, both
     // tempo steps, the drag commit, the flag-editor commit, the propagate paste,
@@ -267,7 +266,7 @@ void finish_position_nudge(
     viewport.move_playhead_to(
         source_frame_to_active_domain(app, audio, committed_focused_frame));
     // (f) THE CAMERA IS THE PRESS'S (NudgeCamera, gui_input.h — at every zoom
-    // and on every column; the hold posture's answer since 2026-09-23,
+    // and on every column; the hold posture's answer (2026-09-23),
     // nudge_camera, read at the dispatch before this act and kept across it):
     // with the posture dark the press follows the edge and needs nothing
     // beyond (e)'s own keep-visible edge-align; with it standing the press

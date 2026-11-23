@@ -17,23 +17,20 @@ struct GuiTargetRender;
 // 2026-07-29). Both position nudges (bare Left/Right in the marker lane: the warp
 // nudge GuiWarpMarkersOps::nudge_selected_markers in source home, the phase reset
 // nudge GuiPhaseResetMarkersOps::nudge_selected_phase_resets in either audio
-// view, S+P and T+P since 2026-10-12) and
+// view, S+P and T+P) and
 // the pointer marker DRAG act on ONE marker, the FOCUS: a 2+ selection COLLAPSES
 // TO ITS FOCUS and the focus takes the step (here, in the shared prologue below),
 // and a click on a member of a 2+ selection single-selects it like a click on
 // any other marker, the drag then being an ordinary singleton drag
 // (run_marker_click_act, input_pointer.cpp — the flag's click acts AT THE
-// PRESS since 2026-08-17, so the single-select stands before any crossing can
+// PRESS (2026-08-17), so the single-select stands before any crossing can
 // begin the drag; marker_drag.cpp carries no group
-// machinery at all). The per-member nudge and the rigid group drag both existed
-// and both died with this ruling — do not re-propose either: a proposal loop with
-// a whole-press wall refusal and a same-column merge on one side, an
-// intersection-clamped shared delta with a grabbed-anchored rigid commit on the
-// other, and the pointer deferral (a press that held its click back so the group
-// could seed) with them. Do not read the press-time click that stands now
-// (2026-08-17) as that deferral's return in the other direction: the dead one
-// held a click back FOR THE DRAG's benefit and had to decide which markers it
-// was about; today's press acts for the USER's benefit and decides nothing
+// machinery at all). RULED OUT, do not re-propose: a per-member nudge (a
+// proposal loop with a whole-press wall refusal and a same-column merge), a
+// rigid group drag (an intersection-clamped shared delta with a
+// grabbed-anchored rigid commit), and a pointer deferral (a press holding its
+// click back so a group could seed). The press-time click is no deferral in
+// the other direction: it acts for the USER's benefit and decides nothing
 // extra.
 //
 // THE GROUP-VERB DOCTRINE, the general rule this ruling instances — stated ONCE
@@ -43,12 +40,9 @@ struct GuiTargetRender;
 //     Ctrl+N's inherit toggle, the Up/Down cent step, Delete) and, reading the
 //     span, `m`, bare P (the phase-reset copy), the
 //     zoom framing, and the undo/redo + paste
-//     restores (which DEFINE a group selection). (The trim region toggle READ
-//     a span until 2026-08-18 — the trim-scratch region's — and the toggle
-//     itself is deleted since 2026-09-22. Space left this list on 2026-07-30, its
-//     left-bound region launch dropped for an unconditional
-//     play-from-the-playhead;) CTRL+N'S MEMBERS ARE INDEPENDENT ONCE EACH IS
-//     RESOLVED AGAINST THE PRE-STATE (architect 2026-11-19, send CC): the
+//     restores (which DEFINE a group selection). CTRL+N'S MEMBERS ARE
+//     INDEPENDENT ONCE EACH IS RESOLVED AGAINST THE PRE-STATE (architect
+//     2026-11-19): the
 //     pass -> owner freeze reads the resolved walk, and read over what the
 //     members before it had just become a member's frozen tempo would depend
 //     on the iteration order — so every member resolves against the store as
@@ -65,19 +59,17 @@ struct GuiTargetRender;
 // group-capable OR collapses to the focus with the playhead landed on it; there is
 // no third answer, and "collapse to last selected" means exactly
 // collapse_to_focused + the marker land, the shape below.
-// THE COLLAPSE+LAND SITE, ONE (re-derived by grep over
-// Selection::collapse_to_focused's callers, 2026-11-19): this prologue serving
+// THE COLLAPSE+LAND SITE, ONE (by grep over Selection::collapse_to_focused's
+// callers): this prologue serving
 // both position nudges. The singleton tempo step's call (warpmarkers_ops.cpp's
 // Up/Down arm) is NOT one: its selection is already a singleton, so the
 // collapse moves no focus and owes no land.
-// `t` AND `c` LEFT THIS LIST (architect 2026-07-30): each collapsed only to keep a
-// group from resting SPANLESS — the state the 2026-07-29 rejection was about — and
-// with the SPAN FORM retired that state does not exist, a group's cue being its
-// members' stems (the selection's, render.h's THE STATES) plus the always-visible cursor on the focus. Both
-// now CARRY their group (`t` keeping its selection-gated land, `c` jumping to
-// the focus as it always did). Bare `0` had left one day earlier, re-ruled a
-// PURE VIEWPORT MOVE.
-// REACHABILITY, with the pointer deferral dead: the ONLY producers of a resting
+// `t` AND `c` CARRY THEIR GROUP (architect 2026-07-30): no group rests
+// SPANLESS, a group's cue being its members' stems (the selection's, render.h's
+// THE STATES) plus the always-visible cursor on the focus, so neither owes a
+// collapse (`t` keeping its selection-gated land, `c` jumping to the focus).
+// Bare `0` is a PURE VIEWPORT MOVE.
+// REACHABILITY: the ONLY producers of a resting
 // 2+ selection are the multi-select click (the ctrl toggle, the barrel's or
 // the add-to-selection lamp's), the
 // bpm-mode open, the propagate paste, and the undo/redo restores — and every
@@ -94,45 +86,38 @@ struct GuiTargetRender;
 //     press before a wall moves the remaining distance, and the next is
 //     refused. The hop, being the
 //     longer stride, clamps sooner than a millisecond does.
-//     Both position twins clamp (the warp twin
-//     always did; the phase twin joined with this ruling, replacing a whole-press
-//     refusal). The SINGLETON TEMPO STEP's constructive clamp
-//     (adjust_tempo_cents, warpmarkers_ops.cpp) already conformed and is
-//     untouched — it steps whole CENTS on the cent grid, so clamping and refusing
+//     Both position twins clamp. The SINGLETON TEMPO STEP's constructive clamp
+//     (adjust_tempo_cents, warpmarkers_ops.cpp) conforms
+//     — it steps whole CENTS on the cent grid, so clamping and refusing
 //     coincide there and the value simply stops at the bracket edge.
 //   * A GROUP PRESS REFUSES WHOLE. This is NOT a wall policy — it is GROUP
 //     RIGIDITY: clamping per member would pool members at the wall and deform
-//     their relative values, which is the same reason the deleted per-member
-//     group nudge refused the whole press. The one surviving group arm, the group
-//     tempo step (adjust_tempo_cents_group), keeps that whole-press refusal and
-//     its own group-rigidity justification at its site.
+//     their relative values. The one group arm, the group tempo step
+//     (adjust_tempo_cents_group), refuses the whole press and carries its own
+//     group-rigidity justification at its site.
 // POST-CLAMP IDENTITY IS A SILENT NO-OP in both position twins: the clamped
 // target is compared against the current frame and an equal result writes
 // NOTHING — no undo push, no damage, no playback stop. That check is what makes
 // the keyboard stop rule's refusal gating (playback_lifecycle.h) EXACT for the
-// nudges, with no recorded deviation left.
+// nudges, with no recorded deviation.
 //
 // This file is the type-free flesh SHARED BY THE TWO POSITION NUDGE TWINS, all of
-// it singleton-scoped now: an identical guard prologue (which owns the collapse),
+// it singleton-scoped: an identical guard prologue (which owns the collapse),
 // one step owner with its two units, an identical WALL-REGIME MIDDLE and an
-// identical commit tail. The middle was the SAME SHAPE in both twins under the
-// policy above from 2026-07-30 — a delta clamped into the marker's own wall
-// headroom, over warp's identity domain and over phase's mapped domain alike —
-// but spelled out in each VERBATIM, on the reasoning that each reads its own
-// store and its own EOF wall; it JOINED THE SHARED FLESH ON 2026-08-31
-// (position_nudge_landing below), when the Left / Right buttons needed the
-// landing as a const owner they could compare against and a caller-side copy
-// of it would have been the drift the truthful-buttons rule forbids. The
-// reasoning did not survive its own re-reading: the STORE read stayed in each
-// twin (the landing takes a frame), and the EOF wall was never two walls —
-// total_frames - 1 is the single marker wall both columns share. These four
+// identical commit tail. The middle (position_nudge_landing below) is a delta
+// clamped into the marker's own wall headroom, over warp's identity domain and
+// over phase's mapped domain alike; the Left / Right buttons compare against
+// it as a const owner, so no caller-side copy can drift from it (the
+// truthful-buttons rule). The STORE read stays in each twin (the landing
+// takes a frame), and the EOF wall is one wall — total_frames - 1 is the
+// single marker wall both columns share. These four
 // free functions collapse only the type-free parts: no templates, no
 // callbacks, no policy structs (the naming-symmetry doctrine resists
 // genericity — this is plain extraction of the shared flesh).
 //
 // TWO UNITS OF STEP, ONE ROAD (architect 2026-09-21). The position nudge is
-// BARE Left / Right alone — the horizontal ladder is retired on every column,
-// placement being graphical — and every press carries a HorizontalArrowStep
+// BARE Left / Right alone — no horizontal ladder on any column, placement
+// being graphical — and every press carries a HorizontalArrowStep
 // (gui_input.h), ONE step in the ACTIVE COLUMN'S unit (horizontal_arrow_step,
 // the one fork): ONE MILLISECOND on the warp column (architect 2026-11-15),
 // or on the PHASE-RESET column a
@@ -169,8 +154,8 @@ struct PositionNudgePrologue {
 // dispatcher, which routes an empty selection to the waveform-lane playhead
 // step and never reaches here, so it is a belt — a missing focus, a dead
 // sample rate, a non-positive samples-per-pixel, a stale focused index, the
-// ONLY index this gesture reads) plus THE MARKER'S OWN WALL, which the twins
-// used to discover after the fact through their post-clamp identity no-op. A
+// ONLY index this gesture reads) plus THE MARKER'S OWN WALL, asked up front
+// rather than left to the twins' post-clamp identity no-op. A
 // 2+ selection passes the wall term unconditionally: it collapses and lands
 // below, so the press changes the screen whatever the step then does (the full
 // reasoning is at the predicate).
@@ -182,8 +167,8 @@ struct PositionNudgePrologue {
 // BEHIND EVERY REFUSAL AND AHEAD OF THE COLLAPSE, and both halves of that are
 // load-bearing: behind, because A WALL NO-OP TOUCHES NOTHING (2026-08-31 — a
 // physical press invalidates the stamp inside that call, so a wall test behind
-// it split an undo run at the KEY while the same press on the greyed BUTTON
-// left it whole; the rule, its discriminator and its supersession are recorded
+// it would split an undo run at the KEY while the same press on the greyed
+// BUTTON left it whole; the rule and its discriminator are recorded
 // at the call site and at Undo::coalesce_gesture); ahead, because the tap arm
 // compares the PRE-collapse selection against what record_gesture stamped
 // POST-collapse in the tail.
@@ -191,7 +176,7 @@ struct PositionNudgePrologue {
 // LANDS on that focus (collapse + land at the CALLER of
 // Selection::collapse_to_focused, the convention that keeps the land at the site
 // which hands the marker lane a focus). The step below is therefore always the
-// SINGLETON op on `focused`, bit-for-bit what a singleton selection always got.
+// SINGLETON op on `focused`, bit-for-bit a singleton selection's.
 // THE PROLOGUE OWNS THE PRESS'S ONE PLAYBACK STOP, immediately ahead of the
 // collapse: past (1) every press acts — a 2+ press collapses and lands, a
 // singleton is past its wall and its step moves the marker — so the keyboard
@@ -201,14 +186,14 @@ struct PositionNudgePrologue {
 // A 2+ press that then refuses at its wall in the twin keeps the collapse, the
 // land and the stop — the collapse is the press's own committed act,
 // not a prelude to the step (its damage is collapse_to_focused's own, so a
-// refused press repaints correctly). That is the 2+ press's path alone since
-// the wall joined (1): a SINGLETON at its wall refuses ahead of everything,
+// refused press repaints correctly). That is the 2+ press's path alone, the
+// wall being a term of (1): a SINGLETON at its wall refuses ahead of everything,
 // having nothing to collapse and nothing to stop.
 // Every marker is nudgeable, including the one at time 0 — the parser resolver
 // normalizes the resulting arrangement at render/preview time, there is no
 // gesture pin.
 //
-// PLAYHEAD RULE (architect 2026-07-23, reversing the 2026-07-20 decoupling): the
+// PLAYHEAD RULE (architect 2026-07-23): the
 // playhead FOLLOWS the nudged marker through the step (the actual follow lands in
 // finish_position_nudge) — it steps with the marker so a later Space
 // auditions FROM the marker. It is a re-land, not a repair: nothing DIVERGES from
@@ -222,10 +207,8 @@ struct PositionNudgePrologue {
 // IN THE ACTIVE COLUMN'S UNIT (horizontal_arrow_step, gui_input.h) — ±1
 // millisecond on the warp column, ±1 hop on the phase-reset column — consumed by
 // the wall term at (1) alone, which is what makes the refusal DIRECTIONAL,
-// the marker at frame 0 refusing Left and taking Right. IT WAS A BARE SIGN
-// NAMED `direction` UNTIL THE 2026-08-31 LADDER made it a column count, and
-// it took its unit on 2026-09-21, the day the ladder retired. The store
-// size is no longer a parameter: the wall predicate reads the ACTIVE column's
+// the marker at frame 0 refusing Left and taking Right. The store
+// size is no parameter: the wall predicate reads the ACTIVE column's
 // store, which is the calling twin's own (the dispatch picks the twin by that
 // same bit), and owns the stale-index belt with it.
 PositionNudgePrologue position_nudge_prologue(
@@ -251,17 +234,12 @@ PositionNudgePrologue position_nudge_prologue(
 // arithmetic off the walls). THE PHASE-RESET COLUMN'S HOP (2026-09-21) is the
 // other unit, the render's quantum under the LIVE map
 // (phase_reset_hop_step_frame), untouched by the millisecond.
-// DO NOT CARRY A PIXEL GUARANTEE TO ANY STEP: the column step that stood here
-// until 2026-11-15 moved exactly one painted column a press, and the
-// tempo-image step that once borrowed that claim for a cent's step inverted
-// it and is deleted (2026-07-29, marker_drag.h); the surviving steps — a
-// millisecond, a hop, a cent — are each one unit of their own by definition.
+// DO NOT CARRY A PIXEL GUARANTEE TO ANY STEP: the steps — a millisecond, a
+// hop, a cent — are each one unit of their own by definition.
 
 // WHERE ONE POSITION NUDGE WOULD LAND A MARKER — THE WALL-REGIME MIDDLE, one
-// owner for both columns since 2026-08-31 (it stood spelled out in each twin
-// verbatim until then, on the reasoning that each reads its own store and its
-// own EOF wall; the stores are the CALLER's business — this takes a frame —
-// and the EOF wall is the SAME wall in both columns, total_frames - 1, the
+// owner for both columns (the stores are the CALLER's business — this takes
+// a frame — and the EOF wall is the SAME wall in both columns, total_frames - 1, the
 // single marker wall stated at drop_phase_reset_at_position). Given the
 // marker's resting frame it returns the frame the press would commit:
 //   (1) THE STEP, as a plain integer delta, forked on the step's UNIT and on
@@ -278,7 +256,7 @@ PositionNudgePrologue position_nudge_prologue(
 //       the wall, exactly reachable. This is the UNIFIED WALL POLICY
 //       (architect 2026-07-30: singleton steps clamp, group presses refuse
 //       whole), stated once at the head of this file;
-//   (3) the [0, wall] belt on the sum — provably dead today (all-integer
+//   (3) the [0, wall] belt on the sum — provably dead (all-integer
 //       int64 sums under the headroom clamp above), kept as cheap insurance so
 //       a future edit cannot commit a wall-illegal frame, which would save a
 //       load-fatal file.
@@ -328,10 +306,7 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     enabled or disabled (2026-11-11), and the full-waveform damage covers
 //     the moved one whatever its state;
 // (d) invalidate_clock_area — the unified bottom row's clock cell, through
-//     the playhead move at (e). (It was TWO calls until 2026-08-29, the second
-//     for the RESOLVED READOUT this tail's selection used to move; that
-//     readout retired whole with the one-day status bar that carried it, and
-//     the call went with it.);
+//     the playhead move at (e);
 // (e) PLAYHEAD FOLLOW: move_playhead_to the nudged marker's committed frame
 //     through the two-step placement basis (source_frame_to_active_domain —
 //     identity in source view, warp's home and S+P, a real map in T+P;
@@ -341,8 +316,8 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 //     refusal verdict and ahead of the first write, so this tail always runs
 //     stopped).
 // (f) THE CAMERA, the press's REQUIRED NudgeCamera (gui_input.h, no default;
-//     at every zoom and on every column; the hold posture's answer since
-//     2026-09-23, nudge_camera, read at the dispatch): FollowEdge (the
+//     at every zoom and on every column; the hold posture's answer,
+//     nudge_camera, read at the dispatch, 2026-09-23): FollowEdge (the
 //     posture dark) adds nothing to (e)'s keep-visible edge-align, so the
 //     camera holds while the marker stays on screen and walks with it at the
 //     edge once it would leave; HoldColumn (the posture an explicit centring
@@ -360,13 +335,10 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // (g) THE A/B AUDITION: a position nudge ENDS it, unconditionally — (e) above
 //     and the prologue's collapse land are both playhead movement owners and
 //     end it there (the rule at Viewport::move_playhead_to, viewport.cpp), so
-//     the nudge owes no call of its own. (They also hid the trim region
-//     overlay until its resting form was deleted on 2026-09-22.)
+//     the nudge owes no call of its own.
 // (h) target_render.trigger(): warp and phase reset positions are both
 //     engine inputs, so each twin passes its own GuiTargetRender and a nudge
-//     dirties the preview. (The parameter was a nullable pointer while the
-//     magnification level markers column, display-only, passed none; it is a
-//     reference since that column's deletion, architect 2026-09-23.)
+//     dirties the preview.
 //
 // NO SYNCHRONOUS RE-WARP is needed at either home: the warp nudge authors in
 // warp's SOURCE home view, where the source waveform pixels do not depend on the
@@ -375,32 +347,16 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // target preview still invalidates (a source-view warp edit changes the rendered
 // target buffer), so the view-independent trigger stays.
 //
-// ORDERING: the two twins historically ordered {undo push, playhead}
-// slightly differently (warp: push -> record -> ... -> playhead -> region;
-// phase: playhead -> push -> record -> ... -> region). The unified order
-// gives both the WARP shape (push in the twin, then this tail: record,
-// invalidate, playhead). The COMMITTED BYTES are identical for every
-// input: the undo push/record read neither the playhead nor the selection (their
+// ORDERING: both twins take ONE order (push in the twin, then this tail:
+// record, invalidate, playhead). The COMMITTED BYTES are the same whatever
+// the order: the undo push/record read neither the playhead nor the selection (their
 // snapshots capture the marker stores, engine settings, tab, and the hint indices
 // only — not the cursor), the playhead follow does not read undo
-// state. ONE
-// knowingly-accepted delta rides the unification, phase-only (the warp twin
-// already had this shape) and harmless, recorded here so the next reader need
-// not re-derive it; a second one dissolved with the coalesce clock and is kept
-// below as (2) so it is not re-discovered as an open cost.
+// state.
 //
-// (1) HOVER-POPUP ordering. The playhead move can conditionally recompute the hover
-// after a viewport shift, and the undo push clears it; the phase twin historically
-// recomputed-then-cleared while the warp twin cleared-then-maybe-recomputed, so the
-// unified tail gives both the warp behavior — a nudge that shifts the viewport with
-// the pointer resting on a hoverable marker now ends with the hover recomputed
-// rather than cleared. Transient display state only (no committed bytes, no undo
-// content, damage idempotent); accepted as improved twin symmetry.
-//
-// (2) WHERE record_gesture SITS IN THE TAIL — a bounded accepted cost again since
-// the TAP ARM restored a clock to coalescing (architect 2026-08-01), recorded in
-// full so it is not re-derived as an oversight. The phase pre-image moved the
-// playhead THEN recorded; the unified tail records THEN moves the playhead, so a
+// WHERE record_gesture SITS IN THE TAIL — a bounded accepted cost of the TAP
+// ARM's clock (architect 2026-08-01), recorded in full so it is not re-derived
+// as an oversight. The tail records THEN moves the playhead, so a
 // possible SYNCHRONOUS kick_waveform_sync (the playhead move runs one when the
 // follow shifts the viewport — the offscreen-focused case) falls AFTER the
 // accepted-event timestamp record_gesture stamps. The window to the next press is
@@ -411,9 +367,8 @@ int64_t position_nudge_landing(const AppState& app, const GuiAudio& audio,
 // reorder: the constant is a human-tapping interval, a discrete sync render is a
 // small fraction of it, and the direction of the error is the SAFE one (an extra
 // undo entry, never a wrong merge). The HELD-KEY arm is untouched — it consults no
-// clock at all. The ordering itself stands as it was, the unified tail adopting the
-// warp shape verbatim to minimize warp/phase divergence, and record_gesture reads
-// nothing the playhead move writes.
+// clock at all. One order serves both twins, so warp and phase cannot diverge,
+// and record_gesture reads nothing the playhead move writes.
 void finish_position_nudge(
     AppState& app, const GuiAudio& audio, Viewport& viewport, Undo& undo,
     GestureKind kind, bool merged, int64_t prior_focused_frame,

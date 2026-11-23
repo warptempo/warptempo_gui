@@ -11,13 +11,13 @@
 // Trim gestures (architect-ruled hardfail model; the full ruling sits at the
 // TrimState store in app_state.h): begin and end are authored named roles, and
 // THE WINDOW IS ALWAYS SET — no unset state, no lone bound (architect
-// 2026-07-30). The FULL window [0, total-1] is the old unset state under a new
-// spelling: it renders untrimmed and plays to the natural end, and Reset Trim
+// 2026-07-30). The FULL window [0, total-1] renders untrimmed and plays to
+// the natural end, and Reset Trim
 // (Shift+T, PRESETS' hold) is how the user gets back to it.
 // Every gesture clamps each bound to its absolute walls — frame 0 to EOF-1,
 // the same wall both marker columns hold. All authored positions (both
 // marker columns and both trim bounds) share the inclusive [0, total-1]
-// domain — the end bound's old exclusive-at-total wall is retired. Every wall
+// domain. Every wall
 // check is a plain integer compare — literally the load guard's comparison.
 // A BOUND SET BY A PEN PLACE IS THE FRAME THE CONVERSION FINDS THERE, THEN
 // THE WALLS, NOTHING RAISING IT TO THE SOURCE'S END (architect 2026-11-19):
@@ -26,8 +26,7 @@
 // to the exact full window — the rule, its reason, its worked example and
 // every road that writes total-1 at trim_bound_frame_at_x, the one owner.
 //
-// PARTNER WALLS ARE NOW PER-ROUTE (architect 2026-08-02, splitting what used to
-// be one blanket "there are no partner walls" clause). What is unchanged
+// PARTNER WALLS ARE PER-ROUTE (architect 2026-08-02). What holds
 // everywhere is the REST rule: crossed/equal can never rest, because every trim
 // commit runs auto_clear_crossed_trim (below) and a pair landing on or across
 // itself RESETS to the full window. What differs is how far a gesture may push
@@ -55,8 +54,7 @@
 //     writes nothing
 //     (trim_bound_click). A clamp would move the bound somewhere the user
 //     did not click; a refusal is the ruled answer there. IT ACTS AT THE LIFT
-//     since 2026-08-15, and since 2026-08-17 it is the ONE click still
-//     deferred (the press arms
+//     (architect 2026-08-15), the ONE click deferred (the press arms
 //     PendingClickAct, app_state.h, and a CROSSING runs the set at the press
 //     column and then hands over to that bound's endcap drag): the verdict
 //     is asked live where the act runs, and it reads no clock — a long
@@ -65,11 +63,10 @@
 //     bar means anything, plain or barrel, the PLAIN press's double tap
 //     alone framing the trim (architect 2026-11-21; TrimBarPressSeed,
 //     app_state.h).
-//   THE TYPED AND LOADED ROUTES (the settings editor's `trim_*=` commits, and
-//     the load) HAVE NO CLAMP AT ALL — a typed pair can still cross, and the
-//     crossed/equal reset is exactly what catches it. The clamp is the DRAG's,
+//   THE LOAD HAS NO CLAMP AT ALL — the crossed/equal reset is exactly what
+//     catches a crossed pair. The clamp is the DRAG's,
 //     because a clamp is only meaningful where a bound is being pushed.
-//   THE TRIM PRESETS LIST'S APPLY HAS NO CLAMP EITHER (2026-10-28 night): it
+//   THE TRIM PRESETS LIST'S APPLY HAS NO CLAMP EITHER (architect 2026-10-28): it
 //     writes a stored pair whole, and its file's reader admits only a pair
 //     inside the walls with begin < end strictly (trim_presets_file.h), so
 //     the pair it writes is one a resting trim can hold.
@@ -77,16 +74,14 @@
 //     anchor and one moving column — and needs none: it authors ANY span its
 //     two ends describe, down to nothing at all, and a COINCIDENT release
 //     falls into auto_clear_crossed_trim exactly as the single-bound drag's
-//     does (the shared escape, below). The MINIMUM WIDTH FLOOR it carried
-//     from 2026-08-18 to 2026-08-19 is retired — the record is at
-//     write_trim_from_sweep.
-// NO TRIM WRITER MOVES THE PLAYHEAD (architect 2026-11-07, session 88:
+//     does (the shared escape, below). It has no minimum width (architect
+//     2026-08-19; the reason at write_trim_from_sweep).
+// NO TRIM WRITER MOVES THE PLAYHEAD (architect 2026-11-07:
 // "Setting the trim should not move the playhead — I usually use scrub now,
 // so moving playhead is just distracting") — the one authoritative statement
-// of the rule; other sites state their own class and point here. It
-// REVERSES 2026-08-05's park at the new trim start and the sweep's carry of
-// 2026-07-30: the cursor stays where it stood in the music, inside the new
-// window or outside it. THE MEMBERSHIP, re-derived by grepping the routes
+// of the rule; other sites state their own class and point here. The
+// cursor stays where it stood in the music, inside the new
+// window or outside it. THE MEMBERSHIP, the routes
 // that write a trim bound, none of which writes the cursor:
 //   * the barrel's bound-set click (set_trim_bound_at_click), at its
 //     motionless lift or its threshold crossing (2026-08-15), the nearest
@@ -97,17 +92,15 @@
 //     drag, 2026-11-07): its begin deselects and arms and seats no playhead,
 //     its motion writes the trim alone, its release commits through
 //     commit_region_sweep;
-//   * the SETTINGS EDITOR's `trim_*=` commits (settings_editor.cpp), the
-//     active tab's through the tail, the inactive band's a parked pair;
-//   * THE TRIM PRESETS LIST's APPLY (architect 2026-10-28 night,
+//   * THE TRIM PRESETS LIST's APPLY (architect 2026-10-28,
 //     GuiInputHandler::trim_presets_apply, input_key_dispatch.cpp): both
 //     bounds from the preset at once, then the preset FRAMED
 //     (run_span_framing_command, a camera move alone) and the list closed
-//     (architect 2026-11-19, send CC);
+//     (architect 2026-11-19);
 //   * the CROSSED / COINCIDENT RESETS (auto_clear_crossed_trim), a write to
 //     the full window;
 //   * Shift+T, PRESETS' hold, the maximizer (handle_trim_clear_both).
-// The first six run the shared commit tail (commit_trim_mutation); the
+// The first five run the shared commit tail (commit_trim_mutation); the
 // maximizer is its one deliberate non-caller. Each route's EXISTING regime
 // stands — the trim-mutation playback stop (a stop moves no cursor) and the
 // setter's deselect.
@@ -122,30 +115,23 @@
 // meets the launch's own refusal (playback_launch_playable: the PLAY face
 // greys, the state a placement outside the window always reached), and in
 // source view plays on to the song's end as ever (the window does not bound
-// source playback, 2026-08-05).
-// (THE SET-FROM-REGION ACT, once a member, is gone: setting the region IS
-// setting the trim, so that act no longer exists. The
-// maximizer is unchanged and is the recovery route, trim having no undo.)
+// source playback, 2026-08-05). The maximizer is the recovery route, trim
+// having no undo.
 //
 // EVERY TRIM ROUTE IS READ-ONLY-LEGAL (architect 2026-08-07). Read-only
 // protects the AUTHORED MUSICAL CONTENT — the two marker stores and the engine
-// settings — and trim is BAND: it lives in ViewState beside the viewport and the
-// zoom, it has no undo, and it never dirties the session, which is what the
-// gate's old "authoring mutation" classification of it was missing. So Reset Trim (Shift+T)
+// settings — and trim is NOT AUTHORED CONTENT: it lives in ViewState beside
+// the viewport and the zoom, it has no undo, and it never dirties the
+// session. So Reset Trim (Shift+T)
 // is on the read-only allowlist, the endcap / bridge
 // drags and the barrel's bound-set clicks carry no read-only refusal
-// anywhere on their routes, the SWEEP carries none either (trim being band
-// whichever surface writes it), and the
-// settings editor's typed `trim_*=` arms commit in a locked tab. NOT ONE of
-// the behaviors above changed with the
-// admission — the bound-set click's verdict, the
-// partner clamp, the setter's deselect and the
-// trim-mutation playback stop are the same code taking the same decisions. The
+// anywhere on their routes, and the SWEEP carries none either (trim being
+// trim whichever surface writes it). The
 // full ruling is at read_only_key_blocked (input_key_dispatch.cpp), the model's
 // one authoritative home.
 //
-// THE ZERO FLOOR (frame 0 — not a span rule, and unrelated to the retired
-// sweep width floor) is subsumed by the walls but remains the reason a lower
+// THE ZERO FLOOR (frame 0 — not a span rule) is subsumed by the walls but
+// remains the reason a lower
 // clamp exists at all: a negative position is unrepresentable in the authored
 // frame form the .settings file persists (parse_authored_frame rejects
 // negatives as malformed) — a format-representability floor, not a spacing
@@ -178,7 +164,7 @@ namespace {
 // ONE CALLER, the MOTION arm (update_trim_drag's single-bound path), which
 // clamps the tracked candidate at every event; the release commits that
 // value as it stands (commit_trim_drag takes no snap, architect 2026-11-15,
-// the no-grid arc), so a bound pinned on its partner rests pinned and the
+// the no-grid rule), so a bound pinned on its partner rests pinned and the
 // ruled drag-onto-partner quick-clear reads the equality the motion left. The
 // BRIDGE arm deliberately does not call
 // this and must not: it moves the pair rigidly by one shared delta, so the gap
@@ -195,7 +181,7 @@ int64_t clamp_trim_bound_at_partner(bool is_begin, int64_t v,
 }
 
 // THE TRIM FORMERS' ONE PLACE->BOUND LANDING, AND HOW EACH WALL IS REACHED
-// (architect 2026-11-15, the no-grid arc, ruling B: "B, yes, also the exact
+// (architect 2026-11-15: "B, yes, also the exact
 // frame there" — the trim's edges land on the frame under the pen's real
 // place). The trim formers that land a bound at a place take its frame
 // here: the sweep's two ends (sweep_trim_frame_at_x, the armed touch sweep)
@@ -297,7 +283,7 @@ int64_t trim_bound_frame_at_x(const AppState& app, const GuiAudio& audio,
 // whatever surface the press came from, measured off waveform_area's x.
 //
 // THE PEN'S PLACE IS NOT HELD INTO THE STRIP (architect 2026-11-15, the
-// no-grid arc): both drags follow the pen at the grab's own offset — the
+// no-grid rule): both drags follow the pen at the grab's own offset — the
 // pair by the pen's displacement from its grab, the single bound by the
 // frame under its TOWED PLACE, the pen's place less the grab's offset (on
 // the identity, the same thing as the displacement; architect 2026-11-18)
@@ -309,7 +295,7 @@ int64_t trim_bound_frame_at_x(const AppState& app, const GuiAudio& audio,
 // partner; the pair by its wall-held shared delta. Holding the pen instead
 // would stop a bound short of the strip's edge by the grab's own offset: an
 // end grabbed a fraction of a px right of its bound could then never be
-// pushed the last frames to the frame at x = w (Sol's review, 2026-11-16).
+// pushed the last frames to the frame at x = w (2026-11-16).
 // The roads with no
 // grab offset — the bound-set click and the TRIM sweep's ends, whose place
 // IS the frame — hold the place into [0, w] themselves
@@ -347,7 +333,7 @@ double trim_bound_place_x(const AppState& app, const GuiAudio& audio,
 }
 
 // A TRIM BOUND'S UNROUNDED IMAGE'S PLACE, waveform-relative, in a MAPPED
-// domain (architect 2026-11-18, send Y): trim_bound_place_x's chain on the
+// domain (architect 2026-11-18): trim_bound_place_x's chain on the
 // same item basis and displayed map, the image taken straight from the one
 // forward map (map_source_to_target) without displayed_trim_ms's rounding to
 // a whole displayed frame. The endcap drag's mapped arm measures its grab
@@ -376,29 +362,25 @@ void GuiInputHandler::reset_trim_to_full_window() {
     app.trim = full_trim_window(audio.total_frames());
 }
 
-// Architect ruling (2026-07-15, re-posed 2026-07-30 under always-set):
+// Architect ruling (2026-07-15, 2026-07-30):
 // crossed/equal trim bounds cannot REST — committing one bound onto or across
 // the other RESETS BOTH bounds to the song edges, the trim sibling of the
 // marker normalizations (ambiguous states resolve instead of resting or
 // refusing). The bar's endcaps visibly JUMP TO THE SONG EDGES, and that is the
-// whole signal — it used to be the old chips vanishing; with the window always
-// set there is nothing to vanish into. A card said it too for one day
-// (2026-08-30 to 2026-08-31, on the argument that the jump is easy to miss);
-// the architect retired it
-// under the arc's success rule, the endcaps at the extremes being the visible
-// cue on every road and the full window having zero impact on the render. The
-// check is the exact integer
+// whole signal: no card (architect 2026-08-31), the endcaps at the extremes
+// being the visible cue on every road and the full window having zero impact
+// on the render. The check is the exact integer
 // compare end_frame <= begin_frame, run only at COMMIT — nothing pops
 // mid-gesture, and update_trim_drag never calls this.
 //
-// THE `<=` HALF CARRIES THE COINCIDENT DRAG (architect 2026-08-02). Since the
-// single-bound drag clamps at its partner, the shape it hands this function is
-// begin == end rather than a crossed pair — which this compare has always
-// caught, so the drag's route to clearing the trim (drag one handle onto the
-// other) is served by the rule exactly as written, with nothing added.
+// THE `<=` HALF CARRIES THE COINCIDENT DRAG (architect 2026-08-02). The
+// single-bound drag clamps at its partner, so the shape it hands this function
+// is begin == end rather than a crossed pair — which this compare catches, so
+// the drag's route to clearing the trim (drag one handle onto the other) is
+// served by the rule exactly as written, with nothing added.
 //
-// AND SINCE 2026-08-19 THAT ESCAPE IS GLOBAL, still with nothing added (the
-// architect, retiring the sweep's minimum width floor): the SWEEP can now
+// AND THAT ESCAPE IS GLOBAL, still with nothing added (architect 2026-08-19,
+// the sweep having no minimum width): the SWEEP can
 // author any span its two ends describe, including a coincident pair, and its
 // release runs this same tail through commit_trim_mutation — so a stroke that
 // ends where it began resets to the whole song exactly as a handle dragged
@@ -409,8 +391,7 @@ void GuiInputHandler::reset_trim_to_full_window() {
 // the bound-set click and the trim presets list's apply (whose preset pair
 // is never crossed) — calls this
 // after its mutation and before its invalidations, so the repaint shows the
-// reset state. (The sweep took the retired set-from-region act's place in this
-// list on 2026-08-18; the per-route inventory is at the head of this file.)
+// reset state. (The per-route inventory is at the head of this file.)
 //
 // THE ONE-FRAME EXCEPTION: on a one-frame source (load-legal) the canonical
 // full pair is [0, 0], which trips the end <= begin compare. Recognizing the
@@ -420,16 +401,14 @@ void GuiInputHandler::auto_clear_crossed_trim() {
     if (trim_is_full_window(app.trim, audio.total_frames())) return;
     if (app.trim.end_frame <= app.trim.begin_frame) {
         reset_trim_to_full_window();
-        // AND THE RESET SAYS NOTHING (architect 2026-08-31, retiring the
-        // one-day card "The trim bounds crossed; the window was reset to the
-        // whole song"). The reset is a SUCCESS whose result is on screen: the
+        // AND THE RESET SAYS NOTHING (architect 2026-08-31: no card). The
+        // reset is a SUCCESS whose result is on screen: the
         // trim bar's endcaps snap to the song's extremes on every road into
-        // here — the endcap drag, the bridge, the sweep, the bound-set click
-        // and the settings editor's `trim_*=` commit alike — and the trim is
+        // here — the endcap drag, the bridge, the sweep and the bound-set
+        // click alike — and the trim is
         // scratch viewport, render-modifying but benign, a full window having
         // zero impact on the output. So there is nothing to warn about and
-        // nothing the screen fails to show. The RESET BEHAVIOR is untouched:
-        // what left is the sentence, not the rule.
+        // nothing the screen fails to show.
     }
 }
 
@@ -439,7 +418,7 @@ void GuiInputHandler::commit_trim_mutation() {
     auto_clear_crossed_trim();
     viewport.invalidate_waveform_area();
     target_render.trigger();
-    // A TRIM WRITE PUTS THE TRIM ARM LAMP OUT (architect 2026-11-17, send U:
+    // A TRIM WRITE PUTS THE TRIM ARM LAMP OUT (architect 2026-11-17:
     // a trim written by other means than the sweep the lamp armed — the
     // endcap and bridge drag's release, the bound-set click, a trim preset's
     // apply — ends the posture as the sweep
@@ -447,25 +426,24 @@ void GuiInputHandler::commit_trim_mutation() {
     // setter. The sweep's own release reaches here having put it out
     // already (commit_region_sweep's own rule), so this is a no-op there.
     if (app.trim_armed) set_trim_armed(false);
-    // NO PLAYHEAD WRITE (architect 2026-11-07, session 88): the cursor stays
+    // NO PLAYHEAD WRITE (architect 2026-11-07): the cursor stays
     // where it stood in the music, the rule at this file's head.
 }
 
 // SHIFT+T IS THE MAXIMIZER, PRESETS' HOLD (architect 2026-07-30 for the act,
 // 2026-11-08 for the seat): it writes the
-// FULL window [0, total-1] — the old "unset" outcome, now spelled as a real
-// pair. The caller is handle_trim_maximize. Trim is gesture-owned and excluded
+// FULL window [0, total-1] as a real pair. The caller is
+// handle_trim_maximize. Trim is gesture-owned and excluded
 // from undo/redo history.
 //
-// THE ALREADY-FULL IDENTITY GUARD replaces the old has-a-bound refusal gate: a
+// THE ALREADY-FULL IDENTITY GUARD: a
 // Reset Trim over an already-maximized window stops nothing, repaints nothing and
-// triggers nothing, which keeps the refusal-gated stop rule exactly as it was.
-// IT IS SILENT (architect 2026-08-31, retiring the one-day card "The trim
-// already covers the whole song"): a benign one-dimensional refusal already at
+// triggers nothing, which keeps the refusal-gated stop rule.
+// IT IS SILENT (architect 2026-08-31: no card): a benign one-dimensional
+// refusal already at
 // its state says nothing — the trim bar spans the window and the endcaps sit at
 // its ends, so one glance at one place answers what the maximizer would have
-// done. (Its one road is the PRESETS key's long press, Shift+T, since
-// 2026-11-08.)
+// done. (Its one road is the PRESETS key's long press, Shift+T.)
 void GuiInputHandler::handle_trim_clear_both() {
     if (trim_is_full_window(app.trim, audio.total_frames())) {
         // Nothing to recover, nothing to say (the rule above).
@@ -481,11 +459,11 @@ void GuiInputHandler::handle_trim_clear_both() {
         viewport.invalidate_waveform_area();
         target_render.trigger();
         // THE RESET IS A TRIM WRITE, so it puts the TRIM arm lamp out as the
-        // shared tail does (architect 2026-11-17, send U; commit_trim_mutation)
+        // shared tail does (architect 2026-11-17; commit_trim_mutation)
         // — on this writing arm alone: an already-full reset writes nothing.
         if (app.trim_armed) set_trim_armed(false);
-        // AND THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07, session
-        // 88: no trim write moves it, the rule at this file's head). The
+        // AND THE PLAYHEAD STAYS WHERE IT IS (architect 2026-11-07: no trim
+        // write moves it, the rule at this file's head). The
         // maximizer is not a SETTER either — it deselects nothing.
     }
 }
@@ -493,19 +471,17 @@ void GuiInputHandler::handle_trim_clear_both() {
 // THE SWEEP'S TRIM WRITE — one anchor, one moving column, and the trim written
 // straight from the pair (architect 2026-08-18, the region IS the trim). Its
 // one entry is the TRIM arm lamp's touch sweep on the waveform (architect
-// 2026-11-07, session 87), which writes here per motion event, so a stroke
+// 2026-11-07), which writes here per motion event, so a stroke
 // sets the trim
 // in one gesture, the trim bar and the canvas's sweep highlight being its
 // live picture (the bar drawn at the view's scale; the highlight on the
 // bar's span, edge for edge, architect 2026-11-12, sweep_highlight_columns,
 // raised by the first accepted write here). THE WRITE'S REPAINT IS ITS
-// CALLER'S (architect 2026-11-16, the beats; apply_region_drag_motion,
+// CALLER'S (architect 2026-11-16; apply_region_drag_motion,
 // input_pointer.cpp, which reads the highlight's span before this write and
 // after it): the trim bar's lane whole and the cells the highlight's two
-// edges moved across — what a write changes and nothing else. THE SET-FROM-REGION
-// ACT was the old two-step's commit half — sweep a free span, then commit it —
-// and the step it named is gone. The maximizer is unchanged and is the
-// recovery route, trim having no undo.
+// edges moved across — what a write changes and nothing else. The maximizer
+// is the recovery route, trim having no undo.
 //
 // It is the SETTER's regime whole, taken at the FIRST ACCEPTED bound change
 // exactly as the endcap/bridge drag takes it: the trim-mutation playback stop
@@ -516,12 +492,7 @@ void GuiInputHandler::handle_trim_clear_both() {
 // NO DOMAIN HOP IN HERE: both endpoints arrive as whole SOURCE frames already
 // inside the song walls, from the sweep's one place->trim route
 // (sweep_trim_frame_at_x, below this function), so this function orders
-// and writes and maps nothing. (The old set-from-region's hop
-// — ACTIVE-domain ends crossed through active_domain_to_source_frame in here —
-// took the CURSOR's value as the trim's, an authored write off the
-// snap_authored_frame chokepoint's trim road every
-// other trim former commits through: numerically the same frame in source
-// view, but a second route.) Equality is the only collapse a stroke's two ends can
+// and writes and maps nothing. Equality is the only collapse a stroke's two ends can
 // produce, and an equal pair is a legal thing to write here: the release's
 // commit tail turns it into the whole song (below).
 //
@@ -529,23 +500,18 @@ void GuiInputHandler::handle_trim_clear_both() {
 // gate: a refused write leaves the release owing no tail at all.
 //
 // THE SWEEP AUTHORS ANY SPAN, and its degenerate cases have no backstop of
-// their own (architect 2026-08-19, RETIRING the MINIMUM WIDTH FLOOR that stood
-// here for one day). The floor — kMinTrimSpanFrames, 65536 whole source frames,
-// derived as the resolved tempo-scale ceiling (16) times the engine window kN
-// so that a swept window's TARGET span could never fall below one analysis
-// window at either end of the value bracket — widened any narrow stroke instead
-// of refusing it. It is deleted whole: the architect found the enforced minimum
-// distracting in the hand, and too short a span to be worth the machinery that
-// held it. Nothing replaced it and nothing should — a floor here is exactly the
-// rare-fault backstop the product removes rather than patches.
+// their own (architect 2026-08-19: NO MINIMUM WIDTH — an enforced minimum is
+// distracting in the hand, and too short a span to be worth the machinery
+// that would hold it). A floor here is exactly the rare-fault backstop the
+// product removes rather than patches.
 //
 // SO A DEGENERATE SPAN IS LEGAL, and there are two of them, answered in two
 // different places:
 //   * A COINCIDENT PAIR (begin == end) is answered by the ENDCAP DRAG'S OWN
-//     ESCAPE, now global: the release runs the shared commit tail, whose
+//     ESCAPE: the release runs the shared commit tail, whose
 //     auto_clear_crossed_trim resets the pair to the WHOLE SONG on the same
-//     `end <= begin` compare that has always caught a handle dragged onto its
-//     twin. One owner for every former; no arm was added here for the sweep,
+//     `end <= begin` compare that catches a handle dragged onto its
+//     twin. One owner for every former; no arm here for the sweep,
 //     and none is wanted.
 //   * A TINY BUT NON-EMPTY PAIR simply rests and renders. It is the RENDER
 //     boundary that owns whether such a window is honorable — validate_trim_frames
@@ -555,21 +521,19 @@ void GuiInputHandler::handle_trim_clear_both() {
 //     that actually knows the geometry decides, at the moment it has the map,
 //     instead of a gesture-time constant guessing on its behalf.
 //
-// (The floor's own retired argument for a FLAT COUNT OF SOURCE FRAMES rather
-// than a duration — a duration paints a variable width in target view, where
-// the resolved tempo-scale product stretches the same source window — is worth
-// keeping only as a note to whoever proposes the next span rule here: any such
-// rule must be one number in both views or it is two rules wearing one name.)
+// (Any span rule proposed here must be one number in both views — a duration
+// paints a variable width in target view, where the resolved tempo-scale
+// product stretches the same source window — or it is two rules wearing one
+// name.)
 
 bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
                                             int64_t moving_source) {
     if (audio.total_frames() <= 0 || audio.sample_rate() <= 0) return false;
 
-    // ORDER IS THE WHOLE OF THIS FUNCTION'S GEOMETRY since 2026-08-19 (the
+    // ORDER IS THE WHOLE OF THIS FUNCTION'S GEOMETRY (the
     // walls are the producer's, applied before the ends arrive): the pair is
     // ordered and written as the two ends describe it, with no width rule of
-    // any kind between them (the retired floor's record is at the head of this
-    // function). A coincident pair is written like any other and the RELEASE
+    // any kind between them (the head of this function says why). A coincident pair is written like any other and the RELEASE
     // turns it into the whole song through the shared escape.
     const int64_t begin = std::min(anchor_source, moving_source);
     const int64_t end   = std::max(anchor_source, moving_source);
@@ -600,10 +564,10 @@ bool GuiInputHandler::write_trim_from_sweep(int64_t anchor_source,
 // THE SWEEP'S ONE PLACE->TRIM ROUTE — the authored value a sweep's place
 // yields, and the only producer of write_trim_from_sweep's two arguments (the
 // arm's anchor, arm_region_drag_at; the motion path's moving end,
-// apply_region_drag_motion). A SWEEP PLACE YIELDS ONE VALUE since
-// 2026-11-07 (session 88: the sweep seats and carries no playhead, the rule
+// apply_region_drag_motion). A SWEEP PLACE YIELDS ONE VALUE (architect
+// 2026-11-07: the sweep seats and carries no playhead, the rule
 // at this file's head), this whole SOURCE frame for the TRIM: THE FRAME
-// UNDER THE PEN'S REAL PLACE (architect 2026-11-15, the no-grid arc) through
+// UNDER THE PEN'S REAL PLACE (architect 2026-11-15, the no-grid rule) through
 // the family's one landing, trim_bound_frame_at_x (this file's anonymous
 // namespace: the displayed frame under the place, the target view through
 // the displayed map at full precision, snap_authored_frame the one
@@ -625,30 +589,22 @@ int64_t GuiInputHandler::sweep_trim_frame_at_x(double x) const {
 }
 
 // Shift+T MAXIMIZES the trim to the full window — RESET TRIM (architect
-// 2026-07-25 for the
-// act, re-posed 2026-07-30 under always-set — the old "unset" is now
-// [0, total-1], which renders untrimmed and plays to the natural end, so the
-// user-visible act is unchanged and the endcaps simply rest at the song edges).
+// 2026-07-25, 2026-07-30: the full window [0, total-1] renders untrimmed and
+// plays to the natural end, the endcaps resting at the song edges).
 // One-shot, history-less like every trim mutation. No read-only check of its own
-// (this file's header block: read-only does not reach trim at all since
-// 2026-08-07, and the key is on the allowlist).
+// (this file's header block: read-only does not reach trim at all, and the
+// key is on the allowlist).
 // Delegates WHOLE to handle_trim_clear_both — whose already-full identity guard
 // makes a second Reset Trim a silent no-op (the ruling at that function) and whose
 // tail owns the repaint
 // (the waveform's) and the target_render trigger. IT TOUCHES NO REGION AND
 // NO SELECTION: it is a trim MAXIMIZER, not a SETTER, so the setter-deselect
-// rule does not reach it, and the gated region re-sync it used to carry died
-// with the trim-window highlight itself (architect 2026-07-30). The trim bar
-// shows the whole-song window on the next frame.
+// rule does not reach it, and no trim-window highlight stands to re-sync
+// (architect 2026-07-30). The trim bar shows the whole-song window on the
+// next frame.
 void GuiInputHandler::handle_trim_maximize() {
     handle_trim_clear_both();
 }
-
-// (BARE `[`, THE TRIM REGION TOGGLE — handle_toggle_trim_region and the icon
-// row's Show trim region button — showed and hid the waveform overlay at rest
-// from 2026-08-16 until the architect deleted it whole on 2026-09-22: he uses
-// the tablet's pen, which reaches the trim bar. The bracket carries the
-// Waveform Magnification lamp since.)
 
 // --- Trim boundary pointer gestures -------------------------------------
 
@@ -679,7 +635,7 @@ bool GuiInputHandler::trim_mouse_x_to_source_frame(double mouse_x,
 
     // Target view: the pen's displayed frame is an active-domain time; the
     // trim store is source-domain. Inverse-translate THE REAL DISPLAYED FRAME
-    // (architect 2026-11-15, the no-grid arc: no whole active frame is taken
+    // (architect 2026-11-15, the no-grid rule: no whole active frame is taken
     // on the way) at the boundary through the DISPLAYED paint basis
     // (displayed_or_live_target_map — the SAME map the trim bar and its ends
     // are painted with; identity in source view), in full double precision
@@ -715,10 +671,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
                                       bool both) {
     if (which == TrimHit::None) return;
     const bool is_begin = (which == TrimHit::Begin);
-    // (The old both-bounds-set backstop is gone with the unset state: a full
-    // ordered pair always rests, so there is nothing left to require. The
-    // router's own geometry gate is the only thing standing between a press and
-    // this arm.)
+    // (A full ordered pair always rests, so there is nothing to require of
+    // the bounds: the router's own geometry gate is the only thing standing
+    // between a press and this arm.)
     app.trim_drag.active       = true;
     app.trim_drag.is_begin     = is_begin;
     app.trim_drag.both         = both;
@@ -726,9 +681,9 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
     // The drag's own origins, read from the store as it rests HERE — for a
     // bound-set-armed drag that includes the click-set the press already
     // committed, which is exactly the basis the mechanics want (the rigid pair
-    // delta and commit's untouched-bound test). No set_click distinction survives:
-    // it existed to override these into an Esc-restore origin, and pointer
-    // gestures have no cancel (the rule at the drag-modal gate, input_handler.cpp).
+    // delta and commit's untouched-bound test). No set_click distinction:
+    // pointer gestures have no cancel (the rule at the drag-modal gate,
+    // input_handler.cpp).
     app.trim_drag.orig_frame = is_begin ? app.trim.begin_frame
                                           : app.trim.end_frame;
     app.trim_drag.orig_begin_frame = app.trim.begin_frame;
@@ -742,7 +697,7 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
     // place, its source-domain frame and the grab's pixel offset, of which
     // the UNMAPPED arm reads anchor_frame (motion applying the cursor's
     // source displacement from here — anchor-relative like the marker drag,
-    // though that drag's anchor now lives in the active domain, see
+    // though that drag's anchor lives in the active domain, see
     // DragState) and the MAPPED arm press_x and grab_offset_px (the towed
     // place, update_trim_drag). A bad conversion leaves the anchor at 0;
     // harmless since the same unusable state makes update_trim_drag
@@ -762,7 +717,7 @@ void GuiInputHandler::begin_trim_drag(TrimHit which, double mouse_x,
         // (the mapped arm its one reader; the identity's offset is written
         // too, so the field means the same in either domain).
         // The bound's place per domain, the fork update_trim_drag takes
-        // (architect 2026-11-18, send Y): on the identity its exact place as
+        // (architect 2026-11-18): on the identity its exact place as
         // the trim bar's painter has it (trim_bound_place_x — there the
         // bound's image is its own frame, whole, and the painter's rounding
         // changes nothing); in a mapped domain its UNROUNDED image's place
@@ -839,30 +794,26 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // NO PARTNER WALL IS NEEDED ON THIS ARM and none is applied: the pair
         // rides ONE shared delta, so the gap between
         // the bounds is invariant for the whole gesture and they cannot approach
-        // each other at all. The partner clamp the 2026-08-02 ruling added
+        // each other at all. The partner clamp (architect 2026-08-02)
         // belongs to the single-bound arm below — the only one that can push a
         // handle toward its twin.
-        // ONE CEILING, ONE LOCAL (2026-08-29). The two bounds had SEPARATE
-        // walls when this clamp was written (2026-07-08): begin at frame
-        // EOF-1, end at frame EOF, an end bound being exclusive then. The
-        // domain unification put both bounds on the shared inclusive
-        // [0, total-1] — an end stored at exactly total frames is adversarial
-        // load-fatal now (marker_store_validate.h) — so the two expressions
-        // became identical and stood as two locals with a note saying so. They
-        // are one: a second local that must equal the first is a split waiting
+        // ONE CEILING, ONE LOCAL: both bounds live on the shared inclusive
+        // [0, total-1] (an end stored at exactly total frames is adversarial,
+        // load-fatal: marker_store_validate.h), so one wall serves both — a
+        // second local that must equal the first would be a split waiting
         // to be re-read as a distinction.
         const int64_t wall_active = static_cast<int64_t>(std::nearbyint(
             map_source_to_target(
                 static_cast<double>(audio.total_frames() - 1), dmap)));
         // A BOUND PUSHED PAST ITS WALL RESTS ON THE WALL'S OWN SOURCE FRAME,
-        // ONE RULE AT BOTH WALLS (Sol's reviews, 2026-11-18) — A WALL, NEVER
+        // ONE RULE AT BOTH WALLS (2026-11-18) — A WALL, NEVER
         // A RAISE (architect 2026-11-19, the rule at trim_bound_frame_at_x's
         // head: nothing raises a bound to the source's end). The walls in the
         // active domain are ROUNDED images: the floor 0 is displayed 0, which
         // a begin rounding down to it shares with up to half the ratio's
         // source frames under a speed-up (a begin at source 5 under 16x
         // maps to 0.3125, displayed 0); the ceiling is the last frame's
-        // rounded image, whose inverse can stop short of total-1 (Sol's 4.00
+        // rounded image, whose inverse can stop short of total-1 (a 4.00
         // x 2.00 piece: total-1 = 1,801,602 maps to 225,200.25, the ceiling
         // 225,200, whose inverse is 1,801,600). So the push is read off the
         // PROPOSAL BEFORE THE CLAMPS below — the original's displayed frame
@@ -876,7 +827,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // total-1 — and the wall holds it there: the begin on frame 0, the
         // end on total-1. An end whose proposal stands ON the ceiling is no
         // push, and rests where the inverse of its proposal puts it (on
-        // Sol's piece 1,801,600, two short of total-1: the truthful
+        // that piece 1,801,600, two short of total-1: the truthful
         // shortfall; the roads to the exact full window are listed at
         // trim_bound_frame_at_x's head). The
         // push is told apart from a pen that has not pushed even where the
@@ -908,10 +859,10 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // single fractional-to-authored route). These are the pair's exact
         // dragged frames, and the values the release commits as they stand
         // (commit_trim_drag takes no snap, architect 2026-11-15).
-        // A ZERO DELTA MOVES NEITHER BOUND (Sol's review, 2026-11-18): the
+        // A ZERO DELTA MOVES NEITHER BOUND (2026-11-18): the
         // pair stays exactly as the drag found it, the originals and not
         // their round trip through the map — which under a speed-up is not
-        // the identity (1,801,602 -> 225,200 -> 1,801,600 on Sol's 4.00 x
+        // the identity (1,801,602 -> 225,200 -> 1,801,600 on that 4.00 x
         // 2.00 piece), so a bridge pressed and dragged straight down past
         // the grab gate would otherwise write the trim with no travel. The
         // pair rides its delta off the originals, so a pen brought back to
@@ -949,7 +900,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
             // THE PLAYHEAD DOES NOT MOVE, here or at the release (the rule
             // at this file's head): motion updates the bounds and repaints
             // THE TRIM BAR'S LANE, WHOLE, AND NOTHING ELSE (architect
-            // 2026-11-16, the beats: a motion's frame repaints what it
+            // 2026-11-16: a motion's frame repaints what it
             // moved, so it is a small repaint, less of the chrome redrawn
             // and uploaded; the GPU draws every frame whole,
             // GuiPlatform::present). The bar is the trim's one
@@ -966,14 +917,11 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
             // THE DRAG IS A SETTER, so it DESELECTS (architect 2026-07-29) —
             // past the moved-bounds gate above, so a drag event that changes
             // nothing deselects nothing, and idempotent across the gesture's
-            // later events. The publish half is gone with the trim-window
-            // highlight (architect 2026-07-30): nothing is written to the region
-            // here at all.
-            // THE STOP LIVES HERE NOW (architect 2026-07-30): the endcap/bridge
-            // drag used to stop at the PRESS, beside a highlight-only publish
-            // that has since retired outright, so the stop moved to the FIRST
+            // later events; nothing is written to the region here at all
+            // (architect 2026-07-30).
+            // THE STOP LIVES HERE (architect 2026-07-30): at the FIRST
             // ACCEPTED TRIM MUTATION — this arm — where a trim change actually
-            // happens. A trim mutation stops a live audition in both views (the
+            // happens, never at the press. A trim mutation stops a live audition in both views (the
             // keyboard stop rule, stated at stop_playback_if_playing's
             // declaration, playback_lifecycle.h); the call is refusal-gated and
             // idempotent, so the drag's later events cost one early return each.
@@ -983,10 +931,10 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         return;
     }
 
-    // THE SINGLE BOUND'S PROPOSAL, ONE ARM PER DOMAIN (architect 2026-11-18,
-    // send X's decision, built in send Y: IN TARGET VIEW A DRAGGED TRIM CAP
+    // THE SINGLE BOUND'S PROPOSAL, ONE ARM PER DOMAIN (architect 2026-11-18:
+    // IN TARGET VIEW A DRAGGED TRIM CAP
     // STANDS UNDER THE PEN FOR THE WHOLE DRAG, at the grab's own offset — ON
-    // SCREEN IS AS PAINTED, the promise Source view already kept). The fork
+    // SCREEN IS AS PAINTED, the promise Source view keeps too). The fork
     // is the displayed paint basis's map (displayed_or_live_target_map, the
     // map the trim bar and its caps are painted with): empty — Source view,
     // or a target view with no map — the identity; else a mapped domain.
@@ -1062,11 +1010,11 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         // travel the towed place's frame is the bound's image and its inverse
         // the bound to floating error, so a sub-pixel travel answers the
         // bound or its neighbor on the travel's side, never a frame against
-        // it — a bound on the source's end included: on Sol's 720,007-frame
+        // it — a bound on the source's end included: on a 720,007-frame
         // piece under 16x an end on 720,006 (image 45,000.375, painted on the
         // displayed total 45,000) drifting left 0.0078125 px at q = 20 tows
         // to 45,000.21875, whose inverse 720,003.5 rounds to 720,004, under a
-        // still cap — the truthful frame under the pen, and no longer the
+        // still cap — the truthful frame under the pen, not the
         // full window (the roads back to it at trim_bound_frame_at_x's
         // head). THE PEN AT ITS
         // PRESS'S X HAS NOT TRAVELLED
@@ -1086,7 +1034,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // location would be hidden, AND AN END DRAGGED AS FAR AS IT GOES REACHES
     // THE FRAME AT THE STRIP'S RIGHT EDGE, the structural wall below holding
     // it on total-1 where that frame is past it (architect 2026-11-15, the
-    // no-grid arc; architect 2026-11-19, nothing raising it to the source's
+    // no-grid rule; architect 2026-11-19, nothing raising it to the source's
     // end: trim_bound_frame_at_x's head; the
     // last fully-visible pixel's left edge, the bound of the marker drag's
     // viewport_marker_bounds, would stop the end a column short of it).
@@ -1187,7 +1135,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // INCLUSIVELY at the resting partner's frame through the one owner
     // (clamp_trim_bound_at_partner, above) — a begin drag stops at the
     // end, an end drag stops at the begin — so the handle can land exactly ON
-    // its partner and never beyond it. This is the one route that gained a
+    // its partner and never beyond it. This is the one route with a
     // partner wall; the header block above carries the split.
     //
     // LANDING ON THE PARTNER IS A REACHABLE, MEANINGFUL OUTCOME rather than an
@@ -1196,8 +1144,8 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // the pair to the full window — so dragging one handle onto the other IS
     // the drag's own route to clearing the trim, which is exactly what the
     // architect asked for ("if they are set coincident, make trim 0 to EOF").
-    // No second arm was added for it and none is wanted: the equal case was
-    // always inside that compare.
+    // No second arm exists for it and none is wanted: the equal case is
+    // inside that compare.
     //
     // APPLIED LAST, so the partner wins over both the viewport clamp and the
     // absolute wall. The composition is order-independent in fact — the partner
@@ -1224,7 +1172,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
         viewport.invalidate_rect(top_trim_row_area(app));
         // THE DRAG IS A SETTER, so it DESELECTS (the pair arm's twin above) —
         // past the moved-bound gate, and idempotent across the gesture's later
-        // events; it publishes nothing, the trim-window highlight having retired.
+        // events; it publishes nothing.
         // The STOP rides the same first-accepted-mutation placement the pair arm
         // records in full.
         playback_lifecycle.stop_playback_if_playing();
@@ -1236,7 +1184,7 @@ void GuiInputHandler::commit_trim_drag() {
     if (!app.trim_drag.active) return;
     if (app.trim_drag.moved) {
         // THE RELEASE COMMITS THE BOUNDS AS THE MOTION LEFT THEM (architect
-        // 2026-11-15, the no-grid arc, ruling B: a moved bound rests on its
+        // 2026-11-15: a moved bound rests on its
         // exact dragged frame — the frame its own motion arm tracked under
         // the pen, whole already — and takes no snap to a painted column).
         // So nothing is re-judged here: the absolute walls, the single-bound
@@ -1256,10 +1204,10 @@ void GuiInputHandler::commit_trim_drag() {
         // ruling at auto_clear_crossed_trim). The playhead stays where it is
         // (the rule and its membership are in this file's header).
         //
-        // UNCHANGED BY THE 2026-08-02 PARTNER CLAMP, deliberately. The clamp
-        // narrowed what the single-bound arm can hand this tail — ON the partner
-        // instead of across it — and `end <= begin` already covered the equal
-        // case, so a coincident release resets exactly as a crossed one used to.
+        // THE PARTNER CLAMP (architect 2026-08-02) hands this tail a
+        // single-bound arm's bound ON the partner instead of across it, and
+        // `end <= begin` covers the equal case, so a coincident release
+        // resets exactly as a crossed one does.
         // That is the whole implementation of "if they are set coincident, make
         // trim 0 to EOF": no new arm here, and none wanted. The bridge arm
         // can still hand it other shapes, which is the other reason the
@@ -1269,9 +1217,8 @@ void GuiInputHandler::commit_trim_drag() {
         // trim-mutation stop like the motion events did (both already applied by
         // then in the moved case that reaches here — each is stated at every
         // accepted mutation rather than inferred from gesture order). There is
-        // nothing to restore from in any case — the drag carries no snapshot at
-        // all since 2026-07-29. The release publishes no highlight of its own,
-        // that coupling having retired 2026-07-30.
+        // nothing to restore from in any case — the drag carries no snapshot
+        // (2026-07-29). The release publishes no highlight of its own.
         playback_lifecycle.stop_playback_if_playing();
         selection.clear_selection();
     }
@@ -1291,11 +1238,10 @@ void GuiInputHandler::commit_trim_drag() {
 // which ACTS (the stop, the write, the commit tail, the deselect).
 //
 // THE BARREL CLICK ON THE TRIM BAR MOVES WHICHEVER END CAP IS NEAREST THE
-// PEN (architect 2026-11-10; the begin for a plain barrel click and the end
-// for one held past the hold delay until then, which "doesn't work very
+// PEN (architect 2026-11-10: a bound chosen by the hold "doesn't work very
 // well"). The click moves one bound of the resting window to THE FRAME
-// UNDER THE PEN'S REAL PLACE (architect 2026-11-15, the no-grid arc, ruling
-// B): the place maps to a source frame through the family's one landing
+// UNDER THE PEN'S REAL PLACE (architect 2026-11-15, the no-grid rule):
+// the place maps to a source frame through the family's one landing
 // (trim_bound_frame_at_x: authored_frame_at_x_on_basis over the DISPLAYED
 // paint map on the ITEM viewport basis, the absolute walls [0, total-1]
 // after), the click held into the strip's closed extent, so a click at the
@@ -1306,7 +1252,7 @@ void GuiInputHandler::commit_trim_drag() {
 //
 // NEAREST IS DECIDED ONCE, IN THE DECIDER, BY REAL DISTANCE ON THE BAR
 // (architect 2026-11-10, on screen is as painted: the cap nearest the PEN, by
-// distance on the bar; the distance real since the no-grid arc): the bound
+// distance on the bar; the distance real by the no-grid rule): the bound
 // whose cap's exact place is the nearer to the click's real place,
 // A TIE GOING TO THE BEGIN — EXCEPT RIGHT OF BOTH CAPS,
 // WHERE IT IS THE END'S (such a tie stands only where the two caps share
@@ -1334,7 +1280,7 @@ void GuiInputHandler::commit_trim_drag() {
 //
 // A CLICK EXACTLY ON ITS CAP IS A CONSUMED NO-OP, AND "ON ITS CAP" IS THE
 // PIXEL THE CAP'S PAINTED PLACE HOLDS (architect 2026-11-10, on screen is as
-// painted; in reals since the no-grid arc: the click within half a device
+// painted; in reals by the no-grid rule: the click within half a device
 // px of the nearest cap's exact place). The pen is on the cap and there is
 // nothing to move on glass — writing the fraction of a px between them
 // would stop the play, clear the selection and trigger a render
@@ -1364,11 +1310,10 @@ void GuiInputHandler::commit_trim_drag() {
 // resetting the whole window on a mis-click is the outcome trim
 // cannot afford): commit_trim_mutation below carries the shared commit
 // tail every setter runs (auto_clear_crossed_trim first), kept for that
-// shape and not because this route can fire it. (The begin / end clicks'
-// card for this wall, 2026-08-01, went with those clicks.)
+// shape and not because this route can fire it.
 //
 // READ-ONLY DOES NOT REFUSE (architect 2026-08-07): the clicks are trim, which
-// is band rather than authored content, and a locked tab sets a bound
+// is not authored content, and a locked tab sets a bound
 // exactly as a writable one does. History-less like every trim
 // mutation; the repaint + target_render.trigger() tail mirrors the drag release.
 // The act OWNS the click's playback stop — placed past every refusal
@@ -1377,8 +1322,8 @@ void GuiInputHandler::commit_trim_drag() {
 // claim-keyed stop rule at on_button_press's top-strip paragraph, taken inside the
 // gate).
 //
-// IT RUNS AT THE LIFT, NOT AT THE PRESS (architect 2026-08-15, the act-at-lift
-// sweep finishing: "all actions should be on mouse-up / finger-up"). The
+// IT RUNS AT THE LIFT, NOT AT THE PRESS (architect 2026-08-15: "all actions
+// should be on mouse-up / finger-up"). The
 // barrel press ARMS PendingClickAct (app_state.h) and commits nothing; the
 // MOTIONLESS LIFT runs the act at the PRESS COLUMN, and a THRESHOLD CROSSING
 // runs it and then hands over to the endcap drag of the bound it wrote,
@@ -1399,8 +1344,8 @@ void GuiInputHandler::commit_trim_drag() {
 // drag takes, so every refusal suppresses the drag with no second spelling
 // of the guard ladder and no second nearest verdict.
 
-// THE DECISION HALF (hoisted 2026-08-03; the nearest verdict's one home
-// since 2026-11-10): which bound the click would move and the frame it
+// THE DECISION HALF (the nearest verdict's one home, architect
+// 2026-11-10): which bound the click would move and the frame it
 // would write, or nullopt on every refusal — a degenerate audio/geometry
 // state, a click on its cap's painted column, a click on the bound's own
 // frame, and the partner wall. Nothing here
@@ -1421,7 +1366,7 @@ GuiInputHandler::trim_bound_click(double mouse_x) const {
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     if (basis.spp <= 0.0) return std::nullopt;
     // THE CLICK'S REAL PLACE on the strip (architect 2026-11-15, the no-grid
-    // arc), held into the strip's closed extent [0, w].
+    // rule), held into the strip's closed extent [0, w].
     const double click_x = std::clamp(
         mouse_x - static_cast<double>(area.x), 0.0,
         static_cast<double>(area.w));
@@ -1430,7 +1375,7 @@ GuiInputHandler::trim_bound_click(double mouse_x) const {
     // namespace).
     const int64_t frame = trim_bound_frame_at_x(app, audio, click_x);
     // THE NEAREST END CAP, BY REAL DISTANCE ON THE BAR (see the header;
-    // architect 2026-11-15, the no-grid arc): each resting bound's EXACT
+    // architect 2026-11-15, the no-grid rule): each resting bound's EXACT
     // PLACE as the trim bar's painter draws it — its own two owners with its
     // own arguments (GuiPaintHandler::paint_trim: displayed_trim_ms over the
     // displayed-or-live map, null in source view, then trim_bound_column's
@@ -1505,8 +1450,7 @@ GuiInputHandler::set_trim_bound_at_click(double mouse_x) {
     }
     commit_trim_mutation();
     // THE SETTER'S DESELECT (see the header). Past every refusal above, so only a
-    // click that actually set a bound deselects. It publishes no highlight — the
-    // trim-window region retired 2026-07-30.
+    // click that actually set a bound deselects. It publishes no highlight.
     selection.clear_selection();
     return decided;
 }
@@ -1518,10 +1462,9 @@ GuiInputHandler::set_trim_bound_at_click(double mouse_x) {
 // committed when made (trim is history-less) and pointer gestures have no
 // cancel.
 //
-// ITS ONE CALLER IS THE CROSSING since 2026-08-15 (on_motion's pending-click
-// branch), where it used to be the PRESS: the act-at-lift sweep moved the set to
-// the lift, so this pair is what a barrel press becomes only once the pointer
-// has actually travelled. THE MARKER FLAG'S CROSSING IS THE MODEL — run the
+// ITS ONE CALLER IS THE CROSSING (on_motion's pending-click branch): the set
+// runs at the lift, so this pair is what a barrel press becomes only once
+// the pointer has actually travelled. THE MARKER FLAG'S CROSSING IS THE MODEL — run the
 // click act, then begin the drag — the set landing at the press's place and
 // the drag anchoring there. A motionless lift runs the set ALONE, through
 // the act owner, and arms no drag at all.
@@ -1549,38 +1492,30 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
 }
 
 // Plain trim-bar press routing — the PLAIN press's route into a trim drag,
-// and one of TWO arm_pending_trim_drag callers (re-derived 2026-08-12, the
-// trim surface arc's revert — the arc's extra arms, the alt bridge press and
-// the ctrl deferred-set pending, lived one day, 2026-08-11..12, and are
-// deleted whole): this router, and the ctrl BOUND SET's THRESHOLD
-// CROSSING above (a PRESS until 2026-08-15, when the set moved to the lift),
-// which arms the same single-bound pending on the bound it has just written.
-// The Alt pointer gesture retired wholesale, and the waveform stem grab with it:
-// a bound is grabbed ONLY on the trim bar (architect 2026-10-03), by its
+// and one of TWO arm_pending_trim_drag callers: this router, and the barrel
+// BOUND SET's THRESHOLD CROSSING above, which arms the same single-bound
+// pending on the bound it has just written.
+// A bound is grabbed ONLY on the trim bar (architect 2026-10-03), by its
 // END'S GRAB ZONE round the cap at that end of the pill (render.h's THE
 // TRIM BAR'S CAPS AND GRABS, architect 2026-11-20) — or by the bar's
-// inter-cap bridge span (the bound's own mark was already the unambiguous handle),
+// inter-cap bridge span (the bound's own mark being the unambiguous handle),
 // leaving the waveform purely
 // region/playhead. Arms a PendingTrimDrag rather than beginning the drag
 // outright — the pending+threshold pattern the marker flag uses: the press
 // CLAIMS the endcap/bridge geometry, a motionless press-release commits nothing,
 // and only once the pointer crosses grab_moved_threshold_px() does begin_trim_drag
 // run and the existing single/pair drag machinery take over unchanged. A full
-// ordered pair ALWAYS rests (the unset state died 2026-07-30), so the old
-// pair-required gate is gone and the press is claimed purely on GEOMETRY.
+// ordered pair ALWAYS rests, so the press is claimed purely on GEOMETRY.
 // Returns true iff the press landed on trim
 // geometry (an endcap-rect single-bound hit, or the bar's inter-cap bridge
 // span), so the caller CLAIMS the press (no fallback); false lets the caller
 // fall through. Trim bounds are transparent to every OTHER chord (the caller
 // gates this to the plain, unmodified press).
 //
-// THIS ROUTER CARRIES NO READ-ONLY CHECK, and must not grow one — and since
-// 2026-08-07 neither does anything above it: the band's sole read-only defense
-// (the plain trim-bar press's own return, input_pointer.cpp) was DELETED with
-// the reclassification of trim as band rather than authored content, so a locked
-// tab arms the endcap and bridge drags exactly as a writable one does. The two
-// internal returns this function once carried had already been deleted in
-// 2026-08-02 as unreachable; nothing replaced them, and nothing should.
+// THIS ROUTER CARRIES NO READ-ONLY CHECK, and must not grow one — and
+// neither does anything above it (architect 2026-08-07): trim is not
+// authored content, so a locked tab arms the endcap and bridge drags
+// exactly as a writable one does.
 // The two arms:
 //   CAP HIT: a press in an end's zone — a 6 W core from 1 W outside the
 //     pill's tip to the cap's cut line, and 4 W of air either side of it,
@@ -1593,16 +1528,15 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
 //     the painted bridge interval, already clipped to the painter's
 //     [0, area_w)) arms the pair
 //     drag. The bridge handle is the TRIM BAR lane's inter-cap span, NOT the whole
-//     strip height: a top-strip press below that lane — the ruler (the region
-//     former's band), then the marker lane — is not claimed here at all; each
-//     of those bands has its own claim in on_button_press. Both bounds are
+//     strip height: a top-strip press below that lane — the ruler, then
+//     the marker lane — is not claimed here at all; each of those lanes
+//     has its own claim in on_button_press. Both bounds are
 //     the subject (no grabbed-bound notion; the pair has no viewport clamp and,
 //     like every trim gesture, never moves the playhead), so it always arms as
 //     Begin structurally.
 // BOTH ARMS ARE SHARED OWNERS AND NEITHER IS SPELLED HERE (hit_test_trim_endcap,
 // point_in_trim_bridge_span). The drags DESELECT and STOP a live audition at
-// their FIRST ACCEPTED bound change (architect 2026-07-29 / 2026-07-30 — the
-// press-time stop went with the highlight-only publish it accompanied); the
+// their FIRST ACCEPTED bound change (architect 2026-07-29 / 2026-07-30); the
 // PLAYHEAD is what they never
 // touch, and the deselect RESTS — the gesture has no cancel to restore it from.
 //
@@ -1616,10 +1550,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
 // The remaining seams are all ACCEPTED: commit-to-scanout plus human reaction
 // (irreducible — input responds to the previously presented frame), and the
 // COLD state (nothing painted yet, nothing grabbable). The playhead-placement
-// clicks (column-based) are no longer among them: since 2026-09-24 (architect,
-// strictly as-painted) they convert through item_viewport_basis, the same
-// painted twin every aimed gesture here reads, so they no longer trail the
-// live viewport.
+// clicks are not among them: they convert through item_viewport_basis
+// (architect 2026-09-24, strictly as-painted), the same painted twin every
+// aimed gesture here reads, so they never trail the live viewport.
 bool GuiInputHandler::route_trim_bar_press(double mouse_x, double mouse_y) {
     if (audio.total_frames() <= 0) return false;
     // Single-drag hit: the endcap rect (hit_test_trim_endcap, trim-lane-gated).
@@ -1653,8 +1586,8 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     app.pending_trim_drag.both     = both;
     app.pending_trim_drag.press_x  = press_x;
     app.pending_trim_drag.press_y  = press_y;
-    // THE BAR TAKES ITS HELD LOOK AT THE PRESS (architect 2026-11-17,
-    // session 140, ruling 4: Arc's slider:active, `selected_fill`, on the
+    // THE BAR TAKES ITS HELD LOOK AT THE PRESS (architect 2026-11-17:
+    // Arc's slider:active, `selected_fill`, on the
     // part held — the body, or that end's cap — with both caps showing,
     // architect 2026-11-20: trim_bar_look, app_state.h, and render.h's
     // trim_bar_tones): every arm — an end's grab or the
@@ -1664,8 +1597,7 @@ void GuiInputHandler::arm_pending_trim_drag(bool is_begin, bool both,
     // never crossed. The lane is the damage rect at both edges: it holds the
     // pill whatever the drag did to the bounds meanwhile.
     viewport.invalidate_rect(top_trim_row_area(app));
-    // Five fields, no captures: the pre-gesture selection + region this used to
-    // copy existed for an Esc-cancel, and pointer gestures have no cancel
+    // Five fields, no captures: pointer gestures have no cancel
     // (2026-07-29 — the rule at the drag-modal gate, input_handler.cpp). The drag
     // this may become deselects at its first published bound and keeps that
     // deselect.
@@ -1686,11 +1618,8 @@ void GuiInputHandler::disarm_pending_trim_drag() {
     app.pending_trim_drag = PendingTrimDrag{};
 }
 
-// (THE TOUCH TRIM MOVE lived here 2026-08-11..12 — the fourth glass session's
-// hold-a-beat gesture, three bodies driving this machinery from the
-// platform's trim-move hooks. Deleted whole at the timer-free ruling and NOT
-// revived when the disambiguation window returned the same day (the sixth
-// glass ruling): on glass the trim bar is an ordinary pointer surface — a
-// finger or the pen landing there is the pointer on contact (2026-09-25) and
-// reaches the endcap/bridge machinery through the ordinary press path like
-// every other pointer gesture; closed_questions.md carries the ruling.)
+// (ON GLASS THE TRIM BAR IS AN ORDINARY POINTER SURFACE: a finger or the
+// pen landing there is the pointer on contact (2026-09-25) and reaches the
+// endcap/bridge machinery through the ordinary press path like every other
+// pointer gesture; no hold-a-beat touch gesture drives it —
+// closed_questions.md carries the ruling.)

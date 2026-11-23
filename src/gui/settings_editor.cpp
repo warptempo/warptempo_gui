@@ -22,7 +22,6 @@
 #include <filesystem>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -227,10 +226,10 @@ std::optional<std::string> recall_setting_value(const AppState& app,
 //
 // THE OPENER IS LIVE UNDER EITHER LOCK, ONE LEVEL UP TOO (2026-10-21, the
 // planner's ruling by the 2026-09-04 rule): bare `;` — the SETTINGS PAGE's
-// opener since 2026-10-28, whose rows are this editor's one road
+// opener (2026-10-28), whose rows are this editor's one road
 // (GuiInputHandler::settings_page_commit) — is on the read-only allowlist
 // (read_only_key_blocked's is_settings_page), which the iteration gate
-// inherits, and the band's Settings button — the chord's pointer spelling —
+// inherits, and the top icon row's SETUP key — the chord's pointer spelling —
 // stays lit under both, so a locked ACTIVE tab keeps its road to the device
 // keys. The entry holds THE OPENED KEY'S VALUE ALONE (architect 2026-11-19:
 // "One, agree."): nothing typed names another key, so no key
@@ -254,10 +253,8 @@ void GuiSettingsEditor::open(const std::string& key) {
     // THE MODAL PLAYBACK STOP IS THE OPENER'S, past the return above — the
     // `h` view's own load raise takes the same shape ("playback halts only
     // when the modal actually opens, so a refused open leaves a listening
-    // session undisturbed"). It moved here from the two call sites in
-    // 2026-08-07 with the read-only gate that has since left again: a
-    // caller-side stop would have made a refused open kill a live audition and
-    // open nothing.
+    // session undisturbed"): a caller-side stop would make a refused open
+    // kill a live audition and open nothing.
     playback_lifecycle.stop_playback_for_modal_open();
     text_editor::enter(app.settings_editor,
                        /*target=*/0,
@@ -385,13 +382,11 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
             reject(kGuiScaleGrammarReason);
             return true;
         }
-        // History-less, and APPLIED LIVE: the store write is no longer the
-        // whole commit — since
-        // 2026-07-31 the redesigned rows size on this value, so the commit
-        // pushes it to the renderer and re-lays-out immediately (apply_gui_scale
-        // runs the resize-path rebuild), and a `gui_scale=200` is visible
-        // without a restart. It marks nothing dirty and Ctrl+S does not carry
-        // it: since 2026-08-27 the applier WRITES THE DEVICE CONFIG at the
+        // History-less, and APPLIED LIVE: the rows size on this value, so the
+        // commit pushes it to the renderer and re-lays-out immediately
+        // (apply_gui_scale runs the resize-path rebuild), and a `gui_scale=200`
+        // is visible without a restart. It marks nothing dirty and Ctrl+S does
+        // not carry it: the applier WRITES THE DEVICE CONFIG at the
         // commit, so the value is persisted the moment it is applied.
         const int v = static_cast<int>(v64);
         if (v == app.gui_scale) { unchanged(); return true; }
@@ -463,8 +458,8 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
 void GuiSettingsEditor::commit() {
     if (!text_editor::is_active(app.settings_editor)) return;
 
-    // THE ASSIGNMENT IS COMPOSED, NEVER PARSED (architect 2026-11-19, send
-    // AA: "One, agree."): the key is the open's (page_key_, an editable
+    // THE ASSIGNMENT IS COMPOSED, NEVER PARSED (architect 2026-11-19:
+    // "One, agree."): the key is the open's (page_key_, an editable
     // row's), the value the entry's whole text with its surrounding
     // whitespace trimmed (trim_ws, the interactive latitude; the FILE
     // boundary trims nothing). Nothing is split, so a value holding `=` or
@@ -504,7 +499,7 @@ void GuiSettingsEditor::commit() {
     // been. The refused field plus card, the shape every refusal on this
     // surface wears.
     //
-    // IT IS BOTH LOCKS SINCE 2026-09-10 (authoring_locked, app_state.h): an
+    // IT IS BOTH LOCKS (2026-09-10; authoring_locked, app_state.h): an
     // engine key is a map input and its commit pushes a settings undo entry,
     // so grid iterations refuses it exactly as the read-only bit does, and the
     // SAME division holds — the keys above still commit under a lit lamp,
@@ -540,7 +535,7 @@ void GuiSettingsEditor::commit() {
     // Source-clobber guard. An edit that makes the title-named render output
     // resolve to the source file itself would overwrite the source on the next
     // render, and the shared predicate composes and checks that path. What is
-    // still reachable now that the deliverable lands one folder down, in the
+    // reachable, the deliverable landing one folder down, in the
     // project's `render/`, is stated at the predicate itself
     // (render_output_source_collision, render_output_naming.h): not a
     // spelling, but a `render/` or a `render/<title>.wav` that is linked onto
@@ -550,12 +545,10 @@ void GuiSettingsEditor::commit() {
         text_editor::refuse(app.settings_editor);
         viewport.invalidate_dialog_editor_box();
         // The path names its BASENAME on the card, SINGLE-QUOTED as every
-        // name is (notifications.h's card rules), and the stderr line has always named the
+        // name is (notifications.h's card rules), and the stderr line names the
         // same.
-        // ONE CLAUSE AND NO INSTRUCTION AFTER IT (2026-09-01, the
-        // capitalization sweep's sentence shape): the reason IS the message,
-        // the grid-iterations cap card's own rule. It closed with "; choose a
-        // different title" until that day.
+        // ONE CLAUSE AND NO INSTRUCTION AFTER IT (2026-09-01): the reason IS
+        // the message, the grid-iterations cap card's own rule.
         const std::string refusal =
             "Settings edit rejected: this would make the render output "
             "overwrite the source file '" +
@@ -609,11 +602,10 @@ void GuiSettingsEditor::commit() {
 
     viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
-    // (THE ENGINE COMMIT'S WHOLESALE OVERLAY HIDE IS DELETED, 2026-08-19: the
-    // region is the trim, whose source-domain bounds the re-warp below leaves
-    // untouched — the trim bar and its endcaps go on showing it in the new
+    // (The region is the trim, whose source-domain bounds the re-warp below
+    // leaves untouched — the trim bar goes on showing it in the new
     // domain, with nothing stale to put away.)
-    // THE SELECTION STILL GOES (architect 2026-07-29): an engine
+    // THE SELECTION GOES (architect 2026-07-29): an engine
     // commit rebuilds the map under every marker INDEX and IMAGE at once, so no
     // marker keeps the identity a focus named — the same
     // "ready to move on" act the trim setters make when a trim-bar click deselects.
@@ -621,9 +613,8 @@ void GuiSettingsEditor::commit() {
     // restore clears the selection at its own restore (undo.cpp), and GUI-kind
     // keys are
     // history-less, so no other settings entry kind exists to cover. Together they
-    // are what let the never-span-less ENFORCEMENT be deleted: this site was one of
-    // its two remaining producers, and closing it here means no collapse protocol
-    // is needed rather than a collapse being owed. It touches no trim: a
+    // leave no selection standing across a settings change, so no collapse
+    // protocol is needed. It touches no trim: a
     // selection mutator writes no trim state at all.
     selection.clear_selection();
     // Full-area damage for the teardown, and it is the site's own: clear_selection
@@ -641,18 +632,15 @@ void GuiSettingsEditor::commit() {
     // view so displayed == live at this command boundary. A non-scale engine key (provenance) leaves the plate
     // unchanged, so the sync is a redundant bounded rebuild there — acceptable,
     // matching the unconditional trigger beside it.
-    // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT (architect 2026-09-02,
-    // superseding the "NO RE-LAND, and none is
-    // possible" this site carried from 2026-07-29). That reading was the
-    // pre-2026-08-24 FOCUS argument: with the selection cleared above there is
-    // no focus whose image could be the subject, so the site concluded there
-    // was no subject at all. The DELETE had already answered it — it clears the
-    // selection too and re-lands the PLAYHEAD'S OWN MUSICAL INSTANT, captured
-    // in source frames before the rewrite (warpmarkers_ops.cpp) — and a whole-
+    // AND THE PLAYHEAD RE-LANDS ON ITS OWN INSTANT (architect 2026-09-02):
+    // with the selection cleared above there is no focus whose image could be
+    // the subject, so the subject is the PLAYHEAD'S OWN MUSICAL INSTANT,
+    // captured in source frames before the rewrite — the DELETE's answer
+    // (warpmarkers_ops.cpp), which clears the selection too — because a whole-
     // map rewrite is exactly the delete's class: keeping the cursor's NUMBER
-    // across it moves the cursor in the music, which is what the family's
-    // re-land exists to prevent, and left an edit-then-undo landing the cursor
-    // where neither the edit nor the undo put it. THROUGH THE RESEAT, never a
+    // across it would move the cursor in the music, which is what the family's
+    // re-land exists to prevent, and would leave an edit-then-undo landing the
+    // cursor where neither the edit nor the undo put it. THROUGH THE RESEAT, never a
     // movement owner: an image moving out from under a resting cursor is a
     // TRANSLATION, not a movement in the music (the rule at
     // Viewport::move_playhead_to, viewport.cpp). Source view needs nothing —
@@ -672,14 +660,13 @@ void GuiSettingsEditor::commit() {
     target_render.trigger();
 }
 
-// THE DEVICE KEYS' COMMIT (the head's item 1). projects_repo has taken
-// a direct-set arm here since it was a `.settings` key — free text, no undo
-// history, no dirty tracking, the settings editor its sole authoring surface
-// — and since 2026-08-27 it is a DEVICE preference: ONE user has ONE
+// THE DEVICE KEYS' COMMIT (the head's item 1). projects_repo and
+// projects_path take a direct-set arm here — free text, no undo
+// history, no dirty tracking, the settings editor their sole authoring
+// surface — as DEVICE preferences (2026-08-27; the path architect
+// 2026-09-02): ONE user has ONE
 // repository, so the projects home is the device config's (device_config.h)
-// and Ctrl+S does not carry it. projects_path JOINED IT 2026-09-02
-// (architect — the Settings dropdown carried
-// both as rows until 2026-10-21), which is what made the arm a body: ONE SHAPE FOR THE TWO.
+// and Ctrl+S does not carry it. ONE SHAPE FOR THE TWO.
 // The key's own grammar owner in device_config.h decides —
 // is_projects_repo, is_projects_path, never a second spelling
 // — and a refusal is the refused field and the card with the grammar's own
@@ -689,22 +676,15 @@ void GuiSettingsEditor::commit() {
 // the value (AppState::device_config, the loop's one — so the other keys
 // travel as they stand, the ownership rule at write_device_config) and THIS
 // COMMIT IS THE PERSIST: the config is written right here. A failed write is
-// advisory — the live value stands for the session — and since 2026-09-02 it
+// advisory — the live value stands for the session — and it
 // is SAID: the writer composes the two clauses at its one failure point
 // (GuiFailure, failure.h) and this site prints the diagnostic and cards the
 // display, the strictness ruling's shape for a press whose result nothing
 // paints.
 //
-// THE BODY'S INTEGER ARMS CAME AND WENT: the waveform's height cap
-// (2026-09-13..10-07, its live relayout with it — the waveform is the
-// lanes' leftover since, main.cpp's vertical rule) and the hold delay's key
-// for its one-day tuning phase (architect 2026-09-29, the value hard-coded
-// as kHoldDelayMs, gui_input.h), each struck with its Settings row.
-//
 // WHEN EACH IS IN FORCE. `projects_repo`: at once — every reader reads
-// `app.projects_repo`, the live field, whose source moved 2026-08-27 and whose
-// readers did not (an empty value simply never matches any remote, which
-// disables the GitHub recheck). `projects_path`: FOR THE NEXT OPEN PROJECT AND THE
+// `app.projects_repo`, the live field (an empty value simply never matches
+// any remote, which disables the GitHub recheck). `projects_path`: FOR THE NEXT OPEN PROJECT AND THE
 // NEXT LAUNCH, the open project staying open — the picker lists the folders
 // under the live struct's path and gui_main's reopen resolves the chosen name
 // under that same live value (main.cpp), so Open Project already
@@ -718,21 +698,21 @@ void GuiSettingsEditor::commit() {
 // (open_project_commit), so a folder under the new path carrying the open
 // project's own name reads as "already open" until a relaunch or a different
 // project is opened first — a rename-by-hand case, accepted.
-// `true_colors` (2026-10-21, the popup's command row made a key): AT ONCE,
-// live, no card — its arm below; `waveform_grow` (2026-10-31) the same, its arm after
-// that, `noise` and `noise_crossfade_s` (2026-10-28) and
-// `noise_attenuation_level` (2026-11-05 night) the same, at once and no
-// card, their arms after it (the level, `noise_level`, has no arm since
-// 2026-11-05 night: no Settings row, the band's NOISE case its one road,
-// kSettingsEditorKeys), and the keyboard's three tuning keys `osk_key_w`,
-// `osk_key_h` and `osk_font_px` (2026-10-29) the same, their arms last
-// (every retired key's arm left with its key, the record git's). The
+// `true_colors` (2026-10-21): AT ONCE,
+// live, no card — its arm below; `noise` (2026-10-28) and `waveform_grow`
+// (2026-10-31) the same, their arms after
+// it, `noise_attenuation_level` (2026-11-05 night) and `noise_crossfade_s`
+// (2026-10-28) the same, at once and no
+// card, their arms after them (the level, `noise_level`, has no arm,
+// 2026-11-05 night: no Settings row, the top icon row's NOISE case its one
+// road, kSettingsEditorKeys), and the keyboard's three tuning keys `osk_key_w`,
+// `osk_key_h` and `osk_font_px` (2026-10-29) the same, their arms last.
+// The
 // commit is the line editor's Enter for the keys whose row opens it,
 // and a list row's tap for the four keys with a value list
 // (kSettingsValueListKeys, settings_editor.h), whose rows open the list and
 // never the line editor — ONE BODY BEHIND BOTH DOORS (apply_device_setting
-// below; the choice rows' list rows of 2026-10-07..10-14, which showed a
-// value and committed nothing, went with the choice editor).
+// below).
 //
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
@@ -789,8 +769,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return DeviceSettingOutcome::Applied;
     };
 
-    // TRUE COLORS (architect 2026-10-21, the Settings popup's "True Colors"
-    // command row made a key): one of the two words under its one owner
+    // TRUE COLORS (architect 2026-10-21, a device key): one of the two words under its one owner
     // (parse_true_colors, device_config.h), APPLIED LIVE AT THE COMMIT, which
     // is the line editor's Enter or the value list's row tap, through
     // the toggle's own apply shape (GuiInputHandler::apply_true_colors — the
@@ -852,7 +831,7 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         return applied();
     }
 
-    // THE NOISE'S ATTENUATION (architect 2026-11-05 night, session 49: "then
+    // THE NOISE'S ATTENUATION (architect 2026-11-05 night: "then
     // the slider maintains its current behavior and law"; noise.h's head): a
     // fixed dB under the NOISE case's number, the bed at noise_level + this,
     // under its one grammar owner (parse_noise_attenuation_db, device_config.h:

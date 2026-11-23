@@ -1,31 +1,27 @@
 #pragma once
 
 // THE NOISE — THE BACKGROUND SOUND (architect 2026-10-28; THE LEVEL IS ITS
-// ONE SWITCH since 2026-11-05). A bed of sound plays CONTINUOUSLY as A SECOND
+// ONE SWITCH, 2026-11-05). A bed of sound plays CONTINUOUSLY as A SECOND
 // VOICE mixed under everything the playback engine plays — work playback,
 // the A/B audition, the render player, the score's soundtrack — and over its
 // silence between plays, AT ONE LEVEL, NEVER DUCKED and never paused by any
-// of them. THE LEVEL IS THE SWITCH (architect 2026-11-05, the level
-// cases, mock s46_m1:
+// of them. THE LEVEL IS THE SWITCH (architect 2026-11-05:
 // "the only off switch is -inf, and that should actually shut it off so
 // reduce footprint"): the `noise_level` device key — a decimal dB or -inf,
-// THE LEVEL GRAMMAR, device_config.h — set by the band's NOISE case
+// THE LEVEL GRAMMAR, device_config.h — set by the top icon row's NOISE case
 // (RedesignButton::IconNoiseLevel, app_state.h: a slider, dragged relative
 // on the square-law travel, A TAP TOGGLING IT TO -inf AND BACK to the level
 // the tap left, architect 2026-11-10 — the level still the one switch, the
-// tap one more hand on it), its one road (no
-// Settings row since 2026-11-05 night, the main-page rule at
-// kSettingsEditorKeys); ABOVE -inf THE BED PLAYS, AT -inf IT IS OFF. THE BED
-// SOUNDS AT THE LEVEL PLUS A FIXED ATTENUATION (architect 2026-11-05 night,
-// session 49: "then the slider maintains its current behavior and law"):
-// the `noise_attenuation_level` device key, a decimal dB in [-60.0, 0.0],
-// never -inf, default -9, set on the Settings page's line
+// tap one more hand on it), its one road (no Settings row, the main-page
+// rule at kSettingsEditorKeys); ABOVE -inf THE BED PLAYS, AT -inf IT IS
+// OFF. THE BED SOUNDS AT THE LEVEL PLUS A FIXED ATTENUATION (architect
+// 2026-11-05 night: "then the slider maintains its current behavior and
+// law"): the `noise_attenuation_level` device key, a decimal dB in
+// [-60.0, 0.0], never -inf, default -9, set on the Settings page's line
 // (set_attenuation_db) — the gain 10^((level + attenuation)/20); the case
 // prints its own level alone, its law, travel, floor and tap
 // untouched, and the attenuation never lights or darkens the bed. There is
-// no lamp and no switch beside the level (the NOISE lamp on bare `w`,
-// 2026-10-28 to 2026-11-05, RETIRED with the cases; his "iPhone requires
-// enabling each time" reversed on the same word): THE BED PLAYS FROM THE
+// no lamp and no switch beside the level: THE BED PLAYS FROM THE
 // LAUNCH at the
 // persisted level — gui_main seats set_level_db after the probe, and an
 // audible level with a folder there lights the voice and starts the loader
@@ -38,9 +34,7 @@
 // closing the app silences it for good; A ROUTE DROP PAUSES IT (next).
 //
 // A ROUTE DROP STOPS THE VOICE WITH ITS STREAM, AND THE BED RESUMES AT THE
-// NEXT REOPEN (architect 2026-11-05, the route drop's reading, confirmed by
-// the planner's "Decisions" item; reversing 2026-10-28's darkening of the
-// lamp, the iPhone's Background Sounds precedent, which went with the lamp):
+// NEXT REOPEN (architect 2026-11-05, the route drop's reading):
 // a route drop (a headphone connected or taken off) kills the AAudio stream,
 // and on a dead stream nothing sounds; THE LEVEL IS UNTOUCHED and so is the
 // voice's `target` — noise_voice_reset_on_dead_stream (below) resets the
@@ -259,14 +253,13 @@ void noise_mix_block(GuiNoiseVoice& voice, float* const* channel_buffers,
                      uint32_t output_rate);
 
 // THE VOICE RESET ON A DEAD STREAM, THE ONE BODY (2026-10-28; the head's two
-// roads; THE SEQUENCE ALONE since 2026-11-05, the route drop's reading): the
+// roads; THE SEQUENCE ALONE, 2026-11-05, the route drop's reading): the
 // audio-thread-private fields to the no-sequence state noise_mix_block's
 // idle arm reads (noise.cpp's reset_voice_sequence) — `target` and the level
 // UNTOUCHED, so an audible voice starts a fresh random segment with the
 // fade-in from silence on the next stream the music opens, and a switched-
-// off voice's fade tail never plays after the reopen. (Until 2026-11-05 it
-// also stored `target` false, the lamp's darkening at a drop; the lamp is
-// gone and the bed resumes at the next reopen by his ruling.) PRECONDITION:
+// off voice's fade tail never plays after the reopen; the bed resumes at
+// the next reopen by his ruling. PRECONDITION:
 // THE STREAM IS DEAD, READ THROUGH THE LATCH ON THIS THREAD JUST BEFORE THE
 // CALL; no fill runs, and the reopen that follows is this thread's own — the
 // first exception at GuiNoiseVoice. Idempotent. Two callers:

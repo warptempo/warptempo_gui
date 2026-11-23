@@ -2,7 +2,6 @@
 #include "canvas_sink.h"
 #include "target_render.h"
 #include "notifications.h"
-#include "chrome_spec.h"
 #include "cool_edit_paint.h"
 
 #include "gui_font.h"
@@ -48,65 +47,35 @@
 // waveform_cache.cpp. Trim paints live per frame
 // (paint_trim), out of any cache.
 
-// -- The bottom row's shaped-text tier (row 7, 2026-08-01) ------------------
+// -- The bottom icon row's text tier ------------------------------------------
 //
-// THE BOTTOM ROW HAS NO MONOSPACE FACE (architect 2026-10-05, after his
-// ACID Pro 3.0 and Vegas screenshots: "no monospace face anywhere";
-// gui_font.h): the bottom icon row's clock and its tab name are THE
-// PROGRAM FACE (Regular 12 W, 24 device px on the tablet since send Z,
-// every text 12 W, gui_font.h), and the render player's two time labels
-// with them (architect 2026-10-26 ~12:10, "yes" to symmetry with the
-// clock); every modal string and the status bar the body face, 12 W too, a
-// row of its own (gui_font.h's table). The no-wiggle guarantee is the
-// timestamps' fixed width, the specimen's advance.
+// ONE FACE (gui_font.h): the bottom icon row's clock and its tab name are
+// THE PROGRAM FACE (Regular 12 W, 24 device px on the tablet, every text
+// 12 W, gui_font.h), and the render player's two time labels with them
+// (architect 2026-10-26, "yes" to symmetry with the clock); every modal
+// string and the status bar the body face, 12 W too, a row of its own
+// (gui_font.h's table). The no-wiggle guarantee is the timestamps' fixed
+// width, the specimen's advance.
 //
 // THE STANDING STATE — the queue/render status and the history walk line —
-// IS THE STATUS BAR'S PROCESS LINE (architect 2026-11-19, send Z;
+// IS THE STATUS BAR'S PROCESS LINE (architect 2026-11-19;
 // status_bar_text, paint_status_bar), the body face in the text tone, no
 // shadow, on the bar under the bottom icon row; notifications.h's head is
 // its word-for-word record.
 //
 // STATE, NOT EVENTS: what is true right now, replaced as it changes, with NO
-// timeouts and no clear on a key press — which is why the "revealed stale"
-// class the transient tier suffered cannot exist here. EVENTS are the
-// NOTIFICATION CARDS (paint_notifications, notifications.h).
+// timeouts and no clear on a key press, so nothing it shows is ever stale.
+// EVENTS are the NOTIFICATION CARDS (paint_notifications, notifications.h).
 //
-// ONE CELL, TWO STRINGS THAT RANK: the `h` walk line wins while the view
-// stands, and the render's progress line is what it carries otherwise. THE
-// RESOLVED READOUT — the third state string, and the bar's right cell for its
-// one day — RETIRED WHOLE with the bar: no state surface displays a resolved
-// value any more, Ctrl+Shift+J copies it (its card, an event, naming the
-// copied value — architect 2026-09-13; the chord 2026-10-14) and Ctrl+J goes
-// to the marker it came from.
+// ONE CELL, TWO STRINGS THAT RANK: the history walk line wins while the view
+// stands, and the render's progress line is what it carries otherwise. No
+// state surface displays a resolved value: Ctrl+Shift+J copies it (its
+// card, an event, naming the copied value — architect 2026-09-13; the chord
+// 2026-10-14) and Ctrl+J goes to the marker it came from.
 //
-// THE STRINGS' EARLIER HOMES, as history: they were the bottom-LEFT
-// lead-in until the 2026-08-12 unification, the bottom row's right end after
-// it, the TAB ROW's right-aligned STATUS CHAIN from 2026-08-13 — a
-// precedence ladder that ranked FOUR tiers, then three when its TRANSIENT tier
-// (the one-line refusals and reports, hidden under a progress line, revealed
-// stale when it cleared and wiped on the next key press) and its CRITICAL CHIP
-// (the checkpoint act's permanent red box) left for the cards on 2026-08-29 —
-// and the STATUS BAR's left cell for the rest of that day. The chain, its
-// right-alignment, its tabs-win-by-paint-order collision rule
-// and its `h`-view overlap with the tabs all went with the bar's landing.
-//
-// THE DIRTY MARK IS NOT A TENANT EITHER: the row carries none since
-// 2026-10-05, SAVE'S GREY BEING THE MARK (architect; plain_save_actionable,
-// app_state.h). It stood here as the clock's `*` suffix from 2026-09-09, and
-// in the window title before that.
-
-// (THE FOUR MODAL EDITORS' SHARED PAINT BODY — render_bottom_strip_editor —
-// DIED 2026-08-12 when the editors became dialogs: the settings, load,
-// commit-title and BPM editors painted as a label + dark inset field + OK/Cancel
-// buttons in paint_modal_dialog (one buffer left since 2026-10-29, the
-// settings editor's), and
-// the prompt's text-plus-labels line became a message + real buttons. The
-// one-run prefix+pending shaping died with it, the pending run shaping alone
-// and the published click-to-caret geometry (AppState::DialogEditorText) the
-// editor's own. A prompt is a full page (architect 2026-11-20), its answers
-// on the bottom icon row's rows (modal_owns_bottom_row), and a line editor a
-// sub-page of its own (THE VALUE SUB-PAGE below), its answers the on-screen
-// keyboard's.)
+// THE DIRTY MARK IS NOT A TENANT EITHER: the row carries none, SAVE'S GREY
+// BEING THE MARK (architect 2026-10-05; plain_save_actionable,
+// app_state.h).
 
 // -- GuiPaintHandler::paint_flag_annotations -----------------------------
 
@@ -114,14 +83,13 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
                                              const GuiRect& top_strip) {
     // Flag annotations in the top strip. The marker/phase-reset flag BOXES live
     // on flag_cache.surface (rebuilt from on_tick via maybe_rebuild_flag_cache);
-    // this pass is a pure blit. (Trim's bar and endcaps left this cache for the
-    // live paint_trim pass.) The boxes CARRY THEIR TEXT since row 5 — the marker-text lane
-    // that used to show it beneath them is gone — so the only thing painted
-    // after this blit in that band is the open editor's overlay
+    // this pass is a pure blit. (The trim bar is the live paint_trim pass's,
+    // outside this cache.) The boxes CARRY THEIR TEXT, so the only thing
+    // painted after this blit in the marker lane is the open editor's overlay
     // (render_flag_editor_box) — which is why the EDITED BOX, and every box of
     // that marker standing to its right, are NOT in this surface at all: they
     // are skipped at cache-build time (2026-08-02, one rule for all three
-    // editor kinds since 2026-09-05) rather than painted here and covered,
+    // editor kinds) rather than painted here and covered,
     // because the overlay is narrower than the committed box whenever the
     // edited text is shorter and the boxes past it ride its edge. Like the other
     // caches, the surface may be null on the very first paint after a load
@@ -133,16 +101,17 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
     // above the origin take no source, and the rows it holds are the bytes
     // the whole-strip surface put there.
     // ONLY ONTO THE ROWS IT WAS LAID OUT FOR (2026-10-14, ON SCREEN IS AS
-    // PAINTED): a surface whose band — its origin row and its height — is
-    // not the live band (top_ruler_row_area's top through the strip's
+    // PAINTED): a surface whose rows — its origin row and its height — are
+    // not the live rows (top_ruler_row_area's top through the strip's
     // bottom) is not blitted. A live gui_scale commit (apply_gui_scale,
-    // through relayout_window) moves the band at once and repaints the whole window, while the
+    // through relayout_window) moves the rows at once and repaints the
+    // whole window, while the
     // surface is rebuilt only at the next tick (maybe_rebuild_flag_cache);
-    // a frame painted between the two blitted the old scale's cues at the
-    // old origin, inside the new, taller toolbar band — a lane the rebuild's
-    // damage never reaches (it starts at the band's foot,
-    // damage_window_top_rows), so the old text stood there for good. Refused,
-    // that frame shows the marker lane's face without cues, and the
+    // a frame painted between the two would blit the old scale's cues at
+    // the old origin, inside the new, taller top icon row — rows the
+    // rebuild's damage never reaches (it starts at that row's foot,
+    // damage_window_top_rows), so the old text would stand there for good.
+    // Refused, that frame shows the marker lane's face without cues, and the
     // rebuild's own damage covers the lane on the frame that lands the new
     // surface. A WIDTH alone is not refused: a resize keeps the rows, the
     // surface stays inside the lanes that damage repaints, and the flags
@@ -166,40 +135,20 @@ void GuiPaintHandler::paint_flag_annotations(cairo_t* cr,
 
 namespace {
 
-// THE SHARED TEXT FACE is the one face owner's body face (gui_font.h): Wine
-// Tahoma at its vertically matched em at every scale (architect 2026-10-06).
-// Every row names it through that owner, gui_font(GuiFace::Body) at the live
-// scale.
+// THE SHARED TEXT FACE is the one face owner's body face (gui_font.h):
+// Liberation Sans Regular 12 W. Every row names it through that owner,
+// gui_font(GuiFace::Body) at the live scale.
 
 // (The authored-length -> device-pixels conversion every dimension below takes
 // is scaled_px, render.h — the ONE conversion the whole scale axis shares.)
 
-// (THE ACCENT'S FOCUS FORK — accent_for_focus — retired 2026-10-03 with the
-// inactive selection face: ONE SELECTED PAIR, FOCUSED OR NOT, the record at
-// render.h's palette block.)
-
-// (ROW 1, THE MENU ROW — Explorer's menu band and then the plain menu bar's
-// seat, its File, Edit and Settings titles flush left at a 2-W lead with 9 /
-// 7 W pads, each title's Alt access key underlined — IS REMOVED, architect
-// 2026-10-21: "I'd like to see v1 without the file/edit... row … keep the
-// line above the top icon row". kMenuButtons, its access-key static_assert
-// and paint_menu_row went with it; the record is git history.)
-
-// THE PRODUCT'S TEXT RULES, STATED ONCE AND HERE (architect 2026-08-01,
-// generalizing the row-by-row carve-out that started at this row; completed
-// 2026-09-01 by the capitalization sweep, which retired every declared
-// exception the domain had left — universal rules, an exception in user-facing
-// text being the sign that the thing carrying it is poorly designed; joined
-// 2026-09-03 by the dropdown items' Title Case, declared that morning as the
-// ONE exception the product would allow itself; and SETTLED THE SAME EVENING,
-// when a research pass over kdenlive's own strings found the two-class rule
-// that explains them and the architect took it whole — so THE DROPDOWN ITEMS
-// STOP BEING AN EXCEPTION AND BECOME AN INSTANCE, one class of a rule that was
-// always kdenlive's, as this product's whole text convention is. Every other
-// site states its own class and points here.
+// THE PRODUCT'S TEXT RULES, STATED ONCE AND HERE (architect 2026-08-01;
+// settled 2026-09-03: kdenlive's two-class rule, taken whole — universal
+// rules, an exception in user-facing text being the sign that the thing
+// carrying it is poorly designed). Every other site states its own class
+// and points here.
 //
-//   * A CONTROL'S NAME IS TITLE CASE — a dropdown item ("Open Project",
-//     "Paste Phase Reset State", "Projects Repository"), a modal row's WORD button ("Copy to
+//   * A CONTROL'S NAME IS TITLE CASE — a modal row's WORD button ("Copy to
 //     Clipboard"), a panel's title, and A TOOLTIP THAT NAMES A GLYPH BUTTON'S
 //     ACT ("Drop Marker", "Go to Start", "Toggle Grid Iterations").
 //     The evidence is kdenlive's own: the Title Case hover on an icon button
@@ -212,22 +161,17 @@ namespace {
 //     period, a caption: "Hold for the A/B audition"; architect 2026-10-31),
 //     a card, a prompt (a question), the status bar's line, and a panel's row
 //     labels and prose.
-//     A TOOLTIP'S FIRST LINE IS NEVER IN THIS CLASS any more (architect
-//     2026-09-12): it named a STATE or a REASON on a handful of buttons until
-//     then ("At the trim end (End)", "Markers are placed in source view (S)",
-//     "Committing the checkpoint (Ctrl+S)"), and that whole class was ruled
-//     out — a tooltip is the act's NAME, the grey is the message and the
-//     reason is the key's card — so the only sentence-case text a tooltip
-//     carries is its second line.
+//     A TOOLTIP'S FIRST LINE IS NEVER IN THIS CLASS (architect 2026-09-12):
+//     a tooltip is the act's NAME, never a state or a reason — the grey is
+//     the message and the reason is the key's card — so the only
+//     sentence-case text a tooltip carries is its second line.
 //   * SO ONE ACT SPLITS BY SURFACE, and that is the rule doing its work rather
 //     than a carve-out: a CARD naming an act stays a sentence because a card
 //     is a description ("BPM iterations work in source view"), while the
 //     TOOLTIP naming the same act is that control's name ("Render Grid
 //     Iterations"), which is also the icon-row button's own
-//     ("BPM Iterations"). No reader compares any of these as strings — the
-//     menus' item
-//     tables were read by index (until the popups retired, 2026-10-21) —
-//     so each surface is free to spell its own class.
+//     ("BPM Iterations"). No reader compares any of these as strings, so
+//     each surface is free to spell its own class.
 //   * TITLE CASE SPELLING: principal words capitalized; articles,
 //     conjunctions and prepositions of three letters or fewer lowercase unless
 //     they lead ("Copy to Clipboard", "Load in Place", "Save and Commit", "Up
@@ -239,9 +183,9 @@ namespace {
 //     tooltip names the act and, on its second line, the glass gesture that
 //     reaches a twin ("Hold to …"). The one key text
 //     is the on-screen keyboard's own caps (onscreen_keyboard.h's cap_word).
-//     The dialog buttons' words are plain words, no letter underlined and
-//     never a bracket (architect 2026-10-30: no keyboard stands under a
-//     dialog, so an access key has no producer).
+//     The word buttons' words are plain words, no letter underlined and
+//     never a bracket (architect 2026-10-30: an access key has no
+//     producer).
 //   * ACRONYMS KEEP THEIR CAPS wherever they fall, in either case ("BPM
 //     iterations work in source view", "GUI Scale", "URL").
 //   * DATA IS VERBATIM: user-authored marker labels, titles and filenames,
@@ -254,40 +198,11 @@ namespace {
 //     and are the accepted class. The card-side statement is notifications.h's,
 //     and the one seam helper is lowercase_initial (notifications.h).
 //
-// THE SUCCESSION IN ONE SENTENCE: sentence case with a Title Case pair
-// (2026-08-01), the pair retired for sentence case with nothing left to except
-// (2026-09-01, "Save and Commit" losing its capital C), the dropdowns carved
-// back out as the one declared exception (2026-09-03 morning), and that
-// exception generalized the same evening into the class it had always been —
-// which is what put "Save and Commit" back, a NAME this time rather than a
-// favourite.
-//
-// THE CASE SPLIT IS OVER (2026-08-02): the terminal round landed, so
-// stderr/stdout prose follows the same rules and there is ONE set for both
-// surfaces.
-// (ROW 2 — THE TOOLBAR — IS DELETED: 2026-08-12, the grand relayout's roster
-// commit. The labeled Save / Undo / Redo / Render lane of 2026-07-31
-// dissolved into the ICON ROW's first group of four glyph buttons
-// (kIconRowButtons below), same chords and face machinery in the row's boxes,
-// the old labels living on as their tooltips. Its painter, its layout
-// constants, ToolbarButtonDef and kToolbarButtons went producer-less with
-// it; what SURVIVES of row 2's measured anatomy is the MODAL DIALOG BUTTONS'
-// box — its height and the two label pads, the chrome spec's push_button_*
-// fields since 2026-10-07, recorded at the kModal* block below,
-// which used to read the row's constants and now own the numbers, with the
-// derivation recorded there. The crops and the full row-2 record are git
-// history.)
+// STDERR / STDOUT PROSE FOLLOWS THE SAME RULES (2026-08-02): ONE set for
+// both surfaces.
 
-// (THE CHROME'S OWN BUTTON PAINTER, paint_button_box — Windows' two-line
-// faces in two families, a TOOLBAR button's SOFT edges on the on-screen
-// keyboard's keys and a PUSH button's PLAIN ones on the dialogs' word
-// buttons, raised at rest, sunken pressed and sunken over the Hilight dither
-// checked — stood from 2026-10-02 until its last two wearers became the
-// roster's keys, 2026-10-22. Its face
-// answer, ButtonBoxFace and the glyph's shift it carried, went 2026-10-23.)
-
-// ARC'S ENTRY'S LENGTHS (architect 2026-11-19, send Z; DESIGN §3, the kit's
-// body_entry; G3 `entry`): the box on the keys' rows, the key's height (28 W
+// ARC'S ENTRY'S LENGTHS (architect 2026-11-19; GTK's `entry`): the box on
+// the keys' rows, the key's height (28 W
 // at the default, 56 device rows on the tablet), its WIDTH kEntryPadsW (18 W)
 // PLUS THE ADVANCE OF ITS SPECIMEN — the widest text it holds, in its face
 // at the live scale — ROUNDED UP TO A WHOLE W, then through scaled_px; its
@@ -305,8 +220,8 @@ static int entry_w_px(GuiFace face, std::string_view specimen) {
     const double adv_w  = factor > 0.0 ? adv_px / factor : 0.0;
     return scaled_px(std::ceil(kEntryPadsW + adv_w), 1);
 }
-// A LABEL'S SLOT (send Z's design, built in send AA: the controls rows' time
-// labels and the score viewer's page cell, GTK labels, no entry round
+// A LABEL'S SLOT (2026-11-19: the controls rows' time labels and the
+// score viewer's page cell, GTK labels, no entry round
 // them): its specimen's advance in its face at the live scale, ROUNDED UP TO
 // A WHOLE W, then through scaled_px.
 static int label_w_px(GuiFace face, std::string_view specimen) {
@@ -321,7 +236,7 @@ static double entry_baseline(const GuiFont& font, const GuiRect& entry) {
                              kKeyHeightW);
 }
 // NOISE's specimens and its box's width (the head above; architect
-// 2026-11-19, send AA, RULINGS §8): the case prints one decimal under 10 dB
+// 2026-11-19): the case prints one decimal under 10 dB
 // of magnitude and none from 10 (format_level_db_face), so the entry is the
 // pads plus THE WIDEST ADVANCE OF THE FOUR SHAPES IT CAN TAKE — a one-decimal
 // number, a two-digit one at the travel's floor and its neighbor, and -inf:
@@ -350,7 +265,7 @@ void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
 // Whether the clip reaches a rect (its rule at the definition below).
 static bool clip_meets(cairo_t* cr, const GuiRect& rect);
 
-// A ROSTER GROUP'S PAINT (send Z, 2026-11-19; materials.h's
+// A ROSTER GROUP'S PAINT (2026-11-19; materials.h's
 // paint_linked_group): the members `ids`, already published at their boxes
 // from (x, y) (publish_button_face, which stashes each one's enabled and
 // selected bits as painted), painted as ONE LINKED GROUP — each member's
@@ -370,7 +285,8 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect);
 // each member's drawing on
 // its box (paint_key_glyph) in its ink as painted (key_ink_tone: the drawing
 // fades with the face; its icon, a discrete property, the state's at once).
-// The band's runs and the bottom icon row's groups both paint through it.
+// The top icon row's runs and the bottom icon row's groups both paint
+// through it.
 void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
                         int x, int y, std::span<const RedesignButton> ids) {
     using FaceFades = AppState::FaceFades;
@@ -403,10 +319,10 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 }
 
 // THE LEVEL CASE'S PAINTER — NOISE AS ARC'S ENTRY WITH ARC'S ENTRY PROGRESS
-// (architect 2026-11-19, send Z; DESIGN §3, the kit's body_entry; the
-// ruling of the case itself at RedesignButton::IconNoiseLevel, app_state.h,
-// architect 2026-11-05, session 46): the `noise_level` SLIDER at the band's
-// third run's tail, a run gap after it, ITS OWN BOX `entry` (noise_entry_w_px
+// (architect 2026-11-19; the ruling of the case itself at
+// RedesignButton::IconNoiseLevel, app_state.h, architect 2026-11-05): the
+// `noise_level` SLIDER at the top icon row's third run's tail, a run gap
+// after it, ITS OWN BOX `entry` (noise_entry_w_px
 // wide, the key's height): THE ENTRY (materials.h's paint_entry: the canvas
 // tone in a one-W `well_border`, its corners 3 W) — NEVER LIT, NEVER PRESSED:
 // a slider shows its value (his "no press face on the cases", 2026-11-05) —
@@ -419,23 +335,23 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 // the level, however small. AT -inf NO LINE. THE NUMBER: one decimal under
 // 10 dB of magnitude, none from 10 — "0.0", "-9.5", "-22", "-inf"
 // (format_level_db_face, THE LEVEL GRAMMAR, device_config.h; architect
-// 2026-11-19, send AA: "doesn't need decimals once it hits 10"), the case's
+// 2026-11-19: "doesn't need decimals once it hits 10"), the case's
 // own `noise_level` alone (the bed's fixed attenuation is not printed,
 // noise.h's head), in the BODY face (Regular 12 W), CENTERED IN THE ENTRY
-// (architect 2026-11-19, send AA, RULINGS §10: "I guess the text should
+// (architect 2026-11-19: "I guess the text should
 // probably be centered" — "Agree."; alignment is the app's property in GTK,
 // its default left, and the entry is its widest number's width, so a
 // left-aligned "-inf" left air on its right): the shaped run's advance
 // centered on the entry's inner width at its exact place, no rounding (the
 // border is one W each side, so the inner width's center is the box's), on
 // the line-box baseline, `text` — at -inf too
-// (architect 2026-11-17, send U: "Negative INF on the noise slider should
+// (architect 2026-11-17: "Negative INF on the noise slider should
 // not have a disabled color because it's still enabled"). DISABLED
 // (`enabled` false — no folder or a failed load, and the roster's blanket
 // greys: a load, an overlay, the on-screen keyboard standing, a question's
 // page or the progress page; roster_greyed_whole, architect 2026-11-20): THE
-// NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry, the
-// kit's; the mix per channel of the row's words, rounded) and NO LINE.
+// NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry; the mix per
+// channel of the row's words, rounded) and NO LINE.
 // The run shaped through the memo (memoized_run: a few dozen spellings).
 // THE REPAINT: every change of the case's level damages its box explicitly
 // (GuiInputHandler::apply_level_case) — the per-tick comparator watches no
@@ -463,19 +379,19 @@ void paint_level_case(cairo_t* cr, const GuiRect& entry, bool enabled,
     cairo_restore(cr);
 }
 
-// THE RENDER PLAYER'S GLYPHS (architect 2026-11-01, M7; the acts'
-// drawings as ruled 2026-11-02, R12 / R14, icons.h's roster), by the act
+// THE RENDER PLAYER'S GLYPHS (architect 2026-11-01; the acts' drawings as
+// ruled 2026-11-02, icons.h's roster), by the act
 // each key runs (its
 // name the tooltip's, render_player_button_hint): the transport triple
 // PREV MediaSkipBackward, PLAY
-// MediaPlaybackStart, NEXT MediaSkipForward (the band's START / END's two,
-// R14's transport rule: "two arrows with a bar" on every to-the-end step);
+// MediaPlaybackStart, NEXT MediaSkipForward (the bottom icon row's START /
+// END's two, the transport rule: "two arrows with a bar" on every
+// to-the-end step);
 // REPEAT MediaRepeatSingle (the row's one lamp); DOWN / UP GoDown / GoUp;
-// FOLDER GoParentFolder; LOAD DialogOkApply (the band's LOAD key's, the
-// same act); DELETE EditDelete. (The player has no Close key, architect
-// 2026-11-11, session 106. The word buttons carry no drawing since
-// 2026-11-18, his ruling "the word alone", so modal_word_icon, their
-// vocabulary of drawings, retired 2026-11-19, send Z's stage C.) THE PLAY
+// FOLDER GoParentFolder; LOAD DialogOkApply (the top icon row's LOAD key's,
+// the same act); DELETE EditDelete. (The player has no Close key, architect
+// 2026-11-11. The word buttons carry no drawing: architect 2026-11-18, "the
+// word alone".) THE PLAY
 // KEY'S GLYPH NAMES ITS NEXT PRESS (architect 2026-10-25; the roster's rule
 // at redesign_button_icon's stateful overload) BY ITS FACE
 // (render_player_play_face, the owner the tooltip reads too): PAUSE
@@ -507,16 +423,16 @@ std::optional<icons::Icon> render_player_button_icon(
     return std::nullopt;
 }
 
-// A KEY'S DRAWING ON ITS BOX (architect 2026-11-01 / 2026-11-02; icons.h's
-// THE INK BOX) — THE ONE PLACE the drawing's seat, size and tone are
-// decided, every key's (the band's, the bottom icon row's, the controls
-// rows' glyph keys, and the on-screen keyboard's glyph keys —
-// onscreen_keyboard::cap_icon, architect sessions 95 / 96: "one ink size
-// with the program keys"); THE TOOLTIP names the act in words.
-// THE SET'S DRAWING CANVAS AT kKeyDrawingBoxW, 16 W (architect 2026-11-19,
-// send Z; DESIGN §3: Papirus's 16-px drawings at their native size are the
-// design), 32 device px on the tablet — ONE
-// SIZE FOR EVERY KEY — the drawing scaled as its whole canvas into
+// A KEY'S DRAWING ON ITS BOX (architect 2026-11-02; icons.h's THE INK BOX)
+// — THE ONE PLACE the drawing's seat, size and tone are decided, every
+// key's (the top icon row's, the bottom icon row's, the controls rows'
+// glyph keys, and the on-screen keyboard's glyph keys —
+// onscreen_keyboard::cap_icon, architect: "one ink size with the program
+// keys"); THE TOOLTIP names the act in words.
+// THE SET'S DRAWING CANVAS AT kKeyDrawingBoxW, 16 W (architect 2026-11-19:
+// Papirus's 16-px drawings at their native size are the design), 32 device
+// px on the tablet — ONE SIZE FOR EVERY KEY — the drawing scaled as its
+// whole canvas into
 // that box (icons::ink_in_box: its ink's length and its offset in the box),
 // THE BOX CENTERED IN THE KEY'S BOX EXACTLY (+10 W, +6 W in the 36 x 28 W
 // key: 20 and 12 device px on the tablet; in another box half the spare on
@@ -587,13 +503,13 @@ void paint_key_glyph(cairo_t* cr, const GuiRect& key, icons::Icon icon,
 
 // THE ONE AS-PAINTED COVERAGE TEST (architect 2026-09-24), read by every
 // publisher of an as-painted stash that a per-tick comparator replays — the
-// roster's faces (publish_button_face) (the open dropdown's item verdicts
-// were a second until 2026-10-21). A stash may be refreshed only on a frame whose clip
+// roster's faces (publish_button_face). A stash may be refreshed only on a
+// frame whose clip
 // repaints every pixel the stash describes, and THOSE PIXELS ARE THE RECT'S
 // DRAWABLE PART, the rect intersected with the surface — never the logical
 // rect whole: cairo bounds every clip by the surface, so a rect running past
-// the window's edge (the icon row's rightmost buttons cropping past the tablet's fit
-// ceiling) could never be covered, its stash would never publish, and the
+// the window's edge (the top icon row's rightmost buttons cropping past the
+// tablet's fit ceiling) could never be covered, its stash would never publish, and the
 // comparator would invalidate it on every tick for as long as it stood. A
 // rect with NO drawable part — empty, or wholly off the surface — refreshes
 // unconditionally: it has no pixel that can be stale, and refreshing is what
@@ -630,106 +546,80 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 }
 
 // THE BUTTON-FACE PUBLICATION, one writer so a row cannot forget a field: the
-// painter stashes the rect it painted plus the three face bits it is painting
+// painter stashes the rect it painted plus the face bits it is painting
 // (redesign_button_enabled / redesign_button_selected /
-// redesign_button_glyph_swapped — the same
-// predicates main.cpp's per-tick drift comparator replays), and returns the
-// face so the caller reads .enabled / .selected back for its own paint. Every
-// row painter publishes through here at the top of its per-button body; the
+// redesign_button_glyph / redesign_button_icon — the same predicates
+// main.cpp's per-tick drift comparator replays), and returns the face so the
+// caller reads .enabled / .selected back for its own paint. Every row
+// painter publishes through here at the top of its per-button body; the
 // comparator's vector is total over the roster, so the stash is written for
 // every id — a button with no selected state simply stores the predicate's
-// constant false. (The tab row's hand-copied stash once omitted `selected`,
-// which made the comparator disagree with the painter on the active tab EVERY
-// tick — a permanent idle full-top-strip repaint. This owner is why that class
-// of omission cannot recur.)
+// constant false. One owner, so no row's hand-copied stash can omit a bit
+// and leave the comparator disagreeing with the painter on every tick.
 //
-// THE BITS REFRESH ONLY WHERE THE PIXELS DO (2026-08-15, the transport-pair
-// staleness fix): on_redraw runs once per damage rect under a Cairo clip to
-// exactly that rect, while each row painter runs WHOLE whenever ANY rect
-// intersects its lane — so a narrow damage (the clock cell at scanner cadence,
-// the tab row's status-chain band) used to run this publisher for buttons
-// whose pixels the clip never touched, stamping the stash LIVE over pixels
-// still wearing the OLD face. The comparator's premise — the stash is what the
-// painter last PAINTED — was thereby false, and any enabled/selected flip
-// whose own edge damaged a sliver of the lane (a click act's stop damaging the
-// clock cell) was masked forever: stash equal to live, pixels stale, repaired
-// only by an unrelated full-lane damage such as a hover. The gate below
-// restores the premise at the one writer: a face whose DRAWABLE rect (the
-// part on the surface, clip_covers_drawable above) is not fully inside the
-// current clip keeps its as-painted bits, the comparator sees the
-// drift on the next tick, and its own damage — the drifted key's rect, cut
-// to cover what this gate asks, or the key's home strip (main.cpp's walk) —
-// is what repaints and republishes: the comparator is the repair mechanism.
+// THE BITS REFRESH ONLY WHERE THE PIXELS DO (2026-08-15): on_redraw runs
+// once per damage rect under a Cairo clip to exactly that rect, while each
+// row painter runs WHOLE whenever ANY rect intersects its lane — so a
+// narrow damage (the clock cell at scanner cadence) would otherwise run
+// this publisher for buttons whose pixels the clip never touched, stamping
+// the stash LIVE over pixels still wearing the OLD face, and any flip whose
+// own edge damaged a sliver of the lane (a click act's stop damaging the
+// clock cell) would be masked for good: stash equal to live, pixels stale.
+// So a face whose DRAWABLE rect (the part on the surface,
+// clip_covers_drawable above) is not fully inside the current clip keeps
+// its as-painted bits, the comparator sees the drift on the next tick, and
+// its own damage — the drifted key's rect, cut to cover what this gate
+// asks, or the key's home strip (main.cpp's walk) — is what repaints and
+// republishes: the comparator is the repair mechanism. This is no face
+// policy: it is what makes ANY face update reliable, for every row and
+// every bit — the selected bit and the glyph (play and stop are one
+// button, its glyph flipped by an end-of-song teardown that damages no
+// button) ride the same gate; `glyph`'s whole argument is at the predicate
+// (app_state.h).
 // An EMPTY rect refreshes unconditionally (as does one wholly off the
-// surface): it publishes "not painted at all", no pixel can be stale for it, and refreshing is what keeps the
-// comparator from thrashing under a standing modal. TWO PRODUCERS of an empty
-// rect: THE MODAL YIELD (since 2026-08-18; the contract is at
-// paint_bottom_strip's yield branch), since 2026-10-01 the icon row's
+// surface): it publishes "not painted at all", no pixel can be stale for
+// it, and refreshing is what keeps the comparator from thrashing under a
+// standing modal. THE PRODUCERS of an empty rect: THE MODAL YIELD (the
+// contract is at paint_bottom_strip's yield branch), the top icon row's
 // OVERFLOW RULE at a window too narrow for the row, a member the view pairs
-// cover whole (kIconRowViewPairs), since 2026-10-05 the icon row's
-// HISTORY STAND-INS, a member that does not stand in the current state
-// (kIconRowHistoryStandIns), and since 2026-10-07 THE `h` VIEW'S HIDE on
-// both toolbars, a member whose chord the view refuses in every session
-// (history_mode_hides_button, input_pointer.cpp).
+// cover whole (kIconRowViewPairs), the top icon row's HISTORY STAND-INS, a
+// member that does not stand in the current state (kIconRowHistoryStandIns),
+// and THE HISTORY VIEW'S HIDE on both icon rows, a member whose chord the
+// view refuses in every session (history_mode_hides_button,
+// input_pointer.cpp).
 //
-// THE CLIP TEST SURVIVED THE FACE-POLICY REVERSAL THAT FOLLOWED IT, and that is
-// deliberate rather than an oversight: it landed in the same arc that made the
-// transport row honest, and the architect reversed that policy whole hours
-// later (redesign_button_enabled, app_state.h). This is NOT part of it. It is
-// not a policy choice at all — it is what makes ANY face update reliable, for
-// every row and every bit, and the stale-row bug it fixed had nothing to do
-// with which buttons grey. Do not revert it along with the policy.
+// THE INPUT CLAIMS ON THESE BITS (architect 2026-09-24, strictly
+// as-painted): the roster's press, lift and hold-repeat read the stash this
+// publishes rather than the live predicates, so the gate is what keeps a
+// press agreeing with the pixels under it — a bit stamped over pixels that
+// never took it would misdirect a press as well as blind the comparator.
 //
-// AND IT IS LOAD-BEARING AGAIN RATHER THAN MERELY HISTORICAL: the transport's
-// state moved axis TWICE more the same day — onto the SELECTED bit with the
-// radio ruling, and onto the GLYPH with the collapse of play and stop into one
-// button — so the very same masking edge (a click act's stop, or the natural
-// end-of-song teardown, damaging no button) now flips that button's
-// GLYPH under a clip that redraws no button. Same gate, same repair, the third
-// term; `glyph` (the glyph index since Save grew a third, 2026-09-27) is
-// stashed here for exactly that reason and its whole argument is at the
-// predicate (app_state.h).
-//
-// AND THE INPUT CLAIMS ON THESE BITS (architect 2026-09-24, strictly
-// as-painted): the roster's press, lift, hold-repeat and menu-row slide read
-// the stash this publishes rather than the live predicates,
-// so the gate is what keeps a press agreeing with the pixels under it — a
-// bit stamped over pixels that never took it would now misdirect a press as
-// well as blind the comparator.
-//
-// IT TOOK A GuiPlayback WITH THAT POLICY, GAVE IT BACK WITH IT, AND TOOK IT
-// AGAIN WITH THE POLICY'S REVERSAL: the PLAY button's honest arm is the only
-// reader of the object down this path (redesign_button_enabled asks
-// playback_launch_playable about the bound preview buffer's domain), so the
-// parameter left with its one producer on 2026-08-15 rather than resting
-// unread — the same move the GuiAudio parameter of that predicate made a
-// revision earlier — and both returned on 2026-08-30 under the
-// truthful-buttons ruling, with a GuiTargetRender beside them for the target
-// preview's readiness (the painter's own member since that day). `cr` stays
-// because the clip test is the survivor of every move.
+// THE PARAMETERS: the GuiAudio, the GuiPlayback and the GuiTargetRender are
+// redesign_button_enabled's (the truthful-buttons ruling, 2026-08-30: the
+// PLAY button's arm asks playback_launch_playable about the bound preview
+// buffer's domain, and the target preview's readiness is the render's);
+// `cr` is the clip test's.
 //
 // THE COVERAGE IS WHAT THE BUTTON PAINTS, THE RECT WHAT IT ANSWERS
 // (2026-10-23): `painted` — the face, cut by whatever clip the row paints
-// under (the band's overflow column), since the printed legend under it
-// retired (2026-11-18, send Z) — is the rect the clip must cover, because
-// the face wears the enabled bit and a refresh over a clip that missed it
-// would stamp a bit its pixels never took; `rect`, the face, is what the
-// face publishes for the press, the hover and the tooltip.
+// under (the top icon row's overflow column) — is the rect the clip must
+// cover, because the face wears the enabled bit and a refresh over a clip
+// that missed it would stamp a bit its pixels never took; `rect`, the face,
+// is what the face publishes for the press, the hover and the tooltip.
 //
-// THE GLYPH IS THE FOURTH TERM (2026-11-02; the printed word's from
-// 2026-10-25): `icon` is the drawing the key wears
+// THE DRAWING IS A TERM (2026-11-02): `icon` is the drawing the key wears
 // (redesign_button_icon's stateful overload — the act its next press runs),
-// stashed beside the index so the comparator sees FIT / RECALL and INHERIT
-// / TIE, which move no index. THE COVERAGE IS THE UNION OF THE PAINTED
-// EXTENT AND THE ONE LAST STASHED (RedesignButtonFace::painted), so a face
-// whose extent moved is repainted whole before the stash may say the new
-// drawing.
+// stashed beside the glyph index so the comparator sees FIT / RECALL and
+// INHERIT / TIE, which move no index. THE COVERAGE IS THE UNION OF THE
+// PAINTED EXTENT AND THE ONE LAST STASHED (RedesignButtonFace::painted), so
+// a face whose extent moved is repainted whole before the stash may say the
+// new drawing.
 //
 // A MEMBER THAT DOES NOT STAND publishes the EMPTY rect and paints nothing
-// (the modal yield, the overflow, the `h` view's stand-ins and hide, above;
-// the overload below); its stash refreshes unconditionally (the empty rect
-// has no pixel to be stale) and its painted extent empties (the walk's own
-// damage having erased what stood there).
+// (the modal yield, the overflow, the history view's stand-ins and hide,
+// above; the overload below); its stash refreshes unconditionally (the
+// empty rect has no pixel to be stale) and its painted extent empties (the
+// walk's own damage having erased what stood there).
 AppState::RedesignButtonFace& publish_button_face(
     cairo_t* cr, AppState& app,
     const GuiAudio& audio, const GuiPlayback& playback,
@@ -765,74 +655,58 @@ AppState::RedesignButtonFace& publish_button_face(
                                rect, rect, 0);
 }
 
-// ROW 4 — THE ICON ROW: THE TOOLBAR BAND (architect 2026-10-09, the program
-// is Cool Edit; the simple layout 2026-10-22, program_spec.h's head). Its
-// metrics — the case and its glyph seat, Arc's toolbar pads and the run gap —
-// live in render.h's program block, where the lane table
-// and row 8 read them too; its ends are the well's first and last columns
-// (render.h's well_columns, 2026-10-23); this row spells none of
-// them.
+// THE TOP ICON ROW (architect 2026-10-09, the program is Cool Edit;
+// program_spec.h's head). Its metrics — the case and its glyph seat, Arc's
+// toolbar pads and the run gap — live in render.h's program block, where
+// the lane table and the bottom icon row read them too; its ends are the
+// panel's seats (render.h's well_columns, 2026-10-23); this row spells none
+// of them.
 //
-// THE VERTICAL STORY (architect 2026-11-18 / 2026-11-19, send Z; render.h's
-// band paragraph): the title bar (render.h's title bar block), Arc's pad
-// 7 W, the key (band_case_top_offset_px), the pad 7 W; the bottom icon row
-// the pad 7 W, its key, the pad 7 W (symmetric, architect 2026-11-20, send
-// EE; render.h's ARC'S TOOLBAR PADS).
+// THE VERTICAL STORY (architect 2026-11-19; render.h's THE TITLE BAR AND
+// THE TOP ICON ROW): the title bar (render.h's title bar block), Arc's pad 7 W,
+// the key (band_case_top_offset_px), the pad 7 W; the bottom icon row the
+// pad 7 W, its key, the pad 7 W (symmetric, architect 2026-11-20;
+// render.h's ARC'S TOOLBAR PADS).
 //
 // THE HORIZONTAL WALK (architect 2026-10-22: "push all icons
 // together … add a spacing after render, and after flatten"): the roster's
 // left members in THREE RUNS on the body tone — Open Project .. Render,
 // Zoom In .. Flatten, Play Renders .. Tooltips — EACH RUN ONE LINKED GROUP,
-// Arc's linked buttons (send Z, 2026-11-19: the sub-groups inside a run no
-// longer parted; materials.h's THE KEY and linked_group_w_px), NOISE's entry
-// a run gap after the third, and the run gap of ground between two
-// (render.h's program_run_gap_px, kRunGapW, 6 W, 12 device px on the
-// tablet; redesign_button_opens_icon_run,
-// app_state.h, the runs' leaders); the right five — the history opener and
-// the two view pairs — ONE GROUP ending 6 W inside the panel's right edge,
-// the left walk starting 6 W inside its left edge (icon_row_seats;
-// render.h's kEdgeInsetW). No pane, groove, recess
-// or line (Cool Edit's panes and grooved recess stood 2026-10-09 to
-// 2026-10-22).
+// Arc's linked buttons (2026-11-19: no part inside a run; materials.h's THE
+// KEY and linked_group_w_px), NOISE's entry a run gap after the third, and
+// the run gap of ground between two (render.h's program_run_gap_px,
+// kRunGapW, 6 W, 12 device px on the tablet;
+// redesign_button_opens_icon_run, app_state.h, the runs' leaders); the
+// right five — the history opener and the two view pairs — ONE GROUP
+// ending 6 W inside the panel's right edge, the left walk starting 6 W
+// inside its left edge (icon_row_seats; render.h's kEdgeInsetW). No pane,
+// groove, recess or line.
 
 // THE PAINTER'S HALF OF THE ICON-ROW ROSTER: each button's id, in painted
 // order; the key wears its glyph (redesign_button_icon, 2026-11-02).
 // The press claim's chord table (input_pointer.cpp) is the
 // other half; both key off the same ids.
 //
-// WHAT LEADS A BUTTON IS NOT HERE ANY MORE (2026-08-13): the struct carried an
-// IconRowLead column — First / Gap / Separator — of which only Separator ever
-// meant anything to the walk, First and Gap taking the same branch. The row's
-// GROUP BOUNDARIES are redesign_button_opens_icon_group's (app_state.h), the
-// unit of the `h` view's stand-in swap, and its RUN BOUNDARIES — the run gap
-// of bare ground, the band's one spacing since the simple layout (2026-10-22) —
+// The row's GROUP BOUNDARIES are redesign_button_opens_icon_group's
+// (app_state.h), the unit of the history view's stand-in swap, and its RUN
+// BOUNDARIES — the run gap of bare ground, the row's one spacing —
 // redesign_button_opens_icon_run's.
 struct IconRowDef {
     RedesignButton id;
 };
 constexpr IconRowDef kIconRowButtons[] = {
-    // THE TOOLBAR GROUP — the row's FIRST since the 2026-08-12 grand
-    // relayout, Open Project at its head since 2026-10-07 (below), the
-    // relayout having dissolved row 2 (architect: the labeled lane goes, "the icon
-    // to represent all those various meanings"): Save, Undo, Redo and Render at
-    // the row's left, the SAME chords, gates, disabled derivations and
-    // stateful faces the labeled buttons carried (Save's and Render's
-    // stateful glyphs, redesign_button_icon's stateful overload; Render serves BOTH plain
-    // render and the iteration sweep by the architect's same-day ruling, the
-    // tooltip alone forking).
+    // THE FIRST RUN, OPEN PROJECT, SAVE, UNDO, REDO AND RENDER (the run gap
+    // after Render; redesign_button_opens_icon_run): each one icon for "all
+    // those various meanings" (architect 2026-08-12), with its chord, gates,
+    // disabled derivation and stateful face (Save's and Render's stateful
+    // glyphs, redesign_button_icon's stateful overload; Render serves BOTH
+    // plain render and the iteration sweep, the tooltip alone forking).
     //
     // OPEN PROJECT LEADS THEM ALL (architect 2026-10-07), ONE BUTTON — "just
     // to keep those two together", the button and its shift twin, Revert:
-    // no drop-down — and THE FIVE ARE THE BAND'S FIRST RUN (the simple
-    // layout, 2026-10-22: Open, Save, Undo, Redo and Render one run, the run
-    // gap after Render; redesign_button_opens_icon_run). Undo still leads a
-    // GROUP with Redo and Render (redesign_button_opens_icon_group), the unit
-    // the `h` view's stand-ins replace, which paints nothing.
-    //
-    // (COPY PHASE RESETS stood between Redo and Render 2026-10-25 to
-    // 2026-11-07, a member of Undo's group; it is row 8's marker verbs' tail
-    // since, right of DRAG — kMarkerVerbGroup — so the first run is OPEN SAVE
-    // UNDO REDO RENDER again, architect 2026-11-07, session 87.)
+    // no drop-down. Undo leads a GROUP with Redo and Render
+    // (redesign_button_opens_icon_group), the unit the history view's
+    // stand-ins replace, which paints nothing.
     {RedesignButton::OpenProject},
     {RedesignButton::Save},
     {RedesignButton::Undo},
@@ -841,55 +715,15 @@ constexpr IconRowDef kIconRowButtons[] = {
     // (The view axes' faces are the two radio pairs at this row's right end,
     // architect 2026-10-14 — kIconRowViewPairs below; no view button stands
     // in this group.)
-    // (THE ROW'S GROWTH, in brief: an earlier ZOOM PAIR sat after the radios
-    // 2026-08-01..02 and was deleted under the no-duplicate-commands ruling —
-    // superseded for today's zoom GROUP by the 2026-08-12 relayout order, at
-    // that group below; the history button arrived 2026-08-04, its group grew
-    // through 2026-08-08, the trim button opened its group 2026-08-11 at
-    // seventeen buttons in six groups, and the 2026-08-12 relayout landed the
-    // toolbar four above plus the zoom and marker-verb groups below —
-    // twenty-nine members in nine groups then, of which the mode-collapsing roster
-    // painted a subset per frame. The 2026-08-13 revision moved the history
-    // group left, ahead of the mass-marker category; 2026-08-14 took the
-    // group's four companions to the BOTTOM ROW, brought the READ-ONLY toggle
-    // in from the tabs and put the opener last, which is TWENTY-SIX members in
-    // EIGHT groups, all painted, every frame; 2026-08-16 made it TWENTY-SEVEN
-    // by filling the trim group's second slot with the Show trim region
-    // button, the group count unchanged; and the 2026-08-18 ROSTER RELAYOUT
-    // brought it back to TWENTY-SIX in EIGHT — the scissors deleted, the four
-    // MARKER VERBS gone to the bottom row with their group, the four HISTORY
-    // COMPANIONS returned behind the opener in a group of its own — and the
-    // WALK RADIOS made it TWENTY-EIGHT in EIGHT later that day, landing inside
-    // the history group between the opener and the cumulative toggle; the
-    // WAVEFORM MAGNIFICATION three closed the zoom group on 2026-08-26 — the
-    // stepping pair, then the reset later the same day — which was TWENTY-NINE
-    // in EIGHT, and the reset's deletion on 2026-08-27 put it back to
-    // TWENTY-EIGHT in EIGHT. THE SERIES RELOCATION later that same day is what
-    // makes it TWENTY-SIX in SIX: the BPM and ITERATION buttons left the
-    // roster for the new menu, and FOLLOW and the SHOW TRIM REGION button
-    // joined the zoom group, dissolving two separator-led groups into it; the
-    // KEEP-CENTERED LAMP (2026-08-31) lands beside Follow at that group's
-    // tail, TWENTY-SEVEN in SIX. The walk's own paragraph at paint_icon_row
-    // carries the current count.)
-    // THE ZOOM GROUP OPENS HERE, on the separator the TRIM GROUP held from
-    // 2026-08-11 — the scissors opened it then, the Show trim region button
-    // filled it on 2026-08-16, the scissors were deleted on 2026-08-18, and on
-    // 2026-08-27 (architect) that one member merged with the zoom buttons
-    // behind it by DELETING THE BOUNDARY IN FRONT OF THEM. The Show trim
-    // region button itself — bare `[`, wearing tool-rect-selection — was
-    // deleted on 2026-09-22 (the tablet's pen reaches the trim bar), one box
-    // and one 2px gap
-    // off the walk, no separator moving; ZOOM IN leads the group (the step
-    // pair in front of Zoom to Fit since 2026-10-27). What
-    // the group collects is the VIEWPORT CLASS — Zoom In, Zoom Out, Zoom to
-    // Fit, the magnification lamp and FOLLOW — at the head of the band's
-    // second run.
+    // THE ZOOM GROUP, the VIEWPORT CLASS — Zoom In, Zoom Out, Zoom to Fit,
+    // the magnification lamp, Follow, Restrict, the trim arm lamp and the
+    // presets key — at the head of the top icon row's second run; ZOOM IN
+    // leads the group and the run.
     // ZOOM IN AND ZOOM OUT (architect 2026-10-27, "the zoom in and out to the
     // left of FIT ... including the position in the toolbar"): bare `=` and
     // bare `-`, one level about the viewport's centre, the shift press and
     // the long press two (RedesignButton::IconZoomIn's record), IN and
-    // OUT. Two cases onto the walk at the second run's head, no run
-    // moving; Zoom In is the group's and the run's leader.
+    // OUT.
     {RedesignButton::IconZoomIn},
     {RedesignButton::IconZoomOut},
     // THIS TABLE IS THE ROW'S PAINTED ORDER — the walk
@@ -898,144 +732,87 @@ constexpr IconRowDef kIconRowButtons[] = {
     // redesign_button_opens_icon_group and redesign_button_opens_icon_run
     // (app_state.h) and the roster enum's own order, which they keep in
     // step. No count, no gap and no width follows a swap.
-    // ZOOM TO FIT (2026-08-12, the grand relayout, as Full Zoom Out; renamed
-    // 2026-10-24 — the architect's live placement, "the rest in the icon row,
-    // after the trim"): bare `0`, Shift+0 Frame the Trim on its shift press
-    // (2026-10-24), the command's one pointer home (the press's act
-    // run_overview_command, the hold's run_span_framing_command, the trim
-    // bar's double tap exactly). The step pair stands in
-    // front of it (above). WORKING-ZOOM CENTER (bare `c`) stood
-    // behind it until 2026-09-29, when the architect moved it to the bottom
-    // row (kTransportNudgePlayGroup since 2026-10-18) — one box and one 2px gap off
-    // this walk, no separator moving.
+    // ZOOM TO FIT (architect 2026-10-24, "the rest in the icon row, after
+    // the trim"): bare `0`, Shift+0 Frame the Trim on its shift press, the
+    // command's one pointer home (the press's act run_overview_command, the
+    // hold's run_span_framing_command, the trim bar's double tap exactly).
+    // The step pair stands in front of it (above).
     {RedesignButton::IconZoomFitBest},
     // WAVEFORM MAGNIFICATION (architect 2026-09-22), the backtick's
     // lamp, after Zoom to Fit in the same group — the louder waveform, its
     // vertical scale grown.
-    // It joins the group rather than opening one, so it adds one box and one
-    // 2px gap to the walk and no separator.
     {RedesignButton::IconWaveformMagnification},
-    // (THE WAVEFORM MAGNIFICATION PAIR closed the same group from 2026-08-26
-    // to 2026-09-14 — magnify wearing zoom-in-y and reduce wearing
-    // zoom-out-y — and left with the setting it stepped (architect
-    // approval 2026-09-14), two boxes and two 2px gaps off the walk and no
-    // separator moving.)
-    // (THE SINGLE-MARKER VERBS opened a separator-led group here from
-    // 2026-08-12 until the architect moved them to the BOTTOM ROW's right
-    // block on 2026-08-18, the bottom row's own table below.)
-    // (THE MASS-MARKER CATEGORY OPENED A SEPARATOR-LED GROUP HERE and no
-    // longer exists. The PHASE-RESET CLIPBOARD PAIR led it until 2026-08-20,
-    // when the architect's propagate relocation deleted both buttons: all five
-    // propagate commands took the new EDIT MENU as their one pointer home, and
-    // edit-copy and edit-paste went with them — the glyphs had no second
-    // consumer, the trim scissors' own precedent — and the separator fell in
-    // front of the BPM opener. On 2026-08-27 the SERIES RELOCATION did the
-    // same thing to the two that were left: bare `m` and bare `i` took the new
-    // SERIES MENU as their one pointer home, IconBpm's MUSIC-NOTE-16TH and
-    // IconIter's MATHMODE went with them (neither glyph had a second consumer;
-    // GridIterations had been iteration mode's since 2026-08-18, when it took the
-    // summation sigma's slot and the sigma moved to the CUMULATIVE toggle), and
-    // the separator went too — FOLLOW, the survivor, joined the ZOOM GROUP
-    // above rather than standing alone behind a divider. THE TWO BUTTONS AND
-    // BOTH GLYPHS CAME BACK ON 2026-09-04 in a group of their own, further
-    // down this table; the mass-marker group itself did not.)
-    // FOLLOW (bare `f`): the view follows the playing scanner. Out for the
-    // hours of 2026-09-23 the Shift+C chase posture replaced it, and back
-    // that evening: one box and one 2px gap onto the walk, no separator
-    // moving.
+    // FOLLOW (bare `f`): the view follows the playing scanner.
     {RedesignButton::IconFollow},
     // RESTRICT (architect 2026-10-29): bare `r`, the lamp that keeps the
-    // user's play inside the window, behind Follow, its radio partner. One
-    // case onto the second run, no run and no separator moving.
+    // user's play inside the window, behind Follow, its radio partner.
     {RedesignButton::IconRestrict},
-    // THE TRIM ARM LAMP (architect 2026-11-07, session 87), behind Restrict:
-    // bare `w`, TRIM, the lamp that arms the next waveform drag as the trim
-    // sweep (RedesignButton::IconTrimArm). One case onto the second run, the
-    // band keeping its count (COPY having left the first run for row 8).
+    // THE TRIM ARM LAMP (architect 2026-11-07), behind Restrict: bare `w`,
+    // TRIM, the lamp that arms the next waveform drag as the trim sweep
+    // (RedesignButton::IconTrimArm).
     {RedesignButton::IconTrimArm},
-    // THE PRESETS KEY (architect 2026-10-28 night; PRESETS since 2026-11-07),
-    // the zoom group's TAIL behind the TRIM lamp: bare `t`, the trim presets
-    // list's opener and, while it stands, its closer
-    // (RedesignButton::IconTrimPresets). No run and no separator moving (the
-    // iteration group's stays BPM's).
+    // THE PRESETS KEY (architect 2026-10-28; PRESETS 2026-11-07), the zoom
+    // group's TAIL behind the TRIM lamp: bare `t`, the trim presets list's
+    // opener and, while it stands, its closer
+    // (RedesignButton::IconTrimPresets).
     {RedesignButton::IconTrimPresets},
-    // THE ITERATION GROUP (architect 2026-09-04): the BPM opener (bare `m`)
-    // and grid iteration mode (bare `i`), back from the menu row behind a
-    // separator of their own, just ahead of the render-entry pair. The
-    // architect deleted the ITERATIONS dropdown once this row had room again,
-    // which is the 2026-08-27 Series relocation run in reverse — the two
-    // commands have ONE pointer home and it is these buttons. The row gains
-    // two boxes, one 2px gap and ONE separator, so the group count moves too
-    // (the leader is IconBpm, redesign_button_opens_icon_group).
+    // THE ITERATION GROUP (architect 2026-09-04): the BPM opener (Ctrl+B)
+    // and grid iteration mode (bare `i`), just ahead of the render-entry
+    // group — the two commands have ONE pointer home and it is these
+    // buttons (the leader is IconBpm, redesign_button_opens_icon_group).
     {RedesignButton::IconBpm},
     {RedesignButton::IconIter},
-    // FLATTEN CLOSES THE GROUP (architect 2026-09-19), up from the bottom
-    // row's marker verbs where it had stood since that morning: the group
-    // gains one box and one 2px gap, no separator moves, and the leader is
-    // unchanged. ITS SEAT IS A CLASSIFICATION BY SUBJECT — a deviation term
-    // exists because a GRID SWEEP APPENDED ONE to every cell it wrote, and
-    // Ctrl+F is the one road that takes those terms off again, so the act
-    // stands beside the mode that produces what it removes (the reasoning in
-    // full, and what is deliberately NOT claimed for it, is at the roster
-    // entry, app_state.h).
+    // FLATTEN CLOSES THE GROUP (architect 2026-09-19). ITS SEAT IS A
+    // CLASSIFICATION BY SUBJECT — a deviation term exists because a GRID
+    // SWEEP APPENDED ONE to every cell it wrote, and Ctrl+F is the one road
+    // that takes those terms off again, so the act stands beside the mode
+    // that produces what it removes (the reasoning in full, and what is
+    // deliberately NOT claimed for it, is at the roster entry, app_state.h).
     {RedesignButton::IconFlatten},
-    // THE RENDER-ENTRY GROUP (architect 2026-08-14): "make the last section of
-    // the icon row: listen, load-in-place, readonly, history". The render-entry
-    // pair keeps its separator-led group and gained the READ-ONLY toggle, the
-    // padlock off the tabs. THE HISTORY OPENER stood fourth here from that day
-    // until 2026-08-18, when it left to lead its own group again with its four
-    // companions behind it. IT IS TWO SINCE 2026-09-01 — Listen and the
-    // padlock — the LOAD IN PLACE having moved to the history group's tail
-    // below (architect: "move the button to the history section"), its act
-    // outside the `h` view having been Play renders' own; the two that stay
-    // keep his order and Listen still opens the group.
+    // THE RENDER-ENTRY GROUP (architect 2026-08-14: "make the last section
+    // of the icon row: listen, load-in-place, readonly, history"), the
+    // third run: Listen (Play Renders) opens it, the READ-ONLY toggle — the
+    // padlock off the tabs — beside it; the Load in Place is the history
+    // view's (kIconRowHistoryActGroup, architect 2026-09-01: "move the button
+    // to the history section").
     {RedesignButton::IconListen},
     // The read-only toggle: its lit face says read-only, as every
     // toggle's does.
     {RedesignButton::IconReadOnly},
     // THE SCORE (architect 2026-10-26), between the padlock and Settings
     // (architect 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS
-    // NOISE since the AUDIO case left, 2026-11-11): bare `m`, the score
-    // viewer's opener and, while it stands, its closer (RedesignButton::IconScore). One case on the walk, no run
-    // moving.
+    // NOISE): bare `m`, the score viewer's opener and, while it stands, its
+    // closer (RedesignButton::IconScore).
     {RedesignButton::IconScore},
     // SETTINGS (architect 2026-09-29), right after the Score key (architect
-    // 2026-11-10) and ahead of
-    // the tooltip lamp (architect 2026-10-01: help comes after settings): bare
-    // `;`, the settings page (2026-10-28) — the key's pointer spelling, one box and one 2px gap onto the walk
-    // and no separator moving.
+    // 2026-11-10) and ahead of the tooltip lamp (architect 2026-10-01: help
+    // comes after settings): bare `;`, the settings page — the key's pointer
+    // spelling.
     {RedesignButton::IconSettings},
-    // ENABLE TOOLTIPS (architect 2026-09-29, evening), behind Settings
-    // since 2026-10-01 (architect: help
-    // comes after settings), the level case behind it: the bare backslash's LAMP. Dark at every open, and while dark no tooltip shows
-    // anywhere; lit, the Qt model as ruled. One box and one 2px gap onto the
-    // walk, no separator moving.
+    // ENABLE TOOLTIPS (architect 2026-09-29), behind Settings (architect
+    // 2026-10-01: help comes after settings), the level case behind it: the
+    // bare backslash's LAMP. Dark at every open, and while dark no tooltip
+    // shows anywhere; lit, the Qt model as ruled.
     {RedesignButton::IconTooltips},
-    // THE LEVEL CASE (architect 2026-11-05), the third run's last, in the
-    // NOISE lamp's seat (2026-10-28 to 2026-11-05): NOISE, the `noise_level`
-    // slider (RedesignButton::IconNoiseLevel, app_state.h; paint_level_case
-    // above). The AUDIO case before it, the project voice's slider, retired
-    // 2026-11-11 with its key, the run one pitch shorter, no run moving: on
-    // the tablet at the defaults the left walk ends short of the left runs'
-    // limit (the right run's first face less the run gap, icon_row_seats;
-    // THE FIT at paint_icon_row's width math).
+    // THE LEVEL CASE (architect 2026-11-05), the third run's last: NOISE,
+    // the `noise_level` slider (RedesignButton::IconNoiseLevel, app_state.h;
+    // paint_level_case above). On the tablet at the defaults the left walk
+    // ends short of the left runs' limit (the right run's first face less
+    // the run gap, icon_row_seats; THE FIT at paint_icon_row's width math).
     {RedesignButton::IconNoiseLevel},
-    // (THE HISTORY OPENER closed this walk until 2026-10-06; it is
-    // right-anchored since, kIconRowHistoryOpener below.)
 };
 
-// THE HISTORY STAND-INS — THE ICON ROW'S ONE MODE SWAP (architect
-// 2026-10-05, so the row fits the tablet's 2304 device px at gui_scale 400):
-// WHILE THE `h` VIEW STANDS, the history group's four companions here (the
-// walk lamp, Cumulative, Revert and Load in Place; Older and Newer are row
-// 8's since 2026-10-11, kTransportHistoryStandIns) paint in the
-// slots of the AUTHORING GROUPS THE VIEW REFUSES WHOLE, and those groups'
-// members publish empty rects; outside the view the authoring groups stand
-// and the four publish empty rects. The opener (IconHistory) is not a
-// companion and stands at its own slot in both states. Every other x is the
-// walk's plain accumulation over whichever members stand, and the keyboard
-// is untouched: only the row's picture changes, every chord answering
-// exactly as it did.
+// THE HISTORY STAND-INS — THE TOP ICON ROW'S ONE MODE SWAP (architect
+// 2026-10-05, so the row fits the tablet's width): WHILE THE HISTORY VIEW
+// STANDS, the history group's four companions here (the walk lamp,
+// Cumulative, Revert and Load in Place; Older and Newer are the bottom icon
+// row's, kTransportHistoryStandIns) paint in the slots of the AUTHORING
+// GROUPS THE VIEW REFUSES WHOLE, and those groups' members publish empty
+// rects; outside the view the authoring groups stand and the four publish
+// empty rects. The opener (IconHistory) is not a companion and stands at its
+// own slot in both states. Every other x is the walk's plain accumulation
+// over whichever members stand, and the chords are untouched: only the
+// row's picture changes, every chord answering the same in both.
 //
 // WHICH GROUPS: each entry names the LEADER of the authoring group it
 // replaces (redesign_button_opens_icon_group), and the stand-in group takes
@@ -1046,27 +823,22 @@ constexpr IconRowDef kIconRowButtons[] = {
 // — Ctrl+Z, Ctrl+Shift+Z, Ctrl+Alt+R)
 // and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). No other group is
 // refused whole in the view: the zoom group keeps Zoom In, Zoom Out and Zoom
-// to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders (bare `l`, admitted 2026-10-25),
-// the tooltip lamp (bare backslash) and the level case (no chord, LIVE
-// by the walk's own arm since 2026-11-05; the NOISE lamp's bare `w`
-// admitted 2026-10-28 until then).
+// to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders
+// (bare `l`), the tooltip lamp (bare backslash) and the level case (no
+// chord, LIVE by the walk's own arm).
 //
-// THE SLOTS: UNDO'S THREE (Undo, Redo and Render; four with Copy Phase
-// Resets 2026-10-25 to 2026-11-07) take the view's two acts, Revert and Load
-// in Place, so that group stands one case narrower in the view; THE ITERATION
-// GROUP'S THREE take the two reading lamps, the walk source and the
-// cumulative reading (architect 2026-10-26, the toggles reinstated "as they
-// were at the time of removal"), so that group stands one case narrower and
-// its third seat is empty. OLDER AND NEWER LEFT UNDO'S GROUP FOR ROW 8
-// (architect 2026-10-11 ~02:40; they stood in Undo's and Redo's slots from
-// 2026-10-05): they take the Left / Right arrows' seats in the
-// nudge-and-play group there, the row's per-seat stand-ins
-// (kTransportHistoryStandIns). The zoom group stands on the four members the
-// view does not refuse in every session (Zoom In and Zoom Out since
-// 2026-10-27, Zoom to Fit and, since 2026-10-12, Waveform Magnification) and
-// the render-entry group on three (Play Renders,
-// since 2026-10-25, Enable Tooltips, and the level case since
-// 2026-11-05 — the NOISE lamp 2026-10-28 until then), their others hidden
+// THE SLOTS: UNDO'S THREE (Undo, Redo and Render) take the view's two acts,
+// Revert and Load in Place, so that group stands one case narrower in the
+// view; THE ITERATION GROUP'S THREE take the two reading lamps, the walk
+// source and the cumulative reading (architect 2026-10-26), so that group
+// stands one case narrower and its third seat is empty. OLDER AND NEWER ARE
+// THE BOTTOM ICON ROW'S (architect 2026-10-11): they take the Left / Right
+// arrows' seats in the nudge-and-play group there, the row's per-seat
+// stand-ins (kTransportHistoryStandIns). The zoom group stands on the four
+// members the view does not refuse in every session (Zoom In, Zoom Out,
+// Zoom to Fit and Waveform Magnification, architect 2026-10-12: he wants to
+// magnify while walking history) and the render-entry group on three (Play
+// Renders, Enable Tooltips and the level case), their others hidden
 // (history_mode_hides_button, paint_icon_row's walk).
 // The history opener and the view pairs are right-anchored and do not move
 // (kIconRowHistoryOpener).
@@ -1078,12 +850,12 @@ constexpr IconRowDef kIconRowButtons[] = {
 // press resolves against that painted row (publish_button_face).
 constexpr IconRowDef kIconRowHistoryActGroup[] = {
     {RedesignButton::HistoryRevert},
-    // THE LOAD IN PLACE (architect 2026-09-01, off the render-entry group):
-    // the icon row's press runs the `h` view's own load — the confirmation on
+    // THE LOAD IN PLACE (architect 2026-09-01): the top icon row's press
+    // runs the history view's own load — the confirmation on
     // the viewed walk member, the render player's Load in Place act.
     {RedesignButton::IconLoadInPlace},
 };
-// THE READING GROUP (reinstated architect 2026-10-26): Cumulative first,
+// THE READING GROUP (architect 2026-10-26): Cumulative first,
 // then the walk lamp — CUMUL and SESSION, each key's lit face its state
 // (architect 2026-10-26: "cumul and session should switch places — cumul is
 // more common").
@@ -1102,58 +874,48 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 
 // THE HISTORY OPENER — RIGHT-ANCHORED (architect 2026-10-06): bare `h`, the
 // one history button that stands in every state, the toggle's same press
-// entering and leaving the view. A group of its own since 2026-08-18 ("place
-// a separator before the history button, and place cumulative/etc after the
-// history button") and alone since 2026-10-05, when its companions went
-// to the stand-in slots. IT TAKES NO PART IN THE LEFT WALK: it heads the
-// band's RIGHT RUN, attached to Source with no gap (architect 2026-10-22,
-// his layout verdict: "Layout 4" — History attached to Source), and the left
-// runs' limit stands one run gap left of it (paint_icon_row). THE REASON IS
-// THE PEN: while the opener closed the
-// left walk, the stand-in swap's one-case-narrower iteration group put its x
-// 31 Windows px further left inside the view than outside, so the button
-// that toggles the view moved out from under the pen at its own press;
-// anchored to the lane's right edge, which no state moves, it stands at one x
-// in both. It paints whole beside the view pairs under the same overflow
+// entering and leaving the view; its companions stand in the stand-in slots
+// (kIconRowHistoryStandIns). IT TAKES NO PART IN THE LEFT WALK: it heads the
+// top icon row's RIGHT RUN, attached to Source with no gap (architect
+// 2026-10-22: History attached to Source), and the left runs' limit stands
+// one run gap left of it (paint_icon_row). THE REASON IS THE PEN: in the
+// left walk the stand-in swap's one-case-narrower groups would put its x
+// further left inside the view than outside, so the button that toggles the
+// view would move out from under the pen at its own press; anchored to the
+// lane's right edge, which no state moves, it stands at one x in both. It
+// paints whole beside the view pairs under the same overflow
 // rule (kIconRowViewPairs), the left groups yielding to both. Its seat is
 // the same in both states, and the mode's two edges damage the whole window
 // anyway (THE REPAINT, above).
 constexpr IconRowDef kIconRowHistoryOpener =
     {RedesignButton::IconHistory};
 
-// THE VIEW PAIRS — THE ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE (architect
-// 2026-10-01; two radio pairs since 2026-10-14): the Source / Target pair on
-// bare 1 / 2 (the audio view) and the Warp / Phase-reset pair on bare 3 / 4
-// (the markers view), the view the product of the
-// two lit members, in their keys' order. THE ACTS CAME FROM THE ROW-1 VIEW
-// BAR (2026-08-02..2026-10-01), itself kdenlive's workspace switcher — the
-// blue "Logging | Editing | Audio | Effects | Color" bar at the far right of
-// its menu row — reborn as the selectors, keys since the hi-fi skin
-// (2026-10-23).
-// THE BAND'S OWN METRICS, NONE NEW: the program's case
-// (render.h's program block), the four linked behind the history opener in
-// the band's one right group, Phase Reset's box ending 6 W inside the
-// panel's right edge (icon_row_seats; the two panes with their groove
-// 2026-10-14 to 2026-10-22). THE BAND'S FACES, and EACH
-// PAIR A RADIO THAT POPS: its lit member is its axis's current value
-// (redesign_button_selected reads one axis per button) and a press on it
-// SELECTS THE PAIR'S OTHER MEMBER at its lift (architect 2026-10-23 night,
-// "building a suction on the other one is the right way to go"; the consumed
-// nothing of 2026-10-14 reversed; the key's own resolution, GuiInputHandler::
-// on_key) — never greyed for it — the key staying lit under the hold in
-// the one accent (Arc's lit look, pressed or not; the radio keys' purple
-// retired 2026-11-19, send Z; materials.h's key_state).
+// THE VIEW PAIRS — THE TOP ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE
+// (architect 2026-10-01; two radio pairs 2026-10-14): the Source / Target
+// pair on bare 1 / 2 (the audio view) and the Warp / Phase-reset pair on
+// bare 3 / 4 (the markers view), the view the product of the two lit
+// members, in their keys' order.
+// THE ROW'S OWN METRICS, NONE NEW: the program's case (render.h's program
+// block), the four linked behind the history opener in the row's one right
+// group, Phase Reset's box ending 6 W inside the panel's right edge
+// (icon_row_seats). THE ROW'S FACES, and EACH PAIR A RADIO THAT POPS: its
+// lit member is its axis's current value (redesign_button_selected reads
+// one axis per button) and a press on it SELECTS THE PAIR'S OTHER MEMBER at
+// its lift (architect 2026-10-23, "building a suction on the other one is
+// the right way to go"; the key's own resolution, GuiInputHandler::on_key)
+// — never greyed for it — the key staying lit under the hold in the one
+// accent (Arc's lit look, pressed or not; materials.h's key_state).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
-// CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and since 2026-10-06 the
-// history opener seated against their left with them (kIconRowHistoryOpener).
+// CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and the history opener
+// seated against their left with them (kIconRowHistoryOpener, 2026-10-06).
 // All paint LAST, whole, at their right-anchored places; the runs to
-// their left yield one run gap short of the opener: A MEMBER WHOSE BOX NO
-// LONGER FITS IS DROPPED WHOLE — it publishes the empty rect and paints
+// their left yield one run gap short of the opener: A MEMBER WHOSE BOX
+// DOES NOT FIT IS DROPPED WHOLE — it publishes the empty rect and paints
 // nothing, no key cut, its group's ring closing round the members that
 // stand — so a press, a hover and a tooltip land on exactly the pixels on
 // screen (on screen is as painted; paint_icon_row's walks). The widths at
-// which the band holds every run, and which member drops at each width
+// which the row holds every run, and which member drops at each width
 // past them, are THE FIT at paint_icon_row's width math, its one
 // statement; the tablet does not reach the rule at its 200 %.
 constexpr IconRowDef kIconRowViewPairs[2][2] = {
@@ -1163,7 +925,7 @@ constexpr IconRowDef kIconRowViewPairs[2][2] = {
      {RedesignButton::ViewPhase}},
 };
 
-// THE BAND'S RIGHT RUN (architect 2026-10-22, the simple layout): the
+// THE TOP ICON ROW'S RIGHT RUN (architect 2026-10-22): the
 // history opener and the two view pairs, five keys a key pitch apart in painted
 // order, right-anchored (icon_row_seats), never hidden.
 constexpr IconRowDef kIconRowRightRun[] = {
@@ -1173,21 +935,21 @@ constexpr IconRowDef kIconRowRightRun[] = {
 
 // -- THE FLOATING SURFACES: the hover tooltip and the notification cards --
 //
-// The tooltip is Arc's (send AA's stage D1, 2026-11-19): its type, its box
+// The tooltip is Arc's (2026-11-19): its type, its box
 // and its shadow are its painter's (paint_shift_tooltip, on the floating
 // surfaces' rounded box, paint_floating_box), its lengths, its seat, its
 // timing and its damage bound render.h's.
 // (The damage BOUND on the height and the timing constants live in render.h —
-// the tooltip's clock reads them, for the deadlines and for the band beside
-// the strip.)
+// the tooltip's clock reads them, for the deadlines and for the damage band
+// beside the owner's face, tooltip_damage_band.)
 
 // THE TOOLTIP'S TEXT lives with the roster, not here
 // (redesign_button_tooltip, app_state.h, owns both the membership and the text;
 // its MODIFIER line is static_asserted against redesign_button_shift_admits,
 // so the hint cannot appear where a modified press does nothing).
 //
-// EVERY BUTTON BUT ROW 1'S HAS ONE (architect 2026-07-31, stated as the ROW's
-// property at the table): the one-line form is the whole story for most, and the
+// EVERY ROSTER BUTTON HAS ONE (architect 2026-07-31, stated at the table):
+// the one-line form is the whole story for most, and the
 // buttons that admit a modifier add the hint line below it (the membership is
 // those predicates, app_state.h, never a count restated here) — Render only
 // while iteration mode is OFF, where its shift press has a twin to reach.
@@ -1215,7 +977,7 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // under the key's top.
 //
 // EVERY OTHER TEXT TAKES ANOTHER SEAT. THE LINE-BOX RULE (render.h's
-// line_box_baseline, GTK's seat; send Z, 2026-11-19): the face's line box
+// line_box_baseline, GTK's seat; 2026-11-19): the face's line box
 // centered in a box of whole W, the baseline its ascent under the box's
 // top — the bottom icon row's left run, the render player's and the score
 // viewer's time labels and page cell, the lists' rows, the
@@ -1241,59 +1003,39 @@ double line_box_baseline(const GuiFont& font, double box_y, int box_w) {
     const int top_w = d >= 0 ? d / 2 : -((1 - d) / 2);   // floor(d / 2)
     return box_y + static_cast<double>(scaled_px(top_w + lb.ascent));
 }
-// (THE CAPTION'S PAINTER — paint_caption_row, the window's own title bar
-// at the top lane 0 from 2026-10-05: the quaver, "<piece> - Warptempo" and
-// the three procedural glyphs, the hi-fi skin's flat lane 2026-10-23 — is
-// REMOVED 2026-10-24 with the lane, architect: "release it to the window
-// manager as we had in the beginning of this project"; the tablet's window
-// has none. Git history. Since 2026-11-19, send Z, the band's first rows
-// are the app's TITLE BAR, paint_title_bar — a bar of the program's, no
-// window chrome.)
 
-// (THE PROGRAM'S FRAME'S PAINTER — paint_program_frame, Cool Edit's frame
-// window round the program from 2026-10-10, its top row alone, one Shadow
-// line under the caption, from 2026-10-21 — is retired with the row,
-// architect 2026-10-22: the band stood directly under the caption.)
-
-// (THE BOTTOM OVERLAYS' PAINTER — paint_bottom_overlays, the taskbar line in
-// the chrome's Hilight across the window's whole width over the keyboard and
-// the dialog, and the dialog's ground, 2026-10-10 to 2026-10-14 — is retired
-// with the taskbars, architect 2026-10-14: the keyboard draws no line and
-// the prompts and the dialog editors stand in the modal family's box,
-// paint_modal_box.)
-
-// THE `h` VIEW'S ONE SEPARATOR, ` | `: between the walk line's segments
+// THE HISTORY VIEW'S ONE SEPARATOR, ` | `: between the walk line's segments
 // (history_walk_line below) — one token, one spelling. (The status bar's
 // fields part by Thunar's wider "  |  ", kStatusFieldSeparator.)
 static constexpr const char* kSegmentSeparator = " | ";
 
 // -- history_walk_line ----------------------------------------------------
 //
-// THE `h` HISTORY MODE'S ONE LINE, composed for THE STATUS BAR'S FIRST FIELD
-// (status_bar_text; send Z, 2026-11-19). While the mode stands this line is
+// THE HISTORY VIEW'S ONE LINE, composed for THE STATUS BAR'S FIRST FIELD
+// (status_bar_text; 2026-11-19). While the mode stands this line is
 // what that field is for.
 //
 // THE SHAPE (architect 2026-09-28; the GitHub segment ahead of the scale
-// since 2026-09-29): SEGMENTS SEPARATED BY ` | `, every one alike — the
+// 2026-09-29): SEGMENTS SEPARATED BY ` | `, every one alike — the
 // POSITION `x/y`, then the GITHUB segment `GitHub: <word>` when there is one,
 // then the SCALE segment `Scale: [-]<then token> [+]<now token>` when the
 // scale changed (both below) — so an absent segment leaves no separator
 // behind it and nothing leads or trails: `03/14 | GitHub: up to date |
 // Scale: [-]1.0 [+]1.1`, `03/14 | GitHub: behind`, `007/114`. The same shape
 // on BOTH walks. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
-// token and `[+]` before the now one, spelled here: the lane's labels lost
-// theirs to the strike (architect 2026-10-26; history_diff_label), and this
-// line, a plain run, has no strike to carry the side. THE LINE STANDS AT
+// token and `[+]` before the now one, spelled here: the lane's labels carry
+// the side by the strike (architect 2026-10-26; history_diff_label), and
+// this line, a plain run, has no strike to carry it. THE LINE STANDS AT
 // THE STATUS BAR'S LEFT, its first field (paint_status_bar the one painter
 // of it), under the bottom icon row.
 //
-// THE LINE NAMES NO COMMIT (architect 2026-09-28): the short SHA left it, so
-// the position is the line's only reference to the member on either walk.
+// THE LINE NAMES NO COMMIT (architect 2026-09-28): no short SHA, so the
+// position is the line's only reference to the member on either walk.
 // The member's NAME still has its one owner, HistoryMode::member_label
 // (app_state.h), which the `'` load confirmation reads — the line does not.
 //
-// THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect 2026-08-05,
-// superseding the arc's unchanged-token report): a value that both sides agree
+// THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect 2026-08-05): a
+// value that both sides agree
 // on is not a difference, and this view shows differences. So there is no
 // unchanged arm at all, and the both-sides-empty case is covered by the same
 // test rather than by one of its own. A side carrying no `scale=` line has an
@@ -1305,7 +1047,7 @@ static constexpr const char* kSegmentSeparator = " | ";
 // THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `x/y` reads the viewed
 // member's DISPLAYED NUMBER and the walk's count, so a Local tab counts the
 // session's own timeline states with the same two numbers in the same place.
-// THE COUNT RUNS UPWARD FROM THE PIECE'S PAST since 2026-09-17 — the oldest
+// THE COUNT RUNS UPWARD FROM THE PIECE'S PAST (2026-09-17) — the oldest
 // member is 1 and the newest is y — and the arithmetic that turns the walk's
 // index into that number has ONE OWNER, HistoryMode::member_number
 // (app_state.h). THE NUMBER IS ZERO-PADDED to the count's digit count
@@ -1317,15 +1059,15 @@ static constexpr const char* kSegmentSeparator = " | ";
 // nothing.
 static std::string history_walk_line(AppState& app) {
     const std::size_t count = app.history_mode.walk_count();
-    // AN EMPTY WALK READS `0/0` (2026-08-07), where it used to read nothing at
-    // all: a blank cell beside a blank lane says only that the cell has stopped
-    // working. ONE SPELLING FOR BOTH WALKS, and since 2026-08-08 only the
+    // AN EMPTY WALK READS `0/0` (2026-08-07), not nothing: a blank cell
+    // beside a blank lane would say only that the cell has stopped working.
+    // ONE SPELLING FOR BOTH WALKS, and only the
     // COMMIT walk can reach it — its empty window, a visit opened before the
     // prefetch has delivered member 0. The LOCAL walk is never empty while the
     // mode stands: the one entry owner binds it before `active` goes up and its
     // member count is U + R + 1, so a session that has authored nothing reads
     // `1/1` — one state compared against itself. The zero arm therefore
-    // describes the commit side alone now, and it lives inside member_number
+    // describes the commit side alone, and it lives inside member_number
     // with the counting it belongs to rather than as a test of this line's own.
     const std::string total = std::to_string(count);
     std::string line = std::to_string(
@@ -1335,7 +1077,7 @@ static std::string history_walk_line(AppState& app) {
     line += '/';
     line += total;
     // THE GITHUB SEGMENT, SECOND, AHEAD OF THE SCALE (architect 2026-09-27;
-    // moved ahead of the scale 2026-09-29): how this device stands against
+    // its seat 2026-09-29): how this device stands against
     // GitHub as of the last check — `GitHub: checking...` / `up to date` /
     // `ahead` / `behind` / `diverged` / `offline` / `refused`
     // (github_status_word) — in the line's own `Label: value` shape, on BOTH
@@ -1359,8 +1101,7 @@ static std::string history_walk_line(AppState& app) {
         app.history_mode.displayed_delta();
     // No unavailable-delta arm: walk membership is the strict whole-set load
     // (history_diff.h's gate, 2026-08-04), so every commit this line can name
-    // has a real delta — the old `Ambiguous` token died with the display
-    // machinery it named.
+    // has a real delta.
     if (d && d->scale_changed) {
         line += kSegmentSeparator;
         line += "Scale: [-]";
@@ -1371,33 +1112,33 @@ static std::string history_walk_line(AppState& app) {
     return line;
 }
 
-// THE STATUS BAR'S STRING — ITS ONE COMPOSER (architect 2026-11-19, send Z;
-// DESIGN §5, his rulings of that day; render.h's status bar block): STANDING
+// THE STATUS BAR'S STRING — ITS ONE COMPOSER (architect 2026-11-19;
+// render.h's status bar block): STANDING
 // STATE ONLY, NEVER AN EVENT (events stay cards; "No, I decline both of
 // those" — no card retires into it), EACH FIELD SHOWN ONLY WHILE IT HAS
 // SOMETHING TO SAY, in this order, joined by kStatusFieldSeparator, "  |  "
 // (Thunar's, two spaces each side):
 //   1. THE PROCESS LINE ("a must-have"), the state line of notifications.h's
-//      head WORD FOR WORD, moved here from the bottom icon row: in the `h`
+//      head WORD FOR WORD: in the history
 //      view the walk line (history_walk_line, which wins: a render
 //      dispatched before the visit runs on through it), else
 //      AppState::queue_progress_text — a render's "Rendering...", a sweep
 //      cell's "Rendering N of M <label>...", a preview's "Updating...".
 //   2. THE SELECTION COUNT, only while one or more markers are selected
 //      ("only when there's ... one or more selected, it would say the
-//      number"), outside the `h` view: the size of
+//      number"), outside the history view: the size of
 //      AppState::selected_markers on the column it lives on
 //      (AppState::active_markers_view — the selection is cleared on a column
 //      switch, so it never mixes), "1 warp marker selected", "5 warp markers
 //      selected", "1 phase reset selected", "3 phase resets selected" (warp
 //      is never the unmarked default). Nothing else rides it.
-//   3. GITHUB, IN THE `h` VIEW ONLY ("Keep it in the history only"): the
+//   3. GITHUB, IN THE HISTORY VIEW ONLY ("Keep it in the history only"): the
 //      remote's standing state the view already prints — the walk line's
 //      own "GitHub: <word>" segment (github_status_word), so field 1 carries
 //      it and no third field is composed (the history view has no other
 //      word for the remote; nothing here opens the network).
 // UNDER AN OVERLAY OR A MODAL (modal_box_stands — the folder overlay's
-// contents, a dialog editor, the score viewer, a question's page — or an
+// contents, a value sub-page, the score viewer, a question's page — or an
 // open text editor, the flag editor's among them) the bar keeps fields 1
 // and 3 and DROPS FIELD 2 (his "agree").
 // WHILE A BATCH'S PROGRESS STANDS THE BAR IS BLANK (architect 2026-11-20,
@@ -1408,7 +1149,7 @@ static std::string history_walk_line(AppState& app) {
 // WHATEVER STANDS OVER THE PROGRESS PAGE, a question raised over it
 // included (its page shows the question; the batch's line stays off the bar
 // until the batch's terminal closes the progress). The lane's line and fill
-// paint as always (paint_status_bar). Every field goes, the `h` view's walk
+// paint as always (paint_status_bar). Every field goes, the history view's walk
 // line with the rest, should the view stand under the batch.
 // The tick holds this string against the one last painted
 // (refresh_status_bar, main.cpp) and damages the bar's rect alone on a
@@ -1440,29 +1181,29 @@ std::string status_bar_text(AppState& app) {
     return out;
 }
 
-// THE BAND'S STANDING MEMBERS, IN RUNS (2026-10-13: lifted out of
-// paint_icon_row so the painter and the band's as-painted fingerprint,
-// GuiPaintHandler::upper_rows_fingerprint, walk ONE membership; runs since
-// the simple layout, 2026-10-22): every member that stands in this state
+// THE TOP ICON ROW'S STANDING MEMBERS, IN RUNS (out of paint_icon_row so
+// the painter and the row's as-painted fingerprint,
+// GuiPaintHandler::upper_rows_fingerprint, walk ONE membership): every
+// member that stands in this state
 // laid into its run — a run's width is its standing members' — in the
 // walk's order, and every member that does not stand into `absent`. A RUN
 // LEADER (redesign_button_opens_icon_run, app_state.h) opens a new run, the
 // run opening at its first STANDING member, so a run none of whose members
 // stands is no run at all. The membership forks are keyed on the GROUPS
 // (redesign_button_opens_icon_group, app_state.h — the swap's and the hide's
-// unit): the history stand-ins (2026-10-05) and the `h` view's hide
+// unit): the history stand-ins (2026-10-05) and the history view's hide
 // (2026-10-07). The right run is not in this walk: none of its five is ever
 // hidden. `history` is the view's bit — the live one
 // (app.history_mode.active) for the painter and the fingerprint.
 static void icon_row_walk(bool history,
                           std::vector<std::vector<IconRowDef>>& runs,
                           std::vector<RedesignButton>& absent) {
-    // THE STAND-IN SWAP (kIconRowHistoryStandIns, its one owner): in the `h`
-    // view a group leader that names a stand-in group paints that group in
-    // its place, and the rest of the replaced group is skipped up to the
+    // THE STAND-IN SWAP (kIconRowHistoryStandIns, its one owner): in the
+    // history view a group leader that names a stand-in group paints that
+    // group in its place, and the rest of the replaced group is skipped up to the
     // next group leader; outside the view the stand-in groups never paint.
     // A DELIBERATE ASYMMETRY: A STAND-IN GROUP JOINS THE RUN TO ITS LEFT, NO
-    // RUN GAP BEFORE IT (architect 2026-10-26 ~10:10) — the groups it replaces
+    // RUN GAP BEFORE IT (architect 2026-10-26) — the groups it replaces
     // open no run, so Revert and Load abut OPEN SAVE and Cumul and Session
     // abut FIT MAGNIFY, and the stand-ins take no run-opening mark of their
     // own: "I thought cumul and session were purposely placed in that group —
@@ -1470,7 +1211,7 @@ static void icon_row_walk(bool history,
     // two groups of two floating in the top strip, then? I think I prefer as
     // it is."
     // THE HIDE is history_mode_hides_button's answer under `history`
-    // (input_pointer.cpp, architect 2026-10-07): in the `h` view a member
+    // (input_pointer.cpp, architect 2026-10-07): in the history view a member
     // whose chord the view refuses in every session is skipped — no case, no
     // width, its empty rect published — and its neighbours close up.
     const auto hides = [history](RedesignButton id) {
@@ -1510,10 +1251,9 @@ static void icon_row_walk(bool history,
     }
 }
 
-// THE BAND'S SEATS (2026-10-21: lifted out of paint_icon_row; the simple
-// layout's runs 2026-10-22; ARC'S LINKED GROUPS since 2026-11-19, send Z,
-// DESIGN §3, the kit's Layout): THE KEY the title bar and the pad
-// under the band's top (band_case_top_offset_px). THE RIGHT RUN IS RESOLVED
+// THE TOP ICON ROW'S SEATS (ARC'S LINKED GROUPS, 2026-11-19): THE KEY the
+// title bar and the pad under the lane's top (band_case_top_offset_px).
+// THE RIGHT RUN IS RESOLVED
 // FIRST, because it decides where every run to its left may stand (the
 // overflow rule at kIconRowViewPairs): ONE LINKED GROUP whose last box ends
 // kEdgeInsetW (6 W) INSIDE THE PANEL'S RIGHT EDGE (render.h's THE EDGE RULE
@@ -1543,12 +1283,12 @@ static IconRowSeats icon_row_seats(const AppState& app, const GuiRect& lane) {
 
 // THE TITLE BAR'S LAYOUT (render.h's title bar block, every rule there) —
 // ONE ROAD for the painter and the tick's damage (logo_legend_extent), so
-// the two cannot disagree: the bar is the band's first title_bar_h_px rows
+// the two cannot disagree: the bar is the lane's first title_bar_h_px rows
 // (28 W, 56 device px on the tablet); EVERY TEXT ON ONE BASELINE, +18 W
 // (kTitleBaselineW), in the Bold 12 W; THE CAP BAND the alphabet's painted
 // ink rows above it (kLogoLegendInkSet, gui_font_ink_band), on which the
 // battery and the lamps stand; THE RIGHT GROUP ONE TEXT RUN (architect
-// 2026-11-19, send AA), laid right to left: the run "  |  <clock>" (the
+// 2026-11-19), laid right to left: the run "  |  <clock>" (the
 // status bar's own separator, kStatusFieldSeparator, then the clock) with
 // its LAST INK kTitleRightInsetW inside the panel's right edge, the
 // battery's cell ending on that run's pen, the run "<percent> " (the
@@ -1670,7 +1410,7 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     // THE TITLE BAR (render.h's title bar block, every length scaled_px):
     // its own flat fill in the title tone `ground` (2F343F,
     // its line of kArcDarkTones: "the darkest color would only apply to the top line,
-    // the title bar", architect 2026-11-18, send Z), then the note, the
+    // the title bar", architect 2026-11-18), then the note, the
     // brand and the right group in `title_text`. NO SHADOW (the flat look).
     const GuiRect lane{band.x, band.y, band.w,
                        std::min(band.h, title_bar_h_px())};
@@ -1690,9 +1430,10 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     const double baseline = title_baseline(lane);
 
     // THE NOTE (MusicNote16th on the ink-box road — the BPM key's drawing
+    // THE NOTE (MusicNote16th on the ink-box road — the BPM key's drawing
     // and the BPM form's rows' too, a deliberate share, icons.h's head) IN
-    // ITS 12 W BOX (architect 2026-11-19, send Z): ITS INK'S LEFT EDGE
-    // kTitleNoteInsetW inside the panel (architect 2026-11-19, send AA), its
+    // ITS 12 W BOX (architect 2026-11-19): ITS INK'S LEFT EDGE
+    // kTitleNoteInsetW inside the panel (architect 2026-11-19), its
     // ink centered on the bar's rows exactly.
     const icons::InkInBox note = icons::ink_in_box(
         icons::Icon::MusicNote16th, scaled_px(kTitleNoteBoxW, 1));
@@ -1706,7 +1447,7 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
                       note.ink_px, ink_word);
 
     // THE BRAND, a constant: ITS PEN kTitleNoteGapW AFTER THE NOTE'S INK'S
-    // RIGHT EDGE (architect 2026-11-19, send AA), the ink box's real edge.
+    // RIGHT EDGE (architect 2026-11-19), the ink box's real edge.
     set_palette_source(cr, ink);
     {
         const GuiFont bold = gui_font(GuiFace::Bold);
@@ -1727,12 +1468,11 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
         text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
     // THE TWO LAMPS, ON THEIR REAL EDGES (architect 2026-11-15, the no-grid
     // arc): exact rects off the percent's real ink edge, filled at exact
-    // coverage over the bar's fill — each lamp its face at rest (`key_face`) or lit (the
-    // limiter `limiter_lamp`, Alert, Arc's warning orange — its own tone
-    // since send AA's stage D1, the cards having left Alert for notifyd's
-    // fills; the clip `clip_lamp`); the clip lamp, while
+    // coverage over the bar's fill — each lamp its face at rest (`key_face`)
+    // or lit (the limiter `limiter_lamp`, Arc's warning orange, its own
+    // tone; the clip `clip_lamp`); the clip lamp, while
     // struck, THE WHOLE SQUARE in `key_dim_ink`, WINNING OVER ITS LIT BIT
-    // (architect 2026-11-05 night, session 52) — one three-way pick, struck,
+    // (architect 2026-11-05) — one three-way pick, struck,
     // else lit, else rest — from the three bits the tick writes
     // (refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS).
     paint_ink_rect(cr, l.limiter_lamp,
@@ -1763,69 +1503,60 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
 }
 
 void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
-    // THE ICON ROW (top lane 0, at the window's top; row 4 of the
-    // redesign; the window's width since 2026-10-21): THE TOOLBAR BAND (the
-    // roster block above), the simple layout since 2026-10-22 — the title
-    // bar, Arc's pad, the cases, the pad on the body tone (architect
-    // 2026-11-19; 7 W each side, architect 2026-11-20), the left members in
-    // THREE RUNS and the right five in ONE — TWENTY-SEVEN members outside the
-    // `h` view and EIGHTEEN inside it (2026-10-29, the Restrict lamp behind
-    // Follow, hidden in the view), RE-COUNTED off the roster enum, the
-    // painter's tables and the run leaders rather than adjusted: OPEN
-    // PROJECT at the row's head (architect 2026-10-07, its Revert twin with
-    // it) with SAVE, UNDO, REDO, COPY (2026-10-25) and RENDER behind it in
-    // the first run; ZOOM IN, ZOOM OUT, ZOOM TO FIT, THE WAVEFORM
-    // MAGNIFICATION LAMP, FOLLOW, RESTRICT and TRIM PRESETS (the viewport
-    // class), then THE ITERATION GROUP (the BPM opener, grid iteration mode
-    // and FLATTEN) in the second; the RENDER-ENTRY group (Listen, the
-    // READ-ONLY toggle, the SCORE key — between the padlock and Settings,
-    // architect 2026-11-10 — SETTINGS, ENABLE TOOLTIPS and since 2026-11-05
-    // the level case, NOISE (AUDIO beside it until 2026-11-11),
-    // in the NOISE lamp's seat of 2026-10-28) the third — then,
+    // THE TOP ICON ROW (the lane at the window's top, the window's width):
+    // the title bar, Arc's pad, the cases, the pad on the body tone
+    // (architect 2026-11-19; 7 W each side, architect 2026-11-20), the left
+    // members in THREE RUNS and the right five in ONE — TWENTY-SEVEN members
+    // outside the history view and EIGHTEEN inside it, COUNTED off the roster
+    // enum, the painter's tables and the run leaders: OPEN PROJECT at the
+    // row's head (architect 2026-10-07, its Revert twin with it) with SAVE,
+    // UNDO, REDO and RENDER behind it in the first run; ZOOM IN, ZOOM OUT,
+    // ZOOM TO FIT, THE WAVEFORM MAGNIFICATION LAMP, FOLLOW, RESTRICT, THE TRIM
+    // ARM LAMP and TRIM PRESETS (the viewport class), then THE ITERATION
+    // GROUP (the BPM opener, grid iteration mode and FLATTEN) in the second;
+    // the RENDER-ENTRY group (Listen, the READ-ONLY toggle, the SCORE key —
+    // between the padlock and Settings, architect 2026-11-10 — SETTINGS,
+    // ENABLE TOOLTIPS and the level case, NOISE) the third — then,
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
-    // (kIconRowRightRun). IN THE `h` VIEW the history group's four icon-row
-    // companions stand in two groups' slots — Revert and Load in Place in
-    // the toolbar group behind Save, Cumulative and the walk lamp in the
-    // iteration group's (kIconRowHistoryStandIns, the swap's one owner).
+    // (kIconRowRightRun). IN THE HISTORY VIEW the history group's four
+    // icon-row companions stand in two groups' slots — Revert and Load in
+    // Place in the toolbar group behind Save, Cumulative and the walk lamp in
+    // the iteration group's (kIconRowHistoryStandIns, the swap's one owner).
     //
     // ONE MODE SWAP AND ONE MODE HIDE (architect 2026-10-05 and 2026-10-07,
-    // reversing 2026-08-14's "no more hiding/showing icons in top icon row"
-    // for the `h` view alone): the history stand-ins replace the two groups
-    // the view refuses whole (the companions publish empty rects outside the
-    // view, the replaced members inside it), and inside the view every other
-    // member whose chord it refuses in EVERY session is not painted
-    // (history_mode_hides_button, input_pointer.cpp) — Follow, Restrict and
-    // Trim Presets behind Zoom
-    // In, Zoom Out, Zoom to Fit and the magnification lamp (which the view
-    // admits since
-    // 2026-10-12, architect: he wants to magnify while walking history), and
-    // the padlock, the Score key (2026-10-26) and Settings between Play
-    // Renders (admitted 2026-10-25) and Enable Tooltips, the level case
-    // behind it standing — its
-    // neighbors
-    // closing up and its run standing
-    // while any member does. What the view refuses only BY STATE (Save with
-    // nothing to commit, Revert with no subject, Load in Place over an empty
-    // walk) and what any other mode refuses wears the DEAD FACE, and a window
-    // too narrow for the row drops members whole otherwise, under the view pairs'
-    // overflow rule — a width, never a state.
+    // for the history view alone; no other mode hides a key, architect
+    // 2026-08-14: "no more hiding/showing icons in top icon row"):
+    // the history stand-ins replace the two groups the view refuses whole
+    // (the companions publish empty rects outside the view, the replaced
+    // members inside it), and inside the view every other member whose chord
+    // it refuses in EVERY session is not painted (history_mode_hides_button,
+    // input_pointer.cpp) — Follow, Restrict, the trim arm lamp and Trim
+    // Presets behind Zoom In, Zoom Out, Zoom to Fit and the magnification
+    // lamp (which the view admits, architect 2026-10-12: he wants to magnify
+    // while walking history), and the padlock, the Score key and Settings
+    // between Play Renders and Enable Tooltips, the level case behind it
+    // standing — its neighbors closing up and its run standing while any
+    // member does. What the view refuses only BY STATE (Save with nothing to
+    // commit, Revert with no subject, Load in Place over an empty walk) and
+    // what any other mode refuses wears the DEAD FACE, and a window too
+    // narrow for the row drops members whole otherwise, under the view
+    // pairs' overflow rule — a width, never a state.
     //
     // THE WIDTH MATH — the box 36 W (kKeyWidthW), a group's keys sharing one
-    // seam column each, the run gap 6 W (kRunGapW; send Z, 2026-11-19: Arc's
-    // icon button, linked buttons and toolbar groups; the ends 6 W inside
-    // the panel, render.h's kEdgeInsetW): in the tablet's
+    // seam column each, the run gap 6 W (kRunGapW; Arc's icon button, linked
+    // buttons and toolbar groups, 2026-11-19; the ends 6 W inside the panel,
+    // render.h's kEdgeInsetW): in the tablet's
     // device px at 200 % (one W = 2), each group of n keys 72 + 70 (n − 1)
     // (linked_group_w_px), 12 of ground (the run gap) between two groups;
     // the right group 352, its last box ending 12 px inside the panel's
-    // right edge (columns 1940..2291). Outside the `h` view the LEFT WALK is
-    // three groups of 5, 11 and 5 and NOISE's entry (39 W, 78 px since
-    // 2026-11-19, send AA: noise_entry_w_px),
+    // right edge (columns 1940..2291). Outside the history view the LEFT WALK
+    // is three groups of 5, 11 and 5 and NOISE's entry (39 W, 78 px:
+    // noise_entry_w_px),
     //   352 + 12 + 772 + 12 + 352 + 12 + 78 = 1590,
     // from column 12: OPEN .. RENDER 12..363, IN .. FLATTEN 376..1147,
-    // PLAYER .. TIPS 1160..1511, NOISE 1524..1601 — the kit's seats
-    // (the mock kit's build log) — 338 px of ground before the
-    // history opener; inside the view three groups of 4, 6 and 2 (Open, Save,
-    // Revert, Load in Place | Zoom In, Zoom Out, Zoom to Fit, the lamp,
+    // PLAYER .. TIPS 1160..1511, NOISE 1524..1601 — 338 px of ground before
+    // the history opener; inside the view three groups of 4, 6 and 2 (Open,
+    // Save, Revert, Load in Place | Zoom In, Zoom Out, Zoom to Fit, the lamp,
     // Cumulative, Session | Play Renders, Enable Tooltips) and NOISE,
     //   282 + 12 + 422 + 12 + 142 + 12 + 78 = 960.
     // A roster move restates these numbers.
@@ -1844,52 +1575,34 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // at every width.
     //
     // NO FOCUS SWAP HERE: the ground has one value focused and unfocused
-    // (render.h's palette says so), and so has the menu row's.
+    // (render.h's palette says so).
     //
     // THE KEYS ARE ARC'S BUTTONS (paint_roster_group, above; materials.h's
     // key_state): at rest, LIT — the accent — under a standing press or when
     // CHECKED, the live fact its chord flips (redesign_button_selected), one
-    // look (Arc's `:active` and `:checked`; the radio keys' purple retired
-    // 2026-11-19, send Z), and AT REST UNDER THE HOVERING PEN Arc's hover
+    // look (Arc's `:active` and `:checked`, 2026-11-19), and AT REST UNDER
+    // THE HOVERING PEN Arc's hover
     // face (architect 2026-11-20; paint_roster_group's hover span, the rule
     // AppState::FaceFades's); THE LEVEL CASE its own painter
     // (paint_level_case: Arc's entry, the level its progress line, never lit,
     // never pressed, never hovered). The pointer walk finds the tooltip's
     // button (recompute_redesign_button_hover).
-    // THE DISABLED FACE IS THE TWO MODES' AND THE TOOLBAR MIGRANTS':
-    // the row's own members never grey for a REFUSAL —
-    // presses always dispatch and the CHORDS' OWN refusals answer (loading
-    // blocks everything, and each arm keeps its home-view, empty-selection and
-    // occupied-frame guards), inherited through on_key rather than mirrored —
-    // while the toolbar four
-    // BROUGHT their real disabled derivations with them at the 2026-08-12
-    // relayout (Undo/Redo's locked-tab and empty-stack terms, Save's
-    // in-flight lockout, Render's source path — redesign_button_enabled's
-    // own arms, painted by this body's generic disabled face with nothing added
-    // here). THE TWO RULED EXCEPTIONS ARE BOTH MODES rather than refusals,
-    // which is what the per-press refusals above cannot express: the `h`
-    // HISTORY VIEW greys every button in this row whose act it consumes
-    // (architect 2026-08-04, at the face code below), and since 2026-08-15 the
-    // per-tab READ-ONLY LOCK greys what it blocks — THREE of them on this row
-    // (the ITERATION PAIR, back from the deleted menu on 2026-09-04, and
-    // FLATTEN, which joined their group 2026-09-19 and takes the lock inside
-    // its own predicate rather than beside it; the four
-    // marker verbs carried the same term down to the
-    // bottom row on 2026-08-18, and the membership is inventoried once at
-    // redesign_button_enabled) — so the lock looks the way the view already
-    // looks (architect; the read-only-LEGAL buttons beside them stay lit, which
-    // is the 2026-08-07 band ruling). A mode is entered deliberately and does
-    // not flicker, which is exactly what separates these two from the refusals
-    // the row still swallows silently. (THE NEVER-GREY RULE'S INVERTED
-    // EXCEPTION — the history companions' resting grey outside the view —
-    // stood on this row 2026-08-18..2026-10-05 and reaches no pixel since:
-    // outside the view the companions do not stand. Their arm is still at
-    // redesign_button_enabled, which says why it stays.)
+    // THE DISABLED FACE (the truthful-buttons ruling): a key greys wherever
+    // its press would be a no-op, and WHICH KEYS WEAR IT is
+    // redesign_button_enabled's (app_state.h) and
+    // history_mode_disables_button's (input_pointer.cpp) alone, the two
+    // MODES among their terms — the HISTORY VIEW greys every button in this
+    // row whose act it consumes (architect 2026-08-04, at the face code
+    // below), and the per-tab READ-ONLY LOCK greys what it blocks (architect
+    // 2026-08-15; the membership inventoried once at
+    // redesign_button_enabled), so the lock looks the way the view looks. A
+    // mode is entered deliberately and does not flicker. This body paints
+    // the generic disabled face with nothing added here.
     const GuiRect lane = top_icon_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE TOP ICON ROW IS THE BODY TONE `body_face` (Arc's $bg_color, arc_dark
-    // 383C4A; architect 2026-11-18, send Z: the title tone "would only apply
+    // 383C4A; architect 2026-11-18: the title tone "would only apply
     // to the top line, the title bar") under every group, between them, at
     // a group's rounded corners and in its two pads, NO LINE between it and
     // the title bar (a tone change only) — laid first under every clip, so
@@ -1906,11 +1619,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     }
     paint_title_bar(cr, lane);
 
-    // THE KEYS ARE ARC'S LINKED BUTTONS (architect 2026-11-18 / 2026-11-19,
-    // send Z; DESIGN §3; materials.h's THE KEY and paint_linked_group): EACH
-    // RUN ONE LINKED GROUP — its standing members' boxes sharing one seam
-    // column each inside one bordered ring with rounded outer corners — THE
-    // BAND'S SEATS the one layout (icon_row_seats, above, where the right
+    // THE KEYS ARE ARC'S LINKED BUTTONS (architect 2026-11-19; materials.h's
+    // THE KEY and paint_linked_group): EACH RUN ONE LINKED GROUP — its
+    // standing members' boxes sharing one seam column each inside one
+    // bordered ring with rounded outer corners — THE ROW'S SEATS the one
+    // layout (icon_row_seats, above, where the right
     // run's place and the left runs' limit are stated). THE PUBLISHED RECT
     // IS THE KEY'S BOX, border included ("the border is clickable"), and ITS
     // SEAM — the column it shares with the key on its left, which belongs to
@@ -1919,27 +1632,25 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // publication's coverage test and the repaint read, and the damage of a
     // drift or a press (every pixel a member's state moves lies inside its
     // own box, its group's corners included). NOISE IS ARC'S ENTRY a run gap
-    // after the third run's group (paint_level_case). No printed legend
-    // under any of them (retired 2026-11-18, send Z); the tooltip names the
+    // after the third run's group (paint_level_case). The tooltip names the
     // act.
     const IconRowSeats seats = icon_row_seats(app, lane);
     const int btn_y      = seats.btn_y;
     const int left_limit = seats.left_limit;
 
-    // THE DEAD LOOK (architect 2026-10-02, the AB set; the flat look
-    // 2026-11-01, M6; Arc's states since 2026-11-19, send Z): a dead key
+    // THE DEAD LOOK (Arc's states, architect 2026-11-19): a dead key
     // wears Arc's disabled button (materials.h's KeyState::Disabled: the dim
     // face, the dim border on its stretch of the ring, the dim drawing) — AND
     // A LIT-BUT-INERT KEY (the value drag lamp on a locked tab, the chosen
     // view pair under grid iterations, any lit key under an overlay) keeps
     // its lit state, Arc's button:disabled:checked (`lit_dim_fill` under
-    // `text_on_lit_dim`; architect 2026-11-11, session 106, "so both read as
-    // a unit"; 2026-11-19, "let's do arcs numbers"): the mode cannot change
-    // that state, so hiding it would be a lie. UNDER AN OVERLAY THE LIT
-    // STATE IS KEPT TOO (architect 2026-11-11, session 107;
-    // redesign_button_selected's head). WHICH KEYS WEAR IT — the two modes
-    // (the `h` view's state refusals, the read-only lock's set) and the
-    // toolbar migrants' own arms — is redesign_button_enabled's (app_state.h)
+    // `text_on_lit_dim`; architect 2026-11-11, "so both read as a unit";
+    // 2026-11-19, "let's do arcs numbers"): the mode cannot change that
+    // state, so hiding it would be a lie. UNDER AN OVERLAY THE LIT STATE IS
+    // KEPT TOO (architect 2026-11-11; redesign_button_selected's head).
+    // WHICH KEYS WEAR IT — the two modes (the history view's state refusals,
+    // the read-only lock's set) and each key's own arms — is
+    // redesign_button_enabled's (app_state.h)
     // and history_mode_disables_button's (input_pointer.cpp) alone; this
     // painter decides none of it. THE PRESS (Arc's `:active`, the lit look)
     // is gated on the painted enabled bit rather than trusted: the claim
@@ -1982,14 +1693,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // where a run holds it (the third), ITS OWN ENTRY A RUN GAP AFTER THAT
     // GROUP. THE OVERFLOW RULE (kIconRowViewPairs; THE FIT at the width
     // math above): a group keeps the members whose boxes end at or before
-    // the left runs' limit — whole at every width the band fits (the
+    // the left runs' limit — whole at every width the row fits (the
     // tablet's included) — and every member past it, NOISE's entry
     // included, publishes the EMPTY rect and paints nothing, which contains
     // no point and refreshes its bits unconditionally (publish_button_face):
     // NO KEY IS CUT, so every group's ring closes whole round the members
     // that stand. The same clip as ever bounds the paint at the limit.
-    // A MEMBER THAT DOES NOT STAND in this state (the `h` view's hide and its
-    // stand-in swap) is not in its run at all: its neighbors close up into
+    // A MEMBER THAT DOES NOT STAND in this state (the history view's hide
+    // and its stand-in swap) is not in its run at all: its neighbors close up into
     // one ring, and it publishes the empty rect too, so neither a press nor
     // the drift comparator (main.cpp's tick) reads a rect or a bit from the
     // other state's row.
@@ -2021,8 +1732,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
         paint_group(keys, x, n_whole);
         if (n > 0) x += linked_group_w_px(n) + seats.gap;
         if (level) {
-            // THE LEVEL CASE (architect 2026-11-05; Arc's entry since
-            // 2026-11-19, send Z): its box the entry a run gap after the
+            // THE LEVEL CASE (architect 2026-11-05; Arc's entry,
+            // 2026-11-19): its box the entry a run gap after the
             // group, the key's height, noise_entry_w_px wide — the published
             // rect, the hit box (no seam: it is no linked key) and the
             // damage — its own painter (paint_level_case: the entry, the
@@ -2047,7 +1758,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE RIGHT RUN, PAINTED LAST AND WHOLE, ONE LINKED GROUP: the history
     // opener at one x in both states, Source / Target and Warp / Phase Reset
     // linked behind it (kIconRowRightRun). NONE IS EVER HIDDEN
-    // (history_mode_hides_button): bare `h` is the view's own vocabulary and
+    // (history_mode_hides_button): bare `h` is the view's own chord and
     // bare 1 / 2 / 3 / 4 its admitted selectors, so the hide does not reach
     // this run.
     {
@@ -2059,237 +1770,151 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// (THE TAB STRIP'S PAINTER — paint_tab_strip, its two roster tabs and their
-// labels kTabStripLabels, 2026-10-18 — IS REMOVED with the strip, architect
-// 2026-10-22; the active tab's name is row 8's, beside the clock.)
-
-// THE BOTTOM ROW'S BUTTON CLUSTER AND CLOCK — THE UNIFIED BOTTOM ROW (rows 8
-// and 9 merged 2026-08-12): permanent — ordinary
-// buttons, no touch mode, no flag, no detection. LEFT TO
-// RIGHT (architect 2026-09-29, for the right-handed tablet: the most-used
-// buttons at the bottom right):
+// THE BOTTOM ICON ROW'S BUTTON CLUSTER AND CLOCK: ordinary buttons, no touch
+// mode, no flag, no detection. LEFT TO RIGHT (architect 2026-09-29, for the
+// right-handed tablet: the most-used buttons at the bottom right):
 //
 //   THE TIMESTAMP, PLAIN TEXT, "  |  " AND THE ACTIVE TAB'S NAME, one run
 //   from 14 W (architect 2026-11-19; bottom_left_run below; the face and
 //   the fixed width at THE TIME FIELDS' block);
 //
-//   and, PACKED AGAINST THE RIGHT INSET, five groups, each one linked group (send Z), the run
-//   gap between two (architect 2026-10-22; five since 2026-11-08, his
-//   "least used left, most used right"):
-//   THE COPY / PASTE DUO (kPhaseResetPropagateGroup, architect 2026-11-08,
-//   session 93) — COPY (bare P, the phase resets' copy, no modifier) and
-//   PASTE (Ctrl+P, the paste, its hold Ctrl+Shift+P the state paste), PASTE
-//   alone resting grey on a locked tab and under grid iterations (COPY
-//   admitted by both locks, architect 2026-11-17, send U);
-//   THE SKIPS (kTransportSkipGroup, back 2026-10-24) — GO TO START (bare
-//   Home) and GO TO END (bare End), their shifted presses the whole piece's
-//   ends;
+//   and, PACKED AGAINST THE RIGHT INSET, five groups, each one linked group,
+//   the run gap between two (architect 2026-11-08: "least used left, most
+//   used right"):
+//   THE COPY / PASTE DUO (kPhaseResetPropagateGroup) — COPY (bare P, the
+//   phase resets' copy, no modifier) and PASTE (Ctrl+P, the paste, its hold
+//   Ctrl+Shift+P the state paste), PASTE alone resting grey on a locked tab
+//   and under grid iterations (COPY admitted by both locks, architect
+//   2026-11-17);
+//   THE SKIPS (kTransportSkipGroup) — GO TO START (bare Home) and GO TO END
+//   (bare End), their shifted presses the whole piece's ends;
 //   THE MARKER VERBS (kMarkerVerbGroup) — drop (bare `s`), delete (Delete,
-//   its shifted press Shift+Delete since 2026-10-29), disable (Ctrl+D, its
-//   shifted press Ctrl+Shift+D since 2026-10-29), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J,
-//   since 2026-09-29), OPEN TEXT EDITOR (bare Return, since 2026-10-09),
-//   ADD TO SELECTION (bare `k`, the sticky ctrl, lit while the mode stands)
-//   and TOGGLE VALUE DRAG (bare `[`, since 2026-10-11, lit while armed — the
-//   row's two lamps — closing the group again since 2026-11-08, COPY gone to
-//   the duo). The
-//   four verbs, Open Text Editor and Toggle Value Drag
-//   are the row's resting greys on a locked tab; the jump and Add to
-//   selection are not, both being navigation (EDIT FLAG and COPY RESOLVED VALUE stood
-//   between Toggle inherit and Add to selection until 2026-09-29; Copy was
-//   the icon row's from then until 2026-10-14, its act now the jump's shift
-//   twin, and Edit Flag was deleted);
+//   its shifted press Shift+Delete), disable (Ctrl+D, its shifted press
+//   Ctrl+Shift+D), inherit (Ctrl+N), JUMP TO DEFINING MARKER (Ctrl+J), OPEN
+//   TEXT EDITOR (bare Return), ADD TO SELECTION (bare `k`, the sticky ctrl,
+//   lit while the mode stands) and TOGGLE VALUE DRAG (bare `[`, lit while
+//   armed — the row's two lamps). The four verbs, Open Text Editor and
+//   Toggle Value Drag are the row's resting greys on a locked tab; the jump
+//   and Add to selection are not, both being navigation;
 //   THE STEP AND THE WALK (kTransportStepWalkGroup, architect 2026-10-18) —
 //   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab) and NEXT MARKER
-//   (Tab), none admitting a modifier since 2026-11-08;
+//   (Tab), none admitting a modifier;
 //   THE NUDGE AND PLAY (kTransportNudgePlayGroup, architect 2026-10-18) —
 //   SWITCH TAB (Ctrl+Tab, its shifted press the paired march), CENTER (bare
-//   `c`, down from the icon row since 2026-09-29), LEFT and RIGHT (bare
-//   Left/Right). THE FOUR ARROWS, a single line and not a d-pad until
-//   2026-10-18 and two pairs since, are THE ROW'S HOLD GESTURE: held past
-//   the hold beat they repeat their own chords at the platform's
-//   key-repeat rate (key_repeat_period_ms) (the record at the arrows' chord-table rows,
-//   input_pointer.cpp). The pressed interior is the ordinary arm's, and the
-//   hold has no cue of its own — and, THE LAST GROUP'S LAST CASE CLOSING THE
-//   ROW, THE ONE PLAY/STOP BUTTON (bare Space, whose GLYPH and TOOLTIP swap
-//   on the live audition bit; Shift+Space the A/B audition). The last button's
-//   face ends on the well's last column
-//   (bottom_row_seats, 2026-10-23).
+//   `c`), LEFT and RIGHT (bare Left/Right). THE FOUR ARROWS, two pairs, are
+//   THE ROW'S HOLD GESTURE: held past the hold beat they repeat their own
+//   chords at the platform's key-repeat rate (key_repeat_period_ms) (the
+//   record at the arrows' chord-table rows, input_pointer.cpp). The pressed
+//   interior is the ordinary arm's, and the hold has no cue of its own —
+//   and, THE LAST GROUP'S LAST CASE CLOSING THE ROW, THE ONE PLAY/STOP
+//   BUTTON (bare Space, whose GLYPH and TOOLTIP swap on the live audition
+//   bit; Shift+Space the A/B audition). The last button's box ends on the
+//   row's right seat (bottom_row_seats).
 //
 // EVERY BUTTON GREYS WHERE ITS PRESS WOULD BE A NO-OP (the truthful-buttons
-// ruling, redesign_button_enabled), the `h` view's derived partition on top.
-// TWO MODE TERMS. THE HIDE (architect 2026-10-07): in the `h` view a member whose chord
-// the view refuses in every session is NOT PAINTED (history_mode_hides_button,
-// input_pointer.cpp) — Play / Stop, Up and Down, the four verbs, Jump to
-// Defining Marker, Open Text Editor, Toggle Value
-// Drag, and COPY and PASTE (the duo hidden whole, its run gap with it) —
-// and publishes an empty rect, the block
-// closing up from
-// the right margin; the row in there is
-// GO TO START and GO TO END (the mode's own absolute jumps), ADD TO
-// SELECTION alone, the walk pair, and SWITCH TAB, CENTER, OLDER and NEWER:
-// nine cases in four groups (2026-10-24; seven in three while the skips
-// were off the row, 2026-10-12 to 2026-10-24; the duo hidden whole since
-// 2026-11-08). THE STAND-IN (architect 2026-10-11,
+// ruling, redesign_button_enabled), the history view's derived partition on
+// top. TWO MODE TERMS. THE HIDE (architect 2026-10-07): in the history view a
+// member whose chord the view refuses in every session is NOT PAINTED
+// (history_mode_hides_button, input_pointer.cpp) — Play / Stop, Up and Down,
+// the four verbs, Jump to Defining Marker, Open Text Editor, Toggle Value
+// Drag, and COPY and PASTE (the duo hidden whole, its run gap with it) — and
+// publishes an empty rect, the block closing up from the right margin; the
+// row in there is GO TO START and GO TO END (the mode's own absolute jumps),
+// ADD TO SELECTION alone, the walk pair, and SWITCH TAB, CENTER, OLDER and
+// NEWER: nine cases in four groups. THE STAND-IN (architect 2026-10-11,
 // kTransportHistoryStandIns): in the view Older / Newer take the seats Left
 // and Right hold outside it, the nudge pair publishing empty rects (Up and
-// Down hidden), and outside it the two publish empty rects. THE STAND-INS DO NOT INHERIT THE
-// ARROWS' HOLD-REPEAT (architect 2026-10-11; kToolbarChords, input_pointer.cpp,
-// records why). Otherwise no member publishes a
-// zero rect except under a modal.
+// Down hidden), and outside it the two publish empty rects. THE STAND-INS DO
+// NOT INHERIT THE ARROWS' HOLD-REPEAT (architect 2026-10-11; kToolbarChords,
+// input_pointer.cpp, records why). Otherwise no member publishes a zero rect
+// except under a modal.
 //
-// (A CENTERED ESC BUTTON shipped between the groups on row 8's first day and
-// was DELETED at the architect's live pass — "looks like a missing button
-// with that cross out"; the mid-render CANCEL lives on the RENDER button now.)
+// THE BUTTONS ARE THE TOP ICON ROW'S ("the same size as the other icon
+// buttons": bigger finger targets without stealing waveform height): the
+// program's key (36 x 28 W, render.h's kKeyWidthW x kKeyHeightW, 72 x 56
+// device px on the tablet) — read from the same accessors (render.h's
+// program block) so the rows cannot drift apart — on THE ROW'S OWN GROUND,
+// Arc's pad above the case and the same pad below it (7 W each side,
+// architect 2026-11-20; render.h's ARC'S TOOLBAR PADS).
 //
-// THE BUTTONS ARE THE BAND'S (the unification's point — "the same size as
-// the other icon buttons", bigger finger targets without stealing waveform
-// height): the program's key (36 x 28 W, render.h's kKeyWidthW x
-// kKeyHeightW) — read from
-// the band's own accessors (render.h's program block) so the rows cannot
-// drift apart — on THE ROW'S OWN GROUND, Arc's pad above the case and the
-// same pad below it (7 W each side, architect 2026-11-20; render.h's ARC'S
-// TOOLBAR PADS). (Row 8's kdenlive
-// transport metrics, its 26-px boxes and
-// its ruled separators; Explorer's flat case with WordPad's air and the
-// etched separators, 2026-10-06 to 2026-10-09 — git history.)
-//
-// EVERYTHING ELSE IS THE BAND'S OWN MODEL: the same keys, each group one
-// linked group (paint_roster_group), the same dead look. WHO WEARS THE DEAD FACE HERE, re-derived 2026-10-07 — in
-// the `h` view the derived partition answers dead for the PLAY/STOP button
-// (Space is consumed there), UP and DOWN (bare Up/Down are neither the mode's
-// vocabulary nor on its allowlist), the FOUR MARKER VERBS, JUMP TO
-// DEFINING MARKER (Ctrl+J, consumed in there like the verbs' chords) and OPEN
-// TEXT EDITOR (bare Return, on neither list, 2026-10-09) — every
-// one of them dead in every session, so none of them is painted in the view
+// EVERYTHING ELSE IS THE TOP ICON ROW'S MODEL: the same keys, each group one
+// linked group (paint_roster_group), the same dead look. WHO WEARS THE DEAD
+// FACE HERE — in the history view the derived partition answers dead for the
+// PLAY/STOP button (Space is consumed there), UP and DOWN (bare Up/Down are
+// neither the mode's vocabulary nor on its allowlist), the FOUR MARKER VERBS,
+// JUMP TO DEFINING MARKER (Ctrl+J, consumed in there like the verbs' chords)
+// and OPEN TEXT EDITOR (bare Return, on neither list) — every one of them
+// dead in every session, so none of them is painted in the view
 // (history_mode_hides_button) — while the LEFT / RIGHT chords are the mode's
-// own playhead step since 2026-09-26 (admitted; the hide predicate leaves
-// them be, kTransportHistoryStandIns seating Older / Newer in their buttons'
-// places in the view, the painted, state-greyed pair there); ADD TO SELECTION STAYS LIT SINCE 2026-09-17, bare `k`
-// being on that mode's allowlist now and the lamp producing the view's own
-// multi-selection; THE WALK PAIR, SWITCH TAB AND CENTER stay lit, Tab/Shift+Tab being the
-// mode's diff-flag cycle, `c` its centring and Ctrl+Tab on its allowlist
-// (Home / End, its own absolute jumps, are keys alone since 2026-10-12, the
-// two skip buttons gone; Play / Stop is the transport's one button and is not
-// painted in the view). NEXT and PREVIOUS
-// MARKER grey where their step would land nothing (since 2026-11-08, their
-// twins retired). Outside the view the four VERBS
-// and OPEN TEXT EDITOR grey on a locked tab, their own
-// gate — JUMP TO DEFINING MARKER, seated among them, does NOT, its chord being
-// navigation the lock admits — and since 2026-08-30 EVERY MEMBER BUT PLAY /
-// STOP (the transport's one button since the skips left, 2026-10-12; its own
-// launch and A/B predicates) AND ADD TO SELECTION greys on the
-// selection's state where its press would be a consumed no-op (the
-// truthful-buttons ruling, reversing the architect's 2026-08-15 always-on
-// ruling, which was made about the RESTING face of the ten members the row
-// then had). All at redesign_button_enabled; nothing decided here.
-// THE SELECTED FACE IS WORN BY ADD TO SELECTION AND NOTHING ELSE HERE
-// (2026-08-18): the sticky-ctrl mode lights while it stands, which is the
-// roster's standing rule for a mode and the lamp iteration already
-// wears up in row 4. (The row was lampless for the hours between the Cumulative
-// toggle going back to the icon row with the rest of the history group —
-// it had been the row's one lamp from 2026-08-14 — and this arrival; Play and
-// Stop wore one for hours on 2026-08-15, as a RADIO PAIR on the live audition
-// bit, and the collapse of that pair into ONE button took it with them, the
-// bit picking the button's GLYPH now. The `selected` term in the shared
-// expressions below was kept through that gap rather than dropped, because it
-// is the icon row's own face logic verbatim and the row has now gained and
-// lost a lamp four times — which is why this arrival cost the body nothing.)
-// THAT IS A RULING RATHER THAN AN UNFINISHED SWEEP, and it took back the
-// whole-row honesty ruling of the same morning in three steps: the four
-// arrows and the four history companions first (a glyph blinking on every
-// marker selection restates what the selection already shows), then the two
-// SKIPS (bare Home / End are not pure jumps — each also stops a live audition,
-// clears the selection, no-op jump included, so a grey
-// promised less than the key delivers), then PLAY and STOP last, on the reason
-// that covers those ten: "there's not a whole lot of value derived from
-// the icon faces changing, and it is a little distracting... the user is
-// expected to know that with the playhead outside trim it's not going to play
-// in target view". (The ARROWS had no in-view answer to paint at the time —
-// they were not painted in there at all under the cluster swap. In the view
-// the LEFT and RIGHT chords are the mode's own playhead step, live, but
-// kTransportHistoryStandIns seats Older / Newer in their buttons' places
-// there, the painted, state-greyed pair; UP and DOWN, whose bare chords the mode consumes, are not painted there
-// since 2026-10-07 (history_mode_hides_button). Those are the partition's
-// own answers and no part of the always-on ruling, which is about the
-// RESTING face.)
+// own playhead step (admitted; the hide predicate leaves them be,
+// kTransportHistoryStandIns seating Older / Newer in their buttons' places
+// in the view, the painted, state-greyed pair there); ADD TO SELECTION STAYS
+// LIVE, bare `k` being on that mode's allowlist and the lamp producing the
+// view's own multi-selection; THE WALK PAIR, SWITCH TAB AND CENTER stay
+// live, Tab/Shift+Tab being the mode's diff-flag cycle, `c` its centring and
+// Ctrl+Tab on its allowlist. NEXT and PREVIOUS MARKER grey where their step
+// would land nothing. Outside the view the four VERBS and OPEN TEXT EDITOR
+// grey on a locked tab, their own gate — JUMP TO DEFINING MARKER, seated
+// among them, does NOT, its chord being navigation the lock admits — and
+// EVERY MEMBER BUT PLAY / STOP (its own launch and A/B predicates) AND ADD
+// TO SELECTION greys on the selection's state where its press would be a
+// consumed no-op (the truthful-buttons ruling, 2026-08-30). All at
+// redesign_button_enabled; nothing decided here.
+// THE SELECTED FACE IS WORN BY ADD TO SELECTION AND TOGGLE VALUE DRAG ALONE
+// HERE: a mode lights while it stands, the roster's standing rule for a
+// mode, as the top icon row's lamps do (redesign_button_selected). Play and
+// Stop are ONE button whose GLYPH, not a lamp, follows the live audition bit.
 // THE LANE'S GROUND IS THE FLAT GROUND (materials.h's head): the
 // lane's chrome is paint_bottom_strip's, which lays it and calls the body
 // below onto it.
 
 // THE ROW AUTHORS NO METRIC OF ITS OWN (program_spec.h owns every one): the
-// cases and glyphs are the band's, the pads Arc's toolbar's, the run gap
-// the program's (2026-10-22; the bars and their pads 2026-10-21, Cool
-// Edit's grippers and end bars before), and the row's ends the well's
-// first and last columns, flush like the band's (bottom_row_seats,
-// 2026-10-23). The render
-// player's modal row in this lane takes the same case at the same seat
-// (modal_controls_seats) and stands its items its own eight W apart on the
-// row's ground (paint_modal_dialog's player branch).
+// cases and glyphs are the top icon row's, the pads Arc's toolbar's, the run
+// gap the program's (2026-10-22), and the row's ends its seats, 6 W inside
+// the panel like the top icon row's (bottom_row_seats). The render player's
+// modal row in this lane takes the same case at the same seat
+// (modal_controls_seats) and stands its items the run gap apart on the
+// row's ground (player_row_layout; paint_modal_dialog's player branch).
 
 // The painter's half of the row's roster: five groups, all in the right
 // block and painted left to right in the order the body lays them (the
-// COPY / PASTE duo since 2026-11-08, the two skips since 2026-10-24, the
-// marker group, the step and walk, the nudge and play with Play last; the
-// `h` view's stand-ins seated in the last); each
-// table is declared beside its reasons.
+// COPY / PASTE duo, the two skips, the marker group, the step and walk, the
+// nudge and play with Play last; the history view's stand-ins seated in the
+// last); each table is declared beside its reasons.
 // The press claim's chord table (input_pointer.cpp) is the other half; both
 // key off the same ids.
 struct TransportRowDef {
     RedesignButton id;
 };
 // THE SINGLE-MARKER VERBS (architect 2026-08-18, "move drop/delete/disable/
-// toggle inherit to bottom right row"), the RIGHT BLOCK'S MARKER GROUP: drop
-// (bare `s`), delete (`Delete`), the disable toggle (`Ctrl+D`: a disabled
-// marker is one the render does not hear) and the inherit toggle (`Ctrl+N` — a
-// pass marker links its tempo to its neighbor). They opened their own
-// separator-led group in the ICON ROW from 2026-08-12 until this move.
-//
-// THE GROUP IS FIVE since later the same day, the architect seating ADD TO
-// SELECTION himself — "add group selection icon ('Add to Selection') after
-// toggle inherit, before the separator". It is the group's one MODE (bare `k`)
-// and therefore wears the lit face; the
-// four verbs above are acts that complete. (Toggle Value Drag, the group's
-// second lamp since 2026-10-11, is the other member that does.)
-//
-// It was SEVEN from 2026-09-19 until 2026-09-29 — the four verbs, the EDIT
-// FLAG BUTTON (2026-08-27), COPY RESOLVED VALUE (2026-08-29) and ADD TO
-// SELECTION; the rest of the succession (the Marker Measure, the value drag
-// lamp, the marker magnification, the Flatten button's hours) is in git
-// history.
-//
-// THE GROUP IS SIX SINCE 2026-09-29 EVENING (architect): EDIT FLAG and COPY
-// RESOLVED VALUE went up to the icon row (Edit Flag was deleted later that
-// evening), and JUMP TO DEFINING MARKER — Ctrl+J,
-// JumpToDefiningMarker's jump arc — took the seat
-// after Toggle Inherit, Add to Selection closing the group behind it. It is an
-// act, wears no lamp, and SINCE 2026-10-14 CARRIES THE COPY AS ITS SHIFT TWIN
-// (architect: "it's a marker action and the marker row is the bottom row"):
-// its long press is Ctrl+Shift+J, Copy Resolved Value, whose
-// icon-row button left that day. It greys where the jump and the copy both
-// refuse (the twin rule at its enabled arm) and in the `h` view; neither lock
-// greys it, neither act authoring anything.
-//
-// THE GROUP IS SEVEN SINCE 2026-10-09 (architect: "resurrect the Open Text
-// Editor button. It should go between jump to defining marker and toggle add
-// to selection"): OPEN TEXT EDITOR — bare Return — the glass's road to Return with no editor standing. An act that opens an
-// editor, no lamp; it greys where Return would open nothing and on a locked
-// tab, and the `h` view does not paint it (its roster entry, app_state.h).
-//
-// THE GROUP IS EIGHT SINCE 2026-10-11 (architect ~00:40): TOGGLE VALUE DRAG —
-// bare `[` — IMMEDIATELY RIGHT
-// OF ADD TO SELECTION, the group's second lamp and its last member ("arm Add
-// to Selection, pick several flags, then arm this and drag them"). A
-// one-shot: the drag it arms puts it out; under grid iterations permanently
-// lit and grey (2026-10-11 ~01:45; its roster entry, app_state.h).
-//
-// THE GROUP IS EIGHT AGAIN SINCE 2026-11-08 (architect, session 93): COPY
-// PHASE RESETS, its tail from 2026-11-07 (down from the band's first run),
-// left it for the COPY / PASTE duo, the row's leftmost run
-// (kPhaseResetPropagateGroup below); the verbs keep their order, a unit.
-//
-// (THE FLATTEN BUTTON stood between Toggle inherit and Edit flag for the hours
-// of 2026-09-19 and went up to the ICON ROW'S ITERATION GROUP the same day
-// (architect).)
+// toggle inherit to bottom right row"), the RIGHT BLOCK'S MARKER GROUP, EIGHT
+// MEMBERS in this order, a unit:
+//   drop (bare `s`), delete (`Delete`), the disable toggle (`Ctrl+D`: a
+//   disabled marker is one the render does not hear) and the inherit toggle
+//   (`Ctrl+N` — a pass marker links its tempo to its neighbor): the four
+//   verbs, acts that complete;
+//   JUMP TO DEFINING MARKER (Ctrl+J, JumpToDefiningMarker's jump arc): an
+//   act, no lamp, ITS SHIFT TWIN THE COPY (architect 2026-10-14: "it's a
+//   marker action and the marker row is the bottom row"): its long press is
+//   Ctrl+Shift+J, Copy Resolved Value. It greys where the jump and the copy
+//   both refuse (the twin rule at its enabled arm) and in the history view;
+//   neither lock greys it, neither act authoring anything;
+//   OPEN TEXT EDITOR (bare Return; architect 2026-10-09: "It should go
+//   between jump to defining marker and toggle add to selection"): the
+//   glass's road to Return with no editor standing. An act that opens an
+//   editor, no lamp; it greys where Return would open nothing and on a
+//   locked tab, and the history view does not paint it (its roster entry,
+//   app_state.h);
+//   ADD TO SELECTION (bare `k`; architect 2026-08-18: "add group selection
+//   icon ('Add to Selection') after toggle inherit, before the separator"):
+//   the group's one MODE, and therefore it wears the lit face;
+//   TOGGLE VALUE DRAG (bare `[`; architect 2026-10-11), the group's second
+//   lamp and its last member ("arm Add to Selection, pick several flags,
+//   then arm this and drag them"). A one-shot: the drag it arms puts it out;
+//   under grid iterations permanently lit and grey (its roster entry,
+//   app_state.h).
+// The phase resets' copy stands in the COPY / PASTE duo
+// (kPhaseResetPropagateGroup below; architect 2026-11-08).
 constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconMarkerDrop},
     {RedesignButton::IconMarkerDelete},
@@ -2300,81 +1925,68 @@ constexpr TransportRowDef kMarkerVerbGroup[] = {
     {RedesignButton::IconAddToSelection},
     {RedesignButton::IconValueDrag},
 };
-// THE COPY / PASTE DUO (architect 2026-11-08, session 93: row 8 "least used
-// left, most used right"), THE RIGHT BLOCK'S FIRST RUN, before the skips:
+// THE COPY / PASTE DUO (architect 2026-11-08: "least used left, most used
+// right"), THE RIGHT BLOCK'S FIRST RUN, before the skips:
 // COPY (bare P, the selected run's phase resets into the clipboard) and
 // PASTE (Ctrl+P, the clipboard's resets onto the one selected anchor behind
 // the paste's question; its long press Ctrl+Shift+P, their enabled /
 // disabled state alone). Both acts, no lamp; both grey on a locked tab and
-// PASTE under grid iterations; in the `h` view both are hidden (no `p`
+// PASTE under grid iterations; in the history view both are hidden (no `p`
 // chord on its allowlist), the run going with its gap (row8_block). Their
 // roster entries, app_state.h.
 constexpr TransportRowDef kPhaseResetPropagateGroup[] = {
     {RedesignButton::IconCopyPhaseResets},
     {RedesignButton::IconPastePhaseResets},
 };
-// THE SKIP GROUP (architect 2026-10-24: the two skip buttons back as their
-// own run at the left of Drop), THE RIGHT BLOCK'S SECOND since 2026-11-08
-// (its first until the duo came): GO TO START (bare
-// Home, START) and GO TO END (bare End, END), the trim bounds'
+// THE SKIP GROUP (architect 2026-10-24: the two skip buttons as their own
+// run at the left of Drop), THE RIGHT BLOCK'S SECOND, after the duo: GO TO
+// START (bare Home, START) and GO TO END (bare End, END), the trim bounds'
 // jump, their shifted press and long press the whole piece's ends
 // (Shift+Home / Shift+End). The run gap stands between it and the marker
-// verbs like every group's. Both stand in the `h` view, where every jump is
-// the piece's end (history_mode_owns_key). (The pair stood in row 8's
-// transport group with Play until 2026-10-12, when the architect took it out
-// of the row, Home and End keeping their keys.)
+// verbs like every group's. Both stand in the history view, where every
+// jump is the piece's end (history_mode_owns_key).
 constexpr TransportRowDef kTransportSkipGroup[] = {
     {RedesignButton::TransportSkipBack},
     {RedesignButton::TransportSkipForward},
 };
-// THE STEP-AND-WALK GROUP (architect 2026-10-18 ~21:40, regrouping row 8's
-// two right-hand groups: "Next marker, previous marker, up, down, separator",
-// read right to left), the right block's second group between the verbs and
-// the nudge-and-play group, in this order: DOWN and UP (bare Down / Up, the
-// value step, one unit — its hold-repeat at their chord rows,
-// input_pointer.cpp), PREVIOUS MARKER (Shift+Tab) and NEXT MARKER (the walk:
-// Tab; its camera the audio view's), neither admitting a modifier since
-// 2026-11-08. (Until 2026-10-18 the marker-walk group was Previous Marker, Next Marker,
-// Center and Switch Tab, and Down / Up led the arrow group behind it.)
-// A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON since
-// 2026-09-29 (architect: "an artificial constraint; the tablet is the only
+// THE STEP-AND-WALK GROUP (architect 2026-10-18: "Next marker, previous
+// marker, up, down, separator", read right to left), the right block's
+// fourth group, between the verbs and the nudge-and-play group, in this
+// order: DOWN and UP (bare Down / Up, the value step, one unit — its
+// hold-repeat at their chord rows, input_pointer.cpp), PREVIOUS MARKER
+// (Shift+Tab) and NEXT MARKER (the walk: Tab; its camera the audio view's),
+// neither admitting a modifier.
+// A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON
+// (architect 2026-09-29: "an artificial constraint; the tablet is the only
 // real development surface now") — Previous Marker is Next Marker's Shift
-// form and Switch Tab its Ctrl form; Previous Marker had merged into the walk
-// on 2026-09-22 under the rule that it could not, and the walk's modified
-// presses retired 2026-11-08, each having its own key. Down / Up are the verticals here, Left / Right the
-// horizontals in the last group; the vertical pair keeps the architect's
-// 2026-08-14 order, down before up (which superseded the row's original vim order, h j k l).
-// IN THE `h` VIEW Down and Up are hidden (history_mode_hides_button), the
-// group standing as the walk pair alone.
+// form and Switch Tab its Ctrl form, each its own key. Down / Up are the
+// verticals here, Left / Right the horizontals in the last group; the
+// vertical pair keeps the architect's order, down before up (2026-08-14).
+// IN THE HISTORY VIEW Down and Up are hidden (history_mode_hides_button),
+// the group standing as the walk pair alone.
 constexpr TransportRowDef kTransportStepWalkGroup[] = {
     {RedesignButton::TransportDown},
     {RedesignButton::TransportUp},
     {RedesignButton::TransportWalkPrevious},
     {RedesignButton::TransportWalk},
 };
-// THE NUDGE-AND-PLAY GROUP (architect 2026-10-18 ~21:40: "play button, right
+// THE NUDGE-AND-PLAY GROUP (architect 2026-10-18: "play button, right
 // nudge, left nudge. Center, switch tabs, separator", read right to left),
 // THE ROW'S LAST: SWITCH TAB (Ctrl+Tab; its shifted press is the paired
-// march, both chords' one pointer road since 2026-11-08), CENTER (bare `c` — down from the icon row's zoom group since
-// 2026-09-29), LEFT and RIGHT (bare Left / Right, the nudge — the playhead
-// step) and PLAY / STOP.
-// (Until 2026-10-18 Switch Tab and Center closed the marker-walk group and
-// this group was the four arrows with Play.)
+// march, both chords' one pointer road), CENTER (bare `c`), LEFT and RIGHT
+// (bare Left / Right, the nudge — the playhead step) and PLAY / STOP.
 //
 // PLAY / STOP IS THE GROUP'S LAST MEMBER, beside the right nudge with no
-// bar or run gap between them (linked, one seam), and so closes the row at the far
-// right outside the `h` view (architect 2026-10-12, revising his own ruling
-// of the same morning that seated Play at the marker group's head, and
-// correcting the one-member group of the hours after it: "no division
-// between the Right arrow and Play"; kept by the 2026-10-18 regroup). Play /
-// Stop at the far right sits at the screen's edge, where Shift+Play, the A/B
-// audition, is quickest to reach; reaching across from the marker verbs to
-// stop a scrub is acceptable, because at working zoom his hand moves faster
-// than the scanner. (The Go to Start / Go to End pair came back on
-// 2026-10-24 at the block's other end, kTransportSkipGroup.) Play and stop are
-// ONE stateful button (2026-08-15): its glyph is STOP's while an audition
-// runs (redesign_button_icon's stateful overload — Save's and Render's own
-// shape). IN THE `h` VIEW the group is Switch Tab, Center, Older and
+// bar or run gap between them (linked, one seam), and so closes the row at
+// the far right outside the history view (architect 2026-10-12: "no
+// division between the Right arrow and Play"). Play / Stop at the far right
+// sits at the screen's edge, where Shift+Play, the A/B audition, is
+// quickest to reach; reaching across from the marker verbs to stop a scrub
+// is acceptable, because at working zoom his hand moves faster than the
+// scanner. Play and stop are ONE stateful button (2026-08-15): its glyph is
+// STOP's while an audition runs (redesign_button_icon's stateful overload —
+// Save's and Render's own shape). IN THE HISTORY VIEW the group is Switch
+// Tab, Center, Older and
 // Newer: the nudge pair's seats are the history steps'
 // (kTransportHistoryStandIns, below) and Play is hidden
 // (history_mode_hides_button), so it does not stand there.
@@ -2385,9 +1997,9 @@ constexpr TransportRowDef kTransportNudgePlayGroup[] = {
     {RedesignButton::TransportRight},
     {RedesignButton::TransportPlayStop},
 };
-// THE `h` VIEW'S STAND-INS ON THIS ROW — OLDER AND NEWER IN THE NUDGE PAIR'S
-// SEATS (architect 2026-10-11 ~02:40, "Older / Newer in the arrows' seat";
-// the seat restated on the 2026-10-18 regroup): A PER-SEAT SWAP — while the
+// THE HISTORY VIEW'S STAND-INS ON THIS ROW — OLDER AND NEWER IN THE NUDGE
+// PAIR'S SEATS (architect 2026-10-11: "Older / Newer in the arrows' seat";
+// 2026-10-18): A PER-SEAT SWAP — while the
 // view stands Older paints in Left's seat and Newer in Right's, inside the
 // nudge-and-play group, and Left and Right publish empty rects; outside the
 // view the nudge pair stands and these two publish empty rects. Play, hidden
@@ -2395,15 +2007,11 @@ constexpr TransportRowDef kTransportNudgePlayGroup[] = {
 // row's MOST-USED ACTION'S — stepping left / right outside the view,
 // stepping older / newer in it — and the nudge pair has no seat in the view
 // at all ("I never use that … the nudge was for precision placement and
-// history view has no placement"). THE KEYS ARE UNCHANGED: `,` / `.` step the
-// walk and bare Left / Right stay the view's playhead step
-// (handle_history_mode_key) — only the buttons moved. THIS TABLE IS THE SWAP'S ONE OWNER: the painter
-// seats a stand-in through transport_row_seated and publishes the absent
-// side's empty rects from it.
-// (The arrows' first mode twin, a kHistoryClusterGroup of four history
-// companions painted at the arrows' anchor 2026-08-14..18, went back to the
-// icon row with the 2026-08-18 relayout; this is a narrower swap, two for
-// the two arrows the view still painted.)
+// history view has no placement"). THE CHORDS ARE NOT SWAPPED: `,` / `.`
+// step the walk and bare Left / Right stay the view's playhead step
+// (handle_history_mode_key) — only the buttons are. THIS TABLE IS THE SWAP'S
+// ONE OWNER: the painter seats a stand-in through transport_row_seated and
+// publishes the absent side's empty rects from it.
 struct TransportStandIn {
     RedesignButton  seat;      // the member whose seat it takes in the view
     TransportRowDef stand_in;  // what paints there while the view stands
@@ -2414,7 +2022,7 @@ constexpr TransportStandIn kTransportHistoryStandIns[] = {
     {RedesignButton::TransportRight,
      {RedesignButton::HistoryNewer}},
 };
-// WHAT PAINTS IN `def`'s SEAT: its stand-in while the `h` view stands, else
+// WHAT PAINTS IN `def`'s SEAT: its stand-in while the history view stands, else
 // the member itself.
 static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
                                                    bool history) {
@@ -2426,16 +2034,15 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 
 // THE TIME FIELDS — THE BOTTOM ICON ROW'S TIMESTAMP, THE RENDER PLAYER'S
 // POSITION AND LENGTH AND THE SCORE VIEWER'S PAIR — PLAIN TEXT, NO ENTRY
-// (architect 2026-11-19, RULINGS §8 / §9, his pick C 2 of Z_10: the
-// timestamp "probably doesn't need to be ... in its own input box. It
-// looks a little awkward now"; the overlays' clocks unboxed the same way):
-// THE DIGITS IN THE PROGRAM FACE (Regular 12 W, 24 device px on the tablet;
-// gui_font.h's table), THE TEXT TONE `text` (M13, 2026-11-02), on the
-// LINE-BOX BASELINE the entry's text had (+18 W of the keys' 28;
-// line_box_baseline). THE BOTTOM ICON ROW'S stands at its own pen
+// (architect 2026-11-19: the timestamp "probably doesn't need to be ... in
+// its own input box. It looks a little awkward now"; the overlays' clocks
+// plain the same way): THE DIGITS IN THE PROGRAM FACE (Regular 12 W, 24
+// device px on the tablet; gui_font.h's table), THE TEXT TONE `text`
+// (2026-11-02), on the LINE-BOX BASELINE of the key's box (+18 W of the
+// keys' 28; line_box_baseline). THE BOTTOM ICON ROW'S stands at its own pen
 // (kBottomLeftPenW, render.h; paint_bottom_row_buttons_and_clock); THE
-// OVERLAYS' ARE GTK LABELS IN A BOX AT 6 W SPACING (architect 2026-11-18 /
-// 19, send Z's design, built in send AA; his "it touches", RULINGS §8): each
+// OVERLAYS' ARE GTK LABELS IN A BOX AT 6 W SPACING (architect 2026-11-19:
+// "it touches"): each
 // time's SLOT IS THE SPECIMEN'S ADVANCE ALONE, ROUNDED UP TO A WHOLE W
 // (time_label_w_px below: "00:00.000" 53.38 W at Regular 12 W, so 54 W,
 // 108 device px on the tablet), THE TEXT'S PEN THE SLOT'S LEFT EDGE, and
@@ -2444,9 +2051,9 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // TABULAR — Liberation Sans's every digit 0.556 em — AND THE RUN IS SHAPED
 // WITH KERNING OFF (text_shape::Kerning::Off, architect 2026-11-05: the
 // face's GPOS kerns the pair "11" by about 1.2 px at 22 px, so under its
-// kerning a time holding "11" ran narrower than the specimen and its later
-// digits walked; 11:11.111 measured 3.7 px narrower than 04:49.027 on the
-// tablet, session 40) — so every digit slot is one advance and the colon
+// kerning a time holding "11" runs narrower than the specimen and its later
+// digits walk; 11:11.111 measured 3.7 px narrower than 04:49.027 on the
+// tablet) — so every digit slot is one advance and the colon
 // and the point stand still as the time runs.
 //
 // EVERY TIME LABEL PRESSES NOTHING (architect 2026-11-20: "it no longer
@@ -2460,7 +2067,7 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // the time runs): the widest digit in every digit slot of "DD:DD.DDD"
 // (kTimeShape), shaped through the one chokepoint at the live scale with
 // kerning off — the widest digit is picked by advance, all ten being 0.556
-// em, so the specimen is "00:00.000", the design's own (DESIGN §3). THE
+// em, so the specimen is "00:00.000". THE
 // CELL — the specimen's ink's whole hull, ceil(ink_r − ink_l) whole px,
 // standing where the run at the pen puts it — is THE CLOCK'S DAMAGE BOX
 // (clock_invalidate_rect, main.cpp); a time whose digit inks reach past the
@@ -2468,8 +2075,8 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // damage carries. THE PLAYER'S ROW HOLDS TWO, one run gap apart: its
 // scrub is what the fixed terms leave (player_row_layout).
 //
-// ROW 8'S RUN IS THE TIMESTAMP, A TEXT PIPE AND THE TAB'S NAME (architect
-// 2026-11-19, send AA, RULINGS §10; paint_bottom_row_buttons_and_clock).
+// THE BOTTOM ICON ROW'S LEFT RUN IS THE TIMESTAMP, A TEXT PIPE AND THE TAB'S
+// NAME (architect 2026-11-19; paint_bottom_row_buttons_and_clock).
 //
 // TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
 // are at format_timestamp, time_format.h). The cell is that format's width and
@@ -2487,7 +2094,7 @@ constexpr const char* kTimeShape = "DD:DD.DDD";
 // the clock and it is format_timestamp (at 59:59.999 — a longer source
 // truncates, the architect's ruling, recorded there).
 // WITH NO PIECE THE RUN IS EMPTY and the field stands blank (architect
-// 2026-10-27, the open's hold's one frame, platform.h's head: row 8's clock
+// 2026-10-27, the open's hold's one frame, platform.h's head: the clock
 // blank, not 00:00.000 — a time of no piece; the one owner
 // no_audio_to_dispatch_on).
 static std::string clock_time_text(const AppState& app,
@@ -2508,11 +2115,10 @@ static std::string clock_time_text(const AppState& app,
 
 // The time fields' metrics, MEMOISED ON THE SCALE — eleven tiny shaping
 // passes (ten digits and the specimen) of THE PROGRAM FACE, every time
-// field's (row 8's clock and the render player's two since 2026-10-26
-// ~12:10), that answer the same thing on every frame until the scale
-// moves — the widths are the face's own. The scale is the whole key: the
-// Program face's size is the table's (gui_font.h; the one live size is the
-// Keys face's, 2026-10-29 night).
+// field's (the bottom icon row's clock and the overlays' times), that
+// answer the same thing on every frame until the scale moves — the widths
+// are the face's own. The scale is the whole key: the Program face's size
+// is the table's (gui_font.h; the one live size is the Keys face's).
 // Single-threaded paint state; the waveform worker never reaches this file's
 // text tiers.
 //
@@ -2521,7 +2127,7 @@ static std::string clock_time_text(const AppState& app,
 // advance sum, shaped with kerning off, so every time is that wide and no
 // glyph ever walks; `ink_l` / `ink_r` are its ink's real edges from origin
 // 0 (text_shape::ink_left_px / ink_right_px, unrounded), and `cell_w` =
-// ceil(ink_r - ink_l) is row 8's cell and each player field's, in whole px
+// ceil(ink_r - ink_l) is the clock's cell and each player field's, in whole px
 // (layout); each cell is its field's damage box too. Every shaping here is
 // text_shape::Kerning::Off, the fields' own option.
 struct TimeFieldMetrics {
@@ -2570,8 +2176,8 @@ static int time_label_w_px() {
 static GuiRect time_label_rect(int x, int case_y) {
     return GuiRect{x, case_y, time_label_w_px(), icon_case_h_px()};
 }
-// ONE OVERLAY TIME LABEL PAINTED: `text` alone (architect 2026-11-19, send
-// AA), kerning off, its pen the slot's left edge, on the line-box baseline,
+// ONE OVERLAY TIME LABEL PAINTED: `text` alone (architect 2026-11-19),
+// kerning off, its pen the slot's left edge, on the line-box baseline,
 // clipped to the slot.
 static void paint_time_text(cairo_t* cr, const GuiRect& slot,
                             const std::string& text) {
@@ -2589,21 +2195,22 @@ static void paint_time_text(cairo_t* cr, const GuiRect& slot,
 }
 
 // THE BOTTOM ROW'S SEATS — the bottom icon row's and the modal controls
-// row's, ONE OWNER (architect 2026-10-23, "shouldn't row 8 take the same
-// rule as top strip?" — yes): the LEFT SEAT where a row's content starts and
+// row's, ONE OWNER (architect 2026-10-23: the bottom row takes "the same
+// rule as top strip"): the LEFT SEAT where a row's content starts and
 // the RIGHT SEAT where its right-aligned cluster ends — THE PANEL'S COLUMNS
 // (render.h's well_columns) EACH kEdgeInsetW (6 W) INSIDE (architect
-// 2026-11-19, send Z; DESIGN §3: the keys' outermost faces 6 W inside the
-// panel, Arc's toolbar margin): 12 and 2292 at 200 % on the tablet's 2304 —
+// 2026-11-19: the keys' outermost faces 6 W inside the panel, Arc's toolbar
+// margin): 12 and 2292 at 200 % on the tablet's 2304 —
 // and THE KEYS' ENDS, CASES_LEFT and CASES_RIGHT, where a row's first key's
 // box starts and its last key's box ends: the seats themselves (the box,
 // border included, is the key, materials.h's THE KEY), both rows'
-// outermost boxes 6 W inside the panel, as the band's (icon_row_seats); THE
+// outermost boxes 6 W inside the panel, as the top icon row's
+// (icon_row_seats); THE
 // CASE the pad under the row's top (icon_case_top_offset_px, 7 W).
 // Text and fields (the clock) start on the left seat. The two rows differ
 // only in `row`: the bottom icon row's lane (bottom_row_area), or the
-// controls row's, the same rows (modal_controls_row_rect, which never lifts
-// since send AA's stage D2; modal_controls_seats below reads this). Every
+// controls row's, the same rows (modal_controls_row_rect, which never
+// lifts; modal_controls_seats below reads this). Every
 // BUTTON on either row is Arc's button (materials.h's THE KEY): a group of
 // glyph keys one linked group, a word button its own text button.
 struct BottomRowSeats {
@@ -2627,29 +2234,26 @@ static BottomRowSeats bottom_row_seats(const AppState& app,
 // THE MODAL FAMILY'S CONTROLS ROW'S SEATS (architect 2026-10-14,
 // modal_box.h): every modal's controls stand on the controls row at the
 // bottom icon row's case seat, their OUTERMOST FACES 6 W INSIDE THE PANEL
-// (THE EDGE RULE, send Z) —
-// row 8's own seats (bottom_row_seats, the one owner) on the
+// (THE EDGE RULE) — the bottom icon row's own seats (bottom_row_seats, the
+// one owner) on the
 // controls row's rows (modal_controls_row_rect, the lane table's, modal_box.h).
 static BottomRowSeats modal_controls_seats(const AppState& app) {
     return bottom_row_seats(app, modal_controls_row_rect(app));
 }
 
-// ROW 8'S RIGHT BLOCK (2026-10-21: lifted out of
-// paint_bottom_row_buttons_and_clock; the numbers and the z rule at the
-// painter's THE NUMBERS). THE FIVE GROUPS IN
+// THE BOTTOM ICON ROW'S RIGHT BLOCK (the numbers and the z rule at
+// paint_bottom_row_buttons_and_clock's THE NUMBERS). THE FIVE GROUPS IN
 // PAINTED ORDER, each read off its own table, so a box joining or leaving
-// moves the block with no second edit; IN THE `h` VIEW the nudge pair's
+// moves the block with no second edit; IN THE HISTORY VIEW the nudge pair's
 // seats are the walk's two steps (kTransportHistoryStandIns, its one owner,
-// seated through transport_row_seated). FIVE GROUPS since 2026-11-08, the
-// COPY / PASTE duo first, then the skips (architect, session 93: "least
-// used left, most used right").
+// seated through transport_row_seated). The COPY / PASTE duo first, then
+// the skips (architect 2026-11-08: "least used left, most used right").
 constexpr int kRow8GroupCount = 5;
 constexpr std::span<const TransportRowDef> kRow8Groups[kRow8GroupCount] = {
     kPhaseResetPropagateGroup, kTransportSkipGroup, kMarkerVerbGroup,
     kTransportStepWalkGroup, kTransportNudgePlayGroup};
-// THE ROW'S LENGTHS (the simple layout, 2026-10-22; Arc's linked groups
-// since 2026-11-19, send Z): the run gap between two groups (render.h's
-// program_run_gap_px, kRunGapW, 6 W), each group
+// THE ROW'S LENGTHS (Arc's linked groups, 2026-11-19): the run gap between
+// two groups (render.h's program_run_gap_px, kRunGapW, 6 W), each group
 // a linked group (materials.h's linked_group_w_px: its keys sharing one
 // seam column each).
 struct Row8Lengths {
@@ -2661,13 +2265,13 @@ static Row8Lengths row8_lengths() {
 // THE BLOCK, MEASURED under the view's bit `history`: EACH GROUP'S STANDING MEMBERS (the hide,
 // history_view_hides_button, asked of what the seat paints), whether any
 // group stands, and the block's left edge. THE BLOCK'S WIDTH IS THE PAINTED
-// GROUPS' (architect 2026-10-07): in the `h` view a button whose chord the
+// GROUPS' (architect 2026-10-07): in the history view a button whose chord the
 // view refuses in every session is not painted (history_mode_hides_button,
 // input_pointer.cpp), so the count is of the members that stand, and a
 // group stands only while it keeps a member. Outside the view nothing is
 // hidden and this is every table's whole length. EACH STANDING GROUP IS
 // ONE LINKED GROUP of its standing members (linked_group_w_px, materials.h;
-// send Z, 2026-11-19), the run gap between two, the last box ending at the
+// 2026-11-19), the run gap between two, the last box ending at the
 // row's cases_right (6 W inside the panel's right edge).
 struct Row8Block {
     int x = 0;                               // the block's left edge
@@ -2724,8 +2328,7 @@ static void row8_block_walk(bool history, const Row8Block& b,
     }
 }
 
-// THE BOTTOM ICON ROW'S LEFT RUN (architect 2026-11-19, RULINGS §9 / §10
-// and the brief's §T; his picks C 2 of Z_10 and "tabs next to the
+// THE BOTTOM ICON ROW'S LEFT RUN (architect 2026-11-19: "tabs next to the
 // bottom left timestamp, but we separate them with a pipe. So non-bold for
 // the timestamp, pipe, and then tab A or tab B"): ONE REGULAR 12 W RUN
 // (GuiFace::Program) in the text tone — THE TIMESTAMP (kerning off, THE
@@ -2734,8 +2337,8 @@ static void row8_block_walk(bool history, const Row8Block& b,
 // doesn't need to be ... in its own input box". ITS PEN kBottomLeftPenW
 // (14 W, render.h; "And then we put the timestamp line at 14W") from the
 // panel's left edge — the status bar's column under it (kStatusBarPenW,
-// the same 14 W by its own ruling) — ON THE BASELINE THE ENTRY'S TEXT HAD:
-// the 14 W line box centered on the keys' 28 W rows (line_box_baseline,
+// the same 14 W by its own ruling) — ON THE KEYS' BASELINE: the 14 W line
+// box centered on the keys' 28 W rows (line_box_baseline,
 // +18 W of the case), so with the row's 7 W above its keys and 7 W below,
 // 14 W of the row above the line box and 14 W under it. THE PIPE'S PEN
 // STANDS AT THE TIMESTAMP SPECIMEN'S ADVANCE ("00:00.000", time_w), so the
@@ -2792,25 +2395,24 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // materials.h's paint_linked_group) with their drawings on them
     // (paint_key_glyph).
 
-    // The row's seats (bottom_row_seats): the band's case at the pad
+    // The row's seats (bottom_row_seats): the top icon row's case at the pad
     // under the lane's top.
     const BottomRowSeats seats = bottom_row_seats(app, lane);
     const int btn_y     = seats.case_y;
-    // EACH GROUP ONE LINKED GROUP (send Z, 2026-11-19; DESIGN §3): its keys
+    // EACH GROUP ONE LINKED GROUP (2026-11-19): its keys
     // sharing one seam column each inside one bordered ring, the run gap of
     // bare body tone between two groups (row8_block).
     const Row8Lengths lengths = row8_lengths();
 
-    // ONE GROUP, the band's own composition (paint_roster_group): each
+    // ONE GROUP, the top icon row's own composition (paint_roster_group): each
     // member publishes its box (linked_key_box) and its seam — the published
     // hit box, the painted extent the publication's coverage test reads,
     // the damage of its drift and its press — and the group paints where the
     // clip reaches it. THE CHECKED KEYS ON THIS ROW are ADD TO SELECTION
     // (2026-08-18, the sticky-ctrl mode that closes the marker-verb group)
     // and TOGGLE VALUE DRAG beside it, each lit in the accent while its mode
-    // stands (the radio class retired 2026-11-19, send Z: "we can let go of
-    // the green"); a checked key a mode greys wears Arc's lit-and-inert
-    // look, the band's own composition.
+    // stands (2026-11-19); a checked key a mode greys wears Arc's
+    // lit-and-inert look, the top icon row's own composition.
     const auto paint_group = [&](int gx, const std::vector<RedesignButton>& ids) {
         for (int i = 0; i < static_cast<int>(ids.size()); ++i) {
             const GuiRect box = linked_key_box(gx, btn_y, i);
@@ -2826,13 +2428,13 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     };
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
-    // layout: the most-used buttons at the bottom right; the simple layout
-    // 2026-10-22): THE LEFT RUN — the timestamp, a text pipe and THE
+    // layout: the most-used buttons at the bottom right): THE LEFT RUN — the
+    // timestamp, a text pipe and THE
     // ACTIVE TAB'S NAME, plain text from kBottomLeftPenW (bottom_left_run)
     // — then THE
     // RIGHT BLOCK, packed against the row's right seat (bottom_row_seats, 6 W
-    // inside the panel's right edge), FIVE GROUPS (kRow8Groups, 2026-11-08): the COPY / PASTE
-    // DUO (kPhaseResetPropagateGroup), the SKIP
+    // inside the panel's right edge), FIVE GROUPS (kRow8Groups): the COPY /
+    // PASTE DUO (kPhaseResetPropagateGroup), the SKIP
     // GROUP (START | END, kTransportSkipGroup), the MARKER-VERB GROUP (its
     // eight counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
     // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
@@ -2841,8 +2443,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // GROUP, the run gap between two. The whole block is measured first and laid left
     // to right from there, so one expression owns the anchor and no group
     // re-derives it.
-    // ITS TWO MODE TERMS are the `h` view's: the hide (architect 2026-10-07,
-    // history_mode_hides_button) — a member hidden there publishes an empty
+    // ITS TWO MODE TERMS are the history view's: the hide (architect
+    // 2026-10-07, history_mode_hides_button) — a member hidden there publishes an empty
     // rect, the block is measured over the members that stand, and a group
     // hidden whole takes its gap with it — and the stand-in (architect
     // 2026-10-11, kTransportHistoryStandIns): Older / Newer in the nudge
@@ -2851,7 +2453,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // (modal_owns_bottom_row) — where the row yields whole
     // (paint_bottom_strip).
     //
-    // THE NUMBERS (send Z, 2026-11-19: Arc's linked groups; in the tablet's
+    // THE NUMBERS (Arc's linked groups, 2026-11-19; in the tablet's
     // device px at 200 %, one W = 2) — the 36-W box (kKeyWidthW), a group's
     // keys sharing one seam column each (72 + 70 (n − 1) a group of n,
     // linked_group_w_px), the 6-W run gap (kRunGapW): the
@@ -2860,29 +2462,27 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 562 + 282 + 352 + 4 · 12 = 1528 px, its last box ending at the row's
     // right seat (bottom_row_seats' cases_right, 2292, 6 W inside the
     // panel's right edge) — the groups on x 764..905, 918..1059, 1072..1633,
-    // 1646..1927 and 1940..2291 (Play 2220..2291), the kit's seats
-    // (the mock kit's build log); the left run from x 28 (kBottomLeftPenW):
+    // 1646..1927 and 1940..2291 (Play 2220..2291); the left run from x 28
+    // (kBottomLeftPenW):
     // the timestamp's advance 106.77 px (the 53.4-W advance of
     // "00:00.000" in the Regular 12 W, kerning off), its cell x 27..135, the
-    // text pipe's run "  |  Tab B" from x 134.77, about 97 px. IN THE `h`
-    // VIEW (the hide, 2026-10-07; Play, Open Text Editor, Toggle Value Drag,
+    // text pipe's run "  |  Tab B" from x 134.77, about 97 px. IN THE HISTORY
+    // VIEW (the hide; Play, Open Text Editor, Toggle Value Drag,
     // COPY and PASTE hidden there with the verbs — the duo whole, its run
     // gap with it — Down and Up with them) the block is the two skips, one
     // verb, the walk pair and Switch Tab, Center and Older / Newer in the
     // nudge pair's seats, 142 + 72 + 142 + 282 + 3 · 12 = 674 px, from x
-    // 1618. THE ROW CARRIES NO
-    // COLLISION RULE — none of the redesign does — and the crop-at-the-floor
-    // allowance recorded at kMinWindowWidthPx covers a narrow window.
+    // 1618. THE ROW CARRIES NO COLLISION RULE — no row does — and the
+    // crop-at-the-floor allowance recorded at kMinWindowWidthPx covers a
+    // narrow window.
     //
-    // THE BLOCK WINS IN Z (architect 2026-10-14, on a restored laptop window
-    // about 392 W wide: "icons row should win in z-index … msg goes under it.
-    // It should be fully opaque"): the block is MEASURED here, ahead of the
-    // clock, but it
-    // is PAINTED LAST — after the clock and the name, on its own span of the
-    // ground laid fresh — so where the window is narrow enough for it to walk
-    // over the clock, the block is what shows, whole and opaque, and nothing
-    // of the left run comes through. The press agrees by
-    // construction: the whole left run — the timestamp, the pipe and the
+    // THE BLOCK WINS IN Z (architect 2026-10-14: "icons row should win in
+    // z-index … msg goes under it. It should be fully opaque"): the block is
+    // MEASURED here, ahead of the clock, but it is PAINTED LAST — after the
+    // clock and the name, on its own span of the ground laid fresh — so where
+    // the block is wide enough to walk over the clock, the block is what
+    // shows, whole and opaque, and nothing of the left run comes through.
+    // The press agrees by construction: the whole left run — the timestamp, the pipe and the
     // name — is pointer-inert ground (the timestamp by architect
     // 2026-11-20: "it no longer carries button look"), and the
     // press resolves against the keys' published rects alone
@@ -2896,7 +2496,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // ground is paint_bottom_strip's own flat ground over the same span.
     // THE FIVE GROUPS IN PAINTED ORDER, each read off its own table, so a
     // box joining or leaving moves the block with no second edit.
-    // IN THE `h` VIEW the nudge pair's seats are the walk's two steps
+    // IN THE HISTORY VIEW the nudge pair's seats are the walk's two steps
     // (kTransportHistoryStandIns, its one owner, seated through
     // transport_row_seated): the side that does not stand publishes its
     // empty rects here.
@@ -2926,7 +2526,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // name — no press, no hover, no tooltip; PLAY is pressed from its
         // own box alone (RedesignButtonFace::contains). The pipe and the
         // name are pointer-inert ground too (no press target: the TAB key
-        // keeps its walk, LOCK the lock's one road; RULINGS §10). The digits
+        // keeps its walk, LOCK the lock's one road). The digits
         // are never greyed. The render player's and the score viewer's time
         // labels share the face and press nothing either.
 
@@ -3018,12 +2618,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                             palette().face);
             cairo_restore(cr);
         }
-        // A HIDDEN MEMBER PUBLISHES THE EMPTY RECT (the band's absent
-        // members' shape): no point is inside it, so no press, hover or
+        // A HIDDEN MEMBER PUBLISHES THE EMPTY RECT (the top icon row's
+        // absent members' shape): no point is inside it, so no press, hover or
         // tooltip reaches it, and its bits refresh unconditionally
         // (publish_button_face) — the same rect the modal yield publishes
         // for the whole row. Each seat paints what transport_row_seated
-        // answers: the member, or its stand-in in the `h` view
+        // answers: the member, or its stand-in in the history view
         // (row8_block_walk, the one walk).
         row8_block_walk(
             history, block, lengths,
@@ -3040,7 +2640,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 }
 
 // THE STATUS BAR'S PAINTER (render.h's status bar block, every length and
-// tone there; architect 2026-11-19, send Z): the lane's first hairline in
+// tone there; architect 2026-11-19): the lane's first hairline in
 // `well_border` (the line Thunar draws over its bar), the bar under it in the
 // body tone `body_face`, and the string (status_bar_text) in the Regular 12
 // W (GuiFace::Body) in `text`, its PEN kStatusBarPenW from the panel's left
@@ -3118,8 +2718,8 @@ void floating_box_path(cairo_t* cr, double x0, double y0, double x1,
     cairo_close_path(cr);
 }
 
-// A FLOATING SURFACE'S BOX (send AA's stage D1, 2026-11-19: Arc's tooltip
-// and notifyd's bubbles, un-shared — each painter its own look): the whole
+// A FLOATING SURFACE'S BOX (2026-11-19: Arc's tooltip and notifyd's
+// bubbles, each painter its own look): the whole
 // box `r` rounded by `radius`, filled in `fill` AT `alpha` OVER WHAT LIES
 // UNDER IT (set_palette_source_alpha: the chrome blended here, the canvas
 // by the GPU inside the floaters' hulls — canvas_sink.h's THE TRANSPARENCY
@@ -3299,9 +2899,9 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // that wait, one per surface), and `visible` is only ever set with an
     // owner, so one is always standing here. Re-walking
     // for a hovered button would be a SECOND membership rule to keep in step
-    // with that one — and since 2026-08-07 it could not be the same rule
-    // anyway: A DISABLED BUTTON SHOWS ITS HINT (the architect's
-    // kdenlive-parity ruling), and the owner is the only record of which
+    // with that one — and it could not be the same rule anyway: A DISABLED
+    // BUTTON SHOWS ITS HINT (the architect's kdenlive-parity ruling,
+    // 2026-08-07), and the owner is the only record of which
     // button the wait ripened on — no tooltip owner is stored anywhere else
     // (the hovered FACE, AppState::FaceFades, is another thing: it names
     // only a key a press would act on, and nothing while a contact is down).
@@ -3313,14 +2913,14 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // a DIALOG owner reads the modal stash the painter itself publishes — its
     // composed hint and its button rect, both written by paint_modal_dialog,
     // which runs BEFORE this body precisely so the rect the box stands above
-    // is the one this frame draws; a MARKER owner (2026-11-09) reads its cue's
-    // recomposed words and the cue's published face; a HISTORY owner
-    // (2026-11-11) its item's recomposed words and the item's published face.
+    // is the one this frame draws; a MARKER owner reads its cue's recomposed
+    // words and the cue's published face; a HISTORY owner its item's
+    // recomposed words and the item's published face.
     const char* line1 = nullptr;
     const char* line2 = nullptr;
     GuiRect     btn{0, 0, 0, 0};
     // THE STRUCK RUN LEADING LINE 1 — a History owner's older side, or a
-    // Marker owner's struck cut line (2026-11-17); null for every other
+    // Marker owner's struck cut line; null for every other
     // owner and for a run that is absent.
     const char* struck = nullptr;
     // A MARKER OWNER'S RUNS, held here so line1 and struck can point into
@@ -3329,7 +2929,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // A HISTORY OWNER'S RUNS, held likewise.
     HistoryCueTooltipText history_text;
     if (owner.surface == AppState::RedesignTooltip::Surface::History) {
-        // THE ITEM'S DIFF (architect 2026-11-11, sessions 106 / 107; the
+        // THE ITEM'S DIFF (architect 2026-11-11; the
         // History owner at AppState::RedesignTooltip): EXACTLY WHAT THE FLAG
         // SHOWS, ON ONE LINE, through the one owner (history_cue_tooltip_text
         // — the older side's label as the struck run, the newer side's as
@@ -3344,8 +2944,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         // THE CUE'S WORDS (the Marker owner at AppState::RedesignTooltip):
         // ONE LINE, recomposed through the one owner (marker_tooltip_text —
         // the value copy's payload verbatim as the plain run, architect
-        // 2026-11-09, session 100; or a cut label's whole flag line, struck
-        // where the lane strikes the label, architect 2026-11-17, send U;
+        // 2026-11-09; or a cut label's whole flag line, struck where the
+        // lane strikes the label, architect 2026-11-17;
         // empty, and so no box, on every other cue), laid as a History
         // item's two runs below, in the name line's face and ink; no hint
         // line. The face is the cue's in the LIVE stash (marker_cue_face), so
@@ -3387,20 +2987,17 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     } else {
         if (owner.index >= kRedesignButtonCount) return;
         const RedesignButton id = static_cast<RedesignButton>(owner.index);
-        // THE STATEFUL OVERLOAD, with the three objects its forks read
-        // (2026-09-01; the frame count, the third, out for 2026-10-24 alone
-        // and back 2026-10-25 with Zoom to Fit's reset term): the words fork
-        // on what the acts and the faces read, and this painter is the
-        // overload's one reader. It took the
-        // enabled predicate's whole five for the morning of 2026-09-01,
-        // `playback` and `target_render` unread at the far end; they left
-        // with the rule that a parameter arrives with its producer.
+        // THE STATEFUL OVERLOAD, with the three objects its forks read (the
+        // frame count Zoom to Fit's reset term's): the words fork on what the
+        // acts and the faces read, and this painter is the overload's one
+        // reader. No `playback` or `target_render`: a parameter arrives with
+        // its producer.
         const RedesignTooltipText text = redesign_button_tooltip(
             app, audio, audio.total_frames(), id);
         // A HINT WITH NO LINE 1 IS NO HINT. Nothing can take a hint away under
-        // a standing box any more — tooltip MEMBERSHIP is the menu row and
-        // nothing else, in every state (the rule is at redesign_button_tooltip,
-        // app_state.h), and the wait's writer only ever takes a button whose
+        // a standing box — every roster key carries one, in every state (the
+        // rule is at redesign_button_tooltip, app_state.h), and the wait's
+        // writer only ever takes a button whose
         // line 1 is non-null. So this reads as the table's total answer rather
         // than as a state guard, and it keeps the painter honest against the
         // owner without knowing which arms are null.
@@ -3413,8 +3010,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     if (btn.w <= 0 || btn.h <= 0) return;
 
     cairo_save(cr);
-    // ARC'S TOOLTIP (architect 2026-11-19, his "good to build" on the
-    // picture Z_07; render.h's THE TOOLTIP IS ARC'S, the rule and its
+    // ARC'S TOOLTIP (architect 2026-11-19: "good to build"; render.h's THE
+    // TOOLTIP IS ARC'S, the rule and its
     // numbers): THE LINES Regular 12 W — the name line in GuiFace::Program,
     // the hint line in GuiFace::Hint, both 12 W Regular — BOTH IN
     // `sidebar_text` (Arc's tooltip label, BAC3CF; the hint line the same
@@ -3434,7 +3031,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // in from the box's real left edge (`box`, exact: a cue's box seats its
     // text origin on the label's pen, below); the box is painted on its hull.
     //
-    // A HISTORY ITEM'S ONE LINE (architect 2026-11-11, session 107: "both in
+    // A HISTORY ITEM'S ONE LINE (architect 2026-11-11: "both in
     // one line with the old one struck and the old one listed first") is two
     // runs in the name line's face and ink: the STRUCK run first, its bar the
     // lane's own geometry (struck_run_bar, render.h — the cue labels' strike,
@@ -3445,7 +3042,7 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
     // pad, gap, pad — where the lane's second segment's text stands from the
     // first's). A run that is absent takes no room and no step; line 1's
     // extent is the runs' with the step between. A CUE'S ONE LINE is laid
-    // the same (architect 2026-11-17, send U): a struck cut line is the
+    // the same (architect 2026-11-17): a struck cut line is the
     // struck run alone, any other words the plain run alone
     // (marker_tooltip_text).
     const GuiFont name_font = gui_font(GuiFace::Program);
@@ -3482,16 +3079,15 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
                      std::ceil(std::max(line1_w, w2));
     const double h = static_cast<double>(2 * pad + line1_h + line2_h);
 
-    // OFF THE OWNER'S FACE ALONE (architect 2026-11-07, sessions 90 and 91):
-    // UNDER a top-row key's face and ABOVE every other (send Z, 2026-11-19:
-    // the title bar no longer holds a band key's box), one W between
+    // OFF THE OWNER'S FACE ALONE (architect 2026-11-07): UNDER a top-row
+    // key's face and ABOVE every other (2026-11-19), one W between
     // (render.h's kTooltipGapW) — THE GAP MEASURED TO THE BOX, the shadow
     // hanging outside it over the gap and the face — its left edge on
     // `btn`'s — then held inside the panel (the edge rule) and under the
     // window's top, the box never shrinking (a truncated hint would be
     // worse than one that shifted). The rule's one statement is
     // tooltip_box_rect (app_state.h).
-    // A CUE'S BOX (architect 2026-11-09, session 100: "the first char on the
+    // A CUE'S BOX (architect 2026-11-09: "the first char on the
     // left of the tooltip should align horizontally with the first char of
     // the marker") seats its TEXT ORIGIN, x + pad below, on the label's
     // pen as the cue pass drew it — marker_tooltip_box_rect, app_state.h,
@@ -3578,9 +3174,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
 
 namespace {
 
-// (THE CARD'S LINE SPACING, the body face's exact line height, is the line
-// box's since send AA's stage D1, 2026-11-19: notification_line_px,
-// notifications.h — 14 W, whole.)
+// (THE CARD'S LINE SPACING is the line box's, 14 W, whole:
+// notification_line_px, notifications.h; 2026-11-19.)
 
 // THE WRAP, and the ONE place a card's text is broken into lines (architect
 // 2026-08-30). GREEDY WORD WRAP AT ASCII SPACES ON MEASURED ADVANCES: each
@@ -3605,7 +3200,7 @@ namespace {
 // line; every other byte is carried verbatim out of the sentence, which is
 // why the lines are substrings and never a rejoin (a rejoin would author
 // text the sentence never had). EVERY RUN THROUGH THE LABEL RUNS' MEMO
-// (text_shape::memoized_run; send BB, 2026-11-19 — the same pixels, the
+// (text_shape::memoized_run; 2026-11-19 — the same pixels, the
 // memo's hit the very run a fresh shape returns): the layout runs under
 // every on_redraw call while a card stands (paint_notifications: its
 // publication is the layout's), so a standing card's sentence and its wrap
@@ -3661,37 +3256,36 @@ std::vector<text_shape::SharedRun> notification_text_lines(
 // THE NOTIFICATION CARDS (architect design 2026-08-29; the model, the
 // classes, the hit rule, the inventory and THE LOOK at notifications.h). THE
 // WHOLE STACK — AppState::Notifications::cards, newest first, every one of
-// them on screen since the queue retired 2026-08-30 — painted top-right at
-// notifyd's seat, 16 W inside the window's right edge and 16 W under its
-// first row (architect 2026-11-19, send BB: "in xfce the card appears at the
+// them on screen (2026-08-30) — painted top-right at notifyd's seat, 16 W
+// inside the window's right edge and 16 W under its first row (architect
+// 2026-11-19: "in xfce the card appears at the
 // top right of the screen without regard for what it obstructs"; the rule
 // and the margins at notification_stack_bound) — over the title bar and the
 // top icon row and growing DOWN over whatever lies there (the lanes, the
 // waveform), the cards notification_gap_px apart (6 W, 12 device px on the
 // tablet).
 //
-// THE LOOK (architect 2026-11-19, send Z, "good to build" on Z_07; built in
-// send AA's stage D1): NOTIFYD'S BUBBLE — a rounded box (kNotificationRadiusW)
+// THE LOOK (architect 2026-11-19: "good to build"): NOTIFYD'S BUBBLE — a
+// rounded box (kNotificationRadiusW)
 // in its class's carried fill AT ITS OPACITY over what lies under it
 // (paint_floating_box: a normal card `card_fill`, a standing one
 // `card_standing_fill`), no border, no shadow; notifyd's ONE PADDING, 14 W
-// (kNotificationPadW, send BB); THE CLASS GLYPH, icons.h's
+// (kNotificationPadW); THE CLASS GLYPH, icons.h's
 // DialogInformation or DialogError, its whole drawing in a 16 W box at the
 // left and top padding (icons::ink_in_box) — then the padding again, then
 // THE SENTENCE, Regular 12 W, one line centered on the glyph's box (its
 // baseline +26 W), wrapped lines from the top padding (+25 W); the words and
 // the glyph one tone, a normal card's `sidebar_text`, a standing card's
 // `card_text`. The card wears no hover face and no pressed face.
-// The card's width is its content's, no floor (architect 2026-11-19, send AA:
-// "agree"), under notification_card_max_w_px — the authored ceiling since
-// 2026-08-31, scaled like every other length, with the panel itself as a
+// The card's width is its content's, no floor (architect 2026-11-19:
+// "agree"), under notification_card_max_w_px — the authored ceiling
+// (2026-08-31), scaled like every other length, with the panel itself as a
 // safety under it.
 //
-// THE TEXT GROWS DOWNWARD (architect 2026-08-30). The
-// width rule is unchanged — the WHOLE sentence's shaped width sets it, inside
-// the same clamp — so a sentence that fits its room is one line exactly as it
-// was; a longer one wraps through notification_text_lines above to at most
-// kNotificationMaxLines, the last of which clips at the run's right edge (no
+// THE TEXT GROWS DOWNWARD (architect 2026-08-30). The WHOLE sentence's
+// shaped width sets the width, inside the clamp, so a sentence that fits its
+// room is one line; a longer one wraps through notification_text_lines
+// above to at most kNotificationMaxLines, the last of which clips at the run's right edge (no
 // ellipsis — the folder overlay rows' precedent). THE CARD GROWS, NOTHING
 // REFLOWS: the glyph keeps its seat on the top padding, the lines stand from
 // the top padding (one line, shorter than the glyph's box, centered on it),
@@ -3755,8 +3349,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     const int max_w    = notification_card_max_w_px(app);
     const int gap      = notification_gap_px();
     // THE LAYOUT (notifyd's bubble, notifications.h's lengths; architect
-    // 2026-11-19, send Z, DESIGN §9; THE ONE PADDING send BB's, the same
-    // day): the padding, the glyph's 16 W box, the padding again, the text's
+    // 2026-11-19, THE ONE PADDING the same day): the padding, the glyph's
+    // 16 W box, the padding again, the text's
     // pen; the wrap's room ends the padding short of the box's right edge;
     // the glyph's box on the top padding, the text's top
     // notification_text_top_px (one line centered on the glyph's rows).
@@ -3796,7 +3390,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     std::vector<LaidCard> laid;
     laid.reserve(st.cards.size());
     int y = room.y;
-    // THE WALK IS THE WHOLE STACK (2026-08-30, the queue's retirement): what
+    // THE WALK IS THE WHOLE STACK (2026-08-30): what
     // ends it is the ROOM, not a count. The bump keeps the stack inside the
     // room's capacity in one-line cards, and the two overflows that count
     // cannot see — wrapped cards, and criticals the bump will not touch —
@@ -3805,17 +3399,16 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // Wholly under the room's foot: so is every card after it.
         if (y >= room.y + room.h) break;
         const AppState::Notification& n = st.cards[i];
-        // THE WIDTH IS THE WHOLE SENTENCE'S, clamped — the rule the wrap did
-        // not change — and the ROOM the wrap breaks against is what that
+        // THE WIDTH IS THE WHOLE SENTENCE'S, clamped, and the ROOM the wrap
+        // breaks against is what that
         // width leaves between the text's pen and the right pad.
         //
         // IT CEILS (architect 2026-08-31): a box that must CONTAIN a run is
         // not a point on a grid, so banker's rounding is the wrong class for
         // it — the cells-not-points rule reserves nearbyint for positions,
-        // and a width that rounded DOWN left the sentence overflowing its own
-        // card by up to half a pixel, which the wrap below then answered by
-        // breaking the last word onto a second line ("There is nothing to
-        // redo" wrapped while the WIDER "…to undo" did not). Ceiling makes
+        // and a width rounded DOWN would leave the sentence overflowing its
+        // own card by up to half a pixel, and the wrap below would break its
+        // last word onto a second line. Ceiling makes
         // text_room ≥ the shaped width by construction, so the wrap's own
         // fits-whole test is exact.
         const text_shape::SharedRun whole =
@@ -3825,7 +3418,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         // shaped width or more.
         const int wanted =
             static_cast<int>(std::ceil(chrome_w + whole->width_px));
-        // No floor (architect 2026-11-19, send AA, notifications.h): the
+        // No floor (architect 2026-11-19, notifications.h): the
         // content's width, under the ceiling, which is also the room this
         // paints into, so no card is wider than its clip.
         const int w = std::min(wanted, max_w);
@@ -3876,7 +3469,7 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
         st.painted.push_back(AppState::NotificationPainted{n.id, shown});
         st.painted_rect = st.painted.size() == 1
                               ? shown : union_rect(st.painted_rect, shown);
-        // A CARD THE RUN'S CLIP MISSES IS NOT PAINTED (send BB, 2026-11-19;
+        // A CARD THE RUN'S CLIP MISSES IS NOT PAINTED (2026-11-19;
         // clip_meets): every pixel of it — the box, the glyph in its box on
         // the padding, the lines in the text's room, all inside `card` —
         // would be clipped out, so skipping the calls writes the same bytes
@@ -3937,27 +3530,19 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// (THE DROPDOWN'S PAINTER — paint_dropdown, Windows 95's popup menu hanging
-// from its anchor, its lit row, its access-key underlines, its separators and
-// the True Colors row's menu check mark — RETIRED 2026-10-21 with the Settings
-// popup, its last menu: the settings page lists the keys.)
-
-// -- THE RULER LANE (top lane 5) ---------------------------------------------
+// -- THE RULER LANE -----------------------------------------------------------
 //
 // A LOOK/MODEL SPLIT, and it is deliberate: the ruler takes COOL EDIT'S LOOK
 // and REAPER'S GEOMETRY MODEL.
-//   LOOK, Cool Edit's FLIPPED RULER IN LIVE'S TONES (architect 2026-10-09,
-//     the program is Cool Edit; flat since 2026-11-01 night; render.h's well
-//     paragraph and its ruler block): flat `ruler_face` under the trim bar's
-//     frame, no line on its top, the ticks `ruler_tick` one W wide, each
-//     centered on its own exact time's place (architect 2026-11-14, send J;
-//     the line rule at its exact place), STANDING ON ITS FOOT — majors 2
-//     W, minors 1 W (4 and 2 device rows on the tablet), overlaying the
-//     ruler's bottom pad — and the digits Bold Small 10 W in `ruler_text`,
-//     bare, on the line-box baseline; then the well's line. (Kdenlive's
-//     look — the majors rising above the flags, the etched ticks — stood
-//     2026-08-01 to 2026-10-09; Cool Edit's E0E0E0 on the dark ground until
-//     the flat well; git history.)
+//   LOOK, Cool Edit's FLIPPED RULER (architect 2026-10-09, the program is
+//     Cool Edit; flat 2026-11-01; render.h's well paragraph and its ruler
+//     block): flat `ruler_face` under the trim lane, no line on its top, the
+//     ticks `ruler_tick` one W wide, each centered on its own exact time's
+//     place (architect 2026-11-14; the line rule at its exact place),
+//     STANDING ON ITS FOOT — majors 2 W, minors 1 W (4 and 2 device rows on
+//     the tablet), overlaying the ruler's bottom pad — and the digits Bold
+//     Small 10 W in `ruler_text`, bare, on the line-box baseline; then the
+//     well's line.
 //   MODEL, from Reaper (architect 2026-08-01): WHERE the ticks go. A round
 //     ladder of labeled steps, the smallest rung whose label pitch clears the
 //     minimum, and eight binary minors inside each step; the labels' text.
@@ -3982,16 +3567,11 @@ constexpr int64_t kRulerLadderMs[] = {
 constexpr int  kRulerMinorsPerStep = 8;
 // The pitch rule, stated on the MINOR because that is the crowding that matters:
 // a rung is admissible while its minors stay at least this far apart, which puts
-// its labels at least 8x that apart. 14 W, A WHOLE W BY HIS RULING OF
-// 2026-11-05 ("round each up"): the 9 Windows px of 2026-10-02 (the laptop
-// pixel's 12 re-authored) times 1.5 at the rebase to 200 % the same day gave
-// 13.5 W, which stood exact for a few hours as a gesture threshold (a double
-// compare against gui_scale_factor(), not a painted length), and was then
-// rounded UP with the other two (kHoverSlopW, render.h;
-// kNavZoomPxPerLevel, app_state.h) so that every authored number is a whole
-// W. The one-device-px consequence: the minor pitch's floor is 28 device px
-// on the tablet (27 before), so a zoom whose minor pitch falls in [27, 28)
-// now takes the next coarser rung.
+// its labels at least 8x that apart. 14 W, A WHOLE W (architect 2026-11-05:
+// "round each up" — every authored number a whole W, as kHoverSlopW,
+// render.h, and kNavZoomPxPerLevel, app_state.h): a gesture threshold, a
+// double compare against gui_scale_factor(), not a painted length — the
+// minor pitch's floor is 28 device px on the tablet.
 constexpr double kRulerMinMinorPitchPx = 14.0;
 
 // The smallest ladder rung whose minors clear the minimum pitch. Falls back to
@@ -4009,7 +3589,8 @@ int64_t ruler_step_ms(double ms_per_px) {
 
 // THE COMB — the ladder's step on a displayed basis and the one expression
 // that places a tick, the ruler's walk's (paint_ruler_row; the canvas draws
-// no vertical grid on them, render.h's row-6 canvas paragraph, 2026-10-09).
+// no vertical grid on them, render.h's THE WAVEFORM block's canvas
+// paragraph, 2026-10-09).
 // `vp_ms` and `ms_per_px` the basis in milliseconds (the ladder's and the
 // walk's bounds), `vp_start`, `spp`, `origin` and `sr` the same basis in
 // frames (the ticks' placement), `wave_w` the columns the walk spans;
@@ -4024,12 +3605,12 @@ struct RulerComb {
     int     sr        = 0;
     int64_t step      = 0;
     int     wave_w    = 0;
-    // EVERY TICK AT ITS OWN EXACT TIME (architect 2026-11-14, send J: "I
+    // EVERY TICK AT ITS OWN EXACT TIME (architect 2026-11-14: "I
     // would expect snapping nothing to integers and leaving them rounding to
     // yield decent results"): step k's major at k · step ms and its minors
     // at (k + i / 8) · step, i = 1 .. 7 (kRulerMinorsPerStep) — the time in
     // the displayed domain's frames, · sr / 1000, PLACED AS EVERY FRAME IS
-    // (architect 2026-11-06, session 68), on the basis's lattice: its EXACT
+    // (architect 2026-11-06), on the basis's lattice: its EXACT
     // PLACE through displayed_x_at — where the tick is painted, the place
     // its line's own span is gated on, and a major's label's center (no
     // column is read, architect 2026-11-15, the no-grid arc). Exact
@@ -4071,15 +3652,13 @@ RulerComb ruler_comb(double spp, double vp_start, int64_t origin, int sr,
 }
 
 // `M:SS.mmm`, REAPER VERBATIM: the minutes field is ALWAYS present, zero
-// included — "0:47.250" below a minute, not "47.250" (architect 2026-08-01,
-// retiring the leading-unit dropping, which was the planner's invention and not
+// included — "0:47.250" below a minute, not "47.250" (architect 2026-08-01:
 // what Reaper does; a field that appears and disappears makes the ruler's own
 // format a moving target to read).
 //
-// THE MILLISECONDS RULE STANDS: the fraction shows only while the labelled step
-// is sub-second, so a bar-level ruler reads "1:30" and a transient-level one
-// reads "0:02.250" — each showing exactly what varies, which is the half of the
-// old rule that was actually Reaper's.
+// THE MILLISECONDS RULE: the fraction shows only while the labelled step is
+// sub-second, so a bar-level ruler reads "1:30" and a transient-level one
+// reads "0:02.250" — each showing exactly what varies, as Reaper does.
 std::string ruler_label_text(int64_t ms, int64_t step_ms) {
     if (ms < 0) ms = 0;
     const int64_t m   = ms / 60000;
@@ -4100,13 +3679,13 @@ std::string ruler_label_text(int64_t ms, int64_t step_ms) {
 // -- THE WELL'S LINES ---------------------------------------------------------
 //
 // THE WELL'S LINES' ONE PAINTER (render.h's THE WELL'S EDGES, the rule and
-// its rows; the tone architect 2026-11-17, session 140, D2; edge to edge
-// since 2026-11-19, send Z): every line inside the rows [y0, y1) — the line
+// its rows; the tone architect 2026-11-17; edge to edge 2026-11-19): every
+// line inside the rows [y0, y1) — the line
 // under the top icon row (the trim lane's first row), the line under the
 // trough (the trim lane's last), the line under the ruler (the ruler lane's
 // last), the lane's foot line and the well's foot, each across the panel's
-// whole width (well_columns) — all flat `well_border`, whole cells. (The
-// frame's two side lines retired with the frame.) Each painter that owns
+// whole width (well_columns) — all flat `well_border`, whole cells; no
+// side lines. Each painter that owns
 // rows of the well calls it over its own rows after its fills (paint_trim,
 // paint_ruler_row, paint_canvas_column_frame — the first two on every frame
 // class, their ground steps alone on a frame with no audio), so a line's
@@ -4129,7 +3708,7 @@ void paint_well_frame_rows(cairo_t* cr, const AppState& app, int y0, int y1) {
     const GuiColor tone = palette().well_border;
     cairo_save(cr);
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    // One part, its rows cut to the band asked.
+    // One part, its rows cut to the rows asked.
     const auto part = [&](int x, int y, int w, int h) {
         const int ry0 = std::max(y, lo);
         const int ry1 = std::min(y + h, hi);
@@ -4152,7 +3731,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     const GuiRect lane   = top_ruler_row_area(app);
     const GuiRect marker = top_marker_row_area(app);
     // THE HEAD'S HIT IS PUBLISHED AS PAINTED (AppState::playhead_head_hit;
-    // architect 2026-10-09 ~17:40, the head drag): `head` the rect this run
+    // architect 2026-10-09, the head drag): `head` the rect this run
     // paints the head in (the head block below), empty where none paints.
     // A run republishes only what its damage clip redrew — the trim stash's
     // rule (paint_trim), for its reason: on_redraw runs once per damage
@@ -4181,8 +3760,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
         }
     };
     // THE HOVER LINE'S TRIANGLE IS RECORDED AS PAINTED BY THE SAME RULE
-    // (AppState::HoverLine's `triangle_painted_x`; architect 2026-11-21,
-    // send GG), for the same reason — but what it records is the cells the
+    // (AppState::HoverLine's `triangle_painted_x`; architect 2026-11-21),
+    // for the same reason — but what it records is the cells the
     // NEXT damage must erase, not a hit: `box` the triangle's painted box at
     // the place this run derived (ruler_head_box at its containing column),
     // empty where it paints nowhere. A triangle this run paints is recorded
@@ -4221,16 +3800,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     }
 
     cairo_save(cr);
-    // THE GROUND STEP — THE LANES (architect 2026-11-01 night, the flat well;
+    // THE GROUND STEP — THE LANES (architect 2026-11-01, the flat well;
     // render.h's well paragraph): the ruler FLAT `ruler_face` across the
     // waveform area's columns over the ruler's rows — the panel's whole
-    // width since 2026-11-19 (send Z, edge to edge), so the body tone `face`
+    // width (2026-11-19, edge to edge), so the body tone `face`
     // laid first shows nowhere on a full window; the marker lane FLAT
     // `lane_face` across them; then THE WELL'S LINE under the ruler, the
     // ruler lane's last row (paint_well_frame_rows). The faces read the LIVE
     // area, as the lines do; the walk below reads the plate's width.
-    // ON EVERY FRAME CLASS, BEFORE EVERY EARLY RETURN (architect 2026-11-21,
-    // send GG: "on loading a project, the trim/ruler/marker lane don't use
+    // ON EVERY FRAME CLASS, BEFORE EVERY EARLY RETURN (architect 2026-11-21:
+    // "on loading a project, the trim/ruler/marker lane don't use
     // their own bg but a different color. all of them should be empty but
     // have their actual bg color"): on_redraw calls this pass on a frame
     // with no audio too (no source, or a load running: its `plate_branch`
@@ -4294,8 +3873,8 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
         return;
     }
     // THE RULER'S COLUMNS ARE THE CANVAS'S (2026-10-09): every tick, digit
-    // and the head from the waveform area's x (the panel's first column since
-    // 2026-11-19, send Z).
+    // and the head from the waveform area's x (the panel's first column,
+    // 2026-11-19).
     const GuiRect area = waveform_area(app);
     const int cx = area.x;
 
@@ -4324,7 +3903,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     const double  end_ms = comb.end_ms();
 
     // THE TICKS STAND ON THE RULER'S FOOT (the flipped ruler; render.h's
-    // ruler block): each ONE CANVAS LINE wide (waveform_line_px, one W since
+    // ruler block): each ONE CANVAS LINE wide (waveform_line_px, one W,
     // 2026-11-04, the unit), centered on its time's exact place (the line
     // rule at its exact place, render.h's waveform_line_span), in
     // `ruler_tick`, rising the major's 2 W or the minor's 1 W (4 and 2 device
@@ -4334,51 +3913,47 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     const int major_top = ruler_bottom - ruler_major_tick_h_px();
     const int minor_top = ruler_bottom - ruler_minor_tick_h_px();
 
-    // THE DIGITS: THUNAR'S COLUMN HEADER (architect 2026-11-19, send Z;
-    // DESIGN §4) — THE RULER FACE (gui_font.h's table, `Small`: BOLD 10 W,
+    // THE DIGITS: THUNAR'S COLUMN HEADER (architect 2026-11-19) — THE
+    // RULER FACE (gui_font.h's table, `Small`: BOLD 10 W,
     // Arc's `font-size: smaller`, 20 device px on the tablet) in
     // `ruler_text` (the text tone at .55 over the ruler's face, Arc's
-    // `.dim-label`; arc_dark 9197A2, architect 2026-11-21, send GG), BARE,
+    // `.dim-label`; arc_dark 9197A2, architect 2026-11-21), BARE,
     // ON THE LINE-BOX BASELINE, +11 W of
     // the ruler's 16 (render.h's ruler_baseline_px: 22 rows on the tablet).
     const GuiFont font = gui_font(GuiFace::Small);
     const double baseline =
         static_cast<double>(lane.y + ruler_baseline_px());
 
-    // THE COMB IS RIGID UNDER PAN BY ITSELF (architect 2026-11-14, send J;
-    // the rule at RulerComb::tick_frames): every tick is painted at its own
-    // time's exact place at its exact coverage, so no tick rounds against
-    // the screen and a pan moves every one by the same real amount — the
-    // smoothness the comb was first made rigid for (architect 2026-08-01,
-    // the grab-pan shimmer: ticks rounded one by one stepped at different
-    // moments, "the ticks are purely informative — I'd rather have
-    // smoothness than total precision") with every tick on its exact time.
+    // THE COMB IS RIGID UNDER PAN BY ITSELF (architect 2026-11-14; the rule
+    // at RulerComb::tick_frames): every tick is painted at its own time's
+    // exact place at its exact coverage, so no tick rounds against the
+    // screen and a pan moves every one by the same real amount — ticks
+    // rounded one by one would step at different moments and shimmer under
+    // a grab-pan (architect 2026-08-01: "the ticks are purely informative —
+    // I'd rather have smoothness than total precision").
     const int64_t first_step = comb.first_step();
     // THE LABELS ARE CLIPPED AT BOTH ENDS (architect 2026-10-22, "clip"): a
     // label is painted CENTERED on its major's exact place wherever it
     // stands and
     // the walk's clip below cuts it at the canvas's columns [0, wave_w), so
-    // under a pan a label slides out a digit at a time. The 2026-10-09
-    // edge-drop (the mock's rule: a label whose box would cross either end
-    // was not painted, so no digit was ever cut) made the numbers "pop in
-    // and out … as soon as the number touches the edge of the screen, it
-    // disappears"; reported as a regression, it was the rule as built, and
-    // his one-word ruling replaced it. The walk therefore reaches EVERY major
+    // under a pan a label slides out a digit at a time: a label dropped
+    // whole at an edge makes the numbers "pop in and out … as soon as the
+    // number touches the edge of the screen, it disappears". The walk
+    // therefore reaches EVERY major
     // whose label can touch the columns: it starts at first_step, whose major
     // stands at or left of column 0, and runs ONE STEP PAST the last column
     // (the loop's break), the major just right of the end whose label's left
     // half reaches in — a label is narrower than a step (the ladder keeps a
     // step at least 72 W), so one step each side is all there is.
     // THE TICK'S WIDTH IS THE CANVAS'S LINE, ONE W (hairline_px, the line
-    // rule; architect 2026-11-04, the unit, reversing the one device px of
-    // 2026-11-01 night, M5b), CENTERED ON ITS TIME'S EXACT PLACE (architect
-    // 2026-11-14, send J; waveform_line_span).
+    // rule; architect 2026-11-04, the unit), CENTERED ON ITS TIME'S EXACT
+    // PLACE (architect 2026-11-14; waveform_line_span).
     const int t = hairline_px();
     // ONE MAJOR'S LABEL at its major's exact place `mark_x` (device px
     // from the waveform's first column, RulerComb::tick_x) and its step
     // time `step_ms`, CENTERED ON THE MAJOR'S EXACT PLACE (architect
-    // 2026-11-15, the no-grid arc: the digits stand with their tick — the
-    // glide's trial of 2026-11-14, send J, is the rule): the run's pen is
+    // 2026-11-15, the no-grid arc: the digits stand with their tick): the
+    // run's pen is
     // the place less half the run's own width, a real x, no half rounded
     // and no column asked, so the number is centered on the tick painted
     // at that place and moves with it by the same real amount;
@@ -4425,15 +4000,15 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     // THE LABELS, EVERY WALKED MAJOR'S, BEFORE ANY TICK: a label paints
     // whether or not its major's tick is on the lane (the walk's start
     // above), the clip cutting it, and the ticks then stand over whatever
-    // of a label's ink could reach their rows (the pad keeps them apart
-    // today: on the tablet the digits' baseline stands 12 rows over the
-    // foot, the major rises 8). Cairo's pass whole, ahead of the stamp's (its contract: no
-    // cairo drawing between its shapes).
+    // of a label's ink could reach their rows (the pad keeps them apart:
+    // on the tablet the digits' baseline stands 10 rows over the foot, the
+    // major rises 4). Cairo's pass whole, ahead of the stamp's (its
+    // contract: no cairo drawing between its shapes).
     for (int64_t k = first_step; step_walked(k); ++k)
         paint_major_label(
             comb.tick_x(k, 0),
             static_cast<double>(k) * static_cast<double>(step));
-    // THE TICKS, THROUGH THE COVERAGE STAMP (architect 2026-11-14, send J:
+    // THE TICKS, THROUGH THE COVERAGE STAMP (architect 2026-11-14:
     // stamped directly at exact coverage, no cairo path per tick — the
     // ruling at CoverageStampPass, cool_edit_paint.h): each tick
     // one rect with real column edges — the one-W line centered on its own
@@ -4465,7 +4040,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     // -- THE HOVER LINE'S TRIANGLE ---------------------------------------------
     //
     // THE WAVEFORM'S HOVER LINE HAS A HEAD IN THE RULER, AS THE PLAYHEAD DOES
-    // (architect 2026-11-21, send GG: "give the hover stem a triangle, same
+    // (architect 2026-11-21: "give the hover stem a triangle, same
     // color as the hover stem. for symmetry"; render.h's render_hover_line,
     // the rule): THE PLAYHEAD HEAD'S OWN DRAWING — the chip's triangle on the
     // ruler's last cue_chip_h_px rows, its apex on the line's center on the
@@ -4503,21 +4078,19 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     //
     // THE HEAD IS COOL EDIT'S CURSOR TRIANGLE IN THE RULER (architect
     // 2026-10-09; render.h's playhead paragraph) — THE SAME DRAWING AS THE
-    // MARKER'S CHIP (architect 2026-11-04, mock k1, "4 accept overlap"): A
-    // SMOOTH-EDGED TRIANGLE WITH NO OUTLINE (architect 2026-11-19, send AA:
-    // the chips' outline retired, the head's with it; the bare triangle of
-    // the nominal 4 W rows, cue_chip_h_px, 8 device px on the tablet),
-    // AT THE PLAYHEAD'S EXACT x, ITS APEX ON THE PLAYHEAD LINE'S CENTER (architect
-    // 2026-11-14 night, send J: "I think the chips should also go
+    // MARKER'S CHIP (architect 2026-11-04: "4 accept overlap"): A
+    // SMOOTH-EDGED TRIANGLE WITH NO OUTLINE (architect 2026-11-19; the bare
+    // triangle of the nominal 4 W rows, cue_chip_h_px, 8 device px on the
+    // tablet), AT THE PLAYHEAD'S EXACT x, ITS APEX ON THE PLAYHEAD LINE'S
+    // CENTER (architect 2026-11-14: "I think the chips should also go
     // anti-aliased", "Agree on both."; cool_edit_paint.h's THE CUE'S CHIP
     // owns the drawing, render.h's cue block its lengths) — its fill the
-    // palette's `playhead_head` (Live's cyan 03C3D5 since 2026-11-01;
-    // arc_dark A5ABB5, the stem's color, architect 2026-11-21, send GG), NO
-    // SHADOW (2026-11-02), the head's own role beside the line's static
-    // `playhead_line` (render_playhead), THE TRIANGLE ON THE RULER'S LAST
-    // cue_chip_h_px DEVICE ROWS (200 %: rows 192 .. 199), its apex on THE
-    // BOTTOM EDGE OF THE RULER'S FOOT ROW, over the ticks' feet (2026-10-09
-    // ~21:00; the ruler's foot since the flat well). It stands over the
+    // palette's `playhead_head` (arc_dark A5ABB5, the stem's color,
+    // architect 2026-11-21), NO SHADOW (2026-11-02), the head's own tone
+    // beside the line's static `playhead_line` (render_playhead), THE
+    // TRIANGLE ON THE RULER'S LAST cue_chip_h_px DEVICE ROWS (200 %: rows
+    // 192 .. 199), its apex on THE BOTTOM EDGE OF THE RULER'S FOOT ROW, over
+    // the ticks' feet (2026-10-09). It stands over the
     // ticks and digits the walk above laid down, covering whatever lies
     // under its whole-covered pixels and blending its edge over them — ITS
     // TOP REACHES INTO THE DIGITS where it stands under a label, ACCEPTED
@@ -4526,16 +4099,16 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     // label. NO SNAP, NO AVOIDANCE: it may stand on a marker's column, the
     // cue's chip being in the marker lane below (render.h's playhead
     // paragraph). It draws NOTHING across the trim bar, the marker lane and
-    // the frame's lines; its canvas line is paint_playheads'.
+    // the lines between the lanes; its canvas line is paint_playheads'.
     //
-    // The whole head is the RESTING CURSOR'S: the `h` view, the render player
-    // and the audition reach it through this one block, and the scanner keeps
+    // The whole head is the RESTING CURSOR'S: the history view, the render
+    // player and the audition reach it through this one block, and the scanner keeps
     // its bare waveform line (paint_scanner). THE HEAD HAS NO HOVER
-    // (architect 2026-11-21, send GG: "very hard to see ... very hard to
+    // (architect 2026-11-21: "very hard to see ... very hard to
     // stably trigger"): `playhead_head` flat, the hover line's triangle under
     // it where the pen stands on it (the block above).
     //
-    // THE HALF-HEAD RULE (2026-05-09, d4e4e04e; restored 2026-09-26, architect):
+    // THE HALF-HEAD RULE (architect 2026-09-26):
     // the head paints whenever any part of it overlaps the waveform's columns
     // [0, wave_w), CLIPPED to them, so a playhead whose column lies just past
     // either edge shows the head's nearer half there — a frame in the song's
@@ -4576,7 +4149,7 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
                               static_cast<double>(ruler_bottom),
                               palette().playhead_head);
             cairo_restore(cr);
-            // THE HEAD'S HIT (architect 2026-10-09 ~17:40, the head drag;
+            // THE HEAD'S HIT (architect 2026-10-09, the head drag;
             // point_on_playhead_head, input_pointer.cpp): THE HEAD AT ITS
             // EXACT PLACE (architect 2026-11-15, the no-grid arc: "yes, I'd
             // like to move to fractional hitboxes.") — the real interval
@@ -4615,16 +4188,15 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     //      for UNDRIVEN changes — resize, the launch load — and as the
     //      on_tick backstop for any residual fingerprint drift (a
     //      warp_frame_map hash included). Map EDITS themselves are
-    //      user-driven and take path 2, and so does FOLLOW'S CAMERA since
-    //      2026-09-02 — its page-in and its scroll's frames (the playhead
+    //      user-driven and take path 2, and so does FOLLOW'S CAMERA
+    //      (2026-09-02) — its page-in and its scroll's frames (the playhead
     //      line is drawn onto that very frame, so the move cannot wait a
     //      publish — Viewport::follow_scroll_if_needed, follow_scanner).
     //   2. Synchronous full render — force_synchronous_waveform_rebuild
     //      renders the full window inline on the GUI thread for every
     //      USER-DRIVEN viewport change: zoom, center-on-playhead, the
-    //      one-shot jumps, and panning/scrolling (which had its own
-    //      incremental shift-and-strip path until 2026-07-26 — retired so
-    //      a moving plate and a resting one come off one route).
+    //      one-shot jumps, and panning/scrolling, so a moving plate and a
+    //      resting one come off one route (2026-07-26).
     // The paint path is draw-only — it records whatever plate the live
     // slot currently holds. For worker-path renders that may
     // be a one- or two-frame-old viewport during the worker-rebuild
@@ -4645,15 +4217,14 @@ void GuiPaintHandler::paint_waveform_plate(GuiCanvasSink& sink,
     // plate as the renderer produced it, drawn once over the plain
     // `waveform_canvas` ground render_canvas laid — the plate's transparent
     // gaps show that ground, the canvas having that one painter. No pass
-    // recolours the waveform at rest (the out-of-trim dim retired
-    // 2026-07-26, the trim bar the window's picture); WHILE A SWEEP'S
+    // recolours the waveform at rest (no out-of-trim dim: the trim bar is
+    // the window's picture, 2026-07-26); WHILE A SWEEP'S
     // POINTER IS DOWN the sweep highlight blends its span toward white over
     // the plate and every line after it (paint_sweep_highlight, the list's
     // last record, architect 2026-11-12).
     //
-    // The clip is the AREA, the canvas's interior (2026-10-09: the canvas's
-    // frame stands outside it), so a plate published at a stale size never
-    // paints over the frame.
+    // The clip is the AREA, the canvas (2026-10-09), so a plate published at
+    // a stale size never paints over the lanes and lines around it.
     //
     // THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): the list takes
     // the live COLUMN BOUNDS (WaveformCache::columns) and the published
@@ -4727,12 +4298,12 @@ std::optional<double> GuiPaintHandler::hover_triangle_x() const {
 
 // -- THE MARKER'S FACE AS PAINTED (the contracts at the declarations,
 //    paint_handler.h; the rule at AppState::FaceFades' THE MARKER'S FACE;
-//    architect 2026-11-21, send FF) ----------------------------------------
+//    architect 2026-11-21) ---------------------------------------------------
 
 // THE LANE'S HOVER FOR A PASS: the table of the marker faces that are not
 // at rest — every Marker record's stored Hover weight, and the hovered
-// marker's look at once where it has no record (hover_weight's own two
-// answers) — and a lookup over it; every other cue 0. A few entries: the
+// marker's look at once where it has no record (a face's two answers,
+// AppState::FaceFades' THE MARKER'S FACE) — and a lookup over it; every other cue 0. A few entries: the
 // hovered marker and those still fading out.
 CueLaneHover GuiPaintHandler::cue_hover_of() {
     using FaceFades = AppState::FaceFades;
@@ -4820,16 +4391,6 @@ GuiRect GuiPaintHandler::ruler_head_box(int col) const {
 
 // -- GuiPaintHandler::phase_reset_overlay_band / its ring pass ------------
 
-// (THE ENGINE'S SEED FRAME FOR A RESET was a file-local static here from
-// 2026-09-02 until 2026-09-09, when the phase-reset column got its own
-// iteration bracket: the walls, the bound editor's refusal, the arrows'
-// landing and the sweep all ask the same lattice this band paints, so the
-// mirror moved out to warp_frame_map_view.h beside the map functions it reads
-// — phase_reset_seed_frame_index, now expressed through
-// phase_reset_window_centre_frame, with the engine.cpp / stft_container.h
-// LOCKSTEP warning that goes with it. This band's own use is unchanged: it
-// reads the DISPLAYED map, as it always did.)
-
 // Resolves the band shown ahead of the focused phase reset marker: from the
 // marker's stem column to where the reset's SEED GRAIN ends, in target time.
 // Paint-only: no persisted state, nothing on disk, no settings key, no undo
@@ -4874,16 +4435,15 @@ GuiRect GuiPaintHandler::ruler_head_box(int col) const {
 // its image is HALF A SOURCE FRAME AT THE LOCAL SEGMENT SLOPE
 // 1/(tempo · marker_scale · settings_scale) — a fraction of a sample at unity
 // tempo, up to ~8 at the slope ceiling of 16, which a resolved
-// label-reference segment shares, and NOT the "sample or two" this comment
-// claimed for one day. THIS SITE ADDS THE THIRD TERM: the nearbyint(T)
-// below is up to another half OUTPUT sample of painted width. So the band can
+// label-reference segment shares. THIS SITE ADDS THE THIRD TERM: the
+// nearbyint(T) below is up to another half OUTPUT sample of painted width. So the band can
 // come out that much wider than N/2 (the worked case — tempo 0.30, reset
 // at source 307 — paints 2049 where N/2 is 2048). NOT CLAMPED to N/2: the
 // clamp would hide the engine's geometry rather than fix it, and this band
 // exists to depict that geometry. It reaches no audio and it is SUB-PIXEL at
 // the working zoom for every resolved slope; it is NOT the trim crop's rounding
-// class (that comparison is withdrawn — the trim's rounding is transient,
-// while this seam sits in every deliverable's geometry).
+// class: the trim's rounding is transient, while this seam sits in every
+// deliverable's geometry.
 //
 // DAMAGE. The right edge depends on the reset's frame and on the displayed
 // map, both of which the left edge already depended on, so no new damage
@@ -4902,11 +4462,10 @@ GuiRect GuiPaintHandler::ruler_head_box(int col) const {
 // resolve, the sub-pixel and offscreen refusals — plus the clipped span, and
 // Selection::phase_overlay_subject MIRRORS its selection-state gates — MINUS the
 // geometry ones, which are not selection state — to decide whether a restore's
-// sanitize changed the subject and, since 2026-07-28, whether Space auditions the
-// lead-in. One rule, so it stays one function; that mirror's own reader
-// inventory lives at its declaration in selection.h. (It served a second pass,
-// an opaque ground recolor under the plate, until the ring became the overlay's
-// whole visual — architect 2026-07-27.)
+// sanitize changed the subject and whether Space auditions the lead-in. One
+// rule, so it stays one function; that mirror's own reader inventory lives at
+// its declaration in selection.h. The ring is the overlay's whole visual
+// (architect 2026-07-27).
 //
 // Painted in T+P ALONE, never in S+P, and this is a
 // phase-reset-only surface with no warp sibling (naming-symmetry asymmetry,
@@ -4914,7 +4473,7 @@ GuiRect GuiPaintHandler::ruler_head_box(int col) const {
 // the engine's window, on the engine's output lattice — so target time is
 // where it is a fixed picture; source view would show a map-dependent,
 // varying width, misrepresenting it. And S+P is the ROUGH-PLACEMENT view
-// (architect 2026-10-12, S+P's return: "the purpose of the overlay is
+// (architect 2026-10-12: "the purpose of the overlay is
 // fine-tuning", which T+P alone does): S+P's drop takes the lead-in but
 // paints no band, and its drag rides no ring.
 // A seed grain is a phase-reset-only concept, so there is nothing on the
@@ -4928,29 +4487,29 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     if (app.active_markers_view != 'P') return out;
     if (app.active_audio_view != 'T') return out;
     if (area.w <= 0 || area.h <= 0) return out;
-    // THE `h` HISTORY VIEW SUPPRESSES THE RING (architect 2026-08-05). The view
+    // THE HISTORY VIEW SUPPRESSES THE RING (architect 2026-08-05). The view
     // paints the DELTA and no live marker surface at all — the lane's flags and
     // its stems go through the lane's own producer ("the history mode owns the
     // lane whole", waveform_cache.cpp) — and this ring is live-store display
     // exactly as they are: what triggers it is app.last_selected_marker, the
-    // LIVE focus, which the mode neither reads nor clears, so a `h` pressed with
-    // a phase reset focused in P + target left the ring painting alone over the
-    // diff. It joins that suppressed inventory here, at the visibility owner
-    // rather than at the painter, so the one function still carries every gate.
+    // LIVE focus, which the mode neither reads nor clears, so the view opened
+    // with a phase reset focused in P + target would leave the ring painting
+    // alone over the diff. It joins that suppressed inventory here, at the
+    // visibility owner rather than at the painter, so the one function still carries every gate.
     // NO DAMAGE OWNER IS NEEDED for the appear/disappear: the mode's entry and
     // exit each end in viewport.invalidate_all() (open_history_mode_fresh /
     // close_history_mode), which is the whole window.
     // Selection::phase_overlay_subject deliberately does NOT mirror this gate:
     // that mirror is SELECTION state, and the mode is no more selection state
     // than the geometry gates below are. The divergence has no visible
-    // consequence since playback left the view (2026-08-05): the mirror's other
-    // reader is Space's lead-in launch, and Space is a consumed no-op in here.
+    // consequence: the mirror's other reader is Space's lead-in launch, and
+    // Space is a consumed no-op in the view, which plays nothing (2026-08-05).
     if (app.history_mode.active) return out;
     // The multi-select suppression (architect 2026-07-23): the overlay depicts ONE
     // focused reset's lead-in, a single-focus authoring aid, so a MULTI-select
     // (2+ members) suppresses it — the state is about a span of markers rather
     // than a single focus, and the overlay would clutter. (A singleton or empty
-    // selection shows it as before; the multi-select builders all publish,
+    // selection shows it; the multi-select builders all publish,
     // so the overlay's appear/disappear rides their flag rebuild's ring
     // damage, paint_phase_reset_overlay_ring's DAMAGE.)
 
@@ -5042,7 +4601,7 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
     // cell and snaps a whole hop at the boundary, which is what the header's
     // "STANDS STILL" sentence promises. The ring is painted, and gated, at
     // the two values' exact places (displayed_x_at, below; architect
-    // 2026-11-14, send J; the gates 2026-11-15).
+    // 2026-11-14; the gates 2026-11-15).
     const double right_ms = ms + static_cast<double>(width_samples);
     // THE EXACT PLACES the ring is painted at (displayed_x_at,
     // warp_frame_map_view.h) — AND ITS GATES' (architect 2026-11-15, the
@@ -5080,11 +4639,11 @@ GuiPaintHandler::phase_reset_overlay_band(const GuiRect& area) const {
 // AFTER the plate and over the ink.
 //
 // THE RING IS FOUR SOLID ONE-W LINES IN THE `cue_outline` (architect
-// 2026-11-04: the dotted stems at rest retired, and the ring with them —
-// the ring and the cue one unit, 2026-09-17, so it wears the chip's dark
-// line, 111111), WHATEVER THE SELECTION, a coincident reset's too (its
+// 2026-11-04; the ring and the cue one unit, 2026-09-17, so it wears the
+// selection stem's dark line, 21252B, its line of kArcDarkTones), WHATEVER THE
+// SELECTION, a coincident reset's too (its
 // struck label the mark, architect 2026-10-26),
-// EVERY SIDE AT ITS EXACT PLACE (architect 2026-11-14, send J: "the
+// EVERY SIDE AT ITS EXACT PLACE (architect 2026-11-14: "the
 // anti-aliasing I would like to commit to that as well, the full
 // anti-aliasing"; the rule at render.h's waveform_line_span), XL the
 // reset's own exact place and XR the grain end's CUT TO THE AREA'S RIGHT
@@ -5260,10 +4819,9 @@ void GuiPaintHandler::phase_reset_ring_damage(
 // (hit_test_trim_endcap / point_in_trim_bridge_span, both reached through
 // route_trim_bar_press) read what this pass PUBLISHES
 // (AppState::trim_bar_hit, below) rather than deriving it a second time, so
-// paint == hit by publication (architect 2026-09-24) — IN EVERY STATE since
-// 2026-08-18, the `h` history view's display-only diff-span substitution
-// having been deleted with the architect's "trim should not change going into
-// history".
+// paint == hit by publication (architect 2026-09-24) — IN EVERY STATE, the
+// `h` history view's included (architect 2026-08-18: "trim should not
+// change going into history").
 // Deliberately NOT the member
 // GuiPaintHandler::plate_viewport_basis(): that is the PLATE-fingerprint
 // basis for plate-registered overlays, a different owner with a different
@@ -5278,14 +4836,10 @@ void GuiPaintHandler::phase_reset_ring_damage(
 // COLD STATES (nothing promoted yet — first paint after a load or
 // load-in-place, the view
 // toggle): the free accessors fall back to the LIVE viewport/map, so trim
-// paints on the pre-first-publish frame too. Small intentional behavior
-// change: the retired cached path SKIPPED its null cache surfaces there, so
-// trim was absent for that one frame — the live pass paints it (an
-// improvement, not byte-identical cold behavior).
+// paints on the pre-first-publish frame too.
 //
-// COORDINATES: both renderers take SCREEN-space rects (the top strip anchors
-// at (0,0), so its screen and former cache-local coords coincide; the waveform
-// rect carries its real screen x/y).
+// COORDINATES: both renderers take SCREEN-space rects (the top strip's and
+// the waveform's, each at its real screen x/y).
 void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
                                  const GuiRect& top_strip, bool content) {
     // No trim gate: the window is ALWAYS set (2026-07-30), so the bar always
@@ -5294,7 +4848,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // bar's: at rest the bare pill, the caps only while a part is hovered or
     // held or a TRIM sweep moves an end (trim_bar_tones' table, render.h).
     //
-    // THE LANE'S GROUND ON EVERY FRAME CLASS (architect 2026-11-21, send GG:
+    // THE LANE'S GROUND ON EVERY FRAME CLASS (architect 2026-11-21:
     // "on loading a project, the trim/ruler/marker lane don't use their own
     // bg but a different color. all of them should be empty but have their
     // actual bg color"): on_redraw calls this pass on a frame with no audio
@@ -5317,7 +4871,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // drags' per-motion writes the lane itself (top_trim_row_area;
     // architect 2026-11-16, the beats), commit_trim_mutation, the maximizer
     // and the tab, load and load-in-place roads the viewport's lanes, the
-    // band's foot through the waveform's bottom at the window's width —
+    // top icon row's foot through the waveform's bottom at the window's width —
     // so the frame that
     // shows a moved bound is always a publishing one. The early returns below
     // publish COLD when they may publish at all: a lane with no bar has
@@ -5339,11 +4893,11 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // body tone `body_face`), across the panel's whole width; THE
     // TROUGH on the waveform area's columns at the lane's painted width
     // (trim_trough_rect, render.h: the line under the top icon row above
-    // it, a FLAT `trim_bar_face`; architect 2026-11-17, session 140, ruling
-    // 4 and D1); and over them THE WELL'S LINES' share of the lane — its top
+    // it, a FLAT `trim_bar_face`; architect 2026-11-17); and over them THE
+    // WELL'S LINES' share of the lane — its top
     // line on the lane's first row, its line under the trough on the last
-    // (paint_well_frame_rows; architect 2026-11-17, session 140; edge to
-    // edge since 2026-11-19). The pill and its caps are render_trim_flags'.
+    // (paint_well_frame_rows; architect 2026-11-17; edge to edge,
+    // 2026-11-19). The pill and its caps are render_trim_flags'.
     // The ground paints before the early returns below, so it stands
     // whatever the bar does, on every frame class.
     if (trim_row.w > 0 && trim_row.h > 0) {
@@ -5373,13 +4927,10 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // THE SOURCE-FRAME PAIR THE BAR DISPLAYS: THE AUTHORED TRIM WINDOW, IN
     // EVERY STATE (architect 2026-08-18 — "trim should not change going into
     // history — it no longer should range from first to last diff, but stay
-    // whatever it was in non-history views"). The bar showed the VIEWED
-    // COMMIT'S DIFF SPAN while the `h` view stood from 2026-08-05 until then, a
-    // display-only substitution at this one site; it is deleted, so the window
-    // the user was in is the window the view shows, and the band's
-    // double tap frames that window in here exactly as it does outside.
-    // (Trim never MUTATED in the view either way: the substitution never wrote
-    // app.trim, and the mode consumes every press that could.)
+    // whatever it was in non-history views"): the window the user was in is
+    // the window the `h` view shows, and the bar's double tap frames that
+    // window in there exactly as it does outside. (Trim never MUTATES in the
+    // view: the mode consumes every press that could.)
     const int64_t bar_begin_frame = app.trim.begin_frame;
     const int64_t bar_end_frame   = app.trim.end_frame;
 
@@ -5397,15 +4948,15 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // accepted resize window; equal to waveform_area(app).w at rest).
     const GuiRect wave_rect{area.x, area.y, basis.area_w, area.h};
 
-    // ONE HALF ONLY since 2026-08-01: the waveform stem pass is deleted, so
-    // this is the strip's bar + endcaps (with the effective-width clip that
+    // ONE HALF ONLY: the strip's bar + endcaps (with the effective-width clip
+    // that
     // slides them off the lane's edges inside render_trim_flags).
     //
-    // The trim bar lane's y-band is THREADED IN as top_trim_row_area(app)
+    // The trim lane's rows are THREADED IN as top_trim_row_area(app)
     // rather than re-derived inside the painter, and the painter publishes the
-    // band it painted in as the stash's `lane` — the y-gate both trim hits
-    // read — so the painted band and the clickable band are one value.
-    // NO WAVEFORM STEMS (architect 2026-08-01): the view bar is the trim
+    // rows it painted in as the stash's `lane` — the y-gate both trim hits
+    // read — so the painted rows and the clickable rows are one value.
+    // NO WAVEFORM STEMS (architect 2026-08-01): the trim bar is the trim
     // window's WHOLE RESTING display — the sweep's transient canvas
     // highlight the one exception (paint_sweep_highlight, 2026-11-12).
     // THE BAR'S STATE (architect 2026-11-19 / 2026-11-20): the part under
@@ -5419,7 +4970,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // paints, so the publishing pass — and only it — resolves it on the
     // zones just published, before the pill and the caps are stamped
     // (resolve_trim_bar_lift; AppState::TrimBarHover's `lift_pending`).
-    // NO PLAYHEAD IN THE BAR (architect 2026-10-09 ~14:30, "no dots on the
+    // NO PLAYHEAD IN THE BAR (architect 2026-10-09, "no dots on the
     // trim bar"; render.h's view-bar paragraph).
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame,
@@ -5433,16 +4984,16 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 
 // -- GuiPaintHandler::paint_marker_stems ---------------------------------
 
-// THE SELECTION STEM (architect 2026-11-05, his pick a2 of session 42,
-// reversing 2026-11-04's coincidence stem — "dropped, along with the rest
-// of cool edit stuff except a few details like the triangle playhead"; the
-// full contract at the declaration): on EVERY published entry — every
+// THE SELECTION STEM (architect 2026-11-05, of the coincidence stem it
+// stands in place of: "dropped, along with the rest of cool edit stuff
+// except a few details like the triangle playhead"; the full contract at
+// the declaration): on EVERY published entry — every
 // selected cue, enabled or disabled (2026-11-11), whose line reaches the
 // waveform's columns (MarkerStem, render.h) — a
 // SOLID ONE-W line in the `cue_outline` from the chip's apex row down the
 // canvas's whole height (the head segment, below), the stereo divider's
 // row crossed (architect 2026-11-02: "the divider is just another grid
-// line now"), AT ITS EXACT PLACE (architect 2026-11-14, send J: the entry's
+// line now"), AT ITS EXACT PLACE (architect 2026-11-14: the entry's
 // x, drawn wherever any of the line is inside the area and cut at its
 // edges, waveform_line_span), the playhead on it or not.
 //
@@ -5504,16 +5055,16 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // the line it hides or uncovers. The GL canvas's list is rebuilt whole at
 // every frame that meets the canvas paint area.
 //
-// THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, mock j1, "3
-// yes"): its rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
+// THE STEM RISES TO THE CHIP'S APEX (architect 2026-11-04, "3 yes"): its
+// rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
 // row — THROUGH THE ONE-W LINE under the lane (the lane's foot line, one of
 // the well's lines) TO THE CANVAS'S LAST ROW (200 %: rows 233 .. 1307,
 // drawn to 1047 under the on-screen keyboard at his tuning, the canvas's
 // clip cut at its top line, onscreen_keyboard::waveform_paint_area; on the
 // line's real span of columns: at a whole place the column left of the
 // marker's and the marker's own), so no gap stands between the apex and
-// the stem (his "small gap": the rows under the lane, 234 .. 235 today,
-// the canvas-only stem left). TWO PAINTERS, ONE DECISION:
+// the stem (his "small gap": the rows under the lane, 234 .. 235, which a
+// canvas-only stem would leave). TWO PAINTERS, ONE DECISION:
 // the canvas's rows are the GPU's (this pass, through the sink, whose list
 // is scissored to the canvas paint area), the lane's last row and the
 // frame's line the chrome's (paint_marker_stem_heads, on the backbuffer after
@@ -5523,7 +5074,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // coverage stamp in the chrome — so the two halves of one stem can never
 // disagree. The playhead's own line stays on the canvas's rows alone.
 //
-// ONE SPAN PER DISTINCT EXACT x (architect 2026-11-14, send J — THE
+// ONE SPAN PER DISTINCT EXACT x (architect 2026-11-14 — THE
 // COINCIDENT LINES' third case, paint_playheads' paragraph the rule): two
 // selected markers may stand on one frame — a drag may land a marker
 // field-identical at another's position (marker_drag.cpp's commit), the
@@ -5540,7 +5091,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // the stash's order, the survivors', so two stems on different places that
 // overlap blend in the order they always did.
 //
-// THROUGH THE CANVAS SINK since 2026-10-13 (canvas_sink.h): one blended
+// THROUGH THE CANVAS SINK (2026-10-13, canvas_sink.h): one blended
 // rect a standing stem.
 std::vector<WaveformLineSpan> GuiPaintHandler::standing_stem_spans(
     const GuiRect& area) const {
@@ -5600,7 +5151,7 @@ void GuiPaintHandler::paint_marker_stems(GuiCanvasSink& sink,
 // chip's fill the stem covers there) and over the frame's line,
 // and under every later
 // surface (the flag editor's box, the keyboard slot, the modal box).
-// THROUGH THE COVERAGE STAMP (architect 2026-11-14, send J;
+// THROUGH THE COVERAGE STAMP (architect 2026-11-14;
 // CoverageStampPass, cool_edit_paint.h): each stem one rect with real
 // column edges — the very span its canvas half hands the sink — on these
 // whole rows, each pixel the outline's word blended over what the lane and
@@ -5659,8 +5210,8 @@ GuiRect GuiPaintHandler::marker_stem_damage_rect(const GuiRect& area,
 // to SEE the glass gesture: "add a zoom stem to the zoom on the touchpad just
 // so I can see exactly what's going on, because at the edges there are some
 // strangeness, it seems like") — the record it reads is one seat shared by
-// the TWO-FINGER PINCH and, since 2026-09-25, the ONE-FINGER CTRL ZOOM
-// (`TouchNavZoomState::one_finger`); AND THE SEAT'S THIRD POSTURE, THE PEN'S
+// the TWO-FINGER PINCH and the ONE-FINGER CTRL ZOOM (2026-09-25,
+// `TouchNavZoomState::one_finger`); AND THE SEAT'S THIRD POSTURE, THE PEN'S
 // RETAINED ANCHOR (`TouchNavZoomState::retained`, architect 2026-09-27): a
 // one-finger seat the pen lifted from with its side button held outlives the
 // gesture, so the stem stays painted between strokes, at the anchor's live
@@ -5712,7 +5263,7 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
     const double anchor_sample = app.touch_nav_zoom.anchor_sample;
 
     // The stem's one place derivation (strip_anchor_stem_x over
-    // displayed_x_at, warp_frame_map_view.h; architect 2026-11-14, send J),
+    // displayed_x_at, warp_frame_map_view.h; architect 2026-11-14),
     // on the PLATE basis.
     const double x = strip_anchor_stem_x(anchor_sample, basis.vp_start,
                                          basis.spp, basis.lattice_origin,
@@ -5726,7 +5277,7 @@ void GuiPaintHandler::paint_strip_drag_anchor(GuiCanvasSink& sink,
 // row-hover white, 3 %.
 inline constexpr int kSweepHighlightPct = 3;
 
-// THE SWEEP HIGHLIGHT (architect 2026-11-12, session 114: "the add selection
+// THE SWEEP HIGHLIGHT (architect 2026-11-12: "the add selection
 // relies on the marker stems, which are dark in color, and they don't show
 // exactly the bound that's being swept ... it could just be an alpha
 // overlay with a config key for tuning. And it would just be a blend
@@ -5739,9 +5290,8 @@ inline constexpr int kSweepHighlightPct = 3;
 // damage sites read the same owner's cells, sweep_highlight_rect and
 // sweep_highlight_change),
 // blending it toward WHITE at kSweepHighlightPct below.
-// THE PERCENT IS ARC'S OWN ROW-HOVER WHITE, 3 (architect 2026-11-22, send
-// LL: "just use their numbers, just like we do for hover"; the
-// `sweep_highlight` tuning key of 2026-11-12 retired here): Arc-Dark's
+// THE PERCENT IS ARC'S OWN ROW-HOVER WHITE, 3 (architect 2026-11-22:
+// "just use their numbers, just like we do for hover"): Arc-Dark's
 // `row.activatable:hover { background-color: rgba(255, 255, 255, 0.03); }`,
 // the lists' hover face's own number (gui_theme.h's `list_hover_face`,
 // 404552 -> 464B57). THE BLEND IS THE TINT'S (gl_canvas.cpp's head):
@@ -5784,7 +5334,7 @@ inline constexpr int kSweepHighlightPct = 3;
 void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
                                             const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
-    // THE SPAN'S REAL EDGES (architect 2026-11-14, send J;
+    // THE SPAN'S REAL EDGES (architect 2026-11-14;
     // sweep_highlight_columns): TRIM's the trim bar's own span edge for
     // edge, ADD SEL's from the down's real place to the pen's (architect
     // 2026-11-15, the no-grid arc) — one blended rect over the canvas's
@@ -5798,7 +5348,7 @@ void GuiPaintHandler::paint_sweep_highlight(GuiCanvasSink& sink,
 
 // -- GuiPaintHandler::paint_hover_line -----------------------------------
 
-// THE WAVEFORM'S HOVER LINE (architect 2026-11-21, send FF; the rule — what
+// THE WAVEFORM'S HOVER LINE (architect 2026-11-21; the rule — what
 // it is, its tone, its order, its place and its damage — at render.h's
 // render_hover_line, the state at AppState::HoverLine). Its place is
 // hover_line_x's, DERIVED HERE AT THE PAINT from the stored gate answer, the
@@ -5839,7 +5389,7 @@ void GuiPaintHandler::paint_hover_line(GuiCanvasSink& sink,
 void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
                                       const GuiRect& area) {
     // THE LINE'S COLOR IS THE PALETTE'S `playhead_line`, ONE STATIC TONE
-    // (architect 2026-11-04 night; the rule at render_playhead's paragraph):
+    // (architect 2026-11-04; the rule at render_playhead's paragraph):
     // no clock, no stored color, nothing damaged at rest. The head in the
     // ruler wears its own `playhead_head`.
     // Use the displayed viewport AND its samples-per-pixel
@@ -5850,32 +5400,32 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     const PlateViewportBasis basis = plate_viewport_basis();
     const int px_x = playhead_pixel_x(app, wf_cache.fp_vp_start, basis.spp,
                                       basis.lattice_origin);
-    // THE LINE'S EXACT PLACE (architect 2026-11-14, send J), the column's
+    // THE LINE'S EXACT PLACE (architect 2026-11-14), the column's
     // own value on the same basis: where the line is painted and what its
     // span is gated on, the column above its cull's and its damage's.
     const double x = playhead_exact_x(app, wf_cache.fp_vp_start, basis.spp,
                                       basis.lattice_origin);
     // THIS PASS IS THE CURSOR'S CANVAS LINE, nothing else: its HEAD is the
-    // triangle in the ruler (paint_ruler_row); across the view bar
-    // (architect 2026-10-09 ~14:30) and the marker lane the playhead draws
+    // triangle in the ruler (paint_ruler_row); across the trim bar
+    // (architect 2026-10-09) and the marker lane the playhead draws
     // nothing.
     //
     // THE CURSOR PLAYHEAD ALWAYS PAINTS (architect 2026-07-30): ONE playhead
     // form at the resting cursor column whatever the selection is doing — a
-    // SOLID ONE-W LINE in the palette's `playhead_line` (Default
-    // 81E1EA, architect 2026-11-12; render.h's playhead paragraph), opaque
+    // SOLID ONE-W LINE in the palette's `playhead_line` (A5ABB5, its line of
+    // kArcDarkTones; render.h's playhead paragraph), opaque
     // on every pixel it covers whole. It paints
     // BEFORE paint_marker_stems, whose selection stem stands over it
-    // (architect 2026-11-04; the stem the selection's since 2026-11-05),
+    // (architect 2026-11-04; the stem the selection's, 2026-11-05),
     // and before the scanner.
     //
-    // THE COINCIDENT LINES (architect 2026-11-14, send J, "Agree to all
+    // THE COINCIDENT LINES (architect 2026-11-14, "Agree to all
     // decisions." — the one rule about lines that overlap): A LINE IS NOT
     // DRAWN WHERE A LATER LINE OF
     // THE LIST, OF THE SAME WIDTH, STANDS ON THE SAME EXACT x (the doubles
     // equal) over rows that hold its own. FOUR CASES EXIST: THE WAVEFORM'S
     // HOVER LINE, the list's first line (paint_hover_line; architect
-    // 2026-11-21, send FF), under the playhead's line — the common case, the
+    // 2026-11-21), under the playhead's line — the common case, the
     // pen back over the place it just tapped, the tap's landing and the
     // cursor one frame through one expression on one basis and so one
     // double — or a selection stem standing there (stem_stands_at; either
@@ -5891,20 +5441,20 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
     // lies beneath by its coverage, so two lines on one fractional place
     // would leave the lower one's color in the upper's fringe (at half
     // coverage a quarter of it) — a light halo round the dark stem; at a
-    // whole place the lower line was hidden whole, so nothing changes
+    // whole place the lower line is hidden whole, so nothing changes
     // there. Lines at different places blend in list order as they fall
     // (accepted). The test is stem_stands_at, on the stems the stem pass
     // will paint. THE TWO x ARE ONE EXPRESSION ON ONE BASIS AT REST: the
     // stem's is the flag pass's, laid out on the plate's published span
     // over its width (wf_cache.fp_* as the flag cache's rebuild read them),
-    // this line's the plate basis's (the same fields now), so the doubles
+    // this line's the plate basis's (the same fields), so the doubles
     // are equal whenever the flags stand on the standing plate. Between a
     // plate's publication and the flag cache's next rebuild (an async
     // publish window, a resize) the two part, the test answers no and the
     // line is drawn under its stem as any two lines fall.
     if (stem_stands_at(area, x)) return;
 
-    // THE SCANNER LEFT THIS PASS (architect 2026-08-01) — it is paint_scanner,
+    // THE SCANNER IS ITS OWN PASS (architect 2026-08-01) — paint_scanner,
     // invoked after this one, solid over everything in the canvas while it
     // runs, this cursor included.
     render_playhead(sink, area, px_x, x, palette().playhead_line);
@@ -5912,14 +5462,12 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 
 // -- GuiPaintHandler::paint_scanner --------------------------------------
 
-// THE SCANNER PASSES OVER THE MARKER STEMS (architect 2026-08-01, at the row-6
-// live playback look). It was drawn inside paint_playheads, which then ran
-// BEFORE paint_marker_stems, so every always-on marker stem overpainted the
-// moving line's column: at our marker density the scanner blinked out
-// repeatedly as it crossed the song. Its own pass, invoked after the stems, was
-// the fix. The resting cursor followed it above the stems on 2026-09-23 (the
-// ruling is at the paint-order block in on_redraw) and paints just before this
-// pass, still under the flags.
+// THE SCANNER PASSES OVER THE MARKER STEMS (architect 2026-08-01): under
+// them every marker stem would overpaint the moving line's column, and at our
+// marker density the scanner would blink out repeatedly as it crossed the
+// song — so it is its own pass, invoked after the stems. The resting cursor
+// paints above the stems too (2026-09-23; the ruling is at the paint-order
+// block in on_redraw), just before this pass, still under the flags.
 //
 // SO THE SCANNER STANDS OVER EVERY LINE IN THE WAVEFORM AREA while it runs —
 // over the stems, over the cursor where they overlap, over the waveform's
@@ -5932,15 +5480,14 @@ void GuiPaintHandler::paint_playheads(GuiCanvasSink& sink,
 // (architect 2026-10-05), WHITE (architect
 // 2026-10-07: "let's go back to a white scanner") — SOLID, ONE W wide
 // (architect 2026-11-04, the unit, waveform_line_px's rule, render.h), AT
-// THE PREDICTOR POSITION'S EXACT PLACE (architect 2026-11-14, send J: the
+// THE PREDICTOR POSITION'S EXACT PLACE (architect 2026-11-14: the
 // line moves by the real distance the position moved, so at a coarse zoom
 // it glides a fraction of a px a frame where its rounded column ticked one
 // px every several frames — the jitter he saw there, "I can see clearly";
 // while it plays, every painted frame then differs and is presented, and
 // no gate is added to avoid it), the canvas's rows alone (Cool Edit's
 // playback cursor is a solid line, measured 2026-10-09), and NEVER BLINKING
-// (the resting cursor's line is a static tone of its own since 2026-11-04
-// night).
+// (the resting cursor's line is a static tone of its own, 2026-11-04).
 //
 // It stays WAVEFORM-ONLY: no head, no lane presence, nothing in the top strip
 // (render_playhead is shared with the cursor and cannot reach a strip lane at
@@ -5955,7 +5502,7 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
     const int scan_px =
         scanner_pixel_x(app, wf_cache.fp_vp_start, basis.spp,
                         basis.lattice_origin);
-    // The predictor position's exact place (architect 2026-11-14, send J):
+    // The predictor position's exact place (architect 2026-11-14):
     // the line moves by the real distance the position moved, the column
     // above its cull's alone; its damage is this line's own cells, the hull
     // of its span on these rows (scanner_invalidate_rect, main.cpp).
@@ -5986,7 +5533,7 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // step-and-walk group's four and the nudge-and-play group's five — and the
 // left run (the timestamp, the pipe and the tab's name) stand down, nothing
 // negotiates for space, and the overlay's controls or the page's answers
-// take the content band they left (paint_modal_dialog; the box is
+// take the row they left (paint_modal_dialog; the box is
 // paint_modal_box's, laid by paint_folder_overlay under the render player
 // and the picker and by paint_modal_dialog for the three pages and the
 // score viewer's page).
@@ -6037,17 +5584,11 @@ static bool modal_owns_bottom_row(AppState& app) {
     return app.score_viewer.active;
 }
 
-// (THE BORDER UNDER ROW 8 — paint_bottom_border, the dock bar's six rows on
-// a bottom lane of their own under row 8, 2026-10-14, row 8's bars running
-// through its light row from 2026-10-21 — IS REMOVED, architect 2026-10-22,
-// the simple layout: row 8 stands on the window's foot.)
-
 // -- GuiPaintHandler::paint_bottom_strip ---------------------------------
 
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
-    // THE UNIFIED BOTTOM ROW (architect-ruled 2026-08-12, rows 8 and 9 merged
-    // into ONE lane, on the WINDOW'S FOOT; THE STRIP since the simple layout,
-    // 2026-10-22; bottom lane 1, over the status bar): one plain-text run
+    // THE BOTTOM ICON ROW (architect 2026-08-12: ONE lane; bottom lane 1,
+    // over the status bar): one plain-text run
     // at the left — the timestamp, a text pipe and the active tab's name
     // (bottom_left_run) — and, packed against the right edge, the COPY /
     // PASTE duo, the skips, the MARKER-VERB GROUP, the step and walk and the
@@ -6055,30 +5596,29 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // above own those memberships). That is the whole roster. This painter
     // owns the lane's CHROME (its ground) and nothing else; the
     // buttons and the clock are paint_bottom_row_buttons_and_clock, called
-    // from here onto the grounded band (the cluster's tables and the clock's
+    // from here onto the grounded lane (the cluster's tables and the clock's
     // metrics live beside that body).
-    // THE ROW HAS A MODAL STATE since 2026-08-13, in which those tenants
+    // THE ROW HAS A MODAL STATE (2026-08-13), in which those tenants
     // stand down and the modal family's controls row takes the row — while
     // an overlay, a question's page or the progress page stands (2026-10-14;
     // architect 2026-11-19 and 2026-11-20; the ruling and the fork are
     // at modal_owns_bottom_row, just above; the modal's own layout is
-    // paint_modal_dialog's) — and with the chain gone
-    // there is nothing left on the lane to negotiate with, which is what
-    // makes that yield clean. UNDER EVERY EDITOR THE ROW YIELDS TO THE
+    // paint_modal_dialog's) — and nothing on the lane negotiates for
+    // space, which is what makes that yield clean. UNDER EVERY EDITOR THE ROW
+    // YIELDS TO THE
     // ON-SCREEN KEYBOARD standing over it (below).
     //
     // WHAT IS NOT HERE, and why it is not missing: an S/T · W/P view readout
     // and a "(read-only)" token. The icon row's view pairs show the view as
     // two lit buttons and its read-only toggle shows the lock, so letters would
     // restate what that row says in its own vocabulary — and the A / B tab
-    // is the active tab's name beside the clock since 2026-10-22 (the tab
-    // strip's lit tab 2026-10-18 to then, the clock cell's letter from the
-    // tab row's deletion of 2026-10-01). The row carries no dirty mark:
+    // is the active tab's name beside the clock (2026-10-22). The row
+    // carries no dirty mark:
     // Save's grey is the mark
     // (architect 2026-10-05, plain_save_actionable).
     //
     // The row paints on EVERY frame class (blank, loaded) like the
-    // redesigned rows above it: with no piece — the open's hold's one frame,
+    // rows above it: with no piece — the open's hold's one frame,
     // platform.h's head — the timestamp stands empty and no tab is named
     // (clock_time_text, the name's block), and the buttons must be visible
     // on every frame class their press claim is live on.
@@ -6086,13 +5626,14 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     if (lane.w <= 0 || lane.h <= 0) return;
 
     // THE LANE'S GROUND, ON EVERY FRAME WHATEVER STANDS OVER IT: THE BODY
-    // TONE (the palette's `face`, the row's `body_face`; send Z,
-    // 2026-11-19), the lane the window's width over the status bar — laid
+    // TONE (the palette's `face`, the row's `body_face`; 2026-11-19), the
+    // lane the window's width over the status bar — laid
     // under the on-screen keyboard too, which covers it in the same pass
     // (paint_keyboard_slot paints after this, opaque) — laid whole because
     // the keyboard's height is a tuning key (`osk_key_h`): at a shorter
     // keyboard part of the row's ground shows above it. The row's tenants
-    // are the program's (row 8, and the modal family's controls row — every
+    // are the program's (the bottom icon row's keys, and the modal family's
+    // controls row — every
     // overlay's, modal_box.h, 2026-10-14), so this lane never changes for
     // them. The ground erases whatever render_background laid down, so the
     // strip does not depend on that erase happening to hold the same value.
@@ -6120,22 +5661,17 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // still published: those are read by main.cpp's staleness comparator
     // alone, and a stash frozen for the overlay's whole life would drift the
     // moment the open changed one — an overlay's open STOPS PLAYBACK, which
-    // flips the transport button's GLYPH (the same edge flipped that
-    // button's ENABLED bit while the row was honest, and the play/stop
-    // pair's LAMP while it was a radio; the state has moved axis twice and
-    // the example holds on each) — leaving the comparator to
+    // flips the transport button's GLYPH — leaving the comparator to
     // invalidate this row on every tick with nothing to repaint but the
     // overlay's row.
     //
     // THE CLOCK'S CELL ZEROES WITH THEM, which is what makes the row's one
     // rect owner degrade HONESTLY: a zero cell answers the WHOLE LANE at
     // clock_invalidate_rect (main.cpp), which covers the overlay's controls
-    // row standing on it (the modal's whole surface from 2026-08-13 until its
-    // box of 2026-10-14; the box takes the modal family's area,
+    // row standing on it (the box takes the modal family's area,
     // invalidate_modal_dialog_area).
-    // NOTHING READS THESE ZEROES as a bound — since 2026-08-13 nothing on
-    // this row is measured from a button stash at all, the status chain having
-    // taken its right anchor to the tab row with it.
+    // NOTHING READS THESE ZEROES as a bound: nothing on this row is measured
+    // from a button stash.
     // AND THE ROW YIELDS WHILE THE ON-SCREEN KEYBOARD STANDS (2026-10-10, ON
     // SCREEN IS AS PAINTED; architect 2026-11-20: "the bottom row remains
     // inactive. So simply showing it isn't helpful"): the keyboard
@@ -6178,7 +5714,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE BUTTON CLUSTER AND THE CLOCK — publishes the clock's reserved cell
     // (AppState::clock_cell_rect), which the row's one remaining rect owner
     // reads (clock_invalidate_rect, main.cpp). Runs whole on every exposure
-    // like the top button rows (it shapes no text beyond the clock's one
+    // like the top icon row (it shapes no text beyond the clock's one
     // memoised-cell run, so a narrow clip pays almost nothing for it) and is
     // the LAST thing this painter does: the row's other tenant is the active
     // tab's name beside the clock, painted by the same function; the process
@@ -6198,11 +5734,11 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // where it stands (render_flag_editor_box), a modal by its veil alone
 // (keyboard_modal_editor_active).
 //
-// ONE RENDERER, ONE WINDOW, ONE FRAME — unchanged. Nothing here creates a
+// ONE RENDERER, ONE WINDOW, ONE FRAME. Nothing here creates a
 // surface, a window or a second buffer: every page is pixels this body
 // paints into the one frame, so
-// this is NOT the scrapped second-toplevel model (that attempt was reverted
-// byte-exact and is recorded do-not-re-propose in closed_questions.md). The
+// this is NOT the scrapped second-toplevel model (recorded
+// do-not-re-propose in closed_questions.md). The
 // bottom row yields whole while an overlay or a page stands —
 // modal_owns_bottom_row, above, is the shared fork.
 //
@@ -6241,14 +5777,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
 // end to end — the same Qt timing, the same box, the same painter, the same
-// AppState::redesign_tooltip state, whose owner names either surface now. The
+// AppState::redesign_tooltip state, whose owner names either surface. The
 // TEXT is a word button's word alone, a glyph button's the player's own,
 // published in the stash beside the rect; the WAIT is written by this surface's own hover walk
 // (update_modal_dialog_hover), and as everywhere no wait starts under a held
 // press (the model is at AppState::RedesignTooltip).
 //
-// THE BUTTONS ARE ARC'S (architect 2026-11-18 / 2026-11-19, send Z's stage
-// C; materials.h's THE KEY): a controls row's GLYPH KEYS Arc's linked buttons — a cluster one linked
+// THE BUTTONS ARE ARC'S (architect 2026-11-18 / 2026-11-19; materials.h's
+// THE KEY): a controls row's GLYPH KEYS Arc's linked buttons — a cluster one
+// linked
 // group, a lone key a group of one (paint_linked_group), its drawing on
 // each (paint_key_glyph) — and its WORD BUTTONS Arc's text buttons, the
 // word alone, no glyph (his ruling 2026-11-18; paint_word_button), laid out
@@ -6262,8 +5799,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // AT REST UNDER THE HOVERING PEN EACH WEARS ARC'S
 // HOVER FACE (architect 2026-11-20), AND EVERY CHANGE OF ITS STATE FADES AS
 // ARC'S SHEET SAYS (architect 2026-11-20; the rule AppState::FaceFades's,
-// each button painted as it stands on screen). (Windows' push buttons, 2026-10-02 to
-// 2026-10-22, are git history.)
+// each button painted as it stands on screen).
 //
 // AND THEY ACT AT THE RELEASE (the same ruling — "everything else acts on
 // lift"), which is what makes the click face real: a press ARMS the button
@@ -6271,24 +5807,19 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // or lifting elsewhere cancels with nothing dispatched. The arm is
 // AppState::modal_dialog_pressed — deliberately not the roster's own arm
 // (AppState::ChromePress), which carries the same act-at-release lifetime
-// since the chrome conversion but a different index space (the reasoning is
+// but a different index space (the reasoning is
 // at the field's declaration).
 //
 // METRICS. The seats are the controls row's (modal_controls_seats: 6 W
 // inside the panel, no tail): every glyph key the program's key at the
 // case's seat, a group's keys sharing one seam column each (materials.h's
 // key_link_pitch_px; the player's player_row_layout and the score viewer's),
-// the word buttons one width, 4 W apart (modal_word_buttons). (The 6-W
-// inter-button gap, the old popup's 8 laptop px, stood until 2026-10-23.)
+// the word buttons one width, 4 W apart (modal_word_buttons).
 // The three pages' lines are THE PAGE MARGIN's (modal_box.h's
 // modal_page_lines).
-// (The editor's one-row field — kModalFieldWidthPx 378 W authored, floored
-// at 29 W, kModalFieldHeightPx 23 W tall with its text kModalFieldPadXPx 5 W
-// in, its label before it and its horizontal travel — stood on the bottom
-// row from 2026-08-12 to 2026-10-14.)
 //
 // THE PUBLICATION is the floating surfaces' own convention: this runs
-// UNCONDITIONALLY from on_redraw (after the keyboard slot since 2026-10-14),
+// UNCONDITIONALLY from on_redraw (after the keyboard slot),
 // rewrites AppState::modal_dialog and AppState::dialog_editor_text every run
 // (zero/invalid with no dialog up), so the pointer path always reads what is
 // actually on screen and a closed dialog strands nothing. `box` is the
@@ -6311,47 +5842,37 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 
 namespace {
 
-// (THE WORD BUTTONS' WINDOWS METRICS — the 6-W button gap, Windows' 75 x
-// 23-W push button sized to its label between the spec's pads, the editor's
-// one-row field's 23-W height and 5-W pad — stood 2026-10-02 to 2026-10-23;
-// every word button is the program's key since, modal_word_buttons
-// below. Git history holds their derivations.)
-// (THE FOCUS FRAME — kModalFocusFramePx, one relief line outside the
-// keyboard-focused button, Windows' default-button frame, 2026-10-02 to
-// 2026-10-23 — is not painted, architect 2026-10-23: the button walk's NO
-// FOCUS FRAME.)
 // THE PLAYER ROW'S SPACING IS THE RUN GAP, A GTK BOX AT 6 W (architect
-// 2026-11-03, on mock dec7b; the box's spacing 2026-11-18 / 19, send Z's
-// design, built in send AA): between every two neighbors (the left
+// 2026-11-03; the box's spacing 2026-11-18 / 19): between every two
+// neighbors (the left
 // cluster → the scale's trough, the trough → the position, the position →
 // the length, the length → the transport) stands render.h's
-// program_run_gap_px, the band's run gap (kRunGapW, 6 W, Arc's toolbar
-// groups' since send Z); the score viewer's two
+// program_run_gap_px, the icon rows' run gap (kRunGapW, 6 W); the score
+// viewer's two
 // rows, laid
 // in the player's shape, read it alike (score_row_layout,
 // score_media_row_layout). A wider gap is taken from the scrub's trough,
 // which the rows' floor of two knobs drops whole when too little is left.
-// The row's own 8-W space is retired
-// (closed_questions.md).
+// The row keeps no 8-W space of its own (closed_questions.md).
 
 // (THE WORD ROWS NO PROMPT TABLE HOLDS are the picker's and the progress
 // page's one button. A BUTTON'S WORD SAYS WHAT LEAVING DOES: the rule, the
 // two leave words kModalCancelLabel and kModalCloseLabel and which overlays
-// carry a leave button (every one without a scrub, architect 2026-11-11,
-// session 107) are app_state.h's (the lit opener's tooltip under its
+// carry a leave button (every one without a scrub, architect 2026-11-11)
+// are app_state.h's (the lit opener's tooltip under its
 // overlay reads the words there too, overlay_leave_word). A line editor has
 // no button: its answers are the on-screen keyboard's Enter and Esc.)
 
 // THE WORD BUTTONS' LAYOUT — ONE FOR THE PAINTER AND THE PRESS: ARC'S TEXT
-// BUTTONS (architect 2026-11-18, his ruling: the word alone, no glyph; send
-// Z's stage C, 2026-11-19; the kit's word_width / word_row, GtkButtonBox's
+// BUTTONS (architect 2026-11-18: the word alone, no glyph; 2026-11-19; the
+// kit's word_width / word_row, GtkButtonBox's
 // homogeneous width, measured on his 9 pt desktop: Help 1340..1424, Close
 // 1747..1831) — on `seats` (the controls row's, modal_controls_seats) the
 // words `words`, in painted order, each a box on the case's rows (the key's
 // height, 28 W at the default) of ONE WIDTH FOR THE ROW, max(kWordButtonMinW
 // (85 W), the widest word's advance in the Body face (Regular 12 W) rounded
 // up to a whole px + kWordButtonPadsW (34 W)) — 170 device px on the tablet
-// for every word the rows hold today — kWordButtonGapW (4 W) apart, THE
+// for every word the rows hold — kWordButtonGapW (4 W) apart, THE
 // CLUSTER FLUSH RIGHT, its last box's right edge the row's right seat
 // (6 W inside the panel); wider than the row it starts at
 // the row's first column (THE BUTTONS STAY WHOLE). The word is the button's
@@ -6389,7 +5910,7 @@ ModalWordButtons modal_word_buttons(const BottomRowSeats& seats,
     return out;
 }
 
-// THE PROGRESS BAR (GTK's, the design's §G; the progress page's, its seat
+// THE PROGRESS BAR (GTK's; the progress page's, its seat
 // modal_box.h's ModalPageLines::bar): the trough `scale_trough` (2D303B,
 // its line of kArcDarkTones) on [x0, x1) x [y, y + h), fully rounded
 // (radius h / 2: 3 W), the done part `cue`, the accent, from x0 over `frac`
@@ -6662,8 +6183,7 @@ void paint_value_page(cairo_t* cr, AppState& app, text_editor::State* ed) {
 
 } // namespace
 
-// THE RENDER PLAYER'S ROW LAYOUT (2026-10-21: lifted out of the modal
-// painter's player branch): each of the eight cases' left
+// THE RENDER PLAYER'S ROW LAYOUT (2026-10-21): each of the eight cases' left
 // column in the plan's order, the clock's two fields and the scrub's span,
 // on the controls row's seats (modal_controls_seats). The row's arrangement
 // and its rulings are at the painter's player branch. THE TRANSPORT STANDS
@@ -6678,11 +6198,10 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     PlayerRowLayout l;
     // THE CASES TOUCH (architect 2026-10-22, "the buttons should be
     // touching"): a run's keys are ONE LINKED GROUP, sharing one seam column
-    // each (send Z, 2026-11-19; materials.h's key_link_pitch_px), as the
-    // band's and the bottom row's keys; THE GROUP SPACE between its items is
+    // each (2026-11-19; materials.h's key_link_pitch_px), as the
+    // top and bottom icon rows' keys; THE GROUP SPACE between its items is
     // the run gap (program_run_gap_px, kRunGapW, 6 W;
-    // architect 2026-11-03, mock dec7b,
-    // and the retrofit's number; the head above the word rows). The press
+    // architect 2026-11-03; the head above the word rows). The press
     // reads the rects the button walk publishes from this layout
     // (modal_dialog_button_hit), the painted faces, so the ground between
     // two answers nothing; the scrub's span, its thumb's seat and its hit
@@ -6696,11 +6215,11 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // the fixed-width rule at THE TIME FIELDS' block), the slot's width the
     // widest-digit specimen's advance rounded up to a whole W
     // (time_label_w_px), so neither label nor anything right of it moves as
-    // the position runs or an item of another length loads — row 8's
-    // timestamp's face, the program face (architect 2026-10-26 ~12:10,
+    // the position runs or an item of another length loads — the bottom
+    // icon row's timestamp's face, the program face (architect 2026-10-26,
     // "yes" to symmetry). THE ROW IS A GTK BOX AT 6 W SPACING (architect
-    // 2026-11-18 / 19, send Z's design, built in send AA; his "it touches",
-    // RULINGS §8): every pair of neighbors — the left group's ring, the
+    // 2026-11-18 / 19; his "it touches"): every pair of neighbors — the left
+    // group's ring, the
     // scale's trough, the position, the length, the transport's ring — one
     // run gap apart (kRunGapW, 6 W).
     l.field_w   = time_label_w_px();
@@ -6711,12 +6230,12 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     //    everything else to the left, the scrub and the clock where they
     //    stand between the two): THE LEFT CLUSTER, the five keys that are not
     //    the transport — the lamp, the highlight pair, Up a Folder and the
-    //    Load in Place / Delete slot (no Close since 2026-11-11, architect,
-    //    session 106: the lit PLAYER key is the way out, the scrub taking the
+    //    Load in Place / Delete slot (no Close, architect 2026-11-11: the
+    //    lit PLAYER key is the way out, the scrub taking the
     //    seat's pitch) — one run from the row's
     //    first face; THE TRANSPORT'S THREE right-flushed where THE CONTROLS
-    //    ROW'S FACES END, the last face's right edge the pane's last column
-    //    (the well's; modal_controls_seats' cases_right); the scrub and the
+    //    ROW'S FACES END, the last face's right edge the row's right seat
+    //    (modal_controls_seats' cases_right); the scrub and the
     //    clock's two fields between them, the scrub taking what is left. --
     const int cx0 = seats.cases_left;
     for (int i = 0; i < 5; ++i)
@@ -6728,7 +6247,7 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     // What the row owes AFTER the scrub, ahead of the transport: the group
     // space, the clock's two labels, the group space.
     const int after_scrub = group + clock_w + group;
-    // THE FLOOR IS TWO KNOBS (2026-10-25, two thumbs then) — a trough
+    // THE FLOOR IS TWO KNOBS (2026-10-25) — a trough
     // shorter than two of the knobs that ride it is not a scale. `scrub_w`
     // is THE TROUGH'S width; the knob's center travels half a knob inside
     // each of its ends (render.h's scrub block).
@@ -6745,9 +6264,9 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 
 // THE SCORE VIEWER'S PAGE ROAD ROW LAYOUT (architect 2026-10-26,
 // score_viewer.h's head, the face with no soundtrack): THE PLAYER'S SEATS
-// (the transport flush right since 2026-11-10, architect) — RESET, START
-// and END one linked group from the row's first column (no CLOSE since
-// 2026-11-11, architect, session 106: the lit SCORE key is the way out, the
+// (the transport flush right, architect 2026-11-10) — RESET, START
+// and END one linked group from the row's first column (no CLOSE, architect
+// 2026-11-11: the lit SCORE key is the way out, the
 // scrub taking the seat's pitch), the page scrub
 // after the group space, THE PAGE CELL where the player's clock stands, and
 // PREV and NEXT one linked group flush right (the transport's seats), the
@@ -6776,7 +6295,7 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
     }
     const std::string digits(std::to_string(std::max(1, page_count)).size(),
                              widest);
-    // THE PAGE CELL'S SLOT, A LABEL'S (send AA, 2026-11-19, the time
+    // THE PAGE CELL'S SLOT, A LABEL'S (2026-11-19, the time
     // labels' rule): its specimen its own, "<count> / <count>" at the
     // widest digit, its advance rounded up to a whole W (label_w_px); its
     // run stays RIGHT-ALIGNED, its right end on the slot's right edge (the
@@ -6796,10 +6315,10 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
     return l;
 }
 
-// THE SCORE VIEWER'S MEDIA PLAYER ROW (architect 2026-10-26 night, the
-// soundtrack's face, score_viewer.h's head; the transport flush right since
-// 2026-11-10, architect): RESET, START and END one linked group from
-// the row's first column (no CLOSE since 2026-11-11, the page road's
+// THE SCORE VIEWER'S MEDIA PLAYER ROW (architect 2026-10-26, the
+// soundtrack's face, score_viewer.h's head; the transport flush right,
+// architect 2026-11-10): RESET, START and END one linked group from
+// the row's first column (no CLOSE, 2026-11-11, the page road's
 // reason), the scrub after the group space, THE
 // CLOCK — the render player's two time
 // labels, measured and spaced as its are (player_row_layout) — and BACK,
@@ -6833,17 +6352,18 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     return l;
 }
 
-// THE TRIM PRESETS LIST'S ROW LAYOUT (architect 2026-10-28 night, THE
-// PLAYER'S SHAPE; his glass on 852a28d9: "up/down are in the bottom right for
+// THE TRIM PRESETS LIST'S ROW LAYOUT (architect 2026-10-28, THE
+// PLAYER'S SHAPE: "up/down are in the bottom right for
 // the player, so they should be there for the trim presets also"): ONE
 // CLUSTER FLUSH RIGHT — THE HIGHLIGHT PAIR, the player's DOWN and UP keys,
 // ONE LINKED GROUP (materials.h's linked_group_w_px), a run gap
 // (program_run_gap_px), then the four WORD BUTTONS SAVE, SAVE AS, DELETE and
 // CLOSE (modal_word_buttons: Arc's text buttons, one width, 4 W apart) — the
 // last box's right edge the row's (every word row's alignment rule; the
-// kit's presets row, send Z, 2026-11-19), nothing at the row's left. A
-// DELIBERATE ASYMMETRY WITH THE PLAYER since 2026-11-10 (architect: the
-// player's transport took its row's right, its pair and the rest the left;
+// kit's presets row, 2026-11-19), nothing at the row's left. A
+// DELIBERATE ASYMMETRY WITH THE PLAYER (architect 2026-11-10: the
+// player's transport stands at its row's right, its pair and the rest at the
+// left;
 // that ruling named the player and the score viewer alone): this list keeps
 // its pair and its words in the one cluster flush right. THE BPM FORM'S ROW
 // (architect 2026-10-29) is the same cluster with no pair: RENDER and
@@ -6876,7 +6396,7 @@ static KeyClusterLayout key_cluster_row_layout(
     return l;
 }
 
-// THE TRIM PRESETS LIST'S HIGHLIGHT PAIR IS THE PLAYER'S (2026-10-28 night):
+// THE TRIM PRESETS LIST'S HIGHLIGHT PAIR IS THE PLAYER'S (2026-10-28):
 // each key's twin in the player's vocabulary, whose glyph
 // (render_player_button_icon) and word (render_player_button_hint) it wears, so the pair reads the same on
 // both rows.
@@ -6954,10 +6474,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     dlg.buttons.clear();
     app.dialog_editor_text = AppState::DialogEditorText{};
 
-    // WHICH DIALOG: the prompt outranks every editor (the order the retired
-    // status chain also kept; the close road takes every editor down before
-    // the unsaved-work question rises, GuiPrompt::request_close, so the two
-    // do not stand together).
+    // WHICH DIALOG: the prompt outranks every editor (the close road takes
+    // every editor down before the unsaved-work question rises,
+    // GuiPrompt::request_close, so the two do not stand together).
     const bool prompt_up = app.prompt.active;
     // THE PROGRESS MODAL, the fifth owner (2026-10-14, AppState::
     // BatchProgress): directly under the prompt and above the three lower
@@ -7029,7 +6548,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // (paint_modal_box): THE THREE PAGES' — the view in the lists' tone
     // whatever stood there, under a sub-page the on-screen keyboard over its
     // foot (modal_box.h's head; the cut below) — and THE SCORE
-    // VIEWER'S (since 2026-10-26), its page the interior.
+    // VIEWER'S (2026-10-26), its page the interior.
     //
     // THE CONTROLS ROW IS THE PAGE'S THAT STANDS IN THE VIEW (architect
     // 2026-11-19: "windows like score and player need the bottom
@@ -7069,7 +6588,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const bool    kb_covers = kb_surf.w > 0 && kb_surf.h > 0;
     // THE LIST'S PAGE THE ROW READS: the standing folder overlay.
     const AppState::FolderOverlay& row_page = app.folder_overlay;
-    // THE TRIM PRESETS LIST (2026-10-28 night): a list whose controls row
+    // THE TRIM PRESETS LIST (2026-10-28): a list whose controls row
     // is the player's shape, not the picker's one word.
     const bool    row_trim = row_list &&
                              row_page.owner ==
@@ -7117,9 +6636,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     const bool value_up  = ed != nullptr;
     const bool score_box = score_viewer_stands(app);
     // THE VIEW'S TONE `ruler_face`, the score viewer's `score_pane_face`
-    // its one exception (modal_box.h's head, M9 A2) — NOT UNDER A PAGE: a
+    // its one exception (modal_box.h's head) — NOT UNDER A PAGE: a
     // question over the viewer shows no mat, its page the lists' tone as
-    // over every other page (the viewer's page hole is gone with its rank:
+    // over every other page (the viewer's page hole goes with its rank:
     // `score_up` is false under a prompt, so `page_hole` is empty there).
     // UNDER A PAGE THE BOX COVERS WHATEVER STOOD IN THE VIEW: the main
     // page's or the `h` view's lanes, which painted under it (on_redraw's
@@ -7151,8 +6670,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
 
     const BottomRowSeats seats = modal_controls_seats(app);
-    // EVERY OWNER'S BUTTON IS THE KEY since 2026-10-23 (the word buttons
-    // the keys, modal_word_buttons), so one band for all.
+    // EVERY OWNER'S BUTTON IS THE KEY'S HEIGHT (2026-10-23; the word buttons
+    // the keys', modal_word_buttons), so one height for all.
     const int btn_h = seats.case_h;
 
     // -- The buttons' words and widths, shaped up front (the layout needs the
@@ -7162,10 +6681,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // its act's glyph (render_player_button_icon) and its tooltip
     // (render_player_button_hint) — the transport
     // triple, the REPEAT ONE lamp, the HIGHLIGHT PAIR (architect 2026-10-10,
-    // Highlight Next and Highlight Previous, the band walk's two keys on
-    // glass), UP A FOLDER and LOAD IN PLACE (or DELETE at the root) —
+    // Highlight Next and Highlight Previous, the highlight's walk as two keys
+    // on glass), UP A FOLDER and LOAD IN PLACE (or DELETE at the root) —
     // while a word button is Arc's text button, its word alone on it and
-    // its tooltip the word (send Z, 2026-11-19). The word kind is the
+    // its tooltip the word (2026-11-19). The word kind is the
     // other owners' alone: a
     // prompt's answers, the progress page's Cancel and the picker's one
     // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
@@ -7182,7 +6701,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // The score viewer's dispatch vocabulary (2026-10-26); its keys are
         // `glyph` keys too, their glyphs score_viewer_button_icon's.
         AppState::ScoreButtonAct  score_act  = AppState::ScoreButtonAct::None;
-        // The trim presets list's (2026-10-28 night): its highlight pair are
+        // The trim presets list's (2026-10-28): its highlight pair are
         // `glyph` keys wearing the player's glyphs, its other four word
         // buttons.
         AppState::TrimPresetsButtonAct trim_act =
@@ -7196,7 +6715,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         PlayerPlayFace play_face = PlayerPlayFace::Play;
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
-        // below. FOUR OWNERS WRITE IT, re-grepped 2026-11-11: the
+        // below. FOUR OWNERS WRITE IT: the
         // player's eight through render_player_button_enabled, the score
         // viewer's keys through score_viewer_button_enabled, the trim
         // presets list's six through trim_presets_button_enabled and the
@@ -7256,7 +6775,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //        modal_controls_seats: max(85 W, the widest word + 34 W) each,
     //        4 W apart, flush right 6 W inside the panel — on the tablet OK
     //        x 1944..2113 and Cancel x 2122..2291 on rows 1324..1379), on
-    //        the row's band in the body tone with NO timestamp, NO tab name,
+    //        the row's ground in the body tone with NO timestamp, NO tab name,
     //        NO roster key and none of an overlay's own controls
     //        (modal_owns_bottom_row). EVERY ANSWER IS LIVE while its page
     //        stands (`enabled` true), painted and published by the walk
@@ -7310,32 +6829,30 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         b.word = kModalCancelLabel;
         plan.push_back(std::move(b));
     } else if (row_player) {
-        // THE PLAYER'S ROW, in painted order (architect 2026-08-28; THE
-        // TRANSPORT TO THE RIGHT AND EVERYTHING ELSE TO THE LEFT, architect
-        // 2026-11-10, each cluster keeping its own order): the REPEAT ONE
+        // THE PLAYER'S ROW, in painted order (THE TRANSPORT TO THE RIGHT AND
+        // EVERYTHING ELSE TO THE LEFT, architect 2026-11-10, each cluster
+        // keeping its own order): the REPEAT ONE
         // lamp, the HIGHLIGHT PAIR (Highlight Next, Highlight Previous: the
-        // bare Down / Up keys' band walk on a button, architect 2026-10-10),
+        // highlight's one-row walk on a button, architect 2026-10-10),
         // the UP A FOLDER button and Load in place from the row's
         // first face — then the scrub and the clock (both laid out in the
-        // player's own branch below, the separators either side of them
-        // retired 2026-10-02), then, FLUSH RIGHT, THE TRANSPORT (THE MAIN
-        // WINDOW'S OWN TRIPLE since 2026-09-01): the two SKIPS around
-        // Play/Pause, on Home and End since 2026-08-31.
-        // NO CLOSE (architect 2026-11-11, session 106: "places like score
+        // player's own branch below, no separator either side of them,
+        // architect 2026-10-02), then, FLUSH RIGHT, THE TRANSPORT (THE MAIN
+        // WINDOW'S OWN TRIPLE, 2026-09-01): the two SKIPS around Play/Pause.
+        // NO CLOSE (architect 2026-11-11: "places like score
         // and the player can lose their close button since the button used
         // to enter that mode is also now the close button, and the tooltip
         // will say as much"): the lit PLAYER key is the way out
         // (PlayerButtonAct's head). No
         // key reaches the player (architect 2026-10-30), so the row has no
-        // ring and no Tab walks it. A STOP BUTTON SAT AFTER PLAY/PAUSE from 2026-08-28
-        // (Audacious's own order) until the act retired.
+        // ring and no Tab walks it.
         // THE PAUSE FACE IS TRUTHFUL (architect 2026-08-31): the button
         // prints PAUSE only where its press would PAUSE — the transport live
         // AND the highlight on the transport's own item (or nowhere), which
         // is exactly render_player_highlight_act_row answering −1. Under a
         // highlight standing on a folder row or on another wav the press
         // would GO THERE, so the face is PLAY's and the tooltip's word
-        // follows it. SINCE 2026-09-01 THE FACE AND THE WORD ARE ONE OWNER,
+        // follows it. THE FACE AND THE WORD ARE ONE OWNER (2026-09-01),
         // render_player_play_face (the act's own two forks read without
         // acting); the hint takes
         // the whole answer, so a folder row says "Open folder" and a live
@@ -7350,14 +6867,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.play_face     = render_player_play_face(app);
         hint.home_previous = render_player_home_takes_previous(app, playback,
                                                                 audio);
-        // (END'S IDLE BIT STOOD HERE and retired 2026-09-04 with the act it
-        // described: it was seek_to's second refusal asked past its first, so
-        // that the hint said "At the end" only with an item bound. The right
-        // skip's press is the NEXT TRACK now, whose one refusal greys the
-        // button, and its word names that act in every state. TWO MORE BITS
-        // STOOD HERE for the one day of 2026-09-12 — a transport-at-rest fork
-        // and an up-a-folder bit — while the skips walked the band; the walk
-        // is the car's own act again and the car has no tooltip.)
+        // The right skip's press is the NEXT TRACK, whose one refusal greys
+        // the button, and its word names that act in every state: it needs no
+        // bit here.
         // THE SHIFT LINES COMPARE DESTINATIONS, not the twins' walls alone
         // (2026-09-01): the line names the FILE the shifted
         // press plays, so it must drop wherever the plain press already
@@ -7369,7 +6881,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // the file they name, so the index decides. On the folder's second
         // item inside that window the two are one file and the line goes,
         // which the wall alone (item_index > 0) could not see. THE WALL IS
-        // STILL A TERM and is still asked from the twin's own owner, which
+        // A TERM TOO, asked from the twin's own owner, which
         // the face reads too — it is what answers on item_index == 0, where
         // the twin is dead outright.
         const int home_plain_index =
@@ -7378,16 +6890,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         hint.home_shift_differs =
             render_player_first_in_item_folder_actionable(app) &&
             home_plain_index != 0;
-        // THE RIGHT SKIP COMPARES DESTINATIONS TOO SINCE 2026-09-04, and for
-        // the first time: its plain act is the NEXT TRACK now, so on the
+        // THE RIGHT SKIP COMPARES DESTINATIONS TOO (2026-09-04): its plain
+        // act is the NEXT TRACK, so on the
         // folder's SECOND-TO-LAST item both presses play the folder's last
         // wav and the line goes, exactly as Home's does on the second item.
         // Both destinations are indices into the ITEM's folder — the plain
         // act's is the item's own plus one, the twin's is that folder's last
         // — and the wall, still asked from the twin's own owner, is what
-        // answers on the last item, where the twin is dead outright. (The bit
-        // was that wall alone while the plain act was a seek inside the item,
-        // which could never reach another file.)
+        // answers on the last item, where the twin is dead outright.
         const int end_plain_index = app.render_player.item_index + 1;
         const int end_twin_index =
             static_cast<int>(app.render_player.item_folder.size()) - 1;
@@ -7408,24 +6918,24 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.tooltip2   = render_player_button_shift_hint(act, hint);
             plan.push_back(std::move(b));
         };
-        // (THE `word_button` LAMBDA IS DELETED — 2026-09-01: the player's
-        // row is keys alone and no word button. The other three owners' word
-        // buttons are built in their own branches below.)
+        // The player's row is keys alone, no word button; the other owners'
+        // word buttons are built in their own branches.
         // THE LEFT CLUSTER (architect 2026-11-10), in its own order: the
         // lamp first.
         glyph_button(AppState::PlayerButtonAct::RepeatOne,
                      app.render_player.repeat_one);
         // THE HIGHLIGHT PAIR (architect 2026-10-10): the render player on
-        // glass has no arrow keys, so the bare Down / Up keys' band walk is a
-        // pair of buttons — DOWN THEN UP, the order of row 8's own pair
+        // glass has no arrow keys, so the highlight's walk is a
+        // pair of buttons — DOWN THEN UP, the order of the bottom icon row's
+        // own pair
         // (TransportDown, TransportUp) — that move the highlight one row and
         // nothing else (GuiRenderPlayer::move_highlight), so a file is picked
         // silently and then loaded in place or played.
         glyph_button(AppState::PlayerButtonAct::HighlightDown);
         glyph_button(AppState::PlayerButtonAct::HighlightUp);
-        // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01, with the
-        // player's move inside `tmp/`): the listings carry no `..` row any
-        // more, so the way out of a batch folder is here — behind the pair,
+        // UP A FOLDER, THE `..` ROW'S ACT ON A BUTTON (architect 2026-09-01):
+        // the listings carry no `..` row, so the way out of a batch folder is
+        // here — behind the pair,
         // ahead of the cluster's last key. It greys at the root through the
         // act's own wall.
         glyph_button(AppState::PlayerButtonAct::Up);
@@ -7453,7 +6963,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         glyph_button(AppState::PlayerButtonAct::NextTrack);
     } else if (row_score) {
         // THE SCORE VIEWER'S ROW (architect 2026-10-26), in painted order, ON
-        // ITS TWO FACES (score_viewer.h's head, 2026-10-26 night), THE
+        // ITS TWO FACES (score_viewer.h's head, 2026-10-26), THE
         // TRANSPORT TO THE RIGHT AND EVERYTHING ELSE TO THE LEFT as the
         // render player's row (architect 2026-11-10): RESET, START and END
         // from the row's first face — then (the scrub and the page
@@ -7466,7 +6976,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // glyph and its word the render player's Play key's by the face
         // (score_viewer_play_face) — each a key with its glyph, its face
         // the act's own truthful answer. NO CLOSE
-        // (architect 2026-11-11, session 106, the player's ruling, its
+        // (architect 2026-11-11, the player's ruling, its
         // branch above): the lit SCORE key is the way out.
         using Act = AppState::ScoreButtonAct;
         const PlayerPlayFace face = score_viewer_play_face(app);
@@ -7491,14 +7001,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             key(Act::NextPage);
         }
     } else if (row_trim) {
-        // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28 night, THE
+        // THE TRIM PRESETS LIST'S ROW (architect 2026-10-28, THE
         // PLAYER'S SHAPE), in painted order, one cluster flush right
         // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
-        // and UP, its glyphs and words, the band walk without applying
+        // and UP, its glyphs and words, the highlight's walk without applying
         // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE (the
         // Close word kModalCloseLabel's rule, app_state.h: the list has no
-        // scrub, so it keeps its leave button, architect 2026-11-11, session
-        // 107), CLOSE LAST. No Apply: the
+        // scrub, so it keeps its leave button, architect 2026-11-11),
+        // CLOSE LAST. No Apply: the
         // row's tap is the act. Each face is the act's own truthful answer
         // (trim_presets_button_enabled).
         using Act = AppState::TrimPresetsButtonAct;
@@ -7543,10 +7053,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else {
         // THE PICKER'S ROW IS ONE BUTTON (architect 2026-08-29): a click on a
         // row opens it, so there is nothing for an OK to add. ITS WORD IS WHAT LEAVING DOES (the rule at
-        // kModalCancelLabel, app_state.h, architect 2026-10-28 night): CANCEL
+        // kModalCancelLabel, app_state.h, architect 2026-10-28): CANCEL
         // under the project picker and the value list, CLOSE under the
         // settings page (an overlay with no scrub keeps its leave button,
-        // architect 2026-11-11, session 107: "Settings doesn't hurt to have
+        // architect 2026-11-11: "Settings doesn't hurt to have
         // a close button and certainly looks better, I think, than having an
         // empty row") — the act the same body by content
         // (dispatch_modal_dialog_button's picker arm), the word alone moving.
@@ -7561,7 +7071,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                 : kModalCancelLabel);
         plan.push_back(std::move(last));
     }
-    // EVERY BUTTON'S BOX: a glyph button the PROGRAM'S CASE at row 8's width
+    // EVERY BUTTON'S BOX: a glyph button the PROGRAM'S CASE at the bottom icon
+    // row's width
     // (the player's eight and the score viewer's keys, placed by
     // its own branch below); every other owner's row — a question's answers
     // and the progress page's Cancel among them — ONE CLUSTER OF WORD
@@ -7604,12 +7115,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // kModalCancelLabel's rule) and the trim presets list's four (its
     // highlight pair, the player's, directly before them in the one cluster)
     // and the BPM form's two — the last one's right edge 6 W inside the
-    // panel (modal_controls_seats), today's button gap between them; the
+    // panel (modal_controls_seats), the button gap between them; the
     // render player's row and the score viewer's read from the left, their
     // other keys first and their transport flush right (architect
-    // 2026-11-10; their branches below). (From 2026-08-29 the picker's list
-    // kept its button flush right, "if I'm using the picker my hand stays on
-    // the right".)
+    // 2026-11-10; their branches below).
     //
     // THE BUTTONS STAY WHOLE: in the pathological case where they are wider
     // than the row, the cluster starts at the row's left seat and runs past
@@ -7619,14 +7128,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // EVERY BUTTON IS CENTRED ON THE CASE ROWS (architect 2026-10-14, the
     // family's controls row): every button the program's key on the rows
     // the player's cases take, so the rows coincide
-    // (modal_word_buttons). (Centered in the bottom row's content band, the
-    // taskbar dialog's centered band before it, until that day.)
+    // (modal_word_buttons).
     const int btn_y = seats.case_y;
 
     // THE SCRUB'S ITEM — Arc's scale, painted and published (dlg.scrub,
     // dlg.scrub_thumb_x) — ONE BODY FOR ITS TWO OWNERS, the render player's
-    // play-scrub and the score viewer's (2026-10-26, lifted out of the
-    // player's branch): the trough at `scrub_x0` and `scrub_w` columns, the
+    // play-scrub and the score viewer's (2026-10-26): the trough at `scrub_x0`
+    // and `scrub_w` columns, the
     // item those columns by the knob's rows centered on the controls row's
     // keys (render.h's scale_item_rect), the knob's center at the real x
     // `thumb_x_of()` answers once the item is published (architect
@@ -7704,26 +7212,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // THE PROGRESS PAGE'S CANCEL, alone on the row.
         dlg.owner = AppState::ModalDialogOwner::Progress;
     } else if (row_player) {
-        // -- THE RENDER PLAYER'S ROW (architect 2026-08-28 — the relaid
-        //    row; THE TRANSPORT KEYS TO THE RIGHT, EVERYTHING ELSE TO THE
-        //    LEFT, architect 2026-11-10, the scrub and the timestamps
-        //    between them in their order): REPEAT ONE · DOWN · UP
-        //    · UP A FOLDER · LOAD IN PLACE · SCRUB · CLOCK ·
-        //    TRANSPORT, the transport flush right. The items are
-        //    Audacious-Qt's under Breeze Dark, which is what the architect
-        //    ruled off his own screen — "not the screenshot as a whole, just
-        //    the layout: transport, separator, scrub, then the time, then
-        //    another separator, then the repeat button" — and its TWO
-        //    SEPARATORS RETIRED (architect 2026-10-02; Sound Recorder and
-        //    mplay32 have none, and the roster's etched separators of
-        //    2026-10-06 did not reach this row): the groups stand the run
-        //    gap of bare face apart (program_run_gap_px, kRunGapW, 6 W) —
-        //    the left cluster → the trough,
-        //    the trough → the position, the position → the length, the
-        //    length → the transport, a GTK box at 6 W spacing (architect
-        //    2026-11-18 / 19, send Z's design, built in send AA). THE
-        //    CLOCK IS TWO TIME LABELS since
-        //    2026-10-05 (architect: Sound Recorder's Position and Length
+        // -- THE RENDER PLAYER'S ROW (THE TRANSPORT KEYS TO THE RIGHT,
+        //    EVERYTHING ELSE TO THE LEFT, architect 2026-11-10, the scrub
+        //    and the timestamps between them in their order): REPEAT ONE ·
+        //    DOWN · UP · UP A FOLDER · LOAD IN PLACE · SCRUB · CLOCK ·
+        //    TRANSPORT, the transport flush right. NO SEPARATORS (architect
+        //    2026-10-02; Sound Recorder and mplay32 have none): the groups
+        //    stand the run gap of bare face apart (program_run_gap_px,
+        //    kRunGapW, 6 W) — the left cluster → the trough, the trough →
+        //    the position, the position → the length, the length → the
+        //    transport, a GTK box at 6 W spacing (architect 2026-11-18 /
+        //    19). THE CLOCK IS TWO TIME LABELS
+        //    (architect 2026-10-05: Sound Recorder's Position and Length
         //    panels, ACID's separate fields) — the position, then the
         //    length.
         //
@@ -7735,14 +7235,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    track too small to seat a handle.
         //
         //    THE PLAN IS EIGHT ITEMS — the left cluster's five (the lamp, THE
-        //    HIGHLIGHT PAIR of 2026-10-10 behind it, Up a Folder of
-        //    2026-09-01 and Load in Place; no Close since 2026-11-11) and the
-        //    transport's three —
+        //    HIGHLIGHT PAIR behind it, Up a Folder and Load in Place; no
+        //    Close, 2026-11-11) and the transport's three —
         //    every one of them a box of the same width and the whole row is fixed
-        //    except the scrub. THE BOXES ARE ROW 8'S CASES (architect
-        //    2026-10-05, bottom_row_seats; the program's since 2026-10-09):
+        //    except the scrub. THE BOXES ARE THE BOTTOM ICON ROW'S CASES
+        //    (architect 2026-10-05, bottom_row_seats):
         //    each cluster one linked group of Arc's buttons (the walk below)
-        //    on the program's key at row 8's seat, the
+        //    on the program's key at the bottom icon row's seat, the
         //    act's drawing centered on its box, the row on the panel's face (the
         //    player is the program's tenant of the row, paint_bottom_strip).
         //    The scrub is Arc's scale (render.h's scrub block); the two
@@ -7750,15 +7249,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    block).
         //
         //    THE ROW IS THE MODAL FAMILY'S CONTROLS ROW (architect
-        //    2026-10-14, modal_box.h; row 8's own from 2026-10-05): the
-        //    buttons stand at row 8's case seat on row 8's rows, the
-        //    left cluster's
-        //    first face on the pane's first column (the well's, its cell on
-        //    the box's outer column) and the right-flushed transport's last
-        //    face ending on the pane's last (no
-        //    focus-frame reserve inside it; modal_controls_seats), today's
-        //    gaps between the groups, and the scrub fills whatever lies
-        //    between.
+        //    2026-10-14, modal_box.h): the buttons stand at the bottom icon
+        //    row's case seat on its rows, the left cluster's first face and
+        //    the right-flushed transport's last 6 W inside the panel
+        //    (modal_controls_seats), the run gaps between the groups, and
+        //    the scrub fills whatever lies between.
         //
         //    THIS BRANCH LAYS OUT AND PAINTS EVERYTHING BUT THE BUTTONS: it
         //    writes each button's own x (the walk below paints where it is
@@ -7771,9 +7266,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // group space, the clock's two fields measured first, the fixed left
         // cluster, the right-flushed transport and the scrub taking what is
         // between them —
-        // the rules stated there). THE CLOCK'S FACE IS ROW 8'S CLOCK'S, THE
-        // PROGRAM FACE (architect 2026-10-26 ~12:10, "yes" to symmetry; the
-        // body face until then), the face its fields were measured in.
+        // the rules stated there). THE CLOCK'S FACE IS THE BOTTOM ICON ROW'S
+        // CLOCK'S, THE PROGRAM FACE (architect 2026-10-26, "yes" to
+        // symmetry), the face its fields were measured in.
         const PlayerRowLayout pl = player_row_layout(seats);
         assert(plan.size() == pl.x.size());
         for (std::size_t i = 0; i < pl.x.size(); ++i) plan[i].x = pl.x[i];
@@ -7785,7 +7280,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int clock_end = pl.clock_end;
 
         // -- THE PLAY-SCRUB, ARC'S SCALE (architect 2026-10-02; Arc's scale
-        //    2026-11-18 / 19, send Z's design, built in send AA; the look and
+        //    2026-11-18 / 19; the look and
         //    its owners at render.h's scrub block). The ITEM is published
         //    (dlg.scrub): the trough's columns by the knob's rows, so a
         //    press anywhere on the scale is on it and the per-position
@@ -7811,9 +7306,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             });
         }
 
-        // -- THE CLOCK, after the scrub (there since 2026-08-28): TWO TIME
-        //    FIELDS since 2026-10-05, the POSITION and then the LENGTH, each
-        //    plain text since 2026-11-19 (send AA) on the case's rows, its
+        // -- THE CLOCK, after the scrub: TWO TIME FIELDS (2026-10-05), the
+        //    POSITION and then the LENGTH, each plain text (2026-11-19) on
+        //    the case's rows, its
         //    run's pen its slot's left edge, in the text tone
         //    (paint_time_text), the slots one run gap apart. ONE RECT ROUND
         //    BOTH IS PUBLISHED (dlg.clock) for the
@@ -7868,8 +7363,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // screen, which the tick reads (GuiScoreViewer::take_gpu_page_report).
 
         if (media) {
-            // -- THE MEDIA PLAYER'S ROW (2026-10-26 night; the transport
-            //    flush right since 2026-11-10): the three keys at the left,
+            // -- THE MEDIA PLAYER'S ROW (2026-10-26; the transport
+            //    flush right, 2026-11-10): the three keys at the left,
             //    the scrub over the range's
             //    frames, the clock — the render
             //    player's items, painted by its own helpers and rules — and
@@ -7952,8 +7447,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             }
 
             // THE PAGE CELL where the player's clock stands: plain text
-            // since 2026-11-19 (send AA, the time fields unboxed the same
-            // way), reading "<ordinal> / <count>" — the shown page's ordinal
+            // (2026-11-19, as the time fields are), reading "<ordinal> /
+            // <count>" — the shown page's ordinal
             // WITHIN THE RANGE and the range's count (the architect's "a page
             // number of its own") — A LABEL, RIGHT-ALIGNED, its run's right
             // end on the slot's right edge (its text is no timestamp and its
@@ -7984,25 +7479,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             }
         }
     } else if (row_list) {
-        // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON since
+        // -- THE PICKER'S ROW (architect 2026-08-28; ONE BUTTON,
         //    2026-08-29): **Cancel**, or **Close** under the settings page
-        //    (kModalCancelLabel's rule, 2026-10-28 night), and NOTHING ELSE —
-        //    no label, no field, no OK. The list in the
-        //    band above is the whole question, a click on a row is the answer,
-        //    and the prompt's `<projects_path>/` prefix went with the field it
-        //    labelled.
+        //    (kModalCancelLabel's rule, 2026-10-28), and NOTHING ELSE —
+        //    no label, no field, no OK. The list
+        //    above is the whole question, a click on a row is the answer.
         //
         //    A LIST'S BUTTONS SIT FLUSH RIGHT (architect 2026-08-29, "if I'm
         //    using the picker my hand stays on the right"; "I am
         //    right-handed", 2026-08-28, on seeing the picker on the tablet),
-        //    the rule every word row keeps since 2026-10-14 (the layout
+        //    the rule every word row keeps (2026-10-14; the layout
         //    block above). With nothing to its left the row is that one
         //    button, ON THE MODAL FAMILY'S CONTROLS ROW (architect,
-        //    modal_box.h; the taskbar dialog carried it from 2026-10-10):
-        //    ALONE, FLUSH RIGHT, ITS FACE ENDING ON THE PANE'S LAST COLUMN
-        //    (x 2279 on the tablet, the well's last, the frame's; its cell on
-        //    the box's outer column).
-        //    THE TRIM PRESETS LIST'S ROW (2026-10-28 night) is the player's
+        //    modal_box.h): ALONE, FLUSH RIGHT, ITS FACE ENDING 6 W INSIDE THE
+        //    PANEL (modal_controls_seats).
+        //    THE TRIM PRESETS LIST'S ROW (2026-10-28) is the player's
         //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above
         //    (key_cluster_row_layout), and THE BPM FORM'S (2026-10-29) the
@@ -8011,14 +7502,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner  = AppState::ModalDialogOwner::Picker;
     }
 
-    // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28, the
-    //    player's relaid row): the word cluster's x's and widths are
+    // -- The button row. EVERY BUTTON PAINTS AT ITS OWN x (2026-08-28): the
+    //    word cluster's x's and widths are
     //    modal_word_buttons' (key_cluster_row_layout's for the trim presets
     //    list and the BPM form), and the PLAYER's and the SCORE VIEWER's
     //    branches above have written all of their own — one walk, several
     //    arrangements, and no second painter. --
     //
-    // EACH BUTTON'S STATE, ARC'S (send Z, 2026-11-19; materials.h's
+    // EACH BUTTON'S STATE, ARC'S (2026-11-19; materials.h's
     // key_state): LIT for the row's one checked button (Repeat One, `lit`)
     // and for a LIVE PRESS on any — armed with the pointer inside it — for
     // as long as the
@@ -8065,7 +7556,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                              app.face_fades.hovered == face_at(i));
     }
     // THE GLYPH KEYS ARE ARC'S LINKED BUTTONS AND THE WORD BUTTONS ARC'S
-    // TEXT BUTTONS (send Z, 2026-11-19; materials.h): a run of glyph keys
+    // TEXT BUTTONS (2026-11-19; materials.h): a run of glyph keys
     // standing one link pitch apart — the player's left cluster and its
     // transport, the score viewer's three and its pair or triple, the trim
     // presets list's highlight pair — is ONE LINKED GROUP (paint_linked_group,
@@ -8191,7 +7682,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // greyed at the range's first frame must not be published live by a
         // frame that repainted the clock alone. Every other owner's buttons
         // publish a constant true and need no gate. THE TRIM PRESETS LIST'S
-        // ROW TAKES THE SAME GATE (2026-10-28 night): its faces move with the
+        // ROW TAKES THE SAME GATE (2026-10-28): its faces move with the
         // highlight and the trim, whose acts damage the row, but a frame
         // whose clip missed a key must still not publish a bit it did not
         // paint. THE BPM FORM'S ROW TAKES IT TOO (2026-10-29), its RENDER
@@ -8241,27 +7732,22 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     cairo_restore(cr);
 }
 
-// (THE CHOICE EDITOR'S COMBO AND ITS LIST — paint_choice_combo,
-// paint_combo_list and paint_settings_choice, 2026-10-07 to 2026-10-14 —
-// went with the choice editor, architect 2026-10-14.)
-
 // -- GuiPaintHandler::paint_onscreen_keyboard ----------------------------
 //
 // THE GLASS'S KEY SURFACE (2026-08-27). Contract, gate and paint order are at
 // the declaration; the layout table, the geometry walk and the two lamps are at
 // onscreen_keyboard.h, which this body reads and never restates.
 //
-// THE KEYS ARE ONE GRID OF ARC'S BUTTON TONES WITH SHARED LINES (architect,
-// his K2 ruling; his approval of the picture Z_06; send AA's
-// stage D2, 2026-11-19; the design's §E, the mock kit's keyboard the
-// reference): the surface's TOP LINE `well_border` (Thunar's pane line
+// THE KEYS ARE ONE GRID OF ARC'S BUTTON TONES WITH SHARED LINES (architect
+// 2026-11-19; the kit's keyboard the reference): the surface's TOP LINE
+// `well_border` (Thunar's pane line
 // parting the keyboard from what stands above) over THE BAND on the body
 // tone `body_face`; in it THE GRID — every key row's outer rect
 // (onscreen_keyboard::for_each_grid_row: its keys and the one-W line round
 // them, neighbors sharing the line between them) in `well_border` (Arc's
 // $borders_color, 2B2E39), THE GRID'S CONVEX OUTER CORNERS rounded
 // kKeyCornerW (3 W) — the block's four, and a wider row's corner past a
-// narrower neighbor's end (rows 1 to 4 a unit wider than row 0 since UP and
+// narrower neighbor's end (rows 1 to 4 a unit wider than row 0 by UP and
 // DOWN, 2026-11-20 / 21: UP's top right) — the concave ones square; each
 // key's FACE `key_face` (444A58) on the walk's
 // rect, the gap between faces the line, a face on a convex corner rounded
@@ -8269,14 +7755,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // coverage stamp pass (cool_edit_paint.h), the caps and the drawings after
 // it. THE CAPS on their own device keys (`osk_key_w`, `osk_key_h`,
 // `osk_font_px`, untouched): REGULAR in THE KEYS FACE (GuiFace::Keys, the
-// `osk_font_px` tuning key's em in W, 12 by default; architect 2026-10-29
-// night; Regular since this stage, the design's §E and Z_06, the Bold of
-// 2026-11-19 before it), in `text` (D3DAE3), the cap band centered on the
+// `osk_font_px` tuning key's em in W, 12 by default; architect 2026-10-29;
+// Regular, architect 2026-11-19), in `text` (D3DAE3), the cap band centered on
+// the
 // face (redesign_baseline); THE GLYPH KEYS (onscreen_keyboard::cap_icon,
 // 2026-11-08) the program keys' drawing at its 16 W canvas centered
 // (paint_key_glyph). ARC'S STATES, ONE LOOK FOR TWO (`:active` and
-// `:checked` one in Arc): A LATCHED KEY — Shift while it is latched (sticky
-// since 2026-11-08) and the page key while the symbols page stands, the two
+// `:checked` one in Arc): A LATCHED KEY — Shift while it is latched (sticky,
+// 2026-11-08) and the page key while the symbols page stands, the two
 // lamps — AND A KEY UNDER PRESS (held BY SLOT, so the page key's own page
 // change keeps the face under the finger, same_slot) wear THE ACCENT `cue`
 // under the lit print `text_on_lit` (FFFFFF). A GREYED KEY — UP, DOWN, the
@@ -8299,8 +7785,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // a grey moves only with the editor session, key_live). NO TOOLTIP: a hint
 // has nowhere to hang here.
 //
-// A CAP IS A GLYPH, A WORD OR A CHARACTER (architect 2026-11-08, sessions
-// 95 / 96, reversing "no glyphs" of 2026-08-27 / 2026-10-29): the function
+// A CAP IS A GLYPH, A WORD OR A CHARACTER (architect 2026-11-08): the function
 // keys that act on the text wear their glyph (onscreen_keyboard::cap_icon
 // names which); Shift, Esc, Space and the page key say their words, the
 // character keys their characters (UTF-8 encoded through
@@ -8309,7 +7794,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 //
 // STATE-AXIS: every key's state is decided ONCE, from the two lamps and the
 // one held index this body reads at its head — compared as a SLOT, not an
-// index (onscreen_keyboard::same_slot, architect 2026-10-29 night) — and
+// index (onscreen_keyboard::same_slot, architect 2026-10-29) — and
 // the cap comes from the layout table's own derivations (cap_icon,
 // cap_word, shifted_char). There is no second list of what a key looks
 // like anywhere.
@@ -8511,7 +7996,8 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // whose rect never touched the band would be a claim about pixels this pass
     // did not write. Both edges break on that:
     //   * the SHOW — an editor or the player opens, its own route damages the
-    //     marker lane or the bottom row and nothing else, and a bit stamped
+    //     marker lane or the bottom icon row and nothing else, and a bit
+    //     stamped
     //     true there would let the comparator see agreement while the band
     //     still shows waveform;
     //   * the HIDE — the tenant closes, some unrelated narrow damage paints
@@ -8527,8 +8013,8 @@ void GuiPaintHandler::paint_keyboard_slot(cairo_t* cr, const GuiRect& exposed) {
     // the window's foot alone, the same rect on the show and the hide — held
     // whole by its edges' own damage (onscreen_keyboard::edge_damage_rect,
     // paid at reconcile_slot_standing); THE
-    // OVERLAY'S is the MODAL FAMILY'S PANEL while it stands — the view bar's
-    // top row through the controls row's top since 2026-10-14 (modal_box.h),
+    // OVERLAY'S is the MODAL FAMILY'S PANEL while it stands — the trim lane's
+    // top row through the controls row's top (modal_box.h, 2026-10-14),
     // whatever its listing's length (its fixed height) — and, with it gone,
     // the slot's damage rect (slot_damage_rect, the modal family's area), its
     // hide's own damage, which is what has to erase it. So each bit
@@ -8581,7 +8067,7 @@ void for_each_part_outside(const GuiRect& r, const GuiRect& hole, F&& f) {
 // (under the on-screen keyboard while it stands, paint_modal_dialog's cut,
 // architect 2026-11-20) — in the
 // well's line tone `well_border` (Arc's $borders_color, Thunar's pane
-// border; send AA's stage D2), and the interior ONE FLAT FILL in `pane`:
+// border), and the interior ONE FLAT FILL in `pane`:
 // THE VIEW's tone (`ruler_face`, Arc's $base_color) for the lists and the
 // three pages, the score viewer's `score_pane_face` its one
 // exception (the caller's answer, modal_box.h's head), no frame, no ring, no
@@ -8626,19 +8112,20 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 
 // -- THE LIST VIEW (paint_list_view) and GuiPaintHandler::paint_folder_overlay --
 //
-// THE LIST PANEL (2026-08-28; the modal family's box since 2026-10-14),
+// THE LIST PANEL (the modal family's box, 2026-10-14),
 // ONE PAINTER FOR EVERY CONTENT —
 // the render player's folders and wavs, the Open project picker's project
 // folders, the settings page's `key=value` lines (2026-10-28; no title
-// row, 2026-11-22), the value list's values (2026-10-28 night; a value as
-// the config spells it), the trim presets and the BPM form. Contract and gate are at the declaration; the geometry, the scroll
+// row, 2026-11-22), the value list's values (2026-10-28; a value as the
+// config spells it), the trim presets and the BPM form. Contract and gate
+// are at the declaration; the geometry, the scroll
 // clamp and the one row walk are at folder_overlay.h, which this body reads
 // and never restates; the row table and every state bit are
 // AppState::folder_overlay.
 //
 // THE VIEW IS THUNAR'S DETAILS LIST UNDER ARC (architect 2026-11-19: "use
-// tunar", his approval of the picture Z_04; the design at 12 W text, the
-// mock kit's list_row / list_view the reference): THE VIEW the
+// tunar"; at 12 W text, the kit's list_row / list_view the reference): THE
+// VIEW the
 // canvas's tone (`ruler_face`, Arc's $base_color 404552) between the box's
 // two lines (paint_modal_box), edge to edge, NO SCROLLBAR, no row
 // separator; the rows on folder_overlay.h's height, and the faces:
@@ -8649,9 +8136,7 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            accent 5294E2) under the
 //                            lit print `selected_text` (FFFFFF)
 //   PRESSED               -> THE SAME LOOK: Thunar is single-click, a
-//                            pressed row a selected one (the lighter press
-//                            row of 2026-11-05, Live's SelectionBackground
-//                            under SelectionForeground, retired with it)
+//                            pressed row a selected one
 //   HOVERED               -> a resting row a tap would act on, under the
 //                            hovering pen (architect 2026-11-21: "I'd
 //                            like to add hover"; its tone the same
@@ -8677,8 +8162,8 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 //                            name in `text_dim` (7E838F)
 // NO FOCUS FRAME (architect 2026-10-23): the lit row is the only sign of
 // the highlight.
-// THE ROW'S DRAWING AND NAME — THE LIST'S OWN SEATS (architect 2026-11-22,
-// send KK: "we add icons for the trim presets. We add the little bookmark.
+// THE ROW'S DRAWING AND NAME — THE LIST'S OWN SEATS (architect 2026-11-22:
+// "we add icons for the trim presets. We add the little bookmark.
 // For BPM, we add the little note. And for the settings, we add the gear.
 // But this also goes for presets, for settings sub pages, like true colors.
 // Text inputs don't get an icon."; the row and its drawing Thunar's at 9 pt,
@@ -8687,11 +8172,11 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // kListDrawingMarginW = 6 W FROM THE VIEW'S LEFT EDGE, measured on the box,
 // never on the drawing's ink (the ink keeps its own offset inside the box,
 // icons::ink_in_box), and the name 6 W after the box (kListDrawingGapW,
-// architect 2026-11-22, send II: "increase the distance b/w icon and text in
+// architect 2026-11-22: "increase the distance b/w icon and text in
 // lists, eg player", "6 w"): the name's pen 6 + 16 + 6 = 28 W, 56 device px
 // on the tablet. THE DRAWING IS THE ROW'S (list_row_drawing, below, the one
 // seat): a folder or project row Folder, a wav row AudioHeadphones, THE
-// HEADPHONES (architect 2026-11-22, send MM: PLAYER's drawing, the
+// HEADPHONES (architect 2026-11-22: PLAYER's drawing, the
 // render player's opener, icons.h's head); every other row its
 // LISTING'S OPENER KEY'S drawing (is_folder_overlay_opener's pairs, read off
 // redesign_button_icon so the row can never drift from its key) — the
@@ -8705,13 +8190,13 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // drawing unchanged under the highlight, as Thunar's) and, ON AN INERT ROW
 // (the settings page's `scale` and `bpm`), in that row's own dim print,
 // `text_dim`, the tone its name paints in — the drawing follows its row's
-// print (architect 2026-11-22, send KK). The name's pen and its mask's ends
+// print (architect 2026-11-22). The name's pen and its mask's ends
 // are this column's only readers — the press and the hover take the whole
 // row, folder_overlay::row_at; the name Regular 12 W (GuiFace::Body) on its
 // row's line-box baseline, +16 W of the 24 (folder_overlay::kListRowFace /
 // row_baseline_px, the seat the head pad reads too). THE RIGHT CUT IS THE
 // BOX'S MARGIN'S TWIN: a name is cut kListDrawingMarginW = 6 W inside the
-// view's right edge on its own mask (architect 2026-11-22, send KK: "it
+// view's right edge on its own mask (architect 2026-11-22: "it
 // should be 6W, since on the left, the icon will be in the 6W. So on the
 // right, the text should be clipped at 6W."); the questions, the progress
 // page and the value sub-page keep the page margin's 12 W. THE LIT ROW'S BAR
@@ -8893,7 +8378,8 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
     // overlay stays open underneath, its rows, highlight and scroll
     // untouched, repainted when the page leaves (the leave damages the whole
     // window). Its rows answer no press meanwhile: the prompt's gate ranks
-    // above the band's claim (on_button_press), and no overlay stands under
+    // above the overlay's claim (claim_folder_overlay_press, on_button_press),
+    // and no overlay stands under
     // the progress page (every batch is dispatched with its overlay closed,
     // AppState::ModalDialogOwner's block). The slot's standing bit is
     // the dispatch's, unmoved (paint_keyboard_slot: the overlay stands).
@@ -8921,7 +8407,7 @@ void GuiPaintHandler::paint_folder_overlay(cairo_t* cr, const GuiRect& exposed) 
 // the well's foot (bottom lane 2): THE BODY TONE across them wherever the
 // canvas does not stand, and over it THE WELL'S LINES in those rows — the
 // lane's foot line and the well's foot (paint_well_frame_rows). Edge to edge
-// since 2026-11-19 (send Z: the frame's sides and margins retired), so on a
+// (2026-11-19: no frame sides, no margins), so on a
 // full window the canvas covers every column between the two lines. It
 // runs before render_canvas. THE HOLE (2026-10-13, canvas_sink.h's
 // transparency invariant): the fill skips `hole`, the canvas's paint area,
@@ -8953,37 +8439,38 @@ void paint_canvas_column_frame(cairo_t* cr, const AppState& app,
 // -- THE AS-PAINTED FINGERPRINTS AND THE OWED CHECK (2026-10-13) ----------
 //
 // The contract is at GuiUpperRowsFingerprint (app_state.h): a viewport step
-// damages the viewport's lanes and owes the rows above them, and row 8's
-// clock cell under the zoom appliers, a CHECK; this is the check and the
+// damages the viewport's lanes and owes the rows above them, and the bottom
+// icon row's clock cell under the zoom appliers, a CHECK; this is the check and
+// the
 // two functions it compares with.
 
 // WHICH FLOATING SURFACE OWES THE ROWS THE CHECK SPARES — the upper rows or
 // the clock cell — THEIR WHOLE REPAINT. Re-derived from on_redraw's paint
-// sequence 2026-10-13 and again 2026-11-19 (send BB): past the lane
+// sequence (2026-11-19): past the lane
 // painters, the ground and the canvas column (each inside its own rows), the
 // passes that paint OUTSIDE their lane are the floating surfaces — the
 // notification cards (from the window's top right over the title bar and the
-// top icon row, notifyd's seat since send BB, notification_stack_bound),
+// top icon row, notifyd's seat, notification_stack_bound),
 // the tooltip (under a top-row key's face, above every other owner's,
 // tooltip_box_rect). (The on-screen
 // keyboard stands over the app's last rows, nothing relaid (architect
 // 2026-11-20), the
 // clock's row yielding under it, and the folder overlay and the modal family's box at
-// the view bar's top row, directly under the band (modal_box.h,
+// the trim lane's top row, directly under the top icon row (modal_box.h,
 // 2026-10-14) — a question's page and the progress page in it, their
 // answers on the clock's row as an overlay's row is
 // (GuiClockFingerprint::yields), a line editor's value sub-page in it too;
 // the flag surface's blit over the top strip
 // is transparent above the marker lane.)
-// THE TERM (2026-10-13, per family and per owner since send BB, architect
+// THE TERM (per family and per owner, architect
 // 2026-11-19: "ok to implement the fix you suggested for the power draw by
 // card"; a struck card stands for minutes over exactly these rows, and the
 // pen rests on PLAY / STOP through a FOLLOW play with TIPS lit): a floater
 // whose pixels or publications a viewport step can change in the rows the
 // check spares makes the check declare THE RECT THE ROUTES DECLARE — the
 // window's top through the owed foot (damage_window_top_rows) — whole, so
-// the floater is repainted there with the rows under it. THE REASON
-// (94d92f3b): "a floater's own publications ride a clip that covers it" —
+// the floater is repainted there with the rows under it. THE REASON:
+// "a floater's own publications ride a clip that covers it" —
 // the tooltip, the one floater it binds, publishes its rect and words as
 // painted only under a clip that covers its extent (paint_shift_tooltip's
 // PUBLISHED AS PAINTED), and a lanes-only rect cuts a box that crosses the
@@ -9094,7 +8581,7 @@ GuiRect hull_union(const GuiRect& a, const GuiRect& b) {
 }
 } // namespace
 
-// THE FLOATERS' HULLS ARE THE FRAME'S OWN PUBLICATIONS (send BB, 2026-11-19;
+// THE FLOATERS' HULLS ARE THE FRAME'S OWN PUBLICATIONS (2026-11-19;
 // the list's field and its readers at canvas_sink.h's GuiCanvasDrawList::
 // floaters): EMPTY AT THE FRAME'S FIRST RECT (on_redraw's canvas block) and
 // WIDENED AFTER EACH on_redraw RUN, once its floating surfaces have painted
@@ -9136,11 +8623,12 @@ void GuiPaintHandler::widen_floater_hulls(GuiFloaterHulls& h) {
 //   * the GROUND (render_background): the palette and the window's
 //     geometry — the globals, with the scale every length and the one face
 //     read;
-//   * THE TITLE BAR (paint_title_bar, the band's first rows since
-//     2026-11-19): the right group the tick composed (AppState::logo_legend);
+//   * THE TITLE BAR (paint_title_bar, the first rows of the top icon
+//     row's lane): the right group the tick composed (AppState::logo_legend);
 //     the note, the brand, the well's columns and the lane's rect are the
-//     globals' and the band's;
-//   * THE TOOLBAR BAND (paint_icon_row): its lane (the pads among the
+//     globals' and the top icon row's;
+//   * THE TOP ICON ROW (paint_icon_row; the fingerprint's `band`): its
+//     lane (the pads among the
 //     lane's inputs, its rect moving with it); the `h` view; the standing
 //     members in the walk's order and their runs (icon_row_walk, the right
 //     run after them); per member the enabled and
@@ -9154,7 +8642,8 @@ void GuiPaintHandler::widen_floater_hulls(GuiFloaterHulls& h) {
 // NONE OF THEM IS A PAINT-TIME PUBLICATION of another surface or the
 // displayed basis that on_redraw's head promotes (re-derived by a call-graph
 // walk 2026-10-13: the roster predicates reach the promoted map only through
-// row 8's Drop and Left / Right arms), so the fingerprint the pre-paint
+// the bottom icon row's Drop and Left / Right arms), so the fingerprint the
+// pre-paint
 // check computes is the one the frame paints.
 GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
     GuiUpperRowsFingerprint fp;
@@ -9313,10 +8802,6 @@ void GuiPaintHandler::settle_owed_lane_damage() {
 // -- GuiPaintHandler::on_redraw ------------------------------------------
 
 void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
-    // (The monospace grid measure that opened every frame is gone with the face
-    // — row 7. Nothing in the product measures text outside a shaping pass now,
-    // and every such pass owns its own font selection.)
-
     // THE FLAG STASH PROMOTES WITH THE FLAG SURFACE (architect 2026-09-24,
     // strictly as-painted; the contract is at AppState::flag_hit_rects). The
     // rebuild staged the pair when it drew the offscreen surface; this frame
@@ -9341,11 +8826,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // frame paints around it (the live trim pass, the flag editor overlay, the
     // marker stems, the
     // playhead) all land on the SAME map — the one the committed items were
-    // built against. Promoting at the frame's END instead let the overlays paint
-    // against the OLD map on the very frame that first blit the rebuilt cache,
-    // then advanced the map silently with no further damage, so those overlay
-    // pixels could stay misplaced (and a stationary hover could keep naming a
-    // marker whose flag had moved away). Promote the staged value the last item
+    // built against. Promoting at the frame's END instead would let the
+    // overlays paint against the OLD map on the very frame that first blits
+    // the rebuilt cache, then advance the map silently with no further
+    // damage, so those overlay pixels could stay misplaced (and a stationary
+    // hover could keep naming a marker whose flag had moved away). Promote the
+    // staged value the last item
     // rebuild left, once — staged_displayed_valid clears on the first damage rect
     // of the frame, so the remaining rects are no-ops; idle frames with no staged
     // value do nothing. A rebuild that stages a CHANGED pair always
@@ -9358,20 +8844,17 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // below, whose committing frame is some later frame: the deferral records
     // the owed rect on deferred_basis_repaint_due (app_state.h) and the promote
     // is BLOCKED until that bit is honored, so the committing frame is by
-    // construction one carrying the strip+waveform rect (since 2026-10-13 the
-    // viewport lanes' rect from the band's foot, the rows above owed a
+    // construction one carrying the strip+waveform rect (the
+    // viewport lanes' rect from the top icon row's foot, the rows above owed a
     // fingerprint check, damage_window_top_rows; every item-basis surface lies
-    // below the band's foot). No input dispatches
+    // below that foot). No input dispatches
     // mid-loop (single-threaded) and the whole frame still commits atomically
     // after the loop in GuiPlatform::paint_one_frame, so a press only ever reads
     // the last COMMITTED frame's geometry — that guarantee is unchanged.
     //
-    // NOTHING SUBSCRIBES TO THIS EDGE any more, and it no longer publishes one:
-    // the hover refresh hook that hung off it re-resolved the marker hover cache
-    // against the just-promoted map, and row 5 deleted the hover cache; the
-    // displayed_map_gen counter that outlived it as a bare record went too
-    // (2026-08-02, write-only). The overlays below simply read the promoted
-    // basis. A future subscriber hangs its key here, on this block.
+    // NOTHING SUBSCRIBES TO THIS EDGE and it publishes nothing: the overlays
+    // below simply read the promoted basis. A future subscriber hangs its key
+    // here, on this block.
     //
     // THE PROMOTE ITSELF IS INSIDE THE DISPLAYED-BASIS FREEZE (2026-08-22, the
     // THIRD consumer of displayed_basis_frozen — membership at the predicate,
@@ -9423,9 +8906,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // basis accessors in app_state.h) keeps naming the same old pair for the
     // whole window.
     //
-    // AND THE PROMOTE WAITS FOR THE DEBT TOO (2026-08-22, the same day's final
-    // verification round): the deferral OWES a strip+waveform repaint (the
-    // viewport lanes' rect from the band's foot since 2026-10-13, the rows
+    // AND THE PROMOTE WAITS FOR THE DEBT TOO (2026-08-22): the deferral OWES
+    // a strip+waveform repaint (the
+    // viewport lanes' rect from the top icon row's foot, the rows
     // above it owed a fingerprint check, damage_window_top_rows; the bit set
     // below), and a basis may not promote onto pixels the frame did not
     // repaint. So the promote's condition is the freeze AND the outstanding
@@ -9484,7 +8967,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     note_upper_rows_painted(GuiRect{x, y, w, h});
 
     // THE CANVAS IS THE GPU'S (2026-10-13; canvas_sink.h's head owns the
-    // rule; the one road since 2026-10-30): the canvas's paint area — the
+    // rule; the one road, 2026-10-30): the canvas's paint area — the
     // waveform area less the keyboard's slice, or nothing under the modal
     // family's box (onscreen_keyboard::waveform_paint_area), `canvas_paint`
     // — is left to the GPU: the chrome ground and the column's face skip it,
@@ -9569,18 +9052,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // the canvas's paint area; the well's lines then take their tone
     // (paint_canvas_column_frame, above), and the waveform area is the GPU's
     // (the block above): its `waveform_canvas` ground with the horizontal
-    // grid over it (render_canvas, render.h's row-6 canvas paragraph) is the
+    // grid over it (render_canvas, render.h's THE WAVEFORM block's canvas
+    // paragraph) is the
     // list's first record, so a cold frame (loading, no audio, or no plate
     // before the first worker publish) shows canvas where the waveform will
     // be rather than a chrome-colored hole. THE CENTER LINES PAINT WHENEVER
     // THE GRID DOES and THE STEREO DIVIDER LIKEWISE (build_canvas_list's
-    // `plate_branch`, render.h's row-6 canvas paragraph). The face skips the
+    // `plate_branch`, the same paragraph). The face skips the
     // canvas's paint area and one CLEAR empties it, so its pixels are alpha 0
     // until an overlay paints over them (canvas_sink.h's transparency
     // invariant).
     //
     // THE CLEAR OF AN ALREADY-CLEAR AREA IS SKIPPED (2026-10-14), OUTSIDE THE
-    // FLOATERS' HULLS (send BB, 2026-11-19: a standing floater costs only
+    // FLOATERS' HULLS (2026-11-19: a standing floater costs only
     // where it stands): the GUI keeps, in the paint handler and never from
     // the platform's upload state, whether the backbuffer's canvas paint
     // area is KNOWN CLEAR OUTSIDE THE LAST PAINTED FRAME'S HULLS
@@ -9605,8 +9089,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     WELL, re-derived from the passes below (2026-10-14; 2026-11-20),
     //     are the cards (paint_notifications) and the
     //     tooltip (paint_shift_tooltip) — the two floater families, each
-    //     inside its hull (the pull-downs one more until
-    //     2026-10-21); the keyboard (paint_keyboard_slot) paints over the
+    //     inside its hull; the keyboard (paint_keyboard_slot) paints over the
     //     area's foot, which waveform_paint_area cuts off the area;
     //     the modal family's box — the folder overlay's
     //     (paint_keyboard_slot), a question's page, the progress page, a
@@ -9615,7 +9098,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     //     sub-page's foot — empties the area (nothing is cleared or skipped
     //     under it); the column's face and its two
     //     wells' rings above skip the area (its hole, a clip);
-    //     every other pass keeps to its own lane (the band and row 8;
+    //     every other pass keeps to its own lane (the icon rows;
     //     paint_trim, the ruler and the flag blit in the top strip; the flag
     //     editor's field in the marker lane). Nothing writes the backbuffer
     //     between frames (the
@@ -9673,8 +9156,8 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         }
     }
 
-    // THE TWO REDESIGNED TOP BUTTON ROWS AND THE UNIFIED BOTTOM ROW PAINT
-    // ON EVERY FRAME
+    // THE TITLE BAR AND THE TOP ICON ROW (one painter, paint_icon_row) AND
+    // THE BOTTOM ICON ROW PAINT ON EVERY FRAME
     // CLASS, deliberately OUTSIDE
     // the loading / total>0 branches below: they are the surfaces with no
     // dependence on the loaded audio, and their buttons are claimed ABOVE the
@@ -9688,14 +9171,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // Each is gated on its OWN exposure rather than run unconditionally like the
     // canvas ground above: these passes shape labels through HarfBuzz, which the
     // outer Cairo clip would not elide, so a narrow per-frame playhead damage
-    // must not pay for them. Nothing painted after this point touches the two
-    // top button lanes (the flag cache is transparent over them and lands
-    // only on its own band, paint_flag_annotations; every other pass owns a
-    // lane below them), so painting them first overdraws nothing.
+    // must not pay for them. Nothing painted after this point touches the
+    // title bar or the top icon row (the flag cache is transparent over them
+    // and lands only on the marker lane, paint_flag_annotations; every other
+    // pass owns a lane below them), so painting them first overdraws nothing.
     // GAP 1 has no painter: it is window ground, render_background's erase
     // above (main.cpp's vertical rule).
     //
-    // THE BOTTOM ROW JOINS THEM (row 7): it is audio-independent in the same
+    // THE BOTTOM ICON ROW JOINS THEM: it is audio-independent in the same
     // sense — with no source the timestamp is empty and no tab is named
     // (the open's hold's one frame, platform.h's head). Nothing painted
     // later overlaps it except the floating surfaces, which paint over
@@ -9717,21 +9200,20 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         if (rects_intersect(exposed, top_icon_row_area(app))) {
             paint_icon_row(cr);
         }
-        // THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged) is one
+        // THE BOTTOM ICON ROW is one
         // exposure and one painter: paint_bottom_strip grounds the lane and
         // paints the button cluster + clock through its
         // paint_bottom_row_buttons_and_clock half (audio-independent chrome
         // exactly like the two top rows — the press claim sits above the
         // pointer path's loading guard, and the painter publishes the hit
         // rects the claim reads, so it must paint on every frame class its
-        // lane is exposed on). Its per-CELL exposure gate went with the status
-        // chain on 2026-08-13: the row shapes no text but the clock's one
-        // memoised cell now, so a narrow clock or button damage has nothing
-        // left to be spared.
+        // lane is exposed on). It has no per-CELL exposure gate: the row
+        // shapes no text but the clock's one memoised cell, so a narrow clock
+        // or button damage has nothing left to be spared.
         if (rects_intersect(exposed, bottom_row_area(app))) {
             paint_bottom_strip(cr);
         }
-        // THE STATUS BAR (send Z, 2026-11-19): audio-independent chrome on
+        // THE STATUS BAR (2026-11-19): audio-independent chrome on
         // the window's foot, painted wherever its lane is exposed but under
         // the on-screen keyboard (paint_status_bar).
         if (rects_intersect(exposed, status_bar_area(app))) {
@@ -9797,19 +9279,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      line through the well's foot round the hole —
         //      then render_canvas — the waveform area's ground and
         //      the horizontal grid (above, unconditional; 2026-10-09; no
-        //      vertical grid, render.h's row-6 canvas paragraph) — and, on a
+        //      vertical grid, render.h's THE WAVEFORM block's canvas
+        //      paragraph) — and, on a
         //      frame with no audio loaded (no source, or a load running:
         //      !plate_branch), THE CENTER LINES straight over it
         //      (render_center_lines), so the grid never stands without them,
         //      then THE STEREO DIVIDER'S ROWS (render_waveform_divider,
         //      2026-10-16).
-        //   3. the toolbar band and the unified bottom row (its
+        //   3. the top icon row and the bottom icon row (its
         //      chrome, buttons, clock and the tab's name in one painter),
         //      and the status bar under it (paint_status_bar),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing
-        //      below them paints on). (THE PROGRAM'S FRAME, paint_program_frame,
-        //      2026-10-10 to 2026-10-22, is retired.)
+        //      below them paints on).
         //   4. waveform plate -> THE CENTER LINES over the ink
         //      (render_center_lines, architect 2026-10-09 evening; with audio
         //      loaded they paint here and not at step 2, a null plate's frame
@@ -9821,16 +9303,16 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      order changes no pixel; UNDER every vertical line, steps 4's
         //      hover line through 11, each crossing it as any grid line,
         //      architect 2026-11-02) -> THE WAVEFORM'S HOVER LINE
-        //      (paint_hover_line, architect 2026-11-21, send FF: the pen's
+        //      (paint_hover_line, architect 2026-11-21: the pen's
         //      would-be playhead in the palette's `hover_line`, UNDER EVERY
         //      OTHER LINE — the ring, the cursor's, the stems, the scanner,
         //      the anchor stem, then the sweep highlight over it;
         //      render.h's render_hover_line) -> phase-reset overlay ring.
-        //   5. LIVE TRIM, one pass, entirely inside the trim lane: Cool
-        //      Edit's view bar and its span (2026-10-09; no cursor mark in
-        //      the bar, ~14:30) — on a frame with no audio its ground step
+        //   5. LIVE TRIM, one pass, entirely inside the trim lane: the
+        //      trim bar and its span (2026-10-09; no cursor mark in
+        //      the bar) — on a frame with no audio its ground step
         //      alone, the trim lane's ground, trough and lines (this
-        //      branch's `else`, architect 2026-11-21, send GG).
+        //      branch's `else`, architect 2026-11-21).
         //   6. the CURSOR's CANVAS LINE (paint_playheads, solid, the
         //      palette's static `playhead_line` — the head is the ruler
         //      pass's, step 9).
@@ -9842,7 +9324,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //   9. the RULER lane — Cool Edit's flipped ruler, its ticks and
         //      digits — AND, in the same pass, the HOVER LINE'S TRIANGLE
         //      (`hover_line`, over the ticks and digits, under the head;
-        //      render.h's render_hover_line, architect 2026-11-21, send GG),
+        //      render.h's render_hover_line, architect 2026-11-21),
         //      then the cursor's HEAD (`playhead_head`, the triangle on the
         //      ruler's bottom rows, over the ticks, the digits and the hover
         //      line's triangle, its edge blended over them) and the MARKER
@@ -9855,18 +9337,19 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      only), the canvas list's LAST record: a blend toward white
         //      over everything steps 2 through 11 put in the waveform area.
         //  12. the KEYBOARD SLOT (paint_keyboard_slot, outside this branch —
-        //      the on-screen keyboard since 2026-08-27 or the folder overlay
-        //      since 2026-08-28, one tenant at a time), whose opaque ground
+        //      the on-screen keyboard or the folder overlay, one tenant at a
+        //      time), whose opaque ground
         //      covers the waveform area's lower part, the well's foot, the
         //      bottom icon row and the status bar (the keyboard, on the
         //      window's last rows, nothing relaid, architect 2026-11-20 — so
         //      of step 3 the bottom row's and the status bar's tenants yield
         //      under it) or
-        //      EVERYTHING FROM THE VIEW BAR'S TOP ROW TO ROW 8'S TOP (the
-        //      overlay, the modal family's box since 2026-10-14, modal_box.h
-        //      — so of steps 3 through 11 only the icon row's lane, the
-        //      band greyed but for what it leaves live, and
-        //      row 8's rows under the controls stay in view) and so follows
+        //      EVERYTHING FROM THE TRIM LANE'S TOP ROW TO THE BOTTOM ICON ROW'S
+        //      TOP (the overlay, the modal family's box, modal_box.h
+        //      — so of steps 3 through 11 only the top icon row, greyed but
+        //      for what it leaves live, and
+        //      the bottom icon row under the controls stay in view) and so
+        //      follows
         //      every pass above.
         //      Which is why the WAVEFORM passes do
         //      not paint there at all: the list's clip is the waveform's
@@ -9874,16 +9357,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      just above this block), which the overlay's band reduces to a
         //      ZERO-HEIGHT rect
         //      — it starts above the waveform's own top. THE LANES ARE NOT
-        //      SPARED THAT WAY and deliberately so: rows 1..7 paint their
-        //      exposure as they always have and the panel then covers them,
+        //      SPARED THAT WAY and deliberately so: the rows above the canvas
+        //      paint their exposure and the panel then covers them,
         //      because their painters own the roster's HIT RECTS and a row
         //      that skipped a frame would strand them (the reasoning is at
         //      step 3). The overdraw is a mode's cost, paid only while the
-        //      panel stands. Both tenants stand inside the program's frame
-        //      (2026-10-14; over its columns and its bottom row from
-        //      2026-10-10 to then).
-        //  13. the MODAL DIALOG (paint_modal_dialog, 2026-08-12; since
-        //      2026-10-14 here: a question's page, the progress page, a
+        //      panel stands.
+        //  13. the MODAL DIALOG (paint_modal_dialog: a question's page, the
+        //      progress page, a
         //      line editor's value sub-page and the score viewer's
         //      box over everything from the line under the top icon row
         //      down, which the waveform's painted rect leaves out, the score
@@ -9897,8 +9378,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      modal's box) — the floating surfaces, after
         //      every pass above and outside this branch — and LAST the
         //      TOOLTIP, which reads the modal's stash.
-        // (The bottom row left the tail of this sequence in row 7 — it paints
-        // with the other redesigned rows at step 3, on every frame class, and
+        // (The bottom icon row paints at step 3, on every frame class, and
         // overlaps none of these passes.)
         // Two structural rulings live in this sequence:
         //   THE RECOLOR MODEL (architect 2026-07-26) — a highlight REPLACES
@@ -9918,9 +9398,9 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //     stem in the cursor's line's place (2026-11-04; the line under
         //     it not drawn, 2026-11-14), the ruler's
         //     head marking the playhead; its head in the ruler and the cue's
-        //     chip in the marker lane never meet. (2026-08-01 lifted the SCANNER above the
-        //     stems, so the moving line does not blink out at every marker it
-        //     crosses.)
+        //     chip in the marker lane never meet. (The SCANNER paints above
+        //     the stems (2026-08-01), so the moving line does not blink out
+        //     at every marker it crosses.)
 
         // THE CANVAS PASSES ARE NOT PAINTED HERE: the frame's list carries
         // them, built once, whole, in this order (build_canvas_list) — the
@@ -9928,8 +9408,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         // cursor's line, the selection stems, the scanner, the zoom anchor,
         // the sweep highlight.
 
-        // LIVE TRIM PASS — the old trim-stem-cache slot, now covering ALL trim
-        // pixels (the view bar whole).
+        // LIVE TRIM PASS — ALL the trim pixels (the trim bar whole).
         // Gated on EITHER half being exposed: render_background erased every
         // exposed top-strip pixel above, so a strip-only damage (hover text, a
         // flag change) must repaint the strip-resident trim pixels; the outer
@@ -9953,7 +9432,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     } else if (const GuiRect top_strip = top_strip_area(app);
                rects_intersect(exposed_rect, top_strip)) {
         // THE LANES' OWN GROUNDS ON A FRAME WITH NO AUDIO (architect
-        // 2026-11-21, send GG: "on loading a project, the trim/ruler/marker
+        // 2026-11-21: "on loading a project, the trim/ruler/marker
         // lane don't use their own bg but a different color. all of them
         // should be empty but have their actual bg color"): no source, or a
         // load running — in practice the open hold's one frame, a fresh
@@ -9974,12 +9453,12 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         paint_ruler_row(cr, /*content=*/false);
     }
 
-    // THE KEYBOARD SLOT (the on-screen keyboard since 2026-08-27, the folder
-    // overlay since 2026-08-28 — one band, one tenant at a time), between the
+    // THE KEYBOARD SLOT (the on-screen keyboard or the folder overlay — one
+    // band, one tenant at a time), between the
     // waveform passes above and the two floating surfaces below (the cards
     // and the tooltip) — which is exactly where it sits in the picture. The overlay OVERLAYS the waveform
-    // with its own opaque ground — the MODAL FAMILY'S PANEL since 2026-10-14
-    // (the view bar's top row down to the controls row, modal_box.h) — and
+    // with its own opaque ground — the MODAL FAMILY'S PANEL
+    // (the trim lane's top row down to the controls row, modal_box.h) — and
     // the keyboard OVERLAYS the canvas's foot, the well's foot, the bottom
     // icon row and the status bar on the window's last rows (architect
     // 2026-11-20), so the slot must follow every pass that paints there
@@ -10000,7 +9479,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // bit reads; with it up the outer Cairo clip makes a narrow damage cheap.
     paint_keyboard_slot(cr, GuiRect{x, y, w, h});
 
-    // THE MODAL DIALOG PAINTS NEXT (2026-08-12; here since 2026-10-14): a
+    // THE MODAL DIALOG PAINTS NEXT (2026-10-14): a
     // question's page, the progress page, a line editor's value sub-page
     // and the score viewer's box over the
     // canvas column, and the controls row — an overlay's, or a page's
@@ -10011,16 +9490,13 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // coexist with the flag editor (ended by any dialog's open). UNCONDITIONAL for the floating surfaces'
     // own reason: it publishes the geometry the pointer path reads
     // (AppState::modal_dialog), and a run that skipped would strand a stale
-    // box. (From 2026-08-12 it painted after the dropdown, last but the
-    // tooltip, the modal on the bottom row below every floater's reach; the
-    // taskbar overlay's line and ground, paint_bottom_overlays, stood between
-    // the slot and the floaters 2026-10-10 to 2026-10-14.)
+    // box.
     paint_modal_dialog(cr);
 
     // THE FLOATING SURFACES PAINT TOPMOST — after EVERY pass above, including
     // the waveform, because they hang outside their strips (the cards from
     // the window's top right down over the title bar, the top icon row and
-    // what lies under them, send BB; the tooltip under a top-row key's face and above
+    // what lies under them; the tooltip under a top-row key's face and above
     // every other owner's) and overlap whatever is
     // under them. They are NOT exposure-gated the way the rows are: each
     // writes the rect that stands (or a zero rect) on every run, and a run that
@@ -10031,8 +9507,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // last drew it otherwise; paint_notifications' head), and paint BELOW
     // the tooltip and ABOVE the modal (2026-10-14, the modal's block above):
     // a hint the pointer just raised belongs on top of a message, and a
-    // message on top of the box it answers. (The Settings dropdown painted between the cards
-    // and the tooltip until it retired, 2026-10-21.)
+    // message on top of the box it answers.
     //
     // THE OPEN FLAG EDITOR'S BOX PAINTS HERE, ahead of those two and after every
     // pass above — including the flag blit it must cover — and UNCONDITIONALLY,
@@ -10044,14 +9519,14 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
     // missing.
     render_flag_editor_box(cr, app, audio);
     // THE NOTIFICATION CARDS (2026-08-29) paint after the flag editor's box:
-    // above every lane, the waveform, the keyboard slot, the folder overlay's
-    // band and the modal family's box (2026-10-14), below the tooltip, the
+    // above every lane, the waveform, the keyboard slot's tenants and the
+    // modal family's box (2026-10-14), below the tooltip, the
     // pointer-transient floater. Unconditional for the floating surfaces'
     // reason: it publishes the geometry the pointer path reads.
     paint_notifications(cr);
 
-    // THE TOOLTIP IS LAST OF ALL since 2026-08-13, when the MODAL's buttons
-    // took hints of their own: this body READS the modal stash
+    // THE TOOLTIP IS LAST OF ALL, the MODAL's buttons carrying hints of their
+    // own: this body READS the modal stash
     // paint_modal_dialog publishes — the hovered dialog button's composed
     // hint and its rect — so
     // running after it is what makes the hint hang off the box THIS frame
@@ -10137,8 +9612,8 @@ void GuiPaintHandler::on_resize(int w, int h) {
 
     // A zoom level valid at the old width may exceed the per-file effective
     // ceiling at the new width. The level ceiling and the viewport clamp both
-    // live in clamp_viewport_start now; the resize keeps only its TRIGGER role
-    // and delegates. When the level actually moved the reflow changed spp under
+    // live in clamp_viewport_start; the resize is only their TRIGGER and
+    // delegates. When the level actually moved the reflow changed spp under
     // the playback predictor, so re-anchor it. (A level move here cannot
     // change the magnification — the gain gate reads the magnification lamp
     // alone and no zoom term, waveform_magnified — so the

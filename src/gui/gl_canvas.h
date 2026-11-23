@@ -68,14 +68,14 @@ public:
     // blended only inside the list's floater hulls (canvas_sink.h's
     // GuiCanvasDrawList::floaters).
     // `list` the GUI's canvas frame (its px the surface's: the app paints no
-    // window frame since 2026-10-24), null before the first, its page's
+    // window frame), null before the first, its page's
     // REPORT written here (GuiCanvasPage, canvas_sink.h); `surface_w` x
     // `surface_h` the surface's size, the viewport — the platform hands its
     // BACKBUFFER'S size, which is the whole surface's (each present's comment
     // says why not EGL's own answer). FALSE, with no GL call made, when there
     // is no texture yet or the backbuffer has no data: the platform then
     // swaps nothing and keeps its damage. The platform swaps on true.
-    // EVERY FRAME IS DRAWN WHOLE (architect 2026-11-16 night, send S; THE
+    // EVERY FRAME IS DRAWN WHOLE (architect 2026-11-16; THE
     // WHOLE DRAW at the definition): the damage narrows the upload alone.
     bool present_frame(cairo_surface_t* back, std::span<const GuiGlRect> damage,
                        GuiCanvasDrawList* list,
@@ -132,7 +132,7 @@ private:
     // attribute locations are the vertex shader's layout qualifiers, so a
     // rebuild keeps it), the plate's bounds texture and its CAPACITY
     // (columns_w_ x columns_h_, which only grows: upload_list's rule,
-    // architect 2026-11-14, send G) — made with
+    // architect 2026-11-14) — made with
     // the texture program, living in the context — and the instances' count
     // and the list generation they were made from.
     // THE BOUNDS TEXTURE'S KEY (2026-10-14, upload_list's rule): whether its
@@ -156,7 +156,7 @@ private:
     bool         columns_uploaded_    = false;
     uint64_t     columns_revision_    = 0;
     std::vector<std::pair<int, int>> columns_spans_;
-    // THE GPU PAGE'S OBJECTS (architect 2026-10-27, "1 a"; the request and
+    // THE GPU PAGE'S OBJECTS (architect 2026-10-27; the request and
     // the report at GuiCanvasPage, canvas_sink.h; the draw at present_frame):
     // the page program and its uniforms, made with the other two, and
     // THE PAGE TEXTURES — one immutable R8 texture a wanted page, on unit 2,

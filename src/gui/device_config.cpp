@@ -23,43 +23,35 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them: THIRTEEN keys since 2026-11-22, send LL
-// (the seven tuning keys `key_height`, `key_width`, `run_gap`,
-// `lamp_hold_ms`, `tooltip_delay_ms`, `sweep_highlight` and
-// `waveform_fade_px` retired into the program's constexprs, device_config.h's
-// head naming each one's seat; the count's succession is git's). THE ORDER
-// IS THE ARCHITECT'S OWN, given with the fifth key (2026-08-30): gui_scale,
-// projects_repo, projects_path, last_project. The scanner takes it as a
-// SET: it checks that each key ARRIVED, never that it arrived here, so this
-// order is the writer's alone and the reader is order-insensitive (the header's
-// schema paragraph owns that ruling). ONE LIST SERVES BOTH, the writer's
-// order and the scanner's presence check (architect 2026-10-14, every key
-// required), so no key can be written and not demanded — the rule the
-// retired `role` key (2026-10-10) brought, "if one of these lines is not in
-// place, it means something's wrong with the config or the setup"
-// (architect), and every key follows.
+// REQUIRED SET, every one of them: THIRTEEN keys (architect 2026-11-22: a
+// tuning number he has settled is a constexpr of the program,
+// device_config.h's head naming each one's seat). THE ORDER IS THE
+// ARCHITECT'S OWN (2026-08-30): gui_scale, projects_repo, projects_path,
+// last_project. The scanner takes it as a SET: it checks that each key
+// ARRIVED, never that it arrived here, so this order is the writer's alone and
+// the reader is order-insensitive (the header's schema paragraph owns that
+// ruling). ONE LIST SERVES BOTH, the writer's order and the scanner's presence
+// check (architect 2026-10-14, every key required), so no key can be written
+// and not demanded: "if one of these lines is not in place, it means
+// something's wrong with the config or the setup" (architect 2026-10-10).
 //
-// TRUE COLORS (architect 2026-10-21, the Settings popup's command row made a
-// key): `true_colors` FOLLOWS last_project, the display keys' head (the
-// `waveform` preset key stood before it until 2026-11-01), and the tuning
-// keys keep the end where they leave from.
+// TRUE COLORS (architect 2026-10-21): `true_colors` FOLLOWS last_project,
+// the display keys' head, and the tuning keys keep the end where they leave
+// from.
 //
 // THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
 // `true_colors`, the display keys' end — a permanent key, the canvas's one
 // scaling concession (device_config.h's head), so it stands among the
 // permanent keys and not with the tuning keys at the end.
 //
-// THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05
-// night): `noise`, `noise_level`, `noise_attenuation_level` and
-// `noise_crossfade_s` FOLLOW `waveform_grow` (the project voice's level
-// stood between them 2026-10-31 night to 2026-11-11), the permanent keys'
-// end, the folder before its loudness, the loudness's fixed attenuation under it,
-// and its crossfade.
+// THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05):
+// `noise`, `noise_level`, `noise_attenuation_level` and `noise_crossfade_s`
+// FOLLOW `waveform_grow`, the permanent keys' end, the folder before its
+// loudness, the loudness's fixed attenuation under it, and its crossfade.
 //
-// THE TUNING KEYS stand after the permanent keys, where the tuning phases'
-// keys have always stood, each leaving when he settles its value: the
-// on-screen keyboard's key box, `osk_key_w` and `osk_key_h`, and its cap
-// size, `osk_font_px` (2026-10-29), the three left since 2026-11-22, send LL.
+// THE TUNING KEYS stand after the permanent keys, each leaving when he
+// settles its value: the on-screen keyboard's key box, `osk_key_w` and
+// `osk_key_h`, and its cap size, `osk_font_px` (2026-10-29).
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -75,7 +67,7 @@ constexpr const char* kDeviceConfigKeys[] = {
     "osk_key_h",
     "osk_font_px",
 };
-// THE REQUIRED KEYS: every key of the writer's order (no optional key since
+// THE REQUIRED KEYS: every key of the writer's order (no key is optional,
 // 2026-10-26).
 constexpr std::span<const char* const> kDeviceConfigRequiredKeys(
     kDeviceConfigKeys);
@@ -88,11 +80,11 @@ std::string format_gui_scale_percent(int percent) {
 }
 
 // THE LEVELS' CANONICAL SPELLING IN THE FILE (THE LEVEL GRAMMAR,
-// device_config.h; the exact double since 2026-11-05 night): `-inf` for the
+// device_config.h; the exact double, 2026-11-05): `-inf` for the
 // off / mute value, else THE SHORTEST DECIMAL THAT ROUND-TRIPS, in fixed
 // notation (std::to_chars with chars_format::fixed and no precision: "0",
 // "-9", "-15.6", "-0.0108695652173913", "-60"), exactly what parse_level_db
-// admits back and reads as the same double — the sliders' exact taper and
+// admits back and reads as the same double — the level case's exact taper and
 // a typed attenuation stored whole. The writer's and the attenuation's
 // recall. A negative zero never reaches the writer (the taper normalizes
 // it, the grammar refuses "-0"); the add of 0.0 keeps that true of any
@@ -107,8 +99,8 @@ std::string format_level_db(double db) {
     return std::string(buf, res.ptr);
 }
 
-// THE LEVEL'S SPELLING ON THE FACE (architect 2026-11-19, send AA, RULINGS
-// §8: "doesn't need decimals once it hits 10. So it should either have
+// THE LEVEL'S SPELLING ON THE FACE (architect 2026-11-19: "doesn't need
+// decimals once it hits 10. So it should either have
 // single digit with one decimal or double digits with no decimal. That'll
 // tighten it up"): `-inf`; else the level rounded to the tenth and
 // normalized (+0.0, so -0.04 prints "0.0", never "-0.0") — a magnitude under
@@ -305,9 +297,8 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.last_project = value;
             return {};
         }
-        // An old `waveform=`, `palette=`, `chrome=`, `scheme=`, `caption=`
-        // or `theme=` line is the unknown key below (no key names a color:
-        // every color is the one theme's, Arc-Dark's, palette_file.h).
+        // No key names a color: every color is Arc-Dark's (kArcDarkTones,
+        // gui_theme.h).
         // TRUE COLORS (2026-10-21): one of the two words under its one owner
         // (parse_true_colors, device_config.h), required like every key; any
         // other word the launch's hard fail.
@@ -319,16 +310,13 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.true_colors = *on;
             return {};
         }
-        // THE NOISE'S FOUR KEYS (2026-10-28; the attenuation 2026-11-05
-        // night): each under its one grammar owner (is_noise_folder_name,
+        // THE NOISE'S FOUR KEYS (2026-10-28; the attenuation 2026-11-05):
+        // each under its one grammar owner (is_noise_folder_name,
         // parse_level_db, parse_noise_attenuation_db,
         // parse_noise_crossfade_s, device_config.h), required like every key;
         // any other spelling the launch's hard fail. The folder's name is
         // judged by its shape alone: a name whose folder is absent loads, and
-        // the key greys (noise.h). (`rain_level` and `rain_crossfade_ms`,
-        // renamed the same day, `rain_fade_in_ms` and `rain_fade_out_ms`,
-        // settled that day, and `noise_crossfade_ms`, made seconds that
-        // night, fall to the unknown-key arm below like every retired key.)
+        // the key greys (noise.h).
         if (key == "noise") {
             if (!is_noise_folder_name(value)) {
                 return bad_value(ln, key, value, kNoiseFolderGrammarReason);

@@ -39,10 +39,8 @@
 // the four dispatches in W+TARGET as well as W+source, and each owes the same
 // tail when app.active_audio_view == 'T' — the flag-editor commit adding one
 // term its three siblings do not need, canonical_changed, because a commit
-// that changed nothing serialized owes neither the kick nor the re-land (it
-// could once land a change that was NO MAP INPUT, an iter-bracket-only
-// commit, and that producer went with the bracket's exit from the undo domain
-// on 2026-09-10 — the argument is at that site):
+// that changed nothing serialized owes neither the kick nor the re-land (the
+// argument is at that site):
 //   1. viewport.kick_waveform_sync() — the synchronous re-warp, so displayed
 //      == live at the command boundary, leaving no divergence window for the
 //      displayed-basis gestures (phase drags, trim drags) to ride out. These
@@ -57,11 +55,11 @@
 //      re-lands the playhead's own musical instant instead (its site says how).
 //      THE DELETE'S FORM IS THE WHOLE-MAP REWRITE'S, and it is not this
 //      cluster's alone: the SETTINGS ENGINE COMMIT (settings_editor.cpp) and
-//      the `h` view's WARP REVERT (input_key_dispatch.cpp) took the same two
-//      lines on 2026-09-02 — capture the
-//      instant before the rewrite, re-land after it — each site arguing its
-//      own subject. The reseat's caller inventory is one owner,
-//      Viewport::reseat_playhead_to's definition (viewport.cpp).
+//      the `h` view's WARP REVERT (input_key_dispatch.cpp) take the same two
+//      lines (2026-09-02) — capture the instant before the rewrite, re-land
+//      after it — each site arguing its own subject. The reseat's caller
+//      inventory is one owner, Viewport::reseat_playhead_to's definition
+//      (viewport.cpp).
 //   3. target_render.trigger(), unchanged and view-independent.
 // SOURCE VIEW NEEDS NOTHING: it is the identity domain, where no image moves
 // at all — exactly the cent step's own split, and the TEMPO WRITE'S TAIL
@@ -72,30 +70,28 @@
 // — an existence, a status, a whole-map rewrite — and the delete re-lands the
 // playhead's own musical instant rather than a focus.
 // THE POSITIONAL FAMILY IS NOT HERE and stays source-only IN THE WARP
-// COLUMN — the one block left since the P column opened to both audio views
-// (architect 2026-08-30, and again with S+P's return, 2026-10-12) —
-// refusing in T+W at its own DISPATCH site, through
+// COLUMN — the one such block, the P column authoring in both audio views
+// (architect 2026-08-30; 2026-10-12) — refusing in T+W at its own DISPATCH
+// site, through
 // the one predicate (the keyboard members on a card, the two POINTER members
 // silent; the split is recorded at the predicate): the drop (drop_marker / drop_copy_previous_at_playhead),
 // the flag drag (marker_drag.cpp), the bare Left/Right nudge
-// (nudge_selected_markers, whose dispatch joined the predicate's callers
-// 2026-08-29, having spelled its two arms by hand until then) and the `m` bpm
-// open, which rewrites tempo through a derivation over a SPAN. The predicate's
-// own site owns the call-site inventory (active_column_authoring_allowed,
-// app_state.h).
+// (nudge_selected_markers) and the BPM sweep's open, which rewrites tempo
+// through a derivation over a SPAN. The predicate's own site owns the call-site
+// inventory (active_column_authoring_allowed, app_state.h).
 
 // Index of the nearest marker strictly before `time_frame` that survives
 // into the render, or -1 if none. Uses the same participation verdict as
 // render resolution and hover (effective_disabled: a marker is out if its own
-// disabled flag is set, and by nothing else since 2026-10-29), so copy-previous copies the previous render-visible tempo
-// rather than attributing to a marker the render ignores. It answers the
-// nearest SURVIVOR, label refs included: stepping past a ref to the marker
-// behind it, as the pass walk does, is drop_copy_previous_at_playhead's own
-// loop, which re-applies this same survival test at each step. `time_frame`
-// need not be present in `mv` — drop_copy_previous_at_playhead calls this
-// with the prospective drop time before insertion, landing on the same
-// slot insert_marker's lower_bound would place the new marker at, one
-// step back.
+// disabled flag is set, and by nothing else, 2026-10-29), so copy-previous
+// copies the previous render-visible tempo rather than attributing to a marker
+// the render ignores. It answers the nearest SURVIVOR, label refs included:
+// stepping past a ref to the marker behind it, as the pass walk does, is
+// drop_copy_previous_at_playhead's own loop, which re-applies this same
+// survival test at each step. `time_frame` need not be present in `mv` —
+// drop_copy_previous_at_playhead calls this with the prospective drop time
+// before insertion, landing on the same slot insert_marker's lower_bound would
+// place the new marker at, one step back.
 int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
                           double time_frame) {
     auto it = std::lower_bound(
@@ -179,13 +175,13 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // and falls to the removal arm's empty answer — which is exactly right, an
     // undone drop resting no selection. touched_live names the inserted row, so
     // the counter-entry's swap hands the REDO the right index. It is the
-    // exact answer rather than a needed one since 2026-11-11: the drop's one
+    // exact answer rather than a needed one (2026-11-11): the drop's one
     // caller refuses an occupied frame, so the new marker is alone on its
     // frame and the diff matcher's grown arm would name the same row. (Inside
     // a coincident group the two differ — insert_marker places by lower_bound,
     // marker_store.h, and lands a new row FIRST, while the grown arm consumes
     // by time_frame alone front-to-back and names the LAST — which is the
-    // deletes' reason for their hint still.)
+    // deletes' reason for their hint.)
     undo.push_undo_warp(std::move(pre_state),
                         /*touched_snapshot=*/{}, /*touched_live=*/{new_idx});
     undo.recompute_dirty();
@@ -204,12 +200,11 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // centered at the working zoom, arming the hold (architect 2026-10-29);
     // off it a standing hold is inherited (Viewport::seat_playhead_on_drop).
     viewport.seat_playhead_on_drop(sample);
-    // A DROP IS A POINT COMMAND (architect 2026-07-29, overruling the drops'
-    // earlier keep-the-highlight behavior): it seats the playhead on the marker
-    // it creates and single-selects it, the seat above being a movement owner
-    // whose camera is the Tab walk's (architect 2026-10-29) and which keeps a
-    // standing hold bit where the walk does not center (architect 2026-10-12).
-    // PAST EVERY REFUSAL by
+    // A DROP IS A POINT COMMAND (architect 2026-07-29): it seats the playhead
+    // on the marker it creates and single-selects it, the seat above being a
+    // movement owner whose camera is the Tab walk's (architect 2026-10-29) and
+    // which keeps a standing hold bit where the walk does not center (architect
+    // 2026-10-12). PAST EVERY REFUSAL by
     // construction, which still matters because the seat is a movement: the
     // callers' gates (read-only, active_column_authoring_allowed, the
     // double tap's own in-area test) return before calling at all, and this
@@ -221,9 +216,9 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
     // DROP is a PLACEMENT, which is exactly what the home-view binding gates
     // (architect 2026-07-22), so it authors in warp's source home view only,
     // where the source waveform pixels don't depend on the warp map and there
-    // is no displayed target plate to re-warp. Its siblings no longer share
-    // the answer — Ctrl+D, Ctrl+N, Delete and the flag-editor commit are the
-    // status/value family admitted in W+target on 2026-08-24 and each carries
+    // is no displayed target plate to re-warp. Its siblings do not share the
+    // answer — Ctrl+D, Ctrl+N, Delete and the flag-editor commit are the
+    // status/value family admitted in W+target (2026-08-24) and each carries
     // the re-warp tail contracted at the head of this file. The target preview
     // still invalidates here — a source-view warp edit changes the rendered
     // target buffer.
@@ -233,8 +228,7 @@ void GuiWarpMarkersOps::drop_marker(double time_frame, bool inherit,
 // `s` (W view): drop an explicit owner that copies the immediate-prior
 // marker's effective tempo (base x scale), via the shared resolver the VALUE
 // PAIR also reads — Ctrl+Shift+J's clipboard copy and Ctrl+J's jump to the
-// marker the value came from (resolved_marker_payload; the readout that used
-// to display it retired 2026-08-29).
+// marker the value came from (resolved_marker_payload).
 // A LABEL REF IS SKIPPED TO THE MARKER BEHIND IT (architect 2026-09-13, the
 // drop taking the rule the pass inheritance walk took the same day,
 // resolve_inherited_tempo in warp_frame_map_build.h): when the prior survivor
@@ -360,12 +354,11 @@ void GuiWarpMarkersOps::delete_selected_body(bool with_references) {
 
     // THE STALE-INDEX BELT, ONE POLICY FOR EVERY VERB THAT ITERATES THE SELECTION
     // (architect 2026-07-30): a stale member is SILENTLY SKIPPED and the rest of
-    // the batch proceeds — the shape the sibling verbs (both toggle_disabled arms,
-    // toggle_inherits, both tempo-step arms) already had. This is a belt against a
+    // the batch proceeds, as in the sibling verbs (both toggle_disabled arms,
+    // toggle_inherits, both tempo-step arms). This is a belt against a
     // sanitization invariant — the selection
-    // layer keeps its indices live, so nothing here is reachable today — and a
-    // belt reports nothing and refuses nothing; the delete arms used to print one
-    // stderr line and refuse the WHOLE batch, alone among the six. Any LIVE marker
+    // layer keeps its indices live, so nothing here is reachable — and a
+    // belt reports nothing and refuses nothing. Any LIVE marker
     // is deletable: the parser resolver normalizes whatever arrangement remains at
     // render/preview time (a missing frame-0 owner gets the silent 1.00 seed; a
     // dangling ref becomes a plain 1.00 owner with one stderr line per timestamp),
@@ -399,7 +392,7 @@ void GuiWarpMarkersOps::delete_selected_body(bool with_references) {
         live_idx.assign(rows.begin(), rows.end());
     }
     // Nothing live to delete: no snapshot, no undo entry, no damage — the
-    // "only on real change" shape the sibling group verbs already have.
+    // "only on real change" shape of the sibling group verbs.
     if (live_idx.empty()) return;
     // A DELETE IS A MARKER MUTATION AND STOPS (architect 2026-10-14, the
     // keyboard stop rule at stop_playback_if_playing's declaration), past the
@@ -426,11 +419,9 @@ void GuiWarpMarkersOps::delete_selected_body(bool with_references) {
     for (auto it = live_idx.rbegin(); it != live_idx.rend(); ++it) {
         app.warpmarkers.remove_marker(*it);
     }
-    // A DELETE RESTS AN EMPTY SELECTION (architect 2026-07-30): the
-    // demotion that used to drop a 2+ delete down to a span over the deleted
-    // positions is gone with the SPAN FORM, and there is no span state left for
-    // one to write into — the region IS the trim. The delete leaves the trim
-    // exactly as it found it.
+    // A DELETE RESTS AN EMPTY SELECTION (architect 2026-07-30): there is no
+    // span state to write into — the region IS the trim — and the delete
+    // leaves the trim exactly as it found it.
     selection.clear_selection();
     // THE IDENTITY HINT, AND A DELETE OWES ONE (the contract and the producer
     // enumeration are at restore_touched_indices, app_state.h). live_idx names
@@ -461,7 +452,7 @@ void GuiWarpMarkersOps::delete_selected_body(bool with_references) {
 }
 
 // Ctrl+N: convert the tempo source of EVERY SELECTED MARKER, EACH FLIPPING
-// ITS OWN STATE (architect 2026-11-19, send CC: "Toggle inherit should work
+// ITS OWN STATE (architect 2026-11-19: "Toggle inherit should work
 // on multiple. ... It should be like toggle disable, which does work on
 // multiple."; put back to him as "toggle inherit on every selected marker,
 // each its own flip, a follower freezing at the tempo it sounds at before the
@@ -707,11 +698,9 @@ void GuiWarpMarkersOps::toggle_disabled_body(bool with_references) {
         if (idx < 0 || idx >= static_cast<int>(proposed.size())) continue;
         if (carried_state(proposed[idx])) continue;  // its definition's, below
         proposed[idx].disabled = !proposed[idx].disabled;
-        // (A BRACKET CLEAR RODE THIS LOOP for a few hours on 2026-09-10, so a
-        // marker disabled under a lit lamp could not keep a bracket the flag
-        // no longer paints. The ITERATION LOCK landed the same day and made it
-        // unreachable: Ctrl+D is one of the acts the lock refuses, so no
-        // marker can be disabled while any bracket stands.)
+        // (No bracket clear rides this loop: Ctrl+D is one of the acts the
+        // ITERATION LOCK refuses, so no marker can be disabled while any
+        // bracket stands.)
         changed = true;
     }
     // The carried references (Ctrl+Shift+D, the ruling above): every
@@ -920,18 +909,17 @@ WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
 // THE LABEL REFERENCE'S STEP SENTENCE (architect 2026-09-13) is
 // kLabelRefHasNoTempoCard (app_state.h, beside its second reader's
 // declaration, the flag editor's UP / DOWN). The step's kind refusal
-// (tempo_cent_step_kind_refusal_for, below) asks it in BOTH audio views —
-// the source-view no-change tail that carded it too is gone, the refusal
-// now standing ahead of the write in either view. It names no view because a
-// reference refuses in both — its tempo is the definition's.
+// (tempo_cent_step_kind_refusal_for, below) asks it in BOTH audio views,
+// ahead of the write. It names no view because a reference refuses in both
+// — its tempo is the definition's.
 
 // Nudge the selected marker(s)' tempo along the 0.01 grid. SINGLETON ARM
 // ONLY, IN EITHER AUDIO VIEW: a label ref refuses on a card (no tempo to
 // nudge — convert via Ctrl+N first), as does a coincident member in
 // target view, both through the kind refusal the Up / Down face greys on;
 // a DISABLED marker steps like any other (the one marker asked for is the one
-// stepped — and since 2026-09-13 the group arm and the value drag step one
-// too); pass markers resolve through the
+// stepped — the group arm and the value drag step one too, 2026-09-13); pass
+// markers resolve through the
 // projection to get their starting tempo/scale (warp_tempo_step_start), then
 // freeze to owning at the nudged value; owning markers nudge in place. THE GROUP ARM (adjust_tempo_cents_group, below) is
 // all-or-nothing instead: a label ref anywhere in the selection WALLS the
@@ -941,21 +929,16 @@ WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
 // clamped into the tempo bracket [kTempoMinCents, kTempoMaxCents]
 // (value_format.h). Only dirties / invalidates on real change.
 //
-// The grid is structural now: authored tempo is integer cents by type, so
-// every stored value is on-grid and the step is plain integer addition —
-// the old off-grid outward snap has no input left to act on.
+// The grid is structural: authored tempo is integer cents by type, so every
+// stored value is on-grid and the step is plain integer addition.
 GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
                                                    bool synthesized_repeat) {
     // THE LEADING REFUSAL BLOCK IS NAMED WHOLE (tempo_cent_step_actionable,
     // app_state.h — the column gate plus the empty-selection and invalid-focus
-    // refusals), and IT HAS TWO READERS AGAIN since 2026-08-30: this body and
-    // the bottom row's Up and Down buttons' disabled face. That face read it
-    // for one evening on 2026-08-15 under the whole-row honesty ruling, lost it
-    // the same day (every term past the column gate is a SELECTION fact and the
-    // pair blinked on every marker click), and took it back under the
-    // truthful-buttons ruling, whose one user withdrew the flicker argument;
-    // the predicate's own header carries all three states. The singleton's
-    // per-marker refusals below it are ALL FACED since 2026-09-13 (architect:
+    // refusals), and IT HAS TWO READERS (2026-08-30, the truthful-buttons
+    // ruling): this body and the bottom icon row's Up and Down keys' disabled
+    // face; the predicate's own header carries the argument. The singleton's
+    // per-marker refusals below it are ALL FACED (architect 2026-09-13:
     // "shouldn't we grey out the up/down for label refs in source? we grey out
     // Left for a marker at 0"), and they differ only in what the key says:
     // THE KIND REFUSAL — a label ref in either view and, in target view, a
@@ -965,13 +948,11 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // greys and is silent at the key. Both are read by the pair's face
     // through tempo_cent_step_direction_actionable, so both are refused at the
     // singleton arm's head, ahead of the coalesce stamp, and neither reaches
-    // the loop below. (From 2026-08-31 to 2026-09-13 the kind refusal kept a
-    // LIVE face on the claim that it needed this act's own resolution run; a
-    // label ref is a plain field and the coincidence test reads the red
-    // cache's membership, memoized per store generation, so a per-tick face reads
-    // both for nothing.)
+    // the loop below. (A label ref is a plain field and the coincidence test
+    // reads the red cache's membership, memoized per store generation, so a
+    // per-tick face reads both for nothing.)
     //
-    // THE BLOCK NOW ANSWERS ON A CARD (architect 2026-08-30, the strictness
+    // THE BLOCK ANSWERS ON A CARD (architect 2026-08-30, the strictness
     // ruling): this act composes the sentence and RETURNS it, the dispatch
     // raising it — the reason channel's contract is at GuiOpRefusal
     // (warpmarkers_ops.h). One sentence for all three terms: the P column, an
@@ -984,7 +965,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // 2026-09-12, the lamps resolved by use case): a step that ACTS is the
     // moment Add to selection's building pass ends — "in fact I have already
     // acted" — but a step that refuses consumed nothing, and every refusal
-    // past this line is PER-BRANCH (the group's walled / empty verdict, the
+    // past this line is PER-BRANCH (the group's walled verdict, the
     // singleton's kind refusal), so THE WRITE IS
     // BRANCH-LOCAL: each accepted exit calls selection_consumed exactly once
     // and no refusing exit calls it at all, which is the placement rule the
@@ -995,13 +976,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // group arm carries its own line past its verdict.
     // A 2+ selection is the GROUP step (architect 2026-07-23): all-or-nothing,
     // owner-only, no freeze conversion. The singleton path below keeps its own
-    // rules (the pass->owner freeze in both views since 2026-09-13, the
+    // rules (the pass->owner freeze in both views, 2026-09-13, the
     // target-only coincidence refusal, the constructive per-marker clamp).
     // Its refusal is ITS OWN sentence, forwarded verbatim.
     if (app.selected_markers.size() >= 2)
         return adjust_tempo_cents_group(delta_cents, synthesized_repeat);
-    // THE KIND REFUSAL IS ASKED FIRST (architect 2026-09-13, when the Up /
-    // Down pair began greying on it): a label ref in either view, and in
+    // THE KIND REFUSAL IS ASKED FIRST (architect 2026-09-13, the Up / Down
+    // pair greying on it): a label ref in either view, and in
     // target view a coincident member, refuse on a CARD through the
     // one owner (tempo_cent_step_kind_refusal, app_state.h — both tests, their
     // order and both sentences), which the pair's face and its tooltip's
@@ -1009,7 +990,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // decision. The ref test reads the marker's own authored fields, not the
     // resolved projection: the question is whether this marker names a
     // definition, which is payload. It runs AHEAD OF THE WALL because the
-    // directional predicate below now answers FALSE on both, and the wall's
+    // directional predicate below answers FALSE on both, and the wall's
     // exit is silent: asked the other way round, a coincident OWNER
     // resting on a bracket end would fall into that exit and lose its
     // sentence. Before any mutation — no freeze, no undo, no dirty.
@@ -1022,15 +1003,13 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // arm that answers: the focused OWNER's clamped landing compared against
     // the value it already holds). A WALL NO-OP TOUCHES NOTHING: the call below
     // invalidates the coalescing stamp on a physical press, so discovering this
-    // wall AFTER it — as the loop's `changed` flag used to, and only there —
-    // split an undo run at the KEY while the same press on the now-GREYED Up /
-    // Down button never dispatched and left the run whole. The discriminator is
-    // the FACE, not the card: a refusal the button greys on runs BEFORE the
-    // stamp. EVERY singleton refusal greys since 2026-09-13, so the kind
-    // refusal above sits ahead of the stamp too and nothing past this line
-    // refuses at all. The supersession of the old "an early call must poison
-    // for a press that goes on to refuse" clause is recorded at
-    // Undo::coalesce_gesture.
+    // wall AFTER it would split an undo run at the KEY while the same press on
+    // the GREYED Up / Down button never dispatches and leaves the run whole.
+    // The discriminator is the FACE, not the card: a refusal the button greys
+    // on runs BEFORE the stamp. EVERY singleton refusal greys (2026-09-13), so
+    // the kind refusal above sits ahead of the stamp too and nothing past this
+    // line refuses at all (the stamp's side of the rule is at
+    // Undo::coalesce_gesture).
     if (!tempo_cent_step_direction_actionable(app, audio, delta_cents)) {
         // AND THE WALL SPENDS THE SELECTION: the press had a warp marker
         // selected and stepped its tempo, and the clamped landing is the value
@@ -1062,15 +1041,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         undo.coalesce_gesture(GestureKind::TempoStep, synthesized_repeat);
     // architect ruling 2026-07-22: the Up/Down tempo step stays reachable off
     // its source home (target view is exactly where you want to hear/see a tempo
-    // change). Since 2026-07-29 it is the WHOLE of the warp column's TEMPO
-    // exception there: the other two flavors
-    // — the pointer tempo drag and its keyboard twin, the bare Left/Right
-    // tempo-image step — were deleted (the list is at the head of
-    // marker_drag.h). It was the whole tempo surface anywhere until 2026-09-10,
-    // when the VALUE DRAG joined it — a vertical pointer step (armed by bare
-    // `[`'s one-shot lamp in either view since 2026-10-11, value_drag_posture)
-    // through this arm's own landing owner and this arm's own kind refusal
-    // (value_drag.cpp), so the two hands ask the same questions.
+    // change). It is the warp column's TEMPO exception there (the list is at
+    // the head of marker_drag.h), beside the VALUE DRAG (2026-09-10) — a
+    // vertical pointer step (armed by bare `[`'s one-shot lamp in either view,
+    // 2026-10-11, value_drag_posture) through this arm's own landing owner and
+    // this arm's own kind refusal (value_drag.cpp), so the two hands ask the
+    // same questions.
     // W+target authors tempo only, never position. The tempo step there
     // CONVERTS A PASS exactly as source view does (architect 2026-09-13: "why
     // not just allow tempo step by collapsing the inherit as we already do in
@@ -1103,28 +1079,25 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
         // press differs from a position nudge's near-wall overshoot. Exact
         // integer compares at both edges; nothing here can overflow (stored
         // cents are in-bracket, deltas are a handful of detents).
-        // THROUGH THE LANDING OWNER since 2026-08-31 (tempo_cent_step_landing,
-        // app_state.h): the clamp is the same one line it always was, and
-        // naming it is what lets the Up / Down face compare THIS arithmetic
-        // against the resting value instead of re-spelling "at the bracket
-        // edge" (tempo_cent_step_direction_actionable, below). SINCE
-        // 2026-09-18 the landing owner is composed by warp_tempo_step_move,
-        // which adds the DEVIATION CHAIN's own headroom: where a chain
-        // stands, the step moves the total AND its last term by one delta so
-        // the derived base holds still. A PASS CARRIES NO CHAIN (the grammar
-        // refuses one and every road that writes a pass clears it), so the
-        // freeze below hands the move an empty chain and gets the plain
-        // bracket clamp — and the frozen marker lands with a plain base.
+        // THROUGH THE LANDING OWNER (2026-08-31, tempo_cent_step_landing,
+        // app_state.h): naming the clamp is what lets the Up / Down face
+        // compare THIS arithmetic against the resting value instead of
+        // re-spelling "at the bracket edge"
+        // (tempo_cent_step_direction_actionable, below). The landing owner is
+        // composed by warp_tempo_step_move (2026-09-18), which adds the
+        // DEVIATION CHAIN's own headroom: where a chain stands, the step moves
+        // the total AND its last term by one delta so the derived base holds
+        // still. A PASS CARRIES NO CHAIN (the grammar refuses one and every
+        // road that writes a pass clears it), so the freeze below hands the
+        // move an empty chain and gets the plain bracket clamp — and the frozen
+        // marker lands with a plain base.
         const WarpTempoStepMove move = warp_tempo_step_move(
             start.cents, m.tempo_deviation_cents, delta_cents);
         if (!m.tempo_inherits && move.cents == m.tempo_cents) continue;
         m.tempo_inherits = false;
         warp_tempo_step_write(m, move);
         m.tempo_scale    = start.scale;
-        // (THE BRACKET RODE THE BASE HERE from 2026-08-02 to 2026-09-10,
-        // through a retroactive clamp that folded a live bracket onto the
-        // stepped base so no sweep cell could leave the tempo bracket. The
-        // iteration lock retired it: a bracket exists only while grid
+        // (No bracket rides the base: a bracket exists only while grid
         // iterations is lit, and while it is lit this step is refused, so no
         // base can move under a bracket at all.)
         changed = true;
@@ -1132,21 +1105,18 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     // NOTHING CHANGED IS A BELT, AND IT IS SILENT. The loop has exactly ONE
     // subject here — collapse_to_focused ran above, so the selection is the
     // focus alone — and every way that subject could be left untouched is
-    // refused at this arm's head since 2026-09-13: a LABEL REF by the kind
-    // refusal (in both views — until that ruling the SOURCE-view ref was
-    // skipped by the loop's `continue` and carded here, the one refusal the
-    // Up / Down face could not see), and an OWNER AT A BRACKET END by the
-    // directional predicate's wall (silent since 2026-08-31, superseding the
-    // 2026-08-30 card "The tempo is already at its limit": a benign
+    // refused at this arm's head (2026-09-13): a LABEL REF by the kind
+    // refusal, in both views, and an OWNER AT A BRACKET END by the
+    // directional predicate's wall (silent, 2026-08-31: a benign
     // one-dimensional refusal already at its state, the focused marker's own
     // value the one place to glance). A pass always freezes, so it always
-    // changes. What still falls here is a stale focused index — a belt
+    // changes. What falls here is a stale focused index — a belt
     // against an invariant the selection layer keeps — so the return says
     // nothing (GuiOpRefusal's contract), and the loop's label-ref `continue`
     // is the same belt.
     if (!changed) return std::nullopt;
-    // THE STEP STOPS A LIVE PLAY (architect 2026-10-14, reversing the
-    // 2026-07-30 "value steps do not stop": a tempo step is a marker mutation —
+    // THE STEP STOPS A LIVE PLAY (architect 2026-10-14: a tempo step is a
+    // marker mutation —
     // the keyboard stop rule at stop_playback_if_playing's declaration). Past
     // every exit above — the refusals, the wall's accepted no-op, which writes
     // no store, and the belt — and ahead of the write, so a press that lands
@@ -1160,9 +1130,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
     std::vector<GuiWarpMarker> pre_state = mv_const;
     app.warpmarkers.markers_mut() = std::move(proposed);
     // Coalesce a held tempo step: the repeats skip the redundant push so one
-    // Ctrl+Z reverts the whole hold. The skip is the WHOLE per-press action now
-    // — note_coalesced_commit existed to mirror the push helpers' hover-popup
-    // clear, and died with the hover popup (row 5).
+    // Ctrl+Z reverts the whole hold. The skip is the WHOLE per-press action.
     if (!merge) undo.push_undo_warp(std::move(pre_state));
     // Settle the burst, POST-mutation: the stamp, or — on a merged press that
     // stepped the value back to the burst entry's own snapshot — the BYTE-EQUAL
@@ -1194,35 +1162,25 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // Group tempo step (architect 2026-07-23): 2+ selected markers each step their
 // OWN tempo by one cent, ALL-OR-NOTHING. An ineligible member is "the wall
 // being hit before it starts to move" — if ANY selected marker is in the WALL
-// SET the whole press refuses, on its own sentence since 2026-08-30 (no
+// SET the whole press refuses, on its own sentence (2026-08-30; no
 // partial stepping, no per-member pinning). THIS IS GROUP RIGIDITY, NOT A WALL
 // POLICY (the unified wall policy, architect 2026-07-30, is stated once at the
 // head of position_nudge.h and rules that SINGLETON steps clamp): per-member
 // clamping would pool the walled members at the bracket edge while the rest
 // kept stepping, deforming the group's relative values, which is precisely
-// what a group edit must not do — the same reason the deleted per-member group
-// nudge refused the whole press. (The comment here used to cite the
-// phase-reset nudge's whole-press refusal as its precedent; that gesture
-// CLAMPS as of the unified policy, so the justification stands on group
-// rigidity alone.)
+// what a group edit must not do.
 // A DISABLED MEMBER IS A MEMBER (architect 2026-09-13, with "disabled should
 // be steppable" for the singleton and the value drag): an effectively
 // disabled member (effective_disabled, warpmarkers.h) counts, walls on the
 // same terms as any other member and steps with the rest, so the singleton
 // key, its button, the value drag and the group step treat a disabled marker
-// alike. From 2026-09-02 (the `m` BPM sweep's
-// "a disabled marker is invisible to the act" asked of this step) until that
-// ruling a disabled member was SKIPPED by both loops, and a selection made
-// only of disabled members was an EMPTY verdict carding the empty-selection
-// sentence; that verdict had no producer left once nothing is skipped (the
-// arm is reached with a standing selection and a valid focus), so it is
-// deleted with its sentence. The invisibility rule stays the SWEEPS' — BPM
+// alike. The invisibility rule is the SWEEPS' — BPM
 // iterations and grid iterations — which author renders; a tempo step is an
 // edit of the one marker's own field, disabled or not.
 // The wall set (VIEW-INDEPENDENT, max strict): a pass (tempo_inherits), a ref
 // (non-empty label_ref) — the ref being the singleton step's payload
-// predicate too, the pass no longer since the singleton freezes one in both
-// audio views (the split is stated just below) — a
+// predicate too, the pass not, the singleton freezing one in both audio
+// views (the split is stated just below) — a
 // coincident ENABLED marker (warp_red_flag_set_cached's `collapsed`, the
 // parser's membership, never its paint cue `red` — the resolver renders every
 // enabled member as a plain 1.00 owner, so the write is render-inert), or
@@ -1239,12 +1197,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents(int64_t delta_cents,
 // the first reader and the Up / Down buttons' face is the second, through the
 // directional predicate. It is EXTRACTED rather than mirrored — the terms are
 // the group's own and a face may not restate them — and it mutates nothing,
-// which is what made the extraction necessary at all: the act's scan used to
-// sit inside a body that had already asked the coalesce verdict (a call with a
-// side effect on the undo stamp), so there was no callable form. It answers a
-// plain boolean again since 2026-09-13 (the three-way
-// TempoCentStepGroupVerdict of 2026-09-02 lost its Empty arm with the
-// disabled skip). Declared in app_state.h beside the face
+// which is what lets it run ahead of the act's coalesce verdict (a call with
+// a side effect on the undo stamp). It answers a plain boolean (2026-09-13).
+// Declared in app_state.h beside the face
 // that reads it; the wall set and its GROUP RIGIDITY justification are here,
 // at the act.
 bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
@@ -1281,13 +1236,12 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
         // the step's move owner, so neither the bracket's ends nor the
         // deviation term's wall is named here: the move's APPLIED delta falls
         // short of the press's iff the member cannot take the full step. At
-        // the bare ±1 this is the old edge compare exactly — a member is out
-        // of bracket after one cent iff it was resting on that edge — so the
-        // day's other behaviour is untouched. GROUP RIGIDITY NOW COVERS THE
-        // CHAIN TOO (architect approval 2026-09-18): a member whose LAST TERM
-        // would leave ±kIterDeltaMaxCents walls the whole press exactly as an
-        // out-of-bracket total does, because the group must move as a group
-        // whichever wall a member meets.
+        // the bare ±1 this is the edge compare exactly — a member is out of
+        // bracket after one cent iff it was resting on that edge. GROUP
+        // RIGIDITY COVERS THE CHAIN TOO (architect approval 2026-09-18): a
+        // member whose LAST TERM would leave ±kIterDeltaMaxCents walls the
+        // whole press exactly as an out-of-bracket total does, because the
+        // group must move as a group whichever wall a member meets.
         if (warp_tempo_step_move(m.tempo_cents, m.tempo_deviation_cents,
                                  delta_cents).applied != delta_cents)
             return false;
@@ -1301,24 +1255,18 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // stale-focus belt says nothing, then the LABEL-REFERENCE refusal in EITHER
 // audio view and then, in target view alone, the coincident one.
 //
-// ONE VERDICT FOR BOTH VIEWS SINCE 2026-09-13 (architect: "shouldn't we grey
-// out the up/down for label refs in source? we grey out Left for a marker at
-// 0"). Until that ruling this owner was the TARGET view's alone and a
-// source-view reference was refused elsewhere — skipped by the act's loop and
-// carded at its no-change tail — with the same literal, so the card agreed
-// while the face and the tooltip's ladder line could not see it. Folding the
-// reference's arm here ahead of the view test made the two refusals one kind
-// verdict, which the Up / Down face now greys on.
+// ONE VERDICT FOR BOTH VIEWS (architect 2026-09-13: "shouldn't we grey out
+// the up/down for label refs in source? we grey out Left for a marker at
+// 0"): the reference's arm stands here ahead of the view test, so the card,
+// the Up / Down face and the tooltip's ladder line read one kind verdict.
 //
 // A PASS IS NOT REFUSED HERE (architect 2026-09-13: "why not just allow tempo
 // step by collapsing the inherit as we already do in S+W?"). The singleton
 // step freezes it to owning at the value it resolves to in BOTH views
 // (warp_tempo_step_start), and the freeze is map-neutral — the pass takes its
 // effective base and scale — so the step then reshapes only what follows it,
-// exactly as stepping an owner does. From 2026-08-30 until that ruling a pass
-// and a ref shared one view-naming sentence here ("In target view only a
-// marker that owns its tempo can be stepped"); what remains is the REFERENCE,
-// which refuses in source view too, so it takes a view-free sentence
+// exactly as stepping an owner does. The REFERENCE refuses in source view
+// too, so it takes a view-free sentence
 // (kLabelRefHasNoTempoCard, app_state.h).
 //
 // NOR IS A DISABLED MARKER (architect 2026-09-13, "disabled should be
@@ -1332,7 +1280,7 @@ bool tempo_cent_step_group_actionable(const AppState& a, const GuiAudio& audio,
 // its term skipped for one on the same argument
 // (tempo_cent_step_group_actionable).
 //
-// THE COINCIDENCE REFUSAL (architect 2026-07-22; the membership widened
+// THE COINCIDENCE REFUSAL (architect 2026-07-22; the membership
 // 2026-11-17): an enabled member of a coincident run renders as a plain 1.00
 // owner (resolve_warp_markers_for_render's stage 2), so its authored tempo is
 // render-inert and a step in target view, where the picture is the render's,
@@ -1406,7 +1354,7 @@ const char* tempo_cent_step_kind_refusal(const AppState& a,
 //
 // THE ARMS ARE THE DISPATCH'S OWN, IN ITS OWN ORDER, and each is argued at the
 // dispatch where its sentence is raised (input_key_dispatch.cpp's Ctrl+B
-// arm, bare `m` until 2026-09-15). What is worth stating HERE is how the
+// arm). What is worth stating HERE is how the
 // coincidence test reads (2026-11-17): every effectively-enabled row of the
 // selected run [owner .. last_sel] is asked of warp_red_flag_set_cached's
 // `collapsed` set rather than of warp_coincident_members fresh. It is the
@@ -1511,36 +1459,30 @@ bool tempo_cent_step_direction_actionable(const AppState& a,
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
         int64_t delta_cents, bool synthesized_repeat) {
-    // THE WALL SCAN IS THE CONST OWNER ABOVE since 2026-08-31
-    // (tempo_cent_step_group_actionable — the wall set, the red-flag cache
+    // THE WALL SCAN IS THE CONST OWNER ABOVE (2026-08-31;
+    // tempo_cent_step_group_actionable — the wall set, the red-flag cache
     // read and the direction's bracket edge, all of it): ANY walled member
-    // refuses the whole press, and the Up / Down buttons now grey on that same
+    // refuses the whole press, and the Up / Down buttons grey on that same
     // answer.
-    // AND IT RUNS AHEAD OF THE COALESCE VERDICT (2026-08-31; it sat
-    // behind it from 2026-07-29): A WALL NO-OP
+    // AND IT RUNS AHEAD OF THE COALESCE VERDICT (2026-08-31): A WALL NO-OP
     // TOUCHES NOTHING. The verdict's call invalidates the coalescing stamp on a
-    // physical press, so with the scan behind it a refused KEY press split the
-    // previous undo run while the same press on the GREYED button never
-    // dispatched and left it whole — one wall, two undo behaviours. The
-    // discriminator is the FACE and not the card: this refusal KEEPS its card,
-    // and it moves anyway because the button greys on exactly this predicate.
-    // A press that PASSES the scan is unaffected: the scan is const, reads no
-    // coalescing state, and the verdict it then computes is the one it always
-    // was.
+    // physical press, so with the scan behind it a refused KEY press would
+    // split the previous undo run while the same press on the GREYED button
+    // never dispatches and leaves it whole — one wall, two undo behaviours.
+    // The discriminator is the FACE and not the card: this refusal KEEPS its
+    // card, and it runs first anyway because the button greys on exactly this
+    // predicate. A press that PASSES the scan is unaffected: the scan is const
+    // and reads no coalescing state.
     // IT STILL SAYS SO, AND THAT PAIRING IS DELIBERATE (architect 2026-08-31,
     // the refinement arc's rule pair): a command whose effect spreads across
     // the screen keeps its card even where its button greys — a group step
     // would have moved every selected flag's value, so it is not the
-    // one-dimensional already-at-its-state refusal that went silent that day.
+    // one-dimensional already-at-its-state refusal, which is silent.
     // The sentence is one for the whole wall set (a pass, a ref, a
     // coincident member, a marker at the bracket edge) because what
     // the press needs to know is that the GROUP could not move as a group, not
     // which member walled — naming the member would be a second act's worth
-    // of detail for a press that changed nothing. (An EMPTY STEP carded the
-    // singleton's empty-selection sentence from 2026-09-02, for a
-    // selection whose every member was effectively disabled and so skipped;
-    // since 2026-09-13 a disabled member steps like any other, so nothing
-    // produces that refusal and its arm is deleted.)
+    // of detail for a press that changed nothing.
     if (!tempo_cent_step_group_actionable(app, audio, delta_cents))
         return "One of the selected markers cannot take this tempo change";
     // THE GROUP STEP STOPS A LIVE PLAY, the singleton's clause (architect
@@ -1574,15 +1516,15 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     std::vector<GuiWarpMarker> pre_state = mv;
     // Apply the press's own signed cent count to each selected member —
     // ±1 bare, ±3 shifted, ±10 with ctrl (plain integer arithmetic — the
-    // structural producer discipline), a DISABLED member included since
-    // 2026-09-13 (the ruling is above the scan); none of them is walled
+    // structural producer discipline), a DISABLED member included
+    // (2026-09-13); none of them is walled
     // (checked above, and the scan asks whether the member can take the WHOLE
     // step), so every add stays in-bracket and actually changes the value;
     // positions untouched, so no reorder/remap. NO MEMBER CARRIES AN ITERATION
     // BRACKET HERE (2026-09-10): a bracket exists only while grid iterations
     // is lit, and while it is lit this step is one of the acts the lock
-    // refuses — which is what retired the per-member retroactive clamp that
-    // used to ride this loop. The undo entry's touched hints are the stepped
+    // refuses, so no per-member retroactive clamp rides this loop. The undo
+    // entry's touched hints are the stepped
     // members — every in-range selected index.
     std::vector<int> touched;
     for (int idx : app.selected_markers) {
@@ -1610,8 +1552,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // OWED HERE: the step leaves the selection as it was (the selection's
     // stems stand on the same members, render.h's THE STATES), so the
     // group's cue is its members' stems plus the landed cursor.
-    // (The skip is the whole per-press action: note_coalesced_commit died with
-    // the hover popup in row 5.)
+    // (The skip is the whole per-press action.)
     if (!merge) undo.push_undo_warp(std::move(pre_state), touched, touched);
     // Settle the burst, POST-mutation: the stamp, or — on a merged press that
     // stepped every member back to the burst entry's own snapshot — the
@@ -1641,22 +1582,18 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     // repricing that can move even its own image. Source view needs nothing
     // (identity domain — the frame never moved).
     // THE TAIL IS THE SINGLETON'S, THROUGH THE ONE BODY (warp_tempo_write_tail
-    // above, which carries the re-land argument, the retired region belts —
-    // this arm's own extent re-derive among them, deleted with the SPAN FORM
-    // on 2026-07-30 — and the stems' silence). Only the REACH differs from the
-    // singleton, never the rule.
+    // above, which carries the re-land argument and the stems' silence). Only
+    // the REACH differs from the singleton, never the rule.
     warp_tempo_write_tail(app, audio, viewport, target_render);
     return std::nullopt;
 }
 
 // -- THE ITERATION BOUND STEP (architect 2026-09-04) --------------------------
 //
-// The vertical arrows' second body. On the road he does not type, and grid
-// iterations was the one mode that needed the keyboard — the bracket was
-// typed into the flag editor as text — so the two bounds became CELLS on
-// the flag, each addressable by a click and stepped by the arrows (and since
-// 2026-09-05 each with its own editor, the flag editor carrying no bracket
-// at all). What
+// The vertical arrows' second body. On the road he does not type, so the two
+// bounds are CELLS on the flag, each addressable by a click and stepped by
+// the arrows, each with its own editor (2026-09-05), the flag editor
+// carrying no bracket at all. What
 // follows mirrors adjust_tempo_cents' shape one clause at a time: the leading
 // refusal block named whole in a predicate the face reads, the wall asked
 // through the directional face, the
@@ -1683,9 +1620,9 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // 2026-11-02, marker_walk_landing) — and
 // every Selection mutator that GROWS a selection seats the focus through
 // Selection::seat_focus, which puts the axis back on the payload. So a 2+
-// selection with Lower or Upper addressed does not exist, and the group arm,
-// its wall scan and their two group forks in the predicates below are deleted
-// rather than kept as belts. The TEMPO step's group arm is untouched: the
+// selection with Lower or Upper addressed does not exist, and there is no
+// group arm, group wall scan or group fork for it, not even as a belt. The
+// TEMPO step's group arm is untouched: the
 // payload axis is where a group lives. A blank bracket starts at [0, 0] and the
 // first step authors it, both bounds written through the one write site
 // (iter_bound_step_write, app_state.h) — which is also where the step and
@@ -1707,22 +1644,19 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
 // history while it stands (authoring_locked, app_state.h). A HELD RUN SIMPLY
 // STEPS: the hold-repeat producers go on firing this body and each fire is a
 // write, there being no burst entry for a repeat to open or merge into, which
-// is why `synthesized_repeat` reaches nothing here any more. It was
-// GestureKind::IterBoundStep's own coalescing kind until that day, with two
-// subject terms — the addressed cell and the W/P column — that no other kind
-// needed.
+// is why `synthesized_repeat` reaches nothing here.
 //
-// IT HAS A TWIN SINCE 2026-09-09, GuiPhaseResetMarkersOps::adjust_iter_bound_
+// IT HAS A TWIN (2026-09-09), GuiPhaseResetMarkersOps::adjust_iter_bound_
 // hops, which is this body clause for clause in the HOP domain over the
-// phase-reset store. The two share the THREE PREDICATES below (four until the
-// group verdict went with the group arm), each forking on
+// phase-reset store. The two share THREE PREDICATES (iter_bound_step_actionable
+// and the two below), each forking on
 // the live column inside its own body, so the Up/Down dispatch, the buttons'
 // face and their tooltip keep ONE switch each.
 
 // The DIRECTIONAL half of the Up/Down face with a bound addressed — the
 // contract is at the declaration (app_state.h). A SINGLETON COMPARE ON EITHER
-// COLUMN and nothing else since 2026-09-10, the act having no group arm left
-// to fork with.
+// COLUMN and nothing else (2026-09-10), the act having no group arm to fork
+// with.
 bool iter_bound_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           MarkerCell side,
@@ -1819,15 +1753,12 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     // THE WALL IS A SILENT, FACED NO-OP: the face greys on it (the Up/Down
     // arms read this very predicate), so the key says nothing either — a
     // benign one-dimensional refusal already at its state, the cell's own
-    // value being the place to glance. (It was ranked AHEAD OF THE COALESCE
-    // STAMP until 2026-09-10, the key having had to leave the stamp exactly
-    // as the greyed button did; the bound step stamps nothing now, so there
-    // is no ordering left to keep.)
+    // value being the place to glance.
     if (!iter_bound_step_direction_actionable(app, audio, side, delta_cents))
         return std::nullopt;
     // THE KIND REFUSAL, on a card and behind a LIVE face — the one kind
-    // refusal under the vertical arrows that still keeps one since the tempo
-    // step's began greying (2026-09-13), and a BELT rather than a live
+    // refusal under the vertical arrows that keeps one, the tempo step's
+    // greying (2026-09-13), and a BELT rather than a live
     // refusal: a bound cell is addressed only where its cell paints, and while
     // the lamp stands the lock refuses every act that could take the carrier
     // away, so no reachable state answers it (iter_bound_step_kind_refusal).
@@ -1872,30 +1803,25 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     return std::nullopt;
 }
 
-// Nudge the FOCUSED warp marker by exactly one on-screen pixel column per press.
+// Nudge the FOCUSED warp marker by one millisecond per press (below).
 // direction: -1 for earlier (up/left), +1 for later (down/right).
 //
 // HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
 // 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
 // also lands the playhead there) and the focus takes this one step, so the body
-// below is the singleton op unconditionally. The doctrine, the group-verb rule it
-// instances, and the dead per-member machinery are recorded once at the head of
-// position_nudge.h.
+// below is the singleton op unconditionally. The doctrine and the group-verb
+// rule it instances are stated once at the head of position_nudge.h.
 //
-// SOURCE HOME VIEW ONLY (the home-view binding, architect 2026-07-22 — restored
-// 2026-07-24 second pass: the same-day "third exception", a both-views warp
-// position branch, was a misreading and is DELETED; there is no warp position
-// authoring in target view at all). In W+TARGET bare Left/Right is a CONSUMED
-// REFUSAL as of 2026-07-29 — it dispatched the tempo-image step there until that
-// whole family was deleted (marker_drag.h), and there is no fallback — with the
-// dispatch site in input_handler.cpp owning the routing.
+// SOURCE HOME VIEW ONLY (the home-view binding, architect 2026-07-22 and
+// 2026-07-24: there is no warp position authoring in target view at all). In
+// W+TARGET bare Left/Right is a CONSUMED REFUSAL (2026-07-29) with no
+// fallback, the dispatch site in input_handler.cpp owning the routing.
 //
 // The wall regime over the identity map, one shape: the marker steps ONE
-// MILLISECOND per press (architect 2026-11-15, the no-grid arc;
-// position_nudge.h's ONE MILLISECOND A PRESS) — the horizontal ladder retired
-// (horizontal_arrow_step in gui_input.h), so no modifier changes the step size
-// any more — through position_nudge_landing, and its delta is CLAMPED into
-// its own wall headroom, walls
+// MILLISECOND per press (architect 2026-11-15; position_nudge.h's ONE
+// MILLISECOND A PRESS) — no modifier changes the step size
+// (horizontal_arrow_step in gui_input.h) — through position_nudge_landing, and
+// its delta is CLAMPED into its own wall headroom, walls
 // exactly reachable — the unified wall policy, stated once at the head of
 // position_nudge.h. The camera term (the hold posture's, nudge_camera) is
 // only passed through to finish_position_nudge (NudgeCamera::HoldColumn,

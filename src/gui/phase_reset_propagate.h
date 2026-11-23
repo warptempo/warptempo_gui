@@ -49,9 +49,7 @@ std::string format_domain_timestamp(double source_frame, const AppState& app,
 
 // THE PROPAGATE CHORDS' CHEAP REFUSALS, each ladder in its arm's own order:
 // the bare P / Ctrl+P / Ctrl+Shift+P arms (handle_mode_keys,
-// input_key_dispatch.cpp; architect 2026-10-24 — Ctrl+Return /
-// Ctrl+Shift+Return from 2026-10-21, Ctrl+P / Ctrl+Alt+P /
-// Ctrl+Alt+Shift+P before) switch on these to card — THE TWO PASTES SHARE
+// input_key_dispatch.cpp; architect 2026-10-24) switch on these to card — THE TWO PASTES SHARE
 // THE PASTE'S LADDER, term for term — and each ladder is its key's face term
 // (architect 2026-11-08, the COPY / PASTE duo): the copy's COPY's
 // (phase_reset_copy_actionable, app_state.h), the paste's PASTE's
@@ -63,14 +61,13 @@ std::string format_domain_timestamp(double source_frame, const AppState& app,
 // they read the AppState and write nothing.
 //
 // THE COPY'S NothingToCopy rung is phase_reset_copy_captures below, asked
-// BEFORE the clipboard is touched: until 2026-09-24 the arm ran
-// copy_from_selection first and only then found the clipboard empty, so a
-// copy over a run with nothing to capture ERASED whatever the clipboard held.
-// Now such a copy refuses and the clipboard stands as it was.
+// BEFORE the clipboard is touched (2026-09-24), so a copy over a run with
+// nothing to capture refuses and the clipboard stands as it was, never
+// erased by an empty capture.
 //
 // THE STRUCK RUNG, LAST ON BOTH LADDERS (architect 2026-11-17: "phase rest
 // copy and apste shoudl fails and card saying something like 'range contains
-// struck marker'"; his earlier reason, struck markers "could mess up a
+// struck marker'"; and his reason, struck markers "could mess up a
 // copy-paste of phase resets"): the family pairs blocks by the warp markers'
 // LABELS, and a struck marker is one whose label or tempo the render
 // normalizes away (a coincident member, a dangling, ambiguous or
@@ -121,10 +118,9 @@ PhaseResetCopyRefusal phase_reset_copy_refusal(const AppState& app,
 // predicate. Each such marker contributes one block whether or not any phase
 // reset falls inside its section (a block with no placements is a real
 // capture: its paste clears the matched destination block), so "captures
-// anything" is "the clipboard would come out non-empty", exactly the test the
-// arm used to make after the fact. Asked at the press and by the copy key's
-// face every tick (2026-10-24), memo-free (its per-tick memo retired
-// 2026-10-21; the walk stops at the first propagating member).
+// anything" is "the clipboard would come out non-empty". Asked at the press
+// and by the copy key's face every tick (2026-10-24), memo-free (the walk
+// stops at the first propagating member).
 bool phase_reset_copy_captures(const AppState& app);
 
 // The two pastes' one ladder (their arms say why; the struck rung above).
@@ -165,8 +161,7 @@ struct PhaseResetPropagate {
     // landing REPLACES the membership with the set the paste created, and a
     // replace must run through a Selection mutator or the shift anchor
     // outlives it (Selection::replace_selection carries the whole reasoning;
-    // the sticky ctrl rode beside the anchor here until 2026-09-10, when it
-    // became a tool posture no Selection body writes). Every other
+    // the sticky ctrl is a tool posture no Selection body writes). Every other
     // selection effect on this path is already the column switch's own clear.
     Selection&            selection;
 
@@ -218,8 +213,7 @@ struct PhaseResetPropagate {
     // silent.
     void paste_apply();
 
-    // Ctrl+Shift+P (architect 2026-10-24; Ctrl+Alt+Shift+P until its removal
-    // of 2026-10-21): propagate only the disabled/enabled *state* of
+    // Ctrl+Shift+P (architect 2026-10-24): propagate only the disabled/enabled *state* of
     // clipboard placements onto matching destination phase resets,
     // leaving positions untouched. Caller has verified W-mode + exactly
     // one warp marker selected + non-empty clipboard + no struck row in the
@@ -238,22 +232,22 @@ struct PhaseResetPropagate {
     // silent. No confirmation prompt: it applies
     // directly. A run that paired a block lands with the resets it FLIPPED
     // selected, the playhead on the first and the set framed (the tail
-    // below; architect 2026-11-17, send U).
+    // below; architect 2026-11-17).
     void paste_state_apply();
 
     // Shared end-of-paste tail: land the completed paste in the P COLUMN OF
     // THE AUDIO VIEW IT WAS PRESSED IN — S+W to S+P, T+W to T+P — with the
     // resets it changed selected (architect 2026-10-14, the symmetry with
-    // Shift+S, which stays in its audio view the same way; the tail crossed
-    // into T+P until then). The audio view never changes.
+    // Shift+S, which stays in its audio view the same way). The audio view
+    // never changes.
     // `changed` is the exact post-run index set of the resets this paste
     // changed: the placement paste's materialized resets (post-insert), the
     // state paste's flipped ones. A non-empty set is selected, the playhead
     // landed on its first (the earliest) and the set FRAMED as the group undo
     // / redo restore frames its markers — on screen nothing moves, off screen
     // it is centered, too wide it is zoomed out to fit
-    // (land_and_frame_active_markers, input_handler.h; architect 2026-11-17,
-    // send U), a one-member set included. An empty set (a run that paired
+    // (land_and_frame_active_markers, input_handler.h; architect 2026-11-17),
+    // a one-member set included. An empty set (a run that paired
     // blocks and changed nothing) selects nothing and moves neither the
     // playhead nor the camera.
     // ONLY A PASTE THAT WROTE A BLOCK REACHES IT (architect 2026-08-31):
@@ -267,7 +261,7 @@ struct PhaseResetPropagate {
     // — paste_state_apply flipping no flag because every one already matched,
     // paste_apply's self-paste at offset zero — STILL LANDS, because a paste
     // that paired stands as a paste and the switch shows a true result. What
-    // the switch was retired for is a paste that touched no block at all:
+    // skips the switch is a paste that touched no block at all:
     // pair_count 0 on either side, or a divergence / count mismatch at block 0.
     void land_paste_in_phase_reset_view(const std::set<int>& changed);
 };

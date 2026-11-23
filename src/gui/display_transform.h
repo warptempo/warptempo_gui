@@ -1,6 +1,6 @@
 #pragma once
 
-// THE DISPLAY TRANSFORM (architect 2026-10-08 ~05:15): EVERY AUTHORED COLOR IS
+// THE DISPLAY TRANSFORM (architect 2026-10-08): EVERY AUTHORED COLOR IS
 // AN sRGB BYTE TRIPLE — a palette member, the compiled row's word
 // (kArcDarkTones, gui_theme.h), a named literal, an
 // icon's own inks — "if I open that image in the web browser, it would have
@@ -14,7 +14,7 @@
 // sRGB color as the browser presents it.
 //
 // WHERE IT RUNS, the one list (re-grep `display_transform::` to re-derive it):
-// set_palette_source and set_waveform_source (render.cpp — every role paint,
+// set_palette_source and set_waveform_source (render.cpp — every palette paint,
 // the text's ink included); the words the painters write by hand (render.cpp:
 // the waveform plate's two inks, converted on the GUI thread as
 // waveform_plate_inks hands them to the job, so the worker writes them
@@ -54,21 +54,20 @@
 // Worked: sRGB 3FF3A2 -> P3 7CF0A9, 3AD884 -> 6ED58C, D4D0C8 -> D3D0C9.
 //
 // THE INVERSE (srgb_word_from_p3) runs nowhere in the product: it is here so a
-// color picked by eye under the 2026-10-02 semantics (a hex WAS the P3 byte
-// the panel showed) can be converted once to the sRGB byte that presents the
-// same color — kP3ToSrgb above is its matrix, the curve the same.
+// color picked by eye as the P3 byte the panel showed can be converted once
+// to the sRGB byte that presents the same color — kP3ToSrgb above is its
+// matrix, the curve the same.
 //
 // THE SWITCH (active) IS TWO BITS, both true for the transform to run:
 //   * THE WINDOW'S SPACE (set_window_display_p3) — GuiPlatform::
 //     window_is_display_p3, read once by gui_main right after the window
 //     exists and before any painter or worker thread runs; nothing changes it
 //     after.
-//   * TRUE COLORS (set_true_colors; architect 2026-10-08 ~05:35) — THE
-//     `true_colors` DEVICE KEY since 2026-10-21 (`on` | `off`, required, read
+//   * TRUE COLORS (set_true_colors; architect 2026-10-08, the device key
+//     2026-10-21) — THE `true_colors` DEVICE KEY (`on` | `off`, required, read
 //     at launch and set live by the settings editor's commit; device_config.h),
 //     ON in the tablet's config ("the default is on, not something off by
-//     default"); from 2026-10-08 until then the Settings menu's "True Colors"
-//     command row, checked, true at every launch and persisted nowhere. With
+//     default"). With
 //     the conversion on, a screenshot holds the converted P3 bytes, so a hex
 //     read off it in GIMP is not the authored one ("I won't be able to
 //     round-trip"); app screenshots are "only for occasional documentation

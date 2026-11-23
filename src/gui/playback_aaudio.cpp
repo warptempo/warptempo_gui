@@ -33,9 +33,9 @@
 // PLAYS (architect 2026-08-27, on glass — "a little click sound, like a
 // keyboard's haptic click" at the start of every audition). STARTING AN AAUDIO
 // STREAM IS AUDIBLE: the framework brings the output path up and the device's
-// own unmute transient rides out with the first frames. The backend used to
-// start the stream at every play() and stop it at every stop(), so every
-// audition began with one of those transients — the click. It now starts the
+// own unmute transient rides out with the first frames, so a stream started
+// at every play() and stopped at every stop() would begin every audition with
+// one of those transients — the click. The backend starts the
 // stream ONCE, at open (init, and the reopen after a disconnect), and stops it
 // only where the stream is about to be CLOSED: shutdown, and the dead-stream
 // reopen. Both live in close_stream, which holds the file's ONE requestStop
@@ -47,15 +47,14 @@
 // the roads that reach it ungated — are
 // one road and an ordinary play makes no device call at all.
 //
-// THE RULING HAS NO NARROWING, and one stood for eight days. From 2026-09-04
-// to 2026-09-12 the render player's rest stopped the stream, so that a paused
-// player would not go on feeding the Bluetooth link with silence the head unit
-// read as an active player. It is REVERTED on the architect's car evidence: a
-// fresh continuous stream is clean for hours, while every play on a
+// THE RULING HAS NO NARROWING (2026-09-12, on the architect's car evidence):
+// the render player's rest does not stop the stream either. A fresh
+// continuous stream is clean for hours, while every play on a
 // stopped-and-restarted stream crackles throughout — the beginning, the middle
 // and the end of a 30-40 s stretch, never twice at the same spot, so it is the
 // restart itself and not the settling of its first seconds. What the head unit
-// makes of a stream that runs while the session says paused is therefore the
+// makes of a stream that runs while the session says paused (silence fed to
+// the Bluetooth link, read as an active player) is therefore the
 // PUBLISH side's business (GuiRenderPlayer::publish_media_state), and the
 // device is never touched between plays by any road.
 //
@@ -144,7 +143,7 @@ struct GuiPlayback::Impl {
 
     // MAIN THREAD ONLY (the head comment's threading block). `started` is
     // true from the stream's one successful requestStart until the stream is
-    // CLOSED — no longer a per-play bit (the lifecycle block at the head).
+    // CLOSED, not a per-play bit (the lifecycle block at the head).
     AAudioStream* stream       = nullptr;
     bool          started      = false;
     // init() bound a source AND opened a device. play()/stop() gate on it.
@@ -290,7 +289,7 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // road through play()'s own head (reopen_stream_if_dead, one body for
     // both). The user presses play again — the same answer the product gives
     // every other rare, loud fault. THE NOISE BED FOLLOWS THIS RULE TOO
-    // (architect 2026-10-28; the sequence alone since 2026-11-05): the
+    // (architect 2026-10-28; the sequence alone, 2026-11-05): the
     // voice's sequence resets, audible or not, at the first main-thread act
     // that reads this latch — gui_main's poll on GuiPlayback::stream_dead at
     // the next tick, or, a press reaching the device first, the reopen's own
@@ -334,10 +333,9 @@ bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
 // callback has quiesced"). IT COUNTS CALLBACK INVOCATIONS, because a stream
 // that stays STARTED keeps calling its data callback whether or not
 // anything is playing (the lifecycle block at the head of this file), so the
-// counter keeps advancing and counting is a proof. It could not be one while
-// the stream was stopped between plays — the old fence therefore drove the
-// STREAM STATE MACHINE (requestStop, then wait for STOPPED), and that
-// requestStop is exactly the click this backend no longer makes.
+// counter keeps advancing and counting is a proof. (A fence that drove the
+// STREAM STATE MACHINE — requestStop, then wait for STOPPED — would make
+// exactly the click the lifecycle block rules out.)
 //
 // THE PROOF. stop() lowers the session word's playing bit (seq_cst) before
 // calling here. One increment after that write retires a callback that may
@@ -562,8 +560,8 @@ void close_dead_stream(GuiPlayback::Impl& impl) {
 // and, with `device_ready` still true, is exactly the "no stream standing"
 // shape device_unavailable reads.
 // THE DEAD ARM RESETS THE NOISE VOICE'S SEQUENCE FIRST (2026-10-28, the
-// no-auto-recover rule's second road, noise.h's head; the sequence alone
-// since 2026-11-05): close_dead_stream below, ahead of the close that clears
+// no-auto-recover rule's second road, noise.h's head; the sequence alone,
+// 2026-11-05): close_dead_stream below, ahead of the close that clears
 // the latch, so a press that reaches here before gui_main's poll has read
 // the drop — a Play press, an audition start, the car's Play at a Bluetooth
 // connect — ends the old sequence instead of resuming it mid-segment on the
@@ -835,8 +833,8 @@ bool GuiPlayback::device_unavailable() const {
 // and init's refused start — actually request one. A refusal closes the
 // stream and answers false, which is the card's own condition.
 // The start's own transient (the lifecycle block at the head of this file:
-// starting an AAudio stream is audible) is unmoved in practice — it lands at
-// the same launch press it always did, microseconds earlier than play()'s.
+// starting an AAudio stream is audible) lands at the launch press,
+// microseconds ahead of play()'s.
 // The answer is device_unavailable's own reading taken AFTER the reopen — the
 // latch cleared by close_stream, the stream standing or not — so the gates
 // card exactly when nothing can be opened. A device that never came up

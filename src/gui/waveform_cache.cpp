@@ -19,13 +19,12 @@
 #include <vector>
 
 // Waveform / flag cache production. The waveform plate's column bounds
-// (worker-rendered or synchronously rebuilt; the incremental shift-and-strip
-// pan was retired 2026-07-26), which the frame's draw list carries to the
-// GPU, and the flag-rect cache's off-screen surface, which on_redraw blits,
-// are produced here, away from the on-screen paint path in
-// paint_handler.cpp. (Trim is a LIVE paint pass now —
+// (worker-rendered or synchronously rebuilt), which the frame's draw list
+// carries to the GPU, and the flag-rect cache's off-screen surface, which
+// on_redraw blits, are produced here, away from the on-screen paint path in
+// paint_handler.cpp. (Trim is a LIVE paint pass —
 // GuiPaintHandler::paint_trim — so no trim pixel is
-// cached; the former trim-stem cache is retired.) These are GuiPaintHandler
+// cached.) These are GuiPaintHandler
 // members defined
 // in a second translation unit; the class declaration and the on-screen
 // paint passes live in paint_handler.{h,cpp}. Nothing here reaches the
@@ -45,7 +44,7 @@ uint64_t next_plate_revision() {
     return ++revision;
 }
 
-// -- kept_row (architect 2026-11-15, send L) --------------------------------
+// -- kept_row (architect 2026-11-15) ----------------------------------------
 //
 // THE ROW'S UPDATE (the store's rule at WaveformKeptBars, render.h): the
 // kept entries of the global bars [k, k + n) of rung b, channel `channel`,
@@ -154,12 +153,12 @@ const std::vector<WaveformColumnRows>* kept_row(
 //
 // THE PLATE'S RENDER (the contract at the declaration, waveform_worker.h):
 // the two bands through the one column producer (render_waveform_columns),
-// each over THE PLATE'S ROW OF BARS (architect 2026-11-14, send G; render.h's
+// each over THE PLATE'S ROW OF BARS (architect 2026-11-14; render.h's
 // THE PLATE'S BARS): the rung for the displayed step, the stored range with
 // its halo and the draw transform are derived here, once for both bands,
 // from the job's inputs, and written into `dest` beside the columns they
-// describe. IN THE FADE BAND before a level switch (architect 2026-11-14,
-// send H; the two-picture blend, architect 2026-11-15, send O; render.h's
+// describe. IN THE FADE BAND before a level switch (the two-picture blend,
+// architect 2026-11-15; render.h's
 // THE FADE BAND, waveform_fade_band) each band holds two rows, each as the
 // producer gave it: the main rung's and the fine rung's own uniform row
 // (waveform_bar_geometry at the fine rung), so the producer is asked twice
@@ -171,7 +170,7 @@ const std::vector<WaveformColumnRows>* kept_row(
 // lays under it showing through, so no ground color is ever carried by the
 // plate and the canvas has one painter (the record is at
 // render_waveform_columns, render.h).
-// WITH THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
+// WITH THE KEPT BARS (architect 2026-11-15; WaveformKeptBars,
 // render.h): the synchronous route hands its store, and each band's rows —
 // in the fade band its main row and its fine row — come out of the kept
 // rows, the producer asked only for the bars a row lacks (kept_row above);
@@ -215,10 +214,9 @@ void render_waveform_to_plate_columns(
     dest.band[1].stored = false;
     if (area_w <= 0 || area_h <= 0) return;
     // THE CHANNELS FILL THE PLATE, WHICH IS THE CANVAS (architect 2026-10-09,
-    // "remove": the waveform's 6-W vertical inset is gone — it paid for a
-    // stem-only band over the samples, where the retired tip-down playhead
-    // triangle hung, and since the canvas became Cool Edit's the head and the
-    // cues' triangles stand above the canvas's frame, so nothing needed it).
+    // "remove": no vertical inset — the playhead's head and the cues'
+    // triangles stand above the canvas, in the ruler and the marker lane, so
+    // nothing over the samples needs room).
     // The plate is area_w x area_h, drawn at the area's origin; the two
     // channels fill its two wells, and the leveler's headroom
     // (waveform_gain.h) is the only thing keeping peaks off their edge rows.
@@ -226,8 +224,8 @@ void render_waveform_to_plate_columns(
     // — so both channels always render.
     //
     // THE TWO BANDS ARE EXACTLY EQUAL, COOL EDIT'S STEREO DIVIDER BETWEEN THEM
-    // (architect 2026-10-16; the channels met flush from 2026-08-03 until
-    // then): each channel takes the area less the divider, halved and floored,
+    // (architect 2026-10-16): each channel takes the area less the divider,
+    // halved and floored,
     // and the bottom one begins under the divider's `divider_px` rows — the
     // job's snapshot of waveform_divider_px (render.h's waveform_divider),
     // which the plate leaves transparent and the canvas paints. At an odd
@@ -289,7 +287,7 @@ void render_waveform_to_plate_columns(
     // row's 0 .. fine.n likewise), y and h the plate's rows.
     const GuiRect ch[2] = {GuiRect{0, b0.y, bars.n, b0.h},
                            GuiRect{0, b1.y, bars.n, b1.h}};
-    // THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars,
+    // THE KEPT BARS (architect 2026-11-15; WaveformKeptBars,
     // render.h, owns the store's rule): with a store — the synchronous
     // route's, the GUI thread's alone — each band's rows come out of the
     // kept rows, the producer asked only for the bars a row lacks, and
@@ -450,25 +448,18 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     // otherwise DRIVE the publication (it writes the live store per motion,
     // so in target view the desired fingerprint's map hash changes every few
     // pixels and this gate is what keeps a full render off the worker until
-    // the commit). (Membership history, kept because each step was a ruling:
-    // the standing region's own editor `region_edit_drag` was a member in its
-    // own right from 2026-08-15 until its drags became the trim drags on
-    // 2026-08-18, and those overlay drags were deleted with the resting
-    // overlay on 2026-09-22 — the trim bar is trim's one pointer surface; the
-    // target-view tempo drag was a member for its own opposite reason until
-    // its 2026-07-29 deletion, see marker_drag.h.) The actives
+    // the commit). The actives
     // freeze the displayed paint basis for the whole gesture (the
     // DragState "no per-drag map copy" contract), so no waveform job may be
     // DISPATCHED or PUBLISHED from the aimed press to the release:
     // on_waveform_render_done's
     // completion-drop gate is the publication half, and this is the dispatch
     // half. Freezing the whole enqueue (not just the warp_frame_map
-    // hash the former drag_freeze excluded) closes the
-    // drop-rewind-redispatch loop: a
+    // hash) closes the drop-rewind-redispatch loop: a
     // job for a viewport-follow / resize fingerprint dispatched just before the
-    // aimed press used to be dropped, rewound, then re-dispatched every tick
-    // because
-    // the vp/area fields still differed — wasted full renders all gesture long.
+    // aimed press would otherwise be dropped, rewound, then re-dispatched every
+    // tick because
+    // the vp/area fields still differ — wasted full renders all gesture long.
     // Nothing that legitimately re-renders can occur inside the freeze anyway:
     // keys are gesture-gated (the drag-modal gate covers the pendings), the
     // follow chase is paused for any live pointer
@@ -501,13 +492,11 @@ void GuiPaintHandler::maybe_enqueue_waveform_render() {
     if (!in.valid) return;
 
     // THE PLATE'S GEOMETRY IS THE AREA'S TWO DIMENSIONS AND THE STEREO
-    // DIVIDER'S HEIGHT (the inset gone 2026-10-09; the divider 2026-10-16):
+    // DIVIDER'S HEIGHT (the divider 2026-10-16):
     // the channels' bands are the area less the divider, halved
     // (waveform_channel_band), so those three are the whole layout input,
     // each keyed directly — the divider's rows a scaled length, moving with
-    // gui_scale where the area's height need not. (The inset was keyed as a
-    // field of its own until 2026-10-09, and the measured MONOSPACE font size
-    // before row 7, as a proxy for it while it was font-derived.)
+    // gui_scale where the area's height need not.
     auto fingerprint_differs = [&](
         int64_t fp_vp_s, int64_t fp_origin, int64_t fp_vp_e,
         int     fp_aw,   int     fp_ah,
@@ -645,10 +634,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // flight at the aimed press; there is no drop-rewind-redispatch loop to
     // sustain.
     // The non-members are the predicate's own, for the dispatch gate's own
-    // reasons. (The TEMPO drag was on this gate too, joining the drop
-    // for its own reason — it re-warped synchronously per cent step, so a pre-grab
-    // async job publishing here would have painted a stale plate over the
-    // step-fresh one — until its 2026-07-29 deletion; see marker_drag.h.)
+    // reasons.
     if (displayed_basis_frozen(app)) {
         wf_cache.supersede = false;
         wf_cache.supersede_warp_frame_map.clear();
@@ -793,8 +779,8 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
     // rationale lives there), through the same road: the viewport's lanes
     // damaged, the rows above them owed a check (damage_window_top_rows,
     // viewport.h). This is the
-    // ASYNC publish (resize, drift catch-up — follow scroll left for the
-    // synchronous route 2026-09-02), whose viewport moved undriven.
+    // ASYNC publish (resize, drift catch-up; follow's scroll is the
+    // synchronous route's, 2026-09-02), whose viewport moved undriven.
     const GuiRect a = waveform_area(app);
     damage_window_top_rows(app, gui, a.y + a.h);
 }
@@ -804,7 +790,7 @@ void GuiPaintHandler::on_waveform_render_done(bool ok) {
 // (the fingerprint's roster in paint_handler.h; maybe_enqueue_waveform_render's compare), read here against the LIVE slot
 // fp_* rather than the pending one, since the question is what the glass
 // would be shown. THE GEOMETRY WITH NO WAVEFORM ROWS answers TRUE first
-// (2026-10-28, Sol's round): compute_waveform_render_inputs's empty-area arm
+// (2026-10-28): compute_waveform_render_inputs's empty-area arm
 // (waveform_area's w or h at zero — a schema-legal lane stack past the
 // window, waveform_area's owner comment in main.cpp) is the one invalid arm
 // tested here, the other two (a load in flight, no audio) being past by the
@@ -866,13 +852,14 @@ bool GuiPaintHandler::live_plate_published() const {
 //      OWES this render (Viewport::kick_waveform_sync, owe_waveform_rebuild)
 //      and the pre-paint hook runs it once, from the latest state, however
 //      many changes the frame's event drain carried — 1.76 touch events a
-//      frame on the tablet's pinch, measured 2026-10-13, each of which ran it
-//      inline before. Only frames no display ever showed are skipped. The pyramid
-//      bounds the exact peak read's per-column cost unconditionally, in both
-//      views: at most 4 + 6(L-1) pairs and 30 raw samples at ladder level L,
+//      frame on the tablet's pinch, measured 2026-10-13, each of which would
+//      run it inline otherwise. Only frames no display would show are
+//      skipped. The pyramid bounds the exact peak read's per-column cost
+//      unconditionally, in both views: at most 4 + 6(L-1) pairs and 30 raw
+//      samples at ladder level L,
 //      76 pairs at the top rung (the bound and its proof live at
 //      GuiAudio::level_for_span). A
-//      magnified plate's bar (architect 2026-11-15, send O; THE EXACT FORM
+//      magnified plate's bar (architect 2026-11-15; THE EXACT FORM
 //      at render_waveform_columns, render.h) pays that one read inside one
 //      working column, and across several at most two partial reads and
 //      ONE QUERY of the curve's lit summary for the whole working columns
@@ -884,7 +871,7 @@ bool GuiPaintHandler::live_plate_published() const {
 //      generally off the working columns, one query and at most two partial
 //      reads. So the
 //      synchronous render is O(the bars it asks the producer), AND WITH THE
-//      KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars, render.h)
+//      KEPT BARS (architect 2026-11-15; WaveformKeptBars, render.h)
 //      THAT IS THE BARS THAT ENTER: a pan's few at the edge it moves
 //      toward, a zoom inside a level's change of range at both edges, in
 //      the fade band the same of the main row and the fine row; the
@@ -892,7 +879,7 @@ bool GuiPaintHandler::live_plate_published() const {
 //      (a lamp flip, an S/T switch, a map edit in target view), a new rung
 //      at a level switch, a jump to a disjoint range (a page turn keeps its
 //      overlap), a moved band height. A FOLLOWING PLAY's scroll frame
-//      (Viewport::follow_scanner, send N, 2026-11-15) is a pan's: the few
+//      (Viewport::follow_scanner, 2026-11-15) is a pan's: the few
 //      bars at the edge it moves toward. Its cost without the store, the row
 //      itself — the area's width over the bars' pitch and a halo of a few,
 //      at most the width out of the fade band; in it the main row and the
@@ -902,32 +889,25 @@ bool GuiPaintHandler::live_plate_published() const {
 //      and THE FADE BAND) — is the worker's — at every zoom level with the
 //      magnification lamp lit or dark.
 //
-//      PAN JOINED THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
+//      PAN IS ON THIS ROUTE (architect 2026-07-26): "i prefer smooth movement
 //      (ie, no special handling for during movement and at-standstill — ableton
-//      looks identical in both) over theoretical accuracy." (Since
-//      2026-11-14 the two also agree inside a zoom level: the plate's bars
+//      looks identical in both) over theoretical accuracy." The two also
+//      agree inside a zoom level (2026-11-14): the plate's bars
 //      are anchored to the audio, render.h's THE PLATE'S BARS, so each
-//      frame's full render reads every bar it keeps at the same tips.) The incremental
-//      shift-and-strip pan is retired with its memmove, its edge strip, and its
-//      boundary-column bridge repair; a pan is now just another full render, so
-//      moving and resting plates are produced by one code path and cannot
-//      disagree. The performance license is precedent plus the step-2 writer:
-//      the strip-drag ZOOM already took a full synchronous rebuild per pointer
-//      frame at this exact cost class, and the direct ARGB32 column writer
-//      replaced the per-column cairo rect-fill, so pan now pays what zoom
-//      always paid. (The older claim here — that the touchpad's high-rate
-//      stream outruns a full-render-per-event model — is superseded by that
-//      ruling; if the torrent ever does outrun it, the answer is coalescing at
-//      the input edge, not a second rendering path.)
+//      frame's full render reads every bar it keeps at the same tips. A pan
+//      is just another full render, so moving and resting plates are
+//      produced by one code path and cannot disagree, and it pays what the
+//      zoom pays. If an input stream ever outruns it, the answer is
+//      coalescing at the input edge, not a second rendering path.
 //   2. The async worker (maybe_enqueue_waveform_render) is the backstop for
 //      changes the user is not actively driving: resize, the launch file
 //      load, and the on_tick safety net that catches residual fingerprint
 //      drift. (A resize owes the gain nothing: the gate reads no zoom term —
-//      GuiPaintHandler::on_resize.) (FOLLOW'S PAGE TURN LEFT THIS LIST 2026-09-02: it takes the
-//      synchronous kick now — kick_waveform_sync at
-//      Viewport::follow_scroll_if_needed — so the playhead line never paints
-//      against a plate that is still a page behind.) The marker and trim
-//      drags freeze this worker's dispatch for the gesture's whole
+//      GuiPaintHandler::on_resize.) (Follow's page turn is not on it: it
+//      takes the synchronous kick — kick_waveform_sync at
+//      Viewport::follow_scroll_if_needed, 2026-09-02 — so the playhead line
+//      never paints against a plate that is still a page behind.) The marker
+//      and trim drags freeze this worker's dispatch for the gesture's whole
 //      duration (the full-enqueue gate at maybe_enqueue_waveform_render, with
 //      on_waveform_render_done dropping the at-most-one job already in flight
 //      at the grab — see those two functions' own comments for the mechanics).
@@ -935,23 +915,21 @@ bool GuiPaintHandler::live_plate_published() const {
 //      freezing it costs no re-warp. The marker (reposition) drag runs only
 //      in its column's home view (W+source / P+target), likewise
 //      map-independent there — and off that home there is no marker pointer
-//      gesture at all any more: W+target's plain flag drag was the TEMPO drag,
-//      which DID re-warp synchronously PER CENT STEP and so kept the worker
-//      frozen for the opposite reason, and it is deleted (2026-07-29, see
-//      marker_drag.h). No pointer gesture re-warps the plate now.
+//      gesture at all (2026-07-29, marker_drag.h). No pointer gesture
+//      re-warps the plate.
 //
-// This is still NOT "make everything synchronous." Async earns its keep for
+// This is NOT "make everything synchronous." Async earns its keep for
 // UNDRIVEN changes — resize, the launch load, the tick's drift net — where no
-// gesture is waiting on the frame (follow's camera was in this list until
-// 2026-09-02 and is synchronous now: its page-in and every scroll frame
+// gesture is waiting on the frame (follow's camera is synchronous,
+// 2026-09-02: its page-in and every scroll frame
 // are frames something is waiting on, the playhead line drawn onto them).
 // What is synchronous is everything the user is actively driving, pan included;
 // the rule is that a user-driven change must not paint its overlays against a
 // stale plate.
 //
 // IT CARRIES NO FREEZE CHECK (displayed_basis_frozen, app_state.h), and it
-// publishes a plate the worker's two freeze gates never see. By grep
-// (2026-09-24, re-read 2026-10-30) NO caller is reachable inside the freeze:
+// publishes a plate the worker's two freeze gates never see. By grep NO
+// caller is reachable inside the freeze:
 // no key arrives under any pointer gesture and its pending presses (the
 // touch window has one owner; a press arms one gesture), a resize force-ends before it
 // catches up, the tick's live-total repair finds no total change under a
@@ -961,11 +939,10 @@ bool GuiPaintHandler::live_plate_published() const {
 // only from the pan zone's window (nothing delivered) or a single-finger nav
 // (no press), so no pending press stands beside its first zoom, and the marker press's acts — the select and the land, a direct
 // cursor write that scrolls nothing — run before its pending arms. THE
-// MARKER DRAG'S PLAYHEAD TOW WAS THE ONE EXCEPTION and is closed (architect
-// 2026-09-24): it rode move_playhead_to → reseat_playhead_to, whose
-// keep-visible edge-align scrolled the viewport on a grab whose stem stood
-// left of it and kicked this render mid-drag; it writes through
-// Viewport::tow_playhead_to now, which scrolls nothing, so the playhead
+// MARKER DRAG'S PLAYHEAD TOW writes through Viewport::tow_playhead_to
+// (architect 2026-09-24), which scrolls nothing — reseat_playhead_to's
+// keep-visible edge-align would scroll the viewport on a grab whose stem
+// stood left of it and kick this render mid-drag — so the playhead
 // rides offscreen until the release and the displayed basis holds. A new
 // caller that can run inside the freeze answers at its own site, not here.
 // THE OWED REBUILD (2026-10-13) CAN BE PAID INSIDE ONE: a kick owed before an
@@ -978,8 +955,8 @@ bool GuiPaintHandler::live_plate_published() const {
 void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // A RUN BY ANY ROAD DISCHARGES THE DEBT (2026-10-13): it renders the live
     // state, which is what the owed rebuild would render. Cleared ahead of the
-    // validity return, as the inline kick it replaces rendered nothing there
-    // either; the next kick owes again.
+    // validity return: an invalid state renders nothing by any road; the next
+    // kick owes again.
     waveform_rebuild_owed = false;
     const WaveformRenderInputs in = compute_waveform_render_inputs();
     if (!in.valid) return;
@@ -998,7 +975,7 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     wf_cache.supersede_warp_frame_map.clear();
 
     // Render into the LIVE slot directly, by the producer the worker runs,
-    // WITH THE CACHE'S KEPT BARS (architect 2026-11-15, send L;
+    // WITH THE CACHE'S KEPT BARS (architect 2026-11-15;
     // WaveformKeptBars, render.h): this route is the GUI thread's, the one
     // that reads and writes the store, keyed by the render inputs' own view,
     // map and gain identities.
@@ -1067,21 +1044,21 @@ void GuiPaintHandler::force_synchronous_waveform_rebuild() {
     // torrent the plate leads the overlays by the whole gesture. Doing the
     // rebuild here makes plate, fingerprint, flag cache, and the
     // staged displayed hit map all commit before the next paint — the
-    // same-frame consistency EVERY kick_waveform_sync caller expects. SINCE
-    // 2026-10-13 THIS RUNS IN THE PRE-PAINT HOOK (the owed rebuild's flush,
+    // same-frame consistency EVERY kick_waveform_sync caller expects. THIS
+    // RUNS IN THE PRE-PAINT HOOK (2026-10-13; the owed rebuild's flush,
     // main.cpp), after every write the hook makes and before the damage list
     // is read, so the commit lands in the very frame that paints it; the
-    // staged stash is promoted by that frame's on_redraw exactly as before,
+    // staged stash is promoted by that frame's on_redraw,
     // and an event-time reader of the plate or of the history lane's list
     // flushes first (the sites are named at Viewport::kick_waveform_sync). The
     // kick's caller set is not enumerated here: the ONE authoritative inventory lives
     // at Viewport::kick_waveform_sync's declaration (viewport.h), and a second
-    // copy here is exactly the drift the one-site rule exists to prevent (the
-    // copy this replaces had gained a member with no code site). The rebuild
-    // also serves a caller whose plate does NOT move — the `p` W/P column
-    // toggle, whose fingerprint change is the flag cache's alone — which is
-    // why it runs unconditionally at this tail rather than under a
-    // plate-changed guard. The rebuild is fingerprint-guarded, so it is a cheap
+    // copy here is exactly the drift the one-site rule exists to prevent. The
+    // rebuild also serves a caller whose plate does NOT move — the W/P
+    // marker-column switch, whose fingerprint change is the flag cache's
+    // alone — which is why it runs unconditionally at this tail rather than
+    // under a plate-changed guard. The rebuild is fingerprint-guarded, so it is
+    // a cheap
     // no-op when the cache already matches. It also stages the
     // event-sync displayed hit map (promoted when on_redraw commits the
     // rebuild — the two-phase commit, ruling at the selector); running it
@@ -1161,17 +1138,13 @@ uint64_t hash_selection(const std::set<int>& s,
 //
 // Called from on_tick AFTER maybe_enqueue_waveform_render: wf_cache.fp_*
 // coupling for the displayed-viewport half of the fingerprint, live-app-state
-// reads for the marker-driven half. (THE GEOMETRY HALF IS GONE — it keyed the
-// measured monospace grid every flag dimension used to derive from; row 5 moved
-// those onto the gui_scale axis, leaving the field a recorded vestige, and row 7
-// deleted the measurement itself.) The cache holds
+// reads for the marker-driven half. The cache holds
 // EVERY flag shape (marker + phase reset) EXCEPT THE EDITING TARGET'S, whose box
 // and hit rect are skipped here because the live editor overlay painted after
 // this blit cannot be assumed to cover them (2026-08-02) — which is why the
-// edited marker is a fingerprint field of its own below. Trim's pixels left this cache and
-// the retired trim-stem cache for the live paint_trim pass, so no trim field
-// remains in the fingerprint (a trim edit repaints through its own mutation
-// damage, no cache rebuild).
+// edited marker is a fingerprint field of its own below. Trim is painted by
+// the live paint_trim pass, so no trim field is in the fingerprint (a trim
+// edit repaints through its own mutation damage, no cache rebuild).
 
 // ONE DIFF FLAG'S LABEL, both columns, both sides. The contract and the four
 // shapes it produces are at the declaration (paint_handler.h): the disable
@@ -1204,12 +1177,12 @@ void GuiPaintHandler::rebuild_history_diff_flags() {
     // the live lane walks: warp entries where warp flags paint, phase-reset
     // entries where phase resets paint. The other column's delta is not shown —
     // one lane, one column, and the mode is a view onto that lane.
-    // ONE ITEM PER DELTA ENTRY (architect 2026-11-11, session 106; the three
+    // ONE ITEM PER DELTA ENTRY (architect 2026-11-11; the three
     // kinds at HistoryDiffFlag, render.h): a change is one item at its one
     // frame, a removal and an addition one each — a moved marker two. Each
     // item takes its sides' LABEL TEXT (history_diff_label: the `#` from each
     // side's LOCAL disable byte, then the line's token — architect
-    // 2026-11-11, session 107), the removed side's REVERT VALUE beside it
+    // 2026-11-11), the removed side's REVERT VALUE beside it
     // (`then_text`, the warp line's bare token, and `then_disabled`, its
     // byte) and their ordinals (the revert's row identity) off the SAME delta
     // entry, so the item cannot show one line and restore another. A warp
@@ -1323,10 +1296,10 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     //   epoch with no rect left to repair them. So the promote gate READS this
     //   bit too and defers while it stands, and the clear below is what makes
     //   the frame this honor schedules the FIRST promote-eligible one. The rect
-    //   is the same one every stage site queues — since 2026-10-13 the
-    //   viewport lanes' rect from the band's foot, the rows above it owed a
-    //   fingerprint check (damage_window_top_rows, viewport.cpp), every
-    //   item-basis surface lying below the band's foot — and it
+    //   is the same one every stage site queues — the viewport lanes' rect
+    //   from viewport_lanes_top_y down, the rows above it owed a fingerprint
+    //   check (damage_window_top_rows, viewport.cpp, 2026-10-13), every
+    //   item-basis surface lying in those lanes — and it
     //   goes into the global damage list (invalidate_region), so whatever
     //   frame comes next carries it in its
     //   damage union — an interleaved narrow request coalesces INTO it rather
@@ -1377,7 +1350,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         return;
     }
 
-    // THE SURFACE'S BAND (2026-10-13, FlagCache's head): the window's width,
+    // THE SURFACE'S ROWS (2026-10-13, FlagCache's head): the window's width,
     // the client rows from the ruler lane's top through the top strip's
     // bottom — the rows the cues' ink can reach, by the painters' own clips
     // (FlagCache's head).
@@ -1412,13 +1385,13 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
                                      app.selected_markers,
                                      app.last_selected_marker);
     const char      mv         = app.active_markers_view;
-    // The flags carry TEXT since row 5, and grid iterations change what an
+    // The flags carry TEXT, and grid iterations change what an
     // eligible flag shows (the two bound cells beside it) ON THE COLUMN THE
     // MODE IS LIT FOR AND ON THAT ONE ALONE (iteration_column_lit, app_state.h
     // — architect 2026-09-10). Asked here of `mv`, which is the column this
     // pass paints, so one read serves both passes below and the fingerprint
-    // field is the verdict rather than the bare bit — a stamp that no longer
-    // names this column reads as "off" here, and fp_active_markers_view above
+    // field is the verdict rather than the bare bit — a stamp that names
+    // another column reads as "off" here, and fp_active_markers_view above
     // is what keeps the two readings apart across a switch.
     // See fp_iteration_mode. (The addressed cell is no input: the selected
     // look is the cue's stem, never a segment's — architect 2026-11-05,
@@ -1483,21 +1456,20 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // width the live trim pass and the hit tests use (this pass stages it
     // for them at the tail), so flags stay column-aligned with the trim/stem
     // verticals below them. The surface is the window's width, the
-    // waveform's columns the panel's whole width (send Z, 2026-11-19: edge
+    // waveform's columns the panel's whole width (2026-11-19: edge
     // to edge).
     //
-    // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01, closing a
-    // resize-window basis split). The numerator here is the DISPLAYED span
-    // (fp_vp_end - fp_vp_start); dividing it by the LIVE effective width mixed
-    // two epochs, so during an async plate publish after a resize the flags,
-    // their stems, their hit rects and the trim geometry were mapped at a
-    // samples-per-pixel the blitted ink did not have — while the playhead, the
-    // region columns and the ruler, which all read plate_viewport_basis
-    // (fp_vp_end - fp_vp_start over fp_area_w), had it right. The plate is
-    // blitted 1:1 at its own scale, never stretched, so an overlay that wants
-    // to sit on its ink must use the width that ink was rendered at. Both
-    // bases are now the one expression. THE FINGERPRINT KEYS IT BY ITS OWN
-    // FIELD (FlagCache::fp_plate_w, Sol's review, 2026-11-18): the span does
+    // IT IS THE PLATE'S OWN WIDTH, NOT THE LIVE ONE (2026-08-01). The
+    // numerator here is the DISPLAYED span (fp_vp_end - fp_vp_start); divided
+    // by the LIVE effective width it would mix two epochs, so during an async
+    // plate publish after a width change the flags, their stems, their hit
+    // rects and the trim geometry would map at a samples-per-pixel the
+    // blitted ink does not have — while the playhead, the region columns and
+    // the ruler read plate_viewport_basis (fp_vp_end - fp_vp_start over
+    // fp_area_w). The plate is blitted 1:1 at its own scale, never stretched,
+    // so an overlay that wants to sit on its ink must use the width that ink
+    // was rendered at: both bases are the one expression. THE FINGERPRINT
+    // KEYS IT BY ITS OWN FIELD (FlagCache::fp_plate_w, 2026-11-18): the span does
     // not catch a width change — q moves with the width where the camera
     // re-solves its level for it (the whole-song fit: 2252 px at q 71.1875
     // and 2278 px at q 70.375 both span 160,314 frames) — and the window
@@ -1519,8 +1491,8 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // generations, the drag overlay and the selection (a marker's motion, an edit, a select) — and
     // THE FRAME, every other field: the surface itself, the basis it is laid
     // out on (the displayed span, the plate's width, the lattice origin, the
-    // target bit, the map), the band's size and origin, the scale, the palette,
-    // the column, the iteration verdict, the editor's suppression and the
+    // target bit, the map), the surface's size and origin, the scale,
+    // the palette, the column, the iteration verdict, the editor's suppression and the
     // history mode's nine. A miss in the content alone repaints cues on a
     // surface whose every other cue stands where it stood.
     const bool frame_matches =
@@ -1557,7 +1529,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
 
     // THE ORIGIN IS KEYED (FlagCache::fp_origin_y): the rows above the
     // ruler move it, keyed by its own field rather than through the scale
-    // that moves them today.
+    // that moves them.
     if (frame_matches && content_matches) return;
 
     if (!flag_cache.surface ||
@@ -1575,12 +1547,12 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     flag_cache.origin_y = origin_y;
 
     // THE FLAG/TRIANGLE LANE rects the shapes occupy, straight from the lane
-    // accessors — the same bands the empty-lane press gate and the hit rects
+    // accessors — the same rects the empty-lane press gate and the hit rects
     // read, in CLIENT coordinates: the context below is translated so that
     // client row origin_y is the surface's row 0, and the painters never see
     // the surface's own rows.
-    // THE COLUMNS' ORIGIN is the canvas's (waveform_area's x, 0 since the
-    // canvas went edge to edge, send Z, 2026-11-19), kept a read so the lane
+    // THE COLUMNS' ORIGIN is the canvas's (waveform_area's x, 0: the canvas
+    // stands edge to edge, 2026-11-19), kept a read so the lane
     // rects stay the accessors' own; the window's width and the scale, which
     // the lanes' geometry reads, are keyed by the fingerprint
     // (fp_gui_scale_percent, fp_area_w).
@@ -1599,7 +1571,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // context, carrying the translation and the clip list.
     cairo_translate(ccr, 0.0, -static_cast<double>(origin_y));
 
-    // THE BAND THE SURFACE HOLDS, in client coordinates, handed to every pass
+    // THE ROWS THE SURFACE HOLDS, in client coordinates, handed to every pass
     // as its `top_strip_area`: each pass clips its ink to these rows
     // (clip_to_waveform_columns), exactly the surface's.
     const GuiRect local_top_strip{0, origin_y, surface_w, surface_h};
@@ -1620,7 +1592,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // (No trim pass here: trim is painted LIVE, every pixel of it, inside its
     // own lane (GuiPaintHandler::paint_trim over top_trim_row_area), and this
     // cache holds the marker and phase-reset FLAG shapes. Two owners over two
-    // disjoint bands — nothing to arbitrate between them.)
+    // disjoint lanes — nothing to arbitrate between them.)
 
     // The warp red-flag set: the marker indices whose render normalizes to
     // the 1.00 fallback — a coincident member of the parser's runs, the same
@@ -1650,7 +1622,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // THE LAYOUT THE LAST PASS LEFT IS KEPT FIRST (cue_pass_keep_previous,
     // render.h): the tail compares this pass's cues with it.
     cue_pass_keep_previous();
-    // THE LANE'S HOVER (architect 2026-11-21, send FF; AppState::FaceFades'
+    // THE LANE'S HOVER (architect 2026-11-21; AppState::FaceFades'
     // THE MARKER'S FACE): the listing every cue's key is taken in and each
     // cue's hover weight as its face stores it now, the one reader of the
     // records (cue_hover_of) — so a rebuild paints every cue at the weight
@@ -1662,7 +1634,7 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         // marker paints. (The lane is not the whole of that suppression — the
         // phase-reset lead-in RING is a live-marker surface in the WAVEFORM, and
         // it is gated at its own visibility owner, phase_reset_overlay_band in
-        // paint_handler.cpp, since 2026-08-05.) This arm becomes the producer of the same two
+        // paint_handler.cpp, 2026-08-05.) This arm is the producer of the same two
         // stashes the two marker arms below produce — with `marker_index`
         // carrying an index into app.history_mode.flags rather than into a
         // store, which is what lets hit_test_flag serve the mode's focus click
@@ -1763,16 +1735,14 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
     // rebuilt, so stage the
     // map they baked (target view) or a clear (source view); on_redraw promotes
     // it at the frame that blits this cache. THIS IS THE SOLE ITEM-BASIS STAGE
-    // SITE (grep app.staged_displayed_valid = true): the retired trim-stem
-    // cache's rebuild used to stage the same value in the same tick, and
-    // deleting that duplicate is safe exactly because THIS rebuild remains the
-    // stage owner on every viewport/map/dimension change — every one of those
+    // SITE (grep app.staged_displayed_valid = true), the stage owner on every
+    // viewport/map/dimension change — every one of those
     // changes moves a field of this cache's fingerprint (fp_vp span, map hash,
     // target bit, the plate's width wave_w — keyed by its own field, since a
     // width change need not move the span (the reason is at wave_w) — the
-    // surface band's dims and origin, the scale), so the rebuild fires and
+    // surface's dims and origin, the scale), so the rebuild fires and
     // re-stages. A trim-only
-    // change no longer stages anything, which is correct: trim never entered
+    // change stages nothing, which is correct: trim never enters
     // the staged basis values, and the live trim pass reads the promoted basis
     // per frame. Ruling at the selector.
     if (is_target)
@@ -1781,13 +1751,11 @@ void GuiPaintHandler::maybe_rebuild_flag_cache() {
         app.staged_displayed_target_warp_frame_map.clear();
     // Stage the displayed VIEWPORT alongside the map — the same fp_vp span the
     // flags just mapped through, over the same width they were column-mapped
-    // against. THAT WIDTH IS NOW THE PLATE'S (wave_w == fp_area_w since
-    // 2026-08-01 — the derivation is at wave_w above), so the item basis, the
-    // plate basis and the flag pass are one {span, width} pair instead of two
-    // that agreed only while no resize was in flight. The contract this line
-    // has always stated — stage what the flags were mapped against — is
-    // unchanged and still what keeps trim paint, trim hits and flag hits on the
-    // flags' own geometry.
+    // against. THAT WIDTH IS THE PLATE'S (wave_w == fp_area_w, 2026-08-01 —
+    // the derivation is at wave_w above), so the item basis, the plate basis
+    // and the flag pass are one {span, width} pair. Staging what the flags
+    // were mapped against is what keeps trim paint, trim hits and flag hits on
+    // the flags' own geometry.
     app.staged_displayed_vp_start = wf_cache.fp_vp_start;
     app.staged_displayed_vp_end   = wf_cache.fp_vp_end;
     app.staged_displayed_area_w   = wave_w;

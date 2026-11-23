@@ -11,7 +11,7 @@
 // viewer's page numbers are pages.txt's, never the printed ones.
 //
 // IT PLAYS ITS OWN SOUNDTRACK AND NEVER FOLLOWS THE GUI (architect
-// 2026-10-26 night: "the score player is essentially a separate media player.
+// 2026-10-26: "the score player is essentially a separate media player.
 // It has nothing to do with what's going on in the GUI, other than I would
 // manually be keeping them both in sync; there's no mechanism for doing that
 // automatically"; the afternoon's "no tolerance, no intelligent sync … it's
@@ -28,20 +28,21 @@
 // under its own question (RESET's) — painted in THE MODAL FAMILY'S BOX
 // (modal_box.h, the geometry's one owner): the box's interior is the page,
 // SCALED TO FIT by the smaller of the two ratios and centered on both axes,
-// the rest the field ground — THE SCORE VIEWER'S PANE, 191919, the box's one
-// exception (modal_box.h's `score_pane_face`, architect 2026-11-01 night, M9
-// A2) — (paint_modal_dialog's score branch). It is the
+// the rest the field ground — THE SCORE VIEWER'S PANE, 262A33 (the
+// waveform's ink, kArcDarkTones' `score_pane_face`), the box's one
+// exception (modal_box.h's `score_pane_face`, architect 2026-11-01) —
+// (paint_modal_dialog's score branch). It is the
 // sixth modal owner (AppState::ModalDialogOwner::Score), ranked with the
 // player and the picker, and NO TAB SWITCH HAPPENS UNDER IT ("just like with
 // other modals"): its veil admits two keys of the roster, the SCORE key and
 // the tooltip lamp (architect 2026-11-10, overlay_admits_button; the
-// struck clip lamp's tap beside them, architect 2026-11-05 night, reopens the
+// struck clip lamp's tap beside them, architect 2026-11-05, reopens the
 // device and switches nothing) and its router those two keys' chords alone,
 // so the active tab is the viewer's for its whole life. Its state is AppState::ScoreViewer and the
 // piece's range keys (app_state.h); this struct owns the acts.
 //
 // TWO FACES OF THE CONTROLS ROW, decided by whether the soundtrack is present
-// (loaded or loading, GuiScoreAudio::present; architect 2026-10-26 night:
+// (loaded or loading, GuiScoreAudio::present; architect 2026-10-26:
 // "when there's audio, the scrub should just be a media player scrub, just
 // like the render player's. The page numbers should not be included at all
 // if there's audio. Everything — the playback, the scrub — should be frame
@@ -50,7 +51,7 @@
 //     AND THE OTHER THREE KEYS AT THE LEFT on both faces, the render
 //     player's row's sides, architect 2026-11-10; in the row's order RESET,
 //     START and END, the scrub, the clock or the page cell, the
-//     transport — NO CLOSE since 2026-11-11, architect, session 106: the lit
+//     transport — NO CLOSE (architect 2026-11-11): the lit
 //     SCORE key is the way out, its tooltip Close there): BACK, PLAY / PAUSE and FWD
 //     flush right, a deck's order (the render player's transport seats, PLAY
 //     its key and its glyph — score_viewer_play_face — in the second as the
@@ -62,12 +63,12 @@
 //     the viewing range's FRAMES: the thumb at the cursor, a press off the
 //     thumb jumping it, a drag CARRYING it and seeking nothing, the page
 //     holding the frame under it SHOWN LIVE, display only — architect
-//     2026-10-27 ~19:45, "the picture follows the thumb, the sound waits for
+//     2026-10-27, "the picture follows the thumb, the sound waits for
 //     the lift" — THE SEEK AT THE LIFT, the position written with it —
 //     architect 2026-10-26, "no scrubbing" — and, the score's own, THE SOUND
 //     PAUSED WHILE THE SCRUB IS HELD: a live soundtrack paused at the press
 //     and playing on from where the thumb dropped at the lift — architect
-//     2026-10-26 ~23:00, "it wouldn't start playing until I commit by
+//     2026-10-26, "it wouldn't start playing until I commit by
 //     dropping the thumb"), THE CLOCK (the render player's two time fields,
 //     verbatim: the elapsed time within the range and the range's length;
 //     UNDER A HELD SCRUB THE ELAPSED FIELD SHOWS THE TIME THE DROP WOULD
@@ -93,8 +94,8 @@
 // (AppState::ScoreViewer::transport owns the states): PLAY runs [cursor, the
 // range's end) ONCE and stops — no loop, no auto-advance, no car hook
 // (car_transport.h stays the trim's). AT THE END IT CONTINUES IF THERE IS A
-// NEXT TRACK AND STOPS DEAD WHERE IT IS OTHERWISE (architect 2026-10-26
-// ~23:55, the render player's one rule; "if I'm working at the end of the
+// NEXT TRACK AND STOPS DEAD WHERE IT IS OTHERWISE (architect 2026-10-26,
+// the render player's one rule; "if I'm working at the end of the
 // song, I don't want it to go back to the beginning every time it hits the
 // end"): the soundtrack is one track, so THE NATURAL END RESTS AT THE RANGE'S
 // END, PAUSED there so the scrub stays live — the last page shown, the clock
@@ -122,7 +123,7 @@
 // close's re-express would kill the run: load_in_place_render_blocked, the
 // render player's own refusal, here a grey PLAY until it ends), the PLAY
 // press binding then. THE CLOSE (the SCORE key's lift, bare `m`; the row
-// carries no Close since 2026-11-11) takes the render player's close road
+// carries no Close) takes the render player's close road
 // verbatim where the engine was the viewer's: the stop body's fence, the
 // transport down, the mode bit down, the source bound first, then the S/T
 // flip's re-express.
@@ -162,20 +163,20 @@
 // never late for it). The open shows the page that holds it, clamped into the
 // range (score_page_for_position).
 //
-// THE PAGES ARE DECODED OFF THE MAIN THREAD (architect 2026-10-26 night: "if
+// THE PAGES ARE DECODED OFF THE MAIN THREAD (architect 2026-10-26: "if
 // there's going to be an additional visual lag on the page turning on top of
 // the Bluetooth lag, that's not going to work"): the page decoder
 // (score_page_worker.h) decodes a page and scales it ONCE to the box's fit
 // size — NEVER A SYNCHRONOUS DECODE, the open's included; the main thread
-// never decodes or scales. THE GPU PAGE PAINTS IT (architect 2026-10-27, "1
-// a": THE PICTURE FOLLOWS THE THUMB, THE SOUND WAITS FOR THE LIFT; the
+// never decodes or scales. THE GPU PAGE PAINTS IT (architect 2026-10-27:
+// THE PICTURE FOLLOWS THE THUMB, THE SOUND WAITS FOR THE LIFT; the
 // measurement and the design at docs/engineering/gpu_canvas_2026_10.md
 // §3.13): the box's interior is the frame's hole, cleared on the CPU, and
 // the GPU draws the field ground and the page there at every swap from THE
 // GRAY STORE'S BYTES, one R8 texture a page (GuiCanvasPage, canvas_sink.h;
 // the textures' lifetime at gl_canvas.h): no blit and no canvas upload, so a
 // page change costs a frame and nothing more once the range is resident.
-// THE GRAY STORE (AppState::ScoreViewer::gray; architect 2026-10-26 ~22:10:
+// THE GRAY STORE (AppState::ScoreViewer::gray; architect 2026-10-26:
 // every page of the viewing range "decoded once", held as 8-bit gray —
 // about 2.3 MB a page fit to 2036 x 1145 in the tablet's box (2026-11-03),
 // about 330 MB for all of K.550, about 85 MB for a delineated movement):
@@ -327,7 +328,7 @@ inline int64_t score_viewer_position(const AppState& a,
 // its PlayerPlayFace): PAUSE while LIVE, PLAY otherwise — at rest anywhere,
 // the press playing on from the cursor, and from the range's start at its
 // end, never a no-op there (architect 2026-10-26: play / pause only, "keep it
-// simple"; the end, ~23:55).
+// simple"; the end, the render player's one rule).
 inline PlayerPlayFace score_viewer_play_face(const AppState& a) {
     return a.score_viewer.transport == AppState::ScoreViewer::Transport::Live
                ? PlayerPlayFace::Pause
@@ -440,13 +441,13 @@ inline bool score_viewer_button_enabled(const AppState& a,
     return false;
 }
 
-// THE KEYS' GLYPHS (architect 2026-11-01, M9; the acts' drawings as ruled
+// THE KEYS' GLYPHS (architect 2026-11-01; the acts' drawings as ruled
 // 2026-11-02, icons.h's roster), on each key's face, the act's name the
 // tooltip's (score_viewer_button_hint below): PREV / NEXT
 // GoPreviousViewPage / GoNextViewPage (the page road, chevrons of their
 // own), BACK / FWD MediaSeekBackward / MediaSeekForward, RESET EditReset,
 // START ZoneIn, the open book with its dot, END ZoneOut, the open book
-// (architect 2026-11-22, send II: his re-picks, the importer's table).
+// (architect 2026-11-22: his re-picks, the importer's table).
 // PLAY / PAUSE's is the render player's Play key's, by its
 // face (render_player_button_icon, paint_handler.cpp, which the painter
 // asks); this table's PlayPause the resting MediaPlaybackStart. The skips
@@ -613,7 +614,7 @@ inline std::optional<int64_t> score_scrub_drop_frame(
 
 // THE PAGE UNDER A DRAGGED THUMB'S CARRIED CENTER, a real place, the one
 // answer of both
-// faces (architect 2026-10-27 ~19:45, "the picture follows the thumb, the
+// faces (architect 2026-10-27, "the picture follows the thumb, the
 // sound waits for the lift"; input_pointer.cpp's score-scrub block): on the
 // page road the page the place rounds to (score_scrub_page_at, the steps);
 // under the soundtrack the page holding the place's frame
@@ -691,8 +692,8 @@ struct GuiScoreViewer {
     // PAUSED, where it can be: the head's THE OPEN), asks the decoder for
     // what the gray store lacks and damages the window.
     bool open();
-    // THE ONE CLOSER — the SCORE key (its lift, bare `m`; the row's CLOSE
-    // retired 2026-11-11, architect, session 106), and the exit
+    // THE ONE CLOSER — the SCORE key (its lift, bare `m`; the row has no
+    // Close, architect 2026-11-11), and the exit
     // road's teardown (GuiPrompt::request_close): the render player's close
     // road where the engine was the viewer's (the head's THE CLOSE), the
     // cursor's frame written through, the scrub's arm dropped, the gray store
@@ -705,7 +706,7 @@ struct GuiScoreViewer {
     // is displayed and its position written (display_page, then
     // write_page_position). The same page is a no-op.
     void show_page(int index);
-    // ITS TWO HALVES, apart for the held scrub (architect 2026-10-27 ~19:45,
+    // ITS TWO HALVES, apart for the held scrub (architect 2026-10-27,
     // "the picture follows the thumb, the sound waits for the lift" —
     // input_pointer.cpp's score-scrub block): display_page clamps `index`
     // into the viewing range and, where it differs, makes it the shown page
@@ -728,8 +729,8 @@ struct GuiScoreViewer {
     void toggle_play();
     // THE PAUSE: LIVE parks at PAUSED through the one stop body, the cursor
     // kept, its page shown and the frame written; a no-op at rest. Its
-    // callers are toggle_play, the scrub's press (architect 2026-10-26
-    // ~23:00: the sound pauses while the scrub is held) and the tick's dead
+    // callers are toggle_play, the scrub's press (architect 2026-10-26:
+    // the sound pauses while the scrub is held) and the tick's dead
     // device.
     void pause();
     // THE PLAY: the engine bound to the soundtrack where it is not yet, and

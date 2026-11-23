@@ -36,25 +36,18 @@ struct GuiNoiseVoice;   // noise.h — the second voice the callback sums
 // and cursor() holds at the integer cursor rather than extrapolating
 // (playback.h's graph-suspension clause).
 //
-// THERE IS NO SPEED FACTOR ANY MORE (architect 2026-08-27): the increment
-// carried a `speed *` multiplier until that day, authored through the
-// `playback_speed` settings key over a tenths-preset vocabulary. The architect
-// runs 1.0 everywhere in his one live project, so the key retired whole and the
-// factor went with it — the setter, the atomic word it published, and the
-// predictor's speed input. What STAYS is the rate ratio above, which is not the
-// same thing and never was: AAudio may hand the engine a rate the source is not
-// recorded at, and that has to be rescaled whatever the speed.
+// THERE IS NO SPEED FACTOR (architect 2026-08-27): the architect runs 1.0
+// everywhere in his one live project. The rate ratio above is not a speed: AAudio
+// may hand the engine a rate the source is not recorded at, and that has to be
+// rescaled.
 //
 // THE SECOND VOICE AND THE CLIP (architect 2026-10-28, the noise). THE
 // ORDER, per callback: the project voice — the render body's block, AT 0 dB,
 // the files as they are — then the noise summed at its own level, then the
 // clip; the tablet's own volume sets the loudness. THE VOICE IS UNSCALED
-// (architect 2026-11-11, session 104, the AUDIO case and its key retired:
-// "realistically it's not clipping, and when it does clip, it's very
-// subtle"): the audio level that scaled it from 2026-10-31 night was a
-// float gain multiplied at the render body's one sample write, exactly
-// 1.0f at its 0 dB, so its removal is byte-identical at the level the
-// tablet ran (x * 1.0f == x in IEEE float). Every
+// (architect 2026-11-11: "realistically it's not clipping, and when it does
+// clip, it's very subtle"): no gain is multiplied at the render body's one
+// sample write. Every
 // callback, on BOTH of its arms — the silence arm between
 // plays and the render body's — SUMS the app's one noise voice into the block
 // the engine just wrote (noise_mix_block, noise.h: its own bank, its own rate
@@ -76,9 +69,7 @@ constexpr int kPlaybackOutputChannels = 2;
 
 // THE SESSION WORD'S LAYOUT (the field's comment, GuiPlaybackState::session):
 // bit 0 playing, the generation above it. The word is process-local — bind
-// resets it and nothing serializes it — so the layout is free to close up: a
-// natural-end hold rode bit 1 for two days (2026-09-01/02) and left with the
-// playback leads on 2026-09-03, and the generation moved back down over it.
+// resets it and nothing serializes it — so the layout is free to change.
 constexpr uint64_t kSessionPlayingBit = 1u;
 constexpr uint64_t kSessionGenShift   = 1u;
 constexpr bool playback_session_playing(uint64_t word) {
@@ -176,7 +167,7 @@ struct GuiPlaybackState {
     // stamp port instant — extrapolates backward on the same line, and the
     // floor keeps it at or above the frame the session's read has reached.
     // Main thread only, both, like the anchor. THE AUDIO THREAD READS NEITHER
-    // (2026-09-01, the third review's packet): the window it renders against
+    // (2026-09-01): the window it renders against
     // is the one it consumed from the command packet below and keeps as its
     // own `active_end`. The mirror stays a MIRROR rather than a read of that
     // private end because the observation's clamp belongs to the PUBLISHED
@@ -244,13 +235,13 @@ struct GuiPlaybackState {
 
     // THE SESSION WORD — the playing flag and the session generation in ONE
     // atomic, so that the audio thread's terminal
-    // write is GENERATION-QUALIFIED by construction (2026-09-01, closing the
-    // play()-over-the-last-fill race): bit 0 is PLAYING, the bits above are
+    // write is GENERATION-QUALIFIED by construction (2026-09-01, the
+    // play()-over-the-last-fill race the terminal below closes): bit 0 is PLAYING, the bits above are
     // the generation, incremented by every publish. Layout at the constants
     // below; the readers ask playback_session_playing of a loaded word.
     //
     // THE FLAG (bit 0) is the one release/acquire synchronization point
-    // between the two threads, as the bool it replaced was: play()'s publish
+    // between the two threads: play()'s publish
     // stores the new word — generation + 1, playing — with release as the last
     // step of its publish block, and the backend's callback loads the word
     // with acquire at its gate, so a callback that sees the bit up sees the
@@ -267,18 +258,18 @@ struct GuiPlaybackState {
     // only if no publish (a newer generation) and no stop (the bit already
     // down) has written the word since the gate, and a publish landing AFTER
     // a successful exchange simply overwrites it with the new generation's
-    // word. So a stale fill can never lower a newer session's flag: before
-    // the word, a play() published between the old fill's gate and its
-    // natural-end stores let that fill store `playing = false` after the new
-    // publish's `true`, stranding the new session's restart behind the
-    // silence gate — the new scanner rested at its seed until the tick tore
-    // it down.
+    // word. So a stale fill can never lower a newer session's flag: with a
+    // bare flag, a play() published between the old fill's gate and its
+    // natural-end stores would let that fill store `playing = false` after
+    // the new publish's `true`, stranding the new session's restart behind
+    // the silence gate — the new scanner resting at its seed until the tick
+    // tore it down.
     // The exchange's success order is RELEASE, pairing with every main-thread
     // acquire load of the word (is_playing, the cursor readers, the rebind
-    // check) exactly as the bool's release store did: the fill's last buffer
+    // check): the fill's last buffer
     // reads and its stamp and cursor stores are ordered before whatever the
     // reader mutates afterwards. WHY THE GATE'S OWN WORD, and not a second
-    // load inside the body (the shape until 2026-09-01's second review): a
+    // load inside the body: a
     // publish landing between the gate and a re-load could be read by a
     // relaxed re-load WITHOUT acquiring its release, so the body rendered
     // against range and pending stores it was not ordered after and could
@@ -304,9 +295,7 @@ struct GuiPlaybackState {
     // soon as the buffer is built. That is the near end of the lead the
     // launch carries at the far end, close in size but NOT the same quantity
     // — the launch's extra term is its pickup phase, not an ending prefix
-    // (the anchor's comment above, and the record at playback_publish_play). A hold that kept the line alive until the
-    // last queued frame had been heard rode bit 1 of this word for two days
-    // and was rolled back with the leads on 2026-09-03.
+    // (the anchor's comment above, and the record at playback_publish_play).
     //
     // THE GENERATION never wraps in practice (a publish per press) and is
     // never read as a number by anyone but the publish; it exists so two
@@ -324,10 +313,8 @@ struct GuiPlaybackState {
     // ONE WRITE SITE, in playback_render_block on the audio thread: THE END OF
     // EVERY FILL, (cursor, fill_ns + consumed × 1e9 / output_rate, the fill's
     // generation) — the read cursor with the instant its frame enters the port
-    // (the frames this fill consumed lead it in the port buffer). A seat stamp
-    // rode beside it while the launch anchored on the audio thread's first
-    // fill (2026-09-01/02) and left with the playback leads; the launch
-    // anchors at the publish instant again, so nothing waits on a seat.
+    // (the frames this fill consumed lead it in the port buffer). The launch
+    // anchors at the publish instant, so nothing waits on a seat.
     // THE GENERATION IS WHOSE STAMP THIS IS: a main thread that reads a stamp
     // whose generation equals the one in the session word it loaded is reading
     // ITS session's stamp, so "is this stamp mine" is one stamp read compared
@@ -371,12 +358,11 @@ struct GuiPlaybackState {
     // THE COMMAND PACKET — (command_start, command_end, command_loop_begin)
     // under `command_seq`: the window play() or play_loop() publishes for ONE
     // generation, written by the main thread and consumed by the audio thread
-    // (2026-09-01, the third review's first finding — until that day the
-    // range was two independent atomics and the restart a compare-exchanged
-    // `pending_start`, and a fill gated on generation N could consume N+1's
+    // (2026-09-01) as ONE packet: with the range and the restart as
+    // independent atomics, a fill gated on generation N could consume N+1's
     // restart under N's end, or N's restart under N+1's end, rendering a
     // block that belonged to neither and declaring a natural end at a window
-    // it was never published into). THE THIRD WORD IS THE LOOP TARGET
+    // it was never published into. THE THIRD WORD IS THE LOOP TARGET
     // (2026-09-17): kPlaybackNoLoop for a once-through window — every GUI
     // launch — or the buffer-local frame the render body wraps to at the
     // window's end, which the publish has already clamped so that
@@ -421,12 +407,12 @@ struct GuiPlaybackState {
     // THE WRAP COUNTER (2026-09-17): a monotonic count of loop wraps the
     // render body has taken, ONE WRITER — the audio thread, ONE RELEASE STORE
     // PER FILL THAT WRAPPED, of the fill's own count, AFTER THAT FILL'S
-    // CYCLE STAMP (2026-11-20, send CC's review, finding A1) — and ONE
+    // CYCLE STAMP (2026-11-20) — and ONE
     // READER, the main thread's playback_consume_loop_wrap, an ACQUIRE load,
     // so a consumer that sees a wrap reads that fill's stamp or a later one
     // in the resync it takes next (the store's comment, playback_render_block;
-    // a count stored mid-fill, ahead of the stamp, let a tick resync on the
-    // previous fill's pre-wrap stamp and lose the wrap for a lap). The
+    // a count stored mid-fill, ahead of the stamp, would let a tick resync on
+    // the previous fill's pre-wrap stamp and lose the wrap for a lap). The
     // reader compares it against its own private
     // `loop_wraps_seen` below. It is a COUNT DIFFERENCE, not a flag: a wrap
     // per tick and ten wraps per tick answer the same "at least one", and a

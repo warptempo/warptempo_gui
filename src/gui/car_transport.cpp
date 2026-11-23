@@ -31,18 +31,17 @@ std::string car_transport_title_line(const UndoHistory& history) {
 // bit ahead of this cluster, so the overlay term below is the picker's.
 bool GuiCarTransport::admits() const {
     if (app.prompt.active) return false;
-    // THE PROGRESS MODAL (2026-10-14): a batch's modal stops playback at its
+    // THE PROGRESS PAGE (2026-10-14): a batch's modal stops playback at its
     // open and covers the waveform, so the console starts nothing under it.
     if (app.batch_progress.active) return false;
     if (folder_overlay_stands(app)) return false;
     // THE SCORE VIEWER (2026-10-26): its open stops playback and nothing of
     // the project's plays under it — the engine is its own soundtrack's or
-    // silent (score_viewer.h's head, 2026-10-26 night), with no car hook — so
+    // silent (score_viewer.h's head, 2026-10-26), with no car hook — so
     // the console starts nothing either.
     if (score_viewer_stands(app)) return false;
     // EVERY EDITOR (2026-10-25: an act that takes the keyboard is a modal,
-    // keyboard_modal_editor_active — the dialog editors alone until then,
-    // the lane editors reaching the helpers' own gates).
+    // keyboard_modal_editor_active).
     if (input_handler.keyboard_modal_editor_active()) return false;
     if (app.history_mode.active) return false;
     return true;
@@ -111,7 +110,7 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
 // or a pointer drag answers the console exactly as it answers the keyboard.
 // Then Space's own target-view gate, asked here where on_key asks it ahead of
 // toggle_playback: in target view with nothing playing and the preview not
-// ready the press is a silent refusal — row 8's process line already carries
+// ready the press is a silent refusal — the status bar's process line carries
 // the preview render's `Updating...`, the one-dimensional class
 // (notifications.h's silent list). The stop arm never meets it:
 // `!playback.is_playing()` is the gate's own term, and a STANDING A/B
@@ -129,7 +128,7 @@ void GuiCarTransport::car_toggle() {
     playback_lifecycle.car_toggle_playback();
 }
 
-// PREVIOUS AND NEXT, THE TWO MODES (architect 2026-11-19 / 20, send CC; the
+// PREVIOUS AND NEXT, THE TWO MODES (architect 2026-11-19 / 20; the
 // ruling, his words, the predicate's argument and the audition's at the head
 // of car_transport.h). Past admits(), the fork is transport_session_live:
 //   LIVE — a standing A/B audition consumes the press in silence; otherwise
@@ -189,8 +188,8 @@ GuiMediaState GuiCarTransport::derive(ClockSide& side) const {
     //
     // ONE GATE SERVES BOTH FIELDS, NOT TWO. A live A/B audition sets
     // transport_session_live as well, and it plays BOUNDED WINDOWS rather than
-    // the trim, so it inherits here exactly the approximation its position has
-    // always carried; no bit is added to tell a car loop from an audition,
+    // the trim, so it inherits here the approximation its position carries;
+    // no bit is added to tell a car loop from an audition,
     // the engine exposing no main-thread "is looping" read (only
     // consume_loop_wrap, which is the wrap's own edge).
     st.duration_ms    = -1;
@@ -229,10 +228,12 @@ GuiMediaState GuiCarTransport::derive(ClockSide& side) const {
         // TRIM — in source view it runs to the song's end — and then each
         // push carries 0 BEFORE THE TRIM'S BEGIN AND THE FULL LENGTH AT ITS END
         // AND BEYOND: the clock keeps the loop's meaning (architect
-        // 2026-11-20, on the clock as built: "it only happens in
-        // source view but car is for target view").
-        // THE CROSSING IS A PUSH (2026-11-20, send CC's second review,
-        // finding A2): the side the cursor stands on — before the begin,
+        // 2026-11-20: "it only happens in source view but car is for target
+        // view").
+        // THE CROSSING IS A PUSH (2026-11-20), because the console counts on
+        // from the last push it was given and a clamped position changes no
+        // other term, so without it the console would count from a stale
+        // place: the side the cursor stands on — before the begin,
         // inside the trim (both bounds included), past the end — is a term of
         // tick()'s comparator, so the tick that first finds the cursor on
         // another side pushes once: ENTERING THE TRIM pushes the position at
@@ -254,7 +255,7 @@ GuiMediaState GuiCarTransport::derive(ClockSide& side) const {
         // THERE — the stretch BEFORE THE ENTRY counts up from 0 until the
         // entry's push sets it back, and PAST THE END the console runs on
         // from the full position — and nothing in this publisher can hold
-        // that clock still. The other option above has no such stretch.
+        // that clock still.
         const int64_t raw = playback.cursor() - trim.first;
         int64_t pos = raw;
         if (pos < 0) pos = 0;

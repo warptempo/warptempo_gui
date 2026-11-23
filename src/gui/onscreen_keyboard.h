@@ -17,8 +17,8 @@
 // digits and the flag grammar's operators, and SYMBOLS, the rest of printable
 // ASCII (the layout table below) — its key box authored in W and scaled,
 // under tuning (the `osk_key_w` and `osk_key_h` device keys, the geometry
-// below; its caps' size the `osk_font_px` key since 2026-10-29 night,
-// cap_word's paragraph), the block of keys SEATED WITH THE GAP BETWEEN ITS
+// below; its caps' size the `osk_font_px` key, cap_word's paragraph), the
+// block of keys SEATED WITH THE GAP BETWEEN ITS
 // `5` AND `6` ON THE WINDOW'S CENTER (architect 2026-11-08, block_x_px) in a
 // band that runs the window's width ON THE WINDOW'S LAST ROWS, one line of
 // its own above it, STANDING OVER THE STATUS BAR, THE BOTTOM ICON ROW AND
@@ -26,15 +26,14 @@
 // block below) — its two pads the bottom icon row's own and no
 // height floor (pad_top_px / pad_foot_px), on the body tone, nothing beside
 // the block. It stands while ANY
-// OF THE TEXT EDITORS stands, on a backend that asks for one, and it
+// OF THE TEXT EDITORS stands, and it
 // REPLACES NOTHING: the flag editor keeps painting in the marker lane, a
 // line editor's label and entry at the head of the box's view (modal_box.h).
 // THERE IS NO SECOND TEXT BUFFER — the live editor's own
-// text_editor::State is the only text state in the product, exactly as it was
-// before this surface existed.
+// text_editor::State is the only text state in the product.
 //
 // WHY IT IS NOT A UNIVERSAL FIELD. Every key here is a KEY: its press calls the
-// backend's synthesize_key and the ORDINARY key path runs unchanged from there
+// platform's synthesize_key and the ORDINARY key path runs unchanged from there
 // — GuiInputHandler::on_key, the keyboard-modal gate, route_modal_editor_key,
 // each editor's own vocabulary, the undo coalescing, and the core's repeat
 // synthesis for a held key. So the editors' grammars, their refusals, their
@@ -49,8 +48,8 @@
 // arms, GuiInputHandler::apply_editor_clipboard) — and a held one does what
 // a held Ctrl+C or Ctrl+V does, the editor's chord keys being one-shot
 // (repeat_eligible's editor arm). SO ARE LEFT, RIGHT, UP, DOWN AND THE PASS
-// KEY (LEFT / RIGHT / the pass key architect 2026-11-08, sessions 95 / 96;
-// UP / DOWN and the pass key's act architect 2026-11-20 / 21): LEFT and RIGHT
+// KEY (LEFT / RIGHT / the pass key architect 2026-11-08; UP / DOWN and the
+// pass key's act architect 2026-11-20 / 21): LEFT and RIGHT
 // synthesize the editors' Left / Right, carrying the latched Shift as the
 // key event's own shift (the selection's extend, text_editor::handle_key's
 // caret arm), and repeat while held; UP and DOWN synthesize bare Up / Down
@@ -60,10 +59,9 @@
 // handle_top_flag_editor_key, input_key_dispatch.cpp), UP / DOWN repeating
 // while held, the pass key one-shot. THAT OWN CTRL IS THE ONLY CTRL A KEY HERE
 // CARRIES: THE BARREL HAS NO ROAD ON ANY KEY, THIS KEYBOARD'S INCLUDED
-// (architect 2026-11-08, session 94) — a press carrying it is consumed with
+// (architect 2026-11-08) — a press carrying it is consumed with
 // no act, Shift and the page key included (GuiInputHandler::
-// claim_onscreen_keyboard_press), and the barrel's word erase, select-all
-// and cut went with it.
+// claim_onscreen_keyboard_press).
 //
 // TIMING: KEYS ARE HOTKEYS AND ACT AT THE PRESS (architect: phone muscle
 // memory; and the core's repeat needs the press edge). That is the modality
@@ -74,7 +72,7 @@
 // A key held down repeats through the core's key repeat, on the platform's
 // advertised cadence.
 //
-// WHAT IT HAS (architect 2026-11-08, sessions 95 / 96): LEFT and RIGHT, the
+// WHAT IT HAS (architect 2026-11-08): LEFT and RIGHT, the
 // caret keys; A PASS KEY, A TRUE TOGGLE INHERIT ON THE FLAG EDITOR'S TEXT
 // (architect 2026-11-20 / 21); UP AND DOWN, THE TEMPO STEP ON THAT TEXT
 // (architect 2026-11-20 / 21; THE EDITOR'S EXTRA KEYS below); A STICKY
@@ -91,8 +89,8 @@
 // place already ... we could just card if it's not a well-formed string.
 // This will make it less jarring, the fact that the flag is sitting there
 // with the old value and we're editing the new value"; "extra keys keep";
-// on part 2 installed: "if it was never built, I guess we should build
-// it"). UP, DOWN, THE PASS KEY AND TAB each REWRITE THE MARKER LANE'S
+// "if it was never built, I guess we should build it"). UP, DOWN, THE PASS
+// KEY AND TAB each REWRITE THE MARKER LANE'S
 // EDITOR'S TEXT and commit nothing — the keyboard's Enter commits it
 // through the editor's own road, its Esc throws it away — each one
 // GuiFlagEditor act (step_editor_text, toggle_inherit_editor_text,
@@ -115,17 +113,17 @@
 // WHAT IT DELIBERATELY HAS NOT GOT: no language switching (one layout), no
 // hide act (it leaves with the editor that raised it), no long-press
 // alternates (an act at the press precludes them), no third page and no
-// character past ASCII (no grammar takes one), no word-select keys (s95's,
-// retired by s96 before landing), and no chords — a second finger on the
+// character past ASCII (no grammar takes one), no word-select keys, and no
+// chords — a second finger on the
 // keyboard is ignored (the pointer translation's rule, input_core.cpp) and
 // never reaches a key, and the barrel's press is consumed (above).
 
 #include "app_state.h"
-// THE SLOT'S OTHER TENANT (2026-08-28): this header reads the folder
-// overlay's own rect in waveform_paint_area, the one gate and clip both
-// tenants share, so the include runs THIS way — the panel borrows nothing
-// from the keyboard since its rows became buttons, and its band is the modal
-// family's (modal_box.h, 2026-10-14).
+// THE SLOT'S OTHER TENANT: this header reads the folder overlay's standing
+// (reconcile_slot_standing) and, through it, the modal family's box
+// (modal_box.h) in waveform_paint_area, the one gate and clip both tenants
+// share, so the include runs THIS way — the panel borrows nothing from the
+// keyboard.
 #include "folder_overlay.h"
 #include "gui_input.h"
 #include "platform.h"
@@ -147,13 +145,11 @@ namespace onscreen_keyboard {
 // derivations below, and the press router reads its keysym and codepoint from
 // the SAME `ch`, so a key cannot type one thing and say another.
 //
-// THE TWO PAGES (architect 2026-10-29, on the sheets kb_f_flags and
-// kb_g_symbols_repeated; rows 0 to 3 re-laid 2026-11-08, sessions 95 / 96;
+// THE TWO PAGES (architect 2026-10-29; rows 0 to 3 architect 2026-11-08;
 // UP and DOWN architect 2026-11-20 / 21).
 // Rows counted from 0 at the top; widths in units
 // (one standard key), every row LEFT-ALIGNED on the block's left edge — no
-// centering of a short row, and since 2026-11-08 no stagger (row 2's
-// one-unit inset is the pass key's slot):
+// centering of a short row and no stagger (architect 2026-11-08):
 //   FLAGS
 //     row 0:  1 2 3 4 5 6 7 8 9 0 + -                                (12u)
 //     row 1:  Tb q w e r t y u i o p * Up                             (13u)
@@ -167,12 +163,12 @@ namespace onscreen_keyboard {
 //     row 2:  Pass ( ) [ ] { } < > | ; : Down
 //     row 3:  Shift ' " , ? ! $ ` Bksp Left Right
 //     row 4:  ABC Copy Paste Space . Esc Enter
-// THE 2026-11-08 RE-LAYING: the `*` left row 0 for row 1's tail, the same
-// character in the same slot on both pages (a non-letter slot, like the
-// digits); the PASS KEY took row 2's old one-unit inset; LEFT and RIGHT
-// stand at row 3's tail, quarters 44..48 and 48..52, flush over Enter.
+// THE TAILS AND THE LEAD (architect 2026-11-08): the `*` at row 1's tail,
+// the same character in the same slot on both pages (a non-letter slot,
+// like the digits); the PASS KEY leading row 2; LEFT and RIGHT at row 3's
+// tail, quarters 44..48 and 48..52, flush over Enter.
 // UP AND DOWN, A THIRTEENTH COLUMN ON ROWS 1 AND 2 (architect 2026-11-20 /
-// 21, the ruled mock DD_01: "UP on the q row, DOWN on the a row"):
+// 21: "UP on the q row, DOWN on the a row"):
 // quarters 48..52 of the q row and the a row, the grid's right column
 // standing over RIGHT, so rows 1 to 4 are the block's thirteen units and row
 // 0 alone its twelve — the grid's outline closing round them (the painter's
@@ -200,7 +196,7 @@ inline constexpr int kPageCount = 2;
 
 enum class Role : uint8_t {
     Character,     // types `ch` — every letter, digit and symbol, space included
-    Shift,         // A LATCH (2026-11-08): lit, the letters type capital and
+    Shift,         // A LATCH: lit, the letters type capital and
                    // LEFT / RIGHT carry its shift; a second press puts it out
     Backspace,     // GuiKeys::BackSpace
     Enter,         // GuiKeys::Return
@@ -248,7 +244,7 @@ struct Row {
 namespace detail {
 
 // ROW 0, ONE ARRAY FOR BOTH PAGES: the digits and two of the flag grammar's
-// three operators (the third, `*`, at row 1's tail since 2026-11-08).
+// three operators (the third, `*`, at row 1's tail).
 inline constexpr KeyDef kRow0[] = {
     {Role::Character, U'1'}, {Role::Character, U'2'}, {Role::Character, U'3'},
     {Role::Character, U'4'}, {Role::Character, U'5'}, {Role::Character, U'6'},
@@ -261,10 +257,7 @@ inline constexpr KeyDef kRow0[] = {
 // autocomplete model, route_modal_editor_key), greyed under an editor whose
 // kind has no completer (tab_key_live, architect 2026-11-21) — a
 // BARE Tab, no modifier, on the same synthesize_key road as every other key
-// here. IT IS NOT THE OPEN PROJECT PICKER'S GLASS ROAD (2026-08-28): that
-// picker is field-less, no editor stands under it and so neither does the
-// keyboard (stands' record), and the gesture is the Open Project button,
-// tap the project's row. What the key serves is the settings editor's
+// here. What the key serves is the settings editor's
 // completions, its value recall and the path's, and the flag editor's
 // LABEL REFERENCE completion (architect 2026-11-20 / 21: "a" then Tab
 // gives "a.0"; GuiFlagEditor::complete_label_reference).
@@ -276,8 +269,8 @@ inline constexpr KeyDef kFlagsRow1[] = {
     {Role::Character, U'p'}, {Role::Character, U'*'},
     {Role::Up},
 };
-// THE PASS KEY leads row 2 on both pages (architect 2026-11-08, sessions
-// 95 / 96), in what was the row's one-unit inset. UP closes row 1 and DOWN
+// THE PASS KEY leads row 2 on both pages (architect 2026-11-08). UP closes
+// row 1 and DOWN
 // row 2 on both pages, the thirteenth column (architect 2026-11-20 / 21;
 // the table's head).
 inline constexpr KeyDef kFlagsRow2[] = {
@@ -288,8 +281,8 @@ inline constexpr KeyDef kFlagsRow2[] = {
     {Role::Character, U';'}, {Role::Character, U':'},
     {Role::Down},
 };
-// LEFT AND RIGHT close row 3 on both pages (architect 2026-11-08, sessions
-// 95 / 96), flush over Enter: Shift 0..6, the seven 6..34, Bksp 34..44, LEFT
+// LEFT AND RIGHT close row 3 on both pages (architect 2026-11-08), flush
+// over Enter: Shift 0..6, the seven 6..34, Bksp 34..44, LEFT
 // 44..48 and RIGHT 48..52 in quarters.
 inline constexpr KeyDef kFlagsRow3[] = {
     {Role::Shift, 0, 6},
@@ -408,7 +401,7 @@ static_assert(pages_are_well_formed(),
 // THE SEAT'S GAP, in quarters into the block: where row 0's `6` key starts,
 // the gap between the `5` and the `6` (block_x_px's rule, architect
 // 2026-11-08), read off the table so the seat cannot part from the keys it
-// names — 20 quarters since that day.
+// names — 20 quarters.
 constexpr int seat_gap_quarters() {
     int q = 0;
     for (const KeyDef& k : kRow0) {
@@ -433,11 +426,9 @@ inline const Row& row_of(Page page, int row) {
 // left hold's — so a key whose code were 0 would match "nothing" on its own
 // release and be taken for the end of a hold it never started. This
 // table's codes are its own small integers, so the base is stated here
-// rather than left to luck. THIS IS THE PRODUCT'S ONLY SYNTHESIZER since
-// 2026-09-12: the render player's car buttons took a base of their own
-// (kCarStableCodeBase = 1000, above this table's ceiling) while each of them
-// pressed one of the player's keys, and that road went whole when the car
-// became an interface of its own and every command a direct act.
+// rather than left to luck. THIS IS THE PRODUCT'S ONLY SYNTHESIZER (the
+// car's commands are direct acts, car_transport.h), so no other base has
+// to stay clear of this table's codes.
 inline constexpr uint32_t kStableCodeBase = 1;
 
 // A KEY'S STABLE PER-KEY IDENTITY, which is what the core's repeat cancel and
@@ -458,7 +449,7 @@ inline constexpr uint32_t key_index(Page page, int row, int col) {
 // damage the key the finger pressed even when that key's own act (the page
 // key) has moved the live page out from under it; asking the live page
 // there would look the key up on a page it is not on and damage nothing
-// (finish_onscreen_keyboard_release; back 2026-11-05 with the press face).
+// (finish_onscreen_keyboard_release).
 inline constexpr Page page_of_key_index(int index) {
     return static_cast<Page>(
         (static_cast<uint32_t>(index) - kStableCodeBase) /
@@ -466,8 +457,8 @@ inline constexpr Page page_of_key_index(int index) {
 }
 
 // THE HELD FACE IS A SLOT, NOT AN INDEX (architect 2026-10-29 night, on the
-// glass: the page key never sank to its second depth; back 2026-11-05 with
-// the press face, the press arc). Two key indices name the same SLOT when
+// glass: the page key must wear its press face under the finger). Two key
+// indices name the same SLOT when
 // they differ in the page term alone — the same row and column, which on
 // these pages is the same rect, role and width, since nothing moves between
 // them (pages_are_well_formed pins it). The painter's held test is this one:
@@ -494,9 +485,8 @@ inline constexpr bool same_slot(int a, int b) {
 // Non-letters are unmoved — this keyboard has no shifted punctuation, the
 // symbols page being where the rest lives, and every letter is on the flags
 // page, so the latch capitalizes there alone. THE LATCH IS NOT SPENT BY A
-// LETTER (architect 2026-11-08, sessions 95 / 96: Shift is sticky, a second
-// press puts it out — the one-shot arm of 2026-08-27 retired), so every
-// letter typed while it is lit is capital.
+// LETTER (architect 2026-11-08: Shift is sticky, a second press puts it
+// out), so every letter typed while it is lit is capital.
 inline constexpr char32_t shifted_char(char32_t base, bool shift_latched) {
     if (!shift_latched) return base;
     if (base >= U'a' && base <= U'z') return base - U'a' + U'A';
@@ -516,7 +506,7 @@ inline constexpr char32_t shifted_char(char32_t base, bool shift_latched) {
 // numbering
 // past ASCII — Latin-1 its own code points, everything else 0x01000000 + the
 // code point — stays here for the walk's completeness; the table types none
-// of it since 2026-10-29.)
+// of it.)
 inline constexpr GuiKey keysym_of(char32_t base) {
     return base < 0x100 ? static_cast<GuiKey>(base)
                         : static_cast<GuiKey>(0x01000000u | base);
@@ -526,11 +516,10 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // cap_icon first, then cap_word, then the character (the painter's order,
 // paint_onscreen_keyboard).
 //
-// THE GLYPH KEYS (architect 2026-11-08, sessions 95 / 96, reversing "no
-// glyphs" of 2026-08-27 / 2026-09-01 / 2026-10-29 night): the function keys
+// THE GLYPH KEYS (architect 2026-11-08): the function keys
 // that act on the text wear A GLYPH, icons.h's — Tab FormatIndentMore,
 // Bksp EditClear (the leftward key with its X), Enter KeyEnter, Copy and
-// Paste row 8's EditCopy /
+// Paste the bottom icon row's EditCopy /
 // EditPaste, LEFT and RIGHT the arrows GoPrevious / GoNext, the pass key
 // the INHERIT key's InsertLink (redesign_button_icon's IconMarkerInherit
 // arm: the same act, Toggle Inherit, architect 2026-11-20 / 21), UP and
@@ -538,7 +527,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // TransportUp / TransportDown arms: the same act, the tempo step).
 // AT THE PROGRAM KEYS' ONE SIZE,
 // centered on the face (paint_key_glyph, paint_handler.cpp — the one owner
-// of the size, the set's 16 W canvas since send Z, 2026-11-19, never of
+// of the size, the set's 16 W canvas, never of
 // osk_key_h), in the key's ink (paint_onscreen_keyboard: the text tone at
 // rest, `text_on_lit` on a lit face — a latched key or a key under the
 // finger — and `key_dim_ink` on a greyed one, key_live). A null answer: the
@@ -566,19 +555,18 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 
 // THE WORD KEYS: every word on the ONE sans face in the keys' own size
 // (gui_font.h's GuiFace::Keys, the `osk_font_px` tuning key's em in W, 12 by
-// default, architect 2026-10-29 night; "C24", architect 2026-10-24), shaped
-// through the one chokepoint like every other label — Shift, Esc, Space and
-// the page key KEEP THEIR WORDS (architect 2026-11-08, sessions 95 / 96).
+// default, architect 2026-10-29 night; architect 2026-10-24),
+// shaped through the one chokepoint like every other label — Shift, Esc,
+// Space and the page key KEEP THEIR WORDS (architect 2026-11-08).
 //
-// A FUNCTION KEY THAT WEARS NO GLYPH WEARS ITS NAME (planner 2026-09-01,
-// under the capitalization sweep's universal-rules spine; architect
-// 2026-10-29 night, on the mocks): Shift, Esc, Space — Title case, the first
+// A FUNCTION KEY THAT WEARS NO GLYPH WEARS ITS NAME (architect 2026-10-29
+// night): Shift, Esc, Space — Title case, the first
 // letter alone capital — and the PAGE KEY names the page it goes TO, `&123`
 // on the flags page and `ABC` on the symbols page. These caps and HELP's
 // mentions of the keys are the only text that names a key at all (a
 // tooltip, a card or a label never does, 2026-10-30); Enter is the
 // product's one word for that key (architect 2026-10-29 night) though its
-// cap is now a glyph. ONE FACE stands, every word in the keys face. This
+// cap is a glyph. ONE FACE stands, every word in the keys face. This
 // function is the ONE OWNER of the words; a glyph key or a Character key
 // other than space answers nullptr — the painter takes the glyph from
 // cap_icon above or spells the character out of the table's own `ch`
@@ -589,10 +577,10 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // osk_key_h 35 moves no width), and there is NO FALLBACK: no second form, no
 // measure at paint, no second face. Measured on Liberation Sans Bold, wider
 // than the Regular the Keys face wears (gui_font.h's table), so every
-// advance below is a ceiling of today's (HarfBuzz's
+// advance below is a ceiling of the face's (HarfBuzz's
 // unhinted advances through FreeType, text_shape's road) against the key's
-// face — the whole key, no outline (2026-11-04) — in the tablet's device px
-// at 200 %, the key widths the slots' at the one-W gap (2026-11-04): at the
+// face — the whole key, no outline — in the tablet's device px
+// at 200 %, the key widths the slots' at the one-W gap: at the
 // defaults (osk_key_w 24, osk_font_px 12 — 48 and 24 device px) "Space" 71
 // px in the 4u key's 198, "&123" 57, "Shift" 53 and "ABC" 52 in their 1.5u
 // keys' 73, "Esc" 43 in its 73 (every 1.5u key the one width,
@@ -605,17 +593,14 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // the first to overhang, from osk_font_px 16 W
 // ("Shift" from 17, "ABC" from 18, "Esc" from 21; each threshold the least
 // whole W at which the word's advance, scaled with the em, exceeds its
-// key's face at the slots' rounding in W of 2026-11-06). (THE RECORD WAS
-// TRIMMED, NOT RE-MEASURED, 2026-11-08: the words that became glyphs left
-// it — Bksp, Enter, Tb, Copy, Paste — and the slots of the words that stay
-// are unchanged by the re-laying.)
+// key's face, measured with the slots' edges rounded to whole W; the exact
+// quarters may move a threshold by a W).
 //
 // SHIFT'S LAMP IS THE FACE, NOT THE CAP. The word is "Shift" latched or
 // resting; what says the latch is the key's LIT FACE — THE ACCENT, `cue`,
-// Default's FFAD56, its cap `text_on_lit`, Default's 070707 (architect
-// 2026-11-11, session 106, the keyboard following the lamps; the print the
-// selection's text since 2026-11-17, session 140; Arc's lit look since send
-// AA's stage D2, paint_handler.cpp's paint_onscreen_keyboard), which this
+// under the lit print `text_on_lit`, Arc's lit look (architect 2026-11-11,
+// the keyboard following the lamps; paint_handler.cpp's
+// paint_onscreen_keyboard; the tones' lines of kArcDarkTones), which this
 // key and the page key (while the symbols page stands) wear off their lamps
 // — a key under the finger wearing the same lit look from the press to the
 // lift (Arc's `:active` and `:checked` one) — and the letter
@@ -731,29 +716,25 @@ inline constexpr Page page_after(Role role, Page page) {
 // FLAGS sheet's 48 x 60 device px on the tablet. THE GAP between adjacent
 // keys, both axes, IS THE PROGRAM KEYS' GAP, ONE W (render.h's key_gap_px:
 // 2 device px on the tablet at 200 %, 1 at 100 %; architect 2026-11-04, the
-// unit: "the same face and gap on every key surface", the tenth of the
-// height of 2026-10-29 retired); THE PITCH is the key plus the gap, in
-// device px; a key of n units is n pitches less one gap, and EVERY SLOT'S
-// EDGE STANDS AT ITS EXACT QUARTER OF THE PITCH (architect 2026-11-15, the
-// no-grid arc: a slot's edge is a ratio of the pitch, and no rounding
-// stands between it and the paint — the whole-W edges of 2026-11-06,
-// session 77, and their ties are retired), so keys of one span are ONE
+// unit: "the same face and gap on every key surface"); THE PITCH is the key
+// plus the gap, in device px; a key of n units is n pitches less one gap,
+// and EVERY SLOT'S EDGE STANDS AT ITS EXACT QUARTER OF THE PITCH (architect
+// 2026-11-15, the no-grid arc: a slot's edge is a ratio of the pitch, and
+// no rounding stands between it and the paint), so keys of one span are ONE
 // WIDTH wherever they stand and a half-unit edge at an odd pitch stands on
 // its half: at the defaults (the key 48 x 60 device px on the tablet at
 // 200 %, the gap 2, the pitch 50) every 1u key is 48 px — the pass key,
 // LEFT and RIGHT included — every 1.5u key 73 (row 3's Shift, the bottom
 // row's page key, Copy, Paste and Esc), Enter 98, Bksp 123 and Space 198;
-// his tuning's osk_key_w is the default 24 (2026-11-08), so his widths are
-// these. On the tablet the pitch is an even number of device px at every
+// his tuning's osk_key_w is the default 24, so his widths are these. On
+// the tablet the pitch is an even number of device px at every
 // tuning, so every edge there is a whole px; at a scale where it is odd a
 // half-unit edge stands on half a px, the key's face painted at that
 // coverage over the band's ground (the exact fill). THE
 // KEYBOARD'S KEYS DO NOT FOLLOW THE PROGRAM KEY'S face (architect
 // 2026-10-29; render.h's icon_case_w_px / icon_case_h_px, the kKeyWidthW x
 // kKeyHeightW face): their box is `osk_key_w` x `osk_key_h` alone, their gap
-// the program's. (The window-derived pitch — Plasma's ten keys
-// across the full width, the one unscaled dimension the product had — is
-// retired 2026-10-29, git history.)
+// the program's.
 // THE BAND IS OPAQUE CHROME AND WHOLE PIXELS (render.h's hull): its ground
 // is one fill across the whole band (paint_onscreen_keyboard), the band's
 // rect is the layout's (surface_rect), and the canvas is not painted under
@@ -784,8 +765,7 @@ inline int block_w_px() {
 }
 
 // THE BLOCK'S SEAT — THE `5` | `6` GAP ON THE WINDOW'S CENTER (architect
-// 2026-11-08, sessions 95 / 96, replacing the block centered in the band,
-// 2026-10-29): the block's left edge, window x in device px, placed so the
+// 2026-11-08): the block's left edge, window x in device px, placed so the
 // gap between row 0's `5` and `6` keys (detail::seat_gap_quarters, 20
 // quarters into the block) stands on the band's center — the band being the
 // window's width, its center the window's — EXACTLY, IN DEVICE PX
@@ -800,10 +780,9 @@ inline int block_w_px() {
 // EXTREME TUNING THAT PUSHES THE
 // BLOCK PAST THE WINDOW'S EDGE IS THAT TUNING KEY'S OWN CONSEQUENCE, like an
 // overhanging cap word: no clamp. (In this table the `5` | `6` gap stands
-// over r | t and f | g — row 1 leads with Tab and row 2 with the pass key.
-// The architect, shown that on 2026-11-09, session 97 — not t | y, as "the
-// true center of the alphabet" might suggest — RULED "keep 5|6": the seat
-// stays on the digit row's gap.)
+// over r | t and f | g — row 1 leads with Tab and row 2 with the pass key —
+// not t | y, as "the true center of the alphabet" might suggest; the seat
+// stays on the digit row's gap, architect 2026-11-09: "keep 5|6".)
 inline double block_x_px(const GuiRect& band) {
     const double center = static_cast<double>(band.x) +
                           static_cast<double>(band.w) * 0.5;
@@ -860,16 +839,15 @@ inline int key_rows_h_px() {
 // icon row and the view's foot there, nothing relaid (the placement block
 // below; architect 2026-11-20).
 inline int foot_y(const AppState& a) { return window_foot_y(a); }
-// THE KEYBOARD'S TOP LINE (the design's Z_06: the keyboard parted from
-// what stands above by Thunar's pane line): ONE W of `well_border`
+// THE KEYBOARD'S TOP LINE (the keyboard parted from what stands above by
+// Thunar's pane line; architect 2026-11-19): ONE W of `well_border`
 // (hairline_px), the surface's first rows, over the band.
 inline int top_line_px() { return hairline_px(); }
 
 // The band's whole height: the top pad, the grid — the five key rows, the
 // four gaps between them and its two outer lines — and the foot pad.
-// THE BAND CARRIES NO LINE (architect 2026-10-14: the raised
-// Hilight line the taskbar overlay laid on its top, 2026-10-10 to 2026-10-14,
-// is gone with the overlay; the placement block below).
+// THE BAND CARRIES NO LINE: the surface's one line is its top line
+// (top_line_px), over the band.
 inline int band_height_px() {
     return pad_top_px() + key_rows_h_px() + 2 * key_gap_px() + pad_foot_px();
 }
@@ -886,9 +864,9 @@ inline double key_rows_top_px(const GuiRect& band) {
 // -- Standing ----------------------------------------------------------------
 
 // DOES THE SURFACE STAND? One term: one of the editors owns the keyboard.
-// The painted keyboard is the one key producer (architect 2026-10-30: the
-// hardware keyboard is closed on the tablet), so no platform term stands
-// beside it. EVERY paint site and EVERY hit site in the product asks this and
+// The painted keyboard is the one key producer (architect 2026-10-30;
+// platform_android.cpp's key arm), so no platform term stands beside it.
+// EVERY paint site and EVERY hit site in the product asks this and
 // nothing else.
 //
 // The editor term is text_editor_session() (app_state.h) rather than
@@ -897,38 +875,28 @@ inline double key_rows_top_px(const GuiRect& band) {
 // predicate delegates to any_text_editor_active, which is exactly the editors
 // this session id is taken from.
 //
-// THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND, AND NO THIRD TERM SAYS SO
-// (2026-08-28): the folder overlay REPLACES the keyboard in this band
-// (architect, "neither use needs typing"), and for one afternoon that day
-// this predicate carried `!folder_overlay::stands(a)` as a third term — its
-// producer being the Open project prompt, whose text editor stood UNDER the
-// picker's band. The prompt lost its field and the pickers became a
-// modal owner that is NOT an editor, so the term lost its producer and was
-// deleted (a gate term exists iff a producer exists — the type rule
-// applied to a gate). THE EXCLUSION IS STRUCTURAL NOW: the overlay
-// stands only under the render player or a picker, neither of which is a
-// text editor; each opener refuses under every editor and each router
-// consumes every editor opener; each veil consumes every pointer press that
-// could raise one (the flag's double tap; the roster, EDIT among it, is dead
-// under both); and the touch region begin refuses under
-// both.
-// So the second term is false whenever the overlay stands, and this
-// predicate cannot answer true over the band without a producer this record
+// THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND, AND NO TERM SAYS SO
+// (architect 2026-08-28, "neither use needs typing"; a gate term exists iff
+// a producer exists — the type rule applied to a gate). THE EXCLUSION IS
+// STRUCTURAL: the folder overlay's owners (AppState::FolderOverlay::owner —
+// the render player, the project picker, the settings page, its value
+// list, the trim presets, the BPM form) are modes that are not text
+// editors, and a row or button that opens an editor closes its list first
+// (close_picker); each
+// opener refuses under every editor and each router consumes every editor
+// opener; each veil consumes every pointer press that could raise one (the
+// flag's double tap; the roster, EDIT among it, is dead under both); and
+// the touch region begin refuses under both. So this predicate cannot
+// answer true while the overlay stands without a producer this record
 // would have to name.
-//
-// (A THIRD TERM, the settings CHOICE editor's, stood 2026-10-07 to
-// 2026-10-14: a choice row had nothing to type, so the band did not rise for
-// it. The choice editor is removed — the color rows are line editors like
-// every other row, architect 2026-10-14 — and the term with it.)
 inline bool stands(const AppState& a) {
     return a.text_editor_session() != 0;
 }
 
-// -- The keyboard's placement (architect 2026-10-14) -------------------------
+// -- The keyboard's placement ------------------------------------------------
 //
-// THE KEYBOARD STANDS ACROSS THE PROGRAM'S LANES (architect 2026-10-14, on
-// the settings-keyboard mock): its band runs across the program lanes — the
-// band's width the lanes' (bottom_row_area's x and width, the window's) —
+// THE KEYBOARD STANDS ACROSS THE WINDOW (architect 2026-10-14): its band's
+// width the lanes' (bottom_row_area's x and width, the window's) —
 // AND STANDS ON THE WINDOW'S LAST ROWS OVER THE STATUS BAR, THE BOTTOM ICON
 // ROW AND THE VIEW'S FOOT — THE APP IS NEVER RELAID FOR IT (architect
 // 2026-11-20: "the waveform and the bottom row don't move such that the
@@ -982,13 +950,13 @@ inline bool stands(const AppState& a) {
 // so the dead keys look dead (roster_greyed_whole, read by
 // redesign_button_enabled's first arm, app_state.h; architect 2026-11-20).
 // ONE LINE OF ITS OWN OVER IT (top_line_px, `well_border`: Thunar's pane
-// line parting the keyboard from what stands above; architect 2026-11-19,
-// his approval of the picture Z_06), THE BOTTOM ICON ROW'S TWO PADS ROUND
+// line parting the keyboard from what stands above; architect
+// 2026-11-19), THE BOTTOM ICON ROW'S TWO PADS ROUND
 // THE GRID AND NO HEIGHT FLOOR (pad_top_px / pad_foot_px, architect
 // 2026-11-19); THE BLOCK OF KEYS STANDS ON ITS SEAT, THE `5` | `6` GAP ON
 // THE WINDOW'S CENTER (architect 2026-11-08, block_x_px), the band's body
 // tone beside it and nothing else there. ITS KEYS ARE ONE GRID OF ARC'S
-// BUTTON TONES WITH SHARED LINES (his K2 ruling; the design's §E;
+// BUTTON TONES WITH SHARED LINES (architect 2026-11-19;
 // paint_onscreen_keyboard). Under a line editor the modal family's box
 // stands down to the bottom icon row, its view the value sub-page, the
 // keyboard over the box's foot, the page's entry at the view's
@@ -996,10 +964,6 @@ inline bool stands(const AppState& a) {
 // page of its own, the main page stands under it, its canvas cut at the
 // surface's top line. UNDER AN OVERLAY THE KEYBOARD NEVER STANDS (stands'
 // record).
-// (THE TASKBARS, 2026-10-10 to 2026-10-14 — architect, "they're analogous to
-// the taskbar … they sit on top of the design": the keyboard and the dialog
-// laid over the window's foot at its whole width, one raised Hilight line
-// on top — ARE RETIRED, "we should stop doing that".)
 //   On the tablet (200 %, 2304 x 1440, the key 28 W tall), across x 0..2303,
 //     the block of keys x 903..1550 (648 wide, its seat block_x_px; the
 //     grid's outer lines x 901..1552) at osk_key_w 24: AT osk_key_h 35 (his
@@ -1057,7 +1021,7 @@ inline GuiRect claim_rect(const AppState& a) {
 // well's foot, the bottom icon row and the status bar (the placement block;
 // architect 2026-11-20: no relayout pays it);
 // THE FOLDER OVERLAY'S IS THE WHOLE AREA THE MODAL FAMILY TAKES — its box
-// and the controls row under it (modal_area_rect, modal_box.h, 2026-10-14),
+// and the controls row under it (modal_area_rect, modal_box.h),
 // which contains every pixel it paints in every content (this function).
 // THE SHOW/HIDE COMPARATOR TAKES THEM (reconcile_slot_standing, below): those
 // two edges damage a band whose tenant is arriving or has already gone, so
@@ -1145,12 +1109,12 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
     viewport.invalidate_rect(surface_rect(a));
 }
 
-// THE SLOT'S SHOW AND HIDE (2026-08-27 for the keyboard, 2026-08-28 for the
-// slot's two tenants), the roster comparator's own mechanism applied to a
-// whole surface: the keyboard appears and disappears with the editors' open
-// and close, the folder overlay with the render player and the picker, and
-// those routes damage the marker lane, the bottom row or the dialog — never
-// the whole band the tenant paints in. So EACH TENANT'S live answer is
+// THE SLOT'S SHOW AND HIDE, the roster comparator's own mechanism applied
+// to a whole surface: the keyboard appears and disappears with the editors'
+// open and close, the folder overlay with its contents' openers and
+// closers, and those routes damage the marker lane, the bottom icon row or
+// the modal area — never the whole surface the tenant paints in. So EACH
+// TENANT'S live answer is
 // compared against ITS OWN AS-PAINTED BIT, which the slot's paint dispatch
 // refreshes only on a frame whose rect FULLY COVERS that tenant's band
 // (AppState::keyboard_painted_standing and overlay_painted_standing,
@@ -1172,28 +1136,26 @@ inline void reconcile_session(AppState& a, Viewport& viewport) {
 // (GuiGlCanvas::present_frame's upload rule; on_redraw's CLEAR: the area
 // changed, so it is unknown), no plate re-rendered: the waveform area, and
 // so the plate's fingerprint, do not move. Whatever else the opening or
-// closing route changes it damages itself (the flag editor's lane, a dialog
+// closing route changes it damages itself (the flag editor's lane, a line
 // editor's open the whole window, its close the modal area,
 // Viewport::invalidate_modal_dialog_area).
 //
-// On the HIDE the departed tenant no longer stands, so there is nothing to
+// On the HIDE the departed tenant does not stand, so there is nothing to
 // ask of it but its rect: the keyboard's a fact of the layout its standing
 // never moves, and the overlay's modal area contains its pixels in every content —
 // and with them the waveform it covered (the box spans the waveform area
 // whole).
 //
-// TWO CALLERS (2026-10-13, the tablet's stale keyboard): the PRE-PAINT HOOK
-// (main.cpp), ahead of every frame the backend paints, and the TICK. The
-// pre-paint call is the fix: a pointer release or a key closes an editor and
-// the pump paints in the SAME pass, before its next tick, so a tick-only
-// comparator let the first frame after a hide paint without the band, and
-// under the GL CANVAS that stranded the keyboard for good — that frame's
-// canvas clip grew back over
-// the band with no damage there, so the band's old texels inside the new
-// clip were never uploaded (the upload rule skips the clip unless it moved
-// on that frame, GuiPlatform::present), and the GPU showed the departed keys
-// over a canvas that answered the press. Paid at pre-paint, the clip moves
-// on the very frame whose damage covers the band, so the whole rect goes up
+// TWO CALLERS: the PRE-PAINT HOOK (main.cpp), ahead of every frame the
+// backend paints, and the TICK. THE PRE-PAINT CALL IS THE ONE THE GL
+// CANVAS NEEDS: a pointer release or a key closes an editor and the pump
+// paints in the SAME pass, before its next tick, and the frame whose canvas
+// clip moves (waveform_paint_area below) must be the frame whose damage
+// covers the band — a frame that moved the clip with no damage there would
+// leave the departed keys in the band's backbuffer pixels, uploaded whole
+// with the moved clip (GuiGlCanvas::present_frame's upload rule), over a
+// canvas that answers the press. Paid at pre-paint, the clip moves on the
+// very frame whose damage covers the band, so the whole rect goes up
 // cleared. The tick call stays for a standing change that declares no damage
 // of its own: a frame paints only with damage, so the pre-paint would never
 // run for it.
@@ -1213,8 +1175,8 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // flag editor's; the placement block) — and the ONE OWNER of the rule that
 // THE WAVEFORM IS NOT PAINTED WHERE THOSE PAINT. IT SUBTRACTS THE STANDING
 // SURFACE'S OWN RECT, which is a real fork rather than a formality: the box
-// is the modal family's panel every time it stands (the view bar's top row
-// down since 2026-10-14, modal_box.h, whatever its content) and the
+// is the modal family's panel every time it stands (the trim lane's first
+// row down, modal_box.h, whatever its content) and the
 // keyboard's is its surface, so a rect borrowed from the other would either
 // hide waveform nothing paints over or leave the panel painting where the
 // waveform still runs. (Under a line editor both stand, and the box, which
@@ -1233,8 +1195,8 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // NEVER A COORDINATE INPUT: the column mapping keeps reading waveform_area
 // itself (the displayed basis, the strictly-as-painted rule at app_state.h),
 // while the press and the touch pan zone ask this rect where the waveform
-// ENDS (point_on_nav_surface, input_pointer.cpp,
-// 2026-10-10) — so a press never answers where no waveform is painted, and
+// ENDS (point_on_nav_surface, input_pointer.cpp) — so a press never
+// answers where no waveform is painted, and
 // paint and hit cannot drift. This rect says WHERE THE PIXELS MAY LAND, and
 // so where the waveform takes a press.
 //
@@ -1248,8 +1210,8 @@ inline void reconcile_slot_standing(AppState& a, Viewport& viewport) {
 // and it is the CLIP rather than the gate that makes that case paint nothing
 // (rects_intersect can still answer true for an empty rect an exposure
 // straddles — it compares edges, not areas). The box starts ABOVE the
-// waveform (the view bar's top row since 2026-10-14; the panel's ceiling
-// first moved above the waveform 2026-09-02), so every waveform pass is
+// waveform (at the trim lane's first row, modal_box.h), so every waveform
+// pass is
 // clipped out whole while it stands, and the LANES it also covers (the trim
 // bar, the ruler, the marker lane and the well's lines) are not spared this
 // way — their painters run and the panel covers them, because they publish
@@ -1280,10 +1242,9 @@ inline GuiRect waveform_paint_area(const AppState& a) {
 // whole key rows.
 //
 // ACROSS: THE BLOCK — the widest row, block_w_px — stands on its SEAT, the
-// `5` | `6` gap on the window's center (block_x_px, architect 2026-11-08;
-// centered in the band 2026-10-29 to 2026-11-08), and EVERY ROW STARTS AT
-// THE BLOCK'S LEFT EDGE (no centering of a short row, no stagger since
-// 2026-11-08), each key `q` quarters in at quarter_offset_px(q), its
+// `5` | `6` gap on the window's center (block_x_px, architect 2026-11-08),
+// and EVERY ROW STARTS AT THE BLOCK'S LEFT EDGE (no centering of a short
+// row, no stagger), each key `q` quarters in at quarter_offset_px(q), its
 // width the next slot's offset less one gap. DOWN, the first key row stands
 // the top pad and the grid's upper outer line under the band's top
 // (key_rows_top_px; the pads the bottom icon row's, pad_top_px /
@@ -1317,8 +1278,8 @@ inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
     }
 }
 
-// THE GRID'S ROWS (send AA's stage D2, 2026-11-19; his K2 ruling: one grid
-// with shared lines): `fn(row, x0, x1, y0, y1)` for every key row of `page`
+// THE GRID'S ROWS (architect 2026-11-19: one grid with shared lines):
+// `fn(row, x0, x1, y0, y1)` for every key row of `page`
 // top to bottom, the row's OUTER RECT IN THE LINE TONE — its keys and the
 // one-W line round them: from one gap left of the block to one gap past its
 // last key, from one gap above its keys to one gap below — so neighboring
@@ -1343,7 +1304,7 @@ inline void for_each_grid_row(const AppState& a, Page page, Fn&& fn) {
 }
 
 // THE KEY UNDER A POINT, or -1 — THE BORDER IS CLICKABLE (architect
-// 2026-11-19, send Z: "the border is clickable"; the main page's linked
+// 2026-11-19: "the border is clickable"; the main page's linked
 // group, materials.h's point_on_key and linked_key_seam_px), the same rule
 // in both axes on this grid of shared lines (paint_onscreen_keyboard): A
 // KEY'S HIT BOX IS ITS FACE (the walk's rect) AND THE LINE TO ITS RIGHT AND

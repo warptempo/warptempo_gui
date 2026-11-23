@@ -1,16 +1,15 @@
 #pragma once
 
 // THE ICONS (architect 2026-10-06), ONE SET, PAPIRUS (his set, architect
-// 2026-11-17, session 140; ONE LOOK, Arc-Dark and Papirus, no device key,
-// architect 2026-11-21, send GG). An Icon is a drawing the GUI paints, ONE
+// 2026-11-17; ONE LOOK, Arc-Dark and Papirus, no device key,
+// architect 2026-11-21). An Icon is a drawing the GUI paints, ONE
 // FILE PER ENUMERATOR in ONE FLAT FOLDER, assets/icons/, each file NAMED BY
 // ITS ENUMERATOR (`<Name>.svg`; assets/icons/README.md the drawings, their
 // provenance and their licences): papirus-icon-theme 20260801, its 16-px
 // symbolic set and drawings of its 16-px actions, devices and panel trees,
-// written by tools/icons/import_papirus.py, the roster the parked picks of
-// session 123 with two re-picked by the architect 2026-11-17, twenty-one
-// 2026-11-22, send II, eight of those again the same day, send MM, and one
-// of the eight once more 2026-11-23, send NN (the importer's table) —
+// written by tools/icons/import_papirus.py, the roster the importer's table
+// as the architect picked it (2026-11-17; re-picks 2026-11-22 and
+// 2026-11-23) —
 // BboxPrev / BboxNext OUR OWN drawing from Papirus's go-first, one source,
 // Next's mirrored by the importer's transform, and TransformMoveVertical OUR
 // OWN double arrow from the same go-first.
@@ -20,50 +19,49 @@
 // (materials.h) at ONE ROAD, THE INK BOX (below), each seat naming its own
 // ink length (the battery's the title bar's cap band, render.h's title bar
 // block):
-//   THE KEYS (architect 2026-11-01, M4 / M5: one visual size; no printed
-//   legend under the key since 2026-11-18, send Z): every key carries one —
-//   and since 2026-11-08 the
-//   on-screen keyboard's glyph keys, at the same one size
+//   THE KEYS (architect 2026-11-01: one visual size): every key carries
+//   one — the
+//   on-screen keyboard's glyph keys too, at the same one size
 //   (onscreen_keyboard::cap_icon: Tab FormatIndentMore, Enter KeyEnter, the
 //   rest shared drawings) —
 //   its 16 W canvas centered on its box (paint_key_glyph, paint_handler.cpp;
-//   send Z, 2026-11-19), `text` (Default's B5B5B5) at rest,
-//   `key_dim_ink` (Default's 5D5D5D) on a disabled key, `text_on_lit`
-//   (Default's 070707) on a lit or pressed one's accent face, and
-//   `text_on_lit_dim` (Default's 2A221A) on a lit disabled one's dimmed face
-//   (materials.h's key_ink; architect 2026-11-11, session 106; 2026-11-17,
-//   session 140; 2026-11-19, send Z).
-//   THE SEATS OFF THE KEYS (2026-11-02, M7): the title bar's note
-//   (MusicNote16th) and its battery + clock legend's glyph
+//   2026-11-19), `text` (D3DAE3) at rest,
+//   `key_dim_ink` (7F8591) on a disabled key, `text_on_lit`
+//   (FFFFFF) on a lit or pressed one's accent face, and
+//   `text_on_lit_dim` (9AA1AF) on a lit disabled one's dimmed face
+//   (materials.h's key_ink; their lines of kArcDarkTones, gui_theme.h;
+//   architect 2026-11-11, 2026-11-17, 2026-11-19).
+//   THE SEATS OFF THE KEYS (2026-11-02): the title bar's note
+//   (MusicNote16th) and its battery's glyph in the Bold run
 //   (Battery000Charging / Battery000) (paint_title_bar), the list rows'
 //   folder and headphones (Folder / AudioHeadphones; the wav rows wear
-//   PLAYER's drawing, architect 2026-11-22, send MM) and, on every other list's
+//   PLAYER's drawing, architect 2026-11-22) and, on every other list's
 //   rows, the opener key's drawing — SETUP's gear (SettingsConfigure) on the
 //   settings page and its value lists, PRESETS' bookmark (Bookmarks) on the
-//   trim presets, BPM's note on the BPM form (architect 2026-11-22, send KK;
+//   trim presets, BPM's note on the BPM form (architect 2026-11-22;
 //   paint_list_view's list_row_drawing), the
 //   cards' class glyphs (DialogInformation / DialogError,
 //   paint_notifications). THE NOTE IS SHARED THREE WAYS (architect
-//   2026-11-22, sends II and KK): the title bar, the BPM key and the BPM
+//   2026-11-22): the title bar, the BPM key and the BPM
 //   form's rows (the launcher's art too, below); THE HEADPHONES TWO
-//   (architect 2026-11-22, send MM): the PLAYER key and the render player's
+//   (architect 2026-11-22): the PLAYER key and the render player's
 //   wav rows; SOURCE's disc, ViewMediaTrack, is the key's alone.
-// THE ROSTER IS AS RULED (2026-11-17, session 140; 2026-11-22, sends II and
-// MM; 2026-11-23, send NN); a re-pick is a row of the importer's table and a rerun. EVERY FILE IS A
+// THE ROSTER IS AS RULED (2026-11-17; 2026-11-22; 2026-11-23); a re-pick is
+// a row of the importer's table and a rerun. EVERY FILE IS A
 // DISTINCT DRAWING (by the written shapes and transforms; the icon
 // theme's names are often symlinks, so one drawing is one enumerator) — the
 // score viewer's page keys, GoPreviousViewPage / GoNextViewPage, are
 // chevrons of their own; BboxPrev and BboxNext share one source file, two
 // drawings by the transform. EVERY DRAWING IS PAPIRUS'S BUT THE MARKER PAIR
-// AND VALUE DRAG, OURS from Papirus's go-first (architect 2026-11-22, send
-// MM; 2026-11-23, send NN; the importer's own sources, tools/icons/own/).
+// AND VALUE DRAG, OURS from Papirus's go-first (architect 2026-11-22;
+// 2026-11-23; the importer's own sources, tools/icons/own/).
 // THE TWO
 // CARDS, DialogError and DialogInformation, are imported, their discs
 // cutting the mark out so one color shows it (assets/icons/README.md's
 // provenance).
 // THE LAUNCHER ICON is the title bar's note, MusicNote16th.svg, which
 // apk/build_apk.sh renders at every build from this folder (architect
-// 2026-11-21, send HH: one drawing, one file).
+// 2026-11-21: one drawing, one file).
 // THE SET PARSED AT LAUNCH through resvg (svg_icon.h: the wrapper and the
 // error rule), straight from the bundle — never copied into the config
 // folder (load_set, below) — and rasterised lazily, per (drawing, ink px,
@@ -71,7 +69,7 @@
 // into an ARGB32 surface that a draw copies at the place's whole device px,
 // no resample (draw_glyph, below).
 //
-// THE BOUND DRAWING (architect 2026-11-02; the road of 2026-10-10 restored):
+// THE BOUND DRAWING (architect 2026-11-02):
 // a file that paints in `currentColor` — every file here — WEARS THE COLOR
 // ITS CALLER PASSES, a 0xRRGGBB value (one of the compiled row's words — the
 // text tones, a lit key's print and its dimmed tone; no role
@@ -84,8 +82,8 @@
 // 2026-11-01).
 //
 // NO CURSOR IS AN ICON: the product shows no pointer cursor at all (the
-// mouse is closed, architect 2026-10-30), so it ships no cursor art and
-// draws none.
+// one pointer is the pen or a finger, input_core.h), so it ships no cursor
+// art and draws none.
 //
 // GUI-ONLY, like text_shape: icons exist only where pixels do,
 // and warptempo_cli must never carry this TU (nor svg_icon's, nor resvg).
@@ -109,7 +107,7 @@ namespace icons {
 // score_viewer_button_icon, paint_handler.cpp /
 // score_viewer.h) and the off-key seats' painters (the head).
 #define WARPTEMPO_ICONS(X)                                        \
-    X(DocumentOpen) X(DocumentSave) X(DocumentSaveAs) X(VcsPull)         \
+    X(DocumentOpen) X(DocumentSave) X(VcsPull)                           \
     X(NetworkConnect) X(VcsCommit) X(EditUndo) X(EditRedo)               \
     X(MediaRecord) X(DialogCancel) X(EditCopy) X(EditPaste) X(ZoomIn)    \
     X(ZoomOut) X(ZoomFitBest) X(ZoomPrevious) X(ZoomInY) X(GoJump)                  \
@@ -128,8 +126,8 @@ namespace icons {
     X(TransformMoveVertical) X(GoDown) X(GoUp) X(BboxPrev) X(BboxNext)   \
     X(TabDetach) X(ZoomOriginal) X(GoPrevious) X(GoNext)                 \
     X(GoParentFolder) X(GoPreviousViewPage) X(GoNextViewPage)            \
-    X(EditReset) X(ZoneIn) X(ZoneOut) X(WindowClose)                     \
-    X(EditClear) X(ViewRefresh) X(Folder) X(DialogInformation)           \
+    X(EditReset) X(ZoneIn) X(ZoneOut) X(EditClear)                       \
+    X(Folder) X(DialogInformation)                                       \
     X(DialogError) X(Battery000) X(Battery000Charging)                   \
     X(FormatIndentMore) X(KeyEnter)
 
@@ -179,29 +177,29 @@ std::optional<std::string> load_set();
 // the print on a lit face is one more color key beside the text tones.
 void drop_rasters();
 
-// -- THE INK BOX: one road for every seat (architect 2026-11-01, M4 / M5:
+// -- THE INK BOX: one road for every seat (architect 2026-11-01:
 // "the glyphs smaller … the problem with M3 was the uneven size, e.g. DRAG
-// was tiny" -> ONE VISUAL SIZE for every key glyph; 2026-11-02, M7: the
+// was tiny" -> ONE VISUAL SIZE for every key glyph; 2026-11-02: the
 // seats off the keys on the same road at their own lengths) ---------------
 //
 // A GLYPH IS SCALED BY ITS INK, never by its viewBox: the drawing is
 // rendered at a uniform zoom from its origin (svg_icon::rasterise_zoom) and
 // its INK BOX — the bounds of every pixel whose alpha is > 0, the
 // antialiased rim included — is cropped out; THE FIT is the zoom at which
-// the ink box's LARGER SIDE is `ink_px`, found as the approved M5 mock found
-// it: a probe at zoom 8 measures the ink in user units, the zoom is `ink_px`
+// the ink box's LARGER SIDE is `ink_px`, found
+// thus: a probe at zoom 8 measures the ink in user units, the zoom is `ink_px`
 // over its larger side, and the zoom steps down by 1 % while the rim's
 // extra row makes it overrun. THE SEATS' LENGTHS, each its owner's: the
 // keys' drawing as its whole canvas in a 16 W box (kKeyDrawingBoxW,
 // paint_key_glyph, 32 device px on the tablet: Papirus's 16-px drawings at
-// their native size; send Z, 2026-11-19, ink_in_box below), the title bar's
+// their native size; 2026-11-19, ink_in_box below), the title bar's
 // note (the drawing's ink in a 12 W box,
 // ink_in_box below) and battery (the cap band's height, render.h's title
 // bar block) — the list rows' drawing as its whole canvas in a 16 W box
-// (kListDrawingBoxW, paint_handler.cpp's THE LIST VIEW; send AA's stage D2,
+// (kListDrawingBoxW, paint_handler.cpp's THE LIST VIEW;
 // 2026-11-19), the cards' drawing as
 // its whole canvas in a 16 W box (kNotificationGlyphBoxW, notifications.h,
-// ink_in_box; send AA's stage D1, 2026-11-19). The fit
+// ink_in_box; 2026-11-19). The fit
 // is the drawing's alpha alone, so it is held per (drawing, ink px) and
 // shared by the colors; the cropped raster per (drawing, ink px, color,
 // phase — draw_glyph below),
@@ -214,7 +212,7 @@ struct InkSize {
 };
 InkSize glyph_ink_size(Icon icon, int ink_px);
 
-// A DRAWING IN A BOX (architect 2026-11-19, send Z: the title bar's note "in
+// A DRAWING IN A BOX (architect 2026-11-19: the title bar's note "in
 // a 12 W drawing box", "the logo should take the same font size as the
 // body"): what the ink-box road needs to draw the drawing as if its whole
 // canvas were scaled into a `box_px` square — `ink_px` the ink's larger side

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-// THE LOOK'S TONES, COMPILED (architect 2026-11-21, send GG: "the alt end
+// THE LOOK'S TONES, COMPILED (architect 2026-11-21: "the alt end
 // state is what i effectively want and it seems cheaper to get there - we
 // would still track arc-dark provenance for each color in the comments").
 // One look, GTK's Arc-Dark at 9 pt ("i am committed"), so its tones are ONE
@@ -47,7 +47,7 @@ struct GuiThemeTones {
     uint32_t score_pane_face;
     uint32_t scale_trough;
     uint32_t scale_slider_border;
-    // THE THREE CARRIED FILLS (send AA's stage D1, 2026-11-19): each word
+    // THE THREE CARRIED FILLS (architect 2026-11-19): each word
     // 0xAARRGGBB, THE TOP BYTE ITS OPACITY, painted at it over whatever lies
     // under the box — the chrome, the lanes, the canvas — so no surface is
     // known to composite it over ahead of time: the opacity rides to the
@@ -96,11 +96,10 @@ struct GuiThemeTones {
 // (display_transform.h's head).
 //
 // THE PROOF IS THE DUMP, NOT AN ASSERT: the row was checked word for word
-// against the derivation it replaced (send GG, step 3c); a static_assert of
-// these literals against the same literals would prove nothing, so none
-// pins them.
+// by a dump against the arithmetic its lines tell; a static_assert of these
+// literals against the same literals would prove nothing, so none pins them.
 //
-// THE WAVEFORM'S BRIGHTNESS ORDER IS HIS (architect 2026-11-21, send FF):
+// THE WAVEFORM'S BRIGHTNESS ORDER IS HIS (architect 2026-11-21):
 // the scanner and the zoom anchor's stem FFFFFF ("the scanner should be this
 // brightest one"), the playhead's stem A5ABB5, the hover line 767B87 ("an
 // even more dark and faint version of the playhead stem").
@@ -112,7 +111,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // THE TITLE TONE: Arc's $header_bg (= wm_bg), the headerbar and the
     // titlebar, the darkest main chrome. The title bar's ground alone
     // (paint_title_bar, the palette's `ground`; the body under it wears
-    // `body_face`, architect 2026-11-18, send Z: "the darkest color would
+    // `body_face`, architect 2026-11-18: "the darkest color would
     // only apply to the top line, the title bar") and the launcher icon's
     // ground (apk/build_apk.sh).
     .ground = 0x2F343F,
@@ -120,7 +119,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // The ground of everything under the title bar — the palette's
     // `body_face` and the panel's `face`: both icon rows, the status bar, the
     // erase, the modal pane's and the on-screen keyboard's ground
-    // (architect 2026-11-18 / 2026-11-19, send Z, the Arc page).
+    // (architect 2026-11-19).
     .body_face = 0x383C4A,
     // THE FONT COLOR: Arc's $fg_color (`@define-color fg_color #D3DAE3`).
     // Every word, digit and drawing the chrome prints — the palette's
@@ -129,12 +128,12 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // (apk/build_apk.sh).
     .text = 0xD3DAE3,
     // THE TITLE BAR'S TEXT AND DRAWINGS: xfwm4's title text on Arc-Dark's
-    // titlebar (send Z, 2026-11-19, the Arc page; paint_title_bar, its
+    // titlebar (architect 2026-11-19; paint_title_bar, its
     // palette member and its glyphs' word).
     .title_text = 0xAFB8C5,
     // THE SIDEBAR TEXT: Arc's $dark_sidebar_fg. The live marker labels' ink,
-    // the tooltip's words and a normal card's words and glyph (send Z; the
-    // floaters' since send AA's stage D1, 2026-11-19).
+    // the tooltip's words and a normal card's words and glyph (architect
+    // 2026-11-19).
     .sidebar_text = 0xBAC3CF,
     // THE DIM TEXT: Arc's insensitive text, $insensitive_fg_color (the font
     // color at 45 % alpha), `button:disabled label { color: rgba(211, 218,
@@ -146,7 +145,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // A DISABLED MARKER'S LABEL UNDER THE HOVERING PEN (its rest `text_dim`):
     // Arc's dim button under its row's hover, `.gedit-document-panel
     // row:hover:not(:selected) button { color: #9da3ad; }` (architect
-    // 2026-11-21, send FF: "just make sure they're all colors from Arc,
+    // 2026-11-21: "just make sure they're all colors from Arc,
     // dark").
     .inactive_cue_label_hover = 0x9DA3AD,
     // THE PRINT ON A LIT FACE: Arc's $selected_fg_color, white on its
@@ -155,7 +154,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     .text_on_lit = 0xFFFFFF,
     // A DISABLED KEY'S GLYPH and the struck clip lamp's square: an
     // insensitive button's drawing MEASURED ON HIS ARC-DARK DESKTOP (shot
-    // B3b, 2026-11-18; architect 2026-11-19, send Z), opaque over the key
+    // B3b, 2026-11-18; architect 2026-11-19), opaque over the key
     // face (key_ink, materials.h; the palette's `key_dim_ink`).
     .key_dim_ink = 0x7F8591,
     // A DISABLED KEY'S AND WORD BUTTON'S FACE: Arc's `button:disabled {
@@ -169,8 +168,8 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // level off; the formula taken).
     .key_dim_border = 0x313441,
     // A CHECKED-BUT-DISABLED KEY'S GLYPH, DIMMED WITH THE BUTTON as GTK's
-    // `opacity` dims its label (architect 2026-11-19, send Z: "let's do arcs
-    // numbers"; stage B): Arc's `button:disabled:checked label { color:
+    // `opacity` dims its label (architect 2026-11-19: "let's do arcs
+    // numbers"): Arc's `button:disabled:checked label { color:
     // rgba(255, 255, 255, 0.8); }` under the button's `opacity: 0.6` — the
     // print FFFFFF at 80 % over the face's inner word (the accent 5294E2 at
     // 75 % over the body tone 383C4A -> 4C7EBC) -> DBE5F2, at 60 % over the
@@ -185,9 +184,9 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // THAT FACE UNDER THE HOVERING PEN, the hover's far end — a key's, a word
     // button's, an on-screen keyboard key's, the scrub's knob's: Arc's
     // `button:hover { background-color: #505666; }`, MEASURED ON HIS DESKTOP
-    // too (the word button B2b and the linked pair C2d) (architect
-    // 2026-11-18, send Y: "lets go arc truthful re: hoevers"; send CC,
-    // 2026-11-20; materials.h's THE HOVER).
+    // too (the word button B2b and the linked pair C2d, 2026-11-20)
+    // (architect 2026-11-18: "lets go arc truthful re: hoevers"; materials.h's
+    // THE HOVER).
     .key_hover_face = 0x505666,
     // A LIST ROW UNDER THE HOVERING PEN: Arc's `row.activatable:hover {
     // background-color: rgba(255, 255, 255, 0.03); }` over the list's view
@@ -202,13 +201,13 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // iterations, a lit key under an overlay): Arc's `button:disabled:checked { background-color:
     // rgba(82, 148, 226, 0.75); opacity: 0.6; }` — the accent 5294E2 at
     // 75 % over the body tone 383C4A -> 4C7EBC, at 60 % over the body tone
-    // -> 44648E (architect 2026-11-19, send Z: "let's do arcs numbers";
+    // -> 44648E (architect 2026-11-19: "let's do arcs numbers";
     // paint_linked_group, materials.h).
     .lit_dim_fill = 0x44648E,
     // THE RULER, Arc's entry's fill (paint_entry, NOISE) and the flag
     // editor's, the lists' and pages' view: Arc's $base_color, the canvas's
-    // own number — THE RULER WEARS THE CANVAS'S TONE (architect 2026-11-17,
-    // session 140, ruling 3: "otherwise it looks too bright").
+    // own number — THE RULER WEARS THE CANVAS'S TONE (architect 2026-11-17:
+    // "otherwise it looks too bright").
     .ruler_face = 0x404552,
     // THE RULER'S TICKS: Arc's `scale marks { color: alpha(currentColor,
     // 0.4); }` of the font color — D3DAE3 at 40 % (the byte 66) over the
@@ -217,16 +216,15 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // THE RULER'S DIGITS: Arc's `.dim-label { opacity: 0.55; }` of the font
     // color over the ruler's ground — D3DAE3 at 55 % over 404552 -> 9197A2,
     // under the triangle A5ABB5 and over the hover line 767B87 (architect
-    // 2026-11-21, send GG; paint_ruler_row).
+    // 2026-11-21; paint_ruler_row).
     .ruler_text = 0x9197A2,
     // THE MARKER LANE: Arc's $dark_sidebar_bg (`@define-color text_view_bg
     // #353945`), between $header_bg and $bg_color.
     .lane_face = 0x353945,
     // THE TRIM BAR'S 12-W TROUGH under the pill: Arc's scrollbar trough,
     // `scrollbar { background-color: #3e434f; }`, $_scrollbar_bg_color =
-    // darken($base_color, 1%) (architect 2026-11-17, session 140, ruling 4:
-    // "the scroll bar and the trough should be accurate to whatever Arc
-    // uses").
+    // darken($base_color, 1%) (architect 2026-11-17: "the scroll bar and
+    // the trough should be accurate to whatever Arc uses").
     .trim_bar_face = 0x3E434F,
     // THE TRIM BAR'S PILL AT REST, the span: Arc's scrollbar slider,
     // `scrollbar slider { background-color: #767b87; }`, mix($fg_color,
@@ -234,14 +232,14 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     .trim_span_face = 0x767B87,
     // THE TRIM BAR'S PART UNDER THE HOVERING PEN, the pill's body or an
     // end's cap: Arc's `scrollbar slider:hover { background-color: #676b78;
-    // }`, Thunar's slider under the pointer as MEASURED ON HIS DESKTOP (send
-    // CC, 2026-11-20; trim_bar_tones; GuiInputHandler::walk_trim_bar_hover).
+    // }`, Thunar's slider under the pointer as MEASURED ON HIS DESKTOP
+    // (2026-11-20; trim_bar_tones; GuiInputHandler::walk_trim_bar_hover).
     .trim_span_hover_face = 0x676B78,
     // THE WELL'S LINES — the one-W lines across the panel, the stereo
     // divider, the status bar's line — and the keys', word buttons' and
     // entries' rings: Arc's $borders_color (`@define-color borders
     // #2b2e39`), darken($bg_color, 6%), Thunar's pane border (architect
-    // 2026-11-17, session 140, D2: "lets use the thunar border").
+    // 2026-11-17: "lets use the thunar border").
     .well_border = 0x2B2E39,
     // THE SELECTION'S BAR, the palette's `selected_fill`: the lists' lit row
     // and the editors' selected substring. Arc's $selected_bg_color, its one
@@ -255,16 +253,16 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     .score_pane_face = 0x262A33,
     // THE PROGRESS PAGE'S BAR'S TROUGH AND THE SCRUB'S: Arc's
     // $_trough_bg_color, `progressbar trough { background-color: #2d303b; }`
-    // and `scale trough { background-color: #2d303b; }` (send AA's stage D2,
+    // and `scale trough { background-color: #2d303b; }` (architect
     // 2026-11-19: GTK's progress bar).
     .scale_trough = 0x2D303B,
     // THE SCRUB'S KNOB'S ONE-W RIM AT REST: Arc's `scale slider { border:
     // 1px solid #262933; }`, MEASURED ON HIS DESKTOP too (the scale shot
-    // C4g) (send AA's stage D3, 2026-11-19; paint_scale).
+    // C4g, 2026-11-19; paint_scale).
     .scale_slider_border = 0x262933,
     // THE TOOLTIP'S BOX (paint_shift_tooltip): Arc's $osd_bg_color at .95,
     // `tooltip.background { background-color: rgba(75, 81, 98, 0.95); }` —
-    // .95 · 255 = 242.25, the byte F2 (send AA's stage D1, 2026-11-19: "if we
+    // .95 · 255 = 242.25, the byte F2 (architect 2026-11-19: "if we
     // can do the transparency, we might as well").
     .tooltip_fill = 0xF24B5162,
     // A NORMAL (TIMED) CARD'S BOX (paint_notifications): xfce4-notifyd's
@@ -286,7 +284,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // THE TITLE BAR'S CLIP LAMP, LIT AND NOT STRUCK — THE CLOSE RED: Arc's
     // xfwm4 / headerbar close disc, `@define-color wm_button_close_bg
     // #cc575d;` (its hover D7787D, its press BE3841), on the clip lamp alone
-    // (architect 2026-11-14, session 123: red reads as a warning or a close).
+    // (architect 2026-11-14: red reads as a warning or a close).
     .clip_lamp = 0xCC575D,
     // THE CANVAS: Arc's $base_color (`@define-color base_color #404552`),
     // its content base, Thunar's list view (architect 2026-11-17: "Thunar's
@@ -298,8 +296,8 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // ballpark).
     .waveform_ink = 0x262A33,
     // THE MAGNIFIED INNER BAR'S SOLID FILL (waveform_plate_inks): THE KEY
-    // FACE, Arc's $button_bg (architect 2026-11-07, session 83, his pick i4
-    // on real MAGNIFY-lit captures: a lighter core from a tone the palette
+    // FACE, Arc's $button_bg (architect 2026-11-07, his pick on real
+    // MAGNIFY-lit captures: a lighter core from a tone the palette
     // already holds, no halo; render.h's THE CORE).
     .waveform_core = 0x444A58,
     // THE CANVAS'S QUARTER LINES (render_canvas): Arc's separator
@@ -310,25 +308,24 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // Arc's $header_border — the zero line IS the ink.
     .center = 0x262A33,
     // THE ACCENT: Arc's $selected_bg_color. A lit or pressed key's face —
-    // every checked key's, Arc's `:checked` and `:active` one look (send Z,
+    // every checked key's, Arc's `:checked` and `:active` one look (architect
     // 2026-11-19) — NOISE's progress line, the on-screen keyboard's lit
     // keys, the scrub's played part and its held knob, the flag editor's
     // border (materials.h's THE KEY).
     .cue = 0x5294E2,
     // EVERY ENABLED MARKER'S CHIP, selected or not, and the history view's
     // added and changed items (resolve_flag_face): the accent's number, its
-    // own member (architect 2026-11-13, session 119: the markers wear the
-    // accent; 2026-11-17, session 140: "the marker should take selection
+    // own member (architect 2026-11-17: "the marker should take selection
     // blue").
     .cue_fill = 0x5294E2,
     // AN ENABLED MARKER'S CHIP UNDER THE HOVERING PEN: Arc's hover of a blue
     // thing, `.documents-entry-tag:hover { background: #639fe5; }` (the tag
-    // at rest 5294E2, the accent) (architect 2026-11-21, send FF).
+    // at rest 5294E2, the accent) (architect 2026-11-21).
     .cue_hover = 0x639FE5,
     // THE SELECTION STEM down the canvas and the phase-reset lead-in ring
-    // (no chip and no ruler head wears an outline since 2026-11-19, send
-    // AA): the xfwm4 frame's edge fill (assets.svg); _common.scss's dark
-    // window outline, darken($header_bg, 7%), resolves to about 20232B.
+    // (no chip and no ruler head wears an outline): the xfwm4 frame's edge
+    // fill (assets.svg); _common.scss's dark window outline,
+    // darken($header_bg, 7%), resolves to about 20232B.
     .cue_outline = 0x21252B,
     // A DISABLED MARKER'S CHIP (and the history view's removed items'):
     // Arc's titlebar glyph of an unfocused window, `@define-color
@@ -337,27 +334,27 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     .inactive_cue = 0x666A74,
     // A DISABLED MARKER'S CHIP UNDER THE HOVERING PEN: the same titlebar
     // glyph awake, `@define-color wm_icon_bg #90939B;` (architect
-    // 2026-11-21, send FF: a disabled marker "is ignored by the parser, but
+    // 2026-11-21: a disabled marker "is ignored by the parser, but
     // otherwise fully clickable and actionable").
     .inactive_cue_hover = 0x90939B,
     // THE PLAYHEAD'S TRIANGLE IN THE RULER: the stem's color, Arc's `.h4,
-    // .category-label { color: #a5abb5; }` (architect 2026-11-21, send GG:
+    // .category-label { color: #a5abb5; }` (architect 2026-11-21:
     // "the triangle for the playhead should probably become the same color
     // as the stem").
     .playhead_head = 0xA5ABB5,
     // THE PLAYHEAD'S STEM ON THE WAVEFORM, its one static tone
     // (render_playhead): Arc's `.h4, .category-label { color: #a5abb5; }`
-    // (architect 2026-11-21, send FF: "the stem is too bright" at the font
+    // (architect 2026-11-21: "the stem is too bright" at the font
     // color).
     .playhead_line = 0xA5ABB5,
     // THE WAVEFORM'S HOVER LINE AND ITS TRIANGLE IN THE RULER: Arc's
     // scrollbar slider, `scrollbar slider { background-color: #767b87; }`
-    // (architect 2026-11-21, send FF; the triangle send GG: "same color as
+    // (architect 2026-11-21; the triangle: "same color as
     // the hover stem. for symmetry"; render_hover_line).
     .hover_line = 0x767B87,
     // THE SCANNER AND THE ZOOM ANCHOR'S STEM: OURS, white, canonical, no
     // Arc number (architect 2026-10-09: "the non-playhead stems that are
-    // related to the controls should be white"; 2026-11-21, send FF: "the
+    // related to the controls should be white"; 2026-11-21: "the
     // scanner should be this brightest one").
     .scanner = 0xFFFFFF,
 };

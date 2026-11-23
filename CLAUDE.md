@@ -159,7 +159,7 @@ THIRTEEN REQUIRED KEYS, no optional one (`kDeviceConfigKeys`, device_config.{h,c
 
 ## Next — ruled or owed, NOT built; nothing here is a go
 
-- Send GG part 4 (the dead code; the older history in the comments; then Sol over the whole send): paused on his word (2026-11-21: "stop the sweep"); it arrives from the Mac as a zip stacked on send HH's tree.
+- After send GG part 4 (landed 2026-11-23; architect 2026-11-23: "I agree to all"): two Sol rounds (the code of sends GG .. NN and part 4; the comments' truth), then ONE SMALL CODE STEP — remove the dead code the code round CONFIRMS (`iter_bound_step_kind_refusal`, `redesign_button_is_door`, the N2 diagnostic, input_handler.cpp's producer-less `'` arm, `chrome_band_modifiers_refused`'s unused parameters, input_key_dispatch.cpp's empty namespace, `GuiPalette::label`'s fallback, `srgb_word_from_p3`) and retell the thirteen `static_assert` messages that still tell history (`gui_input.h`, `text_editor.h`, `app_state.h`).
 
 ## Never re-propose without his word
 
@@ -170,7 +170,7 @@ THIRTEEN REQUIRED KEYS, no optional one (`kDeviceConfigKeys`, device_config.{h,c
 | Topic | Where |
 |---|---|
 | The skin: keys, linked groups, entries, the hover look | `src/gui/materials.{h,cpp}`, `cool_edit_paint.{h,cpp}` (`CoverageStampPass`), `coverage_stamp.h` |
-| Lanes and lengths, the title bar, the icon rows | render.h, `program_spec.h`, `chrome_spec.h`, main.cpp's lane table |
+| Lanes and lengths, the title bar, the icon rows | render.h, `program_spec.h`, main.cpp's lane table |
 | Buttons: roster, drawings, predicates, tooltips | `RedesignButton` and its tables (app_state.h), `paint_handler.{h,cpp}` |
 | NOISE: the level case, the bed | `arm_level_case_press`, `apply_level_case` (input_pointer.cpp), `noise.{h,cpp}`, the sync script's `mirror_noise` |
 | Faces and sizes; shaping; the glyph raster | `gui_font.h`, `text_shape.{h,cpp}`, `text_raster.{h,cpp}`, `fonts/README.md` |

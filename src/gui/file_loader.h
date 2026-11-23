@@ -21,8 +21,8 @@ struct Selection;
 // project from the startup tick of gui_main's loop: a project is opened by
 // REBUILDING the object set around its source (the reopen loop, main.cpp),
 // never by loading into a standing one, so a failed load exits rather than
-// reverting to a blank window — and since 2026-08-27 it can fail only by a
-// change on disk between the Open project picker's dry-run below and the load.
+// reverting to a blank window — and it can fail only by a change on disk
+// between the Open project picker's dry-run below and the load.
 struct GuiFileLoader {
     AppState&          app;
     GuiAudio&          audio;
@@ -30,9 +30,9 @@ struct GuiFileLoader {
     GuiPlayback&       playback;
     Viewport&          viewport;
     GuiTargetRender&   target_render;
-    // Loading a source can change app.gui_scale; the load applies it
-    // through GuiPaintHandler::on_resize, the same geometry-and-cache
-    // rebuild path a window resize takes.
+    // The load re-clamps the zoom and the viewport against the strip
+    // geometry through GuiPaintHandler::on_resize, the same
+    // geometry-and-cache rebuild path a window resize takes.
     GuiPaintHandler&   paint_handler;
     Selection&         selection;
 
@@ -161,14 +161,13 @@ std::optional<GuiFailure> source_load_dry_run(
 
 // Apply a parsed settings file's engine block and the scalar session prefs
 // (active_audio_view, active_markers_view, active_tab_view) into `app`. VALUES ONLY — no side effects: the
-// caller runs on_resize itself, owning its own side-effect timing. (The list
-// lost four prefs 2026-08-27: playback_speed retired, and gui_scale,
-// audio_player and projects_repo became per-DEVICE values gui_main reads before
-// the window exists — device_config.h, where audio_player then retired whole
-// 2026-08-28. A source load must not write any of them.) THE SOURCE LOAD IS THE ONLY CALLER since
-// 2026-08-24, when a load in place narrowed to what its undo entry restores —
-// the two marker columns and the engine block — and so stopped applying a
-// file's view keys, tab bands and session prefs at all (the rule is stated at
+// caller runs on_resize itself, owning its own side-effect timing. (The
+// per-DEVICE values — gui_scale, projects_repo — are gui_main's, read from
+// device_config.h before the window exists; a source load writes none of
+// them.) THE SOURCE LOAD IS THE ONLY CALLER (2026-08-24): a load in place
+// applies only what its undo entry restores — the two marker columns and the
+// engine block — and none of a file's view keys, tab bands and session prefs
+// (the rule is stated at
 // GuiInputHandler::apply_recipe_in_place, input_handler.h). The routine stays a
 // named routine rather than folding into load_file: it is the whole-file
 // values-only apply, and that is one act worth reading as one. SettingsFile is

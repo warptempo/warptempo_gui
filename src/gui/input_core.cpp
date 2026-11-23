@@ -17,9 +17,9 @@ uint64_t gui_monotonic_us() {
 
 namespace {
 
-// THE TOUCH WINDOW HAS NO DEADLINE (architect 2026-11-07, session 87:
-// the region hold, its stillness radius and the slow-start rule retired for
-// the TRIM arm lamp). The window — Pending, the first contact down and
+// THE TOUCH WINDOW HAS NO DEADLINE (architect 2026-11-07: no hold, no
+// stillness radius, no slow-start rule; the sweep is the TRIM arm lamp's).
+// The window — Pending, the first contact down and
 // nothing delivered — OPENS IN TWO PLACES ONLY (architect 2026-09-25: "zoom
 // is not useful outside waveform", and a second finger's only use is the
 // pinch): on the PAN ZONE and in an OPEN EDITOR'S FIELD. Anywhere else a down
@@ -31,7 +31,7 @@ namespace {
 // by a SECOND DOWN (the pinch). So no tick samples the window and a slow
 // start is simply a pan that has not crossed yet.
 //
-// THE FIELD'S VOCABULARY (architect 2026-11-08, session 95): a TAP seats
+// THE FIELD'S VOCABULARY (architect 2026-11-08): a TAP seats
 // the caret, a DRAG moves it, and NOTHING ELSE — no double tap (the field
 // is none of DoubleClickSurface's), no hold meaning, no handles and no toolbar,
 // the selection the on-screen keyboard's alone (begin_touch_caret_drag's
@@ -42,11 +42,11 @@ namespace {
 // whole burst delivers at the LIFT, so a double-click candidate is only ever
 // seeded by a contact that has already left the glass.
 //
-// THE SLOP IS NO LONGER A CONSTANT HERE. It is touch_slop_px_, a settable
-// member whose default is the authored kDefaultTouchSlopPx and whose live
-// value the GUI pushes down scaled (set_touch_slop_px, input_core.h — the
-// contract, the two uses and the twin-gate invariant are all stated there,
-// since the value's owner is now the door rather than this block).
+// THE SLOP IS touch_slop_px_, a settable member whose default is the
+// authored kDefaultTouchSlopPx and whose live value the GUI pushes down
+// scaled (set_touch_slop_px, input_core.h — the contract, the two uses and
+// the twin-gate invariant are all stated there, the value's owner being
+// the door rather than this block).
 
 } // namespace
 
@@ -55,8 +55,8 @@ namespace {
 // ---------------------------------------------------------------------------
 
 void GuiInputCore::tick() {
-    // The key repeat's deadline alone: the touch window has none since
-    // 2026-11-07 (the constants block above).
+    // The key repeat's deadline alone: the touch window has none (the
+    // constants block above).
     maybe_fire_repeat();
 }
 
@@ -221,13 +221,13 @@ void GuiInputCore::maybe_fire_repeat() {
     // THE BIT HAS TWO PRODUCERS, one per held surface: THIS SITE for a held KEY,
     // and GuiInputHandler::tick_chrome_press_repeat (input_pointer.cpp) for a
     // held BUTTON — the chord table's `repeats` rows (the four cardinal arrow
-    // buttons, whose hold-repeat returned 2026-08-16, and Undo / Redo). The button producer never passes through this class (it calls
-    // on_key application-side) and buys the adjacency property below from
-    // its own edge, so nothing here has to account for it; this site is the KEY
-    // surface's whole producer.
+    // buttons, 2026-08-16, and Undo / Redo). The button producer never
+    // passes through this class (it calls on_key application-side) and buys
+    // the adjacency property below from its own edge, so nothing here has to
+    // account for it; this site is the KEY surface's whole producer.
     // ONLY THE BUTTON PRODUCER CLEARS THE BIT ON ITS HOLD'S FIRST FIRE — its
     // burst's undo OPENER, standing in for the press act a chrome button does
-    // not perform (its act is at the LIFT since 2026-08-13; the flip and its
+    // not perform (its act is at the LIFT, 2026-08-13; the flip and its
     // argument are at that producer's own head). A held KEY needs no flip: its
     // physical press acts and IS the burst's opener, so every fire from this
     // site carries the bit as stamped.
@@ -288,9 +288,8 @@ void GuiInputCore::deliver_motion(const GuiPointerPlace& at) {
 }
 
 // ---------------------------------------------------------------------------
-// Touch event handlers (the finger as the pointer; touch phase 1, 2026-08-11;
-// the WINDOWED MODEL, restored at the sixth glass ruling 2026-08-12 and
-// TWO-DEADLINE since the eighth, the same day)
+// Touch event handlers (the finger as the pointer, the WINDOWED MODEL;
+// architect 2026-08-12)
 //
 // The phase machine, the translation contract and the AUTHORITATIVE edge
 // inventory live at the touch state block in input_core.h; each body
@@ -378,15 +377,15 @@ void GuiInputCore::resolve_touch_window_to_single_nav() {
 }
 
 void GuiInputCore::resolve_touch_window_to_region() {
-    // Pending -> Region (THE ARMED SWEEP, architect 2026-11-07, session 87;
-    // contract at the declaration): the contact CROSSED THE SLOP on the pan
-    // zone with a sweep lamp lit (TRIM, or ADD SEL since 2026-11-10) and no
+    // Pending -> Region (THE ARMED SWEEP, architect 2026-11-07; contract at
+    // the declaration): the contact CROSSED THE SLOP on the pan
+    // zone with a sweep lamp lit (TRIM, or ADD SEL, 2026-11-10) and no
     // ctrl, so it now DRIVES THE REGION FORMER through the region hooks and
     // NOTHING pointer-shaped starts — no entry motion, no press, the touch
     // hold never raised (the single-nav model, not the Pointer one). The
     // begin fires at the DOWN point — the lit lamp's former's press half runs
     // there (TRIM's deselect and drag arm, NO playhead seat, the trim's
-    // writers never move it, session 88; ADD SEL's snapshot and arm, no
+    // writers never move it; ADD SEL's snapshot and arm, no
     // deselect), so the span anchors where the contact landed — and the crossing
     // position is the gesture's own first leg, staged for the frame boundary
     // (the caret resolver's shape).
@@ -453,10 +452,10 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     flush_touch_frame_motion();
     // WHAT is delivered FORKS ON clean_release,
     // and the fork is one line at the bottom of this body:
-    //   * CLEAN (the finger's own lift, and nothing else since 2026-08-29) —
+    //   * CLEAN (the finger's own lift, and nothing else) —
     //     the left RELEASE: the press was a click, and every act-at-lift
     //     surface runs.
-    //   * ABNORMAL (THE HARD ENDS since 2026-08-29 — a touch the system
+    //   * ABNORMAL (THE HARD ENDS, 2026-08-29 — a touch the system
     //     takes away is not a click unless it moved; the arm is at
     //     hard_end_touch_stream) — the product's own LOST-BUTTON
     //     edge instead: the hold bit drops here exactly as it does on a clean
@@ -466,9 +465,9 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     GuiInputHandler::on_motion, and the force-end finalizer's own rule):
     //     a MOVED drag finalizes like a release, an UNMOVED press commits
     //     NOTHING FURTHER — no click act still owed, no double-click seed, and
-    //     no chrome dispatch, since dispatching an armed chrome/modal/menu
+    //     no chrome dispatch, since dispatching an armed chrome/modal
     //     press is the RELEASE's job and no release is delivered. NOTHING
-    //     FURTHER RATHER THAN NOTHING SINCE 2026-08-17: a resolved MARKER touch
+    //     FURTHER RATHER THAN NOTHING (2026-08-17): a resolved MARKER touch
     //     has already run its click act at the synthesized PRESS, and this
     //     abnormal end drops the pending ALONE and leaves that committed click
     //     — the selection, the land, the playback stop — standing (the
@@ -477,27 +476,23 @@ bool GuiInputCore::end_touch_left_hold(bool clean_release) {
     //     the surfaces that still commit nothing at an unmoved press are the
     //     ones whose act was never owed until the lift, the nav surface's
     //     deferred click among them. The ruling is the architect's
-    //     (2026-08-29): an edge back-swipe that began on a bottom-row button
-    //     toggled playback or authored on its way out of the app, the clean
-    //     release it used to deliver speaking for a lift that never happened.
+    //     (2026-08-29): an edge back-swipe that began on a bottom icon row's
+    //     key would otherwise toggle playback or author on its way out of the
+    //     app, a clean release speaking for a lift that never happened.
     //     AND THE ARMS THE CHROME / MODAL / LIST SURFACES HOLD ARE
     //     DROPPED BY THAT SAME MOTION, on EITHER arm of the focus fork below:
     //     the GUI ends its release-time claims — the chrome press, the
     //     modal's armed button, the on-screen keyboard's held key, a list
     //     row's press, the scrubs' drags — at exactly
     //     this edge, an unheld motion while one stands
-    //     (clear_release_time_press_arms, at on_motion's top). That is a
-    //     correction of what this comment used to say: those claims are NOT
-    //     button-lost consumers of their own, so calling the end "the standing
-    //     lost-button shape" was true of the motion-driven drag states and false
-    //     of them, and with the pointer focused in the window — where the fork
-    //     takes the restore motion instead of the leave hook — a stale arm
-    //     could survive and swallow the next tap. The promise now is flat:
-    //     an abnormal end ends every arm the vanished press could have
-    //     committed, because the finger that armed them is not going to lift —
-    //     and since 2026-08-29 that promise is what carries the HARD ENDS too,
-    //     where the finger is not going to lift because the window system took
-    //     it.
+    //     (clear_release_time_press_arms, at on_motion's top). Those claims
+    //     are NOT button-lost consumers of their own, and with the pointer
+    //     focused in the window — where the fork takes the restore motion
+    //     instead of the leave hook — a stale arm could survive and swallow
+    //     the next tap. So the promise is flat: an abnormal end ends every
+    //     arm the vanished press could have committed, because the finger
+    //     that armed them is not going to lift — the HARD ENDS included,
+    //     where the window system took it.
     const bool deliver = clean_release ? on_button_release_ != nullptr
                                        : on_motion_ != nullptr;
     touch_left_held_ = false;
@@ -539,9 +534,8 @@ void GuiInputCore::deliver_touch_translation_end(bool clean_release) {
     //     motion, a device branch in spirit (the judgment's one record).
     //   * pointer NOT focused — the leave: no pen hovers in the window, so
     //     the contact ending IS the pointer leaving, the lift's and the hard
-    //     end's alike (the leave carries no reason since 2026-11-07, when
-    //     the hover tooltip's always-show model took every leave as its hard
-    //     end, AppState::RedesignTooltip).
+    //     end's alike (the leave carries no reason: the hover tooltip takes
+    //     every leave as its hard end, 2026-11-07, AppState::RedesignTooltip).
     // The mods are current_mods() at delivery: the touch bit is already down,
     // so the motion honestly reads unheld — an ordinary resting motion.
     // THIS IS THE ONE DELIBERATE TOUCH-SIDE READER OF pointer_focused_ (the
@@ -771,11 +765,10 @@ void GuiInputCore::touch_up(int32_t id) {
                 // "add the zoom modifier at any time, drop it at any time" —
                 // the second finger IS the zoom modifier, so lifting it
                 // CONTINUES the gesture as the single-finger pan on the
-                // survivor instead of ending it; the "upgrade yes, downgrade
-                // no" asymmetry of 2026-08-11..14 is superseded, while the
-                // upgrade's own justification — two fingers cannot land on
-                // the same frame, so the upgrade is the pinch's only way in —
-                // stands untouched). The upgrade's rebase in reverse: the
+                // survivor instead of ending it; the upgrade's own
+                // justification — two fingers cannot land on the same frame,
+                // so the upgrade is the pinch's only way in — stands
+                // beside it). The upgrade's rebase in reverse: the
                 // delta basis re-seats on the SURVIVOR'S current position, so
                 // the next frame's dx measures from the survivor itself
                 // rather than folding the centroid's half-gap jump off the
@@ -927,12 +920,12 @@ void GuiInputCore::touch_motion(int32_t id, double x, double y) {
             // phone model — the pan, or under the ctrl bit the one-finger
             // zoom; no press ever delivered) UNLESS A SWEEP LAMP IS LIT AND
             // NO CTRL STANDS, when it is THE ARMED SWEEP (architect
-            // 2026-11-07, session 87: the region former from the down point,
+            // 2026-11-07: the region former from the down point,
             // the sweep_armed query at set_touch_nav_hooks, asked here at the
             // crossing; the barrel-held drag stays the one-finger zoom, lamp
             // or not). ONE FORK FOR BOTH SWEEPS: the query answers for the
-            // TRIM lamp or the ADD SEL lamp (architect 2026-11-10, session
-            // 101), and which former the Region phase drives is the GUI's
+            // TRIM lamp or the ADD SEL lamp (architect 2026-11-10), and
+            // which former the Region phase drives is the GUI's
             // begin's choice, not this machine's; IN AN OPEN EDITOR'S FIELD
             // it is the CARET DRAG
             // (2026-09-05): the field is off the pan zone, and its quick drag
@@ -1109,14 +1102,13 @@ void GuiInputCore::end_touch_nav_gesture(bool deliver_final_frame) {
     //     staged frame is DROPPED deliberately — the window system's claim
     //     means that motion retroactively was not ours — and the end hook still
     //     fires iff an update was delivered. The asymmetry with the POINTER
-    //     translation's hard end is deliberate and survives that arm's move to
-    //     the abnormal end (2026-08-29): the translation's edge MUST DELIVER
-    //     SOMETHING (a vanished hold would latch the drag-modal gate with no
-    //     event left to lift it) and only WHAT it delivers changed — a
-    //     lost-button motion rather than a release — while dropped nav motion
-    //     wedges nothing: nothing the
+    //     translation's hard end (the abnormal end, 2026-08-29) is
+    //     deliberate: the translation's edge MUST DELIVER SOMETHING (a
+    //     vanished hold would latch the drag-modal gate with no event left to
+    //     lift it) — a lost-button motion rather than a release — while
+    //     dropped nav motion wedges nothing: nothing the
     //     gesture leaves in the GUI is held OPEN. Its one GUI-side record
-    //     since 2026-08-14 is the pinch's seated pivot (TouchNavZoomState),
+    //     is the pinch's seated pivot (TouchNavZoomState, 2026-08-14),
     //     and it cannot survive a hard end: the seat exists only where a frame
     //     was DELIVERED (it is taken by the first zoom frame — two-finger, or
     //     one-finger carrying ctrl — that survives the GUI's refusal, applied
@@ -1203,17 +1195,16 @@ void GuiInputCore::hard_end_touch_stream() {
             // translation end ON THAT DELIVERY'S OWN EDGE, exactly as the
             // finger's own lift delivers it: the leave, or the focus-forked restore
             // motion when a pen hovers in the window, through the one owner.
-            // AN ABNORMAL END SINCE 2026-08-29 (architect: "a touch the system
-            // takes away is not a click unless it moved"), where this arm
-            // passed a CLEAN release from the contract's landing until then.
+            // AN ABNORMAL END (architect 2026-08-29: "a touch the system
+            // takes away is not a click unless it moved").
             // A HARD END IS NOT A LIFT: the window system took the contacts —
             // its own gesture recognition, an edge back-swipe, a shade pull, a
             // task switch — and the user never raised the finger.
-            // A clean release SPOKE FOR A LIFT THAT DID NOT HAPPEN: it re-hit
-            // the box at the last position and every act-at-lift surface ran,
-            // so a back-swipe that started on a bottom-row button toggled
-            // playback or authored (Undo, Delete, Drop marker) on its way out
-            // of the app.
+            // A clean release would SPEAK FOR A LIFT THAT DID NOT HAPPEN: it
+            // would re-hit the box at the last position and run every
+            // act-at-lift surface, so a back-swipe that started on a key of
+            // the bottom icon row would toggle playback or author (Undo,
+            // Delete, Drop marker) on its way out of the app.
             // THE ABNORMAL END GIVES THIS ARM EXACTLY WHAT IT NEEDED, and the
             // three properties are the whole reason it is the right spelling
             // rather than a new suppression (the fork and its own rationale

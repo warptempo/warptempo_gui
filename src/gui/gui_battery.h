@@ -5,8 +5,7 @@
 #include <string>
 
 // THE HOST'S BATTERY ACROSS THE SEAM, AND THE TITLE BAR'S RIGHT GROUP COMPOSED
-// FROM IT AND THE WALL CLOCK (architect 2026-10-24; the legend's first design
-// stood in the menu row 2026-10-01 to 2026-10-05). The type is the seam's —
+// FROM IT AND THE WALL CLOCK (architect 2026-10-24). The type is the seam's —
 // declared here so the GuiPlatform header and the GUI share ONE
 // spelling, gui_media.h's shape — and it is a plain value:
 // GuiPlatform::battery_status fills it from what the host knows (the
@@ -16,7 +15,7 @@
 // paint_handler.cpp's paint_title_bar paint it).
 
 struct GuiBattery {
-    // WHETHER THE CABLE IS ATTACHED (architect 2026-11-05 night: the glyph
+    // WHETHER THE CABLE IS ATTACHED (architect 2026-11-05: the glyph
     // tells him the plug is in, not that current flows): Plugged covers
     // charging, full, and a charge the host's battery protection has paused
     // with the cable in alike (the host's answer is composed at
@@ -37,7 +36,7 @@ struct GuiBattery {
 // not to use nothing … the glyph always there taking up space so that the
 // clock doesn't move"): CHARGING while THE CABLE IS ATTACHED, 100 %
 // INCLUDED ("the charging one on even at 100 %") and a charge paused by the
-// host's battery protection included (architect 2026-11-05 night: the glyph
+// host's battery protection included (architect 2026-11-05: the glyph
 // says the plug is in, not that current flows), and on a host with no
 // battery (power is attached); DISCHARGING while discharging — and while
 // the plug state is UNKNOWN (the cold answer before the tablet's first
@@ -50,8 +49,8 @@ enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 // THE LEGEND — "92% <glyph>  |  2:12 PM" — AS THREE COMPOSED PARTS, laid
 // right to left by the painter as one text run (render.h's title bar block):
 // THE CLOCK, the glyph, and the PERCENT. THE TEXT PIPE before the clock
-// ("  |  ", the status bar's field separator; architect 2026-11-19, send
-// AA) and the space after the percent are NOT COMPOSED: they never change,
+// ("  |  ", the status bar's field separator; architect 2026-11-19) and
+// the space after the percent are NOT COMPOSED: they never change,
 // and the layout joins them to the parts' runs. THE TWO LAMPS left of the
 // percent are the layout's too, their state the tick's
 // (AppState::clip_lamp_lit).

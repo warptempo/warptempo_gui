@@ -39,10 +39,10 @@ void GuiCanvasSink::rects(std::span<const GuiRect> rs, GuiColor color) {
 }
 
 // THE TINT'S RECORD (architect 2026-11-12, the sweep highlight; its real
-// edges architect 2026-11-14, send J): the word the rects' own for the
+// edges architect 2026-11-14): the word the rects' own for the
 // color, the alpha the whole percent the list shader divides by 100
-// (kListFragmentShader's tint arm) — the sweep highlight's key, at most 100
-// by its grammar (parse_sweep_highlight, device_config.h), and 100 for a
+// (kListFragmentShader's tint arm) — the sweep highlight's 3
+// (kSweepHighlightPct, paint_handler.cpp), and 100 for a
 // line — over THE REAL RECT [x0, x1) x [y0, y1) in surface px. THE RECORD'S
 // CELLS are the cells the real rect touches, r = its floor through its
 // ceiling, and ITS EDGES ride as floats FROM r's CORNER — the near two in
@@ -81,14 +81,14 @@ void GuiCanvasSink::blended_rect(double x0, double y0, double x1, double y1,
 // from the area's left edge, the band's rows off the area's origin — at the
 // plate's own size, so a plate published at a stale size is drawn at that
 // size, the scissor (inside the area) cutting what overhangs.
-// THE RECORD'S BARS ARE NOT ITS DEVICE COLUMNS (architect 2026-11-14, send
-// G; render.h's THE PLATE'S BARS): it carries the count of the band's row
+// THE RECORD'S BARS ARE NOT ITS DEVICE COLUMNS (architect 2026-11-14;
+// render.h's THE PLATE'S BARS): it carries the count of the band's row
 // of bars and the plate's draw transform — the centre of the row's first
 // bar and the bars' pitch, in device px from the rect's left edge, the
 // plate's doubles handed on as the floats the shader takes — and THE
-// WEIGHT as the plate holds it (architect 2026-11-14, send H;
+// WEIGHT as the plate holds it (architect 2026-11-14;
 // GuiPlateColumns::bar_weight): 1 for that uniform row alone, under 1 for
-// THE FADE BAND (architect 2026-11-15, send O, the two-picture blend), where
+// THE FADE BAND (architect 2026-11-15, the two-picture blend), where
 // the record also carries the band's FINE ROW — its count, its offset and
 // its own transform, each float its own double's rounding (fine_x0 and
 // fine_pitch, never derived from the main row's floats) — its bars appended

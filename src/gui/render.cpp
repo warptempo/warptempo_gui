@@ -159,8 +159,8 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 }
 
 namespace {
-// ONE CANVAS LINE ACROSS THE AREA AT ITS EXACT ROWS (architect 2026-11-14,
-// send J; the horizontals' one row rule, render.h's canvas_hline_span): the
+// ONE CANVAS LINE ACROSS THE AREA AT ITS EXACT ROWS (architect 2026-11-14;
+// the horizontals' one row rule, render.h's canvas_hline_span): the
 // line one W thick centered on the real window row `yc`, cut to the area's
 // rows, as ONE BLENDED RECT at 100 percent across the area's whole columns
 // — the word itself on every row it covers whole, the word over what lies
@@ -181,16 +181,17 @@ namespace {
 // THE GRID across `area` (its columns; its rows the canvas's), in `color`.
 void canvas_grid_lines(GuiCanvasSink& sink, const GuiRect& area,
                        GuiColor color) {
-    // THE LINES UNDER THE WAVEFORM, in render.h's row-6 canvas order: the
+    // THE LINES UNDER THE WAVEFORM, in the canvas order of render.h's THE
+    // WAVEFORM block's canvas paragraph: the
     // horizontal grid — t = waveform_line_px() thick, ONE W (2 device px on
     // the tablet at 200 %, the unit, architect 2026-11-04), each inside
     // its band. THE CENTER LINES STAND OVER THE WAVEFORM
-    // (architect 2026-10-09 evening), render_center_lines below, a pass after
-    // the plate. NO VERTICAL GRID (architect 2026-10-09 ~18:40, the
-    // rule and its reason at render.h's row-6 canvas paragraph).
+    // (architect 2026-10-09), render_center_lines below, a pass after
+    // the plate. NO VERTICAL GRID (architect 2026-10-09, the
+    // rule and its reason at THE WAVEFORM block's canvas paragraph).
     // THE HORIZONTAL GRID per channel, on the plate's own bands
-    // (waveform_channel_band), AT ITS EXACT ROWS (architect 2026-11-14, send
-    // J): the k-th line pair stands k · H / n rows either side of THE BAND'S
+    // (waveform_channel_band), AT ITS EXACT ROWS (architect 2026-11-14):
+    // the k-th line pair stands k · H / n rows either side of THE BAND'S
     // EXACT ZERO — the plate's own centre, WaveformChannelBand::zero — H the
     // channel's half height h / 2.0 and n the grid's divisions, k = 1 ..
     // n − 1 (the n-th on the band's edge not drawn), each line centered on
@@ -220,16 +221,18 @@ void canvas_grid_lines(GuiCanvasSink& sink, const GuiRect& area,
 void canvas_center_lines(GuiCanvasSink& sink, const GuiRect& area,
                          GuiColor color) {
     // THE CENTER LINE per channel ON ITS BAND'S EXACT ZERO, OVER THE
-    // WAVEFORM'S INK (architect 2026-10-09 evening: "it's supposed to be
+    // WAVEFORM'S INK (architect 2026-10-09: "it's supposed to be
     // visible over the waveform. Otherwise, in a project like this with tape
     // hiss, there's never enough zero that the red line would become visible
-    // ever"; the order at render.h's row-6 canvas paragraph): one W, the
+    // ever"; the order at render.h's THE WAVEFORM block's canvas paragraph):
+    // one W, the
     // grid's row rule (canvas_hline), in the palette's `center`, the
     // channels' bands the plate's own (waveform_channel_band), so it is
     // TRULY CENTERED ON THE ZERO THE PLATE'S BARS STRADDLE (architect
-    // 2026-11-14, send J): on an odd band half a row, a whole row and half
-    // a row; on an even band (the tablet's 526 rows, the key 28 W tall,
-    // send Z) two whole rows. Through the canvas sink (2026-10-13).
+    // 2026-11-14): on an odd band (the tablet's 535 rows, the canvas's 1072
+    // less the divider's 2, halved) half a row, a whole row and half
+    // a row; on an even band two whole rows. Through the canvas sink
+    // (2026-10-13).
     const int divider_px = waveform_divider_px();
     for (int ch = 0; ch < 2; ++ch) {
         const WaveformChannelBand band =
@@ -256,7 +259,7 @@ GuiRect canvas_divider_rect(const GuiRect& area) {
 void render_canvas(GuiCanvasSink& sink, const GuiRect& area) {
     if (area.w <= 0 || area.h <= 0) return;
     const GuiPalette& pal = palette();
-    // The ground is the `waveform_canvas` role (the palette's row-6 block),
+    // The ground is the `waveform_canvas` tone (THE WAVEFORM block, render.h),
     // display_color applied by the sink.
     sink.rects(std::span<const GuiRect>(&area, 1), pal.waveform_canvas);
     canvas_grid_lines(sink, area, pal.grid);
@@ -267,11 +270,11 @@ void render_center_lines(GuiCanvasSink& sink, const GuiRect& area) {
     canvas_center_lines(sink, area, palette().center);
 }
 
-// THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; flat
-// since 2026-11-01 night; the rule and its row at render.h's
+// THE STEREO DIVIDER (architect 2026-10-16, Cool Edit's two wells; flat,
+// 2026-11-01; the rule and its row at render.h's
 // waveform_divider, the one geometry owner): across the area's columns, ONE
 // LINE OF THE WELL'S LINES' TONE (the palette's `well_border`; architect
-// 2026-11-17, session 140, D2) cut to the area's rows —
+// 2026-11-17) cut to the area's rows —
 // CHROME ON THE CANVAS, painted through the sink so the GL canvas draws it
 // from its list (canvas_sink.h's head). ITS OWN PASS, AFTER THE PLATE AND THE CENTER
 // LINES and BEFORE EVERY VERTICAL LINE (build_canvas_list's order): the
@@ -385,28 +388,15 @@ void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
     cairo_set_antialias(cr, was);
 }
 
-// (THE RELIEF FAMILY — paint_relief_frame, paint_relief_edge,
-// paint_relief_plain_sunken, paint_relief_line_frame, every line one scaled
-// Windows px — went 2026-10-23, and its one-device-px successor, the mitred
-// two-tone ring, 2026-11-02 with the overlays' flat pass: render.h's NO
-// RELIEF AND NO RING.)
-
-// (THE WINDOWS PARTS' EDGES — paint_windows_soft_raised, _soft_sunken and
-// _plain_raised in Windows 2000's Standard quartet, the caption buttons' and
-// the sizing frame's, 2026-10-22 to 2026-10-23 — left with those parts; the
-// hi-fi skin's caption and border that replaced them went 2026-10-24,
-// render.h's caption note.)
-
 // THE SCALE (render.h's scrub block, Arc's plain scale; architect
-// 2026-11-18 / 19, send Z's design, built in send AA): one coverage-stamp
+// 2026-11-18 / 19): one coverage-stamp
 // pass at exact coverage — the trough's pill in `scale_trough`; the played
 // part, the same pill cut at the knob's center, in the accent; the knob's
 // disc — at rest `key_face` inside a one-W `scale_slider_border` rim,
 // hovered its fill `key_hover_face`, held the whole disc the accent — AS
 // PAINTED, `knob` its FaceMix (Rest, Hover and Lit; architect 2026-11-20):
 // the fill and the rim each the mix of their looks' tones (the stamp's
-// tone); the knob wholly held is the one accent disc, byte for byte the
-// held picture of before.
+// tone); the knob wholly held is the one accent disc.
 void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x,
                  const FaceMix& knob) {
     if (item.w <= 0 || item.h <= 0) return;
@@ -462,7 +452,7 @@ bool render_waveform_columns(GuiRect area,
     if (area.w <= 0 || area.h <= 2) return false;
     if (basis.full_width <= 0) return false;
     // The lattice step must be numeric and positive; a degenerate zoom refuses
-    // here exactly as the old empty-viewport check did.
+    // here.
     if (!(basis.spp > 0.0)) return false;
 
     const int num_levels = audio.num_levels();
@@ -472,8 +462,8 @@ bool render_waveform_columns(GuiRect area,
     // THE BASIS'S LATTICE (see WaveformBasis: the plate's caller hands THE
     // BAR BASIS, the frame-0 lattice of step b, its start the left edge of
     // the call's first bar — the first stored bar's, or with the kept bars
-    // the first a kept row lacks — architect 2026-11-14, send G; 2026-11-15,
-    // send L). Recover the start's
+    // the first a kept row lacks — architect 2026-11-14; 2026-11-15).
+    // Recover the start's
     // lattice index on ITS OWN LATTICE, of origin basis.origin, with the SAME
     // expression clamp_viewport_start uses to snap a viewport onto its own
     // (nearest_viewport_grid_point), so a start on the lattice round-trips
@@ -591,13 +581,10 @@ bool render_waveform_columns(GuiRect area,
     // once, so every consumer — the loop and the carried-endpoint chain —
     // receives the same already-rounded lattice point and BOTH VIEWS
     // consume the identical integer. Rounding here rather than downstream is
-    // what makes the target-view path honest: to_source used to truncate the
-    // raw product through its size_t cast, so target view mapped
-    // floor((k0+c)*spp) — a frame below the documented g(k0+c) whenever the
-    // fraction would have rounded up, with ties following truncation instead of
-    // banker's rounding. The pan invariant held either way (floor of a lattice
-    // point is still a pure function of the global index), but the geometry sat
-    // off the lattice this contract declares.
+    // what makes the target-view path honest: to_source's size_t cast
+    // truncates, so a raw product handed to it would map floor((k0+c)*spp) —
+    // a frame below g(k0+c) whenever the fraction rounds up, off the lattice
+    // this contract declares.
     const auto edge_at = [&](long long c) {
         return static_cast<double>(basis.origin) +
                std::nearbyint(static_cast<double>(k0 + c) * samples_per_pixel);
@@ -620,9 +607,7 @@ bool render_waveform_columns(GuiRect area,
     // THE RUNNING LEFT EDGE in SOURCE frames, and the carried-endpoint chain it
     // serves: column i's left edge IS column i-1's right edge, so each edge is
     // translated through the map once rather than twice. It seeds at the FIRST
-    // DRAWN column's own left edge — the halo column that used to seed it one
-    // step earlier is gone with the segments (the deletion note is at the top of
-    // this function).
+    // DRAWN column's own left edge.
     double g_prev = to_source(edge_at(static_cast<long long>(col0)));
 
     // THE BAR'S TIPS IN QUARTER ROWS (architect 2026-10-30). The column's
@@ -687,7 +672,7 @@ bool render_waveform_columns(GuiRect area,
     // outer in `outer_tips`, the lit inner in `inner_tips`. The one caller
     // renders a whole row of bars on its basis — the plate's, or with the
     // kept bars the bars a kept row lacks (WaveformKeptBars, render.h;
-    // architect 2026-11-15, send L) — so this call's columns ARE its row;
+    // architect 2026-11-15) — so this call's columns ARE its row;
     // the neighbors a column's picture reads are the GPU's business.
     std::vector<BarTips> outer_tips(static_cast<size_t>(area.w));
     std::vector<BarTips> inner_tips;
@@ -703,7 +688,7 @@ bool render_waveform_columns(GuiRect area,
         long long       s1 = static_cast<long long>(std::nearbyint(g1));
         if (s1 <= s0) s1 = s0 + 1;
 
-        // LIT: THE EXACT FORM (architect 2026-11-15, send O; the definition
+        // LIT: THE EXACT FORM (architect 2026-11-15; the definition
         // and the pieces at this function's declaration): the bar's tips are
         // the least and the greatest magnified sample over [s0, s1) clamped
         // to the source, each working column at its own two scales
@@ -823,7 +808,7 @@ bool render_waveform_columns(GuiRect area,
 
 namespace {
 // ONE SOLID CANVAS LINE DOWN THE AREA AT ITS EXACT PLACE (architect
-// 2026-11-14, send J; the rule at render.h's waveform_line_span): the
+// 2026-11-14; the rule at render.h's waveform_line_span): the
 // line's real span of columns (`span`, the caller's — the line's real
 // interval cut to the area's, empty where none of it is inside) as ONE
 // BLENDED RECT at 100 percent over
@@ -861,8 +846,8 @@ void render_playhead(GuiCanvasSink& sink,
     if (col + cue_chip_paint_reach_px() <= 0) return;
     if (col - cue_chip_paint_reach_px() >= area.w) return;
 
-    // THE LINE STANDS AT THE FRAME'S EXACT PLACE (architect 2026-11-14, send
-    // J): `x` is the caller's playhead_exact_x / scanner_exact_x,
+    // THE LINE STANDS AT THE FRAME'S EXACT PLACE (architect 2026-11-14):
+    // `x` is the caller's playhead_exact_x / scanner_exact_x,
     // displayed_x_at on the plate basis — the plate's own continuous column
     // coordinate, so the line moves with the plate under a pan and a zoom
     // by the same real amount and stands where its frame lies among the
@@ -874,7 +859,7 @@ void render_playhead(GuiCanvasSink& sink,
     // PLAYHEAD'S DAMAGE BOX'S:
     // `col` is the caller's playhead_pixel_x / scanner_pixel_x,
     // displayed_column_at's K − m on the same basis (architect 2026-11-06,
-    // session 68; a tie TO THE RIGHT, session 69: index K owns [K − 0.5,
+    // a tie TO THE RIGHT: index K owns [K − 0.5,
     // K + 0.5), the reason at displayed_column_at) — the column the ruler's
     // head's cull and hit and the playhead's damage box are built on
     // (playhead_invalidate_rect), within half a px of x; the scanner's
@@ -893,7 +878,7 @@ void render_playhead(GuiCanvasSink& sink,
     // The waveform_line_px()-wide line (render.h), centered on its frame's
     // exact place, paints whenever any of its real interval is inside the
     // area, cut at both edges (waveform_line_span; architect 2026-11-15,
-    // the no-grid arc), so it never leaks into an adjacent region, over
+    // the no-grid rule), so it never leaks into an adjacent region, over
     // whatever it crosses — waveform ink included. THE CANVAS'S WHOLE HEIGHT, the stereo
     // divider's row crossed (architect 2026-11-02, render.h's
     // waveform_divider): solid, the scanner and the resting cursor alike
@@ -923,8 +908,8 @@ void render_strip_anchor_stem(GuiCanvasSink& sink, GuiRect area, double x) {
     // stem and the scanner are both white, which unifies them: the
     // non-playhead stems that are related to the controls should be white,
     // and then the playhead is yellow"): a control's line during a gesture,
-    // as the scanner is playback's, in the one `scanner` role — the playhead
-    // wears its own two roles (render.h's playhead paragraph).
+    // as the scanner is playback's, in the one `scanner` tone — the playhead
+    // wears its own two tones (render.h's playhead paragraph).
     // The canvas's whole height (2026-10-09: no line crosses the row of
     // ground above the canvas; the stereo divider's row it crosses, architect
     // 2026-11-02).
@@ -1037,10 +1022,6 @@ GuiRectF trim_endcap_rect(bool is_begin, int strip_x,
     return r;
 }
 
-// (THE POPUP LISTS' SCROLL ARROW BUTTON — paint_trim_arrow_button, up and
-// down, the trim caps' left and right gone with the view bar 2026-10-09 —
-// went with the popup lists' scroll bar, 2026-10-14.)
-
 TrimBarTones trim_bar_tones(const TrimBarLook& look) {
     // THE ONE TABLE (the declaration, render.h), first match; a sweep's
     // moving end is an end held (architect 2026-11-20).
@@ -1096,7 +1077,7 @@ void render_trim_flags(cairo_t* cr,
         viewport_end_sample, viewport_lattice_origin, waveform_area.w);
 
     // THE BAR'S COLUMNS ARE THE WAVEFORM AREA'S: waveform_area's x and its
-    // effective width, the panel's whole width (send Z, 2026-11-19: edge to
+    // effective width, the panel's whole width (2026-11-19: edge to
     // edge; render.h's well_columns), across which paint_trim paints the
     // lane, its trough and its lines.
     const int lane_x   = waveform_area.x;
@@ -1104,11 +1085,11 @@ void render_trim_flags(cairo_t* cr,
     const int lane_y   = trim_bar.y;
     const int lane_h   = trim_bar.h;
 
-    // THE TROUGH (render.h's well paragraph; architect 2026-11-17, session
-    // 140, ruling 4 and D1): its rows (trim_trough_rect, the one statement)
+    // THE TROUGH (render.h's well paragraph; architect 2026-11-17): its
+    // rows (trim_trough_rect, the one statement)
     // the pill's seat below; its FLAT `trim_bar_face` and the lane's lines
     // are paint_trim's ground step, laid before this pass on every frame
-    // class (architect 2026-11-21, send GG).
+    // class (architect 2026-11-21).
     const GuiRect trough_r = trim_trough_rect(trim_bar, lane_x, lane_w);
     const int trough_y = trough_r.y;
     const int trough_h = trough_r.h;
@@ -1119,8 +1100,8 @@ void render_trim_flags(cairo_t* cr,
 
     const GuiRect lane{lane_x, lane_y, lane_w, lane_h};
 
-    // THE SPAN, ARC'S SLIDER — A PILL (architect 2026-11-17, session 140,
-    // ruling 4: "The scroll bar and the trough should be accurate to whatever
+    // THE SPAN, ARC'S SLIDER — A PILL (architect 2026-11-17: "The scroll
+    // bar and the trough should be accurate to whatever
     // Arc uses"). THE SLIDER'S BOX is the trim window from the begin bound's
     // exact place through the end bound's plus one px, UNCUT, ON THE BOUNDS'
     // UNCLAMPED PLACES (TrimBoundColumn::x_raw — the places
@@ -1169,7 +1150,7 @@ void render_trim_flags(cairo_t* cr,
     // the caps show are `look`'s through the one table (trim_bar_tones,
     // render.h): at rest `trim_span_face` (Arc's scrollbar
     // slider) and no caps. No outline. NO PLAYHEAD IN THE BAR (architect
-    // 2026-10-09 ~14:30, "I thought we agreed no dots on the trim bar").
+    // 2026-10-09, "I thought we agreed no dots on the trim bar").
     //
     // THE CAPS (render.h's THE TRIM BAR'S CAPS AND GRABS; architect
     // 2026-11-20) ARE THE PILL'S OWN ENDS: where the look
@@ -1212,7 +1193,7 @@ void render_trim_flags(cairo_t* cr,
     // past a bound at the strip's edge among them) claims its visible
     // stretch alone, and a window wholly off one side publishes no zone on
     // that side and an empty bridge. REAL EDGES (architect 2026-11-15, the
-    // no-grid arc): the zones stand on the span's two real ends — the
+    // no-grid rule): the zones stand on the span's two real ends — the
     // bounds' own places, around the caps drawn off them (architect
     // 2026-11-18 / 2026-11-20) — AS THE GRABS HAVE THEM, `x`, the EOF-wall
     // clamp in it (render.h's TrimBoundColumn): an in-view bound past the
@@ -1289,9 +1270,9 @@ namespace {
 // THE WAVEFORM'S COLUMNS ARE THE MARKER LANE'S CLIP (architect 2026-09-26):
 // every flag box, every flag-editor box and every hit rect either publishes
 // is confined to window x in [x0, x0 + w) — the columns the waveform paints,
-// the panel's whole width since the canvas went edge to edge (send Z,
-// 2026-11-19) — so a flag running past the last column is cut off at it. These two are the one
-// spelling of
+// the panel's whole width, the canvas standing edge to edge (2026-11-19)
+// — so a flag running past the last column is cut off at it. These two
+// are the one spelling of
 // that clip: the paint clip each painter sets before it draws (vertically the
 // band it paints in, unchanged) and the hit rect's matching trim, so the claim
 // is the painted rect clipped the same way — strictly as painted. A rect the
@@ -1317,10 +1298,9 @@ bool clip_hit_rect_to_waveform_columns(FlagHitRect& r, int x0, int w) {
     return true;
 }
 // THE STEM STASH'S GATE IS THE LINE'S OWN (architect 2026-11-15, the no-grid
-// arc: "Only things that are basically impossible to move, like the damages
-// and the culls, should stay integer" — the column gate of 2026-11-06
-// reopened by him): a selected marker publishes its stem entry whenever ANY
-// of the stem's real interval — the one-W line centered on the marker's
+// rule: "Only things that are basically impossible to move, like the damages
+// and the culls, should stay integer"): a selected marker publishes its
+// stem entry whenever ANY of the stem's real interval — the one-W line centered on the marker's
 // exact place `x`, device px from the waveform's first column — lies inside
 // the waveform's columns [0, w): the very span the stem painter draws
 // (waveform_line_span, render.h, its emptiness the gate), so a stem slides
@@ -1339,8 +1319,8 @@ bool stem_meets_waveform(double x, int w) {
 // and the triangles left to right, render.h's marker-lane paragraph).
 //
 // THE PAINT/HIT INVARIANT. `exact_x` — THE MARKER'S EXACT PLACE (architect
-// 2026-11-14, send J; the labels and the published rects on it too since
-// the no-grid arc, 2026-11-15: displayed_x_at, device px from the
+// 2026-11-14; the labels and the published rects on it too, the no-grid
+// rule, 2026-11-15: displayed_x_at, device px from the
 // waveform's first column) — is computed ONCE here: the chip's apex, the
 // label's anchor and the stem's center. The painter draws from it, the hit
 // rects are published from it, and the stem is published at it, so all
@@ -1388,12 +1368,12 @@ void iterate_visible_flags_impl(
     // admitted iff its chip can touch the waveform's columns [0, w) —
     // col - reach < w, the chip's PAINTED REACH left of its column
     // (cue_chip_paint_reach_px, render.h: the chip stands at its mark's
-    // exact x, architect 2026-11-14, send J). So a marker just past
+    // exact x, architect 2026-11-14). So a marker just past
     // the last column (the song's last half-column at the right wall, or a
     // marker just past the viewport's end mid-song) is admitted and paints
     // its triangle's left part ALONE on the last columns — every caller clips
-    // its paint and its hit rect to [0, w), so nothing paints on the well's
-    // frame beside w. Its STEM is
+    // its paint and its hit rect to [0, w), so nothing paints past w. Its
+    // STEM is
     // published where any of the one-W line reaches the columns
     // (stem_meets_waveform), and source_frame_off_right_edge
     // (warp_frame_map_view.h) still refuses AUTHORING there — a triangle's
@@ -1440,20 +1420,17 @@ void iterate_visible_flags_impl(
     }
 }
 
-// (THE SHARED LABEL CAP IS GONE, 2026-09-19. cap_marker_label kept the first
-// nine bytes of whatever a column composed and appended the truncation
-// marker; the WARP payload was its only real subject — the phase-reset token
-// is five bytes — and once a tempo could
-// carry a chain, cutting by a byte count would have eaten the very terms the
-// feature exists to show. The cut now lives inside the one composer that
+// (NO LABEL CAP IS SHARED ACROSS THE COLUMNS, 2026-09-19: a tempo can
+// carry a chain, and cutting by a byte count would eat the very terms the
+// feature exists to show. The cut lives inside the one composer that
 // knows what it is cutting, flag_display_text above, and the phase-reset
-// column's label reaches the pass whole.)
+// column's label — a five-byte token — reaches the pass whole.)
 
 // The two bound cells an eligible flag paints while iteration mode is on, or
 // nothing. The lambda form each column hands render_flag_boxes_impl answers
 // this — the warp column through warp_iter_cells and the phase-reset column
-// through phase_iter_cells (2026-09-09, when the mode grew its second
-// column) — and the two differ in their COMPOSER alone, cents against hops.
+// through phase_iter_cells (2026-09-09) — and the two differ in their
+// COMPOSER alone, cents against hops.
 struct IterCellText {
     bool        present = false;
     // IS THIS MARKER A TIE FOLLOWER (architect 2026-09-19) — one of several
@@ -1567,12 +1544,12 @@ static IterCellLayout measure_iter_cells(const GuiFont& font,
 // first present segment's box opens the fill lead past the mark (the
 // label's lead less the fill's pad, render.h's cue_fill_lead_px — the lead
 // the chip's rows and the gap, so the boxes follow the triangle's rows,
-// architect 2026-10-26 ~12:40; the gap from the chip's own corner since
-// 2026-11-19, send AA), each box
+// architect 2026-10-26; the gap from the chip's own corner,
+// 2026-11-19), each box
 // is ITS TEXT'S OWN WIDTH, UNROUNDED, with the fill's pad either side (the
 // text at its box's start plus the pad — the label's lead), and each next
 // box stands the segment gap past the one before — REAL OFFSETS (architect
-// 2026-11-15, the no-grid arc: a segment's width is its run's advance and
+// 2026-11-15, the no-grid rule: a segment's width is its run's advance and
 // the sums are sums of those, so the second and third segments' text stand
 // exactly their step past the first's end). `w` the three texts' widths,
 // `present` which stand. THE ONE LAYOUT the flag pass, the history lane and
@@ -1598,7 +1575,7 @@ static CueSegmentBoxes cue_segment_boxes(const double (&w)[3],
 
 // THE FLAG'S SIDE: a live lane's cue, or one of the `h` view's three kinds of
 // item — REMOVED, ADDED, CHANGED (HistoryDiffFlag, render.h; architect
-// 2026-11-11, session 106). The history's sides pick the chip's style and
+// 2026-11-11). The history's sides pick the chip's style and
 // the strike's meaning of their own (resolve_flag_face's history rows). The
 // axis colors nothing: WARP and PHASE RESET, co-equal, wear one cue, the axis
 // reading from the view the lane lists (the lane paints the active
@@ -1625,10 +1602,10 @@ struct FlagFace {
 };
 
 // THE ONE RESOLVER for every cue — both marker columns and the `h` view's
-// diff flags (architect 2026-11-05, his pick a2 of session 42 on real captures:
-// THE STEM IS THE SELECTION'S, reversing 2026-11-04's coincidence stem —
-// "dropped, along with the rest of cool edit stuff except a few details like
-// the triangle playhead"; 2026-10-26 ~15:10–15:30, THE STRIKE: "It's very
+// diff flags (architect 2026-11-05, on real captures: THE STEM IS THE
+// SELECTION'S — the coincidence stem "dropped, along with the rest of cool
+// edit stuff except a few details like
+// the triangle playhead"; 2026-10-26, THE STRIKE: "It's very
 // odd having anything but red mean invalid. So I think what we should do is
 // have coincident markers be shown as a strike through, which is actually
 // effective because that's what happens to them. They become one").
@@ -1642,24 +1619,24 @@ struct FlagFace {
 //   ADDED     any         cue_fill      selected  sidebar    never
 //   CHANGED   any         cue_fill      selected  sidebar    per segment
 // — warp or phase reset alike. THE LIVE ROWS: EVERY ENABLED CHIP IS
-// THE `cue_fill`, THE ACCENT (Default's FFAD56, the lit keys' face;
-// architect 2026-11-13, session 119: "we revert the rule so that markers
+// THE `cue_fill`, THE ACCENT (arc_dark 5294E2, the lit keys' face;
+// architect 2026-11-13: "we revert the rule so that markers
 // get accent color instead of icon glyph color"), selected or not, WITH NO
-// OUTLINE — the bare triangle of the nominal rows (architect 2026-11-19,
-// send AA, RULINGS §8 / §11: "I would consider removing the outline of the
+// OUTLINE — the bare triangle of the nominal rows (architect 2026-11-19:
+// "I would consider removing the outline of the
 // chips because, for example, the scroll bar has no outline"; "I think I
 // prefer the smaller version without the outline"). EVERY
 // SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
-// 2026-11-11, session 106: "disabled markers also get the dark stem, same as
+// 2026-11-11: "disabled markers also get the dark stem, same as
 // enabled ones") — a solid one-W `cue_outline` line from the chip's apex
 // row down the canvas's whole height at the cue's exact place, in the
 // playhead's line's place where the two coincide (paint_marker_stems), the
 // playhead on it or not; no
-// other stem exists (Live paints none at rest). THE DISABLED AXIS IS THE
+// other stem exists (none is painted at rest). THE DISABLED AXIS IS THE
 // CHIP'S AND THE LABEL'S ALONE, THE SELECTION THE STEM'S ALONE: the two
 // never cross, so the stem stands through a disable toggle of a selected
 // marker while its chip flips. A DISABLED CHIP IS SOLID GREY (architect
-// 2026-11-05, "disabled marker gets dim label"): the `inactive_cue` 5D5D5D
+// 2026-11-05, "disabled marker gets dim label"): the `inactive_cue` 666A74
 // fill alone, the playhead on it or not, selected or not; THE STEM STAYS `cue_outline` on
 // every selected cue, disabled too — the stem is the one mark of the
 // selection. THE CHIP CARRIES THE SELECTION, THE PLAYHEAD THE FOCUS (architect
@@ -1671,35 +1648,35 @@ struct FlagFace {
 // millisecond, disabled rows counted, 2026-11-17; a label ref the render falls
 // back from; the definitions of a label two live definitions hold,
 // 2026-10-29). A phase reset is never struck (architect 2026-11-17).
-// THE HISTORY ROWS (architect 2026-11-11, session 106: "disabled style and
+// THE HISTORY ROWS (architect 2026-11-11: "disabled style and
 // strike take on a different meaning in history — disabled means a marker
 // was removed, and strike means a text was changed. a removed flag always
 // has its text struck by definition"; "the diff should show as enabled"):
 // `disabled` and `strike` are unread there — a REMOVED item wears the
 // disabled style struck, an ADDED item the enabled style plain, a CHANGED
 // item the enabled style with TWO SEGMENTS, THE STRIKE PER SEGMENT (architect
-// 2026-11-11, session 107: "the label reference with a line through it, and
+// 2026-11-11: "the label reference with a line through it, and
 // then pass next to that"): its older text's segment takes the REMOVED row's
 // strike (struck) and its newer text's the ADDED row's (plain), so the
 // CHANGED face's own `struck` is false and no painter reads it
 // (render_history_diff_flags); the stem the selection's as on the live
 // rows. An inert label's text and its bar are the inert label (`text_dim`)
 // (CueSegment); the bar is part of the text (show_cue_label).
-// THE LABELS' TWO INKS (architect 2026-11-19, send Z; DESIGN §4, Arc's
+// THE LABELS' TWO INKS (architect 2026-11-19, Arc's
 // sidebar): THE SIDEBAR TEXT `sidebar_text` (Arc's $dark_sidebar_fg,
 // arc_dark BAC3CF) on every live label, and THE INERT LABEL `text_dim`
 // (Arc's insensitive text, arc_dark 7E838F; the inert look's reason
-// 2026-10-10 ~12:20, "the arrow needs to be legible for me, but the text
+// 2026-10-10, "the arrow needs to be legible for me, but the text
 // doesn't … since it's disabled, it's inert") on every INERT label — a
 // disabled cue's segments, a tie follower's cells and a removed history
 // item's label — selected or not. THE LABEL'S INK AND THE CHIP'S FILL PART
-// HERE: the disabled chip keeps `inactive_cue` (Default 5D5D5D, the one
+// HERE: the disabled chip keeps `inactive_cue` (arc_dark 666A74, the one
 // inert chip tone) while its label wears `text_dim`, the text tones being
-// Arc's (until 2026-11-19 the one `inactive_cue` inked both). A DISABLED
+// Arc's. A DISABLED
 // STRUCK CUE — the red set counts disabled rows
 // (warp_red_flag_set_cached's (3)) — is the grey chip with its inert label
 // struck.
-// THE HOVER'S FOUR PAIRS (architect 2026-11-21, send FF: "The markers could
+// THE HOVER'S FOUR PAIRS (architect 2026-11-21: "The markers could
 // get a hover action ... if the pen is on the marker's lane, the marker
 // flags would light up"; every tone arc_dark's own, Arc's numbers): A CUE
 // THE HOVERING PEN IS ON — where a tap there would act on it, the faces'
@@ -1774,34 +1751,31 @@ struct CueSegment {
     double x0       = 0.0;
     double x1       = 0.0;
     // INERT: a disabled marker's segment or a tie follower's cell, the
-    // inert label (`text_dim` since 2026-11-19, send Z).
+    // inert label (`text_dim`, 2026-11-19).
     bool   inert    = false;
     // STRUCK (architect 2026-10-26): its side's `struck` (resolve_flag_face)
     // — every segment of a coincident live marker; in the `h` view a removed
-    // item's one segment and a changed item's older one (2026-11-11,
-    // session 107).
+    // item's one segment and a changed item's older one (2026-11-11).
     bool   struck   = false;
 };
 // THE CUE LABEL'S ONE TEXT PAINTER: the run in `ink` — a tone, the label's
 // rest and hover inks mixed by its cue's hover weight as painted
 // (cue_label_ink; resolve_flag_face's THE HOVER'S FOUR PAIRS), plain at
 // rest — NO SHADOW (architect
-// 2026-11-02, the well's part of the flat look, "no shadow anywhere"; its
-// shadow one label quantum right and down, 2026-10-25 to 2026-11-02, is git
-// history). Every label look on the lane's face goes through here —
+// 2026-11-02, the well's part of the flat look, "no shadow anywhere").
+// Every label look on the lane's face goes through here —
 // resting, struck, inert, and the flag editor's riding cells; the
 // editor's FIELD text does not, and never strikes (the text there is being
 // edited).
-// THE STRIKE IS PART OF THE TEXT (architect 2026-10-26 ~15:10: "just the
+// THE STRIKE IS PART OF THE TEXT (architect 2026-10-26: "just the
 // strike through on the text"): where `struck`, the run's strike bar
 // (struck_run_bar, render.h — the one geometry, the `h` view's cue tooltip
 // its other reader) in the text's ink. One rect a segment; nothing
 // memoized.
 // THE TEXT STANDS WITH ITS MARK, EXACTLY (architect 2026-11-15, the no-grid
-// arc: "looks better because it just feels more cohesive now. The whole
-// thing is just one unit" — the glide's trial of 2026-11-14, send J, is the
-// rule): `x` IS THE LABEL'S EXACT PEN — the cue's exact place plus the
-// label's lead and the segments before it, a real x, one pen handed to the
+// rule: "looks better because it just feels more cohesive now. The whole
+// thing is just one unit"): `x` IS THE LABEL'S EXACT PEN — the cue's
+// exact place plus the label's lead and the segments before it, a real x, one pen handed to the
 // shaper's placement (text_shape's place_glyphs unchanged; the raster road
 // places each glyph at its own exact x, text_raster.h) — so the label moves
 // with its chip and its stem by the same real amount under every pan and
@@ -1845,7 +1819,7 @@ static void show_cue_label(cairo_t* cr, const text_shape::ShapedRun& run,
 
 // ONE CUE, laid out: its marker (or diff flag) index, its frame's EXACT
 // PLACE `x` in device px from the waveform's first column (architect
-// 2026-11-14, send J; the iterator's exact_x — the chip's apex, the label's
+// 2026-11-14; the iterator's exact_x — the chip's apex, the label's
 // anchor and the published stem's place), its resolved face (the chip's
 // colors and whether it publishes a stem entry), and its label's
 // up-to-three segments in their left-to-right order.
@@ -1862,7 +1836,7 @@ struct CueDraw {
     double                    hover = 0.0;
     // Whether segments 1 and 2 are the marker's bound cells (the live lanes)
     // or plain halves of one item (the `h` view's changed item, its older
-    // and newer texts, architect 2026-11-11, session 107), whose label
+    // and newer texts, architect 2026-11-11), whose label
     // publishes no cell boundary: no bracket lives in a commit, so the
     // publication collapses both boundaries onto the label's right edge
     // (FlagHitRect's contract) and hit_test_flag_cell answers Payload.
@@ -1888,12 +1862,12 @@ struct CueDraw {
 // can damage the cues that differ and no others (cue_pass_changed_rects,
 // below the producers; the rule is there). `order` and `kept` are that
 // comparison's two working vectors.
-// AND THE PASS'S PLACE (architect 2026-11-21, send FF: the lanes' hovers):
+// AND THE PASS'S PLACE (architect 2026-11-21, the lanes' hovers):
 // the lane, the columns' origin and their width the last paint_cues laid
 // `cues` out on, so cue_pass_sync_hover repaints a cue on the very geometry
 // the surface was painted at; `regions` its working vector. AND `hovered`,
 // THE COUNT OF `cues` PAINTED AT A HOVER WEIGHT OTHER THAN 0 (architect
-// 2026-11-21, send FF: the lanes' at-rest exit,
+// 2026-11-21, the lanes' at-rest exit,
 // GuiPaintHandler::lane_cues_rest): counted by paint_cues over the layout
 // it paints, 0 at cue_pass_keep_previous (`cues` emptied), kept by
 // cue_pass_sync_hover at each weight it writes — always the number of cues
@@ -1921,7 +1895,7 @@ static CuePassScratch g_cue_pass_scratch;
 // hides an earlier label only across its own extent, a selected label as at
 // rest (2026-11-02); then
 // the chips LEFT TO RIGHT, each in its face's fill, no outline
-// (resolve_flag_face; architect 2026-11-19, send AA) — chip and label each
+// (resolve_flag_face; architect 2026-11-19) — chip and label each
 // the mix of its rest and hover tones by the cue's hover weight (the table's
 // hover pairs; CueDraw::hover), plain at rest; then the
 // publication — one FlagHitRect per cue (its label box and its
@@ -1931,7 +1905,7 @@ static CuePassScratch g_cue_pass_scratch;
 // waveform's columns (stem_meets_waveform; paint_marker_stems paints every
 // entry, architect 2026-11-05).
 // EVERYTHING STANDS ON THE CUE'S EXACT PLACE (architect 2026-11-15, the
-// no-grid arc): the label's pen, each segment's box, the occluding box's two
+// no-grid rule): the label's pen, each segment's box, the occluding box's two
 // edges, the chip and every published rect are the cue's exact x plus their
 // own real offsets — one number each, painted and published alike.
 // `lane` is the
@@ -2086,11 +2060,11 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // THE BOX IS NEVER PAINTED AND THE TEXT IS CUT TO WHERE NO LATER BOX
     // COVERS IT (architect 2026-10-12 for the text, the marker slowdown at
     // coarse zoom; 2026-10-13 for the box, the flag cache's solid fills
-    // measuring 12.8 % of the CPU; exact since the no-grid arc, 2026-11-15):
-    // the box is the lane's own flat face (Live's 2A2A2A since 2026-11-03,
+    // measuring 12.8 % of the CPU; exact by the no-grid rule, 2026-11-15):
+    // the box is the lane's own flat face (arc_dark 353945,
     // materials.h's `lane_face`) — the one color of every pixel under the
     // cues, which the lane's painter lays before this cache is blitted over
-    // it — so all a box ever did was hide an earlier label's ink, and a
+    // it — so all a box would do is hide an earlier label's ink, and a
     // label whose ink is laid only where it shows needs no box at all. The
     // VISIBLE INTERVALS of [a, b) less every later non-empty box
     // (cue_label_spans) are the whole of what this label shows: its text and
@@ -2114,12 +2088,12 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     // THE CHIPS, LEFT TO RIGHT, over every label: ONE PASS on one
     // prepared target (CoverageStampPass, cool_edit_paint.h), UNDER THE
     // PASS'S CLIP OF THE LANE'S ROWS (whole pixels, the stamp's clip
-    // box): EACH CHIP AT ITS MARK'S EXACT x (architect 2026-11-14, send J:
+    // box): EACH CHIP AT ITS MARK'S EXACT x (architect 2026-11-14:
     // the window x of the cue's exact place, CueDraw::x — its apex on the
     // stem's center), on the lane's last rows, its one triangle in its fill,
     // each pixel at its exact coverage over what the labels and the
     // chips to its left laid there, so a right chip cuts its left
-    // neighbour's as before, its edge soft. Its contract
+    // neighbour's, its edge soft. Its contract
     // holds here: the label pass changed no clip (each struck bar's
     // own stamp pass began and ended inside its label), the clip
     // was set before begin() and is released after end(), and the pass's
@@ -2135,7 +2109,7 @@ static void paint_cues(cairo_t* cr, const GuiRect& lane, int x0, int w,
     cairo_restore(cr);
 
     // THE PUBLICATION, left to right — ON THE CUE'S EXACT PLACE (architect
-    // 2026-11-15, the no-grid arc: a hit box stands on its mark's real
+    // 2026-11-15, the no-grid rule: a hit box stands on its mark's real
     // edges; FlagHitRect's fields are real x): the very edges the label pass
     // cut on and the chip's hit extent off the same exact x.
     for (int i = 0; i < n; ++i) {
@@ -2273,8 +2247,7 @@ void render_flag_boxes_impl(
     const DragOverlay* drag_overlay,
     // THE ONE BOX THIS PASS DOES NOT PAINT (SuppressedBox, render.h): the
     // marker whose marker-lane editor stands, and WHICH of its boxes that
-    // editor is standing in for. It replaced two separate indices the
-    // day the bound field stopped being the odd one out: the rule is now ONE
+    // editor is standing in for. The rule is ONE
     // COMPARISON against flag_box_rank, so the editor kinds are cases of one
     // model rather than separate arms. At most one box is ever
     // suppressed, the marker-lane editors being one text_editor::State.
@@ -2301,7 +2274,7 @@ void render_flag_boxes_impl(
     clip_to_waveform_columns(cr, lanes.columns_x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
     // THE LABEL FACE for the whole pass (gui_font.h: Regular Label 12 W, 24
-    // device px on the tablet, send Z),
+    // device px on the tablet),
     // every run carrying it (text_shape.h).
     const GuiFont font = gui_font(GuiFace::Label);
     // The pass's kept scratch (CuePassScratch), emptied for this pass.
@@ -2406,9 +2379,9 @@ SuppressedBox suppressed_flag_box(const AppState& app) {
             // that names it (iter_bound_editor_side, app_state.h).
             s.cell = iter_bound_editor_side(ed); break;
         default:
-            // Every other kind edits somewhere else entirely (the dialog
-            // kinds ride the settings editor's buffer and paint in the modal
-            // box), so the marker lane suppresses nothing for them.
+            // Every other kind edits somewhere else entirely (the line
+            // editors ride the settings editor's buffer and paint on the value
+            // sub-page), so the marker lane suppresses nothing for them.
             return SuppressedBox{};
     }
     s.marker_index = ed.target;
@@ -2444,7 +2417,7 @@ void render_flags(cairo_t* cr,
         // sibling, flag_text, so nothing a commit reads passes through here.
         [&](int i) { return flag_display_text(markers, i); },
         // The warp column's disabled verdict is the one participation owner's
-        // (the marker's own flag since 2026-10-29).
+        // (the marker's own flag, 2026-10-29).
         [&](int i) { return effective_disabled(markers, i); },
         // The two bound cells, on exactly the markers the sweep reads
         // (warp_iter_cells above), and none outside the mode.
@@ -2482,8 +2455,8 @@ void render_phase_reset_flags(cairo_t* cr,
         selected_set, kNoStrike,
         // A phase reset authors no payload, so its flag carries the display-only
         // token (render.h owns it and what it reads). It reaches the pass
-        // whole: the shared byte cap is gone (2026-09-19) and this column has
-        // nothing to cut — the token is five bytes by ruling.
+        // whole: no byte cap is shared across the columns (2026-09-19) and
+        // this column has nothing to cut — the token is five bytes by ruling.
         [&](int) { return std::string(kPhaseResetLaneToken); },
         // The bool is the whole verdict on this column.
         [&](int i) { return phase_resets[i].disabled; },
@@ -2497,7 +2470,7 @@ void render_phase_reset_flags(cairo_t* cr,
         // THE BOUND CELLS ARE THE ONLY BOXES THIS COLUMN SUPPRESSES, and the
         // asymmetry is real rather than an oversight (the warp/phase-reset
         // symmetry rule, warpmarkers.h): the BOUND editor is both columns'
-        // since 2026-09-09, while the PAYLOAD editor is a
+        // (2026-09-09), while the PAYLOAD editor is a
         // WARP-column surface by its own open gates — a phase reset authors
         // no payload line, its flag carrying a display-only token — so no
         // phase-reset flag can ever be the edited one for that kind. THE FORK
@@ -2600,16 +2573,15 @@ void render_history_diff_flags(
             // (resolve_flag_face's table, the live lane's rule).
             const bool selected_item =
                 (i == focus_index) || (selected.count(i) != 0);
-            // THE ITEM'S STYLE (architect 2026-11-11, session 106;
+            // THE ITEM'S STYLE (architect 2026-11-11;
             // resolve_flag_face's history rows): removed, added or changed —
             // never its lines' disable bits, which the labels' `#` shows.
             const GuiFlagSide side = !f.added   ? GuiFlagSide::Removed
                                      : !f.removed ? GuiFlagSide::Added
                                                   : GuiFlagSide::Changed;
-            // ONE CUE, ITS SIDES' LABELS AS SEGMENTS (architect 2026-11-11,
-            // session 107, restoring the same-frame label of 2026-10-26: "the
-            // label reference with a line through it, and then pass next to
-            // that"): the older side's text first, then the newer side's, in
+            // ONE CUE, ITS SIDES' LABELS AS SEGMENTS (architect 2026-11-11:
+            // "the label reference with a line through it, and then pass
+            // next to that"): the older side's text first, then the newer side's, in
             // the live lane's box layout (cue_segment_boxes) — the segment
             // gap between a changed item's two. Each segment STRUCK on its
             // own side's row (resolve_flag_face: the older text's the
@@ -2678,7 +2650,7 @@ namespace {
 
 // Whether two laid-out cues PAINT ALIKE: every input paint_cues reads of a
 // cue but its place in the order — its exact place, the chip's two colors
-// and its hover weight (the chip's and the label's mix, send FF),
+// and its hover weight (the chip's and the label's mix),
 // and each segment's presence, run, box, look and strike; `segments_are_cells`
 // beside them, which no pixel reads but the published hit rect does
 // (FlagHitRect's two boundaries), so that "no cue differs" also says "no
@@ -2799,7 +2771,7 @@ void cue_pass_changed_rects(FlagLaneRects lanes, int waveform_width,
 }
 
 // THE LANE'S HOVER BETWEEN REBUILDS (the contract at the declarations,
-// render.h; architect 2026-11-21, send FF).
+// render.h; architect 2026-11-21).
 bool cue_pass_holds(const CueKey& key) {
     for (const CueDraw& c : g_cue_pass_scratch.cues)
         if (c.key == key) return true;
@@ -2820,8 +2792,8 @@ namespace {
 // the repaint (cue_pass_sync_hover) find the same regions on one layout and
 // one set of weights. `write` stores each such cue's weight as the one it
 // is now painted at, keeping the count of the lit (`hovered`): the
-// repaint's. AND ON THE COMPARE ROAD (`write` false; architect 2026-11-21,
-// send FF), A CHANGED CUE WHOSE EXTENT IS EMPTY — none of its columns on
+// repaint's. AND ON THE COMPARE ROAD (`write` false; architect 2026-11-21),
+// A CHANGED CUE WHOSE EXTENT IS EMPTY — none of its columns on
 // the pass's, its ink just off an edge while the conservative cull keeps it
 // in the layout (a pan that took it off mid-fade) — has its weight retired
 // there to the one it has now, the count kept true: the cache's ink is cut
@@ -3082,7 +3054,7 @@ void install_true_colors(bool on) {
 // that anchor needs. Off the same eligibility, the same tokens and the same
 // font the flag pass lays the segments out with (warp_iter_cells or
 // phase_iter_cells, `phase` deciding which — the bound editor is both
-// columns' since 2026-09-09) and the one layout (cue_segment_boxes), so the
+// columns', 2026-09-09) and the one layout (cue_segment_boxes), so the
 // field opens on exactly the box the resting segment stands in.
 //
 // IT ANSWERS WHERE, NOT HOW WIDE (architect 2026-09-05: the bound field takes
@@ -3136,11 +3108,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     if (!payload_kind && !bound_kind) return;
 
     // The PAYLOAD editor is a WARP-COLUMN surface by its own open gates, in
-    // EITHER audio view since 2026-08-24 (the home-view binding's fifth ruled
+    // EITHER audio view (2026-08-24; the home-view binding's fifth ruled
     // exception, active_column_authoring_allowed, app_state.h) — which costs
     // this painter nothing, the column below being resolved on the DISPLAYED
     // basis and the live map like every other lane item. The BOUND editor is
-    // both columns' since 2026-09-09 (the phase-reset
+    // both columns' (2026-09-09; the phase-reset
     // column carries an iteration bracket of its own), so its store is the
     // ACTIVE column's — the column the open route resolved the index against.
     // A target index the store has since shrunk past is the only failure
@@ -3157,7 +3129,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
               : mv[static_cast<size_t>(idx)].time_frame;
 
     // THE MARKER LANE, the flag pass's own: the field is the label's selected
-    // fill (cue_fill_h_px, the whole lane since 2026-10-09 ~21:00), standing
+    // fill (cue_fill_h_px, the whole lane, 2026-10-09), standing
     // exactly where the resting segment's box does.
     const GuiRect lane = top_marker_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -3191,13 +3163,13 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // committed text on the same font — the payload field IS the flag and
     // the bound field IS its cell, and nothing riding past the field steps sideways when it opens. What moves
     // afterwards is what is TYPED, ON EVERY KIND ALIKE (architect 2026-09-05,
-    // retiring the bound field's pin to its cell — "the two editors on the
+    // no pin of the bound field to its cell — "the two editors on the
     // opposite ends behaving one way and the bounds one in the middle behaving
     // in a different way makes the whole thing seem hacked together"): the box
     // grows and shrinks with the pending run, an emptied field is two pads —
     // the smallest field there is, on every kind — and the marker's boxes to
-    // the right of this one ride the edge. There was no fixed-width grammar to
-    // pin a bound field to in any case: this face is PROPORTIONAL, so `-3.75`
+    // the right of this one ride the edge. No fixed-width grammar could
+    // pin a bound field in any case: this face is PROPORTIONAL, so `-3.75`
     // and `+1.00` are not the same width.
     // The pad is the fill's (render.h's cue_fill_pad_px, one W, 2 device px
     // on the tablet) and THE CARET ONE W (render.h's line rule, hairline_px, 2026-11-04;
@@ -3208,19 +3180,16 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // widens by the borrowed column; the box never does.
     const int caret_px = std::min(hairline_px(), pad_r);
 
-    // THE RUN'S OWN WIDTH, UNROUNDED (architect 2026-11-15, the no-grid arc:
+    // THE RUN'S OWN WIDTH, UNROUNDED (architect 2026-11-15, the no-grid rule:
     // the box is its text's exact width and its two pads, a real length).
     const double run_w = run.width_px;
     // THE BOX IS ITS TWO PADS AND ITS RUN, AND NO WIDTH RULE BOUNDS IT — not
-    // the lane, not the window. The LANE-WIDTH CAP that stood here went with
-    // the position clamp below (architect 2026-09-06): it was a WIDTH rule
-    // kept for a POSITION rule's sake — a box no wider than the lane can
-    // always be slid fully on-window — and with the field standing wherever
-    // its own box stands, a field wider than the waveform simply runs off its
-    // last column and is cut off there (the clip below), which is the same
-    // truthful answer the cap existed to avoid giving. Nothing else read it:
-    // the text viewport, the view offset and the riding run all derive from
-    // `box_w` rather than from the lane.
+    // the lane, not the window (architect 2026-09-06, with the position rule
+    // below): with the field standing wherever its own box stands, a field
+    // wider than the waveform simply runs off its last column and is cut off
+    // there (the clip below), the truthful answer. The text viewport, the
+    // view offset and the riding run all derive from `box_w` rather than
+    // from the lane.
     const double box_w =
         static_cast<double>(pad_l) + run_w + static_cast<double>(pad_r);
 
@@ -3228,7 +3197,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         displayed_or_live_target_map(app, audio);
     const ItemViewportBasis basis = item_viewport_basis(app, audio);
     // THE EDITOR STANDS ON THE MARKER'S EXACT PLACE (architect 2026-11-15,
-    // the no-grid arc), the very place the cue pass lays the resting label
+    // the no-grid rule), the very place the cue pass lays the resting label
     // on (painted_x_of_source_frame_on_basis, the column's exact sibling on
     // the same item basis): its box, its field text, its caret and the
     // cells riding its right edge stand where the label's segments stand, to
@@ -3282,35 +3251,33 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const double anchor_off = committed_cell_seam_off(
         app, font, phase, idx, field_cell, iteration_on);
 
-    // NO FIELD IS CLAMPED, ON ANY KIND, AT EITHER EDGE (architect 2026-09-06,
-    // on the clamp this line used to carry: "let's get rid of that, that's a
+    // NO FIELD IS CLAMPED, ON ANY KIND, AT EITHER EDGE (architect 2026-09-06:
+    // "let's get rid of that, that's a
     // good catch … leave its position truthful, don't clamp it, don't do
-    // anything"). The box opened at the seam above and then slid left or right
-    // to keep itself whole on-window — a rule written for the payload editor
-    // when the flag was the only box on the row, and one the ONE GRAPHIC MODEL
-    // cannot survive: at a lane edge the slide walked the field left OVER the
-    // lower cell or the flag box that the cached pass is still painting at
-    // rest, so the boxes to its left no longer stood where they rest and the
-    // field no longer stood in its own box's slot — the two things the model
+    // anything"). A slide to keep the box whole on-window would break the
+    // ONE GRAPHIC MODEL: at a lane edge it would walk the field left OVER the
+    // lower cell or the flag box that the cached pass still paints at
+    // rest, so the boxes to its left would not stand where they rest and the
+    // field would not stand in its own box's slot — the two things the model
     // promises. So the field opens where its box IS and stays there.
     //
     // THE WAVEFORM'S COLUMNS ARE THE CLIP (architect 2026-09-26, set where
-    // `area` is read above, superseding "the window is the clip"): a box past
+    // `area` is read above): a box past
     // the left edge falls off at column 0 and a box past the last column is
     // cut off at it, exactly as the cached flag pass clips its resting boxes,
     // so nothing of the field paints past the waveform's columns. A field cut off at an edge is READ BY
     // Esc, A PAN AND A REOPEN (architect 2026-10-25): the marker-lane editors
-    // are modals since that day, so nothing pans while one stands, and the
+    // are modals, so nothing pans while one stands, and the
     // open does not pan to it either — the field travels with its marker,
     // the same answer the row gives for a label half off the edge at rest.
     const double bx = static_cast<double>(area.x) + mark_x + anchor_off;
 
-    // The text VIEWPORT inside the box: the band the run is clipped to, and the
+    // The text VIEWPORT inside the box: the span the run stands in, and the
     // width the view offset is measured against. The caret column belongs to it
-    // (a caret at the end must be inside the clip to be seen), and THIS IS
+    // (a caret at the end must be inside it to be seen), and THIS IS
     // WHERE THE BORROW IS SPENT, on every kind: the viewport reaches one column
     // INTO the right pad — the column the box above deliberately does not buy —
-    // so a caret at end-of-text is inside the clip with the run standing
+    // so a caret at end-of-text is inside the viewport with the run standing
     // exactly where the committed text stands. The caret one W (held to the
     // pad), the borrow takes those columns of the pad and the viewport ends
     // the rest of the pad short of the box's right edge.
@@ -3326,7 +3293,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // time and walking back left pulls it back the same way, never jumping.
     // The caret's own column is reserved at the right edge, so the comparison
     // is against (view_w - caret) rather than view_w: a caret at end-of-text
-    // stops with its column inside the clip instead of half past it.
+    // stops with its column inside the viewport instead of half past it.
     //
     // WHAT IT HAS TO DO HERE IS NOTHING: the box holds this field's WHOLE
     // run by construction — two pads and the run's own width, unrounded, no
@@ -3373,8 +3340,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                       app, audio.sample_rate(),
                       static_cast<long>(audio.total_frames()))
                           .red.count(idx) > 0;
-    // THE FIELD IS GTK'S IN-PLACE CELL EDITOR (architect 2026-11-18 / 19,
-    // send Z's design, built in send AA; render.h's EDITING paragraph): the
+    // THE FIELD IS GTK'S IN-PLACE CELL EDITOR (architect 2026-11-18 / 19;
+    // render.h's EDITING paragraph): the
     // entry's fill `ruler_face` (arc_dark 404552) inside a one-W border of
     // the accent `cue`, square-cornered, the text and the caret the
     // chrome's `field_text` (the text tone) — on every state of the marker,
@@ -3382,8 +3349,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // legibility guarantee ("when you're looking very closely at a label it
     // has to be legible"), and THE SELECTED SUBSTRING takes the chrome's
     // SELECTED PAIR, `selected_text` on `selected_fill` (on arc_dark the
-    // accent under the lit print, the dialog editor's pair), the ordinary
-    // highlight — the pair that exists "precisely to avoid this problem".
+    // accent under the lit print, the value sub-page entry's pair), the
+    // ordinary highlight — the pair that exists "precisely to avoid this problem".
     // A COINCIDENT MARKER'S FIELD IS THE SAME FIELD, its text and caret the
     // field's own, unstruck; `struck` marks its riding segments alone.
     const GuiPalette& pal = palette();
@@ -3400,8 +3367,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     const bool ride_cells = ride_text.present;
 
     // 1. THE FIELD IS A BOX OVER THE WHOLE LANE (cue_fill_h_px, the selected
-    //    label's box; architect 2026-10-09 ~21:00; the lane's rows ARE the
-    //    box's since 2026-11-01 night, render.h's marker_lane_h_px): the
+    //    label's box; architect 2026-10-09; the lane's rows ARE the
+    //    box's, 2026-11-01, render.h's marker_lane_h_px): the
     //    segment's box — its run and the fill's pad either side, the text
     //    standing exactly where the resting label's does — with THE
     //    EDITOR'S BORDER (render.h's cue_editor_border_px, one W, 2 device
@@ -3415,7 +3382,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    why). Since the editor opens on any store index
     //    (enter_top_flag_edit), disabled included, a disabled marker's field
     //    is this same box, never the inactive grey.
-    // ON ITS REAL EDGES (architect 2026-11-15, the no-grid arc): the box's
+    // ON ITS REAL EDGES (architect 2026-11-15, the no-grid rule): the box's
     // left and right edges are the marker's exact place plus real offsets,
     // its rows the lane's whole rows, both fills at exact coverage (the
     // exact fill, render.h) over the lane — the lane's face and the cues the
@@ -3434,16 +3401,15 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                     field_fill);
 
     // THE CARET AND THE SELECTION BAND ARE THE TEXT'S LINE BOX ROWS
-    // (architect 2026-11-18 / 19, send Z's design, built in send AA: the
-    // dialog editor's rule, one look for both editors; render.h's EDITING
-    // paragraph): read off the one derivation (cue_line_box_top_px,
+    // (architect 2026-11-18 / 19: the value sub-page entry's rule, one look
+    // for both editors; render.h's EDITING paragraph): read off the one derivation (cue_line_box_top_px,
     // cue_line_box_h_px, render.h), never re-derived here — on the tablet
     // rows 2 .. 29 under the lane's 32, the box's whole inner 14 W inside
     // the 2-row border.
     const double band_y = static_cast<double>(lane.y) + cue_line_box_top_px();
     const double band_h = cue_line_box_h_px();
 
-    // NO CLIP STANDS ROUND THE TEXT (architect 2026-11-15, the no-grid arc):
+    // NO CLIP STANDS ROUND THE TEXT (architect 2026-11-15, the no-grid rule):
     // the viewport is exactly the run and the caret's column (the box is the
     // run's own width and its pads), so the run, its selection and its caret
     // lie inside the pads by construction and the waveform's columns' clip
@@ -3461,8 +3427,9 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    still marks one px.
     //
     //    THE TEXT'S COLOR CHANGES AT THOSE SAME BOUNDARIES, GLYPH BY GLYPH
-    //    (the dialog editor's rule, paint_modal_dialog): a selection's edge
-    //    is a byte boundary, between two glyphs, so the run is painted as
+    //    (the value sub-page entry's rule, paint_modal_dialog): a
+    //    selection's edge is a byte boundary, between two glyphs, so the run
+    //    is painted as
     //    three byte ranges — before the band in the field text, the band's
     //    in the selected text, after it in the field text — each range
     //    whole glyphs AT THE PLACES THE WHOLE RUN GIVES THEM
@@ -3538,8 +3505,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // MARKER'S OWN CELLS FOR THE POINTER TOO (architect 2026-09-05), so the
     // run answers "which marker, which cell" exactly as the resting boxes
     // answer it — one walk, one idiom, no second derivation (the contract is
-    // at FlagEditorBox::riding_cells). A PRESS on one is veiled since
-    // 2026-10-25 — a press outside the field, which the editor's modal veil
+    // at FlagEditorBox::riding_cells). A PRESS on one is veiled
+    // (2026-10-25) — a press outside the field, which the editor's modal veil
     // consumes, the editor standing (on_button_press). Folding it
     // into `box` would be the wrong union all the same: the caret / text-drag
     // claim seats a caret for ANY press inside `box`, so a run folded in would map presses
@@ -3547,8 +3514,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // editing where none is.
     // WHAT RIDES, BY RANK: every box standing right of the field's own. The
     // UPPER-bound field's rank is the last, so nothing rides under it. THE
-    // STORE BELOW IS THE FIELD'S OWN COLUMN since 2026-09-09, when the bound
-    // editor became both columns': the payload editor is warp-only by its
+    // STORE BELOW IS THE FIELD'S OWN COLUMN (2026-09-09: the bound editor
+    // serves both columns): the payload editor is warp-only by its
     // open gates, and `phase` already answered that question for the box
     // above.
     if (ride_cells) {
@@ -3585,7 +3552,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
         // ink. The gap after the field belongs to the first riding box.
         const double gap    = static_cast<double>(cue_segment_gap_px());
         const double run_x0 = bx + box_w;
-        // THE RUN IS NOT CLIPPED (architect 2026-10-10 ~19:00): the riding
+        // THE RUN IS NOT CLIPPED (architect 2026-10-10): the riding
         // cells paint where the paint order puts them. The editor paints
         // after the lane pass, so the run stands over a neighbour's label and
         // triangle as the field itself does (render.h's EDITING paragraph,
@@ -3606,7 +3573,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
             // label's one box covers its gaps — the lane's flat `lane_face`
             // (paint_cues' box) through the lane's columns, the ground past
             // them, which the painter's clip (the waveform's columns, above)
-            // cuts, so nothing lands past the lane's columns. ON REAL EDGES (the no-grid arc,
+            // cuts, so nothing lands past the lane's columns. ON REAL EDGES (the no-grid rule,
             // 2026-11-15): the box's two edges are the field's right edge
             // plus real offsets, filled at exact coverage over the lane's
             // cues — an opaque box laid at its real edges hides a
@@ -3691,7 +3658,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // a field wholly past the edge publishes an empty box, which contains no
     // point.
     // THE PUBLISHED BOX IS THE FIELD'S REAL EDGES (architect 2026-11-15, the
-    // no-grid arc) cut to the columns, over the lane's whole rows — the
+    // no-grid rule) cut to the columns, over the lane's whole rows — the
     // pointer's real place is what asks it. (The editor's damage is the top
     // strip's, whole: Viewport::invalidate_top_strip.)
     {

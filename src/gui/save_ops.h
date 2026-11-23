@@ -22,16 +22,13 @@
 // ONE REFUSAL IS NOT ABOUT THE DATA (2026-08-08): a save is refused outright
 // while a Save-and-Commit checkpoint is publishing, because that background act
 // writes these same three paths in the coincident projects/<id>/ workflow. The
-// term lives at the top of save() — one place, every caller — and since
-// 2026-09-24 that arm cards kCheckpointPublishing (notifications.h) itself,
-// ahead of the three write arms below: the retired "Committing..." button
-// label (dead at the 2026-08-12 relayout) and its 2026-09-12 tooltip
-// successor both answered with a face alone, and the architect ruled a card
-// preferred over a no-op that falsely advertises an action. All seven
-// callers — main Ctrl+S, the close prompt's Save answer, the history-entry
-// prelude, the two modal-editor Ctrl+S arms, the picker's and the stats
-// panel's — reach this one arm and inherit its card without composing their
-// own.
+// term lives at the top of save() — one place, every caller — and that arm
+// cards kCheckpointPublishing (notifications.h) itself, ahead of the three
+// write arms below (2026-09-24: the architect ruled a card preferred over a
+// no-op that falsely advertises an action). Every caller — the plain save
+// (save_from_key, every Ctrl+S road), the close prompt's Save answer and the
+// checkpoint act's prelude — reaches this one arm and inherits its card
+// without composing its own.
 //
 // A FAILED WRITE SAYS SO HERE TOO, AT THE OWNER (architect 2026-09-02): past
 // the checkpoint guard above, the three write arms and the numeric-locale

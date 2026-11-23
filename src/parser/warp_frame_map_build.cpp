@@ -38,8 +38,8 @@ struct LabelCacheEntry {
 // this band could never have been authored as a direct marker and
 // normalizes to 1.00. The settings scale is deliberately excluded from the
 // implied quantity: it divides every segment uniformly and cancels, which
-// keeps the check computable identically by the hover popup (which cannot
-// see settings scale).
+// keeps the check computable identically by marker_effective's display
+// verdict (which cannot see settings scale).
 const double kRefImpliedTempoMin = tempo_from_cents(kTempoMinCents) * kScaleMin;
 const double kRefImpliedTempoMax = tempo_from_cents(kTempoMaxCents) * kScaleMax;
 
@@ -501,7 +501,7 @@ int64_t resolve_inherited_tempo(const std::vector<WarpMarker>& markers, int inde
         if (!m.tempo_inherits && !m.disabled) return m.tempo_cents;
     }
     // Reachable: a leading pass with no owner before it resolves to this
-    // fallback on every surface — the hover popup, and the render (where
+    // fallback on every surface — the GUI's display, and the render (where
     // the resolver's frame-0 seed becomes the owner such a pass inherits,
     // the same 1.00).
     return 100;
@@ -818,15 +818,10 @@ MarkerEffective marker_effective(
                                   def_dist_frames, def_idx);
 }
 
-// (ARCHITECT APPROVAL 2026-08-29 — the granted frozen touch on this unit, for
-// the messaging redesign's readout retirement.) THE FUNCTION WAS
-// compute_hover_popup_text, the hover popup's and then the status bar's
-// DISPLAY string: "~= 1.28*1.0112 (from a.23 @ 00:19.208)", a value with a
-// prefix and a parenthetical provenance, plus the pasteable payload on an
-// out-parameter. Nothing displays that string any more — the bar folded into
-// row 8 and its readout cell went with it — so what is left is the two things
-// the GUI still asks for, and this composes exactly them: THE PAYLOAD, and
-// THE INDEX OF THE MARKER THE VALUE CAME FROM.
+// (ARCHITECT APPROVAL 2026-08-29 — the granted frozen touch on this unit.)
+// The GUI asks two things of a resolved value, and this composes exactly
+// them: THE PAYLOAD, and THE INDEX OF THE MARKER THE VALUE CAME FROM; no
+// display string is composed here.
 std::string resolved_marker_payload(
     const std::vector<WarpMarker>& mv, int idx, long sample_rate,
     long total_frames, int* source_index_out) {
@@ -897,8 +892,7 @@ std::string resolved_marker_payload(
         out += "*";
         out += format_value_double(eff.scale.value_or(1.0), 4);
 
-        // The source is the LABEL-DEFINITION marker — exactly what the old
-        // "(from <def_base>:<label> @ <time>)" named.
+        // The source is the LABEL-DEFINITION marker.
         if (source_index_out) *source_index_out = eff.source_idx;
         return out;
     }
@@ -909,13 +903,10 @@ std::string resolved_marker_payload(
 // THIS BUILDER'S SIX REFUSAL STRINGS REACH STDERR ONLY, and they are PAINTED
 // NOWHERE (architect approval 2026-08-30, comment only). Their one GUI reader
 // is the target-view entry gate, whose TWO callers —
-// GuiInputHandler::validate_target_view_entry's keyboard S -> T entry and
+// GuiInputHandler::validate_target_view_entry's S -> T entry and
 // GuiFileLoader::load_file's active_audio_view=T restore — each print the
 // owner's string on one stderr line and stay in source view, saying nothing on
-// screen; the ERROR-NOTICE PROMPT that used to show a refusal verbatim on the
-// bottom row retired whole on 2026-08-30 with its DialogTrigger, so the
-// "only frozen-tree strings the GUI paints" claim recorded here has no subject
-// left. THEY STILL CARRY SENTENCE-INITIAL CAPITALS and nothing about them
+// screen. THEY STILL CARRY SENTENCE-INITIAL CAPITALS and nothing about them
 // moves: the capitalization is the 2026-08-02 frozen grant's ("capitalize for
 // correct english... but change nothing else"), which that day's terminal pass
 // extended to every other frozen refusal reaching the GUI — the ones ending at

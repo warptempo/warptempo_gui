@@ -313,9 +313,9 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     // there is no migration tool and no reader leniency — the architect updates
     // his own files, by his explicit instruction.
     //
-    // `font_size` (architect approval 2026-08-01): the GUI-wide monospace text
-    // size, deleted with the monospace face itself in row 7 of the kdenlive
-    // redesign. Every surface in the product sizes on gui_scale now.
+    // `font_size` (architect approval 2026-08-01): a GUI-wide text size,
+    // deleted with the face it sized. Every surface in the product sizes on
+    // gui_scale now.
     //
     // `playback_speed` (architect approval 2026-08-27): RETIRED WHOLE. It was
     // the audition's tenths-preset speed multiplier, and the architect runs 1.0
@@ -342,7 +342,7 @@ std::optional<std::expected<GuiSettingValue, std::string>> validate_gui_setting(
     //
     // `audio_player` (architect approval 2026-08-27): MOVED beside gui_scale
     // and for the same reason — which player binary exists is a fact about the
-    // DEVICE. The laptop launched audacious on `l`; the tablet had nothing
+    // DEVICE. The tablet had nothing
     // spawnable and carried the blank no-player opt-out, which is exactly the
     // semantics this schema used to load. The device config took the
     // free-UTF-8-verbatim rule with it — AND THEN RETIRED THE KEY WHOLE ON

@@ -78,9 +78,9 @@ void score_viewer_publish_gpu_page(const AppState& app, GuiCanvasPage& out) {
     const AppState::ScoreViewer& sv = app.score_viewer;
     out.stands       = score_viewer_page_stands(app);
     out.session      = sv.session;
-    // THE FIELD ROUND THE PAGE IS THE SCORE VIEWER'S PANE, the installed
-    // theme's `score_pane_face` (Default's 191919; modal_box.h's head, the one
-    // exception to the box's pane, M9 A2).
+    // THE FIELD ROUND THE PAGE IS THE SCORE VIEWER'S PANE, the palette's
+    // `score_pane_face` (its line of kArcDarkTones; modal_box.h's head, the
+    // one exception to the box's pane).
     out.field        = argb32_opaque_word(display_color(palette().score_pane_face));
     out.shown_page   = sv.page;
     out.shown_serial = 0;
@@ -228,8 +228,8 @@ void GuiScoreViewer::write_page_position() {
     AppState::ScoreViewer& sv = app.score_viewer;
     if (!sv.active || !app.score) return;
     // THE PAGE ROAD'S POSITION WRITE (the head's THE REMEMBERED POSITION):
-    // the active tab's band, the shown page's own begin — display scratch,
-    // nothing dirtied — and the score viewer's file at once.
+    // the active tab's view state, the shown page's own begin — display
+    // scratch, nothing dirtied — and the score viewer's file at once.
     active_view_state(app).score_position =
         app.score->pages[static_cast<std::size_t>(sv.page)].begin;
     write_score_viewer_file(app);
@@ -276,7 +276,7 @@ void GuiScoreViewer::pause() {
     // (architect 2026-10-27): the tick follows the cursor only while LIVE, so
     // a cursor that crossed a page boundary since the last tick would leave
     // the previous page shown under the next page's clock for the whole
-    // pause. EVERY PAUSE IS THIS BODY (re-grepped 2026-10-27): toggle_play —
+    // pause. EVERY PAUSE IS THIS BODY (2026-10-27): toggle_play —
     // PAUSE / Space, and RESET's question through it — the scrub's press and
     // the tick's dead device; the natural end follows its own rest.
     playback_lifecycle.stop_playback_if_playing();
@@ -293,7 +293,7 @@ void GuiScoreViewer::play() {
         return;
     if (!bind_soundtrack()) return;
     // PLAY: [cursor, the range's end) once. THE PLAY KEY AT THE END
-    // (architect 2026-10-26 ~23:55, "next track if there is one, otherwise
+    // (architect 2026-10-26, "next track if there is one, otherwise
     // play from the start"): the soundtrack has no next track, so a cursor
     // resting in the range's last frame or at its end (the End key's seek,
     // the natural end's rest) plays from the range's start in the same press
@@ -446,7 +446,7 @@ void GuiScoreViewer::on_natural_end() {
     // bit is already down; stop() is the quiescence proof), its score fork
     // parking the transport at PAUSED; then, the soundtrack being one track
     // with nothing to continue to, THE REST AT THE RANGE'S END (architect
-    // 2026-10-26 ~23:55, "it stops dead where it is otherwise"; the head's
+    // 2026-10-26, "it stops dead where it is otherwise"; the head's
     // THE TRANSPORT): the last page shown, the clock at the range's length,
     // the thumb at the right, written.
     playback_lifecycle.stop_playback_if_playing();
@@ -551,9 +551,8 @@ void GuiScoreViewer::scope_gray_to_range() {
     if (!app.score) return;
     // THE RANGE SCOPES THE GRAY STORE (score_viewer.h's head, architect
     // 2026-10-27): every page outside the range as it stands now goes, so
-    // every road that moves a bound — START, END, RESET's confirm, SETUP's
-    // typed score_first_page / score_last_page — is covered without being
-    // named. Two ints against a vector of at most the score's pages.
+    // every road that moves a bound — START, END, RESET's confirm — is
+    // covered without being named. Two ints against a vector of at most the score's pages.
     const ScoreViewerRange r = score_viewer_range(app);
     std::erase_if(sv.gray, [&](const GuiScoreGrayPage& g) {
         return g.page < r.first || g.page > r.last;
@@ -607,7 +606,7 @@ void GuiScoreViewer::note_gray_complete() {
         return;
     }
     if (!sv.gray_asked_at) return;
-    // THE COMPLETION'S TIMING LINE (architect 2026-10-26 ~22:10): the pages
+    // THE COMPLETION'S TIMING LINE (architect 2026-10-26): the pages
     // held (a failed decode holds none), their bytes in decimal megabytes —
     // w x h a page, the gray page's size wherever it is held, so a page the
     // store has released to its texture (settle_gray_on_gpu)

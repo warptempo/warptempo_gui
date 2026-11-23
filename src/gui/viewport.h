@@ -29,8 +29,8 @@ class GuiPlayback;
 enum class LandingKind { Walk, Restore };
 
 // THE WINDOW-TOP RECT [0, y1) AT THE WINDOW'S WIDTH, SPLIT AT THE VIEWPORT'S
-// LANES (2026-10-13): the rows from viewport_lanes_top_y down are damaged
-// now, and the rows above it — the toolbar band and its title bar — are OWED
+// LANES: the rows from viewport_lanes_top_y down are damaged
+// now, and the rows above it — the title bar and the top icon row — are OWED
 // to every paint target a check
 // (GuiUpperRowsRecord::owed_y1, app_state.h), which the pre-paint hook pays
 // (GuiPaintHandler::settle_owed_lane_damage): the whole rect where the rows'
@@ -42,9 +42,9 @@ enum class LandingKind { Walk, Restore };
 // waveform cache's four (the async publish, the synchronous rebuild, the
 // deferred basis repair and the flag cache's stage wherever it declares the
 // whole area, waveform_cache.cpp).
-// THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the band's foot
-// (the tab strip's 2026-10-18 to 2026-10-22) — the band ends there and the
-// view bar and the modal family's box begin there — so the two halves paint exactly the pixels the one rect
+// THE SPLIT ROW IS CLEAN: nothing a lane paints crosses the top icon row's
+// foot — the row ends there and the trim lane and the modal family's box
+// begin there — so the two halves paint exactly the pixels the one rect
 // did (the floating surfaces, which do cross it, take the whole rect).
 void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1);
 
@@ -67,7 +67,7 @@ struct Viewport {
 
     // Trim helpers — THE NAVIGATION RANGE: the trim bounds Home/End jump to
     // and the load-time playhead rests at. THE GUI'S OWN PLAYBACK DOES NOT
-    // READ THIS since 2026-08-05 (playback_lifecycle.cpp owns the split: the
+    // READ THIS (playback_lifecycle.cpp owns the split: the
     // song's end in source view, the bound preview buffer's in target); TWO
     // PLAYBACK CONSUMERS, both the console's — the car's loop window
     // (GuiPlaybackLifecycle::car_toggle_playback, 2026-09-17), which loops
@@ -81,18 +81,17 @@ struct Viewport {
     int64_t                     trim_end_sample() const;
 
     // Worker kick: requests an immediate waveform regeneration instead of
-    // waiting for the next platform tick. IT IS NO LONGER THE VIEWPORT'S OWN
-    // KICK (retold 2026-09-02): viewport changes take the SYNCHRONOUS route,
-    // and what is left of this is the fallback named below.
+    // waiting for the next platform tick. IT IS NOT THE VIEWPORT'S OWN
+    // KICK: viewport changes take the SYNCHRONOUS route, and this is the
+    // fallback named below.
     // Set from main.cpp to paint_handler.maybe_enqueue_waveform_render().
     // Held as a std::function rather than a GuiPaintHandler& so viewport.cpp
     // keeps no compile-time edge to paint_handler.h. kick_waveform_render()
     // is null-safe: if the callback is unset (e.g. before main.cpp wires it),
     // it no-ops. The enqueue is idempotent against the on_tick backstop —
     // both dirty-check the same pending fingerprint, so a redundant call is
-    // a cheap no-op. Since 2026-09-02 its ONE call site is kick_waveform_sync's
-    // callback-unwired fallback below (follow-scroll, the last explicit caller,
-    // took the synchronous route that day); the async path's own inventory is
+    // a cheap no-op. Its ONE call site is kick_waveform_sync's
+    // callback-unwired fallback below; the async path's own inventory is
     // stated once at request_waveform_sync_'s block.
     std::function<void()> request_waveform_render_;
     void kick_waveform_render() {
@@ -100,10 +99,8 @@ struct Viewport {
     }
 
     // (There is no separate pan kick. Panning routes through
-    // kick_waveform_sync below like every other user-driven viewport change —
-    // the incremental shift-and-strip fast-path and its request_waveform_pan_
-    // callback were retired 2026-07-26 so that moving and resting plates are
-    // produced by one path.)
+    // kick_waveform_sync below like every other user-driven viewport change,
+    // so that moving and resting plates are produced by one path.)
 
     // One-shot synchronous rebuild kick: for a discrete viewport/view jump,
     // owe the frame's synchronous plate rebuild, so every layer reflects the
@@ -131,7 +128,7 @@ struct Viewport {
     //    other three callers (hold_subject_column_after_nudge,
     //    follow_scroll_if_needed and land_subject),
     //    apply_strip_drag_zoom and the follow scroll through it, follow_scanner),
-    //    ALL THREE VIEW SWITCHES, one class since 2026-07-30: the S/T audio-view
+    //    ALL THREE VIEW SWITCHES, one class: the S/T audio-view
     //    switch (GuiInputHandler::switch_active_audio_view_to) and the A/B tab
     //    switch (GuiActiveViews::switch_active_tab_view_to — Ctrl+Tab and the
     //    audition's legs) (both domain flips) and the W/P marker-column switch
@@ -152,15 +149,15 @@ struct Viewport {
     //    lands in the damaged frame (the reason is stated at its site).
     //    The PROPAGATE PASTE'S LANDING TAIL
     //    (land_paste_in_phase_reset_view, phase_reset_propagate.cpp) is the
-    //    column-switch case reached by a different door and joined 2026-07-30: it calls
+    //    column-switch case reached by a different door: it calls
     //    switch_active_markers_view_to('P') directly rather than through the
     //    selector, so it kicks at its own tail — after the changed selection, so the
     //    column and the selection hash rebuild together — its only kick of its
-    //    own since it stopped crossing the audio view (architect 2026-10-14,
+    //    own, as it does not cross the audio view (architect 2026-10-14,
     //    Shift+S's symmetry); the framing of its changed set (architect
-    //    2026-11-17, send U) kicks only through land_subject or
+    //    2026-11-17) kicks only through land_subject or
     //    apply_zoom_to_start, listed above, when it moves the camera. SHIFT+S — THE DROP FROM THE WARP COLUMN
-    //    (2026-08-28, staying in its audio view since 2026-10-12,
+    //    (staying in its audio view, 2026-10-12,
     //    GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp) — is
     //    that same case through a third door and takes the same tail for the
     //    same reason: it calls switch_active_markers_view_to('P') directly
@@ -174,15 +171,14 @@ struct Viewport {
     //    input_pointer.cpp — the force-end finalizer, whose callers are the
     //    window's close, resize and the history prefetch's failed-scan
     //    closer; a moved zoom-phase drag owes one synchronous
-    //    rebuild there, having no release coordinates for a final apply; the
-    //    strip drag whose terminating-event finalize stood here was deleted
-    //    2026-08-15, and Esc is no terminating event, pointer gestures having
-    //    no cancel) — and main.cpp's tick backstop for an ASYNC
+    //    rebuild there, having no release coordinates for a final apply;
+    //    pointer gestures have no cancel) — and main.cpp's tick backstop for
+    //    an ASYNC
     //    total change (a preview completion) live here.
     //  - THE PLATE'S OWN GAIN. The gain is the continuous curve derived from
     //    the source at load (GuiAudio::gain_curve), and the plate's gain
     //    field (waveform_gain_fingerprint, warp_frame_map_view.h) has ONE
-    //    LIVE INPUT, re-grepped 2026-09-25: the MAGNIFICATION LAMP, whose one
+    //    LIVE INPUT, the MAGNIFICATION LAMP, whose one
     //    setter (GuiInputHandler::set_show_waveform_magnification, the one
     //    caller of kick_waveform_sync_if_gain_changed) takes the before/after
     //    kick below. The S/T flip leaves the gain field as it stands (the
@@ -205,24 +201,22 @@ struct Viewport {
     //    of the next tick — a CONTENT change with no geometry behind it, the
     //    gain's shape.
     //  - TARGET-WARP-MAP mutations: a build_warp_frame_map INPUT changed, so the
-    //    target-view plate itself re-warps. RE-DERIVED 2026-07-29 when the whole
-    //    tempo-image family was deleted (marker_drag.h), which took TWO entries
-    //    off this list — the bare Left/Right tempo-image step and the pointer tempo
-    //    DRAG. What remains: THE TEMPO WRITES, through their one shared tail
+    //    target-view plate itself re-warps. The members: THE TEMPO WRITES,
+    //    through their one shared tail
     //    (warp_tempo_write_tail, warpmarkers_ops.cpp) — the bare Up/Down tempo
     //    step (adjust_tempo_cents, singleton AND group) and the VALUE
     //    DRAG's commit (value_drag.cpp, once at the release, the drag having
     //    written the store per motion under the displayed-basis freeze) — the
     //    settings engine-scale commit (GuiSettingsEditor::commit), undo/redo
     //    (Undo::restore_history_entry), and THE LOAD-IN-PLACE
-    //    FAMILY, which reaches this through its ONE shared body since 2026-08-24
+    //    FAMILY, which reaches this through its ONE shared body
     //    (apply_recipe_in_place, input_key_dispatch.cpp — called by
     //    load_render_entry_in_place for the render player's load of a batch
     //    cell,
     //    load_history_commit_in_place for the `h` view's commit load, and
     //    load_history_local_entry_in_place for that view's LOCAL walk, which
-    //    puts a state of the session's own undo/redo timeline back), and — since
-    //    2026-08-25 — THE WARP STATUS/VALUE FAMILY: Ctrl+D
+    //    puts a state of the session's own undo/redo timeline back), and
+    //    THE WARP STATUS/VALUE FAMILY: Ctrl+D
     //    (GuiWarpMarkersOps::toggle_disabled), Ctrl+N (toggle_inherits), Delete
     //    (delete_selected_marker) and the flag editor's payload commit
     //    (GuiFlagEditor::commit_top_flag_edit), admitted in W+target as the
@@ -238,45 +232,39 @@ struct Viewport {
     //    values, never position), so they author in warp's SOURCE home only,
     //    where the source waveform has no map-dependent plate.
     //
-    // AXIS 2 — the CADENCE. EVERY MAP-EDIT SITE ABOVE IS NOW A DISCRETE ONE-SHOT
-    // per command: the one exception was the TEMPO DRAG, which re-warped LIVE per
-    // cent step mid-gesture (the kick a hand-copied list kept dropping), and it
-    // died with the gesture on 2026-07-29 — so no map edit runs per pointer frame
-    // any more.
-    // (The live-per-event kick that remains is apply_strip_drag_zoom — a
+    // AXIS 2 — the CADENCE. EVERY MAP-EDIT SITE ABOVE IS A DISCRETE ONE-SHOT
+    // per command: no map edit runs per pointer frame.
+    // (The live-per-event kick is apply_strip_drag_zoom — a
     // generic viewport rebuild, not a map edit, a sustained pointer gesture
     // or a following play's scroll (follow_scanner) paying one full rebuild
-    // per displayed frame since the rebuild became owed, 2026-10-13, below.)
+    // per displayed frame, the rebuild being owed, below.)
     //
     // The ASYNC worker path (the request_waveform_sync_ fallback above,
     // kick_waveform_render) is not a map-edit route: it serves the UNDRIVEN
     // changes — a window RESIZE and the launch load — and repaints the
     // plate on preview completion. NONE of those is an explicit kick: they are
     // discovered by maybe_enqueue_waveform_render's dirty-detect on the next
-    // tick (main.cpp), so since 2026-09-02 kick_waveform_render has NO caller
+    // tick (main.cpp), so kick_waveform_render has NO caller
     // but the callback-unwired fallback at the tail of kick_waveform_sync
-    // below (grep-derived). FOLLOW-SCROLL LEFT THIS LIST that day — it was the
-    // last explicit async kick and the one the wiring in main.cpp was written
-    // for — because the async page left every surface painting the OLD
-    // viewport while the scanner's column sat outside it, so the playhead line
-    // vanished for a frame or two at each crossing; its reasoning lives at
-    // follow_scroll_if_needed. Panning left the list 2026-07-26 for the same
-    // rule: a mover the user sees renders synchronously like zoom. So the
-    // playback mover is on the synchronous route, once per frame the follow
-    // scroll moves the picture (follow_scanner, send N, 2026-11-15).
+    // below. A MOVER THE USER SEES RENDERS SYNCHRONOUSLY, like zoom — the pan
+    // and the playback's follow scroll, once per frame the follow scroll
+    // moves the picture (follow_scanner): an async page leaves every surface
+    // painting the OLD viewport while the scanner's column sits outside it,
+    // so the playhead line vanishes for a frame or two at each crossing (the
+    // reasoning at follow_scroll_if_needed).
     //
-    // THE REBUILD IS OWED, NEVER RUN HERE (architect 2026-10-13, P4 approved):
+    // THE REBUILD IS OWED, NEVER RUN HERE (architect 2026-10-13):
     // the callback marks the synchronous rebuild owed
     // (GuiPaintHandler::owe_waveform_rebuild, which also declares the
     // rebuild's rect so the frame that pays it is scheduled) and the
     // pre-paint hook runs it ONCE, at its tail (main.cpp) — after the
     // scanner advance and Follow's scroll, either of which may kick, and before
-    // the owed lane check. The 2026-07-26 ruling that every mover takes the
-    // synchronous full rebuild keeps its intent: EVERY FRAME takes one, from
+    // the owed lane check. Every mover takes the synchronous full rebuild
+    // (2026-07-26), once per frame: EVERY FRAME takes one, from
     // the latest state, so no frame paints overlays against a stale plate;
     // the only renders skipped are of states no display ever showed (a
-    // drain's 1.76 touch events per frame on the tablet's pinch, measured
-    // 2026-10-13, each rendered inline before). It is synchronous per frame
+    // drain holds 1.76 touch events per frame on the tablet's pinch,
+    // measured 2026-10-13). It is synchronous per frame
     // on the main thread, NEVER A WORKER: the asynchronous pan fast path
     // stays closed (closed_questions.md). The reclamp below still runs at
     // once, every caller expecting clamped geometry on return.
@@ -287,7 +275,7 @@ struct Viewport {
     // promoted only by on_redraw, so a press resolving against the displayed
     // geometry (displayed_or_live_target_map, item_viewport_basis, the
     // promoted hit rects) reads the same thing either way and needs none.
-    // THREE SITES FLUSH, by inventory 2026-10-13 (every caller class above and
+    // THREE SITES FLUSH (every caller class above and
     // every event-time reader of the rebuild's output examined; no caller
     // reads that output after its own kick in the same event — the drop, the
     // camera moves and the edit tails all read live or displayed state — and
@@ -327,7 +315,7 @@ struct Viewport {
         // AppState::viewport_lattice_origin).
         // The tick backstop (main.cpp) remains cheap belt-and-braces insurance
         // for any future total-changing path that skips this reclamp — with
-        // every edit tail synchronous now, no NAMED asynchronous case drives
+        // every edit tail synchronous, no NAMED asynchronous case drives
         // it, and the one edit that defers its re-land to a gesture's commit
         // (the value drag) is gated out of that backstop for the gesture's
         // life, so it reaches the tick exactly once, here, through this call.
@@ -369,8 +357,8 @@ struct Viewport {
     void refresh_flag_cache() {
         if (refresh_flag_cache_) refresh_flag_cache_();
     }
-    // THE PLAYHEAD'S COLUMN ON THE PLATE BASIS (architect 2026-11-16, the
-    // beats): playhead_pixel_x of the cursor as it stands, on
+    // THE PLAYHEAD'S COLUMN ON THE PLATE BASIS (architect 2026-11-16):
+    // playhead_pixel_x of the cursor as it stands, on
     // GuiPaintHandler::plate_viewport_basis — the column the cursor's line
     // and its ruler head are PAINTED on, which this struct cannot compute
     // (it sees no paint handler; the playheads' damage rule,
@@ -379,8 +367,8 @@ struct Viewport {
     // tow_playhead_to and drag_playhead_to (through reseat_playhead) — each
     // of which widens to the whole area unwired.
     std::function<int()> plate_playhead_column_;
-    // THE SCANNER'S EXACT PLACE ON THE PLATE BASIS (architect 2026-11-16,
-    // send Q): scanner_exact_x of the scanner as it stands, on
+    // THE SCANNER'S EXACT PLACE ON THE PLATE BASIS (architect 2026-11-16):
+    // scanner_exact_x of the scanner as it stands, on
     // GuiPaintHandler::plate_viewport_basis — the place its line is PAINTED
     // at (paint_scanner), which this struct cannot compute for the same
     // reason (it sees no paint handler; the playheads' damage rule,
@@ -391,14 +379,14 @@ struct Viewport {
     // unwired.
     std::function<double()> plate_scanner_x_;
     // THE TOOLTIP'S BOX AS ITS PAINTER WILL LAY IT OUT (architect
-    // 2026-11-16, the beats): GuiPaintHandler::tooltip_box_for_show — the
+    // 2026-11-16): GuiPaintHandler::tooltip_box_for_show — the
     // hull of the standing owner's box, or empty where none would paint —
     // for the show edge's damage (show_tooltip_box, input_pointer.cpp),
     // which cannot size a box whose words only the painter shapes. Wired in
     // main.cpp; unwired, the show falls back to its full-width band.
     std::function<GuiRect()> tooltip_box_for_show_;
-    // THE CARDS AS THE PAINTER WILL LAY THE STACK OUT (architect 2026-11-16,
-    // the beats): GuiPaintHandler::notification_stack_laid_out, for the
+    // THE CARDS AS THE PAINTER WILL LAY THE STACK OUT (architect
+    // 2026-11-16): GuiPaintHandler::notification_stack_laid_out, for the
     // stack's damage owner below (invalidate_notification_stack), which
     // cannot size a card whose sentence only the painter shapes and wraps.
     // Wired in main.cpp; unwired, that owner damages the stack's room.
@@ -413,8 +401,8 @@ struct Viewport {
     // (viewport.cpp). UNCONDITIONAL — a write onto the frame the cursor already
     // holds still ends the act.
     void move_playhead_to(int64_t new_sample);
-    // THE MOVEMENT OWNER AT A DRAG'S CADENCE (architect 2026-11-16, the
-    // beats): move_playhead_to's act whole — the audition's end, the hold
+    // THE MOVEMENT OWNER AT A DRAG'S CADENCE (architect 2026-11-16):
+    // move_playhead_to's act whole — the audition's end, the hold
     // put out, the reseat — with the playhead's own narrow damage where the
     // move scrolled nothing. ONE CALLER, the ruler head's drag
     // (GuiInputHandler::place_playhead_at_click_column); the contract is at
@@ -448,8 +436,8 @@ struct Viewport {
     void translate_playhead_to(int64_t new_sample);
     // THE TOW — the translation's write for THE MARKER DRAG'S PLAYHEAD
     // (marker_drag.cpp, architect 2026-09-24: no scroll under a held hand),
-    // WITH THE PLAYHEAD'S OWN NARROW DAMAGE (architect 2026-11-16, the
-    // beats): the cursor's old and new columns on the plate basis and the
+    // WITH THE PLAYHEAD'S OWN NARROW DAMAGE (architect 2026-11-16): the
+    // cursor's old and new columns on the plate basis and the
     // clock cell, nothing else. A second entry rather than a flag on the
     // translation, the movement owners' convention again; ONE CALLER,
     // MarkerDragOps::apply_drag_motion. The contract is at the definition
@@ -463,12 +451,12 @@ struct Viewport {
     // Strip-drag apply: set the level and place the song anchor (anchor_sample,
     // frames) at anchor_x (its drifted column, window px in fractional pixels) —
     // rather than centering on the playhead the way apply_zoom_change does.
-    // THREE callers (re-derived 2026-11-15): the touch-nav body
+    // THREE callers: the touch-nav body
     // apply_touch_nav_update (which folds its pan into the placement itself —
     // the anchor is the song frame the pan seated, placed at the current
-    // fractional finger centroid, 2026-10-22), the zoom step zoom_step
+    // fractional finger centroid), the zoom step zoom_step
     // (the viewport's centre frame held at the centre column, one final
-    // event per press) and the follow scroll (follow_scanner, send N,
+    // event per press) and the follow scroll (follow_scanner, architect
     // 2026-11-15: the scanner held at the centre at the standing level, a pan
     // frame the play makes, never final). All pre-clamp the level; this
     // places the anchor at
@@ -477,9 +465,8 @@ struct Viewport {
     // exactly. Never touches the playhead or selection. Repaint dispatch: a
     // mid-gesture event (final=false) with the level AND viewport both unchanged
     // after the clamp is a true NO-OP and returns without repainting; a
-    // moved event runs one full synchronous rebuild, whichever axis moved (the
-    // incremental pan fast-path that pan-only frames once used was retired
-    // 2026-07-26). The terminating event (final=true) always runs the one
+    // moved event runs one full synchronous rebuild, whichever axis moved
+    // (a pan-only frame has no incremental fast path). The terminating event (final=true) always runs the one
     // synchronous rebuild plus the predictor resync so the rest state is exact.
     // `lattice` is the chokepoint's lattice rule for the placement (architect
     // 2026-10-31; the rules at AppState::viewport_lattice_origin): the
@@ -489,8 +476,8 @@ struct Viewport {
     void apply_strip_drag_zoom(double new_zoom_level, double anchor_sample,
                                double anchor_x, bool final,
                                ViewportLattice lattice);
-    // THE ZOOM STEP (architect 2026-10-27: bare `=` / `-` and the band's
-    // Zoom In / Zoom Out keys one level, since 2026-11-08 the only step):
+    // THE ZOOM STEP (architect 2026-10-27, 2026-11-08: bare `=` / `-` and
+    // the top icon row's Zoom In / Zoom Out keys one level, the only step):
     // `levels` whole levels from the current
     // one (negative deeper — zoom_step_levels, gui_input.h), saturating at
     // the map's live bounds (zoom_step_level, app_state.h), ZOOMING ABOUT THE
@@ -530,14 +517,14 @@ struct Viewport {
                              std::optional<int64_t> parked_origin);
     void center_viewport_on_playhead();
     // THE NUDGE HOLDS ITS SUBJECT'S COLUMN while the HOLD posture stands
-    // (architect 2026-09-17; chosen by AppState::camera_hold, which an
-    // explicit centring arms, since 2026-09-23 — the Ctrl modifier's choice
-    // for the day before): a step that moved something places the viewport so the playhead it just
+    // (architect 2026-09-17, 2026-09-23; chosen by AppState::camera_hold,
+    // which an explicit centring arms): a step that moved something places the viewport so the playhead it just
     // landed paints at the exact place the subject held before the step,
     // held between the waveform's first and last columns, never changing the
     // zoom. No centring, no lamp, no view term. The prior place is the
     // subject's PAINTED EXACT x (architect 2026-09-24, strictly as painted;
-    // the exact place, not its column, since the no-grid arc, 2026-11-15),
+    // the exact place, not its column: architect 2026-11-15, the no-grid
+    // rule),
     // each caller deriving it on its subject's painted basis — the marker
     // nudge on the item basis its step anchored on, the playhead step on the
     // plate basis the cursor is drawn with, the undo / redo singleton
@@ -554,7 +541,7 @@ struct Viewport {
     // edge. It suspends no follow with its own write
     // (AppState::follow_suspended). Its callers at the definition.
     void follow_scroll_if_needed();
-    // THE FOLLOW SCROLL (architect 2026-11-15, send N, kept on his glass
+    // THE FOLLOW SCROLL (architect 2026-11-15, kept on his glass
     // ("very stable ... even though it's moving"); the rule's one owner at
     // the definition): the picture moves only so that the
     // moving line never passes the waveform area's center — a line left of
@@ -601,23 +588,20 @@ struct Viewport {
 
     // Invalidation.
     //
-    // THE VIEWPORT'S LANES (2026-10-13, ON SCREEN IS AS PAINTED): the rect
-    // runs, at the window's whole width, from the toolbar band's foot
-    // (viewport_lanes_top_y, app_state.h; the tab strip's 2026-10-18 to
-    // 2026-10-22) through the waveform's bottom, and
+    // THE VIEWPORT'S LANES (ON SCREEN IS AS PAINTED): the rect
+    // runs, at the window's whole width, from the top icon row's foot
+    // (viewport_lanes_top_y, app_state.h) through the waveform's bottom, and
     // holds every lane that DRAWS the viewport, the zoom or the cursor — the
-    // view bar (paint_trim: the trim window is the
+    // trim lane (paint_trim: the trim window is the
     // span), the ruler (its ticks and digits, the cursor's head), the marker
     // lane (the cues and their labels), the lane's foot line, and the
     // canvas (the plate, the grid, the center lines, the stems, the
     // playheads, the overlays) — with the floating surfaces over them and
     // the folder overlay's band, which starts at the same row. THE ROWS
-    // ABOVE IT DRAW NONE OF THOSE: the toolbar band and its title bar paint
-    // the legend's battery and clock and the roster's faces (the app's
-    // caption painted the window's state and the project's name too, until
-    // 2026-10-24). Those FACES may be predicates over the view (Zoom to
-    // Fit's reads the zoom level and the viewport start — its plain fork
-    // and, since 2026-10-25, its frame term; constant for 2026-10-24 alone),
+    // ABOVE IT DRAW NONE OF THOSE: the title bar and the top icon row paint
+    // the title bar's battery and clock and the roster's faces. Those FACES
+    // may be predicates over the view (Zoom to Fit's reads the zoom level
+    // and the viewport start — its plain fork and its frame term),
     // and many more move with the acts that
     // reach this rect beside a viewport change (Undo / Redo and Save after
     // an edit, an undo or a load in place), so the rows are not dropped
@@ -628,8 +612,8 @@ struct Viewport {
     // caller of this owner that relied on its rect reaching the window's
     // top is covered by one check rather than by a list.
     void invalidate_waveform_area();
-    // THE STATUS BAR'S DAMAGE FOR THE PROCESS LINE (architect 2026-11-19,
-    // send Z; the bar under the bottom icon row): status_bar_area whole, the bar's own lane. The bar is
+    // THE STATUS BAR'S DAMAGE FOR THE PROCESS LINE (architect 2026-11-19;
+    // the bar under the bottom icon row): status_bar_area whole, the bar's own lane. The bar is
     // STATE — the tick's comparator (refresh_status_bar, main.cpp) holds the
     // composed string against the one last painted and damages this same
     // lane while they differ, so no change of the bar can go stale. These
@@ -660,32 +644,30 @@ struct Viewport {
     // only inside the lane; it covers the clock cell as a superset. NONE
     // while the on-screen keyboard stands over the row (the definition).
     void invalidate_tab_name_area();
-    // THE MODAL'S SURFACE — THE UNIFIED BOTTOM ROW'S LANE (the modal moved
-    // onto the row 2026-08-13, and the row yields to it whole), WITH THE
+    // THE MODAL'S SURFACE — THE BOTTOM ICON ROW'S LANE (the row yields to
+    // a modal whole), WITH THE
     // MODAL FAMILY'S WHOLE AREA while a question's page, the progress page
     // or a line editor's value sub-page stands or was last painted
-    // (2026-10-14, modal_box.h — the box over the canvas column and its
-    // controls row; the definition says why). ITS CALLERS,
-    // re-greped 2026-10-14, are the LINE EDITORS' closers plus the
+    // (modal_box.h — the box over the canvas column and its
+    // controls row; the definition says why). ITS CALLERS
+    // are the LINE EDITORS' closers plus the
     // RENDER PLAYER's three, the player being the row's third owner (A
     // STANDING EDITOR'S EDITS — typing, the completions, the caret blink, a
-    // refusal, the pointer's text drag — take the entry's box alone since
-    // 2026-10-14, invalidate_dialog_editor_box below):
+    // refusal, the pointer's text drag — take the entry's box alone,
+    // invalidate_dialog_editor_box below):
     //
     //   * THE CLOSERS — every commit / abandon that deactivates a line
     //     editor (settings_editor's applied / unchanged / exit_no_commit,
     //     and flag_editor's BPM field commit and exit_bpm_mode), and the settings
     //     editor's prefill, part of its open.
-    //   * THE RENDER PLAYER'S ROW (2026-08-28), which paints into the same
+    //   * THE RENDER PLAYER'S ROW, which paints into the same
     //     lane and damages it through the same owner — TWO sites:
     //     GuiRenderPlayer::damage_row for every transport, highlight and
     //     clock/scrub change (render_player.cpp), and the one stop body's
-    //     player fork for the play/pause face (playback_lifecycle.cpp). (The
-    //     window-activation hook was a third until nothing on the row read
-    //     the window's focus any more, 2026-10-02..03.)
+    //     player fork for the play/pause face (playback_lifecycle.cpp).
     //   * THE PER-TICK COMPARATORS (main.cpp): the player row's enabled-face
-    //     drift, and a standing dialog hint whose words the row's paint has
-    //     recomposed past the ones the box last drew (2026-09-29, below).
+    //     drift, and a standing page tooltip whose words the row's paint has
+    //     recomposed past the ones the box last drew (below).
     //
     // The PROMPTS are deliberately absent: every raise and every answer
     // damages the whole window (prompt.cpp), which is what a surface with no
@@ -695,11 +677,11 @@ struct Viewport {
     // runs between paints still erases what the last frame drew and the
     // row's own tenants come back with it.
     //
-    // A STANDING DIALOG TOOLTIP RIDES THIS DAMAGE (2026-09-29):
+    // A STANDING PAGE TOOLTIP RIDES THIS DAMAGE:
     // a modal button's hint is composed by the row's own paint
     // (paint_modal_dialog publishes it on the stash) and its box hangs OFF
     // the modal's controls row, past this rect — ABOVE ITS BUTTON, the seat
-    // on every surface (architect 2026-11-07, session 90; tooltip_box_rect),
+    // off the top icon row (architect 2026-11-07; tooltip_box_rect),
     // over whatever the row stands under — so a
     // row repaint alone would recompose
     // the words (the Play/Pause face's "Pause" becoming "Play" at a folder's
@@ -732,8 +714,7 @@ struct Viewport {
     // stack (GuiNotifications::notify); the on-screen keyboard's keys and
     // lamps damage their own band.
     // THE OPEN, THE CLOSE, the keyboard's show and hide and every geometry
-    // change keep their whole damage. ITS CALLERS
-    // (re-greped 2026-11-20): TYPING, the on-screen keyboard's LEFT / RIGHT
+    // change keep their whole damage. ITS CALLERS: TYPING, the on-screen keyboard's LEFT / RIGHT
     // (the scroll's road) and the completions — route_modal_editor_key's
     // `repaint` argument from the line editor key handler's three kinds
     // (input_key_dispatch) and the settings editor's completers
@@ -744,16 +725,12 @@ struct Viewport {
     // DRAG — input_pointer's `g.dialog` sites (the glass's caret drag,
     // click-to-caret, the drag's motion and its release).
     void invalidate_dialog_editor_box();
-    // The unified bottom row's CLOCK CELL, and the authoritative inventory of
-    // who wants it
-    // (2026-08-11, when the timestamp moved off the status line and the one
-    // owner split in two — the rects and the split's reasoning are at
-    // clock_invalidate_rect, app_state.h; the 2026-08-12 row unification
-    // merged the two LANES but kept the two CELL owners). MEMBERSHIP IS "THIS ROUTE CHANGES
+    // The bottom icon row's CLOCK CELL, and the authoritative inventory of
+    // who wants it (the rects and the reason the cell has its own owner are
+    // at clock_invalidate_rect, app_state.h). MEMBERSHIP IS "THIS ROUTE CHANGES
     // WHAT THE CLOCK SHOWS" — a write to the playhead or the scanner, the
     // only two values the clock reads, or a flip of WHICH of the two it
-    // reads (the playback edges). The list below is re-derived by grep
-    // rather than inherited, each member with its own reason:
+    // reads (the playback edges). Each member below with its own reason:
     //
     //   CLOCK ALONE —
     //   * Viewport's four CURSOR WRITERS: reseat_playhead_to (the live
@@ -761,12 +738,12 @@ struct Viewport {
     //     are that same write with the audition's end in front of it, so
     //     all three spellings damage this
     //     cell through the one body), translate_playhead_to (the undo/redo
-    //     restore's no-scroll re-land, 2026-09-22), tow_playhead_to (the
-    //     marker drag's no-scroll tow, 2026-09-24) and
+    //     restore's no-scroll re-land), tow_playhead_to (the
+    //     marker drag's no-scroll tow) and
     //     clamp_display_state_to_live_domain's playhead repair.
     //   (Viewport's three ZOOM APPLIERS — apply_zoom_change,
-    //     apply_strip_drag_zoom, apply_zoom_to_start — are NOT members since
-    //     2026-10-13: they move the VIEWPORT AND ZOOM ONLY — none contains a
+    //     apply_strip_drag_zoom, apply_zoom_to_start — are NOT members:
+    //     they move the VIEWPORT AND ZOOM ONLY — none contains a
     //     playhead write or a playhead clamp, and the `c` command's centring
     //     READS the resting cursor without moving it — so they owe the cell
     //     a check instead, owe_clock_check below.)
@@ -790,11 +767,11 @@ struct Viewport {
     //     line yields no damage; never under the on-screen keyboard, every
     //     editor's open stopping play, clock_invalidate_rect's record), the
     //     A/B audition's REST (every tick while a rest
-    //     stands, so the display's idle timer never fires inside the act,
-    //     2026-10-18) and the display keep-alive's brief window after a
+    //     stands, so the display's idle timer never fires inside the act)
+    //     and the display keep-alive's brief window after a
     //     fast Stop (the tick's head, one damage per
     //     GuiPlatform::kDisplayKeepAliveMs). (The resize/total-change
-    //     repair's geometry-moved arm owes the cell a check since 2026-10-13,
+    //     repair's geometry-moved arm owes the cell a check,
     //     like the zoom appliers — owe_clock_check below; the cursor clamp
     //     that CAN move the value damages the clock itself inside
     //     clamp_display_state_to_live_domain.)
@@ -804,13 +781,12 @@ struct Viewport {
     //     it directly; seat_playhead_on_source_frame is the source-to-domain
     //     wrapper feeding it for marker lands, whether through
     //     land_playhead_on_marker / land_playhead_on_domain_frame or
-    //     reseat_playhead_on_marker). (The region sweep's per-motion cursor
-    //     write and the trim commit's park left with 2026-11-07's ruling,
-    //     session 88: no trim writer moves the playhead.)
+    //     reseat_playhead_on_marker). (No trim writer moves the playhead:
+    //     architect 2026-11-07.)
     //
     // ONE ROUTE SPELLS A SECOND SURFACE BESIDE THIS CELL: the A/B tab switch,
     // whose tab name beside the clock takes invalidate_tab_name_area (above),
-    // the bottom row's lane whole, a superset of this cell. Routes that damage the
+    // the bottom icon row's lane whole, a superset of this cell. Routes that damage the
     // WHOLE window (the S/T audio-view toggle's full-window invalidate, the
     // loads, the resize path) cover this cell as a superset and are
     // deliberately unlisted; routes that funnel
@@ -819,7 +795,7 @@ struct Viewport {
     // seat_playhead_on_domain_frame (via seat_playhead_on_source_frame), the nudges through their shared tail)
     // need no row of their own.
     void invalidate_clock_area();
-    // THE CLOCK CELL'S CHECK (2026-10-13), the zoom appliers' clock damage —
+    // THE CLOCK CELL'S CHECK, the zoom appliers' clock damage —
     // apply_zoom_change, apply_strip_drag_zoom and apply_zoom_to_start —
     // and main.cpp's tick repair's geometry-moved arm: each moves the
     // viewport and the zoom and never the playhead or the scanner (the
@@ -837,7 +813,7 @@ struct Viewport {
     // playheads' pixels are plate-registered, and damage follows the basis of
     // the pixels it erases (the rule, and the table of which sites take a
     // narrow shape versus a full-area widening, live at playhead_pixel_x in
-    // app_state.h). TWO CALLERS (re-derived by grep 2026-11-16), the two
+    // app_state.h). TWO CALLERS, the two
     // per-motion cursor writes, each reaching the plate's column through
     // plate_playhead_column_: the marker drag's tow (tow_playhead_to above)
     // and the ruler head's drag (drag_playhead_to, in reseat_playhead's
@@ -846,7 +822,7 @@ struct Viewport {
     // take the scanner's own rect below, and every other playhead write is
     // discrete and widens.
     void invalidate_playhead_columns(int old_px, int new_px);
-    // THE SCANNER'S NARROW DAMAGE (architect 2026-11-16, the beats): the
+    // THE SCANNER'S NARROW DAMAGE (architect 2026-11-16): the
     // scanner's own rect (scanner_invalidate_rect, main.cpp: the hull of its
     // line's span over the canvas's rows, nothing above the canvas) at its
     // old and its new EXACT PLACE, the two united into one rect where they
@@ -858,7 +834,7 @@ struct Viewport {
     // the pixels it erases (the rule and the per-site table at
     // playhead_pixel_x, app_state.h). THE CALLERS ARE EXACTLY THE TWO
     // PER-FRAME SCANNER SITES, THE STANDING SCANNER'S DAMAGE AND THE HOVER
-    // LINE'S DAMAGE BELOW (re-derived by grep 2026-11-21, send FF): main.cpp's
+    // LINE'S DAMAGE BELOW: main.cpp's
     // tick heartbeat (the one place twice) and its pre-paint scanner advance
     // (old, then new), both narrow BY NECESSITY at the frame's cadence and
     // both inside a scope that reaches paint_handler;
@@ -877,7 +853,7 @@ struct Viewport {
     // write is no caller of this: the cursor has a head, and its narrow
     // shape is invalidate_playhead_columns above.
     void invalidate_scanner_line(double old_x, double new_x);
-    // THE WAVEFORM'S HOVER LINE'S DAMAGE (architect 2026-11-21, send FF;
+    // THE WAVEFORM'S HOVER LINE'S DAMAGE (architect 2026-11-21;
     // AppState::HoverLine, the state): the line's cells as last painted and
     // its cells at its new place, each the scanner's rect at that place
     // (scanner_invalidate_rect, main.cpp, the one rect owner: the hull of a
@@ -892,7 +868,7 @@ struct Viewport {
     // ruler is invalidate_hover_triangle's (below).
     void invalidate_hover_line(std::optional<double> old_x,
                                std::optional<double> new_x);
-    // THE HOVER LINE'S TRIANGLE'S DAMAGE (architect 2026-11-21, send GG;
+    // THE HOVER LINE'S TRIANGLE'S DAMAGE (architect 2026-11-21;
     // AppState::HoverLine's triangle pair, the state; render.h's
     // render_hover_line, the rule): the triangle's box as last painted in
     // the ruler and its box at its new place, each the ruler head's painted
@@ -910,30 +886,25 @@ struct Viewport {
     // GuiInputHandler::set_hover_line, where the triangle's place changed.
     void invalidate_hover_triangle(const GuiRect& old_box,
                                    const GuiRect& new_box);
-    // THE STANDING SCANNER'S DAMAGE (architect 2026-11-16, send Q: "number
+    // THE STANDING SCANNER'S DAMAGE (architect 2026-11-16: "number
     // 3, narrowing agree"): the scanner's own rect at its place as it stands
     // — invalidate_scanner_line(x, x), x from plate_scanner_x_, the place the
     // last paint drew it at (the seed's place right after a launch's seed) —
     // and, with the hook unwired, the whole waveform area (the tow's and the
     // ruler head's drag's fallback shape). PRECONDITION: the scanner is
     // active; the caller checks (scanner_exact_x's contract). THREE
-    // CALLERS (re-counted by grep 2026-11-20), GuiPlaybackLifecycle's three
+    // CALLERS, GuiPlaybackLifecycle's three
     // discrete scanner edges: the stop body's teardown (the place before the
     // bit clears), the launch body's success tail (a scanner still standing
     // before the seed, then the seeded place after the camera) and THE
     // CONSOLE'S SEEK, seek_live_session_by (architect 2026-11-20: the place
     // the last paint drew before the publish, then the seeded target).
     void invalidate_standing_scanner();
-    // (There is no stem-column invalidator in this struct, and since row 5 no
-    // selection-driven stem damage either. invalidate_stem_column computed the
-    // old singleton stem's narrow damage on the ITEM basis while the stem
-    // painted on the PLATE basis; that damage was widened to
-    // invalidate_waveform_area in 2026-07-30 and then deleted outright with
-    // Selection's stem subject pair; the selection stem (2026-11-05) rides
-    // the flag cache's selection fingerprint, whose rebuild damages each
-    // stem it moved at the stem's own exact place, on the basis it was laid
-    // out on (maybe_rebuild_flag_cache's tail, 2026-11-16) — run in the
-    // selecting event itself by every Selection mutator's publish,
+    // (There is no stem-column invalidator in this struct: the selection
+    // stem (2026-11-05) rides the flag cache's selection fingerprint, whose
+    // rebuild damages each stem it moved at the stem's own exact place, on
+    // the basis it was laid out on (maybe_rebuild_flag_cache's tail) — run
+    // in the selecting event itself by every Selection mutator's publish,
     // Selection::publish_selection_change.)
     void invalidate_top_strip();
     void invalidate_all();
@@ -942,25 +913,23 @@ struct Viewport {
     // everything the app paints; the pre-paint hook's whole-client damage
     // after a palette install or a gui_scale change is invalidate_all's.)
 
-    // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the shift
-    // tooltip; the Settings dropdown beside it until 2026-10-21): it hangs
-    // outside the strip that owns it — under a top icon row key's face, over
-    // the well's top lanes, or above any other owner's face (tooltip_box_rect)
-    // — so
-    // invalidate_top_strip alone would leave its overhang stale. The
+    // Damage ONE arbitrary rect. The FLOATING SURFACE's entry (the
+    // tooltip): it hangs outside the strip that owns it — under a top icon
+    // row key's face, over the lanes under it, or above any other owner's
+    // face (tooltip_box_rect) — so invalidate_top_strip alone would leave
+    // its overhang stale. The
     // hide edge damages the surface's own published rect, as painted, and
     // the show edge the rect its painter will lay the box out on
-    // (tooltip_box_for_show_; architect 2026-11-16, the beats) — the box and
-    // nothing else, in either case; the words comparators and a standing
-    // dialog's damage keep the room every seat of the box lies in
-    // (tooltip_damage_band). Since row 8 (2026-08-11) it is
-    // also the BOTTOM ROW'S button-face damage entry: the transport/arrow
-    // faces live in the bottom strip, so every face writer's damage fork
-    // passes bottom_row_area here where the top rows call
+    // (tooltip_box_for_show_; architect 2026-11-16) — the box and
+    // nothing else, in either case; the words comparators keep the room
+    // every seat of the box lies in (tooltip_damage_band). It is
+    // also THE BOTTOM ICON ROW'S key-face damage entry: those faces live in
+    // the bottom strip, so every face writer's damage fork passes
+    // bottom_row_area here where the top icon row calls
     // invalidate_top_strip. A zero/negative rect is a no-op.
     void invalidate_rect(const GuiRect& r);
-    // THE NOTIFICATION STACK'S DAMAGE (2026-08-29) — THE CARDS A CHANGE
-    // CHANGED (architect 2026-11-16, the beats: the card's own rect, appear
+    // THE NOTIFICATION STACK'S DAMAGE — THE CARDS A CHANGE
+    // CHANGED (architect 2026-11-16: the card's own rect, appear
     // / dismiss / expire, not the stack's whole room): called AFTER the
     // stack is changed, it holds the cards as last painted
     // (AppState::Notifications::painted — every stack change damages what
@@ -976,27 +945,19 @@ struct Viewport {
     // moves nothing visible damages nothing. THE ROOM
     // (notification_stack_bound, notifications.h) stays the answer where
     // the layout hook is unwired, and the painter's clip.
-    // ITS CALLERS, re-derived by grep 2026-10-01, are GuiNotifications' four
-    // stack changes and nothing else: notify (a push), dismiss (a card's
-    // lift), dismiss_all (a held lift) and
-    // fire_if_due (an expiry). The hover paints nothing since the card's X
-    // retired (2026-10-01) and damages nothing, and the painter publishes the
-    // rects it drew rather than damaging anything.
+    // ITS CALLERS are GuiNotifications' stack changes and nothing else:
+    // notify (a push), dismiss (a card's lift), dismiss_all (a held lift),
+    // fire_if_due (an expiry) and sync_struck_card (the struck card's drop
+    // or re-wording). A card's hover paints nothing and damages nothing, and
+    // the painter publishes the rects it drew rather than damaging anything.
     void invalidate_notification_stack();
 
-    // THE MARKER HOVER IS GONE (row 5, 2026-08-01). clear_hover_popup and
-    // recompute_hover_at_cursor lived here — one clear reachable from every
-    // mutation path, one recompute the motion handler and every viewport
-    // mutator called — and both died with the marker-text lane they served
-    // (the spell-out popup, the lane's one-run fallback tier, and the
-    // pass/ref readout's hover arm). Nothing replaced THEM: a marker's value
-    // is written on its flag, and no viewport-side hover state exists to keep
-    // in sync. ONE MARKER HOVER SURFACE STANDS SINCE 2026-11-09 (session 100,
-    // 00a87821), and it is not the viewport's: with TIPS lit an eligible
-    // cue's resolved value — or, since 2026-11-17 (send U), a cut label's
-    // whole flag line — hangs in the roster's tooltip box, targeted by the
+    // NO MARKER HOVER STATE IS THE VIEWPORT'S: a marker's value is written on
+    // its flag, and the one marker tooltip (architect 2026-11-09, 2026-11-17)
+    // — with TIPS lit an eligible cue's resolved value, or a cut label's
+    // whole flag line, in the roster's tooltip box — is targeted by the
     // roster's hover walk (recompute_redesign_button_hover,
-    // input_pointer.cpp) and published and ended through
-    // AppState::RedesignTooltip's Surface::Marker, painted by
-    // paint_shift_tooltip — that model's owners, not a revival of these.
+    // input_pointer.cpp), published and ended through
+    // AppState::RedesignTooltip's Surface::Marker and painted by
+    // paint_shift_tooltip; those are its owners.
 };

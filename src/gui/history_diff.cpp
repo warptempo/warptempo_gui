@@ -83,9 +83,9 @@ constexpr std::string_view kProjectsPrefix = "projects/";
 // answers where the piece lives, and the strict load gate is what then refuses
 // a partial commit, at walk entry and at the `'` act alike. THE MATCH READS
 // THE THREE MEMBERS OF THE SET AND NO OTHER NAME: a commit that also carries
-// a `.magnificationlevelmarkers` (the set was four from 2026-09-15 until that
-// column's deletion) is matched, listed and loaded on its three, that file
-// never read — the eligibility paragraph at history_diff.h's head.
+// a `.magnificationlevelmarkers` (a column the app does not have) is
+// matched, listed and loaded on its three, that file never read — the
+// eligibility paragraph at history_diff.h's head.
 
 // Pathological-input guards for the line diff. The real files are tens to
 // a few hundred lines, so both are unreachable in practice; they exist so a
@@ -100,9 +100,8 @@ constexpr std::size_t kMaxDiffCells = 16u * 1024u * 1024u;
 // The one settings key this mode displays (GuiHistoryCommitDelta's scale
 // pair). It is read out of the engine block (engine_block_of, below), which
 // matches a line's WHOLE KEY, never a substring: a key ENDING in `scale` would
-// contain this text without being this key, and until 2026-08-27 the sidecar
-// shipped exactly such a key (`gui_scale=100`, which moved to the per-device
-// config that day). The rule outlives its one demonstration.
+// contain this text without being this key — `gui_scale=100`, which older
+// commits' sidecars carry (the per-device config owns it, 2026-08-27).
 constexpr std::string_view kScaleKey = "scale";
 
 // ---------------------------------------------------------------------------
@@ -389,8 +388,8 @@ void pair_changes_by_frame(std::vector<Entry>&  removed,
 // source's three sidecars, wherever under that folder it sits. So a piece's
 // directory may be renamed or nested with no era knowledge to keep current,
 // while a sidecar name that happens to occur elsewhere in the tree — an
-// unrelated copy, a pre-`projects/` era — can no longer make the match
-// ambiguous or drag legacy commits into the walk.
+// unrelated copy, a pre-`projects/` era — cannot make the match ambiguous
+// or drag foreign commits into the walk.
 
 // THE PIECE'S SIDECAR, ONE PREDICATE: a committed path UNDER `projects/`
 // (at any depth, directly inside it included) whose BASENAME is
@@ -771,16 +770,14 @@ GuiHistoryTouchedDirs touched_directories_of_commit(const GuiGitRepo&  repo,
 }
 
 // THE RULE IS THE DIRECTORY THIS COMMIT TOUCHED, AND THERE IS NO OTHER RULE
-// (2026-08-09). It superseded "the session's own directory first", which
-// preferred the session's folder whenever the commit's TREE carried the base
-// name there — which it almost always does, the act never deleting a folder the
-// piece has moved out of, so containment answered about folders the commit
-// never changed: a checkpoint made from a BACKUP copy displayed the ORIGINAL
-// folder's unchanged blobs as its own state, and after a rename the pre-rename
-// era's commits carried two candidates and hid as ambiguous. A containment
-// FALLBACK for "no touch evidence" went the same day, having laundered silence
-// into success: a commit that touched only unrelated files, or a read that
-// failed, fell back, found the session's folder in the tree and loaded a
+// (2026-08-09). Containment — the session's folder whenever the commit's
+// TREE carries the base name there — would answer about folders the commit
+// never changed, the act never deleting a folder the piece has moved out of:
+// a checkpoint made from a BACKUP copy would display the ORIGINAL folder's
+// unchanged blobs as its own state, and after a rename the pre-rename
+// commits would carry two candidates. Nor is there a containment FALLBACK for
+// "no touch evidence": it would launder silence into success, loading for a
+// commit that touched only unrelated files, or a read that failed, a
 // snapshot the commit is not about.
 //
 // SO THE EVIDENCE RULES ARE EXHAUSTIVE AND THERE ARE THREE:
@@ -791,9 +788,9 @@ GuiHistoryTouchedDirs touched_directories_of_commit(const GuiGitRepo&  repo,
 //   NONE           — NOT AN ANSWER, whatever produced it (the reader's comment
 //                    owns the producers). Same hide, same refusal, one message.
 //
-// The chosen folder's blobs are then read from THIS COMMIT'S OWN TREE, which is
-// what replaces knowing the era's directory name: one tree listing per commit,
-// all three extensions picked out of it.
+// The chosen folder's blobs are then read from THIS COMMIT'S OWN TREE, so no
+// era's directory name is ever needed: one tree listing per commit, all three
+// extensions picked out of it.
 GuiHistoryCommitPaths resolve_commit_paths(const GuiGitRepo&  repo,
                                            const std::string& sha,
                                            const std::string& base_name) {
@@ -1350,10 +1347,7 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // resolve_repo_root_for_source's alike: each is consumed ONLY appended
     // ("History is unavailable: <reason>", the one entry owner's card and its
     // stderr twin), and an appended reason does not start a second sentence
-    // (notifications.h's card section states the rule). Eleven of them were
-    // capitalized until 2026-09-01, when the one that already agreed —
-    // `git named '…' as the clone holding '…', which is not a directory` —
-    // turned out to be the sibling in the right, and the family moved to it.
+    // (notifications.h's card section states the rule; 2026-09-01).
     auto unavailable = [&h](GuiFailure why, bool read_failed = false) {
         h.ok = false;
         h.read_failed = read_failed;
@@ -1426,13 +1420,9 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // (architect 2026-08-09). A piece lives in its own folder under the clone's
     // `projects/` with its source inside it, so the folder holding the source is
     // the folder the checkpoints belong in — there is nothing to match, nothing
-    // to synthesize and nothing to disambiguate. It replaced a three-arm
-    // precedence (a committed tip-tree match, then this, then a synthesized
-    // `projects/<base name>`) the same day it was written: the law says in one
-    // sentence what the arms said in three, and the arms' apparatus went with
-    // them — the tip-tree listing, the sole-directory judgment and its ambiguity
-    // refusal, and the act's directory creation, the remaining folder existing
-    // by construction because the source is in it.
+    // to synthesize and nothing to disambiguate, and the act creates no
+    // directory, the folder existing by construction because the source is
+    // in it.
     //
     // A SOURCE OUTSIDE THAT TREE REFUSES THE VIEW, and the message names the fix
     // because the fix is a file move: this is the corpus's own layout, not a
@@ -1440,9 +1430,8 @@ GuiHistoryWalkHeader resolve_history_walk_header(
     // A SOURCE IS UNAFFECTED — this refusal is the history view's alone, and any
     // file anywhere still opens, edits, renders and saves.
     //
-    // CONTINUITY RIDES THE BASENAME, NOT THE FOLDER, which is what the deleted
-    // committed-match arm used to be the answer to: the walk keeps every commit
-    // that touched a file by that name ANYWHERE under `projects/`
+    // CONTINUITY RIDES THE BASENAME, NOT THE FOLDER: the walk keeps every
+    // commit that touched a file by that name ANYWHERE under `projects/`
     // (is_piece_sidecar_path), so a piece's history follows it, and a folder
     // renamed, re-nested or created fresh today still walks back through every
     // checkpoint the piece ever had. The folder decides where the NEXT
@@ -1497,8 +1486,8 @@ void scan_history_walk(
     // The header's project_directory is deliberately not copied here: the scan
     // needs the base NAME (the walk's predicate and the load gate) and nothing
     // about where the piece currently lives, each candidate's own touched directory
-    // being what resolves its blobs since 2026-08-09. The header still carries
-    // it for the checkpoint act, which writes there.
+    // being what resolves its blobs (2026-08-09). The header carries it for
+    // the checkpoint act, which writes there.
     on_header(std::move(header));
     if (!ok) {
         // A run whose header refuses is FINISHED, not merely stopped: the DONE
@@ -1526,7 +1515,7 @@ void scan_history_walk(
     // reachable from HEAD that changed a path is_piece_sidecar_path takes — the
     // basename at any depth under that folder, directly inside it included — so
     // a commit that renamed or re-nested the piece's directory is followed with
-    // no knowledge of what it used to be called, which is the whole point of
+    // no knowledge of the directory's other names, which is the whole point of
     // matching by name; what the folder term adds is that a same-named file
     // OUTSIDE the corpus cannot pull commits into the walk that carry no
     // checkpoint of this piece at all. The per-commit touched-directory read
@@ -1739,10 +1728,9 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // together.
     //
     // THE COUNTED EXPLANATION IS THE PREFETCH'S, at its DONE and in one place
-    // (history_prefetch.cpp): the two message strings that stood here died with
-    // the refusal rather than becoming informational prints beside it.
+    // (history_prefetch.cpp): this body prints none.
 
-    // (THE NOW SIDE IS CAPTURED AT THE HEAD OF THIS BODY since 2026-09-04, the
+    // (THE NOW SIDE IS CAPTURED AT THE HEAD OF THIS BODY, 2026-09-04, the
     // local fallback needing it on the refusing path too. Every delta this
     // session hands out is measured against those exact bytes. The delta caches
     // are NOT sized here — membership grows during a visit, so delta_at grows
@@ -1798,11 +1786,11 @@ GuiHistoryCommitDelta compute_commit_delta(
     // at init (that is what walk membership means) and the now side is the
     // writers' own output, so the extraction's boolean below is the parse's
     // own optional shape, not a leniency arm — there is no unparseable line
-    // to drop and no counter for one (both died with the gate, 2026-08-04).
+    // to drop and no counter for one (2026-08-04).
     // Each entry's disable bit is its line's own local '#' byte (`disabled`),
     // the revert's and the label's `#` (history_diff_label, architect
-    // 2026-11-11, session 107); the chip no longer reads it (architect
-    // 2026-11-11, session 106: the history's styles are its own).
+    // 2026-11-11); the chip does not read it (architect 2026-11-11: the
+    // history's styles are its own).
 
     // EVERY ENTRY CARRIES ITS ROW WITHIN ITS FRAME'S RUN (2026-09-16): each
     // side's ordinals are taken once over the side's whole line list through
@@ -1863,7 +1851,7 @@ GuiHistoryCommitDelta compute_commit_delta(
     }
 
     // THE ONE PAIRING (GuiHistoryWarpChange owns the rule; architect
-    // 2026-11-11, session 106): a removal and an addition at one frame are one
+    // 2026-11-11): a removal and an addition at one frame are one
     // change; a line moved to another frame stays a removal at its old frame
     // and an addition at its new one, two items.
     const auto warp_make =
@@ -1944,8 +1932,8 @@ const GuiHistoryCommitDelta* GuiHistoryDiff::delta_at(
         return &*slots[index];
     }
 
-    // ITERATIVE COMPARES FORWARD, TOWARD NOW (architect 2026-08-05, superseding
-    // the walk-parent pairing of earlier the same day): THEN is the viewed
+    // ITERATIVE COMPARES FORWARD, TOWARD NOW (architect 2026-08-05): THEN is
+    // the viewed
     // checkpoint and NOW is THE NEXT-NEWER ITEM, so the delta is what happened
     // AFTER this checkpoint, one step at a time.
     //
@@ -2015,30 +2003,22 @@ void GuiHistoryLocalWalk::init(const AppState&          app,
 // undo_stack[U + R - k], whose snapshots are the state BEFORE the event that
 // entry records.
 //
-// THE PAST ARM INDEXES FROM THE BOTTOM, WHICH IS WHY A PUSH COULD NOT MOVE A
-// MEMBER — a property that mattered while the frozen-timeline premise had one
-// hole, the admitted S->T VIEW SWITCH's iteration-bracket push. THAT HOLE IS
-// CLOSED AT ITS SOURCE (2026-08-07): iteration mode is TARGET-LEGAL, so the S->T
-// edge wipes nothing and writes no store, and `i` is not on the mode's keyboard
-// allowlist, so the bit cannot move in here either. NO ROUTE PUSHES, POPS OR
-// EVICTS ON EITHER STACK while the view stands, so the premise is EXCEPTIONLESS
-// BY CONSTRUCTION and stands on that derivation alone. The bottom-indexing stays
-// what it always was — the shape that keeps an append harmless if one ever
-// returns.
+// THE FROZEN-TIMELINE PREMISE IS EXCEPTIONLESS BY CONSTRUCTION (2026-08-07):
+// NO ROUTE PUSHES, POPS OR EVICTS ON EITHER STACK while the view stands —
+// iteration mode is TARGET-LEGAL, so the S->T edge wipes nothing and writes
+// no store, and `i` is not on the mode's keyboard allowlist, so the bit
+// cannot move in here either. THE PAST ARM INDEXES FROM THE BOTTOM, the shape
+// that would keep an append harmless besides.
 //
 // THE TWO SIZE TERMS IN member_readable ARE BOUNDS PRECONDITIONS on the
-// subscript this function is about to perform, and they predate all of that: a
-// stack shorter than its captured size answers NOTHING AT ALL (a blank lane)
-// rather than being read at indices that now mean other events. BOTH are tested
-// whichever arm the index takes, because the count that bounds the index is
-// built from both.
+// subscript this function is about to perform: a stack shorter than its
+// captured size answers NOTHING AT ALL (a blank lane) rather than being read
+// at indices that would mean other events. BOTH are tested whichever arm the
+// index takes, because the count that bounds the index is built from both.
 //
-// (A PUSH SERIAL — a per-entry identity the walk captured at init and re-checked
-// here, written for the kCap-EVICTION shape the admitted push could reach, where
-// the bottom entry goes and every position slides down one while the size holds
-// — lived for one day of that same date and was DELETED by the architect once
-// that producer went: a producer-less mechanism rather than a granularity change,
-// in a feature-complete project. Do not re-propose it.)
+// NO PUSH SERIAL (a per-entry identity captured at init and re-checked here)
+// is kept: no producer can evict under a live visit, so it would be a
+// producer-less mechanism (architect 2026-08-07; do not re-propose it).
 bool GuiHistoryLocalWalk::member_readable(std::size_t index) const {
     if (app_ == nullptr || index >= count_) return false;
     if (app_->history.undo_stack.size() < undo_count_) return false;
@@ -2273,9 +2253,9 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 //
 // THE RULING: SANCTIONED USE IS STRICT-EXACT INTENDED USE, AND ANYTHING ELSE
 // THROWS AN ERROR THAT IS FIXED IN THE TERMINAL, OUTSIDE THE GUI (architect
-// 2026-08-09, superseding the graded machinery of 2026-08-04..09 whole: the
-// attribution walk, the retry family, the subject selector, the byte gates and
-// the witness grading are all deleted). The projects repository is the app's
+// 2026-08-09: no graded machinery — no attribution walk, no retry family, no
+// subject selector, no byte gates, no witness grading). The projects
+// repository is the app's
 // alone (the code lives in its own repository, architect 2026-09-27), the
 // corpus is app-written and its history is linear — nothing this act does
 // creates a merge — so the act stops distinguishing deviation cases and stops
@@ -2329,17 +2309,16 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // THE ONE ACCEPTED IMPRECISION, recorded rather than worked around: a PUSH that
 // fails at the time bound (git_repo.cpp's kServerTimeoutMs) after the server
 // had taken it is reported CommittedNotPushed although it landed — the next
-// check or act is the correction, finding the branch no longer ahead. A REMOTE
+// check or act is the correction, finding the branch not ahead. A REMOTE
 // THAT MOVED IN THE SECONDS SINCE THE ACT'S OWN FETCH (a checkpoint pushed from
 // another device) refuses the push as non-fast-forward, CommittedNotPushed
 // too — the accepted window; the next check reads Diverged. A FAILED PUSH IS
-// RETRIED IN THE APP (architect 2026-09-27, superseding "never by an in-app
-// retry" of 2026-08-09): the status reads Ahead, and the publish chord
+// RETRIED IN THE APP (architect 2026-09-27): the status reads Ahead, and the
+// publish chord
 // (the `h` view's Save key) runs this act again, whose clean-but-owing arm
 // pushes the branch. OUT-OF-APP
 // GIT UNDER projects/ is unsanctioned use: a commit racing this act may yield
-// a blunt error rather than a graded diagnosis (git and closed_questions.md
-// carry the history of what this replaced).
+// a blunt error rather than a graded diagnosis.
 //
 // THE PROJECTS-HOME GUARD STAYS, and it is not an outcome observation — it is
 // the FENCE that keeps a checkpoint from publishing to the wrong place. It runs
@@ -2379,7 +2358,7 @@ std::string history_checkpoint_title(const std::string& project_directory) {
 // window, a server-side rejection, the time bound.
 //
 // `title` IS THE COMMIT MESSAGE and the caller's (history_checkpoint_title's
-// default, the only title since 2026-10-10). Nothing matches on it, so it is
+// default, the only title, 2026-10-10). Nothing matches on it, so it is
 // written and never read back.
 //
 // IT CREATES NO DIRECTORY, AND NEEDS NONE: `project_directory` is the folder the
@@ -2507,9 +2486,9 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
     // (2) THE BYTES. Through the same atomic writer a Ctrl+S uses — tmp, fsync,
     // rename — so a checkpoint is never half-written, into a directory that
     // exists because the source is in it. THESE THREE PATHS ARE THE ONES THE
-    // PRELUDE SAVE JUST WROTE, always and no longer only in one workflow: the
+    // PRELUDE SAVE JUST WROTE, always: the
     // sidecars sit beside the source and the checkpoint sits in the source's own
-    // folder, so the coincident double write is now the ONLY case — the same
+    // folder, so the coincident double write is the ONLY case — the same
     // bytes through two atomic renames, deliberately not deduped, and race-free
     // because every other save is locked out for the act's duration (the act's
     // head and GuiSaveOps::save's in-flight arm own that reasoning).
@@ -2683,7 +2662,7 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
         return GuiGitHubStatus::Offline;
     case GuiGitFetch::LocalFailed:
         // THIS CLONE FAILED THE FETCH, not the network: no reading, and no
-        // new word — row 8 shows none, stderr says why.
+        // new word — the status bar shows none, stderr says why.
         std::fprintf(stderr,
                      "warptempo_gui: GitHub not checked: the fetch failed in "
                      "this clone: %s\n",

@@ -97,7 +97,7 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
     s.view_zoom_level = app.zoom_level;
     if (app.active_audio_view == 'T') {
         // Already target-axis: take the live values verbatim. A SWEEP CELL
-        // REACHES THIS ARM, and since 2026-09-13 ONLY THIS ARM (grid
+        // REACHES THIS ARM, and ONLY THIS ARM (grid
         // iterations lives in target view alone,
         // AppState::iteration_mode_enabled), and it diverges here — the
         // cell's own per-cell markers describe a different map than the live
@@ -112,8 +112,8 @@ AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
         // on-screen playhead with its screen column preserved. At dispatch
         // the live stores equal the request's stores for plain dispatches,
         // so the live map IS the entry's axis (a sweep cell, which rewrites
-        // markers per cell, never reaches this arm since 2026-09-13, the mode
-        // living in target view alone). If the live map cannot build (tripwire-class only),
+        // markers per cell, never reaches this arm, the mode living in target
+        // view alone). If the live map cannot build (tripwire-class only),
         // fall back to the untranslated live values: the writer clamp keeps
         // them in-domain, and such a dispatch would surface the worker's own
         // resolve->build stderr refusal.
@@ -266,21 +266,18 @@ void GuiInputHandler::park_render_status(std::string text) {
     // it arms the message that render will show if — and only if — the worker
     // reports crossing into synthesis.
     //
-    // NO RETRACTION ARM HERE, AND NOTHING TO RETRACT. One existed while the
-    // sweeps parked their cells through this body: a cell that had synthesized
-    // left its "Rendering 3 of 8" promoted in the slot, and the next cell's
-    // park took it down so a stale count could not sit through the byte-copy
-    // cells that followed. The sweeps write their line into the slot directly
-    // now (dispatch_next_batch_entry says why), so THE SOLE CALLER IS THE
+    // NO RETRACTION ARM HERE, AND NOTHING TO RETRACT. The sweeps park
+    // nothing: they write their line into the slot directly
+    // (dispatch_next_batch_entry says why), so THE SOLE CALLER IS THE
     // SINGLE ARCHIVAL RENDER, and it can never arrive here over a message of
     // its own: every road to a dispatch — the two chords, and the worker-idle
     // pump behind a killed render — runs only with the worker idle, the worker
     // goes idle only inside the completion event that invokes the session's
     // on_done on the GUI thread, and every terminal branch of every archival
     // session passes through finalize_render_run, which clears the slot and
-    // status_promoted_ with it. So the arm had exactly one producer, that
-    // producer is gone, and the arm goes with it rather than standing as a
-    // condition nothing can raise.
+    // status_promoted_ with it. So no message of a previous run can stand in
+    // the slot here, and a retraction would answer a condition nothing can
+    // raise.
     //
     // BEFORE THE DISPATCH BY CONSTRUCTION (the caller parks, then dispatches):
     // this reset is what stops a PREVIOUS session's fired signal from promoting
@@ -290,8 +287,8 @@ void GuiInputHandler::park_render_status(std::string text) {
 }
 
 void GuiInputHandler::tick_promote_render_status() {
-    // THE SINGLE ARCHIVAL RENDER'S MESSAGE, and nobody else's, since the sweeps
-    // stopped parking (dispatch_next_batch_entry): a batch cell's line is state
+    // THE SINGLE ARCHIVAL RENDER'S MESSAGE, and nobody else's, the sweeps
+    // parking nothing (dispatch_next_batch_entry): a batch cell's line is state
     // written straight into the slot, so nothing on this road runs for one.
     //
     // THE TICK IS THE OBSERVER because the event being watched happens on the
@@ -345,23 +342,19 @@ void GuiInputHandler::tick_promote_render_status() {
     viewport.invalidate_status_bar_area();
 }
 
-// THE FIELD REPORT OF 2026-08-13 AND WHAT IT ACTUALLY WAS, recorded here
-// because this is the site the answer lives at. The architect reported that
-// "Rendering..." and "Updating..." had stopped appearing since the 2026-08-12
-// relayout, and the chain was moved into the tab row that day. THE MOVE FIXED
-// NO DEFECT, and must not be credited with one: the whole path was re-traced
-// against the shipped tree — the writers, this promotion, the damage owner's
-// rect (a 774px live span at 1920x1080), the painter's own exposure gate, the
-// degenerate-span guard and the frame-class gating — and every link was sound.
-// Three facts explain the report, none of them a bug:
+// WHY "Rendering..." OR "Updating..." CAN SHOW NOTHING, recorded here
+// because this is the site the answer lives at. The whole path — the
+// writers, this promotion, the damage owner's rect, the painter's own
+// exposure gate, the degenerate-span guard and the frame-class gating — is
+// sound; three facts explain a label that never shows, none of them a bug:
 //   * THE RUNG SILENCE IS THE 2026-08-08 RULING ITSELF. do_render's three
 //     reuse rungs all return ABOVE the synthesis_started store, so a SINGLE
 //     archival render served by an up-to-date artifact, a project-artifact byte
 //     copy or a render-cache publish shows NOTHING — which is the point of
 //     parking the message. Re-rendering an unchanged recipe is exactly that
-//     case. (A SWEEP'S CELLS ARE NO LONGER IN THIS CLASS: a batch's line is
+//     case. (A SWEEP'S CELLS ARE NOT IN THIS CLASS: a batch's line is
 //     state and stands across the whole run, rung-served cells included —
-//     dispatch_next_batch_entry, 2026-09-11.)
+//     dispatch_next_batch_entry.)
 //   * THE PREVIEW HAS THE SAME SHAPE: stamp_updating fires only on the
 //     synthesis miss and on trigger()'s busy branch, so a preview resolved on
 //     either synchronous rung (undo/redo A->B->A, an S->T entry with a current
@@ -370,12 +363,9 @@ void GuiInputHandler::tick_promote_render_status() {
 //     completion clear are both GUI-thread and nothing forces a paint between
 //     them; the run HOLD covers repeat runs only, by design (the timeline at
 //     GuiTargetRender::stamp_updating states the ~40ms single-tap lifetime).
-// What the relayout DID change is where a shown label lands: the chain went
-// from the bottom-LEFT lead-in to the gutter between the clock and the arrows.
-// The 2026-08-13 move to the tab row's top right addressed that and nothing
-// else. THE LABEL STANDS IN THE STATUS BAR under the bottom icon row
-// (architect 2026-11-19, send Z; status_bar_text, paint_handler.cpp), and
-// the three causes above are untouched by every one of the moves.
+// THE LABEL STANDS IN THE STATUS BAR under the bottom icon row (architect
+// 2026-11-19; status_bar_text, paint_handler.cpp); where it stands changes
+// none of the three causes above.
 
 void GuiInputHandler::maybe_reestablish_target_buffer() {
     if (app.active_audio_view == 'T' &&
@@ -546,17 +536,17 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 }
                 // THE FAILURE'S CARD (architect 2026-09-02): a background act
                 // the user was not watching finishing badly is an EVENT
-                // (notifications.h), and until now a failed archival render
-                // cleared the state cell to the same blank a rung-served
-                // success shows. The reason is do_render's own composition,
+                // (notifications.h), never the blank a rung-served success
+                // leaves in the state cell. The reason is do_render's own
+                // composition,
                 // ITS DISPLAY CLAUSE (GuiFailure, failure.h — the worker
                 // printed the diagnostic with the full paths on its `Render
                 // error:` line; this thread raises the clause whose paths are
-                // named the project's way, so the card no longer ends
+                // named the project's way, so the card never ends
                 // mid-path on his titles), appended under the appended-reason
                 // rule — lowercased initial through the one composer, the
                 // system's words left as they arrive. A Failed return with no
-                // composed reason (there is no such site today) says the bare
+                // composed reason (no site produces one) says the bare
                 // sentence rather than a dangling colon. BOTH ARMS CARD: the
                 // deliverable's failure and the miscellaneous cell's alike,
                 // each an explicit command of his that produced nothing.
@@ -598,7 +588,7 @@ bool GuiInputHandler::dispatch_pending_archival_command() {
     if (cmd.single) {
         if (cmd.miscellaneous) {
             // Late-bind the output cell now that the worker is idle — the
-            // killed render can no longer be mid-publication, so this scan is
+            // killed render cannot be mid-publication, so this scan is
             // exact (see allocate_miscellaneous_cell). A creation failure
             // drops the command (stderr already printed) and reports false so
             // the caller's own pending target preview still gets the idle beat.
@@ -741,11 +731,9 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // Batch terminates if Esc was pressed since the last dispatch OR if
     // we ran out of entries. Either way: log a summary and clean up.
     // A FINISHED SWEEP OPENS THE RENDER PLAYER ON ITS FOLDER (architect
-    // 2026-10-14, reversing 2026-09-15's "a finished sweep opens nothing":
-    // an asynchronous modal would have interrupted whatever the user was
-    // doing, and the batch is not asynchronous any more — THE PROGRESS MODAL
-    // opens at the Render press and stands until this terminal, so the
-    // player's arrival interrupts nothing). THREE TERMINALS, the modal's three
+    // 2026-10-14): THE PROGRESS PAGE opens at the Render press and stands
+    // until this terminal, so the player's arrival interrupts nothing.
+    // THREE TERMINALS, the modal's three
     // ends (AppState::BatchProgress): COMPLETE — every counted cell rendered —
     // swaps the modal for the player; CANCELLED closes it; SHORT — fewer cells
     // than counted, the failure road's card below — closes it.
@@ -769,17 +757,17 @@ void GuiInputHandler::dispatch_next_batch_entry() {
             // gone by then either way. A COMPLETE sweep says nothing (a
             // render's completion is not notified), and a CANCELLED one says
             // nothing either: the cancel is his deliberate act, and the
-            // progress modal closing as the cancel lands is its answer
-            // (2026-10-14; the state cell going blank was until then) — the
-            // sweep's line stands from its first cell's dispatch until this
-            // terminal, whichever branch reaches it, and this clear
+            // progress page closing as the cancel lands is its answer
+            // (2026-10-14) — the sweep's line stands from its first cell's
+            // dispatch until this terminal, whichever branch reaches it, and
+            // this clear
             // (finalize_render_run, just below) is the one that takes it down.
             // WHAT M COUNTS IS DISPATCHED CELLS (recorded 2026-09-02):
             // `batch_.reqs` holds the cells the BUILD produced, and a cell the
             // build itself rejected (compute_base_tempo_scale or
             // bpm_cell_warp_markers refusing, one stderr "Rejected cell" line)
             // never entered the vector — so it is outside M rather than a
-            // shortfall inside it. Today that is a backstop only: the flag
+            // shortfall inside it. That is a backstop only: the flag
             // editor pre-validates both bracket ends, so a rejection here
             // means an authored state the editor would not have committed.
             if (batch_.rendered < total) {
@@ -842,12 +830,11 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // the label reading as the plural noun the two numerals count rather than
     // as a category in a trailing parenthetical ("Rendering 3 of 8 (BPM)...",
     // which said neither what the 8 were nor what the render was doing to
-    // them). BOTH LABELS ARE THE TWO COMMANDS' OWN WORDS since the 2026-08-31
-    // rebrand: the counted noun IS the command's name, so
+    // them). BOTH LABELS ARE THE TWO COMMANDS' OWN WORDS (the architect's
+    // naming, 2026-08-31): the counted noun IS the command's name, so
     // the progress line and the control the user pressed say the same thing.
-    // The vocabulary's owner was the menu rows until 2026-09-04 and is the two
-    // ICON-ROW TOOLTIPS since, that menu having been deleted and its commands
-    // sent back to the row (redesign_button_tooltip, app_state.h). THE
+    // The vocabulary's owner is the two TOP ICON ROW TOOLTIPS
+    // (redesign_button_tooltip, app_state.h). THE
     // WORDS ARE SHARED, THE CASE IS EACH SURFACE'S — the names are Title Case
     // ("Grid Iterations" / "BPM Iterations", a control's NAME) and this line, a
     // card and a stderr tag, stays
@@ -858,7 +845,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // ("warptempo_gui: grid iterations: Rendered 3 of 8 entries") — the same
     // words read as a tag there, which is what lets the two surfaces keep one
     // string.
-    // THE CASE RULE, unchanged by the rewording and no exception to anything:
+    // THE CASE RULE, no exception to anything:
     // "BPM" is an acronym and so capitalizes everywhere (architect
     // 2026-08-02), while "iterations" falls mid-sentence in both surfaces and
     // so is lowercase by the sentence-case rule itself (the product's text
@@ -875,16 +862,14 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // the slot at each dispatch and taken down at the terminal by the
     // mechanics below, unpainted for the batch's whole run.)
     // A SWEEP'S LINE IS STATE, WRITTEN STRAIGHT INTO THE SLOT (architect
-    // 2026-09-11, on the tablet's panel then pinned at 90 Hz, where the line
-    // BLINKED once per cell). The single render's park/promote machinery is
-    // the wrong shape for a batch: each cell parked its own message, a cell
-    // that had synthesized had its message promoted, and the NEXT cell's park
-    // retracted it — so the cell went blank at every hand-off and stayed
-    // blank until the incoming cell crossed the synthesis boundary and the
-    // following tick observed it. That gap is a frame or more, and it is the
-    // blink.
+    // 2026-09-11). The single render's park/promote machinery is the wrong
+    // shape for a batch: were each cell to park its own message, the NEXT
+    // cell's park would retract the last one's promoted message, and the line
+    // would go blank at every hand-off until the incoming cell crossed the
+    // synthesis boundary and the following tick observed it — a blink of a
+    // frame or more per cell.
     //
-    // The fix is the messaging split itself, not a clock: what a sweep's line
+    // The answer is the messaging split itself, not a clock: what a sweep's line
     // reports is STATE — which cell the sweep is at, true right now and
     // replaced as it changes — where a single render's "Rendering..." is a
     // report about the WORKER ("synthesis is happening"), which only the
@@ -893,19 +878,19 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // at the dispatch and comes down only at the batch's terminal, with no
     // hold, no minimum display span and no hysteresis anywhere in it.
     //
-    // WHAT THE COUNT MEANS CHANGES WITH THAT, and to the truer meaning: it
-    // counts DISPATCHED cells as it ticks up, where the park counted only the
-    // cells that SYNTHESIZED — a run of reuse cells used to pass in silence
-    // under a stale number. A cell served by a reuse rung now shows its line
-    // for the instant the rung takes, which is truthful (the sweep IS at that
-    // cell) and too brief to see. Dispatched cells are also what the terminal's
-    // "Rendered N of M" counts M in, so the line and the summary agree.
+    // THE COUNT IS OF DISPATCHED CELLS, the truer meaning: a park would
+    // count only the cells that SYNTHESIZED and let a run of reuse cells pass
+    // in silence under a stale number. A cell served by a reuse rung shows its
+    // line for the instant the rung takes, which is truthful (the sweep IS at
+    // that cell) and too brief to see. Dispatched cells are also what the
+    // terminal's "Rendered N of M" counts M in, so the line and the summary
+    // agree.
     //
     // THE SINGLE ARCHIVAL RENDER KEEPS THE PARK, deliberately and not as
     // residue: there "Rendering..." means synthesis is happening, and a
-    // rung-served single render still shows nothing (the 2026-08-08 ruling,
-    // stated at dispatch_single_archival_render). The machinery stays whole for
-    // it; the batch simply stops using it.
+    // rung-served single render shows nothing (the 2026-08-08 ruling,
+    // stated at dispatch_single_archival_render). The machinery is whole for
+    // it; the batch does not use it.
     //
     // THE FOUR MECHANICS OF THE DIRECT WRITE:
     //  * status_promoted_ = true records that the string in the shared slot is
@@ -926,7 +911,7 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     //    the promotion's own tests survives a write made at the dispatch: there
     //    is no parked string to test, the worker's idleness is this write's
     //    precondition rather than a reason to withhold, the synthesis signal is
-    //    exactly what this ruling drops, and the cancelled-session test cannot
+    //    exactly what this road does without, and the cancelled-session test cannot
     //    apply at all — the write happens BEFORE the dispatch, on a session
     //    that is not yet running and so cannot have been killed. A preview's
     //    "Updating..." standing in the slot is replaced here for the reason the
@@ -1017,12 +1002,11 @@ static std::string format_bpm_descriptor(int beats, double bpm,
 // them when loading a BPM cell in place. The
 // substantive difference from the iter render handler is per-cell
 // mutation of cell_settings.scale, in addition to per-cell marker mutation —
-// which since 2026-08-26 reaches the WHOLE map, not the span alone: every
+// which reaches the WHOLE map, not the span alone (2026-08-26): every
 // effectively enabled owning marker outside the span is rescaled by the
-// owner's own change (bpm_cell_warp_markers, input_handler.h, which since
-// 2026-08-29 leaves every disabled marker untouched in the span and out).
+// owner's own change (bpm_cell_warp_markers, input_handler.h, which
+// leaves every disabled marker untouched in the span and out).
 // Returns true iff a batch was dispatched; every guard bail returns false.
-// Body is the former Ctrl+Alt+M block verbatim, minus the keystroke gate.
 bool GuiInputHandler::render_bpm_sweep() {
     if (app.active_markers_view != 'W') return false;
     if (!app.bpm_mode_enabled) return false;
@@ -1219,14 +1203,13 @@ bool GuiInputHandler::render_bpm_sweep() {
 
     // The batch's DISPLAY label — the progress line's counted noun and the
     // stderr summary's tag, both fed from this one string. "BPM iterations"
-    // since the 2026-08-31 rebrand, which put ONE noun through the control's
-    // own name, this line and the sweep's twin: the counted things ARE the
-    // command's iterations. It is NOT that name's constant — the button says
+    // (the architect's naming, 2026-08-31) puts ONE noun through the
+    // control's own name, this line and the sweep's twin: the counted things
+    // ARE the command's iterations — the line says what the numbers count,
+    // the cells, not a quantity. It is NOT that name's constant — the button says
     // "BPM Iterations" in the Title Case a control's name takes
     // and this string is a card's, a description, so they share the words and
-    // not the spelling. It read "BPM values" from 2026-08-29
-    // (architect: the line says what the numbers count, and "BPM" alone named
-    // a quantity rather than the cells) and plain "BPM" before that. "BPM" is
+    // not the spelling. "BPM" is
     // capitalized always (architect 2026-08-02): it is an acronym, not a
     // sentence position, so both surfaces carry the caps, and "iterations"
     // beside it stays lowercase for the reason the grid batch's does. It is

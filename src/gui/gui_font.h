@@ -4,24 +4,24 @@
 // else, so the painters never name a font. THE PRODUCT'S FACE IS ITS OWN
 // (architect 2026-10-02: "the app becomes its own thing; it has its own
 // fonts"): LIBERATION SANS 2.1.5, Regular and Bold (fonts/README.md has the
-// provenance and the licence), shipped as the APK's assets (the one carrier
-// since the laptop GUI's drop, architect 2026-10-30) and turned into faces by
-// ONE implementation, gui_font_bundled.cpp, through FreeType. Nothing is
-// asked for a face: the tablet has no fontconfig to consult. ONE FACE, HARD-CODED (architect 2026-10-12; the Tahoma
-// and FreeSans sets and the `font` device key went that day,
+// provenance and the licence), shipped as the APK's assets (the one carrier,
+// architect 2026-10-30) and turned into faces by ONE implementation,
+// gui_font_bundled.cpp, through FreeType. Nothing is asked for a face: the
+// tablet has no fontconfig to consult. ONE FACE, HARD-CODED, no device key
+// (architect 2026-10-12; no other family is proposed,
 // docs/engineering/closed_questions.md).
 //
 // THE SIZES ARE ONE PIXEL TABLE: kGuiFaceSizes below, each use's EM IN W,
 // SCALED WITH gui_scale and rounded at the element (size_px =
 // nearbyint(em_w · gui_scale / 100), the scaled_px road; one W = 2 device
 // px on the tablet at its 200 %, render.h's scaled_px). THE SIZES ARE WHOLE
-// W. EVERY TEXT IS 12 W, ARC'S 9 pt (architect 2026-11-18, send Z: "set it
+// W. EVERY TEXT IS 12 W, ARC'S 9 pt (architect 2026-11-18: "set it
 // so that the font is actually at 9 point"; one Arc px is one W, Arc being
 // drawn for 9 pt = 12 px) — 24 device px on the tablet — BUT THE RULER'S
 // DIGITS, 10 W (20 device px; Arc's `font-size: smaller`, 12 / 1.2: "the
 // ruler, we should make the ruler font small still"). No other size on the
-// main page. THE PROGRESS PAGE'S COUNT TAKES GTK'S "small" (send AA's stage
-// D2, 2026-11-19): CAPTION 10 W (Pango's "small", 12 / 1.2). A question's
+// main page. THE PROGRESS PAGE'S COUNT TAKES GTK'S "small" (2026-11-19):
+// CAPTION 10 W (Pango's "small", 12 / 1.2). A question's
 // and the progress page's sentence are plain Body text, no larger face
 // (architect 2026-11-20: GTK's "large" is a popup's — "the oversized text
 // is the clue").
@@ -38,19 +38,16 @@
 // CAPTION 10 (the progress page's count, above). The rows
 // coinciding in number stay rows of their own: the roster is the
 // distinction.
-// TWO WEIGHTS (architect 2026-11-19, send Z: "yes, regular is good"): THE
+// TWO WEIGHTS (architect 2026-11-19: "yes, regular is good"): THE
 // REGULAR FOR BODY TEXT — Body, Program, Label, Hint, Caption, and the
-// on-screen keyboard's caps (Keys; Regular since send AA's stage D2, the
-// design's §E and the approved Z_06, the Bold they wore before) — and THE
+// on-screen keyboard's caps (Keys, 2026-11-19) — and THE
 // BOLD FOR THE TITLE BAR (Bold) AND
 // THE RULER'S DIGITS (Small), as GTK Arc sets them (xfwm's title bold,
 // every other text regular).
-// (The printed legends under the keys, the Legend row, retired with the
-// legends, architect 2026-11-18: "That's from the hi-fi theme".)
 // Every length authored round the text follows these sizes (each length's
 // own comment records its class).
 //
-// THE LINE BOX (architect 2026-11-19, send Z; GTK's seat): what Pango lays a
+// THE LINE BOX (architect 2026-11-19; GTK's seat): what Pango lays a
 // line in — the face's ascent and descent AT THE SIZE IN W, each rounded UP
 // to a whole W (FreeType's FT_Request_Size: the ascender ceiled, the
 // descender floored), gui_font_line_box_w below. Liberation Sans Regular and
@@ -59,9 +56,8 @@
 // render.h's line_box_baseline seats a text by it in a box of whole W.
 //
 // THE VERTICAL METRICS ARE THE FACE'S OWN AT THAT PIXEL SIZE (architect
-// 2026-10-23, REVERSING the rule of 2026-10-06 that a face's line box is
-// never read: with no Windows cell left to match, the face's own box is the
-// truthful one): FreeType's ascender, descender and line height (the
+// 2026-10-23: the face's own box is the truthful one): FreeType's
+// ascender, descender and line height (the
 // file's hhea, read once per file at the install, in em) times the em,
 // each rounded to whole device px (gui_font_ascent_px, gui_font_descent_px,
 // gui_font_line_px). A text stands on the line-box rule's baseline
@@ -124,7 +120,7 @@ inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
 // tablet at 200 %; render.h's scaled_px): 12 W everywhere but the ruler's
 // 10 and the progress page's count, the Regular for body text and the
 // keyboard's caps, the Bold for the title bar and the
-// ruler (architect 2026-11-18 / 2026-11-19, send Z).
+// ruler (architect 2026-11-18 / 2026-11-19).
 struct GuiFaceSize {
     std::size_t file = 0;
     double      em_w = 0.0;
@@ -139,7 +135,7 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 12.0},   // Hint: the tooltip's hint line
     {0, 12.0},   // Label: the cues' labels and the lane's editors
     {0, 10.0},   // Caption: the progress page's count (GTK's "small",
-                 // 12 / 1.2; send AA's stage D2)
+                 // 12 / 1.2)
 };
 
 // THE USE'S TABLE SIZE, its em in W — the one read of the table's sizes,
@@ -173,7 +169,7 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
 // successor of a cairo scaled font. `percent` is gui_scale and `em_w` the
 // use's em in W. THE SIZE TRAVELS IN THE VALUE because
 // ONE USE'S SIZE IS LIVE: the Keys face's, the `osk_font_px` tuning key's
-// (architect 2026-10-29 night, "font size osk config tmp key"; render.h's
+// (architect 2026-10-29, "font size osk config tmp key"; render.h's
 // seat) — the table's 12 its default — so every cache keyed on a GuiFont
 // (the scaled font, gui_font_bundled.cpp's gui_outline_scaled_font, keyed on
 // the em; text_shape's run memo, keyed on the size's bytes) keys on the size
@@ -217,7 +213,7 @@ double gui_font_line_px(const GuiFont& f);
 double gui_font_ascent_exact_px(const GuiFont& f);
 double gui_font_descent_exact_px(const GuiFont& f);
 double gui_font_line_exact_px(const GuiFont& f);
-// THE LINE BOX IN W (the head's THE LINE BOX; architect 2026-11-19, send Z):
+// THE LINE BOX IN W (the head's THE LINE BOX; architect 2026-11-19):
 // the face's ascent and descent at the use's em IN W — its size at 100 % —
 // each rounded up to a whole W, as FreeType's size request rounds them for
 // Pango; the line box their sum. 11 + 3 at 12 W, 10 + 3 at 10 W (Liberation
@@ -247,9 +243,9 @@ double gui_font_cap_px(const GuiFont& f);
 // grid-fitted extents are boxes taken before the lifted pipe's
 // fractional seat and each glyph's own fractional place, so they overstate
 // it (the
-// pipe in Regular 24 among the legend's digits: extents 20 + 3, the paint
+// pipe in Regular 24 among digits: extents 20 + 3, the paint
 // 19 + 3), and
-// the design's unhinted bounds rounded, the first measure, miss the
+// the design's unhinted bounds rounded miss the
 // hinter's own rows (Bold 12: 8.38 rounds to 8, the paint 9). Its readers:
 // the title bar's right group (the alphabet of its runs in the Bold 12 W,
 // the cap band the battery and the lamps stand on — render.h's
@@ -264,7 +260,7 @@ struct GuiInkBand {
 };
 GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set);
 
-// THE STRIKE'S BAND (architect 2026-10-26 ~15:10, "have coincident markers
+// THE STRIKE'S BAND (architect 2026-10-26: "have coincident markers
 // be shown as a strike through … They become one"; "it's the same thickness
 // as the regular — for example, a T would have the same thickness"): the
 // rows of the bar a struck cue label wears through its run (show_cue_label,
@@ -277,7 +273,7 @@ GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set);
 // THE HEIGHT IS THE FACE'S OWN
 // STRIKEOUT POSITION (the file's OS/2 yStrikeoutPosition, per em, read at
 // the install): the band centered on it above the baseline. The cues'
-// labels are the Label face, the Regular file since 2026-11-19 (send Z);
+// labels are the Label face, the Regular file (2026-11-19);
 // for the record, for Liberation Sans Regular (the "l" 180 of 2048 units, the strikeout 530):
 // at a 21-px em a stroke of 1.85 px, centered 5.43 above the baseline; at
 // 14 px 1.23, 3.62 above; at 10 px 0.88, 2.59 above.
@@ -298,12 +294,12 @@ GuiStrikeBand gui_font_strike_band(const GuiFont& f);
 //   planner's measurement in font units, 2026-10-09). NOTHING CLAMPS A LIFT
 //   AT 0: the install stores the signed difference and the one reader adds
 //   it whatever its sign.
-//   THE PIPE SITS ON THE DIGITS' BAND (architect 2026-10-09 ~21:20, "the
+//   THE PIPE SITS ON THE DIGITS' BAND (architect 2026-10-09: "the
 //   pipe should be even"): "|" (U+007C) takes the "0"'s ink centre, so its
 //   overhang above and below the digits beside it is the same — wherever
 //   the face shows one (the labels' grammar, a typed line, the status bar's
-//   field separator, and the title bar's right group's text pipe since
-//   2026-11-19, send AA — render.h's title bar block).
+//   field separator, and the title bar's right group's text pipe —
+//   render.h's title bar block).
 // THE LIFTS ARE DERIVED at the install from each file's own unscaled
 // outline bounds (gui_font_bundled.cpp), in em units. THE MATCH IS BY GLYPH
 // ID after substitution (text_shape compares a shaped glyph's id against

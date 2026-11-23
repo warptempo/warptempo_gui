@@ -14,13 +14,12 @@
 // the one play) and the follow and restrict lamps' toggles.
 // AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
-// (No GuiPlatform& member. The only direct platform reach this cluster ever had
-// was restore_playhead_to_lsp's top-strip invalidate, deleted with that function
-// 2026-07-30; every damage this cluster emits now goes through Viewport.)
+// (No GuiPlatform& member: every damage this cluster emits goes through
+// Viewport.)
 struct GuiRenderPlayer;
 
-// THE DEAD DEVICE'S SENTENCE, ONE SPELLING AND FOUR SITES (2026-08-30; the
-// fourth joined 2026-09-04): the one launch body's own device gate — the BELT,
+// THE DEAD DEVICE'S SENTENCE, ONE SPELLING AND FOUR SITES (2026-08-30,
+// 2026-09-04): the one launch body's own device gate — the BELT,
 // which every road that plays passes — and the TWO PRE-LAUNCH GATES that decide
 // something before reaching it and so must ask the same question first:
 // toggle_playback's target-view
@@ -37,23 +36,21 @@ struct GuiRenderPlayer;
 // and a device that was never there are one fact to the user. It cannot double
 // with them: it returns, and the stop body it takes leaves the act Idle, so no
 // launch of the act's follows it.
-// BESIDE THOSE FOUR (re-grepped 2026-11-05 night): the car's Play
+// BESIDE THOSE FOUR: the car's Play
 // (car_toggle_playback's play arm, its prologue), the score viewer's tick
 // (a dead device mid-soundtrack pauses, the render player's rule) and the
 // struck clip lamp's lift (GuiInputHandler::finish_clip_lamp_press_release,
-// architect 2026-11-05 night: a press that reopens and plays nothing, and
-// cards on a refused reopen). (THE
-// NOISE LAMP'S LIT PRESS asked it too, 2026-10-28 to 2026-11-05; the lamp
-// went with the level cases, and the noise bed asks no device question — it
-// sounds through whichever stream the music opens, noise.h's head.)
+// architect 2026-11-05: a press that reopens and plays nothing, and
+// cards on a refused reopen). The noise bed asks no device question — it
+// sounds through whichever stream the music opens, noise.h's head.
 // It lives here rather than in notifications.h
 // because the fact is this cluster's: the question is GuiPlayback::
 // ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect
 // 2026-09-02): each PRESS site (the three launch sites, the car's Play, the
 // struck clip lamp's tap) reopens a dead AAudio stream before it asks, and
 // cards only when that reopen failed. The
-// reads: the FOUR TICKS keep device_unavailable (re-grepped 2026-11-05
-// night) — the render player's (a dead stream mid-play must pause), the A/B
+// reads: the FOUR TICKS keep device_unavailable — the render player's (a
+// dead stream mid-play must pause), the A/B
 // audition's (a dead stream mid-act must end the act, the fourth site
 // above), the score viewer's (a dead stream under a playing soundtrack
 // pauses it and cards this sentence) and the title bar's (refresh_logo_lamps:
@@ -67,32 +64,30 @@ inline constexpr const char* kPlaybackDeviceUnavailableCard =
     "Playback is unavailable on this device";
 
 // THE DISPLAY KEEP-ALIVE, A BRIEF WINDOW AFTER A FAST STOP (architect
-// 2026-11-13, session 118) — THE ONE OWNER OF ITS FACTS AND ITS RULING.
-// THE FACTS (measured 2026-11-13, sessions 116..118, under the 90 Hz pin of
-// that day, the pin that stands again since 2026-11-16): the tablet's panel
+// 2026-11-13) — THE ONE OWNER OF ITS FACTS AND ITS RULING.
+// THE FACTS (measured 2026-11-13, under the 90 Hz pin): the tablet's panel
 // (Galaxy Tab S10 FE) drops 90 -> 30 Hz once no layer has presented for
 // 250 ms (SurfaceFlinger's idle timer), and the first frames after it land
 // at 30 Hz cadence; neither the window's frame-rate vote (adopt_window) nor
 // a preferred display mode outranks the timer, and `min_refresh_rate` is a
 // System setting no app may write. The architect saw it as a CATCH — the
 // scanner's first beat stepping late — only when tapping play and stop
-// frantically on a transient: recorded in session 118 over 127 plays, 14
+// frantically on a transient: recorded over 127 plays, 14
 // late first frames (41..60 ms against a 27 ms median), 13 of them
 // 0.34..1.06 s after the previous Stop, 12 of those after a play that ran
 // under 0.15 s; calm use never showed one.
 // THE FORMS NOT TAKEN: a keep-alive at every vsync cost ~46 % app / ~53 %
-// SurfaceFlinger (session 33, the panel pinned at 90 Hz); a permanent
+// SurfaceFlinger (the panel pinned at 90 Hz); a permanent
 // sparse keep-alive (one frame after GuiPlatform::kDisplayKeepAliveMs
 // without a present, about five a second at rest) held 90 Hz but cost about
-// 11 % battery (session 117).
+// 11 % battery.
 // THE RULING: the sparse keep-alive, ARMED ONLY BRIEFLY — A STOP LANDING
 // WITHIN kDisplayKeepAliveFastStopMs OF ITS PLAY keeps the panel awake for
 // kDisplayKeepAliveWindowMs PAST THAT STOP, each such Stop re-arming it;
 // calm use never arms it, and the first tap after a rest stays uncovered,
 // accepted ("cover a little more than I can physically do ... comfortable
 // hitting it as hard and fast as I want"). IT STANDS (architect
-// 2026-11-16, reversing its retirement of 2026-11-15 under the single
-// 30-frames cadence, where a late first frame was masked: "the whole point
+// 2026-11-16: "the whole point
 // would be that the scanner would be the one thing that gets the special
 // treatment. And the keep alives are about the scanner, in particular the AB
 // audition and the frantic play press"): the panel kept awake at its pinned
@@ -116,13 +111,13 @@ struct GuiPlaybackLifecycle {
     const GuiAudio&   audio;
     GuiPlayback&      playback;
     Viewport&         viewport;
-    // THE CARD (2026-08-30, the strictness ruling; ONE sentence since
+    // THE CARD (2026-08-30, the strictness ruling; ONE sentence,
     // 2026-08-31): the ONE LAUNCH BODY is where a play that will not sound is
     // discovered, and the DEVICE half is what it says — a dead or absent
-    // device is the one refusal the screen cannot show for itself. Its former
-    // companion, the launch position with nothing left to play from, went
-    // SILENT again on 2026-08-31 (a benign one-dimensional refusal already at
-    // its state; the record is at the file head).
+    // device is the one refusal the screen cannot show for itself. The
+    // launch position with nothing left to play from is SILENT (2026-08-31:
+    // a benign one-dimensional refusal already at its state; the rule is at
+    // playback_lifecycle.cpp's head).
     GuiNotifications& notifications;
     // THE RENDER PLAYER'S BACK-POINTER (2026-08-28, the car's state push),
     // wired in main.cpp once both exist — the settings editor's and the
@@ -154,8 +149,8 @@ struct GuiPlaybackLifecycle {
     // Meaningful only while a project play runs; its value at rest is never
     // read.
     bool restrictable_play = false;
-    // THE SEEK'S FRAME IS OWED ITS ADVANCE (2026-11-20, send CC's review,
-    // finding A3): SET by seek_live_session_by on a seek that moved, its one
+    // THE SEEK'S FRAME IS OWED ITS ADVANCE (2026-11-20): SET by
+    // seek_live_session_by on a seek that moved, its one
     // writer of true; READ AND CLEARED by the next pre-paint advance
     // (main.cpp's pre_paint_advance, its one reader, at its top, whatever
     // that frame then does), so the bit lives for one frame. What it buys:
@@ -167,7 +162,7 @@ struct GuiPlaybackLifecycle {
     // seek's own frame runs the advance's whole body. No other road sets it:
     // a launch, a loop wrap and a stop leave it alone.
     bool seek_frame_owed = false;
-    // THE DISPLAY KEEP-ALIVE'S TWO STAMPS (architect 2026-11-13, session 118;
+    // THE DISPLAY KEEP-ALIVE'S TWO STAMPS (architect 2026-11-13;
     // the facts and the ruling at kDisplayKeepAliveFastStopMs above), both
     // monotonic_ms() (app_state.h, the application layer's one clock).
     // `user_play_launched_ms` is THE USER'S PLAY'S START: written by the two
@@ -252,14 +247,13 @@ struct GuiPlaybackLifecycle {
     //     input, so none changes what plays (the bracket feeds the grid
     //     iterations' own sidecars alone, AppState::iteration_mode_enabled),
     //     and they stand outside the undo domain for that same reason.
-    //   * VALUE STEPS STOP (architect 2026-10-14, reversing the 2026-07-30
-    //     "value steps do not stop"): the Up/Down tempo step on the addressed
-    //     cell writes the warp store, so it is a marker mutation and stops,
-    //     its group arm as well as its singleton — the group-preserving shape
-    //     of the tempo arm no longer buys a play-on. The step ladder's
-    //     magnitude (bare one cent, three with ctrl, ten shifted) changes the
-    //     number and not the class. The BOUND arm still stops nothing, being
-    //     iteration state (the bullet above).
+    //   * VALUE STEPS STOP (architect 2026-10-14): the Up/Down tempo step on
+    //     the addressed cell writes the warp store, so it is a marker mutation
+    //     and stops, its group arm as well as its singleton — the
+    //     group-preserving shape of the tempo arm buys no play-on. The step
+    //     ladder's magnitude (bare one cent, three with ctrl, ten shifted)
+    //     changes the number and not the class. The BOUND arm stops
+    //     nothing, being iteration state (the bullet above).
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
     //     PageUp/PageDown, the zoom gestures and the zoom step (`=` / `-`,
     //     2026-10-27) — they move the window onto the audio,
@@ -269,15 +263,11 @@ struct GuiPlaybackLifecycle {
     //     silent no-op and stops nothing.
     //   * TRIM MUTATIONS STOP, IN BOTH VIEWS: the sweep and Reset Trim, matching every
     //     POINTER trim route (the endcap/bridge drags and the bound-set clicks each
-    //     stop at their own commit point). BOTH views, and the rule is unchanged
-    //     by the 2026-08-05 playback ungating — what narrowed is only the
-    //     rationale's source-view half: a TARGET audition is still playing out the
-    //     very window the mutation replaces, while a SOURCE one now runs to the
-    //     song's end and never ran against the bounds being moved. The stop
-    //     stays there on the rule's own both-views symmetry: since 2026-11-07
-    //     (session 88) no trim write moves the playhead (input_trim.cpp's
-    //     head), so the 2026-08-05 park that once argued the source half is
-    //     no longer its reason.
+    //     stop at their own commit point). BOTH views: a TARGET audition is
+    //     playing out the very window the mutation replaces; a SOURCE one runs
+    //     to the song's end and never ran against the bounds being moved, and
+    //     stops on the rule's own both-views symmetry (no trim write moves the
+    //     playhead, architect 2026-11-07, input_trim.cpp's head).
     //   * A POINTER OR TOUCH PLAYHEAD PLACEMENT STOPS (architect 2026-10-06):
     //     a press, click or drag on the main view that places the
     //     playhead (the waveform's upper-half click act, the ruler's and the
@@ -285,8 +275,8 @@ struct GuiPlaybackLifecycle {
     //     a play without the Stop button, since no other waveform-area act
     //     stops it. It pays once, at the placement body
     //     (place_playhead_at_click_column), past the gutter refusal and ahead
-    //     of the first write. The armed trim sweep's begin left the class
-    //     2026-11-07 (session 88: it seats no playhead); the sweep stops a
+    //     of the first write. The armed trim sweep's begin is not in the
+    //     class (architect 2026-11-07: it seats no playhead); the sweep stops a
     //     play as a TRIM MUTATION, at its first accepted write (the bullet
     //     above). NOT in the class: the
     //     audition scrub (the lower half's click act and the render player's
@@ -301,14 +291,13 @@ struct GuiPlaybackLifecycle {
     // The rule classifies the commands it names and claims nothing about the ones
     // it does not. The cursor-moving NAVIGATION stops (the arrows in every
     // magnitude, Home/End,
-    // the Tab family) are older and broader than the rule — they hold under the
+    // the Tab family) are broader than the rule — they hold under the
     // definition's own contract, a handler about to commit a new cursor position.
     void stop_playback_if_playing();
 
-    // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28, replacing
-    // six hand-spelled stops). Called at the moment a modal surface ACTUALLY
-    // opens. THE CALLER INVENTORY, re-derived by grep 2026-11-20 — SIXTEEN
-    // sites (the color picker's open was another 2026-10-07..14): THE LANE
+    // THE MODAL-OPEN PLAYBACK STOP, ONE OWNER (architect 2026-07-28). Called
+    // at the moment a modal surface ACTUALLY opens. THE CALLER INVENTORY —
+    // SIXTEEN sites: THE LANE
     // EDITORS' TWO OPENS (flag_editor.cpp: GuiFlagEditor::enter_text_edit,
     // the flag editor's one open chokepoint, and enter_iter_bound_edit, the
     // iteration bound editor's; architect 2026-11-20); in
@@ -317,63 +306,40 @@ struct GuiPlaybackLifecycle {
     // editor (bpm_form_commit), each of those two a dialog editor opened
     // over a closed picker; THE
     // PROGRESS MODAL's open (GuiInputHandler::open_batch_progress,
-    // input_render_dispatch.cpp, 2026-10-14, the batch's Render press);
+    // input_render_dispatch.cpp, the batch's Render press);
     // GuiSettingsEditor::open (settings_editor.cpp); in
     // input_key_dispatch.cpp the `h` view's `'` LOAD CONFIRMATION
-    // (history_load_in_place — the history picker it replaced on 2026-08-29
-    // was this caller before it), THE BPM FORM (open_bpm_form, 2026-10-29,
+    // (history_load_in_place), THE BPM FORM (open_bpm_form,
     // the Ctrl+B arm's tail and its line editor's return, whose open rides
     // the stop already taken), the OPEN PROJECT PICKER
-    // (open_project_picker, 2026-08-27 as a prompt, field-less since
-    // 2026-08-28), THE SETTINGS PAGE (open_settings_page, 2026-10-28, the
+    // (open_project_picker), THE SETTINGS PAGE (open_settings_page, the
     // picker's second content, whose rows for the listed keys swap a value
     // list in under the stop already taken) and the PULL confirmation
     // (run_history_pull_press, OK / Cancel); THE SCORE VIEWER's open
-    // (GuiScoreViewer::open, score_viewer.cpp, 2026-10-26); the TWO
-    // prompt opens (prompt.cpp: unsaved, and Revert's confirmation —
-    // the error notice's was a third until that prompt kind retired whole on
-    // 2026-08-30); THE RENDER PLAYER's open
-    // (GuiRenderPlayer::open, render_player.cpp — the third modal owner,
-    // 2026-08-28; the project's audition ends where the player's transport
+    // (GuiScoreViewer::open, score_viewer.cpp); the TWO
+    // prompt opens (prompt.cpp: unsaved, and Revert's confirmation); THE
+    // RENDER PLAYER's open (GuiRenderPlayer::open, render_player.cpp — the
+    // project's audition ends where the player's transport
     // begins, and the player's own stops all take stop_playback_if_playing
-    // through the fork inside it). (The AV Sync Stats panel's opener was a
-    // caller from 2026-09-03 until the panel's deletion on 2026-09-30.) (The
-    // Generate Magnification Level Markers
-    // confirmation was a tenth from 2026-09-22 until the act's deletion on
-    // 2026-09-23, the count going back TEN to NINE with it; the history view's
-    // COMMIT-TITLE editor was one from 2026-08-07 until its retirement
-    // 2026-10-10.) It had gone seven
-    // to six on 2026-08-09, when the render-library advisory prompt was
-    // deleted with the whole attestation surface.
-    // IT WENT EIGHT TO SEVEN LATER THE SAME DAY: the settings editor's TWO doors
-    // — the `;` key (input_handler.cpp) and the Settings DROPDOWN item
-    // (input_pointer.cpp), the one route onto that surface that reached no key
-    // gate — each carried their own call until the editor gained a READ-ONLY
-    // refusal at its opener (a locked tab authors no engine settings), at which
-    // point both stops moved INSIDE GuiSettingsEditor::open to sit past that
-    // gate. Two callers became one, and the refusal-gating rule below is why: a
-    // caller-side stop would have let the dropdown's now-refusable click kill an
-    // audition and open nothing. The count did not move back when that
-    // refusal left the opener on 2026-09-04 (the lock governs the keys now —
-    // GuiSettingsEditor::open): one owner for the two doors is the shape to
-    // keep whether or not the opener can refuse. (The dropdown door retired
-    // with the Settings popup, 2026-10-21; the settings page's rows are the
-    // editor's one door since 2026-10-28, the page's own open a caller of
-    // its own, so a row's editor open finds playback already stopped.)
-    // The count had held across the day's earlier change by coincidence: the
-    // commit-title editor replaced the history commit confirmation, so one
-    // caller left prompt.cpp as another arrived in input_key_dispatch.cpp.
+    // through the fork inside it).
+    // THE SETTINGS EDITOR'S STOP IS INSIDE GuiSettingsEditor::open, one owner
+    // for whatever doors reach it, refusable or not: a caller-side stop
+    // ahead of a refusable open would kill an audition and open nothing (the
+    // refusal-gating rule below). Its one door is the settings page's rows,
+    // the page's own open a caller of its own, so a row's editor open finds
+    // playback already stopped.
     // THREE MODAL OPENS ARE NOT CALLERS, and each is a recorded exception
     // rather than a gap: the PASTE_CONFIRM prompt is built outside prompt.cpp
     // (PhaseResetPropagate::open_paste_confirmation, its one opener) and
     // stops through
     // stop_playback_if_playing directly, which is mechanically this same stop;
     // and the render player's two prompts — its LOAD_IN_PLACE_CONFIRM
-    // (GuiInputHandler::render_player_load_in_place) and its DELETE question
-    // (render_player_delete, input_key_dispatch.cpp) — PAUSE the player's own
+    // (GuiInputHandler::render_player_load_in_place) PAUSES the player's own
     // transport through GuiRenderPlayer::toggle_pause, which takes that same
     // body through the player's fork — a stop that must keep the resume point
-    // the ordinary modal stop would not — so the RULE holds for every modal
+    // the ordinary modal stop would not — and its DELETE question
+    // (render_player_delete, input_key_dispatch.cpp) rises at the root, where
+    // no item is bound and nothing sounds — so the RULE holds for every modal
     // surface even though this function's caller set is not literally every
     // opener.
     // Authoring or answering a dialog over a live audition is the wrong default,
@@ -388,9 +354,9 @@ struct GuiPlaybackLifecycle {
     //     editor's open finds playback already stopped, and the BPM form,
     //     whose line editor's likewise) and the
     //     render player (whose own transport begins where the project's
-    //     audition ends), and THE SCORE VIEWER (2026-10-26, whose own
-    //     soundtrack, since 2026-10-26 night, likewise begins where the
-    //     project's audition ends), all standing in the modal family's box —
+    //     audition ends), and THE SCORE VIEWER (whose own soundtrack
+    //     likewise begins where the project's audition ends), all standing
+    //     in the modal family's box —
     //     STOP.
     //   * THE LANE EDITORS' OPEN — the flag editor in every kind and the
     //     iteration bound editor — STOPS TOO (architect 2026-11-20:
@@ -420,15 +386,6 @@ struct GuiPlaybackLifecycle {
     // calling stop_playback_if_playing directly.
     void stop_playback_for_modal_open();
 
-    // (restore_playhead_to_lsp is GONE, architect 2026-07-30 — do not
-    // reintroduce it. It named a snap-back that had stopped existing: a stopped
-    // scanner is deactivated IMMEDIATELY, its value fields stale by contract, so
-    // nothing was ever restored, and the 2026-07-29 deletion of the natural-end
-    // follow-scroll tail left it a strict subset of stop_playback_if_playing plus
-    // one dead top-strip invalidate — dead because the scanner paints no
-    // top-strip pixel and a stop moves no cursor. Its two callers, Space's stop
-    // edge and the tick's natural-end branch, now call the gesture stop, so the
-    // product has ONE stop body.)
     // launch_offset shifts the SCANNER's launch position (and the play() launch
     // bound) forward in the active paint domain WITHOUT moving the resting
     // cursor, so stop just deactivates the scanner and the cursor is unmoved. Non-zero
@@ -438,8 +395,7 @@ struct GuiPlaybackLifecycle {
     // The offset is applied only in the target-view branch; the offset launch
     // is re-validated against the target buffer's domain, so an offset landing
     // at or past the buffer end is a SILENT no-op (the pre-sum gate, whose
-    // verdict is the launch body's own — architect 2026-08-31, retiring the
-    // 2026-08-30 card "There is nothing left to play from here": a benign
+    // verdict is the launch body's own — architect 2026-08-31: a benign
     // one-dimensional refusal already at its state says nothing, the playhead
     // resting visibly at the view's end and the Play button greying on that
     // very predicate. The rule is at the head of playback_lifecycle.cpp).
@@ -498,7 +454,7 @@ struct GuiPlaybackLifecycle {
     // redo only at rest (GuiCarTransport), so the console's own buttons never
     // restore over the loop: they move its cursor and leave it looping.
     void car_toggle_playback();
-    // THE CONSOLE'S SEEK OVER A LIVE SESSION (architect 2026-11-20, send CC:
+    // THE CONSOLE'S SEEK OVER A LIVE SESSION (architect 2026-11-20:
     // "when audio is playing, the rewind and fast forward buttons ... should
     // ... just go back 3 seconds and forward 3 seconds"; "it wraps around on
     // the end, but not at the beginning"): move the playing session's read
@@ -543,22 +499,20 @@ struct GuiPlaybackLifecycle {
     bool seek_live_session_by(int64_t delta_frames);
     // THE AUDITION LAUNCH ENTRY: launch the scanner from `frame`, an ABSOLUTE
     // position in the active paint domain, leaving the resting cursor untouched.
-    // ONE CALLER CLASS since 2026-07-30 — the waveform SCRUB act (the
+    // ONE CALLER CLASS — the waveform SCRUB act (the
     // launch that follows its stop in the same click, the scrub always
-    // playing since 2026-09-21), which is also the gesture for
+    // playing), which is also the gesture for
     // previewing the trim window: click inside it and it auditions from
-    // there. That act has ONE entry since 2026-08-13 (the lower-half plain
-    // press's MOTIONLESS RELEASE — its press-time dispatch moved to the lift
-    // when the waveform's two halves became one surface, and the bare right
-    // full-height entry died 2026-08-12 with the right button's unbinding),
-    // funneled through scrub_act_at, so this stays one caller class. (Space's region left-bound launch was the second caller until the
-    // architect dropped it 2026-07-30; Space now always toggles from the playhead.)
+    // there. That act has ONE entry (the lower-half plain press's
+    // MOTIONLESS RELEASE, the waveform's two halves being one surface),
+    // funneled through scrub_act_at, so this stays one caller class. (Space
+    // always toggles from the playhead, architect 2026-07-30.)
     // Delegates
     // to the same launch body as toggle_playback's play edge, so the standing
     // gates apply identically: a frame outside the active view's range — the
     // SONG in source view, the target buffer's domain in target view — or one
     // leaving fewer than two playable frames of remainder, is a SILENT no-op
-    // (the launch body's position gate, whose card retired 2026-08-31) —
+    // (the launch body's position gate, silent, 2026-08-31) —
     // exactly Space's conventions,
     // this being the one launch road with no outer gate of its own. A DEAD OR
     // ABSENT DEVICE still cards there, being the one refusal the screen cannot
@@ -571,7 +525,7 @@ struct GuiPlaybackLifecycle {
     // paint domain — and play `span` frames, the session's end being
     // `start + span` clamped to the active view's own end (the song's in
     // source view, the bound preview buffer's in target) rather than that end
-    // itself. NOTHING LOOPS still — the rule has exactly TWO sanctioned
+    // itself. NOTHING LOOPS — the rule has exactly TWO sanctioned
     // exceptions, the render player's REPEAT ONE lamp (2026-08-28,
     // render_player.h, which reaches no project audio) and the CAR'S LOOP OF
     // THE TRIM (2026-09-17, car_toggle_playback above, which reaches this
@@ -583,7 +537,7 @@ struct GuiPlaybackLifecycle {
     // or leaving fewer than two frames refuses), the same scanner — but NO
     // FOLLOW: the pre-paint follow scroll asks the act's phase and moves for
     // none of its plays, each framed by its own `c`. Returns whether it launched; the refusals are the
-    // launch body's own two — the POSITION gate, silent since 2026-08-31, and
+    // launch body's own two — the POSITION gate, silent (2026-08-31), and
     // the DEAD-DEVICE gate, which still cards — and the audition's press-time
     // preflight has already asked both ahead of the act (so a refusal here is
     // unreachable in practice and would merely end the act).
@@ -605,7 +559,7 @@ struct GuiPlaybackLifecycle {
     // so this mutator owes no damage. Refused in the `h` view by the
     // dispatch (bare `f` is off that mode's allowlist), never here. ITS DARK
     // EDGE IS ALSO GuiInputHandler::darken_zoom_lamps' road (architect
-    // 2026-11-17, send U: a user zoom and the `h` view's entry put the lamp
+    // 2026-11-17: a user zoom and the `h` view's entry put the lamp
     // out), which calls it on a lit lamp alone and damages the face itself.
     // THE RADIO (architect 2026-10-29): the lit edge also puts RESTRICT out
     // (AppState::restrict = false); the dark edge leaves it alone.
@@ -621,8 +575,8 @@ struct GuiPlaybackLifecycle {
     // repaints through the per-tick comparator, so this mutator owes no
     // damage. Refused in the `h` view by the dispatch (bare `r` is off that
     // mode's allowlist), never here. ITS DARK EDGE IS ALSO
-    // GuiInputHandler::darken_zoom_lamps' road (architect 2026-11-17, send
-    // U), toggle_follow's shape.
+    // GuiInputHandler::darken_zoom_lamps' road (architect 2026-11-17),
+    // toggle_follow's shape.
     void toggle_restrict();
 
 private:
@@ -635,8 +589,8 @@ private:
     // The view-end launch (contract at the definition): validate an absolute
     // paint-domain launch position and play from it to active_view_play_end.
     // Returns whether it launched. Callers: toggle_playback's play edge and
-    // scrub_launch_at. Since 2026-08-26 this is a thin caller of
-    // launch_playback_window below, adding the end and — since 2026-09-01 —
+    // scrub_launch_at. A thin caller of
+    // launch_playback_window below, adding the end and
     // THE USER-LAUNCH CLEAR of the A/B audition sequence ahead of the
     // delegation (owner (2) of the edge inventory at GuiAuditionSequence): a
     // launch of the user's own transport is a fresh session, refused or not,
@@ -654,8 +608,8 @@ private:
     //     follows the playhead out of the window there. Asked by the
     //     view-end entry with FOLLOW dark and by the A/B audition, never
     //     followed.
-    //   * `Follow` — THE FOLLOW SCROLL at the launch (architect 2026-11-15,
-    //     send N; Viewport::follow_scanner, the rule's one owner): a launch
+    //   * `Follow` — THE FOLLOW SCROLL at the launch (architect 2026-11-15;
+    //     Viewport::follow_scanner, the rule's one owner): a launch
     //     position right of the center is centered at once, one off screen
     //     to the left paged in, one left of the center moves nothing. Asked
     //     by the two user entries — the view-end entry and the car's play —
@@ -679,7 +633,7 @@ private:
     // distinction between a user launch and the act's own is structural
     // alone, carried by which entry reached it (the contract at the
     // definition).
-    // THE PRODUCT HAS A SECOND LAUNCH BODY SINCE 2026-08-28, and it is
+    // THE PRODUCT HAS A SECOND LAUNCH BODY (2026-08-28), and it is
     // recorded here as well as at its own head: the RENDER PLAYER's
     // (GuiRenderPlayer::play_wav / toggle_pause / seek_to, render_player.h)
     // plays a decoded render over ITS OWN buffer and calls playback.play

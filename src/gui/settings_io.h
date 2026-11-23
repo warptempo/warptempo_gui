@@ -5,7 +5,7 @@
 #include "device_config.h"   // format_gui_scale_percent (the recall)
 #include "failure.h"
 #include "sidecar_set.h"     // the sidecar list and the required-file core,
-                             // parser-domain since 2026-09-16
+                             // parser-domain
 
 #include <cstddef>
 #include <cstdint>
@@ -32,8 +32,8 @@ bool atomic_write_string_to_path(const std::string& path,
 
 // SIDECAR PRESENCE IS ONE PREDICATE and it lives at the PARSER
 // (sidecar_exists, sidecar_set.h — with kSidecarExtensions, kSidecarCount,
-// SidecarSetPresence and the all-or-nothing core, all moved there 2026-09-16
-// so the CLI and the render-entry load compile the same preflight). "Present"
+// SidecarSetPresence and the all-or-nothing core, all there so the CLI and
+// the render-entry load compile the same preflight). "Present"
 // is EXISTS, for the reason stated there. What lives HERE is the GUI's
 // GuiFailure-composing wrapper of each: a stat that fails answers with the
 // system's own words, never a silent "absent" — as the TWO CLAUSES of a
@@ -41,7 +41,7 @@ bool atomic_write_string_to_path(const std::string& path,
 // and the file named the basename rule's way (the project folder and the file,
 // shown_project_path) on the display, because the dry run hands that clause to
 // a notification card (the basename rule, failure.h). Its own caller is create_if_missing's
-// belt; the set walk below no longer goes through it (it calls the core
+// belt; the set walk below does not go through it (it calls the core
 // directly and composes the same two clauses from the core's defect).
 std::expected<bool, GuiFailure> sidecar_present(
     const std::filesystem::path& p);
@@ -77,16 +77,15 @@ bool create_if_missing(const std::filesystem::path& p,
 // trim window on both tabs. `total_frames` is the just-loaded source's frame
 // count: the full window is [0, total-1], which is not a compile-time constant,
 // so the four trim keys are the template's ONE dynamic stamp — every other
-// non-engine key carries a fixed descriptor default (the `-1` unset spelling the
-// trim keys used to carry died with the unset state 2026-07-30 — a template
-// still writing it would no longer load).
+// non-engine key carries a fixed descriptor default (the trim window has no
+// unset spelling, 2026-07-30).
 std::string format_default_settings_template(const std::string& stem,
                                              int64_t total_frames);
 
 // The complete non-engine (GUI-kind) value set the settings writer
 // serializes, gathered into one snapshot. Constructed at each call site and
 // consumed within the call: the reference members borrow the caller's
-// storage (the two tab bands), the scalars are copied. One struct so the
+// storage (the two tabs' view states), the scalars are copied. One struct so the
 // writer and the autocomplete recall (format_nonengine_value in
 // settings_io.cpp) take the identical value set without a positional parameter
 // list.
@@ -96,15 +95,11 @@ struct NonEngineSettingsSnapshot {
     char               active_audio_view;
     char               active_markers_view;
     char               active_tab_view;
-    // (`projects_repo` LEFT THIS SNAPSHOT 2026-08-27 with its key — the
-    // repository is the device config's, device_config.h; the sidecar carries
-    // exactly what is about the piece. `follow`, `centered` and
-    // `center_on_next_marker` left it 2026-09-11 with theirs — the three
-    // camera postures are what the user is DOING, not what the piece
-    // determines, so they became session state in AppState (the third
-    // deleted whole 2026-09-13) and nothing serializes them.
-    // The waveform magnification level left it 2026-09-14 with its key — the
-    // picture's gain varies over source time, never a settings field.)
+    // (The sidecar carries exactly what is about the piece: the repository
+    // is the device config's, device_config.h; the camera postures are what
+    // the user is DOING, not what the piece determines, so they are session
+    // state in AppState and nothing serializes them; the waveform's gain
+    // varies over source time, never a settings field.)
 };
 
 // Atomic write: emits keys in the canonical order defined by the shared
@@ -138,15 +133,15 @@ std::string format_settings_text(
 // (GuiSettingsEditor::setting_value). Returns std::nullopt for every other
 // key (the editor falls back to format_engine_setting_value for the piece's
 // engine keys and to recall_score_viewer_value for `score_path`). THE
-// `.settings` FILE'S GUI-KIND KEYS — the view keys and the per-tab band —
-// RECALL NOTHING HERE since 2026-11-19 (architect, send AA: "One, agree."):
+// `.settings` FILE'S GUI-KIND KEYS — the view keys and the per-tab view
+// state — RECALL NOTHING HERE (architect 2026-11-19: "One, agree."):
 // no settings page row opens them and the line editor's key is its row's,
 // so nothing asks; their bytes are format_nonengine_value's, the writer's.
 // What the device keys recall is byte-identical to what the device
 // config file carries, through that file's own serializers
 // (format_gui_scale_percent, device_config.h)
 // or verbatim for the two
-// free-text keys (`projects_repo`, and since 2026-09-02 `projects_path`),
+// free-text keys (`projects_repo`, and `projects_path`, 2026-09-02),
 // or the switch's word (`true_colors`, 2026-10-21), or the
 // plate's grow (`waveform_grow`, 2026-10-31, through format_waveform_grow),
 // or the noise's folder name verbatim (`noise`, 2026-10-28), its fixed
@@ -158,7 +153,7 @@ std::string format_settings_text(
 // (`osk_font_px`, 2026-10-29 night, a tuning key, through
 // format_osk_font_px), so the recall and the file can never diverge.
 // (`last_project` is not editable and recalls nothing: it is
-// the program's own; nor does the level, `noise_level`, since 2026-11-05
-// night: set on the band's NOISE case alone, kSettingsEditorKeys.)
+// the program's own; nor does the level, `noise_level` (2026-11-05 night):
+// set on the top icon row's NOISE case alone, kSettingsEditorKeys.)
 std::optional<std::string> recall_gui_setting_value(const AppState& app,
                                                     const std::string& key);

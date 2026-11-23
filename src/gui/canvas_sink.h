@@ -17,7 +17,7 @@
 // chrome on the canvas, 2026-10-16, render.h's waveform_divider — over the
 // plate, so a plate from before a resize never crosses it, and under every
 // vertical line after it, each crossing it, 2026-11-02), the waveform's
-// hover line (render_hover_line, architect 2026-11-21, send FF: under every
+// hover line (render_hover_line, architect 2026-11-21: under every
 // other line), the
 // phase-reset lead-in ring, the cursor's line, the selection stems over it,
 // the scanner, the zoom
@@ -32,7 +32,7 @@
 // antialiased waveform (architect 2026-10-30, render_waveform_columns'
 // head), EVERY LINE STANDS AT ITS EXACT PLACE, one W wide
 // (waveform_line_px; architect
-// 2026-11-14, send J: "the anti-aliasing I would like to commit to that as
+// 2026-11-14: "the anti-aliasing I would like to commit to that as
 // well, the full anti-aliasing") — the verticals on their frames' exact
 // places (displayed_x_at, warp_frame_map_view.h, which lists them), the
 // grid and the center lines on their bands' exact rows
@@ -48,9 +48,8 @@
 // coverage, architect 2026-11-12 the alpha, 2026-11-14 the edges: a line
 // is the tint at 100 percent)
 // — EVERY LINE ON THE
-// CANVAS IS SOLID since 2026-11-04 (the dotted stems and cursor retired,
-// render.h's marker-lane and playhead paragraphs), so the dotted run left
-// the vocabulary with them. A RECT PAINTS ITS OWN COLOR straight over
+// CANVAS IS SOLID (2026-11-04, render.h's marker-lane and playhead
+// paragraphs). A RECT PAINTS ITS OWN COLOR straight over
 // whatever lies under it, THE PLATE'S FRINGE BLENDS SOURCE-OVER with
 // the ground and the grid beneath it, and THE TINT BLENDS SOURCE-OVER with
 // whatever the earlier records drew under it — the GL blend's work
@@ -72,7 +71,7 @@
 // The platform draws the list under a scissor to the list's clip
 // (GuiPlatform::set_canvas_frame; gl_canvas.cpp's GuiGlCanvas::present_frame);
 // the CPU never paints these pixels at all. THE GPU DRAWS EVERY FRAME
-// WHOLE (architect 2026-11-16 night, send S; present_frame's THE WHOLE
+// WHOLE (architect 2026-11-16 night; present_frame's THE WHOLE
 // DRAW, the plain swap at GuiPlatform::present), but A FRAME IS ONLY
 // PRESENTED WHERE DAMAGE INVITES IT, so EVERY CHANGE A RECORD MAKES STILL
 // OWES DAMAGE ON ITS OLD AND NEW PIXELS, as every chrome pixel always has
@@ -92,12 +91,12 @@
 // list shows) OR ALPHA 255 (an overlay's: every opaque overlay over the well
 // is an integral rectangle whose antialiasing blends against its own ground
 // alone, design record §2) — OR, WHERE A FLOATING SURFACE STANDS, ANY
-// PREMULTIPLIED ALPHA (send AA's stage D1, 2026-11-19: Arc's tooltip, its
+// PREMULTIPLIED ALPHA (2026-11-19: Arc's tooltip, its
 // .95 fill, rounded corners and GTK's shadow, and notifyd's .95 cards — "if
 // we can do the transparency, we might as well"): cairo lays the floater
 // over the cleared zeros, so its texels are its own premultiplied color, and
 // INSIDE THE
-// FLOATERS' HULLS (GuiCanvasDrawList::floaters below; send BB, 2026-11-19)
+// FLOATERS' HULLS (GuiCanvasDrawList::floaters below; 2026-11-19)
 // the texture's draw blends them source-over the canvas the list drew
 // (GuiGlCanvas::present_frame, kCanvasFragmentShader), an opaque texel
 // landing as unblended. No other surface may leave a partial alpha there,
@@ -124,14 +123,14 @@
 // word on its cells; the plate writes, per cell, the
 // premultiplied source of its two coverages — the ink at the union's
 // coverage less the grown inner's, the core at the inner's, the alpha the
-// union's (2026-11-04; area-correct since 2026-11-07, kListFragmentShader's
+// union's (2026-11-04; area-correct, 2026-11-07, kListFragmentShader's
 // head the rule) —
 // rasterized from render_waveform_columns' tips (render.h, the plate's one
 // producer: one pair of tips a BAR, the bars anchored to the audio and drawn
-// stretched by the record's draw transform, architect 2026-11-14, send G —
+// stretched by the record's draw transform, architect 2026-11-14 —
 // and, where the record's weight is under 1, the fade band's two rows each
 // drawn so and their two pictures mixed by the weight, the two-picture
-// blend, architect 2026-11-15, send O;
+// blend, architect 2026-11-15;
 // the algorithm kListFragmentShader's) and blended source-over
 // under the GL blend, exactly the word in the core and nothing where no bar
 // covers and the canvas shows; THE TINT writes, per cell of its rect, the
@@ -139,7 +138,7 @@
 // exact area of the cell its real edges cover, 1 on a cell inside them —
 // blended source-over, so the cell beneath, G, becomes G · (1 − a) +
 // word · a in byte space, rounded once (architect 2026-11-12, the edges
-// 2026-11-14, send J; kListFragmentShader's tint arm owns the arithmetic);
+// 2026-11-14; kListFragmentShader's tint arm owns the arithmetic);
 // later
 // records overwrite (or, the plate's fringe and the tint, blend over)
 // earlier ones in list order, the paint order; the
@@ -155,14 +154,14 @@
 // antialiasing, render_waveform_columns' head) — r THE BAND'S DEVICE-PX
 // RECT, `bars` the count of its row of bars and `period` the index of the
 // row's first bar in the list's `columns` (the bars are the plate's
-// columns, MORE OR FEWER THAN r's device columns; architect 2026-11-14,
-// send G), `bars_x0` and `bars_pitch` THE DRAW TRANSFORM as floats — bar j
+// columns, MORE OR FEWER THAN r's device columns; architect 2026-11-14),
+// `bars_x0` and `bars_pitch` THE DRAW TRANSFORM as floats — bar j
 // of the row has its centre bars_x0 + j · bars_pitch device px from r's
 // left edge (render.h's THE PLATE'S BARS owns it; the doubles are
-// GuiPlateColumns') — `bars_weight` THE WEIGHT (architect 2026-11-14,
-// send H; GuiPlateColumns::bar_weight, render.h's THE FADE BAND): exactly 1
+// GuiPlateColumns') — `bars_weight` THE WEIGHT (architect 2026-11-14;
+// GuiPlateColumns::bar_weight, render.h's THE FADE BAND): exactly 1
 // for that uniform row alone; under 1 THE FADE BAND (architect 2026-11-15,
-// send O, the two-picture blend), that row the main rung's and beside it
+// the two-picture blend), that row the main rung's and beside it
 // THE FINE ROW, the finer rung's own uniform row, `bars2` its count,
 // `period2` the index of its first bar in `columns` (right after the main
 // row's bars) and `bars2_x0` / `bars2_pitch` its own draw transform as
@@ -176,7 +175,7 @@
 // declares it (waveform_cache.cpp's two publication roads), and the
 // transform moves only with one.
 // THE TINT (architect 2026-11-12, the sweep highlight; ITS REAL EDGES
-// architect 2026-11-14, send J, a line at its exact place)
+// architect 2026-11-14, a line at its exact place)
 // blends toward `word` at the alpha `word2`, a WHOLE PERCENT in
 // [1, 100] (its callers' 100 and 3), THE RECT
 // `edges` = {x0, y0, x1, y1}, floats in device px FROM r's CORNER — r the
@@ -307,7 +306,7 @@ inline GuiRect gui_page_place(const GuiRect& box, int w, int h) {
     return GuiRect{box.x + (box.w - w) / 2, box.y + (box.h - h) / 2, w, h};
 }
 
-// THE FLOATERS' HULLS (architect 2026-11-19, send BB: "ok to implement the
+// THE FLOATERS' HULLS (architect 2026-11-19: "ok to implement the
 // fix you suggested for the power draw by card"; the cost of a standing
 // floater confined to where it stands): ONE RECT A FAMILY — the cards'
 // stack and the tooltip, THE TWO FAMILIES (a question, the progress page
@@ -369,7 +368,7 @@ GuiCanvasDrawList& gui_canvas_frame();
 // blended_rect one Tint record blending THE REAL RECT [x0, x1) x [y0, y1)
 // (surface px, doubles) toward `toward` (an authored color, display_color
 // applied here, the rects' word) at `percent` whole percent (at most 100)
-// times each cell's exact coverage (architect 2026-11-14, send J: a line
+// times each cell's exact coverage (architect 2026-11-14: a line
 // at its exact place is this record at 100 percent, the sweep highlight of
 // 2026-11-12 the same record at Arc's 3, kSweepHighlightPct) — nothing for
 // an empty rect.

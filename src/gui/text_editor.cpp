@@ -28,8 +28,7 @@ namespace {
 // THE UTF-8 PRIMITIVE every boundary walk below is built from: a continuation
 // byte is 10xxxxxx, and every other byte STARTS a codepoint. That single test
 // needs no sequence length and degrades safely on malformed bytes. It is the
-// module's own since 2026-08-28 — its one outside caller, the Open prompt's
-// prefix completion, went with that prompt's text field.
+// module's own: nothing outside this file calls it.
 bool is_utf8_continuation_byte(unsigned char b) { return (b & 0xc0) == 0x80; }
 
 // The codepoint boundary strictly LEFT of `pos` (0 when there is none).
@@ -279,16 +278,15 @@ KeyClass classify_key(GuiKey key, GuiInputState mods) {
     // handle_key would act on. THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S
     // (architect 2026-10-30, its one producer under an editor): its
     // characters, Backspace, Enter, Esc, Copy and Paste (the two keys
-    // carrying their own ctrl), and since 2026-11-08 (sessions 95 / 96) LEFT
-    // and RIGHT (bare, or carrying the latched Shift). The keyboard's pass
+    // carrying their own ctrl), and LEFT and RIGHT (architect 2026-11-08;
+    // bare, or carrying the latched Shift). The keyboard's pass
     // key, UP and DOWN are NOT this module's (architect 2026-11-20 / 21:
     // they rewrite the marker lane editor's whole text, its own acts,
     // handle_top_flag_editor_key), so they classify NotEditorKey and the
     // keyboard-modal gate admits them on its own terms. THE
     // BARREL HAS NO ROAD ON ANY KEY, THE KEYBOARD'S INCLUDED (architect
-    // 2026-11-08, session 94: claim_onscreen_keyboard_press consumes a press
-    // carrying it), so the barrel's word erase, select-all and cut went that
-    // day with their last producer.
+    // 2026-11-08: claim_onscreen_keyboard_press consumes a press
+    // carrying it), so no barrel word erase, select-all or cut exists here.
     //
     // NO ARM ADMITS ALT. Session and Backspace are bare-exact,
     // the chords are ctrl-exact, the caret keys shift-free or shift-only,
@@ -375,8 +373,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     // Ctrl+C / Ctrl+V: clipboard, the keyboard's Copy and Paste keys. These
     // sit in the editor's owned keymap (returning a handled action), so they
     // never fall through to the global dispatch. Ctrl+C and Ctrl+V are both
-    // unbound globally (the main window's resolved-value copy is Ctrl+Shift+J
-    // since 2026-10-14), so while an editor stands the chord is this field's
+    // unbound globally (the main window's resolved-value copy is Ctrl+Shift+J,
+    // 2026-10-14), so while an editor stands the chord is this field's
     // copy and nothing else. Copy is a no-op (plain Consumed) without a
     // selection; paste always requests — the input handler applies the action
     // against the SYSTEM clipboard, and answers a request with nothing on it
@@ -389,8 +387,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
         return KeyAction::PasteRequested;
     }
 
-    // THE CARET KEYS, LEFT AND RIGHT (architect 2026-11-08, sessions 95 /
-    // 96, reversing 2026-10-30's "no arrows"; every editor kind — the flag
+    // THE CARET KEYS, LEFT AND RIGHT (architect 2026-11-08; every editor
+    // kind — the flag
     // editor, the bound editors, the settings line, the trim preset's name,
     // the BPM form's line — through route_modal_editor_key). EVERY STEP IS
     // ONE CODEPOINT (the head's rule), the caret indexed by byte.
@@ -429,7 +427,7 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
 
     // Editing: BACKSPACE, the keyboard's one deleting key (architect
     // 2026-10-30: no Home / End and no Delete; the caret moves by LEFT and
-    // RIGHT since 2026-11-08 and by the pointer, the field's press and its
+    // RIGHT (2026-11-08) and by the pointer, the field's press and its
     // caret drag). It is BARE, and that is a CONTRACT: the membership gate
     // above classifies any modifier on it as NotEditorKey.
     if (key == GuiKeys::BackSpace) {

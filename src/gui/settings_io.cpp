@@ -61,7 +61,7 @@ struct SettingDescriptor {
     EngineField field;
     // Template default for non-engine kinds. nullptr means "no fixed
     // default": the four TRIM kinds stamp the FULL WINDOW for the just-loaded
-    // source ([0, total-1] — the trim window is always set since 2026-07-30,
+    // source ([0, total-1] — the trim window is always set (2026-07-30),
     // and the source's frame count is not a compile-time
     // constant). Every other non-engine descriptor carries a fixed default. For
     // engine kinds, the template default comes from a default-constructed
@@ -76,21 +76,15 @@ constexpr SettingDescriptor kSettingsOrder[] = {
     { "notes",                       SettingKind::EnginePassthrough,    EngineField::Notes,                   nullptr },
     { "url",                         SettingKind::EnginePassthrough,    EngineField::Url,                     nullptr },
     { "cover",                       SettingKind::EnginePassthrough,    EngineField::Cover,                   nullptr },
-    // GUI view-state band begins: non-tab keys, then all tab A keys,
+    // The GUI view-state keys begin: non-tab keys, then all tab A keys,
     // then all tab B keys.
     { "active_audio_view",           SettingKind::ActiveAudioViewChar,  EngineField::Title,                   "S"        },
     { "active_markers_view",         SettingKind::ActiveMarkersViewChar,EngineField::Title,                   "W"        },
     { "active_tab_view",             SettingKind::ActiveTabViewChar,    EngineField::Title,                   "A"        },
-    // (FOUR DESCRIPTORS LEFT THIS TABLE 2026-08-27 with their keys —
-    // `playback_speed` retired whole; `gui_scale`, `audio_player` and
-    // `projects_repo` moved to the per-device config, device_config.h, where
-    // `audio_player` then retired whole 2026-08-28. THREE MORE LEFT IT
-    // 2026-09-11 — `follow`, `centered` and `center_on_next_marker`, the
-    // camera postures, which were session state in AppState from then (the
-    // third deleted whole 2026-09-13) and are serialized nowhere. ONE MORE LEFT
-    // IT 2026-09-14 — the waveform magnification level, the picture's gain
-    // varying over source time since (architect approval 2026-09-14). The parser-side record of all eight, and the
-    // consequence for a sidecar still carrying one, is at
+    // (The camera postures are session state in AppState and serialized
+    // nowhere; the device-wide keys live in the device config,
+    // device_config.h. The record of the keys this table does not carry, and
+    // the consequence for a sidecar still carrying one, is at
     // kCanonicalSettingsKeys, settings_file.cpp.)
     { "tab_a_trim_begin",            SettingKind::TrimBegin_A,          EngineField::Title,                   nullptr },
     { "tab_a_trim_end",              SettingKind::TrimEnd_A,            EngineField::Title,                   nullptr },
@@ -284,8 +278,7 @@ std::string format_default_settings_template(const std::string& stem,
     EngineSettings defaults{};
     defaults.title = default_render_title(stem);
     // First-open trim stamp: BOTH tabs get the FULL window [0, total-1] for the
-    // just-loaded source — the trim window is always set (2026-07-30), and the
-    // full window is exactly what the retired `-1` unset spelling used to mean.
+    // just-loaded source — the trim window is always set (2026-07-30).
     // The pair comes from the one seeding owner (full_trim_window, app_state.h)
     // so the template and the load reset can never disagree; `total_frames` is
     // the caller's loaded source total, which is why this is a dynamic stamp
@@ -390,8 +383,8 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     // file formatter (format_level_db, device_config.h: the shortest
     // round-trip decimal — a config loaded as "-9.0" recalls as "-9") and
     // the crossfade through its own (format_noise_crossfade_s), the writer's
-    // own spelling. (The level, `noise_level`, recalls nothing since
-    // 2026-11-05 night: no Settings row, the band's NOISE case its one road,
+    // own spelling. (The level, `noise_level`, recalls nothing: no Settings
+    // row, the top icon row's NOISE case its one road (2026-11-05 night),
     // kSettingsEditorKeys.)
     if (key == "noise" && app.device_config != nullptr)
         return app.device_config->noise;

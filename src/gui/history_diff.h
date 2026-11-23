@@ -22,8 +22,7 @@ struct AppState;
 struct UndoEntry;
 class GuiHistoryPrefetch;
 
-// THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29; moved here
-// 2026-08-30, when the mode's ENTRY refusal became a card too). Every reporter
+// THE HISTORY-UNAVAILABLE SENTENCE, ONE SPELLING (2026-08-29). Every reporter
 // of the fact says these same words, and the reporters are re-greped on this
 // name rather than inherited: this module's own init(), which prints it on
 // stderr with the store's reason appended; the WALK LAMP'S REFUSAL, which
@@ -32,13 +31,11 @@ class GuiHistoryPrefetch;
 // and the prefetch arrival that closes a standing view, which does both.
 // (The checkpoint act never meets the fact: its face greys without a clone,
 // run_publish_chord.) It lives beside the reason it prefixes rather than in one of the
-// readers, so no reader can drift from the producer. (TWO DEAD-BUTTON
-// TOOLTIPS said it too from 2026-09-04 to 2026-09-12 — the walk lamp's and
-// Save-and-Commit's, over the faces this fact greys. A tooltip names the act
-// and states no reason now, so the fact is the KEYS' cards', which append the
-// clone-specific clause a constant tooltip line could not carry anyway.)
+// readers, so no reader can drift from the producer. A tooltip names the act
+// and states no reason, so the fact is the KEYS' cards', which append the
+// clone-specific clause a constant tooltip line could not carry.
 //
-// THE ENTRY IS NO LONGER AMONG THEM (architect 2026-09-04): a bootstrap the
+// THE ENTRY IS NOT AMONG THEM (architect 2026-09-04): a bootstrap the
 // remote walk cannot answer opens the view on the LOCAL walk instead of
 // refusing it, so the fact belongs to the press that asks for git rather than
 // to the press that opens the view. Each such refusal is input routing with an
@@ -64,7 +61,7 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // TREE of the checked-out branch, and whichever directory under `projects/`
 // holds files by that name belongs to this piece's history, whatever that folder
 // is called and however deeply it nests. WHERE THE PIECE ITSELF LIVES IS A
-// SEPARATE AND SIMPLER QUESTION since 2026-08-09: it is the folder the SOURCE is
+// SEPARATE AND SIMPLER QUESTION (2026-08-09): it is the folder the SOURCE is
 // in, required to be under `projects/`, which is where the next checkpoint is
 // written — so the folder decides what is WRITTEN and the name decides what is
 // SEEN, and a folder renamed or made fresh today still walks back through every
@@ -72,19 +69,17 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // basename, so a piece renamed at some point in the walked range is
 // still followed with no knowledge of what its folder used to be called. Each
 // commit's blobs are then read at the paths THAT commit's own tree gives, the
-// same idea applied per era. (The narrowing RETIRED a tree-wide match, and with
-// it the pre-`projects/` era's commits: they are legacy-format checkpoints that
-// refuse the load-in-place anyway, and a foreign copy of a sidecar name
-// elsewhere in the
-// tree can no longer make the match ambiguous.)
+// same idea applied per era. (The match is under `projects/` alone, so a
+// foreign copy of a sidecar name elsewhere in the tree cannot make it
+// ambiguous; the commits from before `projects/` are legacy-format
+// checkpoints that refuse the load-in-place anyway.)
 //
 // THE BRANCH IS THE LOCAL ONE, `HEAD`, not `origin/main` — because this module
-// WRITES checkpoints now (the commit act below) and a checkpoint whose push
+// WRITES checkpoints (the commit act below) and a checkpoint whose push
 // failed must still be visible history. `origin/main` would hide it until the
 // next successful push, which is exactly the moment the user most needs to see
 // that the commit exists. One spelling for both uses — the walk and the push's
-// destination — so "the branch" cannot mean two things. (It was three until
-// 2026-08-09; the header's tip listing went with the three-arm resolution.)
+// destination — so "the branch" cannot mean two things.
 //
 // WHICH REPOSITORY IS THE PROJECTS HOME is the `projects_repo` setting's
 // answer, not this module's assumption. The guard compares it against this
@@ -98,8 +93,8 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // its push, as the mutating boundary's own check, because config can move while
 // the mode stands (clone_is_projects_home in the .cpp is the one owner). The
 // guard asks WHICH REPOSITORY THIS CLONE IS, never how fresh it is — it reads
-// remote URLs and no ref at all — so moving the walk from `origin/main` to
-// the local branch left it untouched and means exactly what it always did.
+// remote URLs and no ref at all — so the branch the walk reads is no question
+// of the guard's.
 //
 // The diff runs THEN -> NOW, older side to newer side, and WHICH TWO SIDES is
 // the compare mode's answer (GuiHistoryCompare below). In the CUMULATIVE
@@ -128,21 +123,21 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // MEMBERS OF THE SET (kSidecarExtensions, sidecar_set.h) by name — the
 // walk's one sidecar predicate, the per-commit sidecar match and the blob
 // reads all enumerate that list and no other — so a commit that also carries a
-// `.magnificationlevelmarkers` beside them (every checkpoint from 2026-09-15
-// to that column's deletion) stays ELIGIBLE on its three: the extra file is
-// never listed, staged or parsed, as on every live road (sidecar_set.h). A
-// commit that lacks one of the three still refuses as ever.
+// `.magnificationlevelmarkers` beside them (older checkpoints do) stays
+// ELIGIBLE on its three: the extra file is never listed, staged or parsed, as
+// on every live road (sidecar_set.h). A commit that lacks one of the three
+// refuses.
 //
-// THE WALK IS UNCAPPED AND PREFETCHED (architect 2026-08-07, retiring the ruled
-// depth of 20). Two facts follow from the gate above: it costs a strict
-// whole-set load PER CANDIDATE, and that cost has to be paid before a walk
-// member exists at all — which is what made `h` stall, and what the depth cap
-// was really buying. So the git half moved OFF the entry and ONTO A BACKGROUND
-// WORKER that runs at startup (GuiHistoryPrefetch, history_prefetch.h): the same
-// steps in the same order, uncapped, STREAMING each eligible member to the main
-// thread as it passes the gate. GuiHistoryDiff BINDS to that store rather than
-// building a list of its own, so a visit costs no git at all in the ordinary
-// case and the walk may GROW while the view stands.
+// THE WALK IS UNCAPPED AND PREFETCHED (architect 2026-08-07). Two facts
+// follow from the gate above: it costs a strict whole-set load PER
+// CANDIDATE, and that cost has to be paid before a walk member exists at all
+// — which would stall `h` at its entry. So the git half runs OFF the entry,
+// ON A BACKGROUND WORKER that runs at startup (GuiHistoryPrefetch,
+// history_prefetch.h): the same steps in the same order, uncapped, STREAMING
+// each eligible member to the main thread as it passes the gate. GuiHistoryDiff
+// BINDS to that store rather than building a list of its own, so a visit costs
+// no git at all in the ordinary case and the walk may GROW while the view
+// stands.
 //
 // THE NOW SIDE IS FROZEN AT init(): the three strings are captured once and
 // every cached delta is measured against them, so a session that keeps
@@ -164,21 +159,20 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // (run_history_pull) fast-forwards the branch, its index and its files. The
 // act and the check also run the cold-start lock recovery when they open the
 // clone (GuiGitRepo::clear_stale_locks: the lock and temporary files a death
-// mid-write leaves, once per clone per process). THE WALK STILL READS THE LOCAL BRANCH (the paragraph above): a fetch moves
-// `origin/<branch>`, never what `h` walks.
+// mid-write leaves, once per clone per process). THE WALK READS THE LOCAL
+// BRANCH (the paragraph above): a fetch moves `origin/<branch>`, never what
+// `h` walks.
 
 // THE TWO COMPARE MODES (architect 2026-08-05). A checkpoint can be read
 // against two different "other sides", and the view offers both.
 //
 // WHICH ONE IS SHOWING IS THE VISIT'S, not a tab: AppState::HistoryMode's
 // `cumulative` is the bit (its contract lives at that field), bare `u` and
-// row 4's Cumulative button toggle it, and it is OFF — iterative — at every
-// entry, the mode's own struct being reset whole at both edges (architect
-// 2026-11-17, send U: CUMUL "like session already does"). THE
-// WALK SOURCE is the icon row's WALK LAMP and bare `g` since 2026-08-18 (two
-// radio buttons over that chord until the 2026-09-04 collapse; row 3's tabs and
-// Ctrl+Tab selected it from 2026-08-05 until 2026-08-18); neither surface
-// touches the reading.
+// the top icon row's Cumulative lamp toggle it, and it is OFF — iterative —
+// at every entry, the mode's own struct being reset whole at both edges
+// (architect 2026-11-17: CUMUL "like session already does"). THE WALK
+// SOURCE is the top icon row's WALK LAMP and bare `g` (2026-09-04); neither
+// surface touches the reading.
 //
 //   ITERATIVE — the viewed checkpoint as the OLD side, against THE NEXT-NEWER
 //   ITEM as the new one. It compares FORWARD, toward now: the next-newer
@@ -186,12 +180,10 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 //   index, which has no committed successor — THE FROZEN LIVE NOW SIDE. So it
 //   answers "what happened after this checkpoint", one step at a time, which is
 //   the question a walk backwards through the history is asking at each stop. It
-//   is the state the PROGRAM starts in (the bit's own initializer) — not a
-//   per-visit default: a session that has turned cumulative on stays there until
-//   `u` turns it back or the program closes.
+//   is the reading every entry opens on (the paragraph above).
 //
-//   CUMULATIVE — the viewed checkpoint against the frozen live now side, the
-//   reading the mode shipped with. It answers "how does what I have now differ
+//   CUMULATIVE — the viewed checkpoint against the frozen live now side. It
+//   answers "how does what I have now differ
 //   from that checkpoint?", which is what a restore or a load-in-place is about.
 //
 // THE LANE'S GRAMMAR IS ONE RULE ACROSS BOTH, because the NEWER side is always
@@ -202,12 +194,11 @@ inline constexpr const char* kHistoryUnavailable = "History is unavailable";
 // or the session itself at the newest index.
 //
 // THE TWO READINGS COINCIDE AT THE NEWEST INDEX, deliberately and by
-// construction (architect 2026-08-05, superseding his walk-parent pairing of
-// earlier the same day): both are the newest checkpoint against the live state
-// there, so a session freshly loaded right after a commit shows a BLANK lane in
-// BOTH readings — which is the architect's stated purpose for the forward
-// direction. Neither the lane nor any reader needs to know; they are simply the
-// same delta, computed and cached twice.
+// construction (architect 2026-08-05): both are the newest checkpoint against
+// the live state there, so a session freshly loaded right after a commit shows
+// a BLANK lane in BOTH readings — which is the architect's stated purpose for
+// the forward direction. Neither the lane nor any reader needs to know; they
+// are simply the same delta, computed and cached twice.
 //
 // EVERY INDEX HAS A FORWARD PARTNER, so there is no empty-delta special case and
 // no "the end of the walk has nothing to compare against" arm anywhere: the
@@ -226,13 +217,13 @@ enum class GuiHistoryCompare {
     Cumulative,
 };
 
-// WHICH WALK THE VIEW IS READING (architect 2026-08-07). The view grew a SECOND
+// WHICH WALK THE VIEW IS READING (architect 2026-08-07). The view has a SECOND
 // WALK SOURCE beside the committed history: THE SESSION'S OWN UNDO/REDO
-// TIMELINE. The icon row's WALK LAMP on bare `g` selects THIS axis and only
-// this one — "Remote" and "Local" (2026-08-08); the OTHER axis, the reading,
-// is row 4's Cumulative toggle.
+// TIMELINE. The top icon row's WALK LAMP on bare `g` selects THIS axis and
+// only this one — "Remote" and "Local" (2026-08-08); the OTHER axis, the
+// reading, is the top icon row's Cumulative lamp.
 //
-//   COMMIT — the checkpoint walk this mode was built on: the piece's committed
+//   COMMIT — the checkpoint walk: the piece's committed
 //   sidecar history, matched by name under `projects/` (the file head owns the
 //   whole model). Its members cost git, its membership is the strict load gate,
 //   and it is the DEFAULT at every entry.
@@ -247,8 +238,8 @@ enum class GuiHistoryCompare {
 //
 // THE DELTA VOCABULARY IS IDENTICAL on both, which is what makes one lane serve
 // them: the six entry vectors and the `scale` pair the walk line displays.
-// Viewport, trim and the rest of the GUI band never appear, because they were
-// never undoable in the first place.
+// Viewport, trim and the rest of the GUI-kind keys never appear, because they
+// are not undoable.
 enum class GuiHistoryWalkSource {
     Commit,
     Local,
@@ -271,9 +262,9 @@ struct GuiHistoryWarpEntry {
     // (HistoryDiffFlag::then_ordinal / now_ordinal, render.h): an added
     // line's ordinal is the now-side row the inverse deletes, a removed
     // line's the then-side row the inverse puts it back at. The frame alone
-    // was the address until then, and on an equal-frame run it reached the
-    // run's FIRST pre-act row whichever row the flag showed — a `4 → 3` flag
-    // on the second of two coincident rows reverted the first. THE ORDINAL IS
+    // would reach an equal-frame run's FIRST pre-act row whichever row the
+    // flag showed — a `4 → 3` flag on the second of two coincident rows would
+    // revert the first. THE ORDINAL IS
     // WITHIN THE RUN, NOT A FULL-SIDE ROW INDEX, deliberately: the act is
     // blind to the reading (run_history_revert), so a flag's now side is the
     // live store only in the cumulative reading and at the newest index; a
@@ -285,9 +276,9 @@ struct GuiHistoryWarpEntry {
     int         ordinal  = 0;
     std::string tempo_token;
     // The line's own local '#' byte — the revert's truth and the label's `#`
-    // (history_diff_label, paint_handler.h; architect 2026-11-11, session
-    // 107). The chip reads no disabled bit off a history line (architect
-    // 2026-11-11, session 106: removed is the disabled style, added and
+    // (history_diff_label, paint_handler.h; architect 2026-11-11). The chip
+    // reads no disabled bit off a history line (architect 2026-11-11:
+    // removed is the disabled style, added and
     // changed the enabled one, whatever the line's bit).
     bool        disabled = false;
 };
@@ -295,8 +286,7 @@ struct GuiHistoryWarpEntry {
 // A removed warp line and an added one AT ONE FRAME, PAIRED INTO ONE CHANGE —
 // what the lane's one changed item paints: a marker changed in place, its
 // payload edited or its disable bit toggled (pair_changes_by_frame). THE
-// SAME-FRAME PAIRING IS THE ONLY ONE (architect 2026-11-11, session 106,
-// retiring the nudged pair of 2026-10-10 / 2026-10-11: "the purpose of the
+// SAME-FRAME PAIRING IS THE ONLY ONE (architect 2026-11-11: "the purpose of the
 // history coalesce was to prevent a small move from creating two entries in
 // history, the later of which obscure the former — we have essentially
 // recreated the same situation"): a MOVED marker is a removed line at its old
@@ -362,8 +352,8 @@ struct GuiHistoryCommitDelta {
 
     // THE SCALE IS THE ONLY SETTINGS KEY THIS MODE DISPLAYS (architect's
     // ruling, kept 2026-10-28) — a recorded asymmetry, not an oversight: every
-    // other settings delta (title, bpm, notes, url, cover, the whole per-tab
-    // view-state band) is deliberately absent from the walk line's segment
+    // other settings delta (title, bpm, notes, url, cover, every per-tab
+    // view-state key) is deliberately absent from the walk line's segment
     // (history_walk_line, paint_handler.cpp), so the mode shows authoring
     // history rather than session bookkeeping. The tokens are the `scale=`
     // value text VERBATIM from each side, empty where that side carried no
@@ -371,17 +361,6 @@ struct GuiHistoryCommitDelta {
     std::string then_scale_token;
     std::string now_scale_token;
     bool        scale_changed = false;
-
-    // (frame_span IS DELETED, architect 2026-08-19. It answered WHERE THE DELTA
-    // LIES — [lo, hi] over all six entry vectors, in SOURCE frames, false when
-    // no entry carried a frame at all. Its only readers were the history view's
-    // two GUI consumers, the trim bar's in-view diff-span DISPLAY and that
-    // bar's framing gesture, and both went on 2026-08-18 when the
-    // architect ruled the bar shows the tab's REAL trim window inside the view
-    // like everywhere else — frame_viewed_commit_diff_span with them. It stood
-    // one day as a reader-less seed and is now gone with the display it served:
-    // a delta describes a CHECKPOINT, and nothing left in the product asks a
-    // checkpoint where it lies. The delta's own machinery never read it.)
 };
 
 // The three files' exact current bytes — what Ctrl+S would write at this
@@ -407,7 +386,8 @@ struct GuiHistoryNowSide {
 // and both sides of every local delta are formatted through it.
 struct GuiHistoryGuiSide;
 
-// Capture it off the live state. The active tab's band takes the save path's
+// Capture it off the live state. The active tab's view state takes the save
+// path's
 // pre-write stash (viewport / zoom / playhead / trim) on a LOCAL copy, so the
 // bytes match a save while this const read mutates nothing.
 std::shared_ptr<const GuiHistoryGuiSide> capture_history_gui_side(
@@ -479,20 +459,19 @@ std::string short_sha(const std::string& sha);
 // deltas, while this reads any one commit by name.
 //
 // `spelling` is a FULL 40-hex commit name: BOTH CALLERS HAND IT ONE THE STORE
-// ALREADY HOLDS since 2026-08-28 — the walk's scan its candidate, the `'`
-// confirmation its viewed member — so the resolution is a verification rather
-// than a lookup (the typed load prompt that took "a SHA pasted from GitHub's web
-// UI" retired with its field, architect 2026-08-28). It must name a COMMIT in
-// this clone; anything else refuses as naming none.
+// ALREADY HOLDS (architect 2026-08-28) — the walk's scan its candidate, the
+// `'` confirmation its viewed member — so the resolution is a verification
+// rather than a lookup. It must name a COMMIT in this clone; anything else
+// refuses as naming none.
 //
 // The sidecar directory is the one THIS COMMIT TOUCHED for the base name, the
 // same rule the walk uses, so a commit from before a corpus rename reads with no
 // knowledge of what the directory used to be called. It takes no session
-// directory to break ties with and had one until 2026-08-09: a commit that
-// touches TWO directories, or NONE, simply refuses — one may belong to another
-// piece entirely and a whole-state replace out of it would be the worst kind of
-// confident wrong (resolve_commit_paths owns the rules and why the session's own
-// directory stopped being an answer).
+// directory to break ties with (2026-08-09): a commit that touches TWO
+// directories, or NONE, simply refuses — one may belong to another piece
+// entirely and a whole-state replace out of it would be the worst kind of
+// confident wrong (resolve_commit_paths owns the rules and why the session's
+// own directory is no answer).
 //
 // A resolved commit that carries none of the three is NOT a failure here — every
 // blob comes back with an empty path and the CALLER decides what a missing
@@ -531,11 +510,12 @@ struct GuiHistoryCommitLoad {
     std::vector<GuiPhaseResetMarker> phase_reset_markers;
 };
 
-// THE STRICT WHOLE-SET LOAD — the load-in-place gate, and since 2026-08-04 THE
-// WALK'S MEMBERSHIP TEST, one predicate for both askers by the architect's
-// ruling (no second predicate, no relaxed variant anywhere). The product's
-// third adversarial load boundary beside the GUI's and the CLI's loaders,
-// differing only in reading a git blob: the same strict parsers, first error.
+// THE STRICT WHOLE-SET LOAD — the load-in-place gate, and THE WALK'S
+// MEMBERSHIP TEST (2026-08-04), one predicate for both askers by the
+// architect's ruling (no second predicate, no relaxed variant anywhere). The
+// product's third adversarial load boundary beside the GUI's and the CLI's
+// loaders, differing only in reading a git blob: the same strict parsers, first
+// error.
 //
 // The sequence is the `'` act's own validation, whole: read_commit_sidecars
 // resolves the spelling and reads the three blobs out of that commit's own
@@ -566,10 +546,10 @@ bool load_commit_sidecars_strict(const std::string&    repo_root,
                                  GuiHistoryCommitLoad& out,
                                  GuiFailure&           failure);
 
-// -- THE WALK'S GIT HALF, TAKEN OFF THE SESSION (2026-08-07) ----------------
+// -- THE WALK'S GIT HALF, OFF THE SESSION (2026-08-07) ----------------------
 //
-// Everything below this line up to GuiHistoryDiff is what init() used to do
-// inline and what the prefetch worker now does off-thread. It lives HERE, in
+// Everything below this line up to GuiHistoryDiff is the walk's git half, which
+// the prefetch worker runs off-thread. It lives HERE, in
 // the module that owns every git call, so the worker file owns only threading:
 // the read/write fence stays "which function a call site names", and the
 // prefetch names none of the mutating one.
@@ -650,9 +630,8 @@ GuiHistoryRepoRoot resolve_repo_root_for_source(
 // worker's header has arrived — so an entry refusal is the same answer computed
 // in the same place whichever thread asks. Its git is the root derivation's
 // discovery and the projects-home guard's reads of the origin's configured URLs
-// — the tip-tree listing went with the three-arm resolution on 2026-08-09,
-// so where the piece lives is answered from the source path and the filesystem
-// alone. It writes nothing.
+// — no tip-tree listing (2026-08-09): where the piece lives is answered from
+// the source path and the filesystem alone. It writes nothing.
 GuiHistoryWalkHeader resolve_history_walk_header(
     const std::string& source_audio_path, const std::string& projects_repo);
 
@@ -741,8 +720,8 @@ void scan_history_walk(
     const std::function<void(GuiHistoryCommitSidecars)>& on_member,
     const std::function<void(GuiHistoryScanResult)>&     on_done);
 
-// The session object: A BINDING TO THE PREFETCH STORE'S WALK (2026-08-07,
-// superseding the list this used to build for itself at init) — each member
+// The session object: A BINDING TO THE PREFETCH STORE'S WALK (2026-08-07) —
+// each member
 // carries the three sidecar snapshots the load gate read on the worker — with
 // each commit's delta computed lazily on first request and cached thereafter PER
 // (INDEX, COMPARE), so stepping back over a commit already visited costs nothing
@@ -757,16 +736,16 @@ void scan_history_walk(
 // carries the count.
 class GuiHistoryDiff {
 public:
-    // BIND THE VISIT TO THE PREFETCH STORE and freeze the live now side. The
-    // git half of this call is gone (the store's worker ran it, or is running
-    // it): what is left is the header — taken from the store, or COMPUTED
+    // BIND THE VISIT TO THE PREFETCH STORE and freeze the live now side. This
+    // call walks no history (the store's worker ran the walk, or is running
+    // it): what it does is the header — taken from the store, or COMPUTED
     // SYNCHRONOUSLY HERE by resolve_history_walk_header when the visit opens
     // before the worker's own header has arrived, a discovery and two config
     // reads and no strict load — plus the now-side capture and the delta
     // caches.
     //
     // Returns available(). TWO FAMILIES OF FAILURE, one stderr line and nothing
-    // else either way — AND A FAILURE NO LONGER REFUSES THE VIEW (architect
+    // else either way — AND A FAILURE DOES NOT REFUSE THE VIEW (architect
     // 2026-09-04): the entry owner opens on the LOCAL walk instead, so what
     // this answers is whether the REMOTE walk bootstrapped, and it is the
     // stored verdict every reader of that question asks for the visit's whole
@@ -775,9 +754,9 @@ public:
     // `projects_repo` that is empty or that names a different repository than
     // this clone's FETCH url or than any of its effective PUSH urls, and a source
     // that is not in a folder under `projects/` — which repository, and where
-    // this piece lives. (The committed-tree questions went with the three-arm
-    // resolution on 2026-08-09: there is no tip listing, no sole-directory
-    // judgment and no ambiguity refusal left in the header.) AND
+    // this piece lives. (The header asks the committed tree nothing,
+    // 2026-08-09: no tip listing, no sole-directory judgment, no ambiguity
+    // refusal.) AND
     // THE SCAN'S: the bound run's walk could not be read, so this program has
     // not read the piece's history at all (GuiHistoryScanResult).
     // Both are questions that went UNANSWERED; neither is a fact about how many
@@ -786,12 +765,12 @@ public:
     // MEMBERSHIP IS NEVER A REFUSAL (architect 2026-08-09). A walk with no
     // eligible commit is AVAILABLE whether its scan is still streaming or has
     // FINISHED empty: the view opens at `0/0` over a blank lane, populating live
-    // in the first case and resting in the second. The two terminal zeros this
-    // once refused on — no commit touching the sidecars, and every touching
-    // commit refusing the strict load — are ordinary now, and the reasoning is
-    // at the site in the definition. Which is exactly why the scan failure had
-    // to become its own answer: with emptiness no longer refusing, an unread
-    // history would otherwise have passed for a read one.
+    // in the first case and resting in the second. The two terminal zeros —
+    // no commit touching the sidecars, and every touching commit refusing the
+    // strict load — are ordinary, and the reasoning is at the site in the
+    // definition. Which is exactly why the scan failure is its own answer:
+    // with emptiness refusing nothing, an unread history would otherwise pass
+    // for a read one.
     bool init(const AppState& app, const GuiHistoryPrefetch& prefetch);
 
     // IS THE REMOTE WALK AVAILABLE? — the bootstrap's verdict, ANSWERED ONCE
@@ -897,12 +876,10 @@ private:
     // delta_at's pointer-stability contract under a growing walk. Indexed by the
     // enum's own value.
     //
-    // THE FOURTH READING DID NOT LAND HERE (2026-08-07), which retires this
-    // slot's old "adding a third reading is a one-line change" note: the LOCAL
-    // walk offers the same two readings over ANOTHER SOURCE (GuiHistoryLocalWalk
-    // below), so what the view grew was a second source with its own two-slot
-    // cache — not a third compare mode. A genuine third READING would still be
-    // the one-line change the array shape suggests, in both classes.
+    // A SECOND SOURCE, NOT A THIRD READING (2026-08-07): the LOCAL walk offers
+    // the same two readings over ANOTHER SOURCE (GuiHistoryLocalWalk below),
+    // with its own two-slot cache. A genuine third READING would be the
+    // one-line change the array shape suggests, in both classes.
     std::array<std::deque<std::optional<GuiHistoryCommitDelta>>, 2> cache_;
 };
 
@@ -958,13 +935,10 @@ private:
 // timeline instead of a rule with a redo exception. At the live member itself
 // both sides are the same state, so the lane is blank there in both readings.
 //
-// (THE REDO STACK WAS DELIBERATELY EXCLUDED until 2026-08-08, on the reasoning
-// that a walk is what is BEHIND you and that including redo would need a second
-// index origin and a signed position. The architect superseded that with the
-// complaint the states model answers — set a marker, move it, Ctrl+Z, open the
-// view and it read `1/1` about a session holding three states — and the
-// objection went with it: there is ONE index origin here, the newest state, and
-// the live state is a member like any other.)
+// THE REDO STACK IS IN THE WALK (architect 2026-08-08): set a marker, move
+// it, Ctrl+Z, open the view — the session holds three states and the walk
+// counts three. There is ONE index origin here, the newest state, and the
+// live state is a member like any other.
 //
 // THE TIMELINE IS FROZEN WHILE THE VIEW STANDS, and the premise is derived
 // rather than hoped: every route that could push, pop or evict an entry on
@@ -972,10 +946,9 @@ private:
 // view as part of itself (AppState::HistoryMode owns that derivation — the same
 // one that keeps the frozen now side honest), and it covers the redo stack by
 // the same argument, redo's only writers being push (which clears it) and the
-// two restores. IT IS EXCEPTIONLESS since 2026-08-07: the one admitted producer
-// it shipped with — the S->T view switch's iteration-bracket push — is gone with
-// the ruling that ITERATION MODE IS TARGET-LEGAL, so entering target view writes
-// no store at all, and the mode bit cannot toggle in here either (`i` is not on
+// two restores. IT IS EXCEPTIONLESS (2026-08-07): ITERATION MODE IS
+// TARGET-LEGAL, so entering target view writes no store at all, and the mode
+// bit cannot toggle in here either (`i` is not on
 // the keyboard allowlist). So both sizes are captured at init and the caches are
 // plain vectors sized once, and the past members index FROM THE BOTTOM of the
 // undo stack, which is what would make an append harmless if one ever returned:
@@ -984,20 +957,17 @@ private:
 // at runtime enforces it. member_at re-reads BOTH stacks' SIZES on every ask,
 // but that is a bounds precondition on the subscript, not a check of the
 // premise: a stack shorter than its captured size answers a blank lane rather
-// than being read at indices that now mean other events. (A per-entry PUSH
-// SERIAL verifying each captured position lived for one day of 2026-08-07,
-// written for the kCap-eviction shape the admitted push could reach; the
-// architect deleted it with that producer — member_at states the rule. Do not
+// than being read at indices that now mean other events. (No per-entry PUSH
+// SERIAL verifies each captured position: the architect ruled it out with
+// its one producer, 2026-08-07 — member_at states the rule. Do not
 // re-propose it.)
 //
 // A MEMBER PAIR THAT SERIALIZES IDENTICALLY SHOWS A BLANK LANE, which is honest
 // rather than a gap: an event that changes nothing any sidecar would carry
 // leaves nothing for a delta to say about the pair that brackets it — the same
 // blank the commit walk shows for a checkpoint whose content matches its
-// neighbour. (The named instance was the iteration bracket's session-only
-// snapshot, which pushed an entry the dirty walk skipped; the bracket left the
-// undo domain on 2026-09-10, so the shape survives without that producer — a
-// settings entry that rewrites a GUI-kind key is one.)
+// neighbour (a settings entry that rewrites a GUI-kind key is one such
+// event).
 class GuiHistoryLocalWalk {
 public:
     // BIND TO THE LIVE SESSION at the mode's entry: BOTH stacks' sizes are
@@ -1108,32 +1078,27 @@ private:
 
 // -- THE COMMIT ACT — the first of the three mutating git routes ------------
 //
-// What the mode reads, it can now also WRITE: the publish chord, Ctrl+Shift+S,
+// What the mode reads, it can also WRITE: the publish chord, Ctrl+Shift+S,
 // the `h` view's Save key and the product's one commit road (architect
-// 2026-11-17, send U), saves the piece and commits the live state — any
-// change git sees in the three sidecars — into its directory in the projects
+// 2026-11-17), saves the piece and commits the live state — any change git
+// sees in the three sidecars — into its directory in the projects
 // repository. The GUI half — THE CHORD'S FORK that asks nothing
 // (run_publish_chord: the pull, the check or the commit by the GitHub
-// status; the commit-title editor that asked for the message
-// from 2026-08-07 retired 2026-10-10), THE
-// ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save and commit", and a
-// failed save refuses it before this module is reached at all), the CLOSE that
-// ends the view once THE SAVE has landed (2026-08-07, superseding the
-// checkpoint-in-the-repository partition), the dispatch onto the background
-// worker and the CRITICAL NOTIFICATION CARD its failures raise (architect
-// 2026-08-29; the tab row's permanent critical slot from 2026-08-09, an
-// acknowledge notice before that) — lives at
+// status), THE ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save
+// and commit", and a failed save refuses it before this module is reached at
+// all), the CLOSE that ends the view once THE SAVE has landed (2026-08-07),
+// the dispatch onto the background worker and the CRITICAL NOTIFICATION CARD
+// its failures raise (architect 2026-08-29) — lives at
 // GuiInputHandler::run_history_commit; what lives here is the act itself.
 
 // THE DEFAULT commit message: `Update <id>`, where the id is the piece
 // directory's own leaf name ("projects/550 - 1" -> "Update 550 - 1").
 //
-// IT IS THE MESSAGE ITSELF AGAIN SINCE 2026-10-10 (architect: "I'm always
-// just using the same title, the default. And if I make a mistake, a revert
-// is just a quick load in place away"): from 2026-08-07 it was the prefill of
-// a commit-title editor, now retired, and every checkpoint carries it. The
-// ONE owner of the spelling, with one reader — the publish chord's act
-// (run_publish_chord).
+// IT IS THE MESSAGE ITSELF (architect 2026-10-10: "I'm always just using the
+// same title, the default. And if I make a mistake, a revert is just a quick
+// load in place away"): no editor asks for a title, and every checkpoint
+// carries it. The ONE owner of the spelling, with one reader — the publish
+// chord's act (run_publish_chord).
 std::string history_checkpoint_title(const std::string& project_directory);
 
 // HOW FAR THE ACT GOT — eight answers over ONE sanctioned path (the act's own
@@ -1163,7 +1128,7 @@ std::string history_checkpoint_title(const std::string& project_directory);
 // remote nothing (status_of's `publication_owed`, compare_with_origin's
 // reading). Committed and published already, nothing to do. It is the
 // one clean ending beside Committed; the caller cards it, "Nothing to
-// commit" (architect 2026-11-17, send U: the face is lit whenever a commit
+// commit" (architect 2026-11-17: the face is lit whenever a commit
 // can be made, so the press is told).
 //
 // CommittedNotPushed — THE BYTES ARE IN THE LOCAL BRANCH AND THE PUSH DID NOT
@@ -1214,7 +1179,8 @@ enum class GuiHistoryCommitOutcome {
 //   Unchecked — no reading: the project's first check has not been
 //               dispatched, or the check could not classify (no clone, a
 //               read that did not answer, a fetch that failed in the clone
-//               rather than on the network). Row 8 shows no segment.
+//               rather than on the network). The walk line shows no
+//               GitHub word.
 //   Checking  — a check is on the worker.
 //   UpToDate  — nothing either way.
 //   Ahead     — this branch has commits GitHub has not (a push that failed).
@@ -1273,14 +1239,13 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
 // own success line too, so the caller reports nothing.
 //
 // `title` IS THE COMMIT MESSAGE, and the caller's (history_checkpoint_title's
-// default, the only title since 2026-10-10). It is written and never read
-// back: the act matches on nothing, the content-signature attribution that once
-// did having gone with the graded machinery (2026-08-09).
+// default, the only title, 2026-10-10). It is written and never read back:
+// the act matches on nothing.
 //
-// IT RUNS ON A BACKGROUND WORKER SINCE 2026-08-07 (GuiHistoryCommitWorker),
-// which changes nothing in this body: every argument is a value the caller
-// captured on the main thread, this function reads no shared state, and its
-// stderr lines print from the worker thread in the same order they always did.
+// IT RUNS ON A BACKGROUND WORKER (2026-08-07, GuiHistoryCommitWorker), which
+// changes nothing in this body: every argument is a value the caller captured
+// on the main thread, this function reads no shared state, and its stderr
+// lines print from the worker thread in this body's order.
 //
 // `projects_repo` is the setting's own value, and it is here because THE FETCH
 // AND THE PUSH CONSUME THE VALIDATED URLS: the same guard init() runs as the

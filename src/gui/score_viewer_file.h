@@ -1,6 +1,6 @@
 #pragma once
 
-// THE SCORE VIEWER'S FILE (architect 2026-10-26 night: "score should not be
+// THE SCORE VIEWER'S FILE (architect 2026-10-26: "score should not be
 // load-fatal: other users shouldn't need the exact same file I use") — the
 // score's five keys in a GUI-OWNED file the piece's own score folder holds,
 // `<project>/score/viewer.txt`, and in no sidecar: the `.settings` schema
@@ -38,7 +38,7 @@
 //                              no range check (score_page_for_position clamps,
 //                              and the viewer's open under the soundtrack):
 //                              under the soundtrack THE CURSOR'S FRAME
-//                              (architect 2026-10-26 night, "it remembers
+//                              (architect 2026-10-26, "it remembers
 //                              based on frames"), on the page road the shown
 //                              page's begin (score_viewer.h's THE REMEMBERED
 //                              POSITION)
@@ -118,8 +118,8 @@ inline bool score_range_crossed(int64_t first, int64_t last) {
 
 // THE PER-KEY GRAMMAR, the one owner the reader asks for all five and the
 // settings editor's `score_path` commit for its one (the range and the
-// positions are the viewer's own writes since 2026-11-19, send AA: no
-// typed road): std::nullopt when `key` is none of the five;
+// positions are the viewer's own writes, 2026-11-19: no typed road):
+// std::nullopt when `key` is none of the five;
 // an error carrying the refusal's reason (no line number) when the value is
 // out of its grammar; otherwise the typed value — `text` for `score_path`,
 // `i64` for the four numbers. The crossing rule is cross-key and is the

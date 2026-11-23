@@ -94,7 +94,7 @@ void Selection::damage_overlay_on_subject_change(
 
 // PUBLISH A SELECTION CHANGE (architect 2026-11-05, his blink: "saw the
 // blink twice in about a dozen or two selects"). A SELECTION CHANGE MOVES THE
-// STEMS: since 2026-11-05 the stem is the selection's (render.h's THE STATES;
+// STEMS: the stem is the selection's (2026-11-05; render.h's THE STATES;
 // MarkerStem published per selected cue, enabled or disabled, by the flag cache's
 // rebuild), so a select takes the stem off the old members and stands it on
 // the new. A SELECTION CHANGE'S WHOLE DAMAGE IS THE FLAG CACHE REBUILD'S
@@ -110,9 +110,9 @@ void Selection::damage_overlay_on_subject_change(
 // on the lane's last row and the frame's line is inside the stem's own
 // rect, the ring is the canvas's, and every key's face, whatever it asks,
 // is the tick's comparator's (main.cpp; the marker verbs' keys stand in
-// row 8) — AND NO CALLER LEANS ON SUCH A DAMAGE for a change of its own
-// (re-derived 2026-11-16 by reading every call site of the six publishing
-// mutators): clear_selection, collapse_to_focused and repair_last_selected
+// the bottom icon row) — AND NO CALLER LEANS ON SUCH A DAMAGE for a change
+// of its own (every call site of the six publishing mutators):
+// clear_selection, collapse_to_focused and repair_last_selected
 // publish nothing where the selection already stands as asked, so no site
 // of theirs could; and each site of the three that always publish declares
 // what it changes itself — the land its playhead (the viewport's lanes and
@@ -120,8 +120,7 @@ void Selection::damage_overlay_on_subject_change(
 // the editors' opens their own strip damage, the BPM form its opener's, the
 // ADD SEL sweep its highlight.
 // THE RING NEEDS NO DAMAGE OF ITS OWN HERE (architect 2026-11-16, the
-// beats; the whole waveform area this publish declared on a change of the
-// overlay's subject is gone from it): a change of subject is a change of
+// beats): a change of subject is a change of
 // the membership or the focus — nothing else of the subject moves inside a
 // Selection mutator — so the fingerprint misses and the rebuild below runs
 // its tail, which compares the ring's geometry itself: where the geometry
@@ -132,10 +131,9 @@ void Selection::damage_overlay_on_subject_change(
 // nothing is owed. The states in which the rebuild cannot run paint no
 // ring: a load in flight and no audio build a canvas list without one, and
 // "no plate yet" exists only under the open's presentation hold, whose
-// release presents the whole window. That
-// rebuild ran only at
-// the tick until this helper, and a select that lands the playhead in the
-// same event (land_playhead_on_marker, the chip tap's road) damaged a frame
+// release presents the whole window. A
+// rebuild left to the tick would let a select that lands the playhead in the
+// same event (land_playhead_on_marker, the chip tap's road) damage a frame
 // that could paint BEFORE the tick: the playhead's line on the newly
 // selected marker with the old stems still standing, the new stem a frame
 // late — the blink. So this runs the rebuild IN THE SAME EVENT
@@ -147,8 +145,8 @@ void Selection::damage_overlay_on_subject_change(
 // playhead's. A later write in the same event that moves a fingerprint
 // field (a camera move's synchronous plate rebuild, whose tail rebuilds the
 // flags) rebuilds again before the frame; the fingerprint makes a repeat
-// with nothing moved free. THE COST, ACCEPTED (planner's call 2026-11-05,
-// Sol's round): a walk that recenters the camera rebuilds twice; the first
+// with nothing moved free. THE COST, ACCEPTED (planner's call 2026-11-05):
+// a walk that recenters the camera rebuilds twice; the first
 // position-arrow press on a group rebuilds for the collapse and again at
 // finish_position_nudge's tail, three times if the held column moves the
 // camera. Discrete events, one real rebuild each extra: a rebuild deferred
@@ -237,8 +235,7 @@ void Selection::clear_selection() {
 }
 
 void Selection::collapse_to_focused() {
-    // TWO CALLER CLASSES, both DELIBERATE ACTS OF THE GESTURE — re-derived by grep
-    // 2026-11-19:
+    // TWO CALLER CLASSES, both DELIBERATE ACTS OF THE GESTURE:
     //   * the singleton TEMPO STEP (adjust_tempo_cents, warpmarkers_ops.cpp),
     //     which narrows the selection so the operation and the resulting
     //     selection both target last_selected only — its selection already a
@@ -248,13 +245,9 @@ void Selection::collapse_to_focused() {
     //     their shared prologue and then step the focus alone.
     // The doctrine, the group-verb rule both instance, and the architect's
     // general statement of it live at the head of position_nudge.h.
-    // THE SPAN-DROPPING CLASS IS GONE (architect 2026-07-30): `t` and `c` were
-    // its two members, each collapsing only to keep a group from resting SPANLESS
-    // — and with the SPAN FORM retired there is no such state, so both now CARRY
-    // their group. (Bare `0` had left the same class one day earlier, re-ruled a
-    // pure viewport command.) The never-span-less ENFORCEMENT class died before
-    // them, 2026-07-29: no caller collapses as REPAIR any more,
-    // every call here is a gesture doing what it means to do.
+    // `t`, `c` and bare `0` CARRY their group (architect 2026-07-30): no
+    // caller collapses as REPAIR, every call here is a gesture doing what it
+    // means to do.
     // The GROUP TEMPO gestures do NOT collapse — they went group (architect
     // 2026-07-23) and move the whole selection's images rigidly.
     // last_selected_marker
@@ -285,7 +278,7 @@ void Selection::collapse_to_focused() {
 
 bool Selection::toggle_selection_membership(int idx) {
     // app.add_to_selection is untouched here, as it is in every Selection
-    // body since 2026-09-10: the mode exists to make plain flag clicks land
+    // body (2026-09-10): the mode exists to make plain flag clicks land
     // HERE, and it is a tool posture that only its own toggle puts out.
     // repair_last_selected, called from the remove arm below, likewise clears
     // nothing: it is a FOCUS repair inside this act, not an act of its own.
@@ -351,10 +344,10 @@ void Selection::cycle_selection(bool forward) {
     // in the walk direction, an empty or all-disabled store yielding none.
     // Its contract, the domain rule and the disabled-skip are at the owner.
     const int land_marker = marker_walk_landing(app, audio, forward);
-    // Nothing ahead — the face is grey here, and since 2026-08-30 the sole
-    // caller asks this same owner BEFORE calling at all (cycle_marker_focus's
-    // gate, which cards the refusal), so this return is a belt rather than the
-    // walk's wall.
+    // Nothing ahead — the face is grey here, and the sole caller asks this
+    // same owner BEFORE calling at all (cycle_marker_focus's gate, which
+    // cards the refusal), so this return is a belt rather than the walk's
+    // wall.
     if (land_marker < 0) return;
 
     // Selection only. Viewport positioning is owned entirely by the sole
@@ -362,8 +355,8 @@ void Selection::cycle_selection(bool forward) {
     // as ITS caller asked — the landing owner (Viewport::land_subject), decided there and never
     // here. A scroll-into-view here would be a redundant intermediate viewport
     // write — overridden by that one write in the same keypress — and the
-    // resulting damage, accumulated against a non-final viewport, is what
-    // produced the outline-blink / cursor-hop artifact.
+    // resulting damage, accumulated against a non-final viewport, would
+    // produce an outline-blink / cursor-hop artifact.
     set_single_selection(land_marker);
 }
 

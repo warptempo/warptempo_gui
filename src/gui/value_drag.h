@@ -10,14 +10,13 @@ struct GuiTargetRender;
 // THE FLAG'S VALUE DRAG — the second plain-flag drag and the ONE pointer
 // gesture that changes a marker's VALUE (architect 2026-09-10). It runs only
 // while THE VALUE DRAG IS ARMED (value_drag_armed): THE VALUE DRAG LAMP lit —
-// bare `[` and row 8's Toggle Value Drag, a ONE-SHOT this unit's commit puts
-// out — or grid iterations standing, under which it is permanently lit and
-// nothing is spent (architect 2026-10-11 ~01:45) (architect 2026-10-11, retiring the
-// view posture of 2026-09-13, under which a sideways drag in T+W changed a
-// tempo unnoticed; the whole rule is at value_drag_posture, app_state.h) —
-// where a plain flag press-and-drag in ANY VIEW, source view included (the
-// phase reset view holds the lamp dark outside grid iterations, 2026-10-11
-// ~02:05, no target standing there), steps
+// bare `[` and the bottom icon row's Toggle Value Drag, a ONE-SHOT this
+// unit's commit puts out — or grid iterations standing, under which it is
+// permanently lit and nothing is spent (architect 2026-10-11: a posture the
+// view decides is forgotten; the whole rule is at value_drag_posture,
+// app_state.h) — where a plain flag press-and-drag in ANY VIEW, source view
+// included (the phase reset view holds the lamp dark outside grid
+// iterations, 2026-10-11, no target standing there), steps
 // the pressed cell's value VERTICALLY and the horizontal marker drag is off
 // on every flag: "we never allow multi-axis dragging; flags move up and down
 // or not at all." It steps the ONE pressed marker; a multi-selection is not
@@ -43,10 +42,7 @@ struct GuiTargetRender;
 //
 // A PASS IS A TEMPO TARGET AND THE DRAG CONVERTS IT (architect 2026-09-10:
 // "the pass inherits whatever it was and then applies on up and down, so we
-// should allow the drag on passes as well"; the payload being a target in
-// target view alone from 2026-09-13, the conversion was deleted that morning
-// as unreachable and restored that afternoon when the arrow step began
-// freezing a pass in target view too; a target in both views since
+// should allow the drag on passes as well"; a target in both views,
 // 2026-10-11, the lamp's posture). The seed is the arrow step's own
 // body — warp_tempo_step_start (warpmarkers_ops.h) — so the value the hand
 // walks from is the EFFECTIVE base the flag shows, and the first motion writes
@@ -79,13 +75,9 @@ struct GuiTargetRender;
 // domain whole (the iteration lock's own rule), so a bound drag is a session
 // act from end to end.
 //
-// (This is not the deleted TARGET-VIEW TEMPO DRAG coming back. That gesture —
-// a map bisection over hypothetical builds, a predecessor-eligibility walk and
-// a group seed — was deleted with its keyboard twin on 2026-07-29 and stays
-// deleted and unproposed; the record is at the head of marker_drag.h. This is
-// a lamp-armed vertical STEP of the same values the arrows step, with no map
-// arithmetic anywhere in it, and it is the architect's own ruling of
-// 2026-09-10.)
+// NO MAP ARITHMETIC: this is a lamp-armed vertical STEP of the same values the
+// arrows step (architect 2026-09-10), never a target-view tempo drag that
+// bisects the warp map (closed, marker_drag.h's head).
 struct ValueDragOps {
     AppState&        app;
     const GuiAudio&  audio;

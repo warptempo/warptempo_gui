@@ -13,7 +13,7 @@
 //
 // THE LOOK IS XFCE4-NOTIFYD'S BUBBLE UNDER ARC (architect 2026-11-19:
 // "Agree" to "normal cards the grey notifyd bubble, standing cards Arc's
-// red", and "good to build" on the approved picture Z_07): A ROUNDED BOX
+// red", and "good to build" on the approved picture): A ROUNDED BOX
 // (kNotificationRadiusW), NO BORDER, NO SHADOW (notifyd draws none,
 // measured), ITS FILL A CARRIED FILL AT ITS
 // OPACITY OVER WHAT LIES UNDER IT (gui_theme.h's THE THREE CARRIED FILLS; the
@@ -42,12 +42,11 @@
 // is what is true right now, replaced as it changes, never timed out and
 // never cleared by a key press — the render's progress line and the `h`
 // walk's line, which live in THE STATUS BAR, the window's last lane under
-// the bottom icon row (architect 2026-11-19, send Z: the process line "a
-// must-have" there, moved word for word from the bottom icon row's state
-// line; render.h's status bar block, paint_handler.cpp's status_bar_text the
-// one composer and paint_status_bar the painter: its first field, the
-// selection count and the history view's GitHub word beside it) — A BATCH'S
-// PROGRESS IS THE PROGRESS MODAL'S since 2026-10-14 (the progress page:
+// the bottom icon row (architect 2026-11-19: the process line "a
+// must-have" there; render.h's status bar block, paint_handler.cpp's
+// status_bar_text the one composer and paint_status_bar the painter: its first
+// field, the selection count and the history view's GitHub word beside it) — A
+// BATCH'S PROGRESS IS THE PROGRESS MODAL'S (2026-10-14; the progress page:
 // "Rendering...", the bar and "X of Y" in the modal family's box from the
 // Render press to the batch's terminal, AppState::BatchProgress), THE STATUS
 // BAR BLANK UNDER IT (architect 2026-11-20: the page says what the
@@ -175,9 +174,7 @@
 //     bracket walls (bpm_sweep_bracket_admits), flag_editor.cpp; the settings editor's
 //     four "Settings edit rejected: …" composers (settings_editor.cpp:
 //     commit_gui_setting's, apply_device_setting's, and the engine arm's
-//     invalid value and source-clobber guard); the commit
-//     title's "Enter a title for the checkpoint" (a card and no stderr line);
-//     the text editor's two capacity refusals, reported by text_editor.cpp and
+//     invalid value and source-clobber guard); the text editor's two capacity refusals, reported by text_editor.cpp and
 //     carded by the dispatch ("The pasted text is too long for this field",
 //     "This field is full" at route_modal_editor_key — the settings recall's
 //     own replace_selection call staying silent, that text being the
@@ -206,7 +203,7 @@
 //     and Ctrl+V are silent: an editor is its own world with that world's
 //     conventions.
 //   * THE GITHUB CARDS (2026-09-27), the `h` view's Save key (the publish
-//     chord, Ctrl+Shift+S, the view's alone since 2026-11-17) forking on the
+//     chord, Ctrl+Shift+S, the view's alone) forking on the
 //     status (run_publish_chord), each the KEY'S — the Save face greys on
 //     the same status, so these answer a status that moved inside the
 //     painted frame: "GitHub is still being checked", "GitHub
@@ -215,7 +212,7 @@
 //     refusals "Pull refused: this device has moved", "Pull refused:
 //     GitHub's checkpoint of this piece would not load" and "Pull failed:
 //     nothing was changed"; and the checkpoint's clean ending, "Nothing to
-//     commit" (architect 2026-11-17, send U: the worker found the sidecars
+//     commit" (architect 2026-11-17: the worker found the sidecars
 //     clean and nothing owed, on_history_checkpoint_complete). UNDER
 //     `offline` THE KEY ASKS GITHUB AGAIN (architect 2026-09-28) and cards
 //     nothing, the status bar's walk line carrying the answer.
@@ -240,19 +237,18 @@
 // per folder, since files may be half gone and the listing is all that says
 // which); and THE STRUCK CARD below.
 //
-// THE STRUCK CARD, STATE WORN AS A CARD (architect 2026-11-19, send Z: "I
+// THE STRUCK CARD, STATE WORN AS A CARD (architect 2026-11-19: "I
 // lean towards giving them a red card. There's never a reason to leave a
 // struct marker, so the red card is the permanent one ... the card could be
 // cleared if the user undoes it or deletes the struct marker. That way the
 // user is alerted immediately, not by a little status bar that they may or
-// may not look at"; its words and its return "Agree"; built in send AA's
-// stage D1): ONE STANDING CARD while any warp marker of the open piece is
-// STRUCK BY COINCIDENCE — a member of a coincident run, the parser's
-// verdict (warp_coincident_members, read through warp_red_flag_set_cached's
-// `collapsed`, warp_frame_map_view.h; disabled rows counted). The
-// label-reference strikes (`red`'s other members) are no coincidence and
-// raise nothing.
-// THE STRUCK CARD SAYS WHERE (architect 2026-11-19, send CC: "The red
+// may not look at"; its words and its return "Agree"): ONE STANDING CARD while
+// any warp marker of the open piece is STRUCK BY COINCIDENCE — a member of a
+// coincident run, the parser's verdict (warp_coincident_members, read through
+// warp_red_flag_set_cached's `collapsed`, warp_frame_map_view.h; disabled rows
+// counted). The label-reference strikes (`red`'s other members) are no
+// coincidence and raise nothing.
+// THE STRUCK CARD SAYS WHERE (architect 2026-11-19: "The red
 // coincide card should say where the coincident markers are"; put back as
 // "'… coincide at <time>', up to three places, then 'and N more'": "Number
 // six. Agree."). ITS WORDS, one clause, no key named, no period (the cards'
@@ -337,8 +333,8 @@
 //     the GROUP tempo step, Shift+S in the P column, the propagate reports.
 //     The act is unchanged where its sentence went; each site carries a
 //     one-line comment naming this rule, and a reverse is per item.
-//   * A BOUND KEY'S REFUSAL WHOSE REASON ROW 8 IS ALREADY SAYING (architect
-//     2026-09-04): the target preview's two gates, Space's play edge and the
+//   * A BOUND KEY'S REFUSAL WHOSE REASON THE STATUS BAR IS ALREADY SAYING
+//     (architect 2026-09-04): the target preview's two gates, Space's play edge and the
 //     waveform scrub's launch, silent under the `Updating...` process line
 //     with the Play face greyed. It is the ONE RECORDED EXCEPTION to the
 //     deduction below: a silent press in target view under `Updating...` is
@@ -352,7 +348,7 @@
 //     a cancelled one's the progress modal closing (2026-10-14); THE SAVE,
 //     the dirty mark going out being its answer (architect 2026-08-30: "the
 //     disc writes — there is something that paints"), the Save button
-//     greying since 2026-10-05 (plain_save_actionable); a clean
+//     greying (2026-10-05, plain_save_actionable); a clean
 //     propagate walk that changed the store, its landing selecting what
 //     changed (a clean paste that changed nothing cards, above); a
 //     landed checkpoint or pull; and the crossed-trim reset
@@ -361,10 +357,9 @@
 //   * A CHORD THIS PRODUCT BINDS NOWHERE IN THE STANDING MODE, wherever it is
 //     pressed and whatever swallowed it (architect 2026-08-30, THE DEDUCTION
 //     RULE: "bound keys either show an effect or a card, so an unbound key is
-//     identified by its silence"), which retired the "<chord> is not bound"
-//     class whole; the `h` view's seven shapes are bound only while the view
-//     stands (2026-09-01), the render player's and the picker's keys only
-//     inside their routers. THE UNBOUND POINTER PRESS goes with it: a
+//     identified by its silence"); the `h` view's seven shapes are bound only
+//     while the view stands (2026-09-01), the render player's and the picker's
+//     keys only inside their routers. THE UNBOUND POINTER PRESS goes with it: a
 //     modified press the waveform, the top strip or the folder overlay's
 //     band (pad, gaps and rows) binds nothing for says nothing, and the
 //     render player's modified press on the scrub track likewise.
@@ -373,8 +368,7 @@
 //     never begins is its own answer; the double-tap drop's LOCK arm and the
 //     flag's double-tap open's refusals are silent on the same ground. Their
 //     keyboard twins card.
-//   * A GREYED BUTTON'S LIFT (a greyed dropdown item's press beside it
-//     until the popup retired, 2026-10-21): the grey IS the message,
+//   * A GREYED BUTTON'S LIFT: the grey IS the message,
 //     the card answering the keyboard; the grey is the PAINTED grey, so a
 //     face painted live whose act refused inside the comparator's tick
 //     dispatches and is answered as its key is. A tooltip states no reason
@@ -461,8 +455,8 @@
 // head). It reads monotonic_ms() — the one clock every software
 // deadline in the product is stamped on — and nothing here schedules anything.
 //
-// THE HIT (architect 2026-10-01, "whole card dismisses, X gone", reversing
-// the 2026-08-29 rule that the X alone dismissed): THE CARD IS ONE BUTTON,
+// THE HIT (architect 2026-10-01, "whole card dismisses, X gone"): THE CARD
+// IS ONE BUTTON,
 // the chrome's own model. A press anywhere on it ARMS it
 // (AppState::ChromePress's Card kind) and dismisses nothing; THE LIFT inside
 // the same card dismisses it; a lift outside the card it pressed dismisses
@@ -478,17 +472,16 @@
 //
 // THE DISMISSAL IS THE LIFT'S — the ONE STATED EXCEPTION to "every dismissal
 // stays at the press" (AppState::ChromePress's head): a card is an EVENT the
-// user closes, not a popup the next press dismisses. A popup's dismissal is
-// the side effect of a press aimed elsewhere, a card's is the press's own
-// act, and an act lives at the lift — the only place a long press can be
-// known. A HELD CARD'S CLOCK IS SUSPENDED (architect 2026-10-01: "holding
-// turns off the timer, releasing re-enables"): from the press to the lift
-// the pressed card's remaining life sits in the HOVER'S ONE BANK, the held
-// press being a second reason the same card stands still and never a second
-// mechanism (GuiNotifications::press_hold_edge); a slide-away lift re-arms
-// it, and a card already due at the press is not banked (the hover's rule:
-// a pause does not resurrect). A held card can still be BUMPED by a push;
-// the lift re-asks the live stack and then lands nothing.
+// user closes, never the side effect of a press aimed elsewhere — its
+// dismissal is the press's own act, and an act lives at the lift, the only
+// place a long press can be known. A HELD CARD'S CLOCK IS SUSPENDED (architect
+// 2026-10-01: "holding turns off the timer, releasing re-enables"): from the
+// press to the lift the pressed card's remaining life sits in the HOVER'S ONE
+// BANK, the held press being a second reason the same card stands still and
+// never a second mechanism (GuiNotifications::press_hold_edge); a slide-away
+// lift re-arms it, and a card already due at the press is not banked (the
+// hover's rule: a pause does not resurrect). A held card can still be BUMPED by
+// a push; the lift re-asks the live stack and then lands nothing.
 //
 // THE WHOLE-STACK DISMISSAL READS NO CLASS — a critical card is dismissed
 // like any other — so what takes a critical card down is always a
@@ -499,14 +492,12 @@
 //
 // THE PRESS IS CONSUMED WHOLE, whatever the button: it
 // arms nothing else, moves nothing, lands no playhead and reaches nothing
-// underneath (a non-left press is the consumed nothing it always was, and
-// arms no card). The claim ranks ABOVE EVERY VEIL (the prompt's, the
-// progress modal's, the player's, the picker's, the dialog editors'), and
-// THE RELEASE IS TAKEN AT THE SAME RANK, above every veil's (the open
-// dropdown's claim and release stood under both until 2026-10-21) —
-// because a card is not a reach into the veiled surface: it is the message
-// about the act the veil stands over, and it must be dismissable under any
-// of them.
+// underneath (a non-left press is consumed and arms no card). The claim
+// ranks ABOVE EVERY VEIL (the prompt's, the progress modal's, the player's,
+// the picker's, the editors'), and THE RELEASE IS TAKEN AT THE SAME RANK,
+// above every veil's — because a card is not a reach into the veiled surface:
+// it is the message about the act the veil stands over, and it must be
+// dismissable under any of them.
 //
 // THE GEOMETRY A CARD IS HIT BY IS THE GEOMETRY IT WAS PAINTED WITH: the
 // painter publishes each visible card's rect into
@@ -524,8 +515,7 @@
 //
 // NO DOUBLE SPACE, ANYWHERE THE PRODUCT WRITES TEXT: prompt text and its
 // options join with single spaces, and no card, prompt or stderr line carries
-// two spaces in a row (the WARPTEMPO_PROFILE instrumentation that was the
-// sole exception is removed).
+// two spaces in a row.
 
 #include "app_state.h"
 #include "viewport.h"
@@ -560,14 +550,13 @@ class GuiAudio;
 //
 // THE LOCK'S SENTENCE — the read-only tab, said by the sites that KNOW THEIR
 // ACT and so need no chord in it: the settings editor's ENGINE-KEY commit arm
-// (an engine key is the piece; the arm took the sentence from the editor's
-// opener on 2026-09-04, when the lock moved from the surface to the keys — the
-// account is at GuiSettingsEditor::open, and the Settings menu's items grey
-// on a load alone, so the commit owes the answer itself), the render
-// player's Load in place, and the `h` view's bare `v`, whose admission
-// composes the subject with this same lock. THE FIRST TWO READ IT THROUGH
-// authoring_lock_card BELOW SINCE 2026-09-10 — the lock gained a second
-// reason, grid iterations, and those two acts refuse under both — while the
+// (an engine key is the piece, and the lock governs the keys, not the
+// surface (2026-09-04), so the commit owes the answer itself — the account
+// is at GuiSettingsEditor::open), the render player's Load in place, and
+// the `h` view's bare `v`, whose admission composes the subject with this
+// same lock. THE FIRST TWO READ IT THROUGH authoring_lock_card BELOW — the
+// lock's second reason is grid iterations, and those two acts refuse under
+// both — while the
 // `h` view's fork keeps the literal, the view being unreachable under the
 // second reason. THE LOCK GATE IS
 // NOT A READER: it says "<Act> is not available on a read-only tab" through
@@ -582,7 +571,7 @@ inline constexpr const char* kTabReadOnlyCard = "This tab is read-only";
 // THE PASTE'S OVER-CAPACITY SENTENCE (architect 2026-08-30, the head's
 // refused-field list): the one incoming filter refused a paste that would
 // grow the field past its byte cap (text_editor::replace_selection's false).
-// TWO READERS since 2026-11-10, one sentence: the editors' paste
+// TWO READERS, one sentence: the editors' paste
 // (GuiInputHandler::apply_editor_clipboard) and the label paste, the EDIT
 // key's hold (GuiFlagEditor::paste_payload_onto_selection).
 inline constexpr const char* kPasteTooLongCard =
@@ -615,7 +604,7 @@ inline std::string read_only_act_card(std::string_view act) {
 // composer below is where the two meet.
 
 // THE ONE COMPOSER THE LOCK'S CARD FORKS AT, and READ-ONLY RANKS FIRST: the
-// two locks compose since 2026-10-13 (authoring_locked, app_state.h — the
+// two locks compose (2026-10-13; authoring_locked, app_state.h — the
 // lamp lit on a writable tab, a switch under it onto a locked one), and
 // there the active tab's lock is the reason the user can fix where he
 // stands, so its sentence is the one said.
@@ -633,26 +622,24 @@ inline const char* authoring_lock_card(const AppState& a) {
 }
 
 // THE CHECKPOINT-PUBLISHING SENTENCE, ONE LITERAL (2026-08-30), homed here
-// since 2026-09-24, when the save owner became a raiser from its own
-// translation unit. ONE FACT, ONE WORDING, and its readers are: the SAVE
-// OWNER's in-flight refusal (GuiSaveOps::save, save_ops.cpp), which every
-// plain Ctrl+S road reaches — on_key, the editors' modal contract, the
-// picker's router, the render player's fall-through —
-// and the close prompt's Save answer; bare `h`'s entry refusal (which also
-// prints it on stderr); and the Open project picker's open act and File >
-// Revert. All of them meet AppState::history_checkpoint_in_flight. (The
-// commit act asks no in-flight question: no `h` view stands while one
-// publishes, run_publish_chord.)
+// because the save owner raises it from its own translation unit. ONE FACT, ONE
+// WORDING, and its readers are: the SAVE OWNER's in-flight refusal
+// (GuiSaveOps::save, save_ops.cpp), which every plain Ctrl+S road reaches —
+// on_key, the editors' modal contract, the picker's router, the render player's
+// fall-through — and the close prompt's Save answer; bare `h`'s entry refusal
+// (which also prints it on stderr); and the Open project picker's open act and
+// the Revert act (revert_project). All of them meet
+// AppState::history_checkpoint_in_flight. (The commit act asks no in-flight
+// question: no `h` view stands while one publishes, run_publish_chord.)
 // ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
-// shape): the sentence is the instruction. It read "A checkpoint is still
-// publishing; try again when it finishes" until that day.
+// shape): the sentence is the instruction.
 inline constexpr const char* kCheckpointPublishing =
     "Wait for the checkpoint to finish publishing";
 
 // THE PROJECTS PATH COMMIT'S SENTENCE (2026-09-02): a `projects_path=` commit
 // from the settings editor rewrites the device config and changes nothing on
-// screen — the open project stays open on its absolute paths — while File →
-// Open project and the next launch read the new folder at once (the whole
+// screen — the open project stays open on its absolute paths — while Open
+// project and the next launch read the new folder at once (the whole
 // account is at GuiSettingsEditor::apply_device_setting,
 // settings_editor.cpp). A press whose result nothing paints says where it
 // applies; one clause. It is raised only when the config write succeeded
@@ -669,9 +656,8 @@ inline constexpr const char* kProjectsPathAppliesCard =
 // goes on painting the hairline window the user drew, so the
 // screen says "this span" while the audio is the whole movement — the shape
 // the strictness ruling's "what shows would mislead" test cards. A MINIMUM
-// TRIM SIZE WAS THE ALTERNATIVE AND IS REJECTED (2026-08-19,
-// write_trim_from_sweep's record: kMinTrimSpanFrames quantized the shift+drag
-// unpleasantly and was retired one day after it landed) — the sweep authors
+// TRIM SIZE IS REJECTED (2026-08-19, write_trim_from_sweep's record: a floor
+// quantized the sweep unpleasantly) — the sweep authors
 // exactly the span it draws and the outcome is announced instead.
 //
 // TWO TRANSLATION UNITS RAISE IT, which is why it is homed here: the preview's
@@ -752,7 +738,7 @@ inline constexpr const char* kHistoryViewMovesNoMarkersCard =
 // its tail does not start a second one; a producer whose string is ever used
 // WHOLE is a sentence in its own right and capitalizes at that producer.
 //
-// IT WAS WRITTEN FOR THE ONE FAMILY THAT IS BOTH — the past-EOF wall
+// ITS FIRST FAMILY IS THE ONE THAT IS BOTH — the past-EOF wall
 // defects (first_past_eof_wall_defect, src/parser/marker_store_validate.cpp),
 // which are used WHOLE by the picker's dry-run card and by the CLI's stderr
 // and APPENDED by four GUI seams: "Revert refused: ", the render entry load's
@@ -762,12 +748,14 @@ inline constexpr const char* kHistoryViewMovesNoMarkersCard =
 // at the producer, which is also what keeps the two whole-message consumers
 // right without a second edit.
 //
-// FIVE CALLERS ACROSS TWO PRODUCER FAMILIES (re-greped 2026-09-02; the
-// inventory of four was the wall defects' alone): the fifth is the FAILED
-// RENDER'S CARD (input_render_dispatch.cpp), which appends `GuiFailure`'s
-// display clause after "Render failed: ". That family is not frozen and
-// composes its own text — it takes the helper for the same reason, an
-// appended reason is lowercase, and for no other.
+// SIX CALLERS ACROSS THREE PRODUCER FAMILIES (re-grep `lowercase_initial(`
+// before restating it): beside the wall defects' four, the loader's
+// sidecar-set refusal (file_loader.cpp, "Source load aborted: " over
+// sidecar_set_presence's diagnostic) and the FAILED RENDER'S CARD
+// (input_render_dispatch.cpp), which appends `GuiFailure`'s display clause
+// after "Render failed: ". Those two families compose their own text and
+// take the helper for the same reason, an appended reason is lowercase, and
+// for no other.
 //
 // ONE OWNER, homed here because a card composer is what asks for it and
 // notifications.h is the header every one of those seams already sees. ASCII
@@ -802,35 +790,26 @@ inline std::string lowercase_initial(std::string_view s) {
 
 // THE CARD'S WIDTH IS ITS CONTENT'S, UNDER THE CEILING BELOW AND NO FLOOR
 // (architect 2026-11-19: "agree" — each card its text's width, notifyd's
-// way, as the approved picture Z_07 drew the struck card at its content's
-// 363 device px): the box is the chrome plus the
+// way): the box is the chrome plus the
 // whole sentence's shaped width, ceiled to the whole px that contains it
 // (paint_notifications), clamped only by notification_card_max_w_px. Two
 // sentences of different widths are two widths of card ("There is nothing to
 // undo" and "…to redo" a few px apart included).
 //
-// THE CARD'S CEILING, THE LAPTOP'S CARD WIDTH (its source), AUTHORED AND SCALED (architect
-// 2026-08-31): 640 authored px is what the retired `window / 3` gave on the
-// 1920 px laptop, so this constant is that width made CANONICAL — the same
-// card at every window and, through `scaled_px`, the same card in millimetres
-// at every gui_scale. The window fraction was DEVICE PIXELS and so starved the
-// tablet: at its 225 % of that day its 1440 px panel gave a 480 px card for
-// text shaped half again as large, three words to a line. IT MAY NOW COVER
-// BUTTONS ON THE TABLET and that is accepted in his own words — "it's okay
-// if it covers up some buttons": a card is a sentence to read and it leaves
-// on its own. A length, so it scales; the life beside it (kNotificationMs)
-// is a duration and does not. 698 W SINCE THE REBASE TO 200 % (architect
-// 2026-11-05): the 465 Windows px of 2026-10-02 times 1.5 is 697.5, RULED TO
-// 698 — a painted length is a whole W — so the card's ceiling is 1396 device
-// px on the tablet against the 1395 before the rebase, THE ONE KNOWINGLY
-// NON-IDENTICAL LENGTH of the rebase (a card one device px wider only when
-// its sentence reaches the ceiling).
+// THE CARD'S CEILING, AUTHORED AND SCALED (architect 2026-08-31): a
+// CANONICAL width — the same card at every window and, through `scaled_px`,
+// the same card in millimetres at every gui_scale; a fraction of the window
+// would be DEVICE PIXELS and starve the tablet, three words to a line. IT
+// MAY COVER BUTTONS ON THE TABLET and that is accepted in his own words —
+// "it's okay if it covers up some buttons": a card is a sentence to read and
+// it leaves on its own. A length, so it scales; the life beside it
+// (kNotificationMs) is a duration and does not. 698 W (architect
+// 2026-11-05: 697.5 RULED TO 698, a painted length being a whole W), 1396
+// device px on the tablet.
 inline constexpr double kNotificationMaxWidthPx = 698.0;
 
 // THE GAP BETWEEN TWO CARDS IN THE STACK: kNotificationGapW, 6 W
-// (notifyd's stack, measured; architect 2026-11-19, send Z, DESIGN §9 — the
-// one-W gap of 2026-10-01, "reduce the distance between the cards to one
-// pixel at a hundred percent", retired with Live's orange box), 12 device px
+// (notifyd's stack, measured; architect 2026-11-19), 12 device px
 // on the tablet, scaled_px floored at one so the cards never touch; read by
 // the painter (paint_notifications) and the room's count
 // (notification_capacity) and by nothing else.
@@ -846,8 +825,8 @@ inline constexpr int kNotificationMaxLines = 3;
 
 // -- Geometry the painter, the damage owner and the hit share ---------------
 
-// NOTIFYD'S BUBBLE'S LENGTHS (architect 2026-11-19, send Z, DESIGN §9; THE
-// PADDING notifyd's ONE NUMBER since send BB, the same day: "the padding
+// NOTIFYD'S BUBBLE'S LENGTHS (architect 2026-11-19; THE PADDING notifyd's
+// ONE NUMBER, the same day: "the padding
 // around the font seems inconsistent - just ask remote to make sure it's
 // arc's canonical padding" — xfce4-notifyd's `#define DEFAULT_PADDING 14.0`,
 // xfce-notify-window.c, the content box's border on all four sides AND the
@@ -904,21 +883,20 @@ int notification_text_top_px(int lines);
 
 // The card's largest possible width at this window and scale: the scaled
 // ceiling above, and — where the window cannot even hold that — the window
-// itself less the stack's two side seats (kNotificationSeatW each side). THE WINDOW TERM IS A SAFETY AND
-// NOT A DESIGN (architect 2026-08-31, retiring `window / 3`): the ceiling is
-// what the design says a card is wide, and the clamp only keeps a card inside
+// itself less the stack's two side seats (kNotificationSeatW each side). THE
+// WINDOW TERM IS A SAFETY AND NOT A DESIGN (architect 2026-08-31): the
+// ceiling is what the design says a card is wide, and the clamp only keeps a card inside
 // a window too narrow for it (the tablet's portrait panel, a contrived
 // window). The painter clamps a card's content width under this, and THE
 // ROOM BELOW IS THIS SAME NUMBER, so every painted card lies inside the rect
-// that clips and publishes it (no floor since 2026-11-19, send AA; never
-// below zero).
+// that clips and publishes it (no floor; never below zero).
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
 // its right edge kNotificationSeatW (16 W) inside the window's last column,
 // from THE CARD SEAT — kNotificationSeatW under the window's first row,
 // OVER THE TITLE BAR AND THE TOP ICON ROW, WHATEVER STANDS THERE (architect
-// 2026-11-19, send BB: "in xfce the card appears at the top right of the
+// 2026-11-19: "in xfce the card appears at the top right of the
 // screen without regard for what it obstructs - it can always be dismissed
 // with a tap. consider having ours do that, simply using the xfce
 // notification margin"; notifyd's SPACE 16 off the screen's top and right,
@@ -939,7 +917,7 @@ int notification_card_max_w_px(const AppState& a);
 // WORKED ON THE TABLET (2304 x 1440 at 200 %, the key 28 W tall; the advances
 // MEASURED off fonts/LiberationSans-Regular.ttf at 24 px the product's way —
 // unhinted hmtx advances and the GPOS `kern` pairs, each to 1/64 px, which
-// gives send BB's "2 warp markers coincide" its recorded 260.1 — the boxes
+// gives "2 warp markers coincide" its recorded 260.1 — the boxes
 // DERIVED from them by the painter's arithmetic): THE STRUCK CARD of one
 // run, "2 warp markers coincide at 00:12.345" — its sentence's advance 400.2
 // device px under 116 px of chrome (28 + 32 + 28 + 28) — is ceil(516.2) =
@@ -964,16 +942,15 @@ int notification_card_max_w_px(const AppState& a);
 // baseline 184), over the icon row's foot pad, the trim lane (140 .. 167),
 // the ruler lane (168 .. 201) and the marker lane's first rows (202 .. 219);
 // a third, rows 232 .. 319, is the first to reach the canvas (from row 236).
-// THE SEAT READS THE WINDOW'S EDGES, NO LANE (architect 2026-11-19, send
-// BB: notifyd seats a card off the screen's corner "without regard for what
+// THE SEAT READS THE WINDOW'S EDGES, NO LANE (architect 2026-11-19:
+// notifyd seats a card off the screen's corner "without regard for what
 // it obstructs"): the top and the right are notifyd's SPACE in from the
 // window's first row and last column, so no lane's height or relayout moves
 // the stack; the foot alone reads a lane, the bottom icon row's.
 //
-// IT IS THE ROOM AND NO LONGER A TIGHT BOUND (2026-08-30, with the wrap): it
-// was "three cards of one line each", which a wrapped card outgrows, and no
-// pure function of the window can know a card's line count — that needs a
-// shaped run. So the answer is the whole space the stack has to grow into,
+// IT IS THE ROOM, NOT A TIGHT BOUND (2026-08-30, with the wrap): no pure
+// function of the window can know a card's line count — that needs a shaped
+// run. So the answer is the whole space the stack has to grow into,
 // and the painter CLIPS to it: a stack that outgrows the room paints on down
 // and is cut at the room's foot, so no card ever paints over the bottom row,
 // and the painter publishes its rects CLIPPED TO THE ROOM TOO, so nothing
@@ -1002,19 +979,15 @@ GuiRect notification_stack_bound(const AppState& a);
 // painter's clip is what answers that, exactly as it answers a stack of
 // criticals that will not be bumped.
 //
-// A pure function of the window and the scale, like the room. Re-derived
-// 2026-10-08 under win2000, the stack seated one line above the trim lane:
-// on the tablet at its scale of that day it was 12 (1107 over 84 + 3), its
-// window being the whole 2304 x 1440 panel since the activity went full
-// screen (2026-10-01; the stacks are recorded at main.cpp's vertical-stack
-// owner). On the tablet today (send BB, 2026-11-19: the one-line card 88
-// device rows, the gap 12, the room rows 32 .. 1307, 1276 rows) it is 12
-// (1288 over 100): every window this product runs in holds more cards than
-// the architect will ever stack.
+// A pure function of the window and the scale, like the room. On the tablet
+// (the whole 2304 x 1440 panel; the one-line card 88 device rows, the gap
+// 12, the room rows 32 .. 1307, 1276 rows) it is 12 (1288 over 100): every
+// window this product runs in holds more cards than the architect will ever
+// stack.
 int notification_capacity(const AppState& a);
 
 // Whether `id` names a card that is IN THE LIVE STACK — which is the same as
-// "on screen" since the queue retired (2026-08-30): a push makes a card
+// "on screen", no card waiting unseen (2026-08-30): a push makes a card
 // visible at once and only an expiry, a dismissal or a bump removes it. THE ONE LIVE
 // TEST every act on a published hit asks, and the one dismiss() asks of its
 // argument — the publication is a paint old, and a card can expire or be
@@ -1027,10 +1000,8 @@ bool notification_visible(const AppState& a, uint64_t id);
 // notification_visible still holds for it, so a card that expired or was
 // bumped between the paint and the event is hit by nothing,
 // and a press on the stale rect falls through to whatever the NEXT paint will
-// put there, which is what the user is about to see. (A card under a list
-// popup's published box yielded to it from 2026-10-08 until the Settings
-// drop-down, the last such popup, retired 2026-10-21: no pointer-owning
-// surface paints above the cards since.)
+// put there, which is what the user is about to see. No pointer-owning
+// surface paints above the cards.
 //
 // THE READERS ARE THE CARD'S OPACITY, re-greped at this declaration: the
 // press claim (claim_notification_press) and its lift
@@ -1061,19 +1032,18 @@ struct GuiNotifications {
     // ruling and its one bit are at the site and at the head of this file.
     void notify(AppState::NotificationClass cls, std::string text);
 
-    // THE CARD'S LIFT (architect 2026-10-01; the X's act until then), and the
+    // THE CARD'S LIFT (architect 2026-10-01), and the
     // pointer's alone: remove the named card whatever its class and state,
     // and drop the hover if it was this card's. The card is the one the press
     // armed, re-hit at the lift's coordinates, and the live test below is
     // asked of that argument.
     void dismiss(uint64_t id);
 
-    // THE WHOLE STACK'S DISMISSAL: BARE ESC's act (2026-09-01, superseding the
-    // 2026-08-31 arm that took the OLDEST card alone) and, since 2026-10-01,
-    // the SHIFTED OR HELD LIFT on any card — the whole stack, CRITICALS
-    // INCLUDED, and the hover with it. An empty stack is a silent nothing —
-    // no damage, no card. The reasoning and the reversal record are at the
-    // hit section above.
+    // THE WHOLE STACK'S DISMISSAL (architect 2026-10-30): the LONG PRESS's
+    // lift on any card (finish_notification_release, its one caller) — the
+    // whole stack, CRITICALS INCLUDED, and the hover with it. An empty stack is
+    // a silent nothing — no damage, no card. The reasoning and the reversal
+    // record are at the hit section above.
     void dismiss_all();
 
     // THE HELD PRESS'S EDGE (architect 2026-10-01, "holding turns off the
@@ -1093,7 +1063,7 @@ struct GuiNotifications {
     void fire_if_due();
 
     // THE STRUCK CARD'S ONE DERIVATION (the head's THE STRUCK CARD; architect
-    // 2026-11-19, sends Z and CC), on the run loop's tick once a piece is
+    // 2026-11-19), on the run loop's tick once a piece is
     // loaded: when THE WORDS' KEY has moved since the last look (the head's
     // list: the warp store's generation, the audio view, in target view the
     // tempo scale, and the loaded audio's rate and length), the struck count
@@ -1113,17 +1083,13 @@ struct GuiNotifications {
     // deadline has ALREADY passed is not banked — hover pauses a clock, it
     // does not resurrect one — so it retires on the next fire_if_due as an
     // unhovered one would. It paints nothing and damages nothing: the card
-    // wears no hover face since its X retired (2026-10-01).
+    // wears no hover face.
     void update_hover(int x, int y);
     // The pointer-left hook's half: no card is hovered, every bank the hover
     // held re-armed (a card a press still holds keeps its bank).
     void clear_hover();
 
 private:
-    // (start_visible_clocks and is_visible_index went with the QUEUE on
-    // 2026-08-30: no card waits unseen any more, so the only clock a push
-    // starts is its own card's, written where that card is built, and no
-    // index is "visible" or not.)
     void set_hover(uint64_t id);
     // THE ONE BANK'S ONE WRITER: re-answer card `id`'s pause from its two
     // reasons — the pointer resting on it (`hovered_id`) and a press holding

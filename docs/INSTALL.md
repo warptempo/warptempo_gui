@@ -180,7 +180,7 @@ Never let a build make a new one: an APK signed by another key will not install 
 
 ```bash
 bash apk/build_apk.sh
-# "assets: icons, 82 files" (the drawings packed into the APK), five VERIFY steps, then near the end "APK: …/apk/build-android/warptempo.apk"
+# "assets: icons, 79 files" (the drawings packed into the APK), five VERIFY steps, then near the end "APK: …/apk/build-android/warptempo.apk"
 # "no keystore at …": do The signing key
 ```
 

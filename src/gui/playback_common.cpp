@@ -23,11 +23,9 @@
 // audio thread's point of view, and its address lives across the device's
 // entire life.
 //
-// (THE SPEED FACTOR AND ITS BUFFER-GRANULARITY NOTE WENT WITH THE
-// `playback_speed` KEY — architect 2026-08-27. The rate ratio that stayed is
-// read at the top of each fill for the same reason the speed was: the device
-// may change it at a reopen, and one value per fill is what keeps a buffer free
-// of mid-block rate artefacts.)
+// THE RATE RATIO is read at the top of each fill: the device may change it at
+// a reopen, and one value per fill is what keeps a buffer free of mid-block
+// rate artefacts.
 
 namespace {
 
@@ -245,8 +243,8 @@ void playback_render_block(GuiPlaybackState& state,
 
     bool natural_end = false;
     // Running fractional source position. ON A ONCE-THROUGH WINDOW IT IS
-    // MONOTONIC — every GUI launch (architect 2026-07-30, looping removed
-    // from every audition): no re-anchoring inside this loop, a plain
+    // MONOTONIC — every audition (architect 2026-07-30: no audition
+    // loops): no re-anchoring inside this loop, a plain
     // drift-free accumulation of `increment` from the last buffer's carry.
     // ON A LOOPING WINDOW THE ONE RE-ANCHOR IS THE WRAP (2026-09-17, the
     // car's loop of the trim): at the window's end the position is moved
@@ -258,13 +256,12 @@ void playback_render_block(GuiPlaybackState& state,
     int64_t n = 0;
     // THE WRAPS THIS FILL TOOK, published after its stamp (below).
     int64_t wraps = 0;
-    // THE SAMPLE FORMAT IS HOISTED OUT OF THE LOOP (2026-10-26 night, the
+    // THE SAMPLE FORMAT IS HOISTED OUT OF THE LOOP (2026-10-26, the
     // score's soundtrack): the bound buffer is float32 (the project source,
     // the target preview, a render player item) or PCM16 (the score's
     // soundtrack, GuiBoundAudio's second format), and the one loop body is
     // instantiated once per format through the generic lambda, so the fill
-    // forks once per block and never per sample. The float32 arithmetic is
-    // unchanged; a PCM16 sample reads as `sample / 32768.0` (unit_of) into
+    // forks once per block and never per sample. A PCM16 sample reads as `sample / 32768.0` (unit_of) into
     // the same interpolation.
     const auto fill = [&](const auto* samples) {
         for (; n < frame_count; ++n) {
@@ -354,18 +351,18 @@ void playback_render_block(GuiPlaybackState& state,
     write_stamp(state, new_cur,
                 fill_ns + n * 1000000000LL / static_cast<int64_t>(output_rate),
                 generation);
-    // THE WRAP COUNT, PUBLISHED AFTER THE STAMP (2026-11-20, send CC's
-    // review, finding A1): one RELEASE store of the fill's wraps, sequenced
+    // THE WRAP COUNT, PUBLISHED AFTER THE STAMP (2026-11-20): one RELEASE
+    // store of the fill's wraps, sequenced
     // after write_stamp's own release, so a main thread whose ACQUIRE load
     // sees the new count (playback_consume_loop_wrap) is ordered after this
     // fill's stamp, and the resync it then takes reads this stamp or a later
-    // one — never a pre-wrap stamp. Counted inside the sample loop and stored
-    // there, as until this day, the count could be read between the wrap and
-    // the stamp (a tick landing in the fill's remainder, or simply the
-    // relaxed store becoming visible ahead of the stamp's) and the resync
-    // anchored on the PREVIOUS fill's pre-wrap stamp: the line clamped at the
-    // window's end for a whole lap, and after the console's seek into the
-    // loop the floor left at the seek's start. One writer, so the load is
+    // one — never a pre-wrap stamp. Stored inside the sample loop, the count
+    // could be read between the wrap and the stamp (a tick landing in the
+    // fill's remainder, or simply the relaxed store becoming visible ahead of
+    // the stamp's) and the resync would anchor on the PREVIOUS fill's
+    // pre-wrap stamp: the line clamped at the window's end for a whole lap,
+    // and after the console's seek into the loop the floor left at the
+    // seek's start. One writer, so the load is
     // relaxed; no wrap, no store.
     if (wraps != 0)
         state.loop_wraps.store(
@@ -478,31 +475,25 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // 0 to one period, then its own output latency — and the line
 // therefore runs ahead of the ear by `L_audio − D + phase`, varying with the
 // phase from launch to launch. THAT IS THE CHOSEN BEHAVIOUR, not a defect
-// left standing: on 2026-09-03 the architect ran a blind comparison at his
-// laptop rig of the day (33 ms measured display lead, 1536 frames = 34.8 ms
-// JACK output latency) between this build and a fully compensated one, and
-// chose this
-// one — "two continuous streams that we sort of happen to pick up here and
-// there — sometimes they match, sometimes they don't, and that's exactly
-// what they are". EVERY LAUNCH ROAD SHARES IT: bare Space, the waveform
+// left standing: in a blind comparison against a fully compensated line
+// (architect 2026-09-03; 33 ms measured display lead, 1536 frames = 34.8 ms
+// output latency on the rig of the day) he chose this one — "two continuous
+// streams that we sort of happen to pick up here and there — sometimes they
+// match, sometimes they don't, and that's exactly what they are". EVERY
+// LAUNCH ROAD SHARES IT: bare Space, the waveform
 // scrub, the A/B audition's four bounded plays, the car's loop of the trim
 // and the render player's own launch all publish through this one body.
 //
-// COMPENSATION WAS BUILT AND ROLLED BACK (2026-09-01/02, removed
-// 2026-09-03). The mechanism — the anchor moved onto the audio thread's
-// first fill, the reported output latency added to every anchor under a
-// per-epoch re-anchor, a self-measured display lead added to the position
-// read, and a natural-end hold keeping the line alive until the last queued
-// frame was heard — lives in git history and nowhere else in this tree. WHY
-// IT WENT is perceptual and his: the compensated line's START varied with the
-// pickup phase, so the line left "sometimes from the marker, sometimes in
-// front of it", which reads as non-determinism, where a deliberate constant
-// lag read as the program waiting for something. He perceives asynchrony at
-// the top few percent, so the residue that stands is ACCEPTED, never
-// unnoticed. DO NOT RE-PROPOSE A COMPENSATED LINE (closed_questions.md).
+// NO COMPENSATION, and the reason is perceptual and his: a compensated
+// line's START varies with the pickup phase, so the line leaves "sometimes
+// from the marker, sometimes in front of it", which reads as
+// non-determinism, where a deliberate constant lag reads as the program
+// waiting for something. He perceives asynchrony at the top few percent, so
+// the residue that stands is ACCEPTED, never unnoticed. DO NOT RE-PROPOSE A
+// COMPENSATED LINE (closed_questions.md).
 //
-// THIS RECORD IS THE PLAYBACK LINE'S ONE OWNER, and what stayed is every
-// CORRECTION, each on its own ground and none of it compensation — read this
+// THIS RECORD IS THE PLAYBACK LINE'S ONE OWNER, and every CORRECTION the
+// line keeps stands on its own ground, none of it compensation — read this
 // list before deleting any of it as lead residue: (1) THE WINDOW TRAVELS AS A
 // COMMAND PACKET UNDER A SEQLOCK (below: a fill consumes only the packet of
 // the generation its own gate acquired, so a publish landing mid-fill moves
@@ -516,8 +507,7 @@ bool playback_bind_and_validate(GuiPlaybackState& state, int sample_rate,
 // the period-wide phase re-roll out of a resync so the step is the accumulated
 // drift alone.
 //
-// AND NO MEASUREMENT IS TAKEN OR PRINTED (2026-09-03, the AV Sync Stats panel
-// deleted 2026-09-30): the product does not measure what the user has not
+// AND NO MEASUREMENT IS TAKEN OR PRINTED (2026-09-30): the product does not measure what the user has not
 // asked it to measure, so the playback line carries no latency measurement
 // at all, and no stderr line reports one.
 bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
@@ -527,8 +517,7 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
     // Domain -> buffer-local at the API boundary (playback.h head comment).
     // Everything below — the clamps, the early returns, the command packet
     // this publishes, the main thread's window mirror and cursor beside it,
-    // and the launch anchor — is buffer-local, exactly as before the
-    // offset moved in here.
+    // and the launch anchor — is buffer-local.
     start_sample -= state.domain_offset;
     end_sample   -= state.domain_offset;
     if (start_sample < 0) start_sample = 0;
@@ -559,8 +548,7 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
     const uint64_t word = playback_session_next(old_word);
     const uint64_t generation = playback_session_generation(word);
 
-    // THE WRAP COUNT A SESSION STARTS FROM (2026-11-20, send CC's second
-    // review, finding A1): A PUBLISH FROM REST LEVELS THE MAIN THREAD'S
+    // THE WRAP COUNT A SESSION STARTS FROM (2026-11-20): A PUBLISH FROM REST LEVELS THE MAIN THREAD'S
     // MIRROR WITH THE COUNTER, so a wrap the previous session took and no
     // playing tick consumed (its fill finishing after the last such tick, a
     // stop landing right at the wrap) is never consumed by this one — no
@@ -647,10 +635,9 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
 
 // THE RESYNC ANCHORS ON THE CYCLE STAMP — (the read cursor, the instant its
 // frame enters the output port) — and NOT on the main thread's `now`, which
-// sat anywhere inside the period before that cursor's fill and re-rolled that
-// whole phase into the line at every resync. THIS IS ACCURACY, NOT
-// COMPENSATION (architect 2026-09-03, the rollback's one survivor from the
-// lead arc): nothing is added to the port instant, so the anchor names the
+// sits anywhere inside the period before that cursor's fill and would
+// re-roll that whole phase into the line at every resync. THIS IS ACCURACY,
+// NOT COMPENSATION (architect 2026-09-03): nothing is added to the port instant, so the anchor names the
 // same raw line the launch does — what the stamp removes is the resync's own
 // period-wide step, leaving the accumulated drift alone. A SESSION WHOSE
 // FIRST FILL HAS NOT RUN IS LEFT ALONE: the stamp is still the previous
@@ -688,7 +675,7 @@ void playback_resync_predictor(GuiPlaybackState& state) {
 // THE WRAP'S CONSUMER: a count difference against the main thread's private
 // mirror, so however many wraps the audio thread took since the last call
 // the answer is one "yes" and the mirror catches up whole (the field's
-// comment, playback_common.h). ACQUIRE (2026-11-20, finding A1): it pairs
+// comment, playback_common.h). ACQUIRE (2026-11-20): it pairs
 // with the fill's release store of the count, which that fill makes AFTER
 // its stamp, so the resync the caller takes next (main.cpp's tick, consume
 // then resync) reads the stamp of the fill that wrapped or a later one: a
@@ -739,14 +726,12 @@ struct Observation {
 // TIME — `now`, or `at_ns` where the caller hands one (architect 2026-11-16,
 // the beats: the scanner's advance hands its frame's own vsync time, the
 // same clock, so a play's step from frame to frame is the speed times the
-// spacing of two vsyncs exactly; before this the step was the speed times
-// the real interval between two pre-paint samplings, whatever ran ahead of
-// each in its loop pass). IT IS THE SAME RAW LINE AT ANOTHER INSTANT: the
+// spacing of two vsyncs exactly, never the real interval between two
+// pre-paint samplings, whatever ran ahead of each in its loop pass). IT IS THE SAME RAW LINE AT ANOTHER INSTANT: the
 // extrapolation is linear in the time it is given, earlier than the anchor
 // as well as later, floored at the session's floor (the publish's start until
 // a resync anchors on the session's wrapped stamp, the loop target after) and
-// clamped at
-// the ends as ever (predict_position) — the
+// clamped at the ends (predict_position) — the
 // raw line, ahead of the ear by the device's output latency and the launch's
 // pickup phase, which is the ruling (the record above playback_publish_play);
 // a frame's time is a few ms before the `now` its paint runs at, so the
@@ -827,10 +812,8 @@ int64_t playback_cursor(GuiPlaybackState& state) {
     // (playback.h head comment).
     //
     // THE ONE POSITION FACE, painting and resting alike (architect
-    // 2026-09-03): a second face that read the same line at a different
-    // instant existed while the display lead did — the render player's pause
-    // point took it — and went with the lead. There is one line and one
-    // reading of it.
+    // 2026-09-03): there is one line and one reading of it, the render
+    // player's pause point included.
     const Observation o = observe(state, /*at_ns=*/0);
     commit_observation(state, o);
     return static_cast<int64_t>(std::floor(o.predicted)) + state.domain_offset;

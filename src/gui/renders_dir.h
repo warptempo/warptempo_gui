@@ -22,19 +22,14 @@
 // render_output_naming.h. What that folder has here is the PRUNE below, which
 // keeps it to the current title's deliverable alone: the parser NAMES the
 // folder because both products write it, and the GUI KEEPS it because the
-// GUI's own archival render is what publishes into it. (It kept it "because
-// the player is what lists it" until 2026-09-01, when the player moved inside
-// `tmp/` and stopped listing `render/` at all — the succession is at the
-// prune.)
+// GUI's own archival render is what publishes into it.
 //
 // The root below is composed from the SOURCE path, whose parent IS the project
 // folder (the parent is "." for a bare filename, exactly as
 // render_output_directory composes it). resolve_project (project_model.h)
 // ignores directories, so neither output folder can be mistaken for a source
-// and neither needs an exclusion rule of its own. There is no migration: a
-// project still carrying the old `renders/` simply has no batches, and a
-// `<title>.wav` still in the project root is the legacy layout the project
-// model refuses with the move to make.
+// and neither needs an exclusion rule of its own. A `<title>.wav` in the
+// project root is a layout the project model refuses with the move to make.
 inline constexpr const char* kBatchFolderName = "tmp";
 
 // `<source parent>/tmp` — the batch root every batch dispatcher creates into,
@@ -42,11 +37,10 @@ inline constexpr const char* kBatchFolderName = "tmp";
 // empties.
 std::filesystem::path project_batch_root(const std::string& source_audio_path);
 
-// THE BATCH ROOT'S NUMBERING (moved here 2026-09-15, from a private static of
-// GuiInputHandler — the scan is pure filesystem over the root this file
-// already composes, no AppState reader in it, and THE RENDER PLAYER'S OPEN
-// needed the same answer with no back-pointer into that class to ask
-// through). Result of one walk over a batch root: the highest leading-index
+// THE BATCH ROOT'S NUMBERING. It lives here because the scan is pure
+// filesystem over the root this file already composes, no AppState reader in
+// it, and THE RENDER PLAYER'S OPEN needs the same answer as the input
+// handler's dispatchers with no back-pointer into that class. Result of one walk over a batch root: the highest leading-index
 // `<digits>_...` folder, and that folder's own filename.
 struct RendersBatchScan {
     int         max_index = 0;             // 0 when none / dir missing
@@ -55,7 +49,7 @@ struct RendersBatchScan {
 };
 
 // Scan `renders_dir` for the highest leading-index batch folder. FOUR READERS
-// share this one walk (re-grepped 2026-09-15): the iteration and BPM sweeps
+// share this one walk: the iteration and BPM sweeps
 // use `max_index + 1` alone for their next batch folder (a missing/empty dir
 // yields max_index 0, so the first folder is index 1 — the pre-factor
 // convention); the miscellaneous cell's allocator (Ctrl+Alt+Shift+R) also
@@ -71,17 +65,15 @@ RendersBatchScan max_renders_batch_index(
 // THE FAILURE WHEN A BATCH FOLDER CANNOT BE MADE (architect 2026-08-30; the
 // two-clause shape 2026-09-02). THREE
 // dispatchers create one under the root above — the iteration sweep, the BPM
-// sweep and the miscellaneous cell's allocator — and each used to print its
-// own tagged stderr line beside this file's card sentence. This composes BOTH
-// halves once, so the three cannot drift on either surface (GuiFailure,
-// failure.h): the diagnostic is the tagged stderr line with the WHOLE path
-// (`render-bpm: Could not create '/…/tmp/3_bpm': Permission denied`, the text
-// each site printed before, now printed from here), and the display is the
-// card's. A PATH IN A SENTENCE IS ITS BASENAME (failure.h), which on the
+// sweep and the miscellaneous cell's allocator. This composes BOTH halves of
+// their failure once, so the three cannot drift on either surface
+// (GuiFailure, failure.h): the diagnostic is the tagged stderr line with the
+// WHOLE path (`render-bpm: Could not create '/…/tmp/3_bpm': Permission
+// denied`), and the display is the card's. A PATH IN A SENTENCE IS ITS BASENAME (failure.h), which on the
 // card is the folder the render would have gone into — `3_iterations`,
 // `2_miscellaneous` — the only part of it the user authored. SINGLE-QUOTED,
-// the product's one quoting form on a card (notifications.h's card rules); it
-// wore backticks until 2026-09-01. `tag` is the road's own stderr tag, the
+// the product's one quoting form on a card (notifications.h's card rules).
+// `tag` is the road's own stderr tag, the
 // one thing the three lines differ by. Advisory in class: the dispatch
 // refuses and cards, and no partial batch is left.
 inline GuiFailure render_folder_creation_failure(
@@ -102,25 +94,17 @@ inline GuiFailure render_folder_creation_failure(
 // THE DEFINITION: `render/` holds THE CURRENT TITLE'S DELIVERABLE AND NOTHING
 // ELSE — `<title>.wav` and its `<title>.fingerprint` — and THIS IS THE ONE
 // PLACE THAT DEFINITION LIVES. A retitle leaves the previous title's pair
-// standing until this prune takes it off disk. (It was for the PLAYER to list
-// too until 2026-09-01, when the player moved inside `tmp/`.)
+// standing until this prune takes it off disk.
 //
-// ONE CALLER, re-derived by grep 2026-09-01 and named at the site that makes
-// it: THE DELIVERABLE'S PUBLISH (the single archival render's GUI-thread
+// ONE CALLER, named at the site that makes it: THE DELIVERABLE'S PUBLISH (the single archival render's GUI-thread
 // completion, dispatch_single_archival_render in input_render_dispatch.cpp,
 // on Success and on the deliverable arm alone — a batch cell publishes into
 // `tmp/`, a different folder, which is never pruned). The publish's prune runs
 // after do_render has written the wav AND its fingerprint, so the current
-// title's pair is complete on disk before any other title's pair goes.
-//
-// IT WAS TWO UNTIL 2026-09-01, and the second RETIRED WITH ITS SITE: the
-// RENDER PLAYER'S LISTING (GuiRenderPlayer::deliverable_wav, which was also
-// the opener's "is there anything to play" question and the root row's)
-// pruned the folder as it asked, and the architect moved the player INSIDE
-// `tmp/` — it never lists `render/` now, so that question is deleted whole
-// (the ruling and his rationale are at the head of render_player.h). WHAT THE
-// DEFINITION LOSES IS PROMPTNESS, NOT REACH: a stale pair survives until the
-// next deliverable publishes rather than until whichever trigger came first.
+// title's pair is complete on disk before any other title's pair goes. The
+// render player lists `tmp/` alone, never `render/` (the ruling at the head
+// of render_player.h), so a stale pair survives until the next deliverable
+// publishes.
 //
 // WARPTEMPO_CLI GETS NO PRUNE — the FIRST of the CLI's four recorded
 // asymmetries, which are enumerated once at `cli_main.cpp`'s publish and
@@ -128,8 +112,7 @@ inline GuiFailure render_folder_creation_failure(
 // `render/<title>.wav` through the same parser owner, but it is the headless
 // insurance render and this is GUI-side machinery — a CLI render leaves a
 // previous title's deliverable standing until the GUI next PUBLISHES into the
-// folder, which is the one moment the definition is asked for (it was that or
-// the player's next listing until 2026-09-01).
+// folder, which is the one moment the definition is asked for.
 //
 // A RUNNING RENDER IS NEVER AT RISK. Every deliverable publishes through the
 // staging name `<title>.wav.tmp` and a rename (render_staging_path), so a wav
@@ -179,9 +162,9 @@ void prune_render_folder(const std::string& source_audio_path,
 // TWO CALLERS: the render player's Delete (GuiRenderPlayer::
 // delete_batch_folders, the folders the root listing parked) and the load in
 // place's tail (load_render_entry_in_place, every folder under `tmp/` through
-// list_batch_folders below). The load's tail went to the desktop trash from
-// 2026-08-07 until this ruling: the tablet's trash cannot be recovered, and
-// by the time he loads a cell in place he has chosen his keeper.
+// list_batch_folders below). No trash: the tablet's trash cannot be
+// recovered, and by the time he loads a cell in place he has chosen his
+// keeper.
 enum class BatchFolderRemoval { Removed, OutOfBounds, Failed };
 BatchFolderRemoval remove_batch_folder(const std::filesystem::path& batch_root,
                                        const std::filesystem::path& folder,
@@ -204,8 +187,6 @@ std::vector<std::filesystem::path> list_batch_folders(
 // the load act's (load_render_entry_in_place, input_key_dispatch.cpp).
 // Reads
 // only AppState (the source path); holds no audio, playback, or view state.
-// The TYPE keeps its name: what changed in 2026-08-27's rename is the folder
-// it walks, not the role it plays.
 struct GuiRendersDir {
     AppState& app;
 
@@ -219,14 +200,12 @@ struct GuiRendersDir {
 // THE RENDER ENTRY'S ID — its path relative to tmp/, `<batch_dir>/<basename>
 // .wav`, always folder-qualified. One path per file, so the id is unique by
 // filesystem construction, and the folder-qualified spelling is the entry's
-// real on-disk path under tmp/. ONE READER, re-greped: the RENDER PLAYER's
-// load confirmation, which spells the entry it asks about with it, single-
-// quoted ("Load '3_bpm/02.wav' in place?", render_player_load_in_place in
-// input_key_dispatch.cpp). It lives here rather than at that one site because
-// the id is a property of the entry, which this header owns. (The typed load
-// editor resolved a user's typed identifier against these strings, and its
-// Tab completed over them, until the player took the renders subject on
-// 2026-08-28.)
+// real on-disk path under tmp/. TWO READERS, both the load in place's
+// (input_key_dispatch.cpp): the RENDER PLAYER's load confirmation, which
+// spells the entry it asks about with it, single-quoted ("Load
+// '3_bpm/02.wav' in place?", render_player_load_in_place), and the load's
+// missing-wav refusal (load_render_entry_in_place). It lives here because
+// the id is a property of the entry, which this header owns.
 inline std::string render_entry_id(const AppState::RenderEntry& e) {
     return e.batch_folder.filename().string() + "/" + e.basename + ".wav";
 }

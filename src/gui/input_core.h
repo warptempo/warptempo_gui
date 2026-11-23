@@ -20,9 +20,8 @@
 // producers are the finger's and the pen's contacts, the pen's hover as the
 // pointer, the pen's side button as Ctrl, and the painted keyboard's keys.
 //
-// WHAT "DETERMINISM PER DISPLAY WIDTH" PROMISES (Astra's determinism audit,
-// 2026-11-06): the same state and the same DELIVERED events give the same
-// coordinate arithmetic and the same authored result on this panel — the
+// WHAT "DETERMINISM PER DISPLAY WIDTH" PROMISES (2026-11-06): the same
+// state and the same DELIVERED events give the same coordinate arithmetic and the same authored result on this panel — the
 // width fixes the grid's pitch. IT DOES NOT PROMISE THE SAME RESULT FOR THE
 // SAME PHYSICAL GESTURE, because the event sampling and the tick schedule
 // are not the gesture: a held arrow's repeats fire on due ticks scheduled
@@ -41,8 +40,8 @@
 //
 // WHAT IT EMITS: the consumer hooks the GUI installs — the key, button and
 // motion callbacks, the pointer-leave hook and the eleven touch
-// hooks (the seven navigation ones — the sweep-armed query among them since
-// 2026-11-07 — the editor-field query and the caret-drag trio)
+// hooks (the seven navigation ones — the sweep-armed query among them —
+// the editor-field query and the caret-drag trio)
 // — plus the two probes it asks the GUI (text-editor-active,
 // repeat-eligible) and the ONE probe it asks the backend (the codepoint
 // refill, at set_codepoint_probe).
@@ -51,15 +50,12 @@
 // (every file that includes platform.h) hold GuiPlatform, and every setter
 // and query on that class forwards to the body living here. COMMENTS HERE
 // SPEAK THE CORE'S EVENT NAMES (touch_frame, touch_cancel, pointer_leave,
-// set_ctrl, set_repeat_info); a provenance sentence (a behaviour measured
-// under the laptop's compositor while its backend stood, until the laptop
-// GUI's drop of 2026-10-30; labwc's repeat delay) keeps its words.
+// set_ctrl, set_repeat_info); a provenance sentence (labwc's repeat delay)
+// keeps its words.
 
-// THE POINTER LEAVE'S THREE FIRES — one hook, no reason handed (the reason
-// enum, GuiPointerLeaveReason, 2026-08-08 to 2026-11-07, RETIRED when its
-// last reader, the hover tooltip's contact-lift keep, went with the
-// always-show model, AppState::RedesignTooltip: a road nothing reads goes).
-// Every consumer reads every fire alike:
+// THE POINTER LEAVE'S THREE FIRES — one hook, no reason handed (2026-11-07:
+// no consumer reads one, the tooltip's always-show model,
+// AppState::RedesignTooltip). Every consumer reads every fire alike:
 //   * THE ORDINARY LEAVE, the pointer focus dropping: pointer_leave, and a
 //     touch POINTER TRANSLATION's ABNORMAL end WITH NO POINTER FOCUSED — the
 //     window system took the contact and no pen hovers in the window, so
@@ -71,10 +67,8 @@
 //     is at deliver_touch_translation_end's definition).
 //   * THE CONTACT'S LIFT, the same translation's CLEAN end (touch_up), with
 //     no pointer focused — delivered after the release, the fork being the
-//     same one. (The hover tooltip kept its button and the button's spent
-//     state across this one, Windows' rule after a click, 2026-10-06 to
-//     2026-11-07.) The S Pen's lift off an empty glass takes no leave at
-//     all since 2026-10-07: the Android backend focuses the pointer at the
+//     same one. The S Pen's lift off an empty glass takes no leave at all
+//     (architect 2026-10-07): the Android backend focuses the pointer at the
 //     lift, so the fork's restore arm runs — pointer_focus_at.
 //   * THE PEN'S HOVER END, the Android backend's S Pen hover ending
 //     (GuiPlatform::end_pen_hover, through pointer_leave: a HOVER_EXIT —
@@ -82,8 +76,8 @@
 //     the GUI's plane, any first down, focus loss; architect 2026-09-27,
 //     every pen hover effect acts only within the plane). THE HOVER END
 //     BEFORE A TIP DOWN DARKENS NOTHING A FRAME COULD SHOW (architect
-//     2026-10-10, his S Pen touching down on a hover-lit row: "the word
-//     Pick Colors blinks"): THE STYLUS HOVER_EXIT AND ITS DOWN ARRIVE IN
+//     2026-10-10, his S Pen touching down on a hover-lit row, the row
+//     blinking): THE STYLUS HOVER_EXIT AND ITS DOWN ARRIVE IN
 //     SEPARATE DELIVERIES WITHIN ONE MILLISECOND (traced on his glass
 //     2026-10-10, six taps: steady-clock ms 92518249 → 92518250, 92524919 →
 //     92524919, 92528433 → 92528434), the exit's leave running before the
@@ -133,7 +127,7 @@
 // snap_authored_frame) — save THE FRAME->COLUMN PLACEMENT, whose exact tie
 // goes right so a moving mark steps one column per column of travel
 // (lattice_index_ties_right, displayed_column_at, warp_frame_map_view.h;
-// architect 2026-11-06, session 69). A CELL is not a
+// architect 2026-11-06). A CELL is not a
 // point — asking which pixel a coordinate is IN has one answer and no tie to
 // break — so the containment is the one answer for every device that hands
 // this layer a fractional position.
@@ -202,9 +196,9 @@ public:
     // none of them names a protocol type. The backend decodes units, protocol
     // enums and keymap state on its own side and calls in.
 
-    // ONE KEY EVENT, already translated. `key` is the GuiKey the backend's own
-    // keymap translation produced — an X11 keysym, ASCII case-folded, with
-    // standalone modifier keysyms and F1..F35 already dropped — or 0 when this
+    // ONE KEY EVENT, already translated. `key` is the GuiKey the backend
+    // hands in — a value of gui_input.h's keysym numbering, ASCII
+    // case-folded — or 0 when this
     // GUI has no use for the key at all, which is the same thing as "there is
     // nothing to deliver". `stable_code` is the backend's PER-KEY IDENTITY, the
     // value the repeat cancel compares against
@@ -306,8 +300,8 @@ public:
     // calls this once per periodic tick, immediately after its own tick hook.
     // The deadline is never SCHEDULED — it is compared against a free-running
     // periodic wakeup — so its granularity is one tick period. (The touch
-    // window's deadline, the region hold's beat, retired 2026-11-07: the
-    // window is decided by geometry alone, input_core.cpp's constants block.)
+    // window has no deadline: it is decided by geometry alone,
+    // input_core.cpp's constants block.)
     void tick();
 
     // THE ONE DOWNWARD PROBE. A synthesized key repeat must not reuse the
@@ -355,7 +349,7 @@ public:
     // motion: the contact is gone and no pen hovers in the window; a FOCUSED
     // pointer gets a restore motion instead and this hook stays silent — the
     // focus fork, stated at deliver_touch_translation_end). The edges drop
-    // pointer focus. IT CARRIES NO ARGUMENT since 2026-11-07: every consumer
+    // pointer focus. IT CARRIES NO ARGUMENT (2026-11-07): every consumer
     // reads the three fires alike (THE POINTER LEAVE'S THREE FIRES, above the
     // class).
     // The one owner of the drop-what-the-pointer-was-naming behavior. What
@@ -366,15 +360,11 @@ public:
     // interior or a hanging tooltip behind. Null-safe.
     void set_pointer_left_hook(std::function<void()> cb);
 
-    // THE TOUCH NAVIGATION HOOKS (touch phase 1, 2026-08-11; SIX members
-    // from PAN-PRIMARY's touch half, the eighth glass ruling 2026-08-12 —
-    // update, end, the pan-zone query, and the REGION trio
-    // begin/update/end, the dead trim-move members' exact pattern reborn for
-    // the region former — TEN since 2026-09-05, when the EDITOR-FIELD
-    // query and the CARET-DRAG trio joined for the third ruled divergence,
-    // and ELEVEN since 2026-11-07, the SWEEP-ARMED query joining for the
-    // TRIM arm lamp; the retired shapes are closed_questions.md's touch
-    // section). ONE finger on
+    // THE TOUCH NAVIGATION HOOKS, ELEVEN: update, end, the pan-zone query,
+    // the SWEEP-ARMED query (the sweep lamps'), the REGION trio
+    // begin/update/end, the EDITOR-FIELD query and the CARET-DRAG trio (the
+    // third ruled divergence); the shapes ruled out are closed_questions.md's
+    // touch section. ONE finger on
     // the glass IS the pointer — translated whole inside this class, so the
     // GUI sees ordinary pointer deliveries and cannot tell which contact
     // produced them (the translation
@@ -386,24 +376,23 @@ public:
     // delivered through
     // the SAME update hook with the finger as the centroid and dist_ratio
     // pinned at 1.0 (one finger has no distance, so no zoom) — EXCEPT WHILE
-    // A GUI SWEEP LAMP IS LIT (TRIM, or ADD SEL since 2026-11-10; the
+    // A GUI SWEEP LAMP IS LIT (TRIM or ADD SEL; the
     // sweep_armed query below), when the
     // same drag with no ctrl is THE ARMED SWEEP: the crossing drives the
     // GUI's region former through the region trio from the down point
-    // (architect 2026-11-07, session 87, retiring the hold-then-drag region
-    // hold of 2026-08-12: "if I turn it on, it's deliberate and for a
+    // (architect 2026-11-07: "if I turn it on, it's deliberate and for a
     // sweep") — and a one-finger DRAG whose down point lies in an
     // OPEN EDITOR'S FIELD is THE CARET DRAG: the caret follows the finger
     // through the caret trio and nothing selects (architect 2026-09-05, the
-    // phone's text vocabulary; since 2026-11-08, session 95, the pointer
-    // road's drag in the field moves the caret the same way —
+    // phone's text vocabulary; the pointer road's drag in the field moves
+    // the caret the same way, 2026-11-08 —
     // set_editor_caret_from_x clears the anchor on both roads — so the two
     // agree and this layer owns only the touch gesture's own recognition).
     // TWO fingers
     // are the ZOOM gesture: this layer measures both the
     // centroid delta and the distance ratio and delivers both, and the GUI
     // discards the centroid delta on a two-finger frame — two fingers zoom
-    // and never pan since 2026-08-14 (the model at apply_touch_nav_update's
+    // and never pan (2026-08-14; the model at apply_touch_nav_update's
     // declaration, input_handler.h), which
     // is a GESTURE POLICY and therefore the GUI's, not this layer's. None of
     // the four delivers pointer events.
@@ -462,11 +451,9 @@ public:
     //     pinch — the touch state block below. SURFACE GEOMETRY ONLY — the
     //     GUI answers the navigation surface (the pan-primary vocabulary's
     //     one plain-drag surface, the waveform alone) less the surfaces
-    //     floating over it, and nothing modal SAVE AN OPEN MENU, which
-    //     yields the whole zone so the first touch outside it is the press
-    //     that closes it (architect 2026-10-01; the carve-outs are the GUI's,
-    //     at touch_point_in_pan_zone); every other refusal (prompt, editors,
-    //     loading/empty audio, live pointer gesture) stays downstream — at the
+    //     floating over it and the pages that veil it (the carve-outs are the
+    //     GUI's, at touch_point_in_pan_zone); every other refusal (prompt,
+    //     editors, loading/empty audio, live pointer gesture) stays downstream — at the
     //     update body's per-frame state refusal for the nav gestures, in the
     //     region begin body for the armed sweep — so a refused pan freezes
     //     and a refused sweep is a dead stream rather than a fallback.
@@ -476,9 +463,9 @@ public:
     //     until its end; nothing here or in the GUI re-asks the place.
     //     Null — or answering false — means no pan surface: the pointer on
     //     contact everywhere outside an editor's field.
-    //   * sweep_armed(): THE SWEEP-ARMED QUERY (architect 2026-11-07,
-    //     session 87) — is a GUI sweep lamp lit for this drag (the TRIM arm
-    //     lamp, or since 2026-11-10, session 101, the ADD SEL lamp — a radio
+    //   * sweep_armed(): THE SWEEP-ARMED QUERY (architect 2026-11-07) — is
+    //     a GUI sweep lamp lit for this drag (the TRIM arm lamp or the ADD SEL
+    //     lamp, 2026-11-10 — a radio
     //     pair, the GUI's begin choosing the lit one's former)? Asked
     //     at a pan-zone window's SLOP CROSSING, and only when no ctrl stands
     //     (the barrel-held drag stays the one-finger zoom, lamp or not): true
@@ -526,8 +513,8 @@ public:
     //     so no pan and no sweep can be meant there. (2) A Field answer
     //     OPENS A WINDOW where the pointer would otherwise land on contact, a
     //     window with no deadline (input_core.cpp's constants block): the
-    //     architect's field vocabulary is a tap and a drag (2026-11-08,
-    //     session 95: no double tap in the field) and carries NO hold meaning,
+    //     architect's field vocabulary is a tap and a drag (2026-11-08: no
+    //     double tap in the field) and carries NO hold meaning,
     //     so nothing there may be decided by a duration — a motionless
     //     contact stays Pending however long it rests and its LIFT is the
     //     ordinary tap burst, the press seating the caret, while a contact
@@ -582,28 +569,26 @@ public:
     // a window opens), and the navigation
     // gestures' LATCH (centroid travel or finger-distance change past it
     // starts navigating, so a two-finger tap navigates nothing and a
-    // single-finger nav is born past it by construction). (A third, the live
-    // translation's MOVED latch that a second finger forked on, went with the
-    // motionless-hold upgrade on 2026-09-25: a second finger landing on a
-    // live pointer translation is ignored whatever the first has done.)
+    // single-finger nav is born past it by construction). A second finger
+    // landing on a live pointer translation is ignored whatever the first
+    // has done, so no third use exists.
     //
     // IT IS A LENGTH, SO IT RIDES gui_scale — AND THE CORE NEVER LEARNS THE
-    // SCALE. The authored length (8 laptop px then, 6 Windows px from
-    // 2026-10-02, 9 W since the rebase of 2026-11-05) was 1.7 mm on the
-    // retired road rig's 1024x600 panel at 100 %
-    // and 0.8 mm on the tablet's 249 PPI one, which a fingertip's roll crosses
-    // during a relaxed double tap; the GUI resolves it and pushes it here,
+    // SCALE. The authored length is 9 W (2026-11-05), 18 device px on the
+    // tablet at 200 %, about 1.8 mm at its 249 PPI; unscaled, the same
+    // number of device px is under a millimetre there, which a fingertip's
+    // roll crosses during a relaxed double tap. The GUI resolves it and
+    // pushes it here,
     // so this layer keeps measuring raw device pixels and knows nothing about
     // percent. The default is kDefaultTouchSlopPx, which is the authored value
-    // and therefore exactly right at gui_scale 100 — so a core nobody ever
-    // pushes to behaves as it always did.
+    // and therefore exactly right at gui_scale 100.
     //
     // THE TWIN-GATE INVARIANT, and why this is a setter rather than a second
     // constant: the slop DELIBERATELY EQUALS the GUI's one generic
     // press-becomes-drag gate, so a finger's travel means one distance
     // whichever side decides it: on the pan zone this layer's crossing turns
     // the window into the pan, and off it — where the finger is the pointer
-    // on contact since 2026-09-25 and its motion reaches the GUI raw — the
+    // on contact (2026-09-25) and its motion reaches the GUI raw — the
     // GUI's own gate turns the press into its drag at the same travel. (The
     // GUI's GRAB gate, twice this, 2026-09-29, has no twin here and needs
     // none: its surfaces, a flag and the trim bar, lie off the pan zone, so
@@ -611,7 +596,7 @@ public:
     // grab_moved_threshold_px, app_state.h.) ONE NUMBER FLOWS TO BOTH: the
     // pushed value IS
     // drag_moved_threshold_px() (app_state.h), so the two cannot drift at any
-    // scale, where before they were two literals kept equal by comment.
+    // scale.
     //
     // THE PUSH HAS TWO CALL SITES, one per gui_scale application point, and
     // this is their inventory (there is no third; set_gui_scale_percent,
@@ -620,11 +605,8 @@ public:
     //     GuiPlatform::init — main.cpp. This is the INIT road:
     //     the scale arrives from the per-device config (device_config.h), which
     //     is read before a window exists, so no frame is ever painted and no
-    //     finger is ever delivered at a scale other than the user's. IT MOVED
-    //     HERE 2026-08-27, from the source load's tail, when the scale stopped
-    //     being a `.settings` key and became a device fact — and the window that
-    //     used to run at the authored default (a mapped surface with no source
-    //     in it) closed with the move.
+    //     finger is ever delivered at a scale other than the user's — the
+    //     scale a device fact, never a `.settings` key (2026-08-27).
     //   * the settings editor's `gui_scale=` commit —
     //     GuiInputHandler::apply_gui_scale, input_handler.cpp. This is the LIVE
     //     road, and the new slop is in force from that commit onward.
@@ -721,8 +703,8 @@ private:
     double pointer_x_ = 0.0;
     double pointer_y_ = 0.0;
 
-    // -- Touch (the finger as the pointer; touch phase 1, 2026-08-11; the
-    //    WINDOWED MODEL, restored at the sixth glass ruling, 2026-08-12) --
+    // -- Touch (the finger as the pointer; the WINDOWED MODEL,
+    //    2026-08-12) --
     //
     // THE UNIFIED-MODE PREMISE, made literal at this boundary: ONE finger IS
     // the pointer, translated whole here so the GUI sees ordinary pointer
@@ -733,8 +715,8 @@ private:
     // pointer events. The WINDOW is what buys that vocabulary ON THE PAN ZONE
     // (a real pinch's two fingers land tens of milliseconds apart, so a press
     // delivered at the first contact jumps the playhead before it can zoom —
-    // the timer-free model died of exactly that on the glass, 2026-08-12:
-    // "every time I pinch, it jumps"), and the pan zone is the only surface
+    // on the glass, 2026-08-12: "every time I pinch, it jumps"), and the pan
+    // zone is the only surface
     // with a pinch, so off it the finger is the pointer on contact
     // (2026-09-25). A PEN is a finger here (GuiTouchTool, gui_input.h): the
     // backend tells the core which tool touched, and the core reads it only
@@ -747,7 +729,7 @@ private:
     //     "zoom is not useful outside waveform", and the second finger's only
     //     use is the pinch): ON THE PAN ZONE and IN AN OPEN EDITOR'S FIELD,
     //     and in both it runs to NO DEADLINE (architect 2026-11-07 on the
-    //     zone, the region hold retired; 2026-09-05 in the field, whose
+    //     zone; 2026-09-05 in the field, whose
     //     vocabulary has no hold meaning), so a resting contact simply stays
     //     Pending. Anywhere else the down
     //     resolves to Pointer ON CONTACT (the edge inventory's off-zone down),
@@ -760,7 +742,7 @@ private:
     //     scrub, the pointer road's own machinery, the TRIM lamp lit or not);
     //     on MOTION beyond
     //     the touch slop to SINGLE-FINGER Nav on the zone (the PHONE MODEL,
-    //     second glass session 2026-08-11: the finger drags the pan, or
+    //     2026-08-11: the finger drags the pan, or
     //     under the ctrl bit the one-finger zoom; no press was ever delivered
     //     — nothing to unwind), or with a sweep lamp lit (TRIM or ADD SEL)
     //     and no ctrl to THE ARMED SWEEP (-> Region below; the sweep_armed
@@ -790,7 +772,7 @@ private:
     //     REBASED to the join (folding the centroid's jump to the pair
     //     midpoint would pan by half the finger gap), so pan is continuous
     //     and zoom is relative to the join. THE REVERSE IS THE DOWNGRADE
-    //     since 2026-08-14 (the one-model ruling — the second finger is the
+    //     (2026-08-14, the one-model ruling — the second finger is the
     //     zoom modifier, droppable at any time): one finger lifting from
     //     TWO-finger nav CONTINUES the gesture as the single-finger pan on
     //     the survivor, the delta bases rebased to the survivor's own
@@ -803,10 +785,9 @@ private:
     //     exemption at set_touch_nav_hooks' update contract). The gesture
     //     ends when its LAST nav finger lifts. A third finger is ignored,
     //     across upgrades and downgrades alike.
-    //   * Region  — THE ARMED SWEEP (architect 2026-11-07, session 87; the
-    //     REGION HOLD of 2026-08-12, the zone window's expiry, retired): the
-    //     zone window's slop crossing with a sweep lamp lit (TRIM, or ADD SEL
-    //     since 2026-11-10) and no ctrl, and
+    //   * Region  — THE ARMED SWEEP (architect 2026-11-07): the
+    //     zone window's slop crossing with a sweep lamp lit (TRIM or ADD SEL)
+    //     and no ctrl, and
     //     the owning contact now drives the REGION former through the region
     //     trio — begin fired at entry with the DOWN point (the GUI runs the
     //     former's own press half and arms the drag, or refuses), the
@@ -847,11 +828,11 @@ private:
     //     the down point, any queued motion), then the release, then the
     //     translation end on the release's own edge; -> the Pointer arm's own
     //     end, Drain if an ignored contact is still down or Idle if not (a
-    //     Pending window can hold one since 2026-09-25 — a finger beside a
+    //     Pending window can hold one — a finger beside a
     //     pen's zone window, a pen beside a finger's, a second finger in the
     //     field's window; that contact's own up is the id-mismatch break
     //     above, not this clause). This window opens ONLY on the pan zone
-    //     and in the field since 2026-09-25 (the placement lanes below never
+    //     and in the field (2026-09-25; the placement lanes below never
     //     reach it), so ON THE PAN ZONE the burst's motionless press-release
     //     runs the GUI's DEFERRED CLICK ACT at its release — the placement at
     //     the tap point (the lower half's scrub), the TRIM lamp lit or not.
@@ -871,14 +852,14 @@ private:
     //     empty stretch that release also seeds the EmptyLane double-click
     //     candidate, so TWO TAPS there reach the marker CREATE (the second
     //     tap's press consumes the candidate).
-    //   * (NO EXPIRY EDGE: no window carries a deadline — the zone's since
-    //     2026-11-07, the region hold and its stillness radius retired; the
-    //     field's since 2026-09-05. A resting contact stays Pending at any age
+    //   * (NO EXPIRY EDGE: no window carries a deadline — the zone's
+    //     (2026-11-07) nor the field's (2026-09-05). A resting contact stays
+    //     Pending at any age
     //     and leaves only by the slop crossing, its lift or, on the zone, a
     //     second down.)
     //   * motion beyond the touch slop inside the window — FORK on the down
-    //     point's captured answers (the phone model, and the editor field
-    //     since 2026-09-05): pan surface -> SINGLE-FINGER Nav (the nav seed
+    //     point's captured answers (the phone model, and the editor field,
+    //     2026-09-05): pan surface -> SINGLE-FINGER Nav (the nav seed
     //     measures its latch from the DOWN point, so the first delivered
     //     frame folds the whole accumulated delta exactly as the two-finger
     //     latch folds, and the frame's ctrl bit picks the pan or the zoom),
@@ -1127,7 +1108,7 @@ private:
     // not this hook). Wired to everything derived from where the pointer is,
     // main.cpp's hook body holding the authoritative list. It carries no
     // reason (THE POINTER LEAVE'S THREE FIRES, above the class: every
-    // consumer reads them alike since 2026-11-07). Null-safe.
+    // consumer reads them alike). Null-safe.
     std::function<void()> pointer_left_hook_;
     // The touch navigation hooks (see set_touch_nav_hooks). Null-safe at
     // each fire site.
@@ -1211,7 +1192,7 @@ private:
     // ABNORMAL END, a lost-button MOTION instead (the hold bit still drops,
     // so nothing sticks) — the product's own button-lost spelling, under
     // which a moved drag finalizes and an unmoved press commits nothing.
-    // THE FINGER'S OWN LIFT IS THE ONLY CLEAN CALLER since 2026-08-29: the
+    // THE FINGER'S OWN LIFT IS THE ONLY CLEAN CALLER (2026-08-29): the
     // two HARD ENDS are the ends where no finger left, and they take the
     // abnormal one (architect: a touch the system takes away is not a click
     // unless it moved).
@@ -1227,7 +1208,7 @@ private:
     // MOTION at its last platform-tracked position instead of the leave, no
     // focus gets the leave. clean_release is passed
     // through to end_touch_left_hold (the release or the lost-button motion;
-    // the leave carries no reason since 2026-11-07): the
+    // the leave carries no reason): the
     // finger's OWN LIFT passes true, and the ends where no finger left — the
     // HARD ENDS (2026-08-29) — pass false. Rationale, edges and
     // the resting-anchor judgment at the definition.

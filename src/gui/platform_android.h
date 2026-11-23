@@ -13,15 +13,14 @@
 #include <map>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 
 // GuiPlatform: the platform abstraction for the GUI's window, event loop and
-// presentation — THE ONE BACKEND (architect 2026-10-30: the laptop GUI
-// dropped, the tablet the one platform; platform.h is its one include). It
+// presentation — THE ONE BACKEND (architect 2026-10-30: the tablet the one
+// platform; platform.h is its one include). It
 // runs inside a NativeActivity over the NDK's stock android_native_app_glue:
 // the glue's thread owns an ALooper, this class adds its own periodic timerfd
 // and the four worker eventfds to it, paints cairo into a persistent ARGB32
@@ -34,7 +33,7 @@ struct GuiCanvasDrawList;   // canvas_sink.h — the GL canvas's frame
 // real interface headers stay private to platform_android.cpp.
 //
 // THE PUBLIC API IS THE SEAM the GUI's consumers compile against through
-// platform.h (re-grepped 2026-10-08: main.cpp, viewport.cpp, icons.cpp,
+// platform.h (its ten includers: main.cpp, viewport.cpp, icons.cpp,
 // paint_handler.h, prompt.h, file_loader.h, input_handler.h,
 // onscreen_keyboard.h, render_player.h, car_transport.h). A member with
 // nothing behind it on glass — the window title — is an honest no-op whose
@@ -90,7 +89,7 @@ public:
     // on the first launch that finds no file there and never consulted again
     // (device_config.h owns the file, its schema and its keys,
     // kDeviceConfigKeys, every one required). THE SHIPPED DEFAULTS FILE
-    // (architect 2026-11-08, session 95; device_config.h's THE FIRST-RUN
+    // (architect 2026-11-08; device_config.h's THE FIRST-RUN
     // VALUES): the APK's root asset `device_config_defaults` — the
     // repository's tracked assets/device_config_defaults, the tablet's own
     // config as last snapshotted, every key spelled — read through the
@@ -103,11 +102,11 @@ public:
     // gui_main answers as it answers a bad config. The XDG_CONFIG_HOME the
     // config resolves under is pointed at the app's private internal
     // directory by android_main before gui_main runs, beside the cache home
-    // it has always set.
+    // it sets.
     static std::expected<DeviceConfig, std::string> device_config_defaults();
 
     // THE BUNDLED ICONS' FILES (icons.h's head; ONE SET, Papirus, architect
-    // 2026-11-21, send GG) — the drawings of assets/icons/, a map from FILE
+    // 2026-11-21) — the drawings of assets/icons/, a map from FILE
     // NAME (`<Enumerator>.svg`, icons.h's kIconNames; no folder) to the
     // file's whole bytes, every `.svg` of the bundle's folder.
     // Read by the launch's icon load alone (icons::load_set, icons.h), IN
@@ -168,14 +167,14 @@ public:
     void present_held_frame();
     void release_presentation();
 
-    // THE DISPLAY KEEP-ALIVE'S PERIOD (architect 2026-11-13, session 118;
+    // THE DISPLAY KEEP-ALIVE'S PERIOD (architect 2026-11-13;
     // the facts and the ruling — the brief window after a fast Stop — at
     // kDisplayKeepAliveFastStopMs, playback_lifecycle.h): 200 ms, under THIS
     // PANEL'S 250 ms IDLE TIMER, so a window kept awake presents one frame
     // after this long without a present and the panel never drops to 30 Hz.
     static constexpr int64_t kDisplayKeepAliveMs = 200;
 
-    // IS A KEEP-ALIVE FRAME DUE NOW (architect 2026-11-13, session 118):
+    // IS A KEEP-ALIVE FRAME DUE NOW (architect 2026-11-13):
     // true when the window stands in front — adopted and focused
     // (window_activated_) and its first configure done — no hold withholds
     // the paint, no damage already waits for its frame, and no frame has
@@ -351,9 +350,10 @@ public:
         return painting_due_vsync_ ? due_vsync_frame_ns_ : 0;
     }
 
-    // THE PEN'S RETAINED ZOOM ANCHOR (architect 2026-09-27): a mouse's
-    // Ctrl + left button held while it is lifted off the table and set down
-    // again, carried onto the S Pen. The platform owns the pen facts (its
+    // THE PEN'S RETAINED ZOOM ANCHOR (architect 2026-09-27): a zoom seat the
+    // S Pen made with its side button held outlives the pen's lift while the
+    // button stays held, so the next stroke zooms about the same anchor. The
+    // platform owns the pen facts (its
     // button, its plane, its contacts) and the GUI owns the seat
     // (TouchNavZoomState, app_state.h); these two members are the whole of
     // the traffic between them.
@@ -434,16 +434,15 @@ public:
 
     // -- THE ON-SCREEN KEYBOARD'S SEAM MEMBER -------------------------------
     //
-    // THE PAINTED KEYBOARD IS THE ONE KEY PRODUCER (architect 2026-10-30: the
-    // hardware keyboard is closed on the tablet), so the GUI paints it
-    // wherever an editor owns the keyboard, with no platform term
+    // THE PAINTED KEYBOARD IS THE ONE KEY PRODUCER (architect 2026-10-30; the
+    // ruling at on_input_event's key arm, platform_android.cpp), so the GUI
+    // paints it wherever an editor owns the keyboard, with no platform term
     // (onscreen_keyboard::stands).
     //
-    // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. The
-    // hardware keyboard is closed for good (on_input_event's key arm owns the
-    // ruling) and this backend
-    // translates none: AInputEvent key events are handed back to the system so
-    // BACK still leaves the app. THIS IS THE ROAD THE OWNED ON-SCREEN KEYBOARD
+    // A KEY EVENT FROM SOMETHING THAT IS NOT A PHYSICAL KEYBOARD. This
+    // backend translates no physical key: AInputEvent key events are handed
+    // back to the system so BACK still leaves the app. THIS IS THE ROAD THE
+    // OWNED ON-SCREEN KEYBOARD
     // TAKES INTO THE CORE'S KEY PATH — a painted surface emitting keysyms
     // directly (onscreen_keyboard.h; its press router is the one caller).
     //
@@ -478,7 +477,7 @@ public:
     // run on are the backend's — so the seam carries exactly two doors: a
     // hook the loop fires for each button the platform received, and a push
     // the GUI makes when what the display should show has changed. THE
-    // CONSUMERS ARE TWO SINCE 2026-09-17, and main.cpp's hook forks the
+    // CONSUMERS ARE TWO (2026-09-17), and main.cpp's hook forks the
     // commands between them on the render player's mode bit: the PLAYER
     // while it stands (GuiRenderPlayer::on_media_command /
     // publish_media_state) and the PROJECT TRANSPORT while it is closed
@@ -511,8 +510,8 @@ public:
     // method lookup and the three drop rules — is stated at the definitions.
     // THE SESSION STANDS FOR THE APP'S LIFE (architect 2026-09-17): the push
     // carries `session_active` true from the first tick of the first project
-    // onward — the render player's close stopped pushing an inactive state
-    // that day, and the car transport's tick publishes the project's own
+    // onward — the render player's close pushes no inactive state, and the
+    // car transport's tick publishes the project's own
     // transport whenever the player is closed — so the sliver's
     // setActive(false) is reached only by the activity's onDestroy.
     void set_on_media_command(std::function<void(GuiMediaCommand)> cb);
@@ -521,8 +520,8 @@ public:
     // THE HOST'S BATTERY (architect 2026-10-24): what the host knows of its
     // battery NOW, for the title bar's battery + clock group (gui_battery.h
     // owns the type and the composer). CALLED ON EVERY TICK from the loop
-    // thread — main.cpp's tick is the legend's one refresh site
-    // (refresh_logo_legend), composing only when the wall-clock minute or
+    // thread — main.cpp's tick is the title bar's right group's one refresh
+    // site (refresh_logo_legend), composing only when the wall-clock minute or
     // this answer changed — so it answers cheaply. IT IS THE SLIVER'S LAST
     // BROADCAST:
     // MainActivity registers for the sticky ACTION_BATTERY_CHANGED (no
@@ -530,7 +529,7 @@ public:
     // the receiver keeps it current) and pushes each one down through
     // nativeBatteryState — ONE JAVA->NATIVE CALL PER CHANGE, the car's road
     // (nativeMediaCommand) rather than a native->Java read at each refresh,
-    // because the broadcast IS the change: the legend follows it within a
+    // because the broadcast IS the change: the group follows it within a
     // tick, with no binder call on the loop's thread. The push stores one
     // atomic word and needs no wake, the tick reading it on its own cadence
     // (the word and its packing are at g_battery_word, platform_android.cpp).
@@ -575,11 +574,10 @@ private:
     int              back_w_ = 0;
     int              back_h_ = 0;
 
-    // -- THE GL CANVAS (2026-10-13; the one canvas road since the laptop
-    // GUI's drop, architect 2026-10-30; the road at present) --
+    // -- THE GL CANVAS (the one canvas road, architect 2026-10-30) --
     // The window goes through EGL / GLES 3.0: the backbuffer above is
     // uploaded into ONE texture by damage rect and the whole frame drawn at
-    // every swap (present's head, architect 2026-11-16 night, send S).
+    // every swap (present's head, architect 2026-11-16).
     // The EGL handles are spelled void* (each EGL type is one on this
     // platform) so no EGL header reaches this file. THE DISPLAY, CONFIG,
     // CONTEXT AND PROGRAMS ARE THE PROCESS'S, made at the first adoption and
@@ -588,7 +586,7 @@ private:
     // destroyed at the window's loss. EVERYTHING GLES AND NEITHER EGL NOR
     // WINDOW — the programs, the texture that follows the backbuffer's size,
     // the canvas list's objects, the upload walk and the frame's draw — is
-    // gl_canvas_'s (GuiGlCanvas, gl_canvas.h, 2026-10-14), the one owner
+    // gl_canvas_'s (GuiGlCanvas, gl_canvas.h), the one owner
     // present drives; what stays here is the platform's.
     void*                 egl_display_ = nullptr;
     void*                 egl_config_  = nullptr;
@@ -609,7 +607,7 @@ private:
     // before the first. display_keep_alive_due's one reading.
     int64_t               last_present_ms_ = 0;
     // THE FIRST SURFACE'S DISPLAY-P3 ANSWER, the one gui_main read; a later
-    // surface answering otherwise is fatal (ensure_gl_surface, 2026-10-13).
+    // surface answering otherwise is fatal (ensure_gl_surface).
     std::optional<bool>   gl_first_display_p3_;
     GuiGlCanvas           gl_canvas_;
     void ensure_gl_context();
@@ -643,7 +641,7 @@ private:
     // request_run_stop; cleared at the post of the frame release_presentation
     // owes (paint_one_frame's tail), never at the release itself. Its ONE
     // FRAME'S DEBT is armed beside it at the same two points and paid by
-    // present_held_frame alone. THE RELEASE OWED (2026-10-28, Sol's round):
+    // present_held_frame alone. THE RELEASE OWED:
     // set by release_presentation alone, the hold left standing; it opens
     // the paint's hold gate and the vsync post at pump's tail, and clears
     // with the hold, both bits together, only once that frame's post
@@ -677,7 +675,7 @@ private:
     // exit or any pen report above the GUI's plane, a finger's first down or
     // focus loss clears it. The clears read
     // this record rather than the clearing event's own stylus metadata, so a
-    // cancel that no longer enumerates the pen still drops the bit.
+    // cancel that does not enumerate the pen still drops the bit.
     bool pen_ctrl_ = false;
     // THE PEN IS A CONTACT ON THE GLASS: true from a down whose acting
     // pointer is the pen until its own lift, a cancel or focus loss. KEYED ON
@@ -775,12 +773,10 @@ private:
     // and every push then drops with the line already logged. Spelled as
     // `struct` pointers so no JNI header reaches this file.
     // THREE IDS SHARE THE ONE LOOKUP BLOCK off the one class object, each
-    // independent of the others: the car's mediaState (2026-08-28) and the
-    // clipboard's read pair, clipboardGet (2026-09-03) and clipboardTime
-    // (2026-10-29; the copy writes no system clipboard, the rule at
-    // clipboard_set_text) — clipboard_road_open() is the one predicate the
-    // paste's system road asks. (Activity's own moveTaskToBack, the
-    // caption's Minimise, 2026-10-05 to 2026-10-24, went with the caption.)
+    // independent of the others: the car's mediaState and the clipboard's
+    // read pair, clipboardGet and clipboardTime (the copy writes no system
+    // clipboard, the rule at clipboard_set_text) — clipboard_road_open() is
+    // the one predicate the paste's system road asks.
     struct _JNIEnv*   jni_env_            = nullptr;
     bool              jni_attached_       = false;
     struct _jmethodID* media_state_method_   = nullptr;
@@ -789,14 +785,13 @@ private:
 
     // -- Idle-tick timing --
     // The tick: a periodic timerfd (bionic has them), one of the loop's TWO
-    // wake sources since 2026-10-14, the vsync
-    // callback below the other (the 2026-08-27 "one wakeup" ruling reversed;
-    // the reason at pump's tail). The number and its whole rationale are at
+    // wake sources, the vsync callback below the other (the reason at pump's
+    // tail). The number and its whole rationale are at
     // detect_refresh_rate_ms().
     int  playback_tick_ms_ = 5;
     int  timerfd_ = -1;
 
-    // -- THE PAINT'S GATE, THE VSYNC CALLBACK (2026-10-14) --
+    // -- THE PAINT'S GATE, THE VSYNC CALLBACK --
     // The loop thread's AChoreographer, taken once in init(); the two bits
     // of the gate's state machine, whose whole rule is at pump's tail:
     // vsync_pending_ — a frame callback is posted and has not fired (set at
@@ -860,7 +855,7 @@ private:
     // stable_code -> codepoint, written by synthesize_key and read by the
     // core's codepoint probe when it re-fills a synthesized repeat. It is a
     // MAP rather than a single slot because the probe may be asked about a key
-    // whose press is no longer the newest one; it never shrinks, and its size
+    // whose press is not the newest one; it never shrinks, and its size
     // is bounded by the painted keyboard's own key count.
     std::unordered_map<uint32_t, uint32_t> key_codepoints_;
 
@@ -908,7 +903,7 @@ private:
     // the damage is cleared; NOTHING VISIBLE — every damage rect lay off
     // the surface and the change is one the damage describes, so nothing
     // was drawn or swapped and the damage is consumed all the same (architect
-    // 2026-11-16 night, send S); KEPT — nothing reached the window (no
+    // 2026-11-16); KEPT — nothing reached the window (no
     // window, no backbuffer, no EGL surface, no texture yet, a failed swap)
     // and the damage stays for the next frame.
     enum class PresentOutcome { Presented, NothingVisible, Kept };

@@ -48,23 +48,22 @@ int notification_text_top_px(int lines) {
 int notification_card_max_w_px(const AppState& a) {
     // THE CEILING IS AUTHORED AND SCALED, NOT A FRACTION OF THE WINDOW
     // (architect 2026-08-31, the reasoning and the number at the declaration,
-    // kNotificationMaxWidthPx in notifications.h): the ceiling is what
-    // `a.width / 3` gave on the 1920 px laptop, where the number was taken,
-    // kept as an authored length rather than a fraction of the window.
+    // kNotificationMaxWidthPx in notifications.h): a fraction of the window
+    // would be device px and starve the tablet.
     const int ceiling_w = scaled_px(kNotificationMaxWidthPx);
     // THE WINDOW IS A SAFETY BELOW THE CEILING: the stack sits inside the
     // window's columns, notifyd's seat off each side (notification_stack_bound;
-    // send BB, 2026-11-19), so a window that cannot hold the ceiling gets
+    // architect 2026-11-19), so a window that cannot hold the ceiling gets
     // what it has. This number is also the ROOM the painter clips to and
-    // publishes within, and with no floor (architect 2026-11-19, send AA) no
-    // card is wider than it.
+    // publishes within, and with no floor (architect 2026-11-19) no card is
+    // wider than it.
     const int room_w = a.width - 2 * scaled_px(kNotificationSeatW);
     return std::max(0, std::min(ceiling_w, room_w));
 }
 
 GuiRect notification_stack_bound(const AppState& a) {
     // THE STACK'S MARGINS: NOTIFYD'S SEAT ABOVE AND AT THE RIGHT, THE PANEL'S
-    // PAD AT THE FOOT (architect 2026-11-19, send BB: "in xfce the card
+    // PAD AT THE FOOT (architect 2026-11-19: "in xfce the card
     // appears at the top right of the screen without regard for what it
     // obstructs - it can always be dismissed with a tap ... simply using the
     // xfce notification margin"): the first card's top kNotificationSeatW
@@ -109,9 +108,8 @@ int notification_capacity(const AppState& a) {
 }
 
 bool notification_visible(const AppState& a, uint64_t id) {
-    // IN THE STACK IS ON SCREEN since the queue retired (2026-08-30): the
-    // second clause this carried — "and among the first kNotificationVisibleMax"
-    // — had the queue as its whole producer, and there is no queue.
+    // IN THE STACK IS ON SCREEN (2026-08-30): there is no queue, so every
+    // card in the stack stands on screen (the painter clips an overflow).
     if (id == 0) return false;
     for (const AppState::Notification& n : a.notifications.cards) {
         if (n.id == id) return true;
@@ -120,9 +118,8 @@ bool notification_visible(const AppState& a, uint64_t id) {
 }
 
 uint64_t notification_card_at(const AppState& a, int x, int y) {
-    // NOTHING THAT TAKES A PRESS PAINTS ABOVE THE CARDS since the Settings
-    // drop-down retired (2026-10-21; it hid a card under its box until then),
-    // so the published rects are the whole answer.
+    // NOTHING THAT TAKES A PRESS PAINTS ABOVE THE CARDS, so the published
+    // rects are the whole answer.
     for (const AppState::NotificationPainted& p : a.notifications.painted) {
         if (!rect_contains(p.rect, x, y)) continue;
         // THE PUBLICATION SELECTS, THE LIVE STACK DECIDES: the rects were
@@ -149,14 +146,14 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
                               std::string text) {
     std::vector<AppState::Notification>& cards = app.notifications.cards;
     const int64_t now = monotonic_ms();
-    // DELIBERATE PRESSES STACK THEIR DUPLICATES (architect 2026-09-01,
-    // superseding the unconditional dedup of 2026-08-30): a PHYSICAL press
+    // DELIBERATE PRESSES STACK THEIR DUPLICATES (architect 2026-09-01): a
+    // PHYSICAL press
     // pushes its own card whatever stands, so hitting a wall three times
     // shows three cards — "I am very deliberate with my presses", and the
     // count IS the confirmation that each press was seen.
     //
     // THE ONE CARVE-OUT IS A HELD INPUT'S SYNTHESIZED REPEATS, which coalesce
-    // exactly as everything used to: a burst at the platform's repeat cadence is
+    // into one: a burst at the platform's repeat cadence is
     // ONE gesture, not thirty presses, and letting it stack would empty the
     // room of every other card in half a second. The bit is the key event's,
     // set at on_key's head and dispatch-scoped
@@ -187,9 +184,9 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     card.id   = app.notifications.next_id++;
     card.cls  = cls;
     card.text = std::move(text);
-    // THE CLOCK STARTS AT THE PUSH, here and nowhere else (2026-08-30, with
-    // the queue's retirement): a card is on screen from this instant, so
-    // there is no later surfacing for a clock to wait for. A critical card
+    // THE CLOCK STARTS AT THE PUSH, here and nowhere else (2026-08-30): there
+    // is no queue, a card is on screen from this instant, so there is no
+    // later surfacing for a clock to wait for. A critical card
     // keeps expiry_ms 0 — it has no clock at all.
     if (cls == AppState::NotificationClass::Normal)
         card.expiry_ms = now + kNotificationMs;
@@ -205,18 +202,16 @@ void GuiNotifications::notify(AppState::NotificationClass cls,
     //     BUMPED whatever the count, so the walk skips it and a stack of
     //     criticals alone simply keeps growing (what does take one down is a
     //     DELIBERATE dismissal — the lift of a press on it, or the whole
-    //     stack's dismissal by bare Esc or a shifted or held lift — and
-    //     none of those is this walk);
+    //     stack's dismissal by a held lift — and neither is this walk);
     //   - THE CARD JUST PUSHED, at index 0: it is the answer to the act the
     //     user has this moment performed, and bumping it would make that act
-    //     silent — which is reachable, not theoretical (the capacity is 4 at
-    //     a 1080 px window and 350 %, and a run of critical checkpoint
-    //     failures fills it). So the walk stops above index 0.
-    // THE MULTIPLES RULE MADE THIS LOAD-BEARING (2026-09-01): repeated presses
-    // of one refusal now fill the room with copies of one sentence instead of
-    // refreshing a single card, so the walk runs on ordinary use and not only
-    // in a burst of different events. It needs nothing new for that — the
-    // victims are still the oldest normal cards and the count is still the
+    //     silent — which is reachable, not theoretical (a run of critical
+    //     checkpoint failures fills the room). So the walk stops above
+    //     index 0.
+    // THE MULTIPLES RULE MAKES THIS LOAD-BEARING (architect 2026-09-01):
+    // repeated presses of one refusal fill the room with copies of one
+    // sentence, so the walk runs on ordinary use and not only in a burst of
+    // different events — the victims the oldest normal cards, the count the
     // room's — and what the user sees at the wall is the stack topping out at
     // the capacity with the newest press on top, which is the picture the
     // count is for.
@@ -268,16 +263,13 @@ void GuiNotifications::dismiss(uint64_t id) {
 }
 
 void GuiNotifications::dismiss_all() {
-    // BARE ESC (architect 2026-09-01, "Esc should clear all notifications")
-    // and, since 2026-10-01, THE SHIFTED OR HELD LIFT on any card ("shift
-    // click or long press dismisses all"): every card dismissed at once,
-    // CRITICALS INCLUDED. The clock never reaches a critical card and the
-    // bump skips them, and that is deliberate: a deliberate press is a
-    // decision, where a timeout would be an accident. THE HOVER
-    // GOES WITH THEM, because the card it named is gone and a banked life on a
-    // vanished card would be a leak. The arm took the OLDEST card alone from
-    // 2026-08-31, and Ctrl+Esc carried this bulk act for one morning before
-    // the key absorbed it and the chord retired.
+    // THE HELD LIFT on any card, its one caller (finish_notification_release;
+    // architect 2026-10-01: "shift click or long press dismisses all"): every
+    // card dismissed at once, CRITICALS INCLUDED. The clock never reaches a
+    // critical card and the bump skips them, and that is deliberate: a
+    // deliberate press is a decision, where a timeout would be an accident.
+    // THE HOVER GOES WITH THEM, because the card it named is gone and a
+    // banked life on a vanished card would be a leak.
     //
     // AN EMPTY STACK DAMAGES NOTHING AND SAYS NOTHING: the state asked for is
     // already true and visibly so (the stack is what the user is looking at),
@@ -322,8 +314,8 @@ void GuiNotifications::fire_if_due() {
 void GuiNotifications::set_hover(uint64_t id) {
     AppState::Notifications& st = app.notifications;
     if (st.hovered_id == id) return;
-    // THE HOVER IS THE BANK'S FIRST REASON AND PAINTS NOTHING (the card
-    // wears no hover face since its X retired, 2026-10-01), so an edge owes
+    // THE HOVER IS THE BANK'S FIRST REASON AND PAINTS NOTHING (a card is
+    // no face, materials.h's THE HOVER), so an edge owes
     // no damage: it moves the reason and re-answers the two cards it touched,
     // the one LEFT and the one ENTERED, each through the one bank writer.
     const uint64_t old = st.hovered_id;
@@ -384,7 +376,7 @@ void GuiNotifications::rebank(uint64_t id, int64_t now) {
 
 void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
     // THE ONE DERIVATION (notifications.h's THE STRUCK CARD, architect
-    // 2026-11-19, sends Z and CC). THE WORDS' KEY IS THE TRIGGER — everything
+    // 2026-11-19). THE WORDS' KEY IS THE TRIGGER — everything
     // the count and the places read (the head's list): the warp store's
     // generation, which every write to the warp markers bumps
     // (marker_store.h); the audio view; in target view the tempo scale (the
@@ -420,7 +412,7 @@ void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
     // card back. The piece's first look (the project's open) counts as one.
     // A KEY THAT MOVED WITH THE STORE STANDING — a view flip, a scale change
     // in target view, a new rate or length — IS NO EDIT (architect
-    // 2026-11-19, send CC): it re-words a standing card and brings back no
+    // 2026-11-19): it re-words a standing card and brings back no
     // tapped-away one, so the bytes are asked only when the store moved.
     bool edited = first_look;
     if (store_moved) {
@@ -447,9 +439,9 @@ void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
         st.struck_card_id = 0;
         return;
     }
-    // THE WORDS (the head's; the count agreed 2026-11-19, send Z, the places
-    // 2026-11-19, send CC: "The red coincide card should say where the
-    // coincident markers are"): a coincident run holds two or more members,
+    // THE WORDS (the head's; architect 2026-11-19: "The red coincide card
+    // should say where the coincident markers are"): a coincident run holds
+    // two or more members,
     // so the count is 2 or more and the plural holds; then ONE PLACE A RUN,
     // its first member's frame (coincident_run_firsts, the verdict's own
     // grouping, in the music's order), the first three named — ", " between
@@ -479,7 +471,7 @@ void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
         // advance — are a change the stack's rect compare cannot see), and
         // the stack's owner damages what a new width moved (a place named or
         // dropped, a count gaining a digit, an "11" kerned in a place: each
-        // card its content's width since 2026-11-19, send AA).
+        // card its content's width, architect 2026-11-19).
         if (card->text != words) {
             card->text = std::move(words);
             for (const AppState::NotificationPainted& p : st.painted)

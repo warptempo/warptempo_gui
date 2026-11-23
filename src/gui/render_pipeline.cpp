@@ -81,7 +81,7 @@ RenderOutcome do_render(const RenderRequest& req,
     // THE ONE FAILURE COMPOSER (architect 2026-09-02, the failed render's
     // card). Every Failed return in this function goes through here: the
     // failure is built once, AS TWO CLAUSES (GuiFailure, failure.h — the
-    // universal shape since 2026-09-02), its diagnostic
+    // universal shape), its diagnostic
     // printed on this pipeline's one `Render error:` line and the whole
     // struct handed back through the out-parameter for the GUI's card, so the
     // terminal and the card carry two spellings of ONE composition and
@@ -257,8 +257,8 @@ RenderOutcome do_render(const RenderRequest& req,
     // <stem>.* — created here (creation failure just makes the write fail into
     // the existing non-fatal skip). The DELIVERABLE (empty batch_folder)
     // stays flat <pid>/<stem>.* — one deliverable per TITLE, and the only way
-    // two of them can meet in a pid dir is the reopen loop (2026-09-02: one
-    // process now opens many projects in turn), which would need two projects
+    // two of them can meet in a pid dir is the reopen loop (one process
+    // opens many projects in turn, 2026-09-02), which would need two projects
     // whose `title` settings match. These are inert future-proofing files,
     // swept at the next launch, so the later pair simply overwrites the
     // earlier one and nothing rests on it. ---
@@ -353,9 +353,9 @@ RenderOutcome do_render(const RenderRequest& req,
     // UNCONDITIONALLY a hard failure: both call sites treat a false `result.ok`
     // by unwinding (removing what this created, and the wav where one was just
     // published) and returning RenderOutcome::Failed, so the diagnostic says
-    // "render error" and never "render warning". The bool parameter that used to
-    // select between those two WORDS is deleted (architect 2026-07-30) — both
-    // callers passed true, so it selected a word and never a behavior.
+    // "render error" and never "render warning" (architect 2026-07-30): no
+    // parameter selects between those two WORDS, since no caller wants the
+    // warning.
     auto publish_load_in_place_critical_batch_sidecars =
         [&]() -> LoadInPlaceCriticalSidecars {
             LoadInPlaceCriticalSidecars result;
@@ -433,9 +433,9 @@ RenderOutcome do_render(const RenderRequest& req,
                 // `vp_hi` = target_total-1: the viewport start because a start
                 // on the total's frame shows nothing, and the playhead because
                 // [0, total-1] is the cursor's own live domain everywhere else
-                // (`clamp_playhead_to_live_domain`, app_state.h) — the one-frame
-                // wider ceiling this site used to grant the playhead alone was
-                // a second spelling of the domain three lines from the first.
+                // (`clamp_playhead_to_live_domain`, app_state.h) — a one-frame
+                // wider ceiling for the playhead alone would be a second
+                // spelling of the domain three lines from the first.
                 // target_total is this entry's map domain total.
                 // Zoom passes through: the live zoom is always in the persisted
                 // vocabulary. Its trim comes from the recipe trim that shaped
@@ -511,16 +511,15 @@ RenderOutcome do_render(const RenderRequest& req,
     // question in the same shape.
     //
     // THE FULL WINDOW MEANS NO TRIM PLAN (architect 2026-07-30). The trim window
-    // is always set, so "unset" no longer exists to branch on; what replaces it
+    // is always set, so there is no "unset" to branch on; the default
     // is the FULL window [0, total-1], recognized through the one shared owner
     // trim_window_is_full (settings_file.h) and rendered UNTRIMMED — no
     // plan_trim call, no stderr line, because it is the documented default and
     // not a refusal. (It is NOT byte-equivalent to planning it: the crop would
     // fire and the authored end wall would drop the last frame's target span.)
-    // The lone-bound completions that used to live here are gone with the lone
-    // bound itself.
+    // A trim has no lone bound to complete.
     //
-    // A PROPER SUB-WINDOW plans exactly as a set pair always did: plan_trim
+    // A PROPER SUB-WINDOW plans: plan_trim
     // validates the pair first — validate_trim_frames stays the sole author of
     // the trim-validity vocabulary — then derives the source cut, the translated
     // maps, and the output crop in one computation. A refusal is NOT a render
@@ -528,10 +527,10 @@ RenderOutcome do_render(const RenderRequest& req,
     // deliverable with one stderr line. From a live store the one remaining
     // reachable refusal is "trim target span rounds below one output sample" (a
     // sub-window whose target span rounds sub-sample under a fast tempo); "trim
-    // end at or before trim begin" is now unreachable from a resting store (a
+    // end at or before trim begin" is unreachable from a resting store (a
     // sub-window can never rest crossed/equal — commit and load reset it to the
-    // full window — and the lone END at frame 0 that used to complete to (0, 0)
-    // no longer exists), and it stays as validate_trim_frames' breach guard for
+    // full window — and a trim has no lone bound), and it stays as
+    // validate_trim_frames' breach guard for
     // hand-edited input. Past-EOF is adversarial load-fatal. trim_plan stays
     // unset under a fallback, and every downstream RENDER stage (source view,
     // engine maps/schedule, crop, projection) keys on trim_plan — never on "a

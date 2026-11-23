@@ -12,8 +12,9 @@
 //
 // A COMMAND IS THE CAR'S OWN ACT (architect 2026-09-12, from the car: "the car
 // is a separate interface"). Every kind runs one of the PRODUCT'S OWN BODIES
-// direct; nothing is synthesized and nothing is dispatched. THERE ARE TWO
-// OWNERS OF THESE COMMANDS AND OF THE STATE BELOW SINCE 2026-09-17, forked at
+// direct; nothing is synthesized, nothing is dispatched and no button is
+// pressed. THERE ARE TWO
+// OWNERS OF THESE COMMANDS AND OF THE STATE BELOW (2026-09-17), forked at
 // main.cpp's hook on the render player's mode bit: with the player standing
 // every command is the PLAYER'S (GuiRenderPlayer::on_media_command,
 // render_player.h — the vocabulary described in the rest of this paragraph),
@@ -26,13 +27,7 @@
 // the one button is a TOGGLE between the item and silence and the outer two
 // are the PLAYLIST WALK — a row of the listing at a rest, a file of the
 // playing folder while live — with the up-a-folder exit on Previous alone.
-// EVERY COMMAND PRESSED ONE OF THE PLAYER'S KEYS until that day (Space, Home /
-// End, Left / Right through GuiPlatform::synthesize_key, with a stable-code
-// base of its own), and the press road CLEARED THE MODAL RING first, because a
-// synthesized Space on a ring-focused button is that button's press — Close,
-// and the player would come down. A direct act presses no button, so the road,
-// the base and the clear are all gone. The table at on_media_command owns each
-// arm's reason.
+// The table at on_media_command owns each arm's reason.
 
 struct GuiMediaCommand {
     // THE KIND TABLE IS SHARED WITH THE JAVA SLIVER BY NUMBER: each enumerator's
@@ -83,7 +78,7 @@ static_assert(static_cast<int>(GuiMediaCommand::Kind::FocusGained) + 1 ==
                   kGuiMediaCommandKindCount,
               "the media command kind table and its count have drifted");
 
-// WHAT THE HEAD UNIT SHOWS — pushed by TWO owners since 2026-09-17, exactly
+// WHAT THE HEAD UNIT SHOWS — pushed by TWO owners (2026-09-17), exactly
 // one of which is live at a time: GuiRenderPlayer::publish_media_state while
 // the render player stands, AT EVERY EDGE where its display changes (the
 // inventory is at that function) and never per tick; and GuiCarTransport::tick
@@ -96,32 +91,31 @@ struct GuiMediaState {
     // TRUE FOR THE APP'S LIFE (architect 2026-09-17). On Android the session
     // goes ACTIVE at the first tick of the first project and stays active
     // until the activity's onDestroy releases it: both owners above publish
-    // this true, the player's close no longer pushes an inactive state, and
-    // the player's open is simply the wire changing hands. It said "active
-    // exactly while the render player stands" until that day, and inactive
-    // was the close's push, after which the head unit's buttons reached
-    // nothing — which is precisely what the car transport is there to answer.
-    // SINCE 2026-09-12 IT ALSO SAYS WHAT THE STATE IS:
+    // this true, the player's close pushes no inactive state, and the
+    // player's open is simply the wire changing hands — an inactive session
+    // would leave the head unit's buttons reaching nothing, which is
+    // precisely what the car transport is there to answer.
+    // IT ALSO SAYS WHAT THE STATE IS (2026-09-12):
     // the consuming side publishes PLAYING at speed 1.0 whenever this is true
     // and STOPPED when it is not, with no third answer, because a console
     // reads the still-streaming Bluetooth link as playing and OVERRIDES a
     // session that says PAUSED — so the session tells it what it already
     // believes and its one button becomes a plain toggle (the ruling and its
-    // reasons are at GuiRenderPlayer::publish_media_state). THAT FORK IS
-    // UNCHANGED; nothing in the running app takes its STOPPED side any more.
+    // reasons are at GuiRenderPlayer::publish_media_state). Nothing in the
+    // running app takes the fork's STOPPED side.
     bool        session_active = false;
     // THE TRUE TRANSPORT BIT — the player's item is sounding, or with the
     // player closed the PROJECT'S transport is live (a play or a standing A/B
     // audition, transport_session_live) — and it is read
-    // on the consuming side FOR THE AUDIO FOCUS ALONE since 2026-09-12: the
+    // on the consuming side FOR THE AUDIO FOCUS ALONE (2026-09-12): the
     // published state is `session_active`'s above. It is the tablet's truth,
     // not the console's picture.
     bool        playing        = false;
     // THE THREE STRINGS ARE THE PROJECT, THE FOLDER AND THE NAME (architect
     // 2026-09-12, from the car, on the console's own picture: it lays the
-    // metadata out as ALBUM above the title, dim, and ARTIST below it — the
-    // opposite of the pairing's first try, which could not be told apart
-    // while both lines read the project's name): the dim top line is the
+    // metadata out as ALBUM above the title, dim, and ARTIST below it, and
+    // two lines reading the project's name cannot be told apart): the dim
+    // top line is the
     // LEAST important of the three, so it carries the project, and the
     // bottom line carries the folder. The one function of (transport, item,
     // highlight) that fills all three is stated at
@@ -136,9 +130,7 @@ struct GuiMediaState {
     // folders; with nothing to highlight at all the LISTED FOLDER names
     // itself, the same word the artist carries. IT IS NEVER EMPTY, and that is
     // the point rather than a tidiness: a console handed a session with
-    // nothing in it goes back to its own idle picture. (It was empty at
-    // exactly one push, the close's inactive one, and that push is deleted —
-    // 2026-09-17.)  THE
+    // nothing in it goes back to its own idle picture. THE
     // SILENCE IS METADATA AND NEVER A FILE — a silent wav on disk would be
     // listed by the player and played by the auto-advance.
     //
@@ -149,12 +141,11 @@ struct GuiMediaState {
     // there).
     std::string title;
     // THE FOLDER THE NAME LIVES IN, bare: the PLAYING ITEM'S OWN folder while
-    // it sounds — the band may have walked somewhere else, and the sounding
-    // item's home is the truth — and otherwise the folder the band is in,
-    // `tmp` at the root and the batch folder's own name inside one. The
-    // player has lived inside `tmp/` since 2026-09-01, so `render/` is not a
-    // spelling this carries. Never empty, for the title's reason and since the
-    // same day.
+    // it sounds — the highlight may have walked somewhere else, and the
+    // sounding item's home is the truth — and otherwise the folder the
+    // highlight is in, `tmp` at the root and the batch folder's own name
+    // inside one. The player lives inside `tmp/`, so `render/` is not a
+    // spelling this carries. Never empty, for the title's reason.
     //
     // WITH THE PLAYER CLOSED: THE TAB AND THEN THE VIEW — "A) T+W", the
     // active A/B tab's letter, a close parenthesis and a space, then the

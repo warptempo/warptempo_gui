@@ -29,14 +29,14 @@ enum class RenderOutcome { Success, Failed, Cancelled };
 // identity plus the session prefs) so the entry is a COMPLETE state on disk —
 // the strict schema requires every key, and the CLI and a plain source load
 // read such a file whole. (The `'` load-in-place reads past all of it but the
-// engine block since 2026-08-24; it is not what these fields are for.) The
+// engine block; it is not what these fields are for.) The
 // trim fields duplicate the request's own trim
 // on purpose: the request trim feeds the engine, this block feeds the
 // sidecar, and keeping the block self-contained keeps the writer trivial.
 struct AuthoringSnapshot {
     char    active_tab        = 'A';
-    // The dispatch tab's trim pair, always a full ordered pair (the unset state
-    // and its has-bits died 2026-07-30).
+    // The dispatch tab's trim pair, always a full ordered pair (a trim has no
+    // unset state).
     int64_t trim_begin_frame  = 0;     // source frames
     int64_t trim_end_frame    = 0;     // source frames
 
@@ -44,14 +44,11 @@ struct AuthoringSnapshot {
     // the request does not otherwise carry. Types match the AppState fields
     // they are captured from.
     char        active_markers_view = 'W';   // 'W' or 'P'
-    // (EIGHT FIELDS LEFT THIS BLOCK WITH THEIR KEYS — playback_speed retired
-    // 2026-08-27; gui_scale, audio_player and projects_repo moved to the
-    // per-device config the same day, audio_player retiring there 2026-08-28;
-    // follow, centered and center_on_next_marker left the schema 2026-09-11,
-    // being session postures (the third deleted whole 2026-09-13) the GUI
-    // serializes nowhere; the waveform magnification level left it 2026-09-14,
-    // the picture's gain varying over source time. An entry's `.settings` carries exactly what a source's
-    // does, so this block tracks that schema and nothing else.)
+    // (An entry's `.settings` carries exactly what a source's does, so this
+    // block tracks that schema and nothing else: the per-device keys live in
+    // the device config, the session postures are serialized nowhere, and the
+    // waveform's magnification is not in the schema, the picture's gain
+    // varying over source time.)
 
     // Dispatch-time browse position, captured on the TARGET axis: the
     // entry's .settings persists active_audio_view=T, so the browse keys
@@ -204,7 +201,7 @@ struct RenderRequest {
     //   * THE TARGET PREVIEW: the buffer route skips the disk rungs entirely
     //     and its label already distinguishes reuse from synthesis on the GUI
     //     thread BEFORE dispatch (target_render.cpp).
-    //   * A SWEEP'S CELLS since 2026-09-11: a batch's progress line is state
+    //   * A SWEEP'S CELLS: a batch's progress line is state
     //     written into the status slot at each cell's dispatch and retracted at
     //     the batch's terminal, so nothing on that road waits for a signal
     //     (dispatch_next_batch_entry, input_render_dispatch.cpp).

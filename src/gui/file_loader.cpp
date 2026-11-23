@@ -40,9 +40,8 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     // the selector.
     reset_displayed_target_basis(app);
     // THE SEATED PINCH'S ANCHOR IS CLEARED HERE. THE SOURCE LOAD IS THIS
-    // ROUTINE'S WHOLE POPULATION since 2026-08-24 (the `'` load-in-place
-    // stopped sharing it when it stopped writing anything a source load writes
-    // beyond the engine block), and the
+    // ROUTINE'S WHOLE POPULATION (the `'` load-in-place writes nothing a
+    // source load writes beyond the engine block), and the
     // three assignments below REPLACE the active view state wholesale, and this
     // routine is where that write lives — so the clear lives here rather than at
     // the caller. THE VALUES-ONLY CONTRACT STILL HOLDS otherwise: this is a
@@ -57,20 +56,12 @@ void apply_settings_engine_and_prefs(AppState& app, Viewport& viewport,
     app.active_audio_view   = sf.active_audio_view;
     app.active_markers_view = sf.active_markers_view;
     app.active_tab_view     = sf.active_tab_view;
-    // (THREE ASSIGNMENTS LEFT THIS ROUTINE 2026-08-27 with their keys. The
-    // sidecar no longer carries playback_speed, gui_scale or audio_player: the
-    // first retired whole, and the two DEVICE preferences moved to the per-device
-    // config (where audio_player retired whole 2026-08-28 with the in-app
-    // render player), which gui_main reads ONCE at startup before the window exists
-    // (device_config.h) — a per-source routine is the wrong place to apply a
-    // fact about the panel, and this load must not overwrite what the config
-    // said.)
-    // (THE WAVEFORM MAGNIFICATION LEVEL LEFT THIS ROUTINE 2026-09-14 with its
-    // key: the picture's gain varies over source time, never a settings
+    // (The panel's facts — gui_scale, the projects home — are the per-device
+    // config's, which gui_main reads ONCE at startup before the window exists
+    // (device_config.h): a per-source routine is the wrong place to apply a
+    // fact about the device, and this load must not overwrite what the config
+    // said. The picture's gain varies over source time and is no settings
     // field.)
-    // (`projects_repo` LEFT THIS ROUTINE 2026-08-27 with its key: the projects
-    // home is the DEVICE config's now, read once by gui_main and never by a
-    // source load — device_config.h.)
 }
 
 std::optional<GuiFailure> source_load_dry_run(
@@ -84,7 +75,7 @@ std::optional<GuiFailure> source_load_dry_run(
         const std::filesystem::path& source,
         const std::filesystem::path& sidecar_dir) {
     // EVERY REASON BELOW IS TWO CLAUSES (GuiFailure, failure.h — the
-    // universal shape since 2026-09-02): the display is a NOTIFICATION
+    // universal shape, 2026-09-02): the display is a NOTIFICATION
     // CARD'S ONE LINE — the Open project picker's third refusal — so every
     // path in it is named by the basename rule's composer
     // (shown_project_path, device_config.h: the project folder and the file,
@@ -212,12 +203,10 @@ std::optional<GuiFailure> source_load_dry_run(
 bool GuiFileLoader::load_file(const GuiProjectSource& project,
                               int& held_display_width_px) {
     const std::string path = project.source.string();
-    // NO EXTENSION REFUSAL STANDS HERE, and none is wanted (2026-09-02): the
-    // `.peaks` cache refusal that opened this body — from the era when a path
-    // could be typed at the app — had no producer left once a project's source
-    // became `resolve_project`'s own composed `<stem>.wav` on both roads
-    // (startup's remembered/first-valid folder and the picker's reopen), so
-    // nothing could hand this function a peaks path. A stray
+    // NO EXTENSION REFUSAL STANDS HERE, and none is wanted (2026-09-02): a
+    // project's source is `resolve_project`'s own composed `<stem>.wav` on
+    // both roads (startup's remembered/first-valid folder and the picker's
+    // reopen), so nothing can hand this function a peaks path. A stray
     // `.samples` or `.peaks` file reaching a future road has no RIFF magic and
     // takes the generic unknown-magic refusal below — no special-cased handling.
     //
@@ -339,11 +328,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
         waveform_area(app).w, audio.total_frames(), audio.working_column()));
     clamp_viewport_start(app, audio, ViewportLattice::Exact);
 
-    // (NO PLAYBACK-SPEED OR gui_scale RESET HERE ANY MORE — 2026-08-27. The
-    // speed retired with its key, and the scale is the DEVICE's: gui_main has
+    // (NO gui_scale RESET HERE: the scale is the DEVICE's, and gui_main has
     // already read it out of the device config and applied it before this load
     // begins, so re-seeding it to 100 here would throw away the live value the
-    // whole file exists to carry.)
+    // config exists to carry.)
     // Companion files: discover the three paths (kSidecarExtensions,
     // sidecar_set.h), and write the three templates for a NEW project alone.
     // Companion file convention is <source_dir>/<source_basename>.<ext>
@@ -363,15 +351,14 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     app.phaseresetmarkers_path = tm_path.string();
     app.settings_path         = set_path.string();
     app.source_audio_path     = path;
-    // THE WINDOW TITLE IS THE PROJECT NAME (architect 2026-08-01, replacing the
-    // full source path + " - warptempo_gui"): the name of the project's folder
-    // under the projects path — `<projects_path>/K551/take3.wav` shows "K551".
-    // The folder is what the architect calls the project, and it reads and
-    // versions better than either the audio filename or the output `title=`
-    // settings key (a different thing entirely: that one names the render). The
-    // " - warptempo_gui" tail is composed by the title's owner,
-    // GuiPlatform::apply_window_title, and the title carries nothing else —
-    // the dirty asterisk it wore until 2026-09-09 is row 8's alone now.
+    // THE PROJECT NAME (architect 2026-08-01): the name of the project's
+    // folder under the projects path — `<projects_path>/K551/take3.wav` is
+    // "K551". The folder is what the architect calls the project, and it reads
+    // and versions better than either the audio filename or the output
+    // `title=` settings key (a different thing entirely: that one names the
+    // render). The platform's window title has no surface (set_project_title,
+    // platform_android.h); the dirty indicator is the Save key's grey on the
+    // bottom icon row.
     //
     // TAKEN FROM THE RESOLVED PROJECT, never derived from the source's parent:
     // the model already answered which folder this is, and a derivation off the
@@ -388,9 +375,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // too): a folder carrying NO sidecar is a new project and gets the three
     // templates; a folder carrying ALL THREE loads them; a folder carrying some
     // and not all is refused naming the missing file, and NOTHING is written —
-    // a project from before a sidecar joined the set is migrated by hand. Any
-    // other file beside the source (a `.magnificationlevelmarkers` left from
-    // when the set was four included) is unrecognized and unread (architect
+    // a project missing a sidecar of the set is migrated by hand. Any other
+    // file beside the source is unrecognized and unread (architect
     // 2026-09-23). The refusal is this load's own class, FATAL, like every
     // refusal below.
     {
@@ -410,8 +396,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
             // content, unlike warp's seeded first-marker line.
             create_if_missing(tm_path, "");
             // The first-open template stamps the FULL trim window for this
-            // source on both tabs, so it needs the loaded total (the `-1`
-            // unset spelling it used to write no longer parses).
+            // source on both tabs, so it needs the loaded total (the grammar
+            // has no unset spelling).
             create_if_missing(set_path,
                               format_default_settings_template(
                                   stem, audio.total_frames()));
@@ -430,8 +416,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     selection.clear_selection();
     app.active_markers_view    = 'W';
     app.drag = DragState{};
-    // The flag's OTHER drag, cleared with its sibling (2026-09-10). Its lamp
-    // (value_drag_lamp, since 2026-10-11) and the sticky ctrl below are lamps
+    // The flag's OTHER drag, cleared with its sibling. Its lamp
+    // (value_drag_lamp) and the sticky ctrl below are lamps
     // this body leaves standing — the fresh AppState's own, both dark: it
     // resets the in-flight GESTURE state alone.
     app.value_drag = ValueDragState{};
@@ -681,8 +667,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // the markers/engine settings the target total derives from are all
     // applied above; both tabs live in that one global domain, so one
     // total clamps both). Load-lenient stays: clamping is the ruling, not
-    // a refusal — in-domain values pass through unchanged, and the
-    // historically load-legal playhead == total silently rests at
+    // a refusal — in-domain values pass through unchanged, and a
+    // load-legal playhead == total silently rests at
     // total - 1, the ruled rest domain ([0, total - 1],
     // move_playhead_to). This bounds the value BEFORE any consumer's
     // translation arithmetic (the S/T toggle's double->int64 conversion,
@@ -777,7 +763,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // above, so it re-syncs after the resets. Render-entry sidecars reach
     // memory through load_render_entry_in_place's own application path and
     // deliberately skip this: they are written once at dispatch from a live
-    // store that can no longer rest crossed — trusted, no re-check.
+    // store that can never rest crossed — trusted, no re-check.
     {
         const int64_t total = audio.total_frames();
         const auto clear_crossed_tab = [total](TrimState& t, char tab_name) {
@@ -814,13 +800,11 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // invalidation at the end of this load supplies the damage, mirroring the
     // resize path's full-surface damage.
     //
-    // (THE gui_scale PUSH AND THE TOUCH-SLOP PUSH THAT RODE IT LEFT THIS SITE
-    // 2026-08-27. The scale is a DEVICE fact now, read out of the device config
-    // by gui_main before the window is even created, so it is already installed
-    // — and already right on the first painted frame, which it never was while
-    // it arrived with the source — long before this load runs. The INIT road
-    // for both pushes is that one place; the inventory is at
-    // GuiInputCore::set_touch_slop_px.)
+    // (NO gui_scale OR TOUCH-SLOP PUSH HERE: the scale is a DEVICE fact, read
+    // out of the device config by gui_main before the window is even created,
+    // so it is installed — and right on the first painted frame — long before
+    // this load runs. The INIT road for both pushes is that one place; the
+    // inventory is at GuiInputCore::set_touch_slop_px.)
     paint_handler.on_resize(app.width, app.height);
 
     const double load_ms =
@@ -847,8 +831,8 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // this point: markers (parsed above, default zero-marker seeded) and
     // engine settings (strict block above). On failure — the tripwire-class
     // build failures only — force source view SILENTLY, naming the cause on
-    // stderr and nowhere else. THE `t` ENTRY REFUSES IDENTICALLY SINCE
-    // 2026-08-30 (architect): one predicate, one answer, the same stderr
+    // stderr and nowhere else. THE `t` ENTRY REFUSES IDENTICALLY (architect
+    // 2026-08-30): one predicate, one answer, the same stderr
     // sentence at both surfaces (the ruling is at the predicate's
     // declaration, input_handler.h). Forcing 'S' intentionally means a later
     // save persists active_audio_view=S — the saved line reflects the view
@@ -865,8 +849,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
                          entry.error().c_str());
             app.active_audio_view = 'S';
             // The column stays as the file names it: T+P forced to source is
-            // S+P, a view in its own right since 2026-10-12 (architect; this
-            // arm landed it on W while S+P was load-fatal, 2026-09-21 to then).
+            // S+P, a view in its own right (architect 2026-10-12).
             // The tab-activation and playhead clamps above ran against the
             // target-domain total (live_total_frames consults the target map
             // cache while active_audio_view=='T'); with the view forced back
@@ -888,7 +871,7 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // COINCIDENCE AUTO-SELECT, the load chokepoint (the rule, the formula and the
     // authoritative call-site inventory live at auto_select_marker_at_playhead,
     // input_pointer.cpp / input_handler.h). A
-    // parsed `.settings` band carries a playhead but never a selection, so the
+    // parsed `.settings` carries a playhead but never a selection, so the
     // session opens with a marker selected exactly when the restored cursor lands
     // on one — the entry reads like a marker click, with the cursor standing on
     // the selected flag from the first frame. PLACED HERE, past the target-view

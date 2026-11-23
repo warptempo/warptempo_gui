@@ -78,18 +78,15 @@ namespace {
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
 // the authored gui_scale row heights (icon_row_h_px() — its key's rows, and
-// row 8's, render.h's kKeyHeightW —
+// the bottom icon row's, render.h's kKeyHeightW —
 // the well's four, its foot, plus bottom_row_h_px() —
 // the bottom icon row — and the status bar's), kRowGapPx and kFlagBottomLiftPx (see the
-// geometry helpers below); nothing is window-proportional, and since row 7
-// nothing is font-proportional either.
+// geometry helpers below); nothing is window-proportional or
+// font-proportional.
 
-// No pointer grab tolerance survives (the marker stems' grab constant died
-// with their pointer surface, 2026-08-12, and the trim endcaps' when the caps
-// became their painted arrow buttons, 2026-10-03 — the view bar's end zones
-// since 2026-10-09, each its drawn cap and the air round it since
-// 2026-11-20, render.h's THE TRIM BAR'S CAPS AND GRABS), so nothing of that
-// family is file-local here.
+// No pointer grab tolerance is file-local here: the marker stems have no
+// pointer surface, and the trim bar's grabs are each its drawn cap and the
+// air round it (2026-11-20, render.h's THE TRIM BAR'S CAPS AND GRABS).
 
 // Samples-per-pixel is a continuous function of the zoom level (a real-valued
 // exponent): spp(level) = column × 2^(level − 2), the column this device's
@@ -103,10 +100,6 @@ namespace {
 // whole song visible) is the point on the same curve whose painted span
 // width·q covers total (fit_zoom_level).
 
-// playhead_half_px() (half-width of the column invalidated around a playhead
-// position) now lives in render.h as a single shared inline accessor,
-// reached here via the render.h include.
-
 // The BPM-sweep math primitives (BaseTempoScale + compute_base_tempo_scale,
 // and the cell rewrite bpm_cell_warp_markers) live in input_handler.h so
 // input_handler.cpp and flag_editor.cpp can reach them.
@@ -114,10 +107,8 @@ namespace {
 // resolved_marker_payload lives in the parser (warp_frame_map_build.{cpp,h})
 // and operates on the parser's WarpMarker. It is a different translation
 // unit from the GUI flag-text composer (flag_text), which stays in
-// render.cpp over GuiWarpMarker. (It was compute_hover_popup_text until
-// 2026-08-29, when the resolved READOUT retired with the one-day status bar
-// and the function became the value pair's composer — the pasteable payload
-// and the source marker's index, no display string at all.)
+// render.cpp over GuiWarpMarker; it composes the value pair — the pasteable
+// payload and the source marker's index, no display string at all.
 
 // UndoEntry, DragState, UndoHistory, RegionDragState,
 // DialogTrigger, PromptState, ViewState,
@@ -128,8 +119,8 @@ namespace {
 // file_loader.cpp and save_markers can both reach them; the .settings
 // reader is the parser-side schema (settings_file.h), shared with the CLI.
 
-// WaveformCache was promoted to paint_handler.{h,cpp} so paint_handler.cpp can
-// reach it. The instance is still a local in main() and is passed by reference
+// WaveformCache lives in paint_handler.{h,cpp} so paint_handler.cpp can
+// reach it. The instance is a local in run_project and is passed by reference
 // into GuiPaintHandler.
 
 } // namespace
@@ -142,25 +133,25 @@ namespace {
 // Per-strip lane stacks with per-lane heights. Top and bottom strips DIFFER in
 // height; the waveform takes what they leave, and TWO FLEXIBLE GAPS stand
 // either side of it, both 0 (the vertical rule below). THE PAGE ON ARC'S
-// NUMBERS (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §1, the
-// approved pictures Z_01 / Z_02): the TOP strip is FIVE lanes — from the
+// NUMBERS (architect 2026-11-19): the TOP strip is FIVE lanes — from the
 // window edge inward:
-// THE BAND (icon_row_h_px(), at the surface's top): THE TITLE BAR (28 W,
-// render.h's title bar block) and THE TOP ICON ROW (Arc's toolbar: 7 W, the
-// key — kKeyWidthW wide by kKeyHeightW tall, 36 x 28 W, Arc's icon button
-// — and 7 W; render.h's band
-// paragraph), then FLEXIBLE GAP 1, then THE WELL — THE PROGRAM'S CANVAS
+// THE TITLE BAR AND THE TOP ICON ROW, ONE LANE (icon_row_h_px(), at the
+// surface's top): THE TITLE BAR (28 W, render.h's title bar block) and THE
+// TOP ICON ROW (Arc's toolbar: 7 W, the key — kKeyWidthW wide by
+// kKeyHeightW tall, 36 x 28 W, Arc's icon button — and 7 W; render.h's THE
+// TITLE BAR AND THE TOP ICON ROW), then FLEXIBLE GAP 1, then THE WELL — THE
+// PROGRAM'S CANVAS
 // COLUMN, flat regions RUNNING THE PANEL'S WHOLE WIDTH (render.h's THE
 // WELL'S EDGES): the TRIM lane (trim_lane_h_px(), the line under the top
 // icon row, Arc's 12-W scrollbar trough with its pill and the line under
 // it, 14 W), the RULER lane (ruler_lane_h_px(), the column header in
-// Arc's tones, 16 W since send AA — the Bold Small (10 W) timestamps on their line-box
+// Arc's tones, 16 W — the Bold Small (10 W) timestamps on their line-box
 // baseline, the ticks and the PLAYHEAD'S HEAD on its foot rows — and its
 // line; a PLACEMENT LANE: a motionless click places the playhead
 // and every drag there does nothing but the head's, which drags the playhead
 // (2026-10-09), the navigation surface being the waveform alone
 // (point_on_placement_lanes and point_on_playhead_head, input_pointer.cpp)),
-// the MARKER lane (marker_lane_h_px(), 16 W since send AA, the ruler's height, Cool
+// the MARKER lane (marker_lane_h_px(), 16 W, the ruler's height, Cool
 // Edit's cues, the label's box and the flag editor's the whole lane)
 // and THE LANE'S FOOT
 // LINE (lane_foot_line_h_px(), one hairline), whose bottom edge is the
@@ -185,14 +176,13 @@ namespace {
 // 2026-10-21: strip_row_rect).
 //
 // THE VERTICAL RULE — THE WAVEFORM IS THE LANES' LEFTOVER, NOTHING ELSE
-// (architect 2026-10-07 evening: the maximum height it carried — a render.h
-// constant from 2026-08-12, a device-config key from 2026-09-13 — is
-// retired whole), AND THE ICON ROW STANDS AT THE WINDOW'S TOP WITH THE
-// FLEXIBLE BAND UNDER IT (architect 2026-09-09, the toolbar-at-the-top
-// shape of kdenlive, QEMU and virt-manager; the app's caption above it
-// 2026-10-05 to 2026-10-24). The window stacks, top to bottom:
-//   THE ICON ROW, at the window's top, at its natural height;
-//   GAP 1 — flexible band of blank window ground;
+// (architect 2026-10-07: no maximum height), AND THE TOP ICON ROW STANDS AT
+// THE WINDOW'S TOP WITH FLEXIBLE GAP 1 UNDER IT (architect 2026-09-09, the
+// toolbar-at-the-top shape of kdenlive, QEMU and virt-manager). The window
+// stacks, top to bottom:
+//   THE TITLE BAR AND THE TOP ICON ROW, at the window's top, at their
+//     natural height;
+//   GAP 1 — flexible blank window ground;
 //   THE CENTERED BLOCK — the trim lane, the ruler, the marker lane, the
 //     lane's foot line, then THE WAVEFORM, the canvas's interior, every one
 //     of them across the panel's whole width (waveform_area's x 0);
@@ -202,9 +192,8 @@ namespace {
 //
 // THE POSITIONING RULE: the block sits so THE WAVEFORM'S VERTICAL MIDPOINT IS
 // THE WINDOW'S VERTICAL MIDPOINT — centered within the APP SURFACE, which
-// is the whole geometry (the app's own caption lane and sizing frame of
-// 2026-10-05 removed 2026-10-24), so no window chrome's rows need arithmetic
-// here. `win_h` below is the clamped window height. The derivation, all of
+// is the whole geometry (the app paints no window chrome), so no chrome's
+// rows need arithmetic here. `win_h` below is the clamped window height. The derivation, all of
 // it in the four functions below (the gap's SIZE is the centering's
 // remainder above the block, and the lanes above the gap are part of the top
 // lane stack whichever side of it they sit on):
@@ -218,25 +207,25 @@ namespace {
 //              = top_flex_gap,
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
 // WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
-// (2026-10-07 evening): gap 1's midpoint term comes to half the bottom
-// strip less half the top stack, negative at every scale (105 Windows px
-// above against 50 below at the approved pad), so it floors at 0,
+// (2026-10-07): gap 1's midpoint term comes to half the bottom
+// strip less half the top stack, negative at every scale (118 W above
+// against 66 W below on the tablet's lanes), so it floors at 0,
 // and gap 2 is the leftover's remainder after W, 0. The centering is
 // infeasible by construction and the waveform takes the whole leftover,
 // which is the rule's own floor rather than a special case; the two gaps'
 // derivations stand, answering 0, and every consumer below still reads its
 // lane through them.
 //
-// THE STACKS BELOW, THE ONE RECORD (re-derived from the lane table
-// 2026-11-20; every line one W, 2 device px on the tablet; the text
-// 12 W, the ruler's 10 W; the device rows below the tablet's at 200 %, the
-// key 28 W tall). Every
+// THE STACKS BELOW, THE ONE RECORD (read off the lane table; every line
+// one W, 2 device px on the tablet; the text 12 W, the ruler's 10 W; the
+// device rows below the tablet's at 200 %, the key 28 W tall). Every
 // lane is its own composite of rounded parts (scaled_px's rule), so the
 // device rows below are read off the lane accessors, never off a total
 // times the factor.
 //   2304x1440 AT gui_scale 200, THE GLASS HOST AND THE ONE HOST (the
-//   tablet's WHOLE SURFACE, full screen with both system bars hidden since
-//   2026-10-01 — MainActivity.java's head): THE BAND 140 (the title bar
+//   tablet's WHOLE SURFACE, full screen with both system bars hidden,
+//   2026-10-01 — MainActivity.java's head): THE TITLE BAR AND THE TOP ICON
+//   ROW 140 (the title bar
 //   0–55, the top icon row's pad 56–69, its faces 70–125, its pad 126–139)
 //   + THE TRIM LANE 28 (the line 140–141, the trough 142–165, the line
 //   166–167) + THE RULER LANE 34 (the ruler 168–199, the line 200–201) +
@@ -250,7 +239,7 @@ namespace {
 //   keyboard changes none of these rows (it stands over the last ones;
 //   onscreen_keyboard.h's placement block holds its worked rows).
 //
-// THE TWO BANDS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
+// THE TWO GAPS HIT NOTHING AND BOTH ARE BLANK WINDOW GROUND:
 // render_background's chrome erase paints them and no lane painter covers
 // them. A press in either falls to a consumed nothing (gap 1 through the top
 // strip's empty-spot return, gap 2 through the press path's tail). ONE
@@ -259,14 +248,14 @@ namespace {
 // kTopFlexGapLane down (the trim lane and everything below it), top_strip_h's
 // total and bottom_strip_h's total (which is what makes waveform_area's h -
 // top - bottom arithmetic yield W with no second expression of the rule) — so
-// every consumer (hit tests, paint, damage, the touch pan zone, the notification stack, the modal family's box starting at the view
-// bar's top row, modal_box.h) inherits the shifted y's through the lane
+// every consumer (hit tests, paint, damage, the touch pan zone, the notification stack, the modal family's box starting at the trim
+// lane's rows, modal_box.h) inherits the shifted y's through the lane
 // accessors with no second site.
 // The lanes pack tight — the inter-lane gaps kRowGapPx and the
 // outer/waveform-side gaps kFlagBottomLiftPx are all 0 — and the derivation
 // below keeps them explicit so the stack reappears correct if either constant
 // is ever un-zeroed. That property has NO EXCEPTION LIST among the consumers:
-// every lane-anchored pixel reaches its band through a lane rect computed here.
+// every lane-anchored pixel reaches its lane through a lane rect computed here.
 // The render.cpp sites that stack marker geometry take their LANE RECT as a
 // parameter, resolved by their callers from top_marker_row_area — whose rows
 // the empty-lane press gate tests (marker_lane_press_area) — so painted flags
@@ -276,9 +265,9 @@ namespace {
 // NO ASSET SPANS A SEAM (2026-10-09): a marker's cue — its triangle and its
 // label — stands inside the marker lane, and the playhead's head on the
 // ruler's own bottom rows. Every seam — the window top|icon seam,
-// icon|trim (GAP 1's band; where gap 1 is zero the trim lane's
+// icon|trim (GAP 1; where gap 1 is zero the trim lane's
 // own first row is the boundary), trim|ruler, ruler|marker, marker|foot
-// line, well's foot|bottom row, bottom row|status bar, and both outer
+// line, well's foot|bottom icon row, bottom icon row|status bar, and both outer
 // kFlagBottomLiftPx gaps — is
 // honored structurally by the loop below and by every consumer. (The focused
 // cue's stem and the playhead's line are the canvas's, below the lane's foot
@@ -327,27 +316,24 @@ namespace {
 // accessors' declarations in render.h.
 //
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
-// and the lane owns every pixel it paints. The ICON lane is THE BAND, the
-// title bar, the pad, the key (its height render.h's kKeyHeightW) and
-// the pad again (render.h's band paragraph,
-// icon_row_h_px), the well's four lanes the trim bar, the ruler, the marker
-// lane and the lane's foot line (render.h's well lanes block): 28 + 34 + 32
+// and the lane owns every pixel it paints. The ICON lane is THE TITLE BAR
+// AND THE TOP ICON ROW: the title bar, the pad, the key (its height
+// render.h's kKeyHeightW) and the pad again (render.h's THE TITLE BAR AND
+// THE TOP ICON ROW, icon_row_h_px), the well's four lanes the trim bar, the
+// ruler, the marker lane and the lane's foot line (render.h's THE WELL'S
+// LANES): 28 + 34 + 32
 // + 2 = 96 device rows on the tablet — THE WELL'S FOOT one W too
 // (well_foot_h_px), THE BOTTOM ICON ROW the strip (bottom_row_h_px) and THE
-// STATUS BAR its line and its bar (status_bar_lane_h_px; send Z,
-// 2026-11-19).
+// STATUS BAR its line and its bar (status_bar_lane_h_px; 2026-11-19).
 constexpr int kTopLaneCount    = 5;
 constexpr int kBottomLaneCount = 3;
-// THE FIRST PROGRAM LANE, the band, AT THE WINDOW'S TOP since 2026-10-24
-// (the caption lane 0 above it 2026-10-05 to then).
+// THE FIRST PROGRAM LANE, the title bar and the top icon row, AT THE
+// WINDOW'S TOP.
 constexpr int kTopProgramLane      = 0;
 // THE LANE GAP 1 OPENS ABOVE — the first top lane whose inset carries the
-// flexible band (strip_row_rect below): THE TRIM LANE, lane 1 since
-// 2026-10-24 (2 under the caption from the simple layout of 2026-10-22,
-// when the tab strip and the column's air between the band and the view
-// bar went), so the band stands at the window's top and everything from
-// the view bar down is the centered block. ONE number, read by
-// strip_row_rect's inset.
+// flexible gap (strip_row_rect below): THE TRIM LANE, lane 1, so the top
+// icon row stands at the window's top and everything from the trim lane
+// down is the centered block. ONE number, read by strip_row_rect's inset.
 constexpr int kTopFlexGapLane  = 1;
 // THE WELL'S LANES, top lanes 1 to 4.
 constexpr int kTopTrimLane        = 1;
@@ -357,11 +343,12 @@ constexpr int kTopLaneFootLane    = 4;
 static_assert(kTopFlexGapLane == kTopTrimLane);
 int top_lane_height(int lane) {
     switch (lane) {
-        // THE BAND: the title bar, the pad, the case, the pad.
+        // THE TITLE BAR AND THE TOP ICON ROW: the title bar, the pad, the
+        // case, the pad.
         case kTopProgramLane: return icon_row_h_px();
-        // THE WELL'S THREE (architect 2026-10-09, the program is Cool Edit;
-        // flat since 2026-11-01 night; render.h's well lanes block the
-        // accessors): the trim bar, the flipped ruler and the cues' marker
+        // THE WELL'S THREE (architect 2026-10-09: Cool Edit's lane order;
+        // flat, 2026-11-01; render.h's THE WELL'S LANES the accessors): the
+        // trim bar, the flipped ruler and the cues' marker
         // lane.
         case kTopTrimLane:    return trim_lane_h_px();      // the trim bar
         case kTopRulerLane:   return ruler_lane_h_px();     // ruler / placement
@@ -374,9 +361,9 @@ int top_lane_height(int lane) {
 }
 // The bottom strip's THREE lanes, indexed from the WINDOW'S FOOT inward
 // like every lane table here: lane 0 is THE STATUS BAR on the window's foot
-// (architect 2026-11-19, send Z: its line and its 22 W; render.h's status
-// bar block), lane 1 THE BOTTOM ICON ROW (2026-08-12, rows 8 and 9 merged:
-// the clock left, the buttons flush right; the layout is
+// (architect 2026-11-19: its line and its 22 W; render.h's status
+// bar block), lane 1 THE BOTTOM ICON ROW (the clock left, the buttons
+// flush right; the layout is
 // paint_bottom_row_buttons_and_clock's), lane 2 THE WELL'S FOOT (one of the
 // well's lines). THE ORDER IS FIXED: no tenant of the row moves a lane — the
 // modal family's box and controls row stand over these rows (modal_box.h),
@@ -392,11 +379,12 @@ constexpr int kBottomRowLane      = 1;
 constexpr int kBottomWellFootLane = 2;
 int bottom_lane_height(int lane) {
     switch (lane) {
-        // THE STATUS BAR (send Z, 2026-11-19): its line and the bar, on the
+        // THE STATUS BAR (2026-11-19): its line and the bar, on the
         // window's foot (render.h's status_bar_lane_h_px).
         case kBottomStatusLane:   return status_bar_lane_h_px();
         case kBottomRowLane:      return bottom_row_h_px();
-        // THE WELL'S FOOT, the frame's bottom line; top edge = waveform bottom.
+        // THE WELL'S FOOT, the canvas's bottom line; top edge = waveform
+        // bottom.
         case kBottomWellFootLane: return well_foot_h_px();
         default: return 0;
     }
@@ -420,8 +408,7 @@ int strip_total_h(bool top_strip) {
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
 // gui_scale 200, the key 28 W tall, the lanes leave 1440 − 236 − 132 = 1072
-// device rows (re-derived 2026-11-20), the on-screen keyboard standing or
-// not.
+// device rows, the on-screen keyboard standing or not.
 // No color moves a lane. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
 // the silent-wrong guard at waveform_area owns that case). Takes the CLAMPED
@@ -430,15 +417,15 @@ int centered_leftover_h(int win_h) {
     return win_h - strip_total_h(/*top_strip=*/true)
                  - strip_total_h(/*top_strip=*/false);
 }
-// THE WAVEFORM'S HEIGHT: THE LEFTOVER, NOTHING ELSE (architect 2026-10-07
-// evening, the maximum retired). The floor at 0 is what keeps a degenerate
+// THE WAVEFORM'S HEIGHT: THE LEFTOVER, NOTHING ELSE (architect 2026-10-07:
+// no maximum). The floor at 0 is what keeps a degenerate
 // window's negative leftover out of the gap arithmetic below;
 // waveform_area's own guard answers the rect.
 int waveform_h(int win_h) {
     const int leftover = centered_leftover_h(win_h);
     return leftover > 0 ? leftover : 0;
 }
-// GAP 1 — the flexible band BETWEEN THE BAND AND THE VIEW BAR (the vertical
+// GAP 1 — the flexible gap BETWEEN THE TOP ICON ROW AND THE TRIM LANE (the vertical
 // rule above carries the ruling): whatever it takes to put the
 // waveform's midpoint on the window's, floored at 0 where that is infeasible.
 // strip_total_h(top) is exactly the rule's "the top lanes whole", above and
@@ -449,23 +436,13 @@ int top_flex_gap(int win_h) {
                               - waveform_h(win_h) / 2;
     return gap > 0 ? gap : 0;
 }
-// GAP 2 — the flexible blank band between the waveform's bottom edge and the
-// bottom strip's lanes (the well's foot over the UNIFIED
-// BOTTOM ROW):
-// the REMAINDER of the leftover, which
-// is what makes the stack add up to the window exactly. Zero, the waveform
-// taking the whole leftover (the vertical rule above). IT IS THE BAND THAT
-// ABSORBED THE STATUS BAR AND GOT IT BACK (2026-08-29, both edges in one day):
-// the bar entered the bottom lane table and the leftover this reads shrank by
-// its 33, all of which came out of this band on a window with room, and the
-// evening's fold gave the same 33 back the same way with no other term
-// moving.
+// GAP 2 — the flexible blank gap between the waveform's bottom edge and the
+// bottom strip's lanes (the well's foot over the bottom icon row): the
+// REMAINDER of the leftover, which is what makes the stack add up to the
+// window exactly. Zero, the waveform taking the whole leftover (the vertical
+// rule above).
 // The floor is defensive only: gap 1 can never exceed the remainder, since that
 // would need the bottom strip to be taller than the whole top stack.
-// (bottom_strip_flex_gap's successor, and top_strip_flex_gap's before it: the
-// seventh ruling opened ONE flexible gap between the icon row and the trim
-// lane, the row unification moved it whole to the window's foot below the
-// bottom row, and commit B split it in two around the block.)
 int bottom_flex_gap(int win_h) {
     const int gap = centered_leftover_h(win_h) - waveform_h(win_h)
                                                - top_flex_gap(win_h);
@@ -473,10 +450,10 @@ int bottom_flex_gap(int win_h) {
 }
 } // namespace
 
-// The TOP strip's public height INCLUDES GAP 1 (commit B): it is the distance
+// The TOP strip's public height INCLUDES GAP 1: it is the distance
 // from the window top to the WAVEFORM top, which is what every consumer asks of
-// it — top_strip_area then spans the blank band above the trim lane (its
-// damage covering it is correct: the band is repainted as window ground by
+// it — top_strip_area then spans gap 1 above the trim lane (its
+// damage covering it is correct: the gap is repainted as window ground by
 // render_background's chrome erase), and waveform_area's y is this sum with
 // no second expression.
 int top_strip_h(const AppState& a) {
@@ -484,10 +461,9 @@ int top_strip_h(const AppState& a) {
     clamp_dims(w, h);
     return strip_total_h(/*top_strip=*/true) + top_flex_gap(h);
 }
-// The BOTTOM strip's public height INCLUDES GAP 2 (2026-08-12: the row
-// unification made this the blank foot below the row, commit B moved the blank
-// above it): it is the distance from the waveform bottom to the window bottom,
-// which is what every consumer actually asks of it — the blank band is
+// The BOTTOM strip's public height INCLUDES GAP 2: it is the distance from
+// the waveform bottom to the window bottom,
+// which is what every consumer actually asks of it — the blank gap is
 // repainted in the window ground, and waveform_area's h - top - bottom
 // arithmetic yields the waveform height with no second expression.
 int bottom_strip_h(const AppState& a) {
@@ -505,8 +481,8 @@ GuiRect top_strip_area(const AppState& a) {
 GuiRect waveform_area(const AppState& a) {
     int w = a.width, h = a.height;
     clamp_dims(w, h);
-    // BOTH strip heights INCLUDE their flexible gap (commit B's two-gap
-    // centering, both gaps 0 since the waveform became the whole leftover),
+    // BOTH strip heights INCLUDE their flexible gap (the two-gap
+    // centering, both gaps 0: the waveform is the whole leftover),
     // so the h - top - bot arithmetic below yields the waveform height — the
     // leftover wherever it is non-negative — and the y lands the waveform
     // flush under the marker lane with no second expression of the vertical
@@ -514,10 +490,9 @@ GuiRect waveform_area(const AppState& a) {
     const int top_h = top_strip_h(a);
     const int bot_h = bottom_strip_h(a);
     // THE CANVAS ACROSS IS THE PANEL'S WHOLE WIDTH — EDGE TO EDGE
-    // (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §1: "NO SIDE
-    // MARGINS: the lanes, their lines and the canvas run the panel's whole
-    // width"): the well's frame of 2026-11-17 and its 12 W margins are
-    // gone, so the area is x 0 .. the window's last column, EVERY COLUMN OF
+    // (architect 2026-11-19: "NO SIDE MARGINS: the lanes, their lines and
+    // the canvas run the panel's whole width"): the area is x 0 .. the
+    // window's last column, EVERY COLUMN OF
     // IT, no floor (every basis that carries a span recovers the painter's q
     // exactly at any width over 16 px: recovered_painter_spp,
     // warp_frame_map_view.h). On the tablet's 2304 at 200 %: x 0, 2304
@@ -529,21 +504,19 @@ GuiRect waveform_area(const AppState& a) {
     // DEFENSIVE NON-NEGATIVE FLOOR on the height, a constructive DOMAIN INVARIANT
     // (a silent-wrong guard): no stderr, no refusal, no settings clamped.
     //
-    // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW, and since 2026-10-05
-    // the vocabulary reaches it: the lanes scale with gui_scale (lane by
-    // lane, each from its rounded parts, which is not one multiply of the
-    // sum), the well's lines one W each (2026-11-04), and at the 1000 %
-    // ceiling (architect 2026-10-05) they PASS the tablet's 1440 rows at
-    // the key 28 W tall: the band (280 + 70 + 280 + 70 = 700) and the
-    // bottom icon row (70 + 280 + 70 = 420) and the status bar (10 + 220)
-    // take 1350 before the well's lanes, so the top of the vocabulary lands
-    // on this floor (one W is 10 device px there). (The host runs far below
-    // it: the tablet at 200 % on its 1440-tall surface, where they take 368
-    // and leave the waveform 1072, the stack record at the
-    // lane table above; re-derived 2026-11-20.) The guard does not rest on
-    // that arithmetic, because the ceiling is a vocabulary the architect
-    // moves — it has now moved four times — and the lane set is one the
-    // redesign keeps adding to and taking from. If
+    // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW: the lanes scale with
+    // gui_scale (lane by lane, each from its rounded parts, which is not one
+    // multiply of the sum), the well's lines one W each (2026-11-04), and at
+    // the 1000 % ceiling (architect 2026-10-05) they PASS the tablet's 1440
+    // rows at the key 28 W tall: the title bar and the top icon row
+    // (280 + 70 + 280 + 70 = 700) and the bottom icon row (70 + 280 + 70 =
+    // 420) and the status bar (10 + 220) take 1350 before the well's lanes,
+    // so the top of the vocabulary lands on this floor (one W is 10 device
+    // px there). (The tablet runs far below it at 200 % on its 1440-tall
+    // surface, where they take 368 and leave the waveform 1072, the stack
+    // record at the lane table above.) The guard does not rest on that
+    // arithmetic, because the ceiling is a vocabulary the architect moves
+    // and the lane set is one that changes. If
     // the sum ever exceeds the window this subtraction goes NEGATIVE on it.
     // A negative-height rect is a silent-wrong input to every consumer
     // that takes a width/height pair, which is exactly the class this project
@@ -558,13 +531,7 @@ GuiRect waveform_area(const AppState& a) {
     // (the scanner's tick fallback damages the clock cell instead), and cairo
     // treats an empty rectangle as a no-op.
     // A positive floor would instead invent a strip of waveform that has nowhere
-    // to live. THE VOCABULARY QUESTION WAS ANSWERED SEPARATELY — gui_scale's
-    // ceiling came down to 200 (architect 2026-07-31) and went back up to 400
-    // (architect approval 2026-08-26, for a 280 dpi tablet panel), down to
-    // 350 (2026-08-29) and up to 1000 (2026-10-05), and font_size, the other
-    // half of the cross-product this guard was written against, left the schema
-    // entirely in row 7 — and the guard STAYS regardless, the ceiling's return
-    // being exactly why: it costs one compare
+    // to live. The guard costs one compare
     // and it is the class of fault (silent-wrong geometry) the project keeps
     // guards for. (NEITHER FLEXIBLE GAP CAN DEEPEN AN OVERFLOW: both floor at
     // 0 and both derive from the same leftover this subtraction reads, which is
@@ -577,16 +544,17 @@ GuiRect waveform_area(const AppState& a) {
 }
 
 // ONE shared layout contract for every strip lane — the single geometry owner,
-// FILE-LOCAL since 2026-10-10 (every reader takes a named accessor below and
+// FILE-LOCAL (2026-10-10: every reader takes a named accessor below and
 // no lane index leaves this file, so a lane added or moved is one table's
 // edit).
 // A lane is a pure index from its strip's window edge (0 = the edge-most lane):
 // the outer gap kFlagBottomLiftPx sits between the window edge and lane 0, and
 // each successive lane is one prior-lane height + one inter-lane gap kRowGapPx
 // further inward — PLUS, for every top lane from kTopFlexGapLane down, GAP 1
-// (the vertical rule at the head of this block: the flexible band opens
-// between the band and the view bar, so the trim lane and every lane below
-// it carry the gap while the icon row stands at the window's top). The
+// (the vertical rule at the head of this block: the flexible gap opens
+// between the top icon row and the trim lane, so the trim lane and every
+// lane below it carry the gap while the icon row stands at the window's
+// top). The
 // bottom strip's own gap 2 is NOT an inset here: its lanes count up from the
 // window's foot, and the gap sits above them, inside bottom_strip_h. The top
 // strip counts downward from y=0; the bottom strip mirrors it about the
@@ -596,18 +564,18 @@ GuiRect waveform_area(const AppState& a) {
 // grows 1 W px each side"). Every damage rect and painter reads its lane
 // here, and every hit rect its rows: the well's three upper lanes are
 // pressed on the waveform area's columns alone (their press rects, below
-// top_marker_row_area) — the panel's whole width since 2026-11-19 (send Z,
-// edge to edge).
+// top_marker_row_area) — the panel's whole width (2026-11-19, edge to
+// edge).
 //
 // Paint/hit agreement invariant: the TRIM BAR is TOP lane 1 (the ruler lane
 // 2, the marker lane lane 3 and the lane's foot line lane 4), and
-// hit_test_trim_endcap / the pair-drag y-gate read the band render_trim_flags
-// painted the view bar in (published as AppState::trim_bar_hit's `lane`),
+// hit_test_trim_endcap / the pair-drag y-gate read the rows render_trim_flags
+// painted the trim bar in (published as AppState::trim_bar_hit's `lane`),
 // because
 // the PAINTER is handed top_trim_row_area(app) as a parameter
 // (GuiPaintHandler::paint_trim passes it as render_trim_flags' `trim_bar`)
 // instead of re-deriving a lane y from the row heights above it. Both sides
-// therefore reach the band through this one helper, so paint and hit cannot
+// therefore reach the lane through this one helper, so paint and hit cannot
 // drift when a lane above the trim bar changes height, is removed, or gains a
 // gap.
 namespace {
@@ -624,7 +592,7 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
         inset += static_cast<int>(kRowGapPx);
     }
     // GAP 1 opens ABOVE THE TRIM LANE, under the icon row (the vertical
-    // rule): the view bar and every lane below it sit under it, the rows
+    // rule): the trim lane and every lane below it sit under it, the rows
     // above it do not, and the bottom strip's arithmetic never sees it.
     if (top_strip && lane_from_window_edge >= kTopFlexGapLane)
         inset += top_flex_gap(h);
@@ -634,19 +602,17 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 }
 } // namespace
 
-// THE TWO BLANK BANDS HAVE NO ACCESSOR (architect 2026-10-30: nothing reads
+// THE TWO BLANK GAPS HAVE NO ACCESSOR (architect 2026-10-30: nothing reads
 // a rect of theirs): both are
 // fall-throughs — a press claims nothing, the touch pan zone has no term for
 // them and answers as it answers the lanes around them, and
 // render_background paints them as window ground.
 
 // Top strip lanes, counted down from the window top (index 0 = the window edge).
-// Lane 0 is the ICON row, at the window's top since 2026-10-24 (the app's
-// caption, lane 0 from 2026-10-05, removed), the title bar over its keys (the thirty-one
-// view/mode/action buttons — kIconRowButtons, kIconRowHistoryOpener,
-// kIconRowViewPairs and the history stand-ins, paint_handler.cpp, are the
-// count's authority; twenty-seven stand outside the `h` view and eighteen
-// inside it, re-counted 2026-10-29 with the Restrict lamp), the toolbar band. Lane 1 is the
+// Lane 0 is THE TITLE BAR AND THE TOP ICON ROW, at the window's top, the
+// title bar over the row's keys (the view/mode/action buttons —
+// kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and the history
+// stand-ins, paint_handler.cpp, are the count's authority). Lane 1 is the
 // TRIM lane (the trim bar: the span and its two ends, every trim
 // gesture and the span-framing double tap), the first lane UNDER GAP 1
 // and the CENTERED BLOCK's cap; lane 2 is the RULER lane (the timestamp
@@ -654,17 +620,14 @@ GuiRect strip_row_rect(const AppState& a, bool top_strip,
 // lane (the cues); lane 4 is THE LANE'S FOOT LINE, one of the well's lines, whose
 // bottom edge is
 // flush with the waveform area top. Every lane spans the window
-// (strip_row_rect, 2026-10-21). (top_caption_row_area and the sizing
-// frame's window_frame_edges_at went 2026-10-24 with the caption and the
-// frame.)
+// (strip_row_rect, 2026-10-21).
 GuiRect top_icon_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/true, kTopProgramLane);
 }
 
 int viewport_lanes_top_y(const AppState& a) {
     // The inventory is at Viewport::invalidate_waveform_area (viewport.h):
-    // the viewport's lanes start under the band (the simple layout,
-    // 2026-10-22; under the tab strip 2026-10-18 to then), the last of the
+    // the viewport's lanes start under the top icon row, the last of the
     // rows above them.
     const GuiRect band = top_icon_row_area(a);
     return band.y + band.h;
@@ -685,13 +648,13 @@ GuiRect top_marker_row_area(const AppState& a) {
 // THE WELL'S LANES' PRESS RECTS — what a press on the trim bar, the ruler or
 // the marker lane claims: THE LANE'S WHOLE ROWS ON THE WAVEFORM AREA'S
 // COLUMNS, where each lane paints its face (the trough and its pill, the
-// ruler's face, the marker lane's cues) — the panel's whole width since
-// 2026-11-19 (send Z, edge to edge), so the lane rects and the press rects
+// ruler's face, the marker lane's cues) — the panel's whole width
+// (2026-11-19, edge to edge), so the lane rects and the press rects
 // coincide on a full window; anything a narrower area left beside it would
-// be ground, "ground is not a button" (architect 2026-11-02, R5 / R11). THE
-// TRIM BAR'S HIT
-// THE LANE'S WHOLE ROWS (architect 2026-11-17, ruling 4). A gesture begun
-// inside one runs on over the margin and the frame until the lift: the drags'
+// be ground, "ground is not a button" (architect 2026-11-02). THE
+// TRIM BAR'S HIT IS
+// THE LANE'S WHOLE ROWS (architect 2026-11-17). A gesture begun
+// inside one runs on over chrome until the lift: the drags'
 // motions and releases never re-test these.
 namespace {
 GuiRect well_lane_press_rect(const AppState& a, const GuiRect& lane) {
@@ -716,8 +679,7 @@ GuiRect marker_lane_press_area(const AppState& a) {
 // (bottom lane 2) — render.h's well-edge accessors; the lines' one painter
 // is paint_well_frame_rows (paint_handler.cpp), the foot line's and the
 // foot's rows paint_canvas_column_frame's. THE WELL'S COLUMNS ARE THE
-// PANEL'S (architect 2026-11-19, send Z: edge to edge, the frame's sides
-// gone): the waveform area's own.
+// PANEL'S (architect 2026-11-19: edge to edge): the waveform area's own.
 WellColumns well_columns(const AppState& a) {
     const GuiRect area = waveform_area(a);
     return WellColumns{area.x, area.x + area.w};
@@ -731,9 +693,7 @@ GuiRect well_foot_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, kBottomWellFootLane);
 }
 
-// THE UNIFIED BOTTOM ROW (2026-08-12, rows 8 and 9 merged; the succession at
-// render.h's bottom-row block) — THE STRIP since the simple layout
-// (2026-10-22): Arc's pad 7 W, the key, the pad 7 W on the body tone
+// THE BOTTOM ICON ROW (render.h's THE STRIP) — Arc's pad 7 W, the key, the pad 7 W on the body tone
 // (architect 2026-11-19; 7 W above and below, architect 2026-11-20), at the
 // left one plain-text run — the timestamp, a text pipe and the active
 // tab's name (paint_handler.cpp's bottom_left_run) — and, packed against
@@ -748,18 +708,18 @@ GuiRect well_foot_area(const AppState& a) {
 // width, whatever stands over it (the modal family's controls row on its
 // rows and the on-screen keyboard over it while it stands are never lanes:
 // modal_box.h, onscreen_keyboard.h's placement block).
-// Gap 2 stands above lane 1 inside bottom_strip_h and is zero since the
-// waveform became the whole leftover.
+// Gap 2 stands above lane 1 inside bottom_strip_h and is zero: the
+// waveform is the whole leftover.
 // THE ROW CARRIES NO DIRTY MARK: Save's grey is the mark (architect
-// 2026-10-05, plain_save_actionable), the clock's `*` suffix retired, and no
-// title carries one (the tablet's window shows none).
+// 2026-10-05, plain_save_actionable), and no title carries one (the
+// tablet's window shows none).
 // Paint and hit agree through
 // the one accessor exactly as the top rows' do through theirs.
 GuiRect bottom_row_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, kBottomRowLane);
 }
 
-// THE STATUS BAR'S LANE (architect 2026-11-19, send Z; render.h's status
+// THE STATUS BAR'S LANE (architect 2026-11-19; render.h's status
 // bar block): BOTTOM LANE 0, on the window's foot under the bottom icon
 // row, the window's whole width — its first hairline the line over the bar,
 // the rest the bar. Every overlay and modal stands above it (the controls
@@ -772,10 +732,11 @@ GuiRect status_bar_area(const AppState& a) {
 }
 
 // THE HOVER TOOLTIP'S SEAT AND ITS DAMAGE BAND (the contract at the
-// declaration, app_state.h; architect 2026-11-07, session 91).
-// A FACE IN THE BAND — a top-row key's — gets its box under it (send Z,
-// 2026-11-19; the contract at tooltip_box_rect's declaration): its bottom
-// edge within the band's rows.
+// declaration, app_state.h; architect 2026-11-07).
+// A FACE IN THE TOP ICON ROW'S LANE — a top-row key's — gets its box under
+// it (2026-11-19; the contract at tooltip_box_rect's declaration): its
+// bottom edge within that lane's rows (the title bar and the top icon
+// row).
 static bool tooltip_face_in_band(const AppState& a, const GuiRectF& face) {
     const GuiRect band = top_icon_row_area(a);
     return face.y + face.h <= static_cast<double>(band.y + band.h);
@@ -784,13 +745,13 @@ GuiRectF tooltip_box_rect(const AppState& a, const GuiRectF& face, double w,
                           double h) {
     // LEFT-ALIGNED ON THE FACE: the box's left edge the face's.
     double x = face.x;
-    // UNDER A TOP-ROW KEY, ABOVE EVERY OTHER FACE (send Z, 2026-11-19): the
-    // box's top edge the gap (kTooltipGapW, render.h) under a band face's
+    // UNDER A TOP-ROW KEY, ABOVE EVERY OTHER FACE (2026-11-19): the
+    // box's top edge the gap (kTooltipGapW, render.h) under a top-row face's
     // bottom edge, else its bottom edge the gap over the face's top edge.
     const double gap = static_cast<double>(tooltip_gap_px());
     double y = tooltip_face_in_band(a, face) ? face.y + face.h + gap
                                              : face.y - gap - h;
-    // THE EDGE RULE (retold 2026-11-19, send Z): the box inside the panel's
+    // THE EDGE RULE (2026-11-19): the box inside the panel's
     // columns — the right clamp first, pulling a box that would run past the
     // right edge back to end on it, then the left, so a box wider than the
     // panel pins its left edge.
@@ -832,10 +793,10 @@ GuiRect tooltip_damage_band(const AppState& a) {
     const GuiRect face = tooltip_owner_face(a);
     if (face.w <= 0 || face.h <= 0) return GuiRect{0, 0, 0, 0};
     // The bound's rows on the box's side: starting on the gap's bottom under
-    // a band face, else ending on the gap's top — or from the window's top
+    // a top-row face, else ending on the gap's top — or from the window's top
     // where they would rise past it, which holds the clamped seat too — AND
-    // THE SHADOW'S REACH ON BOTH SIDES OF THEM (Arc's shadow, send AA's
-    // stage D1: it hangs outside the box, over the gap and the face's rows
+    // THE SHADOW'S REACH ON BOTH SIDES OF THEM (Arc's shadow: it hangs
+    // outside the box, over the gap and the face's rows
     // too; tooltip_shadow_reach, render.h).
     const int band_h = tooltip_damage_h_px();
     const TooltipShadowReach reach = tooltip_shadow_reach();
@@ -850,36 +811,33 @@ GuiRect tooltip_damage_band(const AppState& a) {
     return GuiRect{0, y0, a.width, y + band_h + reach.bottom - y0};
 }
 
-// (THE STATUS BAR IS BACK — architect 2026-11-18 / 2026-11-19, send Z,
-// superseding his ruling of 2026-08-29 that put the state text on the
-// toolbar: Thunar's bar under the bottom icon row, status_bar_area above,
-// its string paint_handler.cpp's status_bar_text. The RESOLVED READOUT stays
-// retired — "The text field would get very long and very short depending on
-// which marker I select".)
+// (THE STATUS BAR — architect 2026-11-19: Thunar's bar under the bottom
+// icon row, status_bar_area above, its string paint_handler.cpp's
+// status_bar_text. It shows no RESOLVED READOUT — "The text field would get
+// very long and very short depending on which marker I select".)
 
 // Resolve the SOURCE-view trim NAVIGATION range from AppState's trim
 // pair. (`Viewport::trim_range` is not "the target-view half" of a pair with
 // this: it is THE navigation range owner in both audio views, and this body is
-// the SOURCE-domain resolution it rests on — retold 2026-09-02.) It is the
-// reason the full window behaves exactly as the old unset state
-// did everywhere downstream. PLAYBACK IS NO LONGER A CONSUMER (2026-08-05): the
-// source-view audition plays to the SONG's end and the target-view one to the
-// bound preview buffer's, both decided at playback_lifecycle.cpp, so what this
-// pair still bounds is Home/End, the load-time playhead and the span framing.
+// the SOURCE-domain resolution it rests on.) PLAYBACK IS NOT A CONSUMER
+// (2026-08-05): the source-view audition plays to the SONG's end and the
+// target-view one to the bound preview buffer's, both decided at
+// playback_lifecycle.cpp, so what this pair bounds is Home/End, the load-time
+// playhead and the span framing.
 //
 // THE FULL-WINDOW NORMALIZATION (architect 2026-07-30): the store's end bound
 // is an INCLUSIVE authored frame while this range's end is EXCLUSIVE, so a full
 // window [0, total-1] taken literally would return {0, total-1} and silently
 // drop the last source frame — End would land at total-2 and the last legal
 // near-end launch would go inert. A full pair therefore normalizes to
-// {0, total_frames}, the exact pair the retired unset state produced. The
-// recognition is the shared owner trim_window_is_full (settings_file.h), never
-// a second compare. A PROPER sub-window keeps today's arithmetic verbatim.
+// {0, total_frames}. The recognition is the shared owner trim_window_is_full
+// (settings_file.h), never a second compare. A PROPER sub-window keeps its
+// own bounds, clamped below.
 //
 // The stored bounds are already whole int64 frames; each side clamps to
 // [0, total_frames] independently so playback ranges stay inside the buffer.
 // There is NO ordering clamp: the pair passes through as authored. Crossed or
-// equal bounds can no longer REST (the commit and load auto-resets reset such
+// equal bounds cannot REST (the commit and load auto-resets reset such
 // pairs to the full window), but MID-GESTURE crossing stays free and this runs
 // per frame, so consumers (Home/End via trim_range, the load-time playhead, the
 // span framing) still degrade to a no-op or a per-side position and must not
@@ -1009,11 +967,11 @@ double clamp_zoom_level(const AppState& a, const GuiAudio& audio, double level) 
 
 int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
     const GuiRect area = waveform_area(a);
-    // Preserved evaluation: the former signature evaluated live_total_frames
-    // here, and in target view that primes target_view_warp_frame_map_cached (a
-    // live map rebuild + the resolver's normalization stderr at this timing).
-    // spp no longer needs the total, but dropping the evaluation would move the
-    // cache-rebuild/diagnostic timing — deliberately kept identical.
+    // Kept evaluation: live_total_frames is evaluated here though spp does
+    // not need the total, because in target view it primes
+    // target_view_warp_frame_map_cached (a live map rebuild + the resolver's
+    // normalization stderr at this timing); dropping it would move that
+    // cache-rebuild/diagnostic timing.
     (void)live_total_frames(a, audio);
     // THE PAINTED SPAN, w·q on the sixteenth-frame grid to the nearest frame
     // (viewport_end_sample's rounding: w·q itself wherever it is whole, within
@@ -1027,11 +985,11 @@ int64_t samples_visible(const AppState& a, const GuiAudio& audio) {
 }
 
 double current_samples_per_pixel(const AppState& a, const GuiAudio& audio) {
-    // Preserved evaluation: the former signature evaluated live_total_frames
-    // here, and in target view that primes target_view_warp_frame_map_cached (a
-    // live map rebuild + the resolver's normalization stderr at this timing).
-    // spp no longer needs the total, but dropping the evaluation would move the
-    // cache-rebuild/diagnostic timing — deliberately kept identical.
+    // Kept evaluation: live_total_frames is evaluated here though spp does
+    // not need the total, because in target view it primes
+    // target_view_warp_frame_map_cached (a live map rebuild + the resolver's
+    // normalization stderr at this timing); dropping it would move that
+    // cache-rebuild/diagnostic timing.
     (void)live_total_frames(a, audio);
     return samples_per_pixel_at(a.zoom_level, audio.working_column());
 }
@@ -1049,8 +1007,8 @@ std::pair<int64_t, int64_t> viewport_marker_bounds(const AppState& a,
 }
 
 namespace {
-// THE WALLS' WHOLE-SONG TEST — THE REAL PAINTED SPAN (architect 2026-11-18,
-// the 16-px floor dropped): the whole song fits iff q·w >= total in reals,
+// THE WALLS' WHOLE-SONG TEST — THE REAL PAINTED SPAN (architect
+// 2026-11-18): the whole song fits iff q·w >= total in reals,
 // q the painter's step and w the waveform's width, never the rounded
 // samples_visible, which may stand half a frame either side of q·w where
 // w·q is not whole. ONE NOTION FOR EVERY SITE THAT DECIDES A WALL:
@@ -1072,8 +1030,8 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // The rightmost ON-grid viewport start: THE FRAME-0 LATTICE'S POINT
     // S = viewport_grid_point(k, q) = nearbyint(k·q) of the smallest k whose
     // strip ends at or past the song's end, (k + w)·q >= total — THE REAL
-    // PAINTED SPAN q·w ON THE LATTICE'S OWN INDEX (architect 2026-11-18, the
-    // 16-px floor dropped). Every place on the wall's viewport is measured
+    // PAINTED SPAN q·w ON THE LATTICE'S OWN INDEX (architect 2026-11-18).
+    // Every place on the wall's viewport is measured
     // from its index k (displayed_x_at and its inverse, origin 0 there,
     // viewport_lattice_index), so the frame at the strip's right edge x = w
     // is (k + w)·q exactly, and this test is the one that puts the song's
@@ -1096,8 +1054,8 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
     // (the flag iterator's cull, render.cpp), and no position nudge or drop
     // at the playhead authors a marker there (source_frame_off_right_edge,
     // warp_frame_map_view.h, which reads this wall). The flush-right
-    // viewport is a true grid point — unlike the off-grid total − q·w it
-    // replaces, this keeps exact-grid marker commits and pixel anchoring
+    // viewport is a true grid point — unlike the off-grid total − q·w, this
+    // keeps exact-grid marker commits and pixel anchoring
     // simultaneously valid at maximum scroll.
     //
     // THE WALL IS THE FRAME-0 LATTICE'S UNDER EVERY LATTICE RULE (architect
@@ -1152,22 +1110,20 @@ int64_t max_viewport_start_grid(const AppState& a, const GuiAudio& audio) {
 //      residue, in [−q/2, q/2)), so the origin a pan keeps is the origin a
 //      landing at that same start derives, and the idempotence tests that
 //      compare start AND origin (zoom_to_start_would_move,
-//      hold_derived_on_arrival) answer for the picture; ties to even gave a
-//      start half a step off the lattice +q/2 or −q/2 by its index's parity
+//      hold_derived_on_arrival) answer for the picture; ties to even would
+//      give a start half a step off the lattice +q/2 or −q/2 by its index's parity
 //      — the same lattice under two names;
 //   2. the SNAP: the nearest point of that lattice to `start`,
 //      origin + nearbyint(m·q), m = nearbyint((start − origin) / q) — under
 //      Exact `start` itself, by construction: THE START ASKED FOR IS THE
-//      REST (architect 2026-11-15, the no-grid arc: every landing exact);
+//      REST (architect 2026-11-15, no grid: every landing exact);
 //   3. the WALLS, the frame-0 lattice's [0, max_viewport_start_grid]: a snap
 //      outside them rests AT the wall it passed, with origin 0.
 // Degenerate geometry (the whole song visible → the park at 0; a non-numeric
 // zoom → the walls alone) answers origin 0. At origin 0 — the walls, and
 // every Keep or Exact whose origin is 0 (an Exact start a whole number of
-// steps from frame 0) — the answer is the frame-0 lattice's,
-// byte for byte the rest before the origin existed (the old `start < 0 → 0`
-// pre-clamp is the left wall's arm: a negative start's nearest point is <= 0,
-// so it rests at 0 either way).
+// steps from frame 0) — the answer is the frame-0 lattice's (a negative
+// start's nearest point is <= 0, so it rests at the left wall, 0).
 ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
                                     int64_t start, ViewportLattice rule) {
     // The whole-song park, on the walls' one notion of the span
@@ -1213,9 +1169,9 @@ ViewportRest resting_viewport_start(const AppState& a, const GuiAudio& audio,
     return {snapped, origin};
 }
 
-// THE REST OF A PARKED CAMERA COMING BACK (architect 2026-11-15, the no-grid
-// arc; Sol's review, 2026-11-16: a view you come back to is the view you
-// left) — the tab switch's parked band and FIT's recall stamp each keep THE
+// THE REST OF A PARKED CAMERA COMING BACK (architect 2026-11-15, no grid;
+// 2026-11-16: a view you come back to is the view you left) — the tab
+// switch's parked band and FIT's recall stamp each keep THE
 // LATTICE ORIGIN beside the start they park (ViewState, OverviewRecall,
 // app_state.h: in memory alone), and the restore rests the start ON THAT
 // ORIGIN, so a view left by a pan — whose kept origin at a fractional step
@@ -1255,16 +1211,15 @@ void settle_zoom_level(AppState& a, const GuiAudio& audio) {
     // argument that placed the viewport grid snap below — so a per-file ceiling
     // assigned above (0/c full-out, the settings editor's active zoom commit,
     // the Ctrl+Tab band restore, a fresh short project's second tab) can never
-    // rest above the effective ceiling. The scattered tick/on_resize reclamps
-    // that used to own this were the leaking surface; they now only trigger and
-    // delegate here. Clamped BEFORE the rest is asked so its `visible` reflects
+    // rest above the effective ceiling. The tick and on_resize only trigger
+    // and delegate here. Clamped BEFORE the rest is asked so its `visible` reflects
     // the final level. clamp_zoom_level no-ops while loading. Parked (inactive-
     // tab) ViewState bands deliberately store zoom requests verbatim and are
     // governed here only once they go live -- at Ctrl+Tab restore or tab-in.
     //
     // AND 'THE WHOLE SONG IS VISIBLE' IS A STATE THE LEVEL FOLLOWS (architect
     // 2026-09-02; the field is ViewState::whole_song_visible, whose
-    // declaration carries the ruling, the one setter and the four clears).
+    // declaration carries the ruling, the one setter and the clears).
     // The per-file ceiling moves with the waveform's width and with the active
     // domain's total, so a resize or an S/T flip into the LONGER domain leaves
     // a level that WAS the ceiling sitting under the new one. While the active
@@ -1416,8 +1371,8 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // discrete and takes the full-area shape, and the scanner — a line with no
 // head — has its own rect (scanner_invalidate_rect below). THE BOX
 // IS THE HEAD'S PAINTED REACH
-// (2026-10-09, ON SCREEN IS AS PAINTED; the reach architect 2026-11-14,
-// send J): the head is the chip's drawing at the playhead's exact x, so the
+// (2026-10-09, ON SCREEN IS AS PAINTED; the reach architect 2026-11-14):
+// the head is the chip's drawing at the playhead's exact x, so the
 // columns it can touch are [col − H − 1, col + H + 1), H the chip's height
 // (cue_chip_paint_reach_px, render.h: 9 each side, 18 device px on the
 // tablet at 200 %, 5 each side at 100 %) — its rows the envelope's, below —
@@ -1435,8 +1390,8 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // culls the line by and the ruler's head stands on (the nearest lattice
 // point on the lattice's own index, displayed_column_at), so the damage is
 // built on the column the paint uses — and the box is placed at
-// area.x + col, the canvas's own origin (0 since the canvas went edge to
-// edge, send Z, 2026-11-19).
+// area.x + col, the canvas's own origin (0: the canvas stands edge to
+// edge, 2026-11-19).
 GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
                                  int px_col) {
     const int col = area.x + px_col;
@@ -1446,13 +1401,13 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
     if (x1 <= x0) return GuiRect{area.x, 0, 0, 0};
     // THE ENVELOPE: FROM THE VIEWPORT'S LANES' TOP ROW THROUGH THE WAVEFORM
     // AREA'S FOOT (architect 2026-11-16, the beats) — viewport_lanes_top_y,
-    // the toolbar band's foot: the very row the discrete moves' damage
+    // the top icon row's foot: the very row the discrete moves' damage
     // starts at (damage_window_top_rows, Viewport::invalidate_waveform_area),
     // so the boundary is one fact. THE PLAYHEAD'S PIXELS ARE ALL INSIDE IT:
     // its head on the ruler's last rows (paint_ruler_row, 2026-10-09; the
-    // view bar carries no mark since ~14:30) and its line on the canvas's
-    // rows (paint_playheads). The lanes between and above them — the view
-    // bar, the marker lane, the frame's lines — hold nothing of the
+    // trim bar carries no mark) and its line on the canvas's rows
+    // (paint_playheads). The lanes between and above them — the trim
+    // lane, the marker lane, their lines — hold nothing of the
     // playhead; they are inside because the rect is ONE rect, the head and
     // the line whole in one clip, and they repaint as they stand (each
     // lane's painter is clip-driven; a stash a narrow clip does not cover is
@@ -1481,7 +1436,7 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 // the one conversion to pixels). THE SCANNER IS THAT LINE AND NOTHING ELSE:
 // one Tint record of the canvas list (paint_scanner → render_playhead →
 // the sink's blended rect over exactly this span and these rows), no head,
-// nothing in the ruler, the lanes or the band and nothing of cairo's — so
+// nothing in the ruler, the lanes or the icon rows and nothing of cairo's — so
 // the rect holds every pixel the scanner's painter can touch at that x, and
 // no more: the record's cells are the floor of the span's left edge through
 // the ceil of its right (GuiCanvasSink::blended_rect), the hull's own, and
@@ -1495,9 +1450,9 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 // invalidate_scanner_line builds one per place (old and new), unites them
 // when they touch and invalidates what comes out — REAL DAMAGE, for the two
 // per-frame scanner sites and the launch's and the stop's edges
-// (Viewport::invalidate_standing_scanner, architect 2026-11-16, send Q), and
+// (Viewport::invalidate_standing_scanner, architect 2026-11-16), and
 // for THE WAVEFORM'S HOVER LINE, the same one-W line over the same rows
-// (Viewport::invalidate_hover_line, architect 2026-11-21, send FF: this
+// (Viewport::invalidate_hover_line, architect 2026-11-21: this
 // rect its one owner too);
 // the tick's offscreen fallback in this file reads only the WIDTH, as an
 // emptiness test. The narrow-on-plate shape (the rule and the per-site
@@ -1521,7 +1476,7 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // Viewport::invalidate_modal_dialog_area's lane. The process line stands in
 // the status bar under the row, status_bar_area above.)
 
-// THE CLOCK'S RECT — the unified bottom row's timestamp cell as the
+// THE CLOCK'S RECT — the bottom icon row's timestamp cell as the
 // painter last drew it, the timestamp's own box at the lane's left
 // (AppState::clock_cell_rect, whose stash contract is at the field; the
 // specimen's advance by the line box, architect 2026-11-19,
@@ -1544,8 +1499,6 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // THE CELL IS THE TIMESTAMP ALONE (architect 2026-10-18; the text pipe and
 // the active tab's name after it, architect 2026-11-19, outside the cell,
 // their pen the specimen's advance so they never move with the digits).
-// (The cell reserved one more cell for the dirty `*` until the mark
-// retired, architect 2026-10-05, Save's grey being the mark.)
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame
@@ -1641,8 +1594,8 @@ void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
     if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 
-// THE STATUS BAR'S COMPARATOR (architect 2026-11-19, send Z: the bar is
-// STATE, NEVER AN EVENT — DESIGN §5): ON EVERY TICK, ahead of the early
+// THE STATUS BAR'S COMPARATOR (architect 2026-11-19: the bar is
+// STATE, NEVER AN EVENT): ON EVERY TICK, ahead of the early
 // returns (a render's line moves under any mode), the live string
 // (status_bar_text, paint_handler.h — the painter's own composer) is held
 // against the one last painted (AppState::status_bar_painted), and the
@@ -1668,15 +1621,15 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 // refresh_logo_legend, ahead of the tick's early returns, because the clip
 // is the device's — it clamps under the render player, the score viewer and
 // the silence between plays alike — and a lamp's dark edge and the strike's
-// edges are owed whatever mode stands. THE HOLD (architect 2026-11-05 night,
-// session 49, REVERSING the same night's "no hold": the tick is the
+// edges are owed whatever mode stands. THE HOLD (architect 2026-11-05:
+// the tick is the
 // platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms,
 // platform_android.cpp) while only the PRESENT waits for the vsync, one
 // beat apart, 22.2 ms at the pinned 90 Hz (kFrameBeat, platform_android.cpp),
 // so a lamp lit for one 5 ms tick can be cleared before any
 // present and never be painted — the clip clamps a RUN of blocks and its
-// lamp spans ticks, but the limiter's engaged frames are POINTS, and its
-// one-tick lamp was missed on his glass): EACH LAMP IS LIT FROM ITS LAST
+// lamp spans ticks, but the limiter's engaged frames are POINTS, and a
+// one-tick lamp goes unseen on the glass): EACH LAMP IS LIT FROM ITS LAST
 // EVENT FOR AT LEAST THE HOLD — a tick whose test sees the event stamps now
 // + kLampHoldMs (below), and the lamp's bit is the event seen this tick or
 // now before the stamp. So an event re-arms the hold (a run of clamping
@@ -1684,7 +1637,7 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 // edge lands on the first tick at or past the stamp, and 85 ms is about
 // three and four fifths presents at the beat. NO TIMER OF ITS OWN: the tick is the clock, the
 // stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
-// (architect 2026-11-05 night, session 49): the clip lamp's third bit,
+// (architect 2026-11-05): the clip lamp's third bit,
 // GuiPlayback::device_unavailable() read on every tick — the error
 // callback's dead latch or no stream standing, "nothing will sound" — a
 // pure read that reopens nothing (no timer, no retry: the tap on the struck
@@ -1705,8 +1658,8 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 //   word and the stamps), one lifetime, so a project switch starts them at
 //   zero together.
 //   THE LIMITER LAMP, THE TARGET BUFFER'S AND THE PLAYER'S ITEMS' (architect
-//   2026-11-05: the item's .fingerprint carries its list since layout 2; the
-//   score's soundtrack stays dark): with the engine playing and the bind's
+//   2026-11-05: the item's .fingerprint carries its list, render_cache.h's
+//   THE SIDECAR'S SIX LINES; the score's soundtrack stays dark): with the engine playing and the bind's
 //   snapshot of the limiter's engaged frames non-empty
 //   (AppState::bound_limiter_frames: filled by the target bind and the
 //   player's item bind, cleared by the score viewer's binds and the T→S
@@ -1721,12 +1674,10 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 //   not test voids prev, so the next play seeds afresh. GUI-thread logic
 //   over the stored list, no atomic stamp. A lamp lit when the play stops
 //   keeps its hold out, dark at its stamp like any other.
-// THE HOLD IS 85 MS (architect 2026-11-22, send LL: "The lamp hold can also
-// be retired"): the `lamp_hold_ms` tuning key of 2026-11-05 night retired
-// at the tablet's own value, tuned on his glass from the key's construction
-// 100 and first recorded by the defaults snapshot of 2026-11-09 (23c12dd4);
-// about three and four fifths presents at the 22.2 ms beat, so a one-tick
-// limiter event is painted.
+// THE HOLD IS 85 MS (architect 2026-11-22: "The lamp hold can also be
+// retired"): a constant at the value he tuned on his glass; about three and
+// four fifths presents at the 22.2 ms beat, so a one-tick limiter event is
+// painted.
 inline constexpr int64_t kLampHoldMs = 85;
 void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
                         const GuiAudio& audio, const GuiPlayback& playback) {
@@ -1839,7 +1790,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // AppState's cold size, which is a per-project object's — and the scale
     // and the touch slop are already installed by gui_main by the time the
     // first session runs, so the first configure and the first painted frame
-    // are at the user's scale as before.
+    // are at the user's scale.
     if (!window_up) {
         if (!gui.init(app.width, app.height, "warptempo_gui")) {
             return {1, {}};
@@ -1904,9 +1855,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         return {1, {}};
     }
     // THE CHECKPOINT WORKER (2026-08-07): the `h` history view's Save-and-Commit
-    // act runs its git steps here instead of on the GUI thread, which used to
-    // freeze the window for as long as the remote took, and so does the GitHub
-    // check (2026-09-27). Single job in flight, completion delivered through
+    // act runs its git steps here, off the GUI thread, so the window never
+    // freezes for as long as the remote takes, and so does the GitHub check
+    // (2026-09-27). Single job in flight, completion delivered through
     // its own eventfd below; shutdown() JOINS an act in progress at quit (the
     // state is saved before the act is dispatched at all, so the wait loses
     // nothing) and abandons a check.
@@ -1988,8 +1939,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // THE SCORE VIEWER (2026-10-26, score_viewer.h), beside the player: its
     // acts over AppState::ScoreViewer, reached from the input handler
     // (wired below) and its tick. It holds the engine and the target render
-    // for its soundtrack's bind and its close's re-express (2026-10-26
-    // night), the player's own pair.
+    // for its soundtrack's bind and its close's re-express (2026-10-26),
+    // the player's own pair.
     GuiScoreViewer score_viewer(app, audio, playback, viewport,
                                 playback_lifecycle, target_render,
                                 notifications);
@@ -2063,18 +2014,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // while the view stands, damages the window for a walk that just grew.
     gui.set_history_prefetch_completion_fd(history_prefetch.completion_fd(),
         [&input_handler]() { input_handler.on_history_prefetch_ready(); });
-    // (NO BACK-WIRE FOR THE PROMPT. It had one while the history mode's commit
-    // confirmation lived there — its `y` reached the act through the pointer —
-    // and both went with the prompt on 2026-08-07, the act now being run by the
-    // input handler itself — the publish chord's act, run_publish_chord.)
 
-    // Viewport worker kick: NOTHING REQUESTS IT DIRECTLY ANY MORE. Follow-scroll
-    // during playback was the one caller that asked for the new waveform
-    // immediately rather than waiting for the next tick, and it took the
-    // synchronous rebuild on 2026-09-02 (the vanishing playhead line — the
-    // reasoning is at Viewport::follow_scroll_if_needed), leaving
-    // kick_waveform_render with only kick_waveform_sync's callback-unwired
-    // fallback as a call site. This wiring stays for that fallback. The
+    // Viewport worker kick: NOTHING REQUESTS IT DIRECTLY —
+    // kick_waveform_render's one call site is kick_waveform_sync's
+    // callback-unwired fallback, and this wiring stays for it. The
     // worker's undriven work — a window resize and the launch load, both of
     // which run on_resize, which only stores the new dimensions, re-clamps
     // zoom/viewport, and re-anchors the playback predictor if the level moved:
@@ -2130,7 +2073,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         return playhead_pixel_x(app, static_cast<int64_t>(pb.vp_start),
                                 pb.spp, pb.lattice_origin);
     };
-    // The launch's and the stop's seam (architect 2026-11-16, send Q; the
+    // The launch's and the stop's seam (architect 2026-11-16; the
     // contract at its Viewport declaration and
     // Viewport::invalidate_standing_scanner): the scanner's exact place on
     // the PLATE basis, the expression the two per-frame scanner sites below
@@ -2142,10 +2085,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                                pb.spp, pb.lattice_origin);
     };
 
-    // The touch navigation (touch phase 1, 2026-08-11; ELEVEN hooks since
-    // 2026-11-07, the sweep-armed query the last to join): the
+    // The touch navigation (2026-08-11; ELEVEN hooks): the
     // platform's nav frames —
-    // the two-finger PINCH ZOOM (zoom only since 2026-08-14: two fingers
+    // the two-finger PINCH ZOOM (zoom only, 2026-08-14: two fingers
     // never pan, the nav body discarding their centroid delta), and the
     // phone model's
     // single-finger frames born of a drag starting on the pan surface — the
@@ -2155,18 +2097,18 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // strip-drag family's own viewport chokepoint — one narrow
     // platform-to-GUI hook set. The PAN-ZONE QUERY is the third hook: the
     // platform asks it once at each first finger's down, and the GUI answers
-    // the NAVIGATION SURFACE — the whole waveform and nothing else (the ruler
-    // and the marker lane left it 2026-09-25) — surface geometry only
-    // save an open menu, which yields the whole zone (2026-10-01; the
-    // carve-outs at touch_point_in_pan_zone), every other refusal staying
+    // the NAVIGATION SURFACE — the whole waveform and nothing else
+    // (2026-09-25) — surface geometry only, save the yields to the surfaces
+    // standing over the waveform (a card, a question's page, the progress
+    // page: touch_point_in_pan_zone's clauses), every other refusal staying
     // per-frame in the update body and in the region begin;
     // off it the platform opens no window at all, the down being the pointer
     // on contact, so no nav gesture can begin anywhere else (2026-09-25).
     // THE SWEEP-ARMED QUERY AND THE REGION TRIO are THE TRIM ARM LAMP's
-    // (architect 2026-11-07, session 87): asked at the zone window's slop
+    // (architect 2026-11-07): asked at the zone window's slop
     // crossing with no ctrl standing, a lit lamp turns the pan into the
     // region former — begin at the down point, one update per frame, an end
-    // that always fires — the dead trim-move hooks' exact pattern (contracts
+    // that always fires (contracts
     // at GuiPlatform::set_touch_nav_hooks; the GUI bodies at
     // begin_touch_region's declaration). THE EDITOR-FIELD QUERY AND THE
     // CARET TRIO are the third divergence's (2026-09-05): the platform asks
@@ -2246,8 +2188,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     gui.set_pen_zoom_anchor_release_hook(
         [&]() { input_handler.release_pen_zoom_anchor(); });
     // THE PEN'S LIFT ARMS THE HOT-FACE LATCH, which holds every hover
-    // face until the pen moves (architect 2026-10-07, every face since
-    // 2026-10-09; the rule at GuiInputHandler::pen_hot_latch_, the producer at
+    // face until the pen moves (architect 2026-10-09; the rule at GuiInputHandler::pen_hot_latch_, the producer at
     // GuiPlatform::set_pen_lift_hook, platform_android.h).
     gui.set_pen_lift_hook([&]() { input_handler.arm_pen_hot_latch(); });
 
@@ -2266,10 +2207,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // session's non-zero exit status. Every in-session load refusal is
     // TERMINAL — a project is opened by rebuilding this whole object set and
     // there is no in-session replacement surface — and the loop's own reopen
-    // refusal (resolve_project below) already returns 1, as startup's does.
-    // Without this bit the outcome defaulted to 0, so a wrapper could not tell
-    // a refused load from a clean quit and the comment at the load site,
-    // which calls them "the same fatal exit", was false. ONE WRITER, the load
+    // refusal (resolve_project, gui_main) returns 1, as startup's does; this
+    // bit gives a refused load the same status, so a wrapper tells a refused
+    // load from a clean quit. ONE WRITER, the load
     // tail below — every deeper failure (the decode, the four sidecar arms,
     // the collision, the past-EOF walls) requests exit AND returns false, so
     // they all converge on that one `if`. A clean quit leaves it false.
@@ -2298,16 +2238,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // selection drag is finalized there too (collapsed to a caret,
         // selection-only, nothing to revert).
         input_handler.finalize_active_drags();
-        // (ANY FULL RELAYOUT CLOSED THE OPEN DROPDOWN here until the Settings
-        // popup retired, 2026-10-21.)
         paint_handler.on_resize(w, h);
-        // (THE CURSOR RE-RESOLVE THAT STOOD HERE IS GONE, 2026-08-03. This
-        // callback force-ends the gestures and rebuilds the layout — both facts
-        // the cursor's zone map reads — and it used to owe a refresh at its
-        // tail, ordered after BOTH writes above. It owes nothing now: a configure
-        // is dispatched inside a run-loop iteration whose tail re-derives the
-        // cursor from the settled state, so the ordering rule this comment used
-        // to spell is a property of the loop rather than of this placement.)
     });
 
     auto invalidate_top_strip     = [&]() { viewport.invalidate_top_strip(); };
@@ -2319,12 +2250,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // which jumps to the marker that value came from (both in
     // input_key_dispatch.cpp); Jump to Defining Marker's face and tooltip,
     // the button carrying both, and the hovered cue's tooltip (TIPS lit;
-    // marker_tooltip_value / marker_tooltip_text, app_state.h) are the other
-    // readers. The readout and its copy became the two acts on 2026-08-29,
-    // when no surface displayed a resolved value and the gate lost the
-    // "popup" half of its old name; since 2026-11-09 (architect, session
-    // 100) the hover tooltip displays the value again, through the same
-    // gate. Its terms are documented above its declaration in app_state.h.
+    // marker_tooltip_value / marker_tooltip_text, app_state.h; architect
+    // 2026-11-09) are the other readers. Its terms are documented above its declaration in app_state.h.
 
     // The drag and selection-shift operations are methods on the
     // GuiWarpMarkersOps struct (warpmarkers_ops.{cpp,h}).
@@ -2455,7 +2382,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // Press-time key-repeat eligibility: the platform consults this before
     // arming repeat so one-shot commands and editor openers never repeat while
     // held-step gestures and editor typing do. FALSE UNDER THE OPEN'S HOLD
-    // (2026-10-28, Sol's round; the block above set_touch_nav_hooks): the
+    // (2026-10-28; the block above set_touch_nav_hooks): the
     // key hook drops the press, and a context that rejects a press must not
     // empower its hold (repeat_eligible's head). GuiInputCore::key_event asks
     // this BEFORE delivering the press and arms on its answer, and
@@ -2490,47 +2417,38 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // state where a finger last was is precisely what the
     // no-hover-under-touch consequence asks for. The fire sites are the
     // touch edge inventory's, input_core.h (THE POINTER LEAVE'S THREE FIRES).
-    // The hook is handed no reason since 2026-11-07: GuiPointerLeaveReason
-    // retired when the tooltip's end, read last in this account, stopped
-    // telling the fires apart.
     // ONE OF THOSE FIRINGS IS THE TOUCH HARD END (a cancel, capability or
     // focus loss on a live pointer translation, hard_end_touch_stream), whose
-    // end is the ABNORMAL one (when the second-finger upgrade
-    // was its other producer — deleted 2026-09-25, a second contact on a live
-    // translation being ignored now) — no release is delivered, so the three
-    // press ARMS this body drops are what stops a system-taken touch
-    // dispatching whatever the finger was resting on. The clears were already
-    // exactly right for it; only their load-bearingness grew.)
+    // end is the ABNORMAL one — no release is delivered, so the three press
+    // ARMS this body drops are what stops a system-taken touch dispatching
+    // whatever the finger was resting on.
     // WHAT MAKES EVERY CLEAR HERE SAFE is that each drops a VISUAL FACE, a
     // hover's state or a press CLAIM, so a later motion or release lands
     // unowned or as a harmless no-op.
     // The pointer-position-dependent state must therefore be cleared here, or
     // a pointer that has gone leaves it standing: the notification cards'
-    // hover is the one left (below; an open dropdown's item face was the
-    // other until 2026-10-21).
-    // THE ARMED CHROME PRESS joins it, and since the act moved to the release
+    // hover among it (below).
+    // THE ARMED CHROME PRESS joins it, and since the act runs at the release
     // (2026-08-13) this is sharper than a face: the arm is a pending ACT, and
     // this is the BUTTON-LOST edge — the hold stops being the pointer's to
     // show and the act must not wait on a release that may never come.
     // THE TOOLTIP'S HOVER ENDS ON THIS EDGE TOO (hide_shift_tooltip, its hard
     // end), and it must end HERE rather than be left to the tick's hover
     // recompute, which refuses outright while the pointer is outside. EVERY
-    // FIRE ALIKE since 2026-11-07 (the always-show model,
+    // FIRE ALIKE (the always-show model, 2026-11-07,
     // AppState::RedesignTooltip): the box goes down in this same event,
     // through the one hide that damages the box's own published rect as well
     // as the strip (the box hangs outside the strip), the wait stops, the
     // chain breaks and the column is forgotten — a translated contact's lift
-    // included, which until then kept the spent button across it; with
-    // nothing spent there is nothing to keep, and a finger's lift raises no
-    // hint because no walk runs after it. (The S Pen's lift off an empty
-    // glass never reaches this body since 2026-10-07: the pen stays the
+    // included: nothing is spent to keep across it, and a finger's lift
+    // raises no hint because no walk runs after it. (The S Pen's lift off an
+    // empty glass never reaches this body, 2026-10-07: the pen stays the
     // pointer at its lift, the restore motion's arm — pointer_focus_at.) No
-    // effect here tells the fires apart (the open popup's lit row, which the
-    // pen's hover end kept, went with the Settings popup, 2026-10-21).
+    // effect here tells the fires apart, so the hook is handed no reason.
     gui.set_pointer_left_hook([&] {
         app.pointer_in_window = false;
         input_handler.hide_shift_tooltip();
-        // THE RELEASE-TIME ARMS. This hook is no longer their only end:
+        // THE RELEASE-TIME ARMS. This hook is not their only end:
         // they also die at the BUTTON-LOST edge, an unheld
         // motion while one of them stands — which is what the touch layer's
         // abnormal end delivers, and what a lost physical button delivers too
@@ -2589,9 +2507,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         input_handler.clear_pen_hot_latch();
     });
 
-    // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (architect 2026-09-29;
-    // Windows 95's too, 2026-10-06: a tooltip control without TTS_ALWAYSTIP
-    // shows only while its window is active): focus leaving or arriving is
+    // WINDOW-ACTIVATION EDGE -> THE TOOLTIP'S HARD END (architect
+    // 2026-09-29: a tooltip shows only while its window is active): focus
+    // leaving or arriving is
     // the user acting elsewhere, not a pointer grazing a gap. hide_shift_tooltip carries its
     // own damage, and forgets the column, so a pointer still on one after
     // the flip is an arrival at the next walk and waits 500 ms (the
@@ -2600,10 +2518,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // pointer has left). The hook fires only when the window's activation actually
     // flips (the platform owns the edge test). NOTHING ELSE TAKES AN
     // UNFOCUSED LOOK (architect 2026-10-03: one selected pair, focused or not,
-    // render.h's palette block — the folder overlay's inactive highlight, the
-    // edge's other reader from 2026-09-02, retired with it; the app's
-    // caption's dulled title, 2026-10-05 to 2026-10-24, went with the
-    // caption).
+    // render.h's palette block).
     gui.set_activation_changed_hook([&] {
         input_handler.hide_shift_tooltip();
     });
@@ -2649,7 +2564,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // This is the run loop's own deadline tick, the same expiry the
         // platform's one software deadline rides — the key repeat
         // (maybe_fire_repeat, input_core.cpp: GuiInputCore::tick; the touch
-        // window has none since 2026-11-07) — and the chrome button
+        // window has none) — and the chrome button
         // hold-repeat and the A/B audition's rests below; the cards are the
         // tick's FOURTH software deadline and, like the other three, schedule
         // nothing (kNotificationMs, gui_input.h; the model at notifications.h).
@@ -2659,7 +2574,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         notifications.fire_if_due();
 
         // THE STRUCK CARD, ON EVERY TICK ONCE A PIECE IS LOADED (architect
-        // 2026-11-19, sends Z and CC; notifications.h's THE STRUCK CARD, its
+        // 2026-11-19; notifications.h's THE STRUCK CARD, its
         // one derivation GuiNotifications::sync_struck_card): state worn as a
         // card, its count and its places derived here from the warp store and
         // the view as they stand rather than at each of the acts that move
@@ -2681,11 +2596,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // lamp owes its dark edge to the first tick past its hold.
         refresh_logo_legend(app, gui);
         refresh_logo_lamps(app, gui, audio, playback);
-        // THE STATUS BAR the same way (refresh_status_bar, send Z): its
+        // THE STATUS BAR the same way (refresh_status_bar): its
         // string is standing state, compared each tick with the one painted.
         refresh_status_bar(app, gui);
 
-        // THE DISPLAY KEEP-ALIVE (architect 2026-11-13, session 118; the
+        // THE DISPLAY KEEP-ALIVE (architect 2026-11-13; the
         // facts and the ruling — a brief window after a fast Stop — at
         // kDisplayKeepAliveFastStopMs, playback_lifecycle.h): ONLY INSIDE
         // THE WINDOW the one stop body opened
@@ -2712,11 +2627,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             gui.display_keep_alive_due())
             invalidate_clock_area();
 
-        // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone since
-        // 2026-11-04 night, render_playhead's paragraph, render.h — the
-        // tick's per-frame damage of a fading line stood one day and went
-        // with the fade; its measurement, the present's own cost, at
-        // GuiPlatform::present.)
+        // (THE PLAYHEAD'S LINE OWES THE TICK NOTHING: one static tone,
+        // 2026-11-04, render_playhead's paragraph, render.h.)
 
         // THE NOISE'S POLL, ON EVERY TICK for the same reason (2026-10-28,
         // noise.h): the bed plays under every mode a return below stands for,
@@ -2730,7 +2642,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE BED FOLLOWS THE NO-AUTO-RECOVER RULE (architect 2026-10-28,
         // "we should follow the rule, iPhone does this also"; the route
-        // drop's reading of 2026-11-05: the bed resumes at the next reopen,
+        // drop's ruling 2026-11-05: the bed resumes at the next reopen,
         // its level untouched). A route drop (headphones connected or taken
         // off) kills the AAudio stream, and the bed sounds only through the
         // running stream's callback, so nothing sounds until a press reopens
@@ -2740,7 +2652,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // read): no grace, no reopen, no card, the level and the switch as
         // they stand. The level is not asked because a voice at -inf may
         // still hold a sequence mid-fade — a fall to -inf within the 40 ms
-        // fade-out just before the drop left `cur` standing with a fade tail
+        // fade-out just before the drop leaves `cur` standing with a fade tail
         // for the next reopen to play. The drop is a loud fault the music
         // already answers with "the next play press reopens the device" (the
         // error callback's "nothing recovers by itself", playback_aaudio.cpp);
@@ -2779,8 +2691,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     build_canvas_list arm), in the well's ground
             //     (paint_canvas_column_frame).
             //   * THE TOP STRIP — the trim lane, the ruler, the marker lane —
-            //     IN THEIR OWN GROUNDS, EMPTY (architect 2026-11-21, send
-            //     GG): paint_trim and paint_ruler_row run their ground steps
+            //     IN THEIR OWN GROUNDS, EMPTY (architect 2026-11-21):
+            //     paint_trim and paint_ruler_row run their ground steps
             //     alone (on_redraw's !plate_branch arm) — the trim lane's
             //     face and trough, the ruler's face, the marker lane's face,
             //     their lines — with no pill, digit, tick, head or cue (the
@@ -3003,7 +2915,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE REDESIGNED BUTTONS' STATE-VECTOR STALENESS COMPARATOR — the ONE
         // site that repairs a stale DISABLED or SELECTED face, and the reason no
         // route that pushes/pops history, toggles read-only, flips
-        // iteration mode, finishes a load — or, since 2026-08-30, MUTATES THE
+        // iteration mode, finishes a load — or MUTATES THE
         // SELECTION, switches a view or steps the history walk (the
         // truthful-buttons ruling's face terms, redesign_button_enabled) —
         // carries an invalidate of its own.
@@ -3024,8 +2936,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // render player's modal row — reads the painted bit rather than the
         // live predicate, so these walks are what carry reality to the face
         // the input acts on.
-        // ONE MECHANISM, BOTH HALVES: the selected half joined with row 4 rather
-        // than growing a second comparator, because it is the same problem — a
+        // ONE MECHANISM, BOTH HALVES: the selected half shares this
+        // comparator rather than growing a second one, because it is the same problem — a
         // painted bit whose source mutates with no damage — with the same
         // answer. `f` and `i` are the pure cases (a bare flag flip and nothing
         // else); `t` and `p` happen to damage anyway and still go through here
@@ -3059,7 +2971,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         {
             // THE TWO STRIPS, EACH ITS OWN VERDICT: a key's home strip is
-            // row 8 (redesign_button_in_transport_row) or the top strip. A
+            // the bottom icon row (redesign_button_in_transport_row) or the
+            // top strip. A
             // drifted key damages ONE RECT OF ITS OWN — its stashed painted
             // extent united with its face — and
             // its home strip, whole, only under the named fallbacks (the
@@ -3067,44 +2980,35 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // strip's keys their own rects. The walk runs the whole roster.
             //
             // THE STASH IT COMPARES AGAINST IS AS-PAINTED, NOT AS-COMPUTED
-            // (2026-08-15, the transport-pair staleness fix — the mechanism
-            // and its record live at publish_button_face, paint_handler.cpp):
-            // a row painter runs whole on any damage intersecting its lane,
-            // but the publisher refreshes a face's enabled/selected bits only
-            // when the current clip covers that button's pixels. Without that
-            // gate a NARROW lane damage in the same frame as the state edge —
-            // the click act's stop damaging the clock cell, the natural
-            // end-of-song teardown doing the same — stamped the stash live
-            // under a clip that never redrew the buttons, so this comparator
-            // saw stash equal to live forever and the play/stop pair stayed
-            // painted stale until an unrelated full-lane damage (a hover)
-            // repaired it. With the gate, the drift survives the masking
-            // frame, this walk catches it on the next tick, and the damage
-            // below — the drifted key's own rect, which is the coverage that
-            // gate asks, or its home strip — is what both repaints the
-            // pixels and republishes the stash, in one pass. (The transport's state was the
-            // ENABLED bit when that fix landed, the SELECTED bit under the
-            // same day's radio ruling, and is the GLYPH since the collapse of
-            // play and stop into one button — this comparator reads all three,
-            // so the repair it describes carried across both moves untouched.)
+            // (2026-08-15; the mechanism lives at publish_button_face,
+            // paint_handler.cpp): a row painter runs whole on any damage
+            // intersecting its lane, but the publisher refreshes a face's
+            // bits only when the current clip covers that button's pixels.
+            // Without that gate a NARROW lane damage in the same frame as the
+            // state edge — the click act's stop damaging the clock cell, the
+            // natural end-of-song teardown doing the same — would stamp the
+            // stash live under a clip that never redrew the buttons, and this
+            // comparator would see stash equal to live forever. With the
+            // gate, the drift survives the masking frame, this walk catches
+            // it on the next tick, and the damage below — the drifted key's
+            // own rect, which is the coverage that gate asks, or its home
+            // strip — is what both repaints the pixels and republishes the
+            // stash, in one pass.
             //
-            // THE GLYPH TERM IS THE THIRD AND IT CLOSED A LATENT CASE WITH IT
-            // (2026-08-15): a stateful GLYPH changes a button's pixels without
-            // moving either of the other two bits, so this walk was blind to
-            // one. THREE buttons have a second glyph, re-counted 2026-10-25
-            // off redesign_button_glyph's nonzero arms — Save, Render and the
-            // collapsed play/stop button (the read-only toggle wears one glyph
-            // since 2026-10-21) — the term carries the index the press reads;
+            // THE GLYPH TERM (2026-08-15): a stateful GLYPH changes a
+            // button's pixels without moving either of the other two bits.
+            // THREE buttons have a second glyph (redesign_button_glyph's
+            // nonzero arms) — Save, Render and the play/stop button — and
+            // the term carries the index the press reads;
             // THE DRAWING TERM beside it (2026-11-02) is the painted glyph's
             // own (redesign_button_icon's stateful overload, app_state.h).
             // FIT / RECALL and
             // INHERIT / TIE move the drawing with no index, and Render's
             // Cancel drawing reads the progress modal besides, so the index
-            // alone would miss those edges. RENDER'S mid-render Cancel face is the one that was quietly
-            // uncovered before this term: queue_running moves neither
-            // enabled nor selected, so its repaint rested on the render
-            // routes' own damage alone. This term is now the one repaint of
-            // that edge (finalize_render_run clears the bit from an async
+            // alone would miss those edges. RENDER'S mid-render Cancel face
+            // needs the term: queue_running moves neither enabled nor
+            // selected, so this term is the one repaint of that edge
+            // (finalize_render_run clears the bit from an async
             // completion), the glyph predicate reading queue_running itself
             // with no per-tick mirror between them (architect 2026-09-24).
             // THE DAMAGE IS THE DRIFTED KEY'S OWN (architect 2026-11-16, the
@@ -3112,8 +3016,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // play adds a key's few pixels to the scanner's frames, not the
             // strip): ONE RECT A DRIFTED KEY, THE UNION OF ITS STASHED PAINTED
             // EXTENT AND ITS BOX (RedesignButtonFace::painted and ::rect —
-            // the key's box, border included, since send Z's linked groups,
-            // 2026-11-19; NOISE's the entry). That rect holds every pixel the
+            // the key's box, border included (the linked groups,
+            // 2026-11-19); NOISE's the entry). That rect holds every pixel the
             // drift can change — every pixel a linked member's state moves
             // lies inside its own box, its seams and its group's corners
             // included (materials.h's paint_linked_group), and the repaint
@@ -3135,9 +3039,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     hidden, yielded or overflowed has an empty rect and its
             //     stash refreshes unconditionally, so it does not drift), or
             //     whose published box is not whole — not the key's height,
-            //     or its painted extent not its box (since send Z's stage C
-            //     the band's overflow publishes a member empty rather than
-            //     cut, so no live key fails this; the test stays the guard);
+            //     or its painted extent not its box (the top icon row's
+            //     overflow publishes a member empty rather than cut, so no
+            //     live key fails this; the test stays the guard);
             //   * A KEY THAT STILL DRIFTS AFTER A FRAME PAINTED ITS OWN RECT
             //     (face_narrow_frame: the frames begun when the rect was
             //     declared, against GuiPaintHandler::frames_begun now) — the
@@ -3149,7 +3053,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     one on_redraw call (GuiPlatform::invalidate_surface_rect's
             //     note), and a tick that flips many faces at
             //     once — a load, an overlay opening over a dead roster, a
-            //     selection arriving under row 8's marker verbs — is one
+            //     selection arriving under the bottom icon row's marker
+            //     verbs — is one
             //     repaint of the strip, as cheap. Four holds what a tap
             //     flips: a lamp, a radio pair, a key and its twin.
             // Until a frame paints, each tick re-declares the same rect
@@ -3231,7 +3136,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                         row8.rects[static_cast<size_t>(k)]);
             }
             // A STANDING HINT IS A FACE TOO (architect 2026-09-24, strictly
-            // as-painted; general since 2026-09-29): a roster hint's words are
+            // as-painted; every stateful hint, 2026-09-29): a roster hint's words are
             // the stateful overload's (redesign_button_tooltip), which fork on
             // live state — Play / Stop on the transport, Center on the focus,
             // a second line dropping where its modified press would not act —
@@ -3261,10 +3166,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // once the frame that repaints the button republishes the glyph,
             // and that frame paints the box under the key's own clip (or its
             // strip's), which does not cover it. Damaging the box on the owner's glyph drift puts
-            // the button and its hint in one frame. (This general test replaced
-            // a Render / Save list on 2026-09-29, which repaired those two and
-            // left every other stateful hint, Play / Stop's among them,
-            // standing stale under a still pointer.)
+            // the button and its hint in one frame. (One general test, so no
+            // stateful hint, Play / Stop's among them, stands stale under a
+            // still pointer.)
             // NOT WHILE THE BOX'S SHOW IS PENDING (architect 2026-11-16, the
             // beats; AppState::RedesignTooltip::show_pending): nothing of a
             // box just shown has been painted, its first paint is owed by
@@ -3300,11 +3204,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 }
             }
             // A STANDING CUE'S BOX, the same words test (architect
-            // 2026-11-09, session 100; the Marker owner at AppState::
+            // 2026-11-09; the Marker owner at AppState::
             // RedesignTooltip): its one line's two runs — the cue's resolved
             // value as the plain run, or a cut label's whole flag line,
-            // struck where the lane strikes it (architect 2026-11-17, send
-            // U) — recomposed live through the one owner
+            // struck where the lane strikes it (architect 2026-11-17) —
+            // recomposed live through the one owner
             // (marker_tooltip_text: the value memoized on the store's
             // generation and the audio identity, the cut line two short
             // strings over the memoized red set, so a tick costs little more
@@ -3332,9 +3236,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 }
             }
             // A STANDING HISTORY ITEM'S BOX, the same words test (architect
-            // 2026-11-11, session 106; the History owner at AppState::
+            // 2026-11-11; the History owner at AppState::
             // RedesignTooltip): its one line's two runs, the struck and the
-            // plain (architect 2026-11-11, session 107), recomposed off the
+            // plain (architect 2026-11-11), recomposed off the
             // painted list (history_cue_tooltip_text) and held against the
             // painted pair (`painted_struck`, `painted_line1`; the box has
             // no line 2) — a step or a switch that rebuilt the list under a
@@ -3359,8 +3263,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         }
 
         // THE RENDER PLAYER'S MODAL ROW, the same comparator for the second
-        // stash (the open dropdown's items were another until 2026-10-21;
-        // architect 2026-09-24, strictly as-painted): a button's face
+        // stash (architect 2026-09-24, strictly as-painted): a button's face
         // (render_player_button_enabled) moves with state that damages no part
         // of the row — the device coming up or going absent, a render run
         // starting or finishing under the Load face, a lock flipping — so the
@@ -3387,7 +3290,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
 
-        // THE SCORE VIEWER'S ROW, the same comparator (2026-10-26 night):
+        // THE SCORE VIEWER'S ROW, the same comparator (2026-10-26):
         // its PLAY key's face (score_viewer_button_enabled) moves with the
         // soundtrack's load landing, the device and a render run ending, and
         // its skips' faces (2026-10-27) with the playing cursor, whose frames
@@ -3406,8 +3309,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
 
-        // THE TRIM PRESETS LIST'S ROW, the same comparator (2026-10-28
-        // night): its faces (trim_presets_button_enabled) read the highlight
+        // THE TRIM PRESETS LIST'S ROW, the same comparator (2026-10-28):
+        // its faces (trim_presets_button_enabled) read the highlight
         // and the active tab's trim, both moved by the list's own acts, which
         // damage the row — so this holds the as-painted bits against the
         // live predicate for the edges a clipped frame carried, as the
@@ -3455,7 +3358,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // all. The box's words are published AS PAINTED (AppState::
         // RedesignTooltip), so a stash that has moved past them is a box
         // standing stale, and the row's damage owner repaints the row, the
-        // old box and the band the new one hangs into. Only while the owner
+        // old box and the rows the new one hangs into. Only while the owner
         // is the stash that armed it (the owner tag and session the painter
         // stamped), since a replaced surface takes the box down on its own.
         if (app.redesign_tooltip.visible && app.modal_dialog.valid &&
@@ -3497,7 +3400,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // modal's yield zeroes the bottom row's. Each would leave the hint's
         // owner wrong until the next motion.
         //
-        // The fix is to run the ONE walk here as well: a handful of rect
+        // So the ONE walk runs here as well: a handful of rect
         // compares, damaging only where an armed press's face crosses its
         // key. (The hover face's walk runs on every tick by its own clock,
         // tick_face_fades above, ungated: a contact answers none there.)
@@ -3527,18 +3430,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // rows' presses arm no gesture that predicate names.
         input_handler.tick_chrome_press_repeat();
 
-        // Stationary-cursor hover refresh (the BACKSTOP). A keyboard mutation
-        // (tempo step, Ctrl+N, nudge) changes the hovered marker's fields/position
-        // without a pointer-motion event, so nothing else re-reads the hover text.
-        // THE HOVER REPAIR TICK IS GONE (row 5). A per-frame arm stood here
-        // driving one recompute_hover_at_cursor whenever either marker store's
-        // generation or the displayed-map generation moved past what the hover
-        // cache had stamped — the backstop for a store mutation or a silent map
-        // promotion under a stationary cursor. There is no hover cache to keep
-        // honest any more: a marker's value is painted on its own flag, and
-        // Ctrl+Shift+J's copy and Ctrl+J's jump both read the live store through
-        // the selection.
-
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate
         // the top strip when it flips. Cheap: top_strip is small.
@@ -3562,12 +3453,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
                 invalidate_dialog_editor_box();
             }
         }
-        // (THE DEFERRED CHECKPOINT NOTICE'S POLL stood here from 2026-08-07 until
-        // 2026-08-09, when the architect replaced the acknowledge modal with the
-        // bottom row's PERMANENT CRITICAL SLOT — a critical notification card
-        // since 2026-08-29. Neither needs a poll or a free strip to wait for:
-        // the completion pushes the card and damages the stack, and the next
-        // paint shows it — so the pump is gone with the modal it pumped.)
 
         if (app.loading || audio.total_frames() <= 0) return;
 
@@ -3596,8 +3481,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             render_player.tick();
             return;
         }
-        // THE SCORE VIEWER'S TICK (2026-10-26; the soundtrack 2026-10-26
-        // night), the player's fork: on EVERY tick it drains the page
+        // THE SCORE VIEWER'S TICK (2026-10-26), the player's fork: on EVERY tick it drains the page
         // decoder, the gray bytes into the gray store, which outlives the
         // viewer's close
         // (GuiScoreViewer::tick); while the viewer stands the engine plays
@@ -3611,14 +3495,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE A/B AUDITION'S REST DEADLINE AND ITS DEVICE WATCH, sampled here
         // and ABOVE the playing-only guard below — a rest has nothing playing
         // and no scanner by definition, so a call under that guard would never
-        // run during one, and since 2026-09-04 the same call also ends the act
+        // run during one, and the same call also ends the act (2026-09-04)
         // where the device has gone away, which must be asked in a PLAY as
         // well (the arm is at GuiAbAudition::fire_if_due; it takes the one
         // stop body, and the natural-end branch below is then unreachable this
         // tick because that body lowers the scanner flag).
         // This is the run loop's own deadline tick, the same timerfd expiry the
         // platform's key-repeat deadline rides (maybe_fire_repeat,
-        // input_core.cpp; the touch window has none since 2026-11-07)
+        // input_core.cpp; the touch window has none)
         // and the same one the chrome button hold-repeat above and the
         // notification cards' clock at this body's head ride; the act
         // adds no timer of its own. One enum compare when no rest stands. It
@@ -3640,18 +3524,17 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // for 250 ms, and the first frame presented after that brings the
         // pinned rate back only a frame or two later — the app's explicit
         // frame-rate vote does not outrank the idle timer (observed
-        // 2026-10-18 under the 90 Hz pin of that day, as is the beat
-        // history below).
+        // 2026-10-18).
         // Inside the act a rest is the one silent gap, and the one the app can
         // keep awake itself: nothing is damaged during it (the scanner is
         // down, and the clock's own damage is the pre-paint hook's while
         // playing), so nothing would be painted. The pair rest is under the
         // timer and the switch rest is not, and the press's touch-control
-        // window holds 90 Hz through the first two beats, so the third beat —
-        // the home tab's first play — started under a 30 Hz panel: its first
-        // frames landed 33 ms apart, the scanner stepping three times coarser
-        // until 90 Hz returned, which the architect saw as the scanner
-        // skipping ahead and then playing smoothly. THE CLOCK CELL is the
+        // window holds 90 Hz through the first two beats, so without it the
+        // third beat — the home tab's first play — would start under a 30 Hz
+        // panel: its first frames 33 ms apart, the scanner stepping three
+        // times coarser until 90 Hz returns (the architect saw the scanner
+        // skip ahead and then play smoothly). THE CLOCK CELL is the
         // OFFSCREEN FALLBACK's rect below — the smallest rect that produces a
         // paint, on screen whenever an act can rest (no rest stands under the
         // on-screen keyboard, the one surface the row yields to: the clock's
@@ -3662,7 +3545,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // AFTER fire_if_due: a rest that
         // fired this tick is waiting no longer, and the launch's own damage
         // covers that frame: the scanner's own rect and the clock cell
-        // (architect 2026-11-16, send Q; the launch's success tail,
+        // (architect 2026-11-16; the launch's success tail,
         // playback_lifecycle.cpp), the clock cell the one rect that always
         // produces a paint.
         if (app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle &&
@@ -3672,10 +3555,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE PLAYING BIT, ONE READ: the audio thread's own flag, which
         // drops at the natural end — the fence/bypass reasoning below is
         // stated on it. Nothing is read ahead of it and nothing is deferred
-        // behind it: a natural-end hold that kept the scanner alive until the
-        // last queued frame had been heard stood here for two days and went
-        // with the playback leads on 2026-09-03 (playback.h's design note),
-        // so the line stops when the FILL ends — ahead of the last sound by the
+        // behind it (no hold keeps the scanner alive until the last queued
+        // frame is heard: playback.h's design note, 2026-09-03), so the
+        // line stops when the FILL ends — ahead of the last sound by the
         // output latency plus that fill's own valid prefix, the arithmetic
         // being stated at the natural-end branch below — the near end of the
         // lead the launch carries at the far end, and the ruling.
@@ -3689,8 +3571,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             // GuiPlaybackLifecycle::car_toggle_playback's), and its wrap is a
             // RESYNC EVENT OF THE AUDIO
             // THREAD'S rather than of the user's — the one such class
-            // (playback.h's design note, whose class list was re-counted
-            // that day): the render body moved the read position back by the
+            // (playback.h's design note, its class list): the render body moved the read position back by the
             // window's length, so the free-running predictor, which has no
             // backward jump to follow, sits clamped at the mirror's end until
             // this line re-anchors it on the cycle stamp, whose cursor has
@@ -3795,52 +3676,39 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // is residue. Every OTHER stop road — Space, a modal open, the S/T
         // flip, a scrub, a trim write — takes the same stop body at once.
         // A NATURAL END IS EXACTLY A SPACE STOP (architect 2026-07-29, "the
-        // simplest symmetry"), and since 2026-07-30 that is literally ONE CALL: the
-        // hand-spelled pair this branch and Space's stop edge both carried
-        // collapsed onto stop_playback_if_playing, the product's one stop body. The
-        // follow-scroll tail that used to run here — a last page at the
-        // natural end — is DELETED, and the two asymmetries flagged against it
-        // (its guard was dead, the stop having just ended the play's paging;
-        // and it could scroll the viewport BACK to the restored playhead,
-        // which the Space stop never does) die WITH the arm rather than being
-        // fixed inside it.
+        // simplest symmetry"): ONE CALL, stop_playback_if_playing, the
+        // product's one stop body. No follow-scroll page runs at the natural
+        // end, as none runs at a Space stop (which never scrolls the viewport
+        // back to the restored playhead).
         //
-        // THE FENCE-BEFORE-FLAG-CLEAR ORDERING SURVIVES THE COLLAPSE, and it is the
+        // THE FENCE-BEFORE-FLAG-CLEAR ORDERING is the
         // whole reason this branch calls anything at all: the session word's
         // playing bit is already down here — the process callback's terminal
         // exchange lowered it (release) at the
         // natural end — but `GuiPlayback::stop()` is the QUIESCENCE FENCE, not a flag
         // write, and the helper takes it FIRST and only then clears
-        // `playhead_scanner_active`, exactly as the pair did. The callback that
+        // `playhead_scanner_active`. The callback that
         // published false has NOT necessarily retired: the fence waits for
         // `process_cycles` to advance by two, which is what proves a full callback
         // ran start-to-finish afterward and orders all of its buffer reads before
         // anything the main thread mutates next. `rebind_buffer` REQUIRES that fence
-        // by contract (playback.h). Without it the tick cleared
-        // `playhead_scanner_active` while the fence was still untaken, and that left
-        // exactly one reachable bypass: a post-natural-end S/T switch, whose
+        // by contract (playback.h). Clearing `playhead_scanner_active` with the
+        // fence still untaken would leave exactly one reachable bypass: a post-natural-end S/T switch, whose
         // `stop_playback_if_playing` early-returns once BOTH flags are false, after
         // which `ensure_ready` / `rebind_to_source` skip their own
         // `is_playing()`-gated stop and rebind UNFENCED. Taking the fence here, at
         // the stop edge, closes it at the source — the Space-symmetric design, and
         // the reason the rebind sites keep their conditional stops rather than
-        // becoming unconditional. THE HOLD DOES NOT REOPEN THE BYPASS: through
-        // it the playing bit is down and the scanner flag is still TRUE, so the stop
-        // body's guard PROCEEDS for any road that reaches it (an S/T flip inside
-        // the hold fences and clears exactly as one inside the old sub-tick
-        // window did), and only this branch's own deferral stands between the
-        // flag's drop and the fence — a deferral during which the callback
-        // takes its silence arm and reads no sample, and which every road
-        // that means a stop ends at once. Cost: the fence blocks the tick for up
+        // becoming unconditional. Cost: the fence blocks the tick for up
         // to ~2 callback periods, once per playback session, which is precisely what
-        // Space's stop edge has always paid. stop() is idempotent on an
+        // Space's stop edge pays. stop() is idempotent on an
         // already-flag-stopped session — it re-stores the same false and then
         // just waits.
         //
         // NO OUTER `if (app.playhead_scanner_active)` IS NEEDED: reaching this line
         // means the early return above did not fire and `ma_playing` is false, so the
         // scanner flag is true — and that is bit-for-bit the helper's own entry guard
-        // (`!is_playing() && !scanner_active`), which now carries it.
+        // (`!is_playing() && !scanner_active`), which carries it.
         //
         // THE A/B AUDITION ADVANCES HERE AND NOWHERE ELSE (architect 2026-08-26):
         // the phase is READ before the stop body (which clears it, being the
@@ -3853,39 +3721,39 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // kAuditionSwitchGapMs across the switch; the pacing is the
         // architect's own hand, app_state.h). The
         // rest's deadline is sampled by ab_audition.fire_if_due earlier in
-        // this same tick body, which is where the launch now happens. A play that
+        // this same tick body, which is where the launch happens. A play that
         // was not the act's hands over Idle and the advance does nothing; the
         // natural end of the act's LAST play hands over HomeSecond and the
-        // advance arms nothing. THE RESTS BEGIN AT THE SOUND'S TRUE END since
-        // the hold (2026-09-01): this branch — and so the advance and the rest
-        // it arms — runs once the play's last frames have been heard, not at
-        // the flag's drop, so each pause the architect paced is a pause
-        // between SOUNDS, which is what the constants' own note says it is.
-        // The stop body's own call is unchanged: the
+        // advance arms nothing. THE RESTS BEGIN AT THE FLAG'S DROP: this
+        // branch — and so the advance and the rest it arms — runs when the
+        // play's last fill ends, ahead of its last sound by the output
+        // latency plus that fill's valid prefix (the arithmetic at this
+        // branch's head), a lead nothing compensates (playback.h's design
+        // note).
+        // The stop body's
         // fence-before-flag-clear ordering above is exactly what the next
         // launch relies on too, a rebind-safe, quiesced device under the fresh
-        // play(). A DEVICE THAT DIES MID-ACT NO LONGER REACHES THIS BRANCH
-        // (architect 2026-09-04, superseding the 2026-09-02 reading recorded
-        // here, which let the act ADVANCE ONE REST into a launch that would
-        // card at the belt): the AAudio disconnect lowers the playing bit
+        // play(). A DEVICE THAT DIES MID-ACT NEVER REACHES THIS BRANCH
+        // (architect 2026-09-04: the act does not advance a rest into a
+        // launch that would card at the belt): the AAudio disconnect lowers the playing bit
         // exactly as a finished window does, and this branch still has no
         // device fork of its own — but ab_audition.fire_if_due, called above
         // the playing-only guard, asks GuiPlayback::device_unavailable while
         // the act stands and ends the WHOLE act through the one stop body on a
         // card. That stop lowers the scanner flag, so the guard returns and
         // this branch is never reached: the act ends once, with one sentence.
-        // The reopen is still the press's and never the tick's — the
+        // The reopen is the press's and never the tick's — the
         // audition's arm reads the latch, as the render player's tick does,
         // and the noise bed's poll on stream_dead (above, in the loop body)
         // resets the voice's sequence at a drop, audible or not, and reopens
-        // nothing (2026-10-28; the sequence alone since 2026-11-05, the bed
-        // resuming at the next press's reopen).
+        // nothing (2026-11-05: the bed resumes at the next press's
+        // reopen).
         const GuiAuditionSequence ended_audition = app.audition_sequence;
         playback_lifecycle.stop_playback_if_playing();
         ab_audition.advance_after_natural_end(ended_audition);
     });
 
-    // THE FOLLOWING PLAY (send N, 2026-11-15): the state in which the
+    // THE FOLLOWING PLAY (2026-11-15): the state in which the
     // advance's follow scroll below runs (Viewport::follow_scanner, the
     // rule's one owner) — a PROJECT play with the scanner active (no load in
     // flight, audio present, neither the render player nor the score viewer
@@ -3940,7 +3808,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // follows the owed plate rebuild, in the hook below.
         input_handler.settle_face_fades();
 
-        // THE CONSOLE SEEK'S FRAME (send CC's review, finding A3, 2026-11-20;
+        // THE CONSOLE SEEK'S FRAME (2026-11-20;
         // GuiPlaybackLifecycle::seek_frame_owed, the bit's owner): read and
         // cleared here, ahead of every return below, so it is this frame's
         // alone whichever way the frame goes; read at the scanner gate.
@@ -3952,18 +3820,16 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // project's: the scanner sampling below would move the waveform's
         // scanner off a buffer the waveform does not show. The player's
         // position is read by its painter and damaged by its own tick. UNDER
-        // THE SCORE VIEWER likewise (2026-10-26 night): the cursor is its
+        // THE SCORE VIEWER likewise (2026-10-26): the cursor is its
         // soundtrack's.
         if (app.render_player.active || score_viewer_stands(app)) return;
         if (!playback.is_playing()) return;
 
-        // (The loop-wrap predictor resync that stood HERE, in the pre-paint,
-        // went with all audition looping on 2026-07-30. The wrap is back
-        // since 2026-09-17 as the car's loop of the trim, and its resync
-        // lives in the TICK's playing branch — consume_loop_wrap, above —
-        // not in the pre-paint: every GUI session still plays its window
-        // once, and the one looping session is re-anchored where the other
-        // discrete events are, at tick cadence, never per paint.)
+        // (The car's loop of the trim resyncs its predictor in the TICK's
+        // playing branch — consume_loop_wrap, above — not in the pre-paint:
+        // every GUI session plays its window once, and the one looping
+        // session is re-anchored where the other discrete events are, at
+        // tick cadence, never per paint.)
 
         // READ THE PREDICTOR AT THE FRAME'S OWN TIME (architect 2026-11-16,
         // the beats): the frame time of the vsync whose frame this hook
@@ -3974,9 +3840,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // STEP FROM ONE FRAME TO THE NEXT IS THE SPEED TIMES THE SPACING OF
         // THEIR TWO VSYNCS EXACTLY — a frame's beat in whole refreshes —
         // whatever ran ahead of this hook in its loop pass (the tick's whole
-        // body, the workers, the car); read at `now`, as it was, the step
-        // was the speed times the real interval between two pre-paint
-        // samplings, uneven by that work. The frame's time is a few ms
+        // body, the workers, the car); read at `now`, the step would be the
+        // speed times the real interval between two pre-paint samplings,
+        // uneven by that work. The frame's time is a few ms
         // before `now`, so the line leads the sound by that constant less;
         // NOTHING COMPENSATES IT (the line's lead is his ruling, playback.h's
         // design note). ONE EVALUATION ANSWERS BOTH FORMS, the integer that
@@ -3998,8 +3864,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // paint racing a target dispatch reads whatever buffer is
         // actually bound, with that buffer's own offset; a stale bias
         // can never be applied to the wrong buffer's cursor, structurally.
-        // (An old app-side bias field needed a target_buffer_frames > 0
-        // guard here for exactly that skew.)
         const GuiPlaybackPosition at_frame =
             playback.position_at(gui.painting_vsync_frame_ns());
         const int64_t cur = at_frame.cursor;
@@ -4030,19 +3894,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         const GuiPaintHandler::PlateViewportBasis pb =
             paint_handler.plate_viewport_basis();
         const int64_t pb_vp = static_cast<int64_t>(pb.vp_start);
-        // OLD PLACE, DERIVED — never stashed (the viewport-mutation stash
-        // playhead_scanner_old_px_stash was retired 2026-07-30; do not reintroduce
-        // one). The plate basis IS the answer by construction: paint_scanner
+        // OLD PLACE, DERIVED — never stashed. The plate basis IS the answer by construction: paint_scanner
         // draws the scanner through this same basis, so scanner_exact_x against it,
         // read with the still-current playhead_scanner_precise (the last painted
         // continuous position), names exactly the place the last paint put the
         // line at — the very double the painter spanned, so the rect is the
-        // painted line's own cells. A stash could only be WORSE — its
-        // producers captured on the LIVE
-        // viewport, which parts company with the plate during every async publish
-        // window (resize, load, preview-driven total drift — follow's page turn
-        // left this list 2026-09-02 for the synchronous kick), and two
-        // of them published on paths that then discovered they had moved nothing.
+        // painted line's own cells. A stash could only be WORSE — captured on
+        // the LIVE viewport, which parts company with the plate during every
+        // async publish window (resize, load, preview-driven total drift).
         // Nor is a stash needed: every viewport mutator that could reflow the
         // scanner's place pairs its write with full waveform-area damage AND a
         // synchronous plate rebuild (kick_waveform_sync, which damages the
@@ -4053,7 +3912,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // mutating frame and this narrow pair only ever has to cover the ordinary
         // per-frame advance (the launch's seed and the stop's teardown, the
         // scanner's two other place changes, declare their own places,
-        // Viewport::invalidate_standing_scanner, send Q).
+        // Viewport::invalidate_standing_scanner).
         const double old_x = scanner_exact_x(app, pb_vp, pb.spp,
                                              pb.lattice_origin);
         // Advance both fields: the integer sample (domain / change-detection)
@@ -4125,9 +3984,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         //     dragged subject under a motionless pointer;
         //   * on glass the conversion is deferred by design — a tap delivers its
         //     whole burst at the LIFT with the DOWN point's coordinates.
-        // PAUSING THE MOVER is the whole fix: with the scroll held, the
-        // press-time viewport stays valid by construction and every existing
-        // conversion is already correct — nothing captures frames at the press
+        // PAUSING THE MOVER is the whole answer: with the scroll held, the
+        // press-time viewport stays valid by construction and every
+        // conversion is correct — nothing captures frames at the press
         // and nothing about the click act or the fold moves. This is a PAUSE,
         // not an end: it writes nothing, so the lamp (AppState::follow) and
         // the play's suspension are unchanged; the picture stands still while
@@ -4169,7 +4028,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE LANES' CUES ARE REPAINTED INTO THE FLAG CACHE HERE, once a
         // frame, at the weights of this moment, their extents damaged
         // (GuiPaintHandler::sync_lane_hovers; the tick only compares and
-        // damages; architect 2026-11-21, send FF) — AFTER THE OWED REBUILD,
+        // damages; architect 2026-11-21) — AFTER THE OWED REBUILD,
         // so the repaint lands in the cache this frame shows: a rebuild just
         // run (a FOLLOW scroll's, any kick's) painted every cue at these
         // same weights (cue_hover_of) and the sync finds nothing to repaint,
@@ -4256,7 +4115,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // The prefetch abandons its scan at the next candidate boundary rather than
     // being waited out: it writes nothing anywhere.
     history_prefetch.shutdown();
-    // THE SCORE'S TWO WORKERS (2026-10-26 night) join beside it: the
+    // THE SCORE'S TWO WORKERS (2026-10-26) join beside it: the
     // soundtrack's load stops at its next chunk and frees its samples — the
     // engine shut down above holds no pointer into them — and the page
     // decoder finishes the page in hand and frees every undrained one.
@@ -4274,11 +4133,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 int gui_main() {
     if (!verify_c_numeric_locale("warptempo_gui")) return 1;
 
-    // (NO SIGCHLD DISPOSITION HERE, AND NO CHILD: the GUI spawns nothing
-    // since 2026-09-29, when the load in place's `gio trash` gave way to a
-    // permanent delete (architect). SIG_IGN stood at this point until
-    // 2026-09-06 to auto-reap fire-and-forget children, the last of which —
-    // the external audio player `l` used to spawn — left 2026-08-28.)
+    // (NO SIGCHLD DISPOSITION HERE: the GUI spawns no child, so nothing
+    // waits to be reaped.)
 
     // Ignore SIGPIPE so a broken pipe is an EPIPE return rather than a process
     // kill — what GTK and Qt do for the same reason. THE LIVE PRODUCER is
@@ -4294,12 +4150,6 @@ int gui_main() {
     // before the first project's workers start, since the prefetch and the
     // checkpoint worker both reach libgit2 on their own threads.
     gui_git_init();
-
-    // (NO colors.conf LOAD HERE ANY MORE. The colors were 23 mutable globals
-    // filled from ~/.config/warptempo_gui/colors.conf by load_color_config()
-    // at exactly this point; that system retired 2026-08-02. The palette is
-    // installed below, after the config is read (install_palette); the
-    // record is at the palette block, render.h.)
 
     // THE DEVICE CONFIG, READ BEFORE THERE IS A WINDOW (architect 2026-08-27).
     // Its keys (kDeviceConfigKeys, device_config.cpp) describe the MACHINE,
@@ -4323,9 +4173,6 @@ int gui_main() {
     // down, and a failed persist (advisory) loses nothing the user committed.
     // Re-reading the file per session was the alternative and is refused for
     // exactly that loss (the rule is at write_device_config, device_config.h).
-    // (The chromes and captions folders were read ahead of it 2026-10-07..14,
-    // the preset files the color picker wrote; the colors are compiled since
-    // 2026-11-21, kArcDarkTones, gui_theme.h, installed below.)
     // THE TEMPLATE IS THE SHIPPED DEFAULTS FILE (device_config.h's THE
     // FIRST-RUN VALUES, 2026-11-09), read and parsed at every launch: a file
     // the reader refuses is a build defect, answered here exactly as a bad
@@ -4347,7 +4194,7 @@ int gui_main() {
     }
     // THE ICONS ARE LOADED NEXT, ONCE (architect 2026-10-06, icons.h's
     // load_set): THE ONE SET, assets/icons/ (Papirus's, architect
-    // 2026-11-21, send GG), read in place from the bundle and every drawing
+    // 2026-11-21), read in place from the bundle and every drawing
     // parsed before the window exists, so no paint meets a half-loaded set.
     // A file missing or not well-formed SVG is a build defect, the
     // validation doctrine's class (1): the same road, one line naming the
@@ -4359,10 +4206,8 @@ int gui_main() {
     // THIS IS THE SCALE'S INIT ROAD, and it runs BEFORE
     // gui.init(): the two pushes here install the scale into the renderer and
     // the input core, so the FIRST configure and the FIRST painted frame are
-    // already at the user's scale. That is strictly earlier than the sidecar
-    // road it replaced — which could not run until a source had been parsed on
-    // the startup tick, so the tablet's first frame used to paint at 100 % and
-    // jump. The other road is the settings editor's `gui_scale=` commit
+    // already at the user's scale — no first frame at 100 % that then jumps,
+    // as a scale read off a parsed source would paint. The other road is the settings editor's `gui_scale=` commit
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
@@ -4372,7 +4217,7 @@ int gui_main() {
     // commits (GuiInputHandler::apply_osk_key_size).
     set_osk_key_size_w(device_config.osk_key_w, device_config.osk_key_h);
     // THE KEYBOARD'S CAP SIZE THE SAME (the `osk_font_px` tuning key,
-    // architect 2026-10-29 night; render.h's seat): seeded before the first
+    // architect 2026-10-29; render.h's seat): seeded before the first
     // paint; the other road is the settings editor's commit
     // (GuiInputHandler::apply_osk_font_px).
     set_osk_font_em_w(device_config.osk_font_px);
@@ -4381,7 +4226,7 @@ int gui_main() {
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);
-    // THE PALETTE, ONCE PER PROCESS (architect 2026-11-21, send GG: one
+    // THE PALETTE, ONCE PER PROCESS (architect 2026-11-21: one
     // look, Arc-Dark, its tones compiled — kArcDarkTones, gui_theme.h):
     // every member installed off the row before there is a window, the
     // program's and the chrome's alike (install_palette, render.h). Every
@@ -4401,11 +4246,11 @@ int gui_main() {
     // probed again only when the settings editor's `noise` arm changes the
     // name, GuiNoise::change_folder), then the attenuation, the level and the
     // crossfade handed to the voice (the config is required, so all four
-    // stand) — THE ATTENUATION BEFORE THE LEVEL (2026-11-05 night), so the
+    // stand) — THE ATTENUATION BEFORE THE LEVEL (2026-11-05), so the
     // gain the level's seat stores, and the bed's first fill reads, is the
     // attenuated one (GuiNoise::set_attenuation_db). THE BED
-    // PLAYS FROM THE LAUNCH (architect 2026-11-05, the level its one switch;
-    // reversing the lamp's "off at every launch"): the level's seat AFTER the
+    // PLAYS FROM THE LAUNCH (architect 2026-11-05, the level its one
+    // switch): the level's seat AFTER the
     // probe lights the voice and starts the loader where the persisted level
     // is above -inf and the folder is there — the bank reads while the first
     // project opens, and the bed begins, with the fade-in, when the first

@@ -26,7 +26,7 @@ struct GuiInputHandler;
 // (PAUSE and PLAYPAUSE, the two kinds a console's own button sends against a
 // display that says PLAYING; a bare PLAY starts nothing at all and is the
 // audio route's reopen, the arm and its measured reason at the table below),
-// and PREVIOUS AND NEXT HAVE TWO MODES (architect 2026-11-19, send CC: "when
+// and PREVIOUS AND NEXT HAVE TWO MODES (architect 2026-11-19: "when
 // audio is playing, the rewind and fast forward buttons ... should just go
 // back 3 seconds and forward 3 seconds. The undo redo thing should only work
 // if the audio is not playing"): WHILE A TRANSPORT SESSION IS LIVE THEY SEEK
@@ -53,7 +53,7 @@ struct GuiInputHandler;
 // THE SESSION STANDS FOR THE APP'S LIFE. On Android the MediaSession goes
 // ACTIVE at the first tick of the first project and stays active until the
 // activity's onDestroy releases it: this cluster's tick publishes with
-// `session_active` true always, the player's close no longer pushes STOPPED
+// `session_active` true always, the player's close pushes no STOPPED
 // (GuiRenderPlayer::publish_media_state's inactive arm returns without
 // pushing), and the player's open is simply the other owner taking the wire
 // for a while — this tick hands over while the player stands and takes the
@@ -114,8 +114,8 @@ struct GuiInputHandler;
 // stopped playback and nothing plays under it), under ANY EDITOR
 // (keyboard_modal_editor_active, the one predicate for a keyboard-taking
 // modal: the dialog line editor (the settings line, the trim preset's name,
-// the BPM form's line) and, since 2026-10-25, the flag and iteration bound
-// editors — a modal admits its own vocabulary alone; every editor's open
+// the BPM form's line) and the flag and iteration bound editors
+// (2026-10-25) — a modal admits its own vocabulary alone; every editor's open
 // stops play, architect 2026-11-20, stop_playback_for_modal_open, so
 // nothing of the project's sounds under one for a Pause, a Stop or a focus
 // loss to end) and in the `h` history view
@@ -143,15 +143,14 @@ struct GuiInputHandler;
 //     glass during a play — a pan, a press not yet resolved — owns the
 //     input, and every console transport press under it says so the one
 //     way, the toggle's.
-// (Under a lane editor the two helpers answered the press themselves — the
-// steps with the editor gate's card, the play in silence — until 2026-10-25,
-// when admits() took every editor; both keep a silent editor arm in on_key's
-// order, a bound chord under any modal being silent.)
+// (admits() takes every editor, 2026-10-25; both helpers keep a silent
+// editor arm in on_key's order, a bound chord under any modal being
+// silent.)
 // So nothing the car does acts under an editor or a pointer drag, and what
 // it still acts under is nothing the chord's own gates would refuse either.
 //
 // THE INPUT HANDLER IS AN ACT OWNER'S AND A GATE OWNER'S BACK-POINTER, NOT
-// THE DELETED KEY ROAD: the steps call
+// A KEY ROAD: the steps call
 // GuiInputHandler::run_undo_redo_without_key, the one body Ctrl+Z's arm
 // shares, and the play and the seek call car_play_refused_by_key_gates for
 // Space's own head gates — no key is pressed, no modal ring is touched, no
@@ -159,7 +158,7 @@ struct GuiInputHandler;
 // empty-stack wall is the held Undo / Redo button's alone; the car does not
 // repeat). A step meets no live session: at rest is its mode.
 //
-// THE TWO MODES (architect 2026-11-19 / 20, send CC; his words at the head)
+// THE TWO MODES (architect 2026-11-19 / 20; his words at the head)
 // FORK ON ONE PREDICATE, transport_session_live — the predicate the
 // console's own play bit and clock read (derive) and the play/stop face
 // wears, a live project play or a standing A/B audition, its rests
@@ -284,7 +283,7 @@ struct GuiCarTransport {
     //     AHEAD OF ITS PROMPT GUARD on the same reason (architect 2026-09-18,
     //     "we want symmetry as much as possible"), so both car roads answer a
     //     connect alike whatever stands on the screen.
-    //     THE ACCEPTED COST: a PLAY key can no longer start
+    //     THE ACCEPTED COST: a PLAY key cannot start
     //     playback from any remote — it costs nothing while the dummy display
     //     stands, because a remote that believes PLAYING sends PAUSE, and the
     //     earbuds with the GUI in front behave as the car does. NOT A TIMING
@@ -332,7 +331,7 @@ struct GuiCarTransport {
     void note_loop_wrap();
 
     // THE SEEK'S LENGTH, IN SECONDS OF THE BOUND BUFFER AS IT SOUNDS
-    // (architect 2026-11-19, send CC: "go back 3 seconds and forward 3
+    // (architect 2026-11-19: "go back 3 seconds and forward 3
     // seconds"): turned into frames at the source rate, the rate the render
     // body consumes the bound buffer at in either view (derive's ONE DIVISOR).
     static constexpr int64_t kCarSeekSeconds = 3;
@@ -343,7 +342,7 @@ private:
     // PREVIOUS (forward false) AND NEXT (true): THE TWO MODES (the head
     // comment's block and the table at on_media_command).
     void car_skip(bool forward);
-    // THE CLOCK'S SIDE (2026-11-20, send CC's second review, finding A2):
+    // THE CLOCK'S SIDE (2026-11-20):
     // where the cursor stands against the trim the clock is measured on —
     // BEFORE its begin, INSIDE it (begin and end included), PAST its end —
     // or NONE where no clock runs (at rest, an unknown length). A term of

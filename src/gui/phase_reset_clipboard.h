@@ -15,15 +15,14 @@
 // in lockstep with the clipboard, materializing phase resets at the
 // destination's actual durations. Single-slot, in-memory only — never
 // persisted to any sidecar, cleared on app exit. THE BLOCK AND THE SLOT ARE
-// TEMPLATES in propagate_clipboard.h, which states why they were split out and
-// what became of the second instantiation; what this header owns is the
-// PLACEMENT, the part that carries this column's own meaning.
+// TEMPLATES in propagate_clipboard.h, which states why they are split out;
+// what this header owns is the PLACEMENT, the part that carries this column's
+// own meaning.
 
 // `anchor_source_frame`, `source_start_frame` and `source_end_frame` carry
 // absolute source-domain geometry so paste_state_apply can apply a
 // boundary-aware count using the same guard window on both clipboard and
-// destination sides (the state paste resurrected 2026-10-24, removed
-// 2026-10-21 to 2026-10-24).
+// destination sides (the state paste, 2026-10-24).
 //
 // WHAT IS CAPTURED AND SCALED IS THE ANCHOR, NOT THE RESET (architect
 // 2026-09-11): a reset's anchor is the musical point it was AIMED at — its own
@@ -47,9 +46,8 @@ struct ClipboardPlacement {
     // membership by: paste_state_apply re-buckets the flat placement list
     // against its own windows and must bucket by the same quantity the capture
     // did, or the two acts disagree about which block a reset belongs to.
-    // (THE CAPTURED RESET'S OWN FRAME WAS A FIELD HERE until 2026-09-12 and is
-    // deleted with the anchor ruling: a paste materializes new resets from the
-    // fraction, and the state paste pairs them in order.)
+    // The captured reset's own frame is not kept: a paste materializes new
+    // resets from the fraction, and the state paste pairs them in order.
     double  anchor_source_frame = 0.0;
     bool    disabled            = false;
 };
@@ -71,18 +69,20 @@ inline const std::string& warp_marker_label_name(const GuiWarpMarker& m) {
 }
 
 // THE PROPAGATE WALK'S MEMBERSHIP, one predicate for every walk that asks it —
-// re-greped 2026-09-19: the copy's selected-run loop
-// (phase_reset_propagate.cpp) and the pastes' destination walk
-// (walk_named_blocks, propagate_blocks.h). TWO READERS, both this family's.
+// phase_reset_propagate.cpp's walks (the copy's selected-run loop and its
+// capture test, the copy's and the paste's range ends) and the pastes'
+// destination walk (walk_named_blocks, propagate_blocks.h), all this
+// family's.
 // A marker takes part iff it CARRIES A LABEL NAME and is
 // EFFECTIVELY ENABLED.
 //
 // Both terms are load-bearing and neither is an efficiency filter. The LABEL is
 // what the paste's lockstep matches on, so an unlabeled marker has nothing to
 // align and is skipped on both sides. EFFECTIVE-DISABLED (the participation
-// verdict's one owner, the own flag alone since 2026-10-29) is skipped because a disabled marker is dropped before the
-// warp map is built — it neither owns a section nor bounds one — so admitting it
-// on one side and not the other would open a lockstep gap.
+// verdict's one owner, the own flag alone, 2026-10-29) is skipped because a
+// disabled marker is dropped before the warp map is built — it neither owns a
+// section nor bounds one — so admitting it on one side and not the other would
+// open a lockstep gap.
 //
 // IT IS EXTRACTED RATHER THAN RESTATED because "the two sides must filter
 // identically" is the paste's whole correctness premise, and a premise held by

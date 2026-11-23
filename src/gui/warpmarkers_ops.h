@@ -29,8 +29,8 @@ int find_immediate_prior(const std::vector<GuiWarpMarker>& mv,
 // commit (value_drag.cpp), which writes the same field with a pointer instead
 // of an arrow. ALL THREE REACH THIS BODY ON THEIR CHANGED PATH ALONE — each
 // returns above on a write that lands the value already standing. The full
-// argument, the re-land's translation-not-movement rule and the retired region
-// belts live at the definition.
+// argument and the re-land's translation-not-movement rule live at the
+// definition.
 void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
                            Viewport& viewport,
                            GuiTargetRender& target_render);
@@ -40,9 +40,7 @@ void warp_tempo_write_tail(AppState& app, const GuiAudio& audio,
 // warp_tempo_write_tail has three (2026-09-10): the singleton cent step's own
 // loop (adjust_tempo_cents, warpmarkers_ops.cpp) and the VALUE DRAG's begin
 // (ValueDragOps::begin, value_drag.cpp) seed the same act with two hands, so
-// the seed is one body or it is a divergence waiting to happen. (The drag's
-// call was deleted for a few hours on 2026-09-13, while target view refused a
-// pass; it came back when the arrow step began freezing one there.)
+// the seed is one body or it is a divergence waiting to happen.
 //
 // AN OWNER ANSWERS ITS OWN AUTHORED FIELDS. A PASS ANSWERS THE PROJECTION:
 // marker_effective (warp_frame_map_build.h, the engine-side owner) resolved
@@ -80,13 +78,11 @@ WarpTempoStart warp_tempo_step_start(const GuiWarpMarker& m,
 // Warp-authoring cluster. Covers the basic authoring operations (drop /
 // delete / toggle / adjust) and the pixel-column-anchored nudge — and, in
 // adjust_tempo_cents + adjust_tempo_cents_group, THE TEMPO SURFACE'S KEYBOARD
-// HALF (the deleted pointer tempo drag and the bare Left/Right tempo-image step
-// are listed at the head of marker_drag.h; these two were the WHOLE surface
-// from 2026-07-29 until 2026-09-10, when the architect added the VALUE DRAG —
-// a lamp-gated vertical pointer step of this same field, through this same
+// HALF (its pointer half is the VALUE DRAG, architect 2026-09-10 — a
+// lamp-gated vertical pointer step of this same field, through this same
 // landing owner, in value_drag.{h,cpp}).
 // stop_playback_if_playing is reached through playback_lifecycle. The
-// reposition drag is no longer here: it is the one cross-kind gesture and
+// reposition drag is not here: it is the one cross-kind gesture and
 // lives in MarkerDragOps in marker_drag.{h,cpp}.
 // THE REFUSAL REASON, and why an authoring op returns a STRING (architect
 // 2026-08-30, the strictness ruling "a card for every silent refusal"): the
@@ -159,14 +155,13 @@ struct GuiWarpMarkersOps {
     void flatten_tempo_deviations(TempoFlattenKind kind);
     // Steps the focused marker's tempo by `delta_cents` integer cents, signed
     // by direction of travel — ONE cent per bare keypress (no modifier is a
-    // magnitude since 2026-11-08; gui_input.h's THE ARROW STEP; this body has
-    // taken a signed count since it was written). With a 2+
+    // magnitude, 2026-11-08; gui_input.h's THE ARROW STEP). With a 2+
     // selection it dispatches to the all-or-nothing group step below.
     // `synthesized_repeat` is
     // the dispatching key event's platform repeat bit, read only by the
     // undo-coalesce verdict (undo.h).
-    // BOTH ARMS STOP A LIVE PLAY on a press that writes (architect 2026-10-14,
-    // reversing the 2026-07-30 play-on): the cent step is a marker mutation
+    // BOTH ARMS STOP A LIVE PLAY on a press that writes (architect
+    // 2026-10-14): the cent step is a marker mutation
     // (the keyboard stop rule, at stop_playback_if_playing's declaration in
     // playback_lifecycle.h), each arm stopping past its refusals and ahead of
     // its first write.
@@ -181,8 +176,8 @@ struct GuiWarpMarkersOps {
     // individually"): every road onto a bound axis single-selects — the plain
     // cell press and the bound editor's open alike — and
     // every Selection mutator that GROWS a selection reseats the axis on the
-    // payload, so a 2+ selection with a bound addressed does not exist and the
-    // group arm that answered it is deleted. Its predicates are the tempo
+    // payload, so a 2+ selection with a bound addressed does not exist and no
+    // group arm answers it. Its predicates are the tempo
     // step's shape one for one (app_state.h, the bound step's block). IT RECORDS
     // NOTHING (architect 2026-09-10): no undo entry, no coalescing kind and no
     // dirty re-derive — the iteration bracket is outside the undo domain, so
@@ -198,8 +193,8 @@ struct GuiWarpMarkersOps {
     GuiOpRefusal adjust_iter_bound_cents(MarkerCell side, int64_t delta_cents);
     // `step` is the press's one step in its unit (horizontal_arrow_step,
     // gui_input.h): on this column always ONE MILLISECOND (architect
-    // 2026-11-15; the horizontal
-    // ladder is retired, the vertical one above standing), which the shared
+    // 2026-11-15: no horizontal
+    // ladder, the vertical one above standing), which the shared
     // road reads as a plain signed count the whole way down. `camera` is the
     // press's (NudgeCamera, gui_input.h — the hold posture's answer,
     // nudge_camera: dark follows the edge, standing holds the column),

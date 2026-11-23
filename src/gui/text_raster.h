@@ -43,10 +43,9 @@
 //       every size of kGuiFaceSizes for both files, on ARGB32 and A8.
 //   (b) AT A FRACTION THE INK MOVES WITH THE PLACE, LINEARLY (its centroid
 //       by the fraction, to 1/64 px), and nothing is cut.
-// What cairo's road did that this one does not: a glyph INSIDE a run, whose
-// pen is a sum of unhinted advances and so a fraction, stood on cairo's
-// nearest quarter; it stands on its own 1/64 now, up to an eighth of a px
-// from where cairo put it.
+// The one place the two roads part: a glyph INSIDE a run, whose pen is a
+// sum of unhinted advances and so a fraction, stands on its own 1/64, up to
+// an eighth of a px from cairo's nearest quarter.
 //
 // THE CONTEXT: its matrix a pure translation (every product context's — the
 // backbuffer's identity, the flag cache's whole-row translation); the place

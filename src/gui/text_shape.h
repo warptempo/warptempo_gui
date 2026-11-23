@@ -7,12 +7,10 @@
 // `show_shaped_run` paints exactly those glyphs at exactly those offsets. That
 // single-run rule is the whole point — width, truncation and hit
 // geometry are computed from the same positions the pixels come from, so they
-// cannot disagree. It is the proportional successor of the monospace path's
-// glyph-count arithmetic, where a character count times one advance was both
-// the measurement and a faithful description of the painted row; with a
-// proportional face only a real shaping pass carries that property, since
-// kerning, GPOS mark placement and ligature substitution all change the
-// advance sum in ways no per-character sum reproduces.
+// cannot disagree. With a proportional face only a real shaping pass carries
+// that property, since kerning, GPOS mark placement and ligature
+// substitution all change the advance sum in ways no per-character sum
+// reproduces.
 //
 // A RUN IS LAID OUT ON A GuiFont, the face owner's face at a scale and a size
 // (gui_font.h), and the run carries it, so show_shaped_run paints with
@@ -99,12 +97,13 @@ struct ShapedRun {
 // THE ONE SHAPING OPTION — KERNING ON OR OFF (architect 2026-11-05). On is
 // the face's own GPOS `kern`, every text surface's default. OFF IS THE TIME
 // FIELDS' ALONE (paint_handler.cpp's kTimeShape block: time_field_metrics'
-// eleven specimen shapings and every time field's painted run — row 8's
-// clock, the render player's two, the score viewer's media pair): Liberation
+// eleven specimen shapings and every time field's painted run — the bottom
+// left's timestamp, the render player's two, the score viewer's media
+// pair): Liberation
 // Sans Bold kerns the pair "11" by about 1.2 px at 22 px, so under the
 // face's kerning a time holding "11" ran narrower than the specimen and its
 // later digits walked as the time ran (11:11.111 measured 3.7 px narrower
-// than 04:49.027 on the tablet, session 40); with `kern` off every digit
+// than 04:49.027 on the tablet); with `kern` off every digit
 // slot is its advance and every time is the specimen's width. Nothing else
 // loses kerning — the ruler's timestamps, the status bar, the labels and
 // the lists keep the face's.
@@ -132,7 +131,7 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // bar's brand and battery + clock runs and the score row's page-cell
 // measure shape through it too, and so do THE NOTIFICATION CARDS' sentences
 // and their wrapped lines (paint_notifications' layout, which runs under
-// every damage rect while a card stands; send BB, 2026-11-19). A run is a pure
+// every damage rect while a card stands; 2026-11-19). A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
 // and a GuiFont is its face, percent and size alone (gui_font.h) — and of
@@ -232,9 +231,9 @@ double ink_right_px(const ShapedRun& run);
 // the run end to end and every caret position and selection edge is one lookup.
 //
 // This exists because a proportional run has no advance to divide by: the
-// monospace path could turn a pixel into a character with one division, and the
-// only faithful successor is the run's OWN accumulated pen, read at the
-// boundaries the glyphs' clusters name. Editors are the consumers (caret
+// only faithful road from a pixel to a byte is the run's OWN accumulated pen,
+// read at the boundaries the glyphs' clusters name. Editors are the
+// consumers (caret
 // placement, selection extents, click-to-byte); labels never need it.
 //
 // The walk is: accumulate the pen glyph by glyph, and when a glyph's cluster is

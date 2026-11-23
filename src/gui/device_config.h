@@ -31,9 +31,7 @@
 //                            the device lacks falling through to the first
 //                            valid project (startup_source, project_model.h)
 //   true_colors=<on|off>     THE sRGB -> DISPLAY-P3 CONVERSION'S SWITCH
-//                            (architect 2026-10-21, the Settings menu's
-//                            "True Colors" command row made a key with the
-//                            popup's retirement; the ruling at
+//                            (architect 2026-10-21; the ruling at
 //                            display_transform.h's head): `on` or `off`, the
 //                            two lowercase words and nothing else, any other
 //                            word the launch's hard fail; REQUIRED, read at
@@ -42,9 +40,7 @@
 //                            page's value list's tap (the apply shape,
 //                            GuiInputHandler::apply_true_colors); the
 //                            first-run value the defaults file's (THE
-//                            FIRST-RUN VALUES below). (The row's
-//                            toggle, 2026-10-08..10-21, persisted nothing:
-//                            the switch was true at every launch.)
+//                            FIRST-RUN VALUES below)
 //   waveform_grow=<px>       THE WAVEFORM PLATE'S GROW (architect
 //                            2026-10-31; the rule at render.h's
 //                            kWaveformSubcells, the plate shader's GROW,
@@ -65,7 +61,7 @@
 //                            are counted in device px (one at the working
 //                            zoom, render.h's THE PLATE'S BARS) and its
 //                            quarter-row tips are device px, while its
-//                            lines are one W since 2026-11-04 (the
+//                            lines are one W (the
 //                            unit, render.h's waveform_line_px) — so the
 //                            waveform needs one tuning key of its own, and the grow
 //                            is the appropriate one, kept for good because a
@@ -73,10 +69,7 @@
 //                            (the grow is the device-px number whose right
 //                            value depends most on it). The first-run value
 //                            the defaults file's (1 there, his ruling of
-//                            2026-11-04 night at parse_waveform_grow; 0.5
-//                            before it, the 2026-10-30 reasoning its reason:
-//                            neighboring pixels spread the weight exactly
-//                            at .5)
+//                            2026-11-04 night at parse_waveform_grow)
 //   noise=<name>             THE BACKGROUND SOUND'S FOLDER (architect
 //                            2026-10-28; noise.h owns the sound): the name of
 //                            one folder under `noise/` beside this file,
@@ -101,8 +94,8 @@
 //                            the files as they are — one level, never
 //                            ducked; above -inf the bed plays, from the
 //                            launch on, and -inf is off, the recordings
-//                            freed; live at every motion of the band's
-//                            NOISE case (RedesignButton::IconNoiseLevel;
+//                            freed; live at every motion of the top icon
+//                            row's NOISE case (RedesignButton::IconNoiseLevel;
 //                            GuiNoise::set_level_db), its ONE ROAD, no
 //                            Settings row (the main-page rule,
 //                            kSettingsEditorKeys, 2026-11-05 night); the
@@ -112,17 +105,15 @@
 //                            retunes it by hand per piece); the first-run
 //                            value the defaults file's — the tablet's own
 //                            level as snapshotted, so a fresh install
-//                            sounds the bed at it (the template's -inf of
-//                            2026-11-05, "-inf is default only for new
-//                            install", gave way 2026-11-09 to the snapshot,
-//                            THE FIRST-RUN VALUES below)
+//                            sounds the bed at it (THE FIRST-RUN VALUES
+//                            below)
 //   noise_attenuation_level=<dB> THE BACKGROUND SOUND'S FIXED ATTENUATION
-//                            (architect 2026-11-05 night, session 49: "then
+//                            (architect 2026-11-05 night: "then
 //                            the slider maintains its current behavior and
 //                            law"): a dB ADDED UNDER the NOISE case's number
 //                            — the bed plays at noise_level +
 //                            noise_attenuation_level, the case's face, law,
-//                            travel, floor and long press untouched — a
+//                            travel, floor and tap untouched — a
 //                            decimal dB in [-60.0, 0.0], THE LEVEL GRAMMAR
 //                            LESS `-inf` (parse_noise_attenuation_db below:
 //                            the bed's one off switch is noise_level's);
@@ -172,296 +163,31 @@
 //                            table's constexpr once he rules the number
 //                            (kGuiFaceSizes), its key, grammar and row going
 //                            then; the first-run value the defaults file's
-//   (key_height=<w>, THE KEY'S HEIGHT IN W, a tuning key with a Settings
-//                            row 2026-10-29 to 2026-11-22, RETIRED (architect
-//                            2026-11-22, send LL: "the regular key height and
-//                            key width are from Arc") at 28 W, Arc's icon
-//                            button's height, border included (send Z) —
-//                            render.h's kKeyHeightW; an old line is the
-//                            ordinary unknown-key hard fail, the sync
-//                            script's setup removing it on the tablet)
-//   (key_width=<w>, THE KEY'S FACE WIDTH IN W, a tuning key with a Settings
-//                            row 2026-11-06 to 2026-11-22, RETIRED with
-//                            key_height at 36 W, Arc's icon button's width,
-//                            border included (send Z) — render.h's
-//                            kKeyWidthW; an old line is the ordinary
-//                            unknown-key hard fail, the sync script's setup
-//                            removing it on the tablet)
-//   (run_gap=<w>, THE GROUND BETWEEN TWO RUNS IN W, a tuning key with a
-//                            Settings row 2026-11-07 to 2026-11-22, RETIRED
-//                            with the key's two sides at 6 W, Arc's gap
-//                            between toolbar groups (send Z) — render.h's
-//                            kRunGapW; an old line is the ordinary
-//                            unknown-key hard fail, the sync script's setup
-//                            removing it on the tablet)
-//   (lamp_hold_ms=<ms>, THE TWO LAMPS' HOLD, a tuning key with a Settings
-//                            row 2026-11-05 night to 2026-11-22, RETIRED
-//                            (architect 2026-11-22, send LL: "The lamp hold
-//                            can also be retired") at 85 ms, the tablet's own
-//                            tuned value — main.cpp's kLampHoldMs; an old
-//                            line is the ordinary unknown-key hard fail, the
-//                            sync script's setup removing it on the tablet)
-//   (tooltip_delay_ms=<ms>, THE TOOLTIP'S ONE DELAY, a tuning key with a
-//                            Settings row 2026-11-07 to 2026-11-22, RETIRED
-//                            (architect 2026-11-22, send LL: "just use their
-//                            numbers") for GTK's own three timeouts, 500 / 60
-//                            / 500 ms — render.h's kTooltipHoverTimeoutMs,
-//                            kTooltipBrowseTimeoutMs and
-//                            kTooltipBrowseDisableTimeoutMs; an old line is
-//                            the ordinary unknown-key hard fail, the sync
-//                            script's setup removing it on the tablet)
-//   (sweep_highlight=<pct>, THE SWEEP HIGHLIGHT'S BLEND TOWARD WHITE, a
-//                            tuning key with a Settings row 2026-11-12 to
-//                            2026-11-22, RETIRED (architect 2026-11-22, send
-//                            LL) at 3 %, Arc's own row-hover white —
-//                            paint_handler.cpp's kSweepHighlightPct; an old
-//                            line is the ordinary unknown-key hard fail, the
-//                            sync script's setup removing it on the tablet)
-//   (waveform_fade_px=<px>, THE PLATE'S FADE START, a tuning key with a
-//                            Settings row 2026-11-14 to 2026-11-22, RETIRED
-//                            (architect 2026-11-22, send LL: "one is the
-//                            ideal and it works well") at 1 device px, the
-//                            whole doubling — render.h's
-//                            kWaveformFadeHundredths; an old line is the
-//                            ordinary unknown-key hard fail, the sync
-//                            script's setup removing it on the tablet)
-//   (audio_level=<dB>, THE PROJECT VOICE'S LEVEL, everything the program
-//                            itself played scaled by one level under THE
-//                            LEVEL GRAMMAR, set by the band's AUDIO case, a
-//                            required key 2026-10-31 night to 2026-11-11,
-//                            RETIRED with the case (architect 2026-11-11,
-//                            session 104: "realistically it's not clipping,
-//                            and when it does clip, it's very subtle"): the
-//                            voice plays at 0 dB, the files as they are
-//                            (playback_common.h's head); an old
-//                            `audio_level=` line is the ordinary unknown-key
-//                            hard fail, the sync script's setup removing it
-//                            on the tablet)
-//   (tooltip_gap=<w>, THE TOOLTIP'S GAP, the ground between the box and its
-//                            owner's face in W, a tuning key in [0, 12] with
-//                            a Settings row, required for session 90 of
-//                            2026-11-07, SETTLED in session 91 (architect:
-//                            "ok to remove the key") AT 1 W, render.h's
-//                            kTooltipGapW; an old `tooltip_gap=` line is the
-//                            ordinary unknown-key hard fail, the sync
-//                            script's setup removing it on the tablet)
-//   (waveform=<name>, THE WAVEFORM PRESET, a required key naming one of
-//                            the built-in color presets, RETIRED with the
-//                            presets (architect 2026-11-01: one palette,
-//                            Live's numbers, palette_file.h); an old
-//                            `waveform=` line is the ordinary unknown-key
-//                            hard fail, the sync script's setup removing it)
-//   (waveform_column_px=<n>, THE WAVEFORM'S COLUMN WIDTH, a tuning key in
-//                            [1, 4] with a Settings row, required for part
-//                            of 2026-11-01, RETIRED that night (architect
-//                            2026-11-01 night: "Ableton uses grow instead
-//                            of column pixels"): every column of the
-//                            waveform is one device px at every scale (its
-//                            stems one W since 2026-11-04), the grow
-//                            (`waveform_grow`) its one length of
-//                            its own; an old line is the ordinary
-//                            unknown-key hard fail, the sync script's setup
-//                            removing it on the tablet)
-//   (role=<author|mirror>, THE DEVICE'S PART IN THE PROJECTS REPOSITORY,
-//                            a required key 2026-10-10 to 2026-10-30,
-//                            RETIRED with the laptop GUI (architect
-//                            2026-10-30): one device runs the program, so
-//                            there is no mirror, and the one behavior is the
-//                            one that commits; an old `role=` line is the
-//                            ordinary unknown-key hard fail, the planner
-//                            editing the tablet's config at the install and
-//                            the sync script's setup removing it)
-//   (noise_crossfade_ms=<ms>, THE CROSSFADE IN MS, [100, 30000], a tuning
-//                            key 2026-10-28, RETIRED that day for the
-//                            seconds key above; an old line is the ordinary
-//                            unknown-key hard fail, the planner editing both
-//                            devices' configs at the install and the sync
-//                            script's setup removing it on the tablet)
-//   (rain_level=<dB>, rain_crossfade_ms=<ms>, THE TWO KEYS ABOVE UNDER
-//                            THEIR FIRST NAMES, 2026-10-28, RENAMED
-//                            `noise_level` and `noise_crossfade_ms` the same
-//                            day with the sound's folder made a choice; an
-//                            old line is the ordinary unknown-key hard fail,
-//                            the planner editing both devices' configs at
-//                            the install and the sync script's setup
-//                            removing them on the tablet)
-//   (rain_fade_in_ms=<ms>, rain_fade_out_ms=<ms>, THE NOISE'S TWO FADES,
-//                            tuning keys with Settings rows for one day,
-//                            2026-10-28, SETTLED that day on the glass at
-//                            200 and 40 ms — noise.h's kNoiseFadeInMs and
-//                            kNoiseFadeOutMs; an old line is the ordinary
-//                            unknown-key hard fail, the planner editing both
-//                            devices' configs at the install)
-//   (bevel_light=<percent>, bevel_dark=<percent>, THE FORTEPIANO CHROME'S
-//                            two bevel weights, tuning keys with Settings
-//                            rows 2026-10-21 to 2026-10-23, RETIRED with that
-//                            chrome (no bevel or ring remains in the flat
-//                            look, materials.h); an old
-//                            line is the ordinary unknown-key hard fail, the
-//                            planner editing both devices' configs at the
-//                            install)
-//   (strip_pad=<W>, THE STRIP PAD, a tuning key with a Settings row
-//                            2026-10-22 to 2026-10-23, SETTLED AT A
-//                            CONSTANT — 19 W since 2026-11-04 night,
-//                            render.h's strip_pad_px (half
-//                            the key the morning of 2026-11-03, the hi-fi's
-//                            pad again since that day); an old `strip_pad=` line is the ordinary
-//                            unknown-key hard fail, the planner editing both
-//                            devices' configs at the install and the sync
-//                            script's setup removing it on the tablet)
-//   (THE LIT LED'S GLOW in device px, an optional tuning key with a
-//                            Settings row 2026-10-23 to 2026-10-26, SETTLED
-//                            AT 4 (architect 2026-10-26: "it stays on"; the
-//                            glow retired with the LED, 2026-11-01, the flat
-//                            look); an old line is the
-//                            ordinary unknown-key hard fail, the sync
-//                            script's setup removing it on the tablet)
-//   (text_shadow=<px>, THE WORDS' DROP SHADOW in device px, a tuning key
-//                            with a Settings row 2026-10-21 to 2026-10-22,
-//                            RETIRED 2026-10-22 for ONE SCALED WINDOWS PX on
-//                            every word — architect: "I would think that
-//                            everything should be one Windows pixel" (no
-//                            word outside the well wears a shadow since the
-//                            flat look, materials.h); an old `text_shadow=` line is
-//                            the ordinary unknown-key hard fail)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30):
 // the scale and the three of the projects first (gui_scale, projects_repo,
 // projects_path, last_project), then the display keys (`true_colors`,
 // `waveform_grow`), then the noise's four — folder, level, attenuation,
-// crossfade — and the tuning keys at the end, where the tuning phases' keys
-// have always stood (`osk_key_w`, `osk_key_h`, `osk_font_px`); the order's
-// succession is git's. The list above is this file's telling of it and
+// crossfade — and the tuning keys at the end (`osk_key_w`, `osk_key_h`,
+// `osk_font_px`). The list above is this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
-// WHY IT EXISTS. `gui_scale` was a `.settings` key until 2026-08-27, which
-// made it a fact about the PIECE: the same project opened on the laptop and
-// on the tablet wanted different scales — 138 and 300 until the laptop GUI's
-// drop of 2026-10-30 (100 and 225 in the laptop-pixel unit of 2026-08-27).
-// Carrying it in the sidecar meant every
-// sync of a project between the two devices had to rewrite it on the way over
-// and put it back on the way home. It is the panel's business, so it
-// follows the panel. (`audio_player`, the `l` command's external player, made
-// the same move beside it and RETIRED WHOLE 2026-08-28 with the in-app render
-// player — `l` now plays a render through the product's own playback
-// engine, so there is no spawnable player to name; a config still
-// carrying the key is unknown-key fatal, no migration, the architect's
-// ruling.) THE OTHER THREE JOINED 2026-08-27 with the project model:
-// where the projects live is a fact about the device (the app's external
-// files dir's `projects/` on the tablet);
-// which repository is the projects home is ONE user's ONE repo, not a
-// property of each piece, so `projects_repo` left the sidecar too (architect
-// approval 2026-08-27, the fifth grant on settings_file.{h,cpp}); and what
-// was opened last is what lets the tablet, which has no command line, open
-// the right piece without a picker
-// at startup. THE WAVEFORM'S HEIGHT CAP CAME AND WENT 2026-09-13..10-07
-// (architect): a key in authored px right after gui_scale, with a Settings
-// row of its own, until the architect ruled the waveform's height THE
-// LANES' LEFTOVER, NOTHING ELSE (2026-10-07 evening). NO TOLERANCE FOR A
-// RETIRED KEY (the same ruling, closed_questions.md): the two installs'
-// configs are hand-edited at the install — by the planner, the program not
-// running — so a config still carrying a retired key meets the ordinary
+// WHY IT EXISTS. The scale is the panel's business, not the piece's: in the
+// sidecar it would be a fact about the PIECE, and it follows the panel
+// (architect 2026-08-27). THE PROJECTS' THREE KEYS are the device's too
+// (architect 2026-08-27, with the project model): where the projects live is
+// a fact about the device (the app's external files dir's `projects/` on the
+// tablet); which repository is the projects home is ONE user's ONE repo, not
+// a property of each piece, so `projects_repo` is no sidecar key (architect
+// approval 2026-08-27); and what is opened last is what lets the tablet,
+// which has no command line, open the right piece without a picker at
+// startup. NO TOLERANCE FOR A RETIRED KEY (closed_questions.md): a config
+// still carrying a key this list does not hold meets the ordinary
 // unknown-key first-error refusal naming its line, with no migration and no
-// special arm.
-// THE WAVEFORM PICTURE'S KEYS came and went (architect): the leveler's
-// `waveform_gain_*` joined 2026-09-23 and the expander's `waveform_expander_*`
-// 2026-09-24 for a tuning phase, eleven at the end, and all eleven LEFT
-// 2026-09-24 with the values hard-coded in waveform_gain.cpp so every project
-// shares one frame of reference; a config still carrying any of them is
-// unknown-key fatal, no migration, the architect hand-editing his two.
-// THE WAVEFORM COLOUR KEYS CAME AND WENT 2026-09-25 (architect), one day's
-// tuning phase: `waveform_ink`, `waveform_magnified_ink` and
-// `waveform_ghost_ink` carried the plate's three inks until the architect
-// closed the phase by eye, and the chosen values went back to render.h as
-// constants (the lit plate's inks settled after their own tuning phase,
-// below). A config still carrying `waveform_magnified_ink` or
-// `waveform_ghost_ink` is unknown-key fatal, no migration; `waveform_ink` was
-// a key again for a day, 2026-10-03..04 (THE COLOUR KEYS, below).
-// THE LIT PLATE'S INK KEYS CAME AND WENT 2026-09-25..27 (architect), A SHORT
-// STRUCK RECORD: `fg_color` (the inner's one flat ink), then `fg_blend_loud`
-// / `fg_blend_quiet` (the core shade by the bar gap, struck: "it doesn't
-// work"), then `fg_color` / `bg_color` (the two bars' flat inks, closed
-// 2026-09-26), then `fg_color` / `fg_border_color` / `bg_color` /
-// `bg_border_color` (each bar's fill and one-pixel outline), closed by eye
-// 2026-09-27 on both fills in the plate's ink and the inner's outline its
-// linear-light blend over the canvas, constants in render.h until the
-// `waveform_ink` and `waveform_outline` keys of 2026-10-03, theme roles
-// 2026-10-04..07 and palette roles since (palette_file.h). A config still carrying any of them is
-// unknown-key fatal, no migration.
-// `waveform_widening` CAME AND WENT 2026-09-27 (architect), its own tuning
-// phase: k columns on each side of a plate column's peak read, closed by eye
-// on 0.00, so the read is the column's own span and the key is struck with
-// its branch; a config still carrying it is unknown-key fatal, no migration.
-// THE TWO LEVEL KEYS CAME AND WENT 2026-09-25 (architect):
-// `waveform_magnification_foreground_db` and
-// `waveform_magnification_background_db` (earlier the same day
-// `waveform_magnified_gain`, `waveform_ghost_reduction`,
-// `waveform_magnified_gain_db` and `waveform_ghost_gain_db`) set the lit
-// plate's two bars' flat levels, `-inf` leaving a bar out; the inner
-// compressor put both bars at 0 dB by construction and they are struck. A
-// config still carrying any of them is unknown-key fatal, no migration.
-// THE COMPRESSOR'S TWO KEYS CAME AND WENT TWICE, 2026-09-25 and 2026-09-27
-// (architect): `waveform_compressor_threshold_db` and
-// `waveform_compressor_ratio` carried the lit plate's inner-bar compressor
-// for a tuning phase closed by eye the same day on -24.00 and 2.00, and came
-// back 2026-09-27 for a second phase, the inner now an outline, with
-// `waveform_foreground_gain_db` (the inner bar's flat gain) beside them. The
-// architect closed it by eye the same day on -24.00, 2.00 and -6.02 dB taken
-// as the exact half, now constexpr in waveform_gain.cpp. A config still
-// carrying any of the three is unknown-key fatal, no migration.
-// THE PEN PLANE'S KEYS CAME AND WENT 2026-09-27 (architect): the S Pen's
-// plane cutoff, landed that day as a constexpr, became the single key
-// `pen_plane_distance` for a tuning phase, then the hysteresis pair
-// `pen_plane_enter` / `pen_plane_exit` (one cutoff flickered under a pen held
-// still at it); the architect closed the phase on the glass the same day on
-// 85 and 100 raw AXIS_DISTANCE counts, now constexpr beside the latch
-// (kPenPlaneEnter / kPenPlaneExit, platform_android.cpp). A config still
-// carrying any of the three is unknown-key fatal, no migration.
-// `sync_path` CAME AND WENT 2026-08-30..09-27 (architect): the destination
-// folder of the Synchronize act, which mirrored a project's renders onto a
-// USB stick for the car. The architect struck the act and the key together
-// 2026-09-27, the tablet now being the car's source; a config still carrying
-// the key is unknown-key fatal, no migration.
-// THE HOLD DELAY'S KEY CAME AND WENT 2026-09-29 (architect), a one-day
-// tuning phase: the holds (the chrome shift long press and, then, the touch
-// region hold, retired 2026-11-07) read it, placed after the scale with a
-// Settings row of its own, until the architect closed the phase on the
-// glass the same day on 300 ms, now constexpr (kHoldDelayMs, gui_input.h);
-// the key was `hold_delay_ms`, [100, 2000] ms. A config still carrying it is
-// unknown-key fatal, no migration.
-// THE PALETTE'S TWO KEYS CAME AND WENT 2026-10-02 (architect), a same-day
-// tuning phase: `palette_passes` and `waveform_passes` put the chrome's and
-// the waveform's colours through extra sRGB -> Display-P3 passes, each with a
-// Settings row; the architect settled on the two-pass package, frozen as
-// P3 bytes the same day. A config still carrying either is unknown-key
-// fatal, no migration.
-// THE COLOUR KEYS (architect): `theme` JOINED 2026-10-03 (and left
-// 2026-10-08, below), naming THE THEME every color was painted in
-// (render.h's palette block owns what each role paints). Beside it from 2026-10-03
-// to 2026-10-04 stood `theme_level` (light | dark, the generated table's two
-// levels) and the twelve program colour keys (`waveform_ink`,
-// `waveform_canvas`, `waveform_outline`, `flag_face`, `flag_face_selected`,
-// `flag_label`, `flag_label_selected`, `invalid_face`,
-// `invalid_face_selected`, `invalid_label`, `playhead_head`,
-// `playhead_stem`), each with a Settings row; they LEFT 2026-10-04 when every
-// colour became a role of a theme file and the dark level was dropped (a dark
-// look is a theme of its own). A config still carrying any of the thirteen is
-// unknown-key fatal, no migration, the fix deleting those lines.
-// `theme` ITSELF CAME AND WENT 2026-10-03..10-08 (architect 2026-10-08:
-// "okay to retire the color theme catalog"; "we just need hard-coded
-// chromes"): it named the built-in `windows-2000-standard` or a theme file
-// read at launch from a themes folder beside this file (the imported
-// catalog shipped as bundled files, copied in at every launch), absent the
-// chrome's own, with a Settings row; the chrome's colors were compiled in
-// after it, and the program's own colors one compiled-in palette
-// (palette_file.h) until 2026-11-05. A `theme` KEY OF A THIRD
-// MEANING stood 2026-11-05 to 2026-11-21 — the slug of a row of a themes'
-// list, Live 12's themes and Arc-Dark — RETIRED 2026-11-21, send GG ("i am
-// committed": one look, Arc-Dark, palette_file.h's head); an old `theme=`
-// line is the ordinary unknown-key hard fail, no migration (the sync
-// script's setup removing it on the tablet).
+// special arm; the sync script's setup removes such a line on the tablet
+// (its list of the retired keys is the one record of them).
 // The sidecar schema keeps everything that is about the music
-// (settings_file.h, where the retired-key record lives).
+// (settings_file.h).
 //
 // WHERE IT LIVES: `$XDG_CONFIG_HOME/warptempo_gui/config`, falling back to
 // `$HOME/.config/warptempo_gui/config` — the same resolution shape the render
@@ -471,7 +197,7 @@
 // platform_android.cpp), exactly as it already does for the cache home.
 //
 // THE FIRST-RUN VALUES ARE ONE TRACKED FILE, `assets/device_config_defaults`
-// (architect 2026-11-08, session 95: "there should be a pipeline in place
+// (architect 2026-11-08: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
 // FILE'S OWN GRAMMAR AND KEY ORDER, all thirteen lines, last_project and
@@ -523,27 +249,23 @@
 // file is always the last committed state and a save carries none of them.
 // The chokepoints are the callers inventory at write_device_config below.
 //
-// EVERY EDITABLE KEY HAS AN IN-APP ROAD SINCE 2026-09-02 (architect): THE
+// EVERY EDITABLE KEY HAS AN IN-APP ROAD (architect 2026-09-02): THE
 // SETTINGS PAGE's row (settings_editor.h) — its value list, or the line
-// editor holding the value alone (architect 2026-11-19, send AA) — for
+// editor holding the value alone (architect 2026-11-19) — for
 // `gui_scale`, `projects_repo`, `projects_path`, `true_colors`,
 // `waveform_grow`, `noise`, `noise_attenuation_level`, `noise_crossfade_s`
 // and the tuning keys `osk_key_w`, `osk_key_h` and `osk_font_px`
 // (kSettingsEditorKeys) — Tab recalling a key's current value and
 // completing the path key's folders, each committed through this file's
 // writer under the key's own grammar below. THE LEVEL,
-// `noise_level`, is edited on the main page alone, the band's NOISE case,
-// whose lift writes through the same writer
+// `noise_level`, is edited on the main page alone, the top icon row's NOISE
+// case, whose lift writes through the same writer
 // (architect 2026-11-05 night: a key shown and edited on the main page gets
-// no Settings row, kSettingsEditorKeys). (The Settings popup's rows opened it prefilled, one per key,
-// 2026-09-02..10-21.) Until
-// 2026-09-02 the path keys
-// were hand-edited only, and HELP told the user to edit one without
-// telling him to quit first — which mattered, because A HAND EDIT UNDER A
-// RUNNING APP IS CLOBBERED BY THE NEXT IN-APP COMMIT: the live struct is
-// the truth and every commit rewrites the whole file from it. That stays so,
-// and it is ordinary Linux behaviour for a program-written config; the in-app
-// road is the sanctioned one now and the hand edit is the quit-first
+// no Settings row, kSettingsEditorKeys). A HAND EDIT UNDER A RUNNING APP IS
+// CLOBBERED BY THE NEXT IN-APP COMMIT: the live struct is the truth and
+// every commit rewrites the whole file from it, ordinary behaviour for a
+// program-written config; the in-app road is the sanctioned one and the
+// hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
 // writes — it is the program's own.
 
@@ -551,12 +273,11 @@
 // fallbacks, for every key: each is required, so a successful read always
 // assigns them, and NONE IS A FIRST-RUN VALUE: the backend's template
 // (GuiPlatform::device_config_defaults) is the shipped defaults file parsed
-// (THE FIRST-RUN VALUES above, 2026-11-09), every key spelled there
+// (THE FIRST-RUN VALUES above), every key spelled there
 // (architect 2026-10-14: every key required). EVERY KEY
 // WRITES ITS LINE, so a first run stamps the
-// whole file and its read-back loads. (The `font` key left 2026-10-12:
-// Liberation Sans is hard-coded; the `icons` key of that day left with it,
-// and a key of that name, the icon set, stood 2026-11-17 to 2026-11-21.)
+// whole file and its read-back loads. (No key names the face: Liberation
+// Sans is the one, gui_font.h.)
 //
 // ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
 // below: `last_project` empty is "nothing opened yet". (`projects_repo` also
@@ -566,8 +287,8 @@
 // only an empty VALUE.
 //
 // The members are in the writer's order. (No key names a color: every
-// color is the one theme's, Arc-Dark's, palette_file.h, architect
-// 2026-11-21, send GG.)
+// color is Arc-Dark's, the one compiled row kArcDarkTones, gui_theme.h;
+// architect 2026-11-21.)
 struct DeviceConfig {
     int         gui_scale = 138;
     std::string projects_repo;
@@ -604,10 +325,8 @@ struct DeviceConfig {
 // initializer, its one reader, a value gui_main's session seat overwrites
 // from the live config before anything reads the field (main.cpp, "THE
 // DEVICE CONFIG'S LIVE VALUES"). IT IS NOT THE FIRST-RUN VALUE: that is the
-// defaults file's `projects_repo=` line (THE FIRST-RUN VALUES above,
-// 2026-11-09), which names the same repository today. It moved here
-// from settings_file.h with the key (architect approval 2026-08-27): the
-// sidecar no longer references it. It is NOT a load fallback — the key is required, so a
+// defaults file's `projects_repo=` line (THE FIRST-RUN VALUES above),
+// which names the same repository. It is NOT a load fallback — the key is required, so a
 // config either names a repository (blank included) or refuses. THE PROJECTS
 // REPOSITORY IS ITS OWN, SEPARATE AND PUBLIC (architect 2026-09-27): the
 // pieces' sidecar history lives in warptempo_projects, laid out as
@@ -616,45 +335,40 @@ struct DeviceConfig {
 inline constexpr const char* kDefaultProjectsRepo =
     "github.com/warptempo/warptempo_projects";
 
-// THE gui_scale RANGE — the ONE owner, moved here from the `.settings` schema
-// 2026-08-27 with the key (architect approval 2026-08-27). Both askers call it
+// THE gui_scale RANGE — the ONE owner, beside the key (architect approval
+// 2026-08-27). Both askers call it
 // and neither respells the bracket: this file's reader, and the settings
 // editor's `gui_scale=` refused commit ("loadable iff it commits", the
 // standing rule).
 //
-// THE PERCENT IS DEVICE PX PER W, THE WINDOWS-95 PX, since 2026-10-02
-// (architect; the unit's statement is at render.h's scaled_px): the tablet
-// runs 200 since 2026-11-05, the rebase (a 16-W glyph at 32 device px, 16 ·
-// 2; 300 from 2026-10-06 to then, on the predecessor unit); 100 is Windows'
-// own 96-dpi size; 1000 is the ceiling; 50 is the half-size floor,
+// THE PERCENT IS DEVICE PX PER W, ONE ARC PX (the unit's statement is at
+// render.h's scaled_px): the tablet runs 200 (a 16-W glyph at 32 device px,
+// 16 · 2); 100 is one device px per W; 1000 is the ceiling; 50 is the
+// half-size floor,
 // which is where every structural dimension in render.h's scaled_px
 // accessors still has a floor holding it above zero.
 //
-// THE CEILING IS 1000 (architect 2026-10-05, raising it from the 350 that
-// stood from 2026-08-29 so 400 can be tried on the tablet; 400 stood from
-// 2026-08-26 before that). It is a vocabulary, not a fit: the lanes above
-// the waveform — the program's band, its title bar over Arc's toolbar pads
-// and the case, the well's trim bar, ruler and marker lane and its lines,
-// one W each — and below it — the well's foot, the bottom icon row and the
-// status bar — scale with gui_scale (main.cpp's stack record,
-// re-derived 2026-11-04 with the unit); whether they pass the
-// tablet's 1440 rows short of the ceiling turns on the key height, and where
+// THE CEILING IS 1000 (architect 2026-10-05). It is a vocabulary, not a
+// fit: the lanes above the waveform — the title bar, the top icon row over
+// Arc's toolbar pads and its case, the trim lane, the ruler and the marker
+// lane and their lines, one W each — and below it — the line under the
+// canvas, the bottom icon row and the status bar — scale with gui_scale
+// (main.cpp's lane table and its stacks' record); whether they pass the
+// tablet's 1440 rows short of the ceiling turns on the scale, and where
 // they do the waveform is the zero height waveform_area's floor answers (the
-// arithmetic, by key height, and the guard at waveform_area, main.cpp).
+// arithmetic and the guard at waveform_area, main.cpp).
 //
 // THE LAYOUT IS NOT WIDENED WITH THE CEILING, deliberately: past a width or a
-// scale the icon row — the
-// toolbar band, its twenty-seven standing members in three left runs and one
-// right run of the program's key (eighteen in the view, its history
-// stand-ins and the view's hide — architect 2026-10-05 and 2026-10-07; the
-// runs the simple layout's, 2026-10-22) — no longer fits, and its
-// right-anchored run covers the runs to its left (the overflow rule at
-// kIconRowViewPairs, paint_handler.cpp). Where that is — the window widths
+// scale the top icon row — its left runs and its one right run — no longer
+// fits, and a left-run
+// member that would end past the right run (less a run gap) is dropped
+// whole, NOISE first, then the third run's keys from its tail; no key is cut
+// and the right run stands whole (the overflow rule at kIconRowViewPairs,
+// paint_handler.cpp). Where that is — the window widths
 // and the scales the tablet's 2304-px panel holds the row whole at, the
 // key's width (render.h's kKeyWidthW) and the run gap (kRunGapW) moving it
 // and the key's height none of it — is THE FIT at paint_icon_row's width math (paint_handler.cpp),
-// its one statement. The
-// redesign carries no
+// its one statement. There is no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at
 // kMinWindowWidthPx (render.h) is the standing answer for a narrow window. A
 // scale is a VOCABULARY; which of its values lays out well is the
@@ -734,11 +448,9 @@ inline constexpr const char* kProjectsRepoGrammarReason =
 // recheck normalizes the value against the local clone's own `origin` and
 // refuses the mismatch there, which is a far better place to judge it than a
 // reader that cannot see the clone. The `\r` clause has the same real
-// producer the path key's has (std::getline on a CRLF-saved file) and joined
-// 2026-09-02 when the key gained this predicate — before it the reader took
-// the value with no test at all, and the editor's own filter had always
-// dropped control bytes, so the only value the clause newly refuses is a
-// hand-edited one.
+// producer the path key's has (std::getline on a CRLF-saved file); the
+// editor's own filter drops control bytes, so the only value the clause
+// refuses is a hand-edited one.
 inline bool is_projects_repo(const std::string& v) {
     if (v.find('\n') != std::string::npos) return false;
     if (v.find('\r') != std::string::npos) return false;
@@ -763,9 +475,8 @@ inline std::optional<bool> parse_true_colors(std::string_view v) {
     return std::nullopt;
 }
 
-// A CANONICAL SIGNED INTEGER (2026-10-28, the noise's integers' shared
-// lexis — the crossfade's since the two levels went decimal 2026-11-05 — and
-// since 2026-10-29 the key's height's and the keyboard's key box's): an optional `-`,
+// A CANONICAL SIGNED INTEGER (the shared lexis of the noise's crossfade and
+// the on-screen keyboard's key box and cap size): an optional `-`,
 // then digits with no leading zero, and no `-0` — exactly what `%d` prints,
 // so the reader admits back only the writer's spelling. At most nine digits,
 // which every range below sits far inside, so the accumulation cannot
@@ -789,26 +500,23 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
 }
 
 // THE LEVEL GRAMMAR — `noise_level` AND, LESS `-inf`,
-// `noise_attenuation_level`, ONE OWNER (architect 2026-11-05, the level
-// cases; "i plan to use stable values for both"; the project voice's level
-// beside them until the AUDIO case's retirement, 2026-11-11, the voice at
-// 0 dB since; the two integer grammars of 2026-10-28 and 2026-10-31 night,
-// [-30, 0] in whole dB, are this one since; THE EXACT DOUBLE since
-// 2026-11-05 night — the face shows its own short spelling, the file keeps
-// the value whole): the value is `-inf`,
+// `noise_attenuation_level`, ONE OWNER (architect 2026-11-05: "i plan to
+// use stable values for both"; THE EXACT DOUBLE, architect 2026-11-05
+// night — the face shows its own short spelling, the file keeps the value
+// whole): the value is `-inf`,
 // or a DECIMAL dB in [-60.0, 0.0] — an optional `-`, digits with no leading
 // zero but a lone `0`, then optionally `.` and ONE OR MORE digits; no `+`,
 // no exponent, no leading `.`. THE WRITER SPELLS THE SHORTEST DECIMAL THAT
 // ROUND-TRIPS, in fixed notation — "0", "-9", "-15.6",
 // "-0.0108695652173913", "-60" — and `-inf` (format_level_db); THE READER
-// ADMITS ANY FRACTIONAL LENGTH (parse_level_db), so "0.0" and "-9.0", the
-// one-digit spellings of before, load as they are and the next commit
+// ADMITS ANY FRACTIONAL LENGTH (parse_level_db), so "0.0" and "-9.0" load
+// as they are and the next commit
 // rewrites them canonical; the value is std::from_chars' on the checked
 // text, the range checked on the value; "-0", "-0.0", "-0.00…" are refused
 // (zero is unsigned), as every other spelling is. THE FACE PRINTS ONE
 // DECIMAL UNDER 10 dB OF MAGNITUDE AND NONE FROM 10 ON (format_level_db_face,
-// architect 2026-11-19, send AA: "0.0", "-9.5", "-22", "-60", "-inf"), the
-// band's NOISE case's number alone. THE RANGE IS THE
+// architect 2026-11-19: "0.0", "-9.5", "-22", "-60", "-inf"), the top icon
+// row's NOISE case's number alone. THE RANGE IS THE
 // SLIDER'S FLOOR: the case reads -60 at its last step and -inf below it
 // ("-60 then -inf"; the taper at level_db_from_travel, app_state.h). -inf
 // is the infinity (kLevelDbOff), the noise's one off switch (noise.h's
@@ -900,20 +608,19 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
 }
 
 // THE osk_key_w AND osk_key_h GRAMMAR (architect 2026-10-29), ONE FOR THE
-// TWO — an integer in [12, 80] W in canonical spelling (the rebase of
-// 2026-11-05 halved the [24, 160] device px of 2026-10-29), the one owner
+// TWO — an integer in [12, 80] W in canonical spelling (24 to 160 device px
+// on the tablet), the one owner
 // the reader, the writer, the settings editor's commit and its recall read
 // (format_osk_key_size, parse_osk_key_size). kOskKeyWDefaultW and
 // kOskKeyHDefaultW ARE CONSTRUCTION STATE ALONE, render.cpp's seats'
 // initializers, overwritten by gui_main's startup seeding before the first
 // layout; THE FIRST-RUN VALUES ARE THE DEFAULTS FILE'S (THE FIRST-RUN
-// VALUES above, 2026-11-09). Theirs are the FLAGS sheet's key box, 24 W
-// wide and 30 tall, 48 x 60 device px on the tablet (the keyboard mock's
-// generator), the template's until 2026-11-09; the range runs from half that width to
+// VALUES above). Theirs are the FLAGS sheet's key box, 24 W wide and 30
+// tall, 48 x 60 device px on the tablet; the range runs from half that width to
 // well past the height, wide enough for him to try a key wider than tall,
 // and its top keeps the widest row (thirteen units) inside the tablet's
 // 2304 device px (13 x (160 + 2) - 2 = 2104 there, the gap the program
-// keys' one W, 2 device px on the tablet since 2026-11-04 night). The
+// keys' one W, 2 device px on the tablet). The
 // settings page opens the LINE EDITOR on each, not a value list (69 values
 // is no short domain, kSettingsValueListKeys' rule). TWO TUNING
 // KEYS: when he rules the numbers, the keys, these functions and their
@@ -934,16 +641,15 @@ inline std::optional<int> parse_osk_key_size(std::string_view v) {
 }
 
 // THE osk_font_px GRAMMAR (architect 2026-10-29 night) — an integer in
-// [6, 24] W in canonical spelling (the rebase of 2026-11-05 halved the
-// [12, 48] device px of 2026-10-29), the keys face's em (gui_font.h's
+// [6, 24] W in canonical spelling (12 to 48 device px on the tablet), the
+// keys face's em (gui_font.h's
 // GuiFace::Keys, scaled with gui_scale like every table size), the one
 // owner the reader, the writer, the settings editor's commit and its recall
 // read (format_osk_font_px, parse_osk_font_px). kOskFontPxDefaultW IS
 // CONSTRUCTION STATE ALONE, render.cpp's seat's initializer, overwritten by
 // gui_main's startup seeding before the first paint; THE FIRST-RUN VALUE IS
-// THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 12 W is
-// the face table's, 24 device px on the tablet (architect 2026-10-24,
-// "C24"), the template's until 2026-11-09.
+// THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above). Its 12 W is the face
+// table's, 24 device px on the tablet (architect 2026-10-24, "C24").
 // The range: 6 W, 12 device px, is the smallest em at which a cap stays
 // legible on the tablet; 24 W is twice 12 W, the em by which every
 // function word but "Bksp" and "Space" already overhangs its key at the
@@ -968,8 +674,8 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
     return n;
 }
 
-// THE waveform_grow GRAMMAR (architect 2026-10-31; the lattice quarters
-// since that afternoon's 4x ruling, render.h's kWaveformSubcells) — a
+// THE waveform_grow GRAMMAR (architect 2026-10-31; quarters of the 4x
+// lattice, render.h's kWaveformSubcells) — a
 // multiple of 0.25 DEVICE PX in [0, 2] in canonical spelling, held as
 // QUARTERS in [0, 8] (kWaveformGrowQuartersPerPx: one quarter is one
 // subcell of render.h's 4x grid, kWaveformSubcells, so the number is the
@@ -987,10 +693,9 @@ inline std::optional<int> parse_osk_font_px(std::string_view v) {
 // seat's initializer, overwritten by gui_main's startup seeding before the
 // window exists, and the plate program gl_canvas.cpp builds first, rebuilt
 // at the first draw of a list at another grow; THE FIRST-RUN VALUE IS THE
-// DEFAULTS FILE'S (THE FIRST-RUN VALUES above, 2026-11-09). Its 1 is the
-// template's of 2026-11-04 night (architect, on the real lit capture at
-// grow 1 beside the unit's 2-px lines: "is good as well"; 0.5 from
-// 2026-10-31 to then, the record at render.h's grow paragraph); the top, 2,
+// DEFAULTS FILE'S (THE FIRST-RUN VALUES above). Its 1 is his ruled value
+// (architect 2026-11-04 night, on the real lit capture at grow 1 beside the
+// unit's 2-px lines: "is good as well"); the top, 2,
 // is what the shader's one-word window was sized for (gl_canvas.cpp's
 // asserts) and twice 1.
 inline constexpr int kWaveformGrowQuartersPerPx   = 4;
@@ -1006,13 +711,6 @@ inline std::optional<int> parse_waveform_grow(std::string_view v) {
         if (format_waveform_grow(n) == v) return n;
     return std::nullopt;
 }
-
-// (THE `waveform` KEY'S GRAMMAR, a built-in preset's key, left with the key
-// and the presets 2026-11-01; the `caption` key's, is_builtin_scheme_name,
-// left with the key 2026-10-21. The `theme_level` grammar and the program color grammar of the twelve keys
-// left with those keys 2026-10-04; the `theme` key's own grammar left with
-// the key 2026-10-08, and the slug grammar of its third meaning
-// (`is_theme_slug`) with that key 2026-11-21, send GG.)
 
 // HOW A PATH UNDER THE PROJECTS PATH IS NAMED IN A SENTENCE — the basename
 // rule's composer for everything the project model and the loaders say
@@ -1120,7 +818,7 @@ std::string format_device_config_text(const DeviceConfig& cfg);
 std::expected<DeviceConfig, std::string> read_device_config(
     const std::filesystem::path& path);
 
-// THE SAME READER OVER BYTES IN HAND (2026-11-09): the shipped defaults
+// THE SAME READER OVER BYTES IN HAND: the shipped defaults
 // file's text (assets/device_config_defaults, THE FIRST-RUN VALUES above),
 // judged by read_device_config's one body — the shared scanner and every
 // per-key grammar — so a defaults file is loadable iff a config holding its
@@ -1141,13 +839,11 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // fatal: the live value stands for this session and the next launch reads
 // whatever the file last held.
 //
-// The card stands, and it is a ruling rather than a leftover (architect
-// 2026-09-04, blessing what landed 2026-09-02 in the two-clause shape): a
-// 2026-09-02 review had classed a failed persist as adversarial reach and
-// asked for no message at all, but each of these writes is a deliberate press
-// whose result nothing paints, and the deliberate-press rule (notifications.h)
-// is what decides such a case — so the failure says its sentence, on a
-// NORMAL card, where the caller has a card surface.
+// The card stands (architect 2026-09-04): a failed persist is not
+// adversarial reach, for each of these writes is a deliberate press whose
+// result nothing paints, and the deliberate-press rule (notifications.h) is
+// what decides such a case — so the failure says its sentence, on a NORMAL
+// card, where the caller has a card surface.
 //
 // THE LIVE CONFIG HAS ONE OWNER, gui_main's loop (main.cpp): the ONE
 // DeviceConfig it reads at startup outlives every project the process opens,
@@ -1158,8 +854,7 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // user committed in the session — and it is why the callers below write the
 // struct they were handed rather than composing one from AppState's fields.
 //
-// THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory
-// (re-grepped 2026-10-21):
+// THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory:
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
 // which serves its ONE device-key body — ten keys, `projects_repo=`,
@@ -1170,7 +865,7 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
 // and `osk_font_px=` (its GuiInputHandler::apply_osk_font_px)
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp) — and the
-// band's level case's end (GuiInputHandler::settle_level_case:
+// top icon row's level case's end (GuiInputHandler::settle_level_case:
 // `noise_level=`, its live act GuiNoise::set_level_db); and
 // gui_main's `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
@@ -1183,8 +878,7 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // exist yet and then read back like any other. The template is the running
 // BACKEND's answer (GuiPlatform::device_config_defaults): the shipped
 // defaults file parsed, every key spelled there, its values the tablet's
-// own config as last snapshotted (THE FIRST-RUN VALUES above, 2026-11-09;
-// until then the backend spelled each value in code), so a first run lands
+// own config as last snapshotted (THE FIRST-RUN VALUES above), so a first run lands
 // a file that is already right for it and the user edits from there rather
 // than from a wrong guess. A missing parent directory is created.
 //

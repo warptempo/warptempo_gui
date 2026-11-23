@@ -232,7 +232,8 @@ void GuiTargetRender::trigger() {
         playback.stop();
         app.playhead_scanner_active = false;
         // The clock flips from the scanner's time to the resting cursor's on
-        // this edge, and nothing else damages row 8's cell on the reachable
+        // this edge, and nothing else damages the timestamp's cell on the
+        // reachable
         // route (a W+target cent step during a live audition — the one
         // mutator the keyboard stop rule lets through un-stopped): the
         // step's re-land is idempotent (the focused marker's own
@@ -344,13 +345,11 @@ void GuiTargetRender::stamp_updating() {
     viewport.invalidate_status_bar_area();
 }
 
-// (THE 2026-08-13 FIELD REPORT — "the Updating.../Rendering... notices are
-// gone" — was traced end to end and is NOT a defect in this label's writers,
-// its damage or its painter. Its three real causes, and the honest statement
-// that the chain's move into the tab row fixed none of them, are recorded once
-// at GuiInputHandler::tick_promote_render_status, this label's archival twin;
-// the label stands in the status bar under the bottom icon row (send Z,
-// 2026-11-19), and the three causes are untouched by that move too.
+// (A MISSING "Updating..." / "Rendering..." NOTICE IS NOT A DEFECT in this
+// label's writers, its damage or its painter (traced end to end 2026-08-13):
+// its three real causes are recorded once at
+// GuiInputHandler::tick_promote_render_status, this label's archival twin;
+// the label stands in the status bar under the bottom icon row (2026-11-19).
 // The half that belongs HERE: this stamp fires only where the update really
 // becomes a wait — the synthesis miss below and trigger()'s busy branch — so
 // an update served by either synchronous reuse rung is silent by the
@@ -918,7 +917,7 @@ void GuiTargetRender::complete_successful_buffer(
         // ensure_ready's own call — takes this bind rather than deferring to a
         // re-express that has already happened. Only the Up tail leaves the
         // bit standing, and it is the tail that still has a close to wait for.
-        // NOR UNDER A SCORE VIEWER HOLDING THE ENGINE (2026-10-26 night,
+        // NOR UNDER A SCORE VIEWER HOLDING THE ENGINE (2026-10-26,
         // score_viewer_holds_engine): the soundtrack is bound, live or
         // paused, and the viewer's close re-expresses the view by the same
         // road, its transport taken down behind the fence first.
@@ -1001,8 +1000,7 @@ GuiTargetRender::compute_buffer_start_frame_for(
     // it AHEAD of the crossed / sub-sample diagnostics is what keeps a one-frame
     // source's canonical [0, 0] from being classified as a crossed trim
     // fallback. The recognition is the shared owner trim_window_is_full
-    // (settings_file.h); the lone-bound completions that used to live here died
-    // with the lone bound.
+    // (settings_file.h); a trim has no lone bound to complete.
     //
     // Survival verdict (orchestrator decoupling; rationale at the struct in
     // target_render.h). For a proper SUB-WINDOW, two fallbacks render the FULL,
@@ -1240,9 +1238,8 @@ void GuiTargetRender::cancel_in_flight_update() {
     // next line, and with pending_ down and in_flight_ either down or naming a
     // render whose own completion now discards, the next target-view entry
     // finds dispatch_stands_for_current_generation() false and falls through to
-    // trigger(). That is the whole of the road that once stood open: it was
-    // the discard's absence, not this drop, that used to hand the next entry a
-    // clean-looking stale buffer.
+    // trigger(). The drop is safe because of that discard: without it the
+    // next entry would be handed a clean-looking stale buffer.
     pending_ = false;
     // THE STAMP IS VOIDED WITH THE DISPATCH: pending_ falls here, but in_flight_
     // falls only when the cancelled render's completion arrives, and until then
@@ -1276,7 +1273,7 @@ void GuiTargetRender::rebind_to_source() {
 
     // Conditional by design, for the reason stated at ensure_ready's twin above:
     // the rebind_buffer QUIESCENCE FENCE is taken at the stop EDGES (Space, the
-    // gesture stop, and the tick's natural-end branch since 2026-07-29), so by the
+    // gesture stop, and the tick's natural-end branch), so by the
     // time a toggle reaches here a stopped session has already been fenced.
     if (playback.is_playing()) {
         playback.stop();

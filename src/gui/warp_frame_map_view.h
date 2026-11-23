@@ -24,14 +24,12 @@
 // nothing on screen (validate_target_view_entry, input_handler.h). Callers
 // in target view route this through render_flags / the trim painters so hit-test
 // math and paint stay in sync.
-// EVERY BUILD IS LOUD: the `quiet` parameter that forwarded into
-// resolve_warp_markers_for_render to suppress normalization stderr lines is DELETED
-// (2026-07-29), together with the frozen parser's own — an explicit surgical freeze
-// approval from the architect. Its sole caller had been the group tempo drag's
-// monotone bisection, which evaluated hypothetical never-live candidate maps, and
-// that whole gesture is gone (deleted with the tempo drag), so no hypothetical build exists
-// to want silence. The parser-side inventory (FIVE resolve call sites, all of which
-// had always passed the loud default) is recorded at that function's declaration.
+// EVERY BUILD IS LOUD: nothing suppresses resolve_warp_markers_for_render's
+// normalization stderr lines, here or in the frozen parser (2026-07-29, an
+// explicit surgical freeze approval from the architect), because no caller
+// builds a hypothetical never-live candidate map that would want silence. The
+// parser-side inventory of the resolve call sites is recorded at that
+// function's declaration.
 std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     const std::vector<GuiWarpMarker>& markers,
     double scale,
@@ -88,7 +86,7 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // Memoized RED-FLAG SET for the warp column: the marker-store indices whose
 // cues paint STRUCK (the plain cue with its label struck through, in every
 // look — resting, inactive, selected — resolve_flag_face's table, render.cpp;
-// architect 2026-10-26 ~15:10, the invalid color retired), so
+// architect 2026-10-26 ~15:10), so
 // the mark is never masked by a selection. `red` is a PAINT cue with ONE
 // meaning: the render normalizes this marker to 1.00 — or, for a disabled
 // coincident member, would ("they both get 1.0 as their effective tempo",
@@ -102,8 +100,8 @@ const TargetWarpFrameMapCache& target_view_warp_frame_map_cached(
 // "if two warp markers are struck in the gui, both should render as 1.0 in
 // the parser/engine"); (2) a LABEL-REF fallback via marker_effective — a
 // dangling label ref (a disabled definition's refs and a coincident member's
-// included, participation being each marker's own flag since 2026-10-29 and a
-// member holding no label since 2026-11-17), a ref to an
+// included, participation being each marker's own flag (2026-10-29) and a
+// member holding no label (2026-11-17)), a ref to an
 // AMBIGUOUS label (two live definitions, 2026-10-29) or an extreme-ratio label
 // ref, all of which resolve to source_idx == -1 (a pass never normalizes: its
 // walk skips refs to the owner behind them, architect 2026-09-13), and with
@@ -169,9 +167,8 @@ struct WarpRedFlagCache {
     // adjacent rows — two runs back to back (the last of one 1 ms or more
     // from the first of the next) stay two — and the entries' runs together
     // hold `collapsed` and nothing else. ITS ONE READER is the struck card's
-    // places (GuiNotifications::sync_struck_card, architect 2026-11-19, send
-    // CC: "The red coincide card should say where the coincident markers
-    // are").
+    // places (GuiNotifications::sync_struck_card, architect 2026-11-19: "The
+    // red coincide card should say where the coincident markers are").
     std::vector<int> coincident_run_firsts;
 };
 
@@ -216,10 +213,9 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
 // the audio and the A/B tabs carry — both tabs always show the same picture,
 // the curve being a function of the one source. The drawing excluded is a
 // plotted curve, a tint over the picture or a colour read from the gain: the
-// lit plate's per-column shade, which read the leveler's gain for one day,
-// is struck (architect 2026-09-25, render_waveform_columns) and both lit bars are
-// one flat colour, the inner's outline (one device px thick) another
-// (2026-09-27).
+// lit plate wears no per-column shade (architect 2026-09-25,
+// render_waveform_columns) — the inner bar is a solid fill in the core over
+// the outer's ink, no outline (render.h's THE CORE).
 //
 // NO MODE TERM — the `h` view follows the lamp as it stood when the view was
 // entered (the lamp is dead there by its allowlist), its plate being the live
@@ -254,7 +250,7 @@ bool waveform_magnification_toggle_actionable(const GuiAudio& audio);
 // when it moved. Its one live input is the lamp: an S/T switch leaves it as
 // it stands, the plate re-rendering on the switch through the fingerprint's
 // own target bit and warp-map hash and the switch's closing
-// kick_waveform_sync. TWO READERS, re-grepped 2026-09-24: the plate's render inputs, which is also
+// kick_waveform_sync. TWO READERS: the plate's render inputs, which is also
 // where the fingerprint's gain field is captured
 // (compute_waveform_render_inputs, waveform_cache.cpp); and the gain kick's
 // hash (Viewport::waveform_gain_hash).
@@ -299,12 +295,12 @@ double painter_samples_per_pixel(const AppState& app, const GuiAudio& audio,
 // 0.0 on a non-positive spp. painter_samples_per_pixel is this at the LIVE
 // level. IT IS WIDTH-FREE: the quantization reads no width, so at a given spp
 // every window size shares one grid, and a hand resize never moves a landing
-// at a held zoom. The LEVEL→spp map is device-relative since 2026-09-27
-// (spp = working column × 2^(level − 2), samples_per_pixel_at), and the
+// at a held zoom. The LEVEL→spp map is device-relative (2026-09-27;
+// spp = working column × 2^(level − 2), samples_per_pixel_at), and the
 // working column is fixed per process from the held display width, so within a
 // device every level, whole or fractional (every rest a pinch or pen zoom
 // leaves), has one step; across devices the same level is the same RELATIVE
-// zoom and a different grid, the cross-device promise withdrawn. EVERY
+// zoom and a different grid. EVERY
 // REST — a landing's and a gesture's alike — lies on ITS OWN LATTICE of that
 // step, origin + nearbyint(k·q), the origin derived from the start the act
 // asked for and held by the camera (architect 2026-10-31 and 2026-11-15,
@@ -420,7 +416,7 @@ inline double viewport_lattice_index(double vp_start, double q,
     return std::nearbyint((vp_start - static_cast<double>(origin)) / q);
 }
 
-// THE PLACEMENT'S INDEX SELECTOR (architect 2026-11-06, session 69, TIES
+// THE PLACEMENT'S INDEX SELECTOR (architect 2026-11-06, TIES
 // RIGHT): the nearest integer to a lattice quotient x, an EXACT half-integer
 // going toward +inf, as a whole-valued double — integer K owns [K − 0.5,
 // K + 0.5). Shared by the frame->column placement (displayed_column_at) and
@@ -439,22 +435,22 @@ inline double lattice_index_ties_right(double x) {
 }
 
 // THE PAINTERS' COLUMN PLACEMENT for a value ALREADY in the displayed domain,
-// ON THE LATTICE'S OWN INDEX (architect 2026-11-06, session 68): the value's
+// ON THE LATTICE'S OWN INDEX (architect 2026-11-06): the value's
 // nearest lattice index K = lattice_index_ties_right((displayed − origin) /
 // spp) less the viewport's own m = viewport_lattice_index(vp_start, spp,
 // origin) — the column K − m, the integer column of the point of the
 // caller's lattice nearest the value, AN EXACT TIE GOING RIGHT IN THE
 // LATTICE'S COORDINATES.
 //
-// TIES RIGHT (architect 2026-11-06, session 69): index K owns the quotients
+// TIES RIGHT (architect 2026-11-06): index K owns the quotients
 // [K − 0.5, K + 0.5), start included — the point model's own half-open
 // convention, a lattice frame the left edge of its pixel (render.cpp's
 // render_playhead). WHY A DIRECTED TIE: it is translation-invariant,
 // R(x + d) = R(x) + d for a whole d, so a marker on a half-column dragged one
 // device px a step at a whole q in source view moves one column a step;
 // ties to even is not (an odd d flips the parity), and painted 2, 0, 2 px
-// (Astra's determinism audit, 2026-11-06: F = 4623, q = 46, origin 0).
-// THE ASYMMETRY IS DELIBERATE AND FORCED (Sol's tie review, the same day):
+// (2026-11-06: F = 4623, q = 46, origin 0).
+// THE ASYMMETRY IS DELIBERATE AND FORCED (2026-11-06):
 // with a = R(0.5), translation wants R(−0.5) = a − 1 and reflection wants
 // R(−0.5) = −a, so a = 0.5, no column — a translation-consistent rule
 // cannot be mirror-symmetric at a tie; right over left is the half-open
@@ -467,15 +463,15 @@ inline double lattice_index_ties_right(double x) {
 // cells, global — column c spans [g(m + c), g(m + c + 1)) — and the plate is
 // placed in those columns' coordinates (render.h's THE PLATE'S BARS), so a
 // pan at a fixed q and origin translates the plate by whole columns, every
-// bar keeping its tips. The viewport-local quotient that stood here,
-// nearbyint((displayed − vp_start) / spp), decided a tie (a point on a
+// bar keeping its tips. A viewport-local quotient,
+// nearbyint((displayed − vp_start) / spp), would decide a tie (a point on a
 // half-column: every odd point of the q = 23 lattice seen at q = 46, an
 // ordinary fine-authored marker one level coarser) half to even in the
-// SCREEN's coordinates, which an odd m flips, and at a fractional q it read
+// SCREEN's coordinates, which an odd m flips, and at a fractional q would read
 // the rounded start's residue against any near-half point; so the mark
-// picked the left or the right boundary of the same global cell by m's
-// parity and beat 0, −2, 0 px against a plate moving −1 px a step (Astra's
-// s68 review, the architect's localization question). K is a function of
+// would pick the left or the right boundary of the same global cell by m's
+// parity and beat 0, −2, 0 px against a plate moving −1 px a step
+// (measured 2026-11-06). K is a function of
 // the value, q and the origin alone, so under a pan the mark translates
 // rigidly with the plate. At a whole q the selector on the local quotient
 // would answer the same column (the rule is translation-invariant and the
@@ -485,10 +481,10 @@ inline double lattice_index_ties_right(double x) {
 // shares (viewport_lattice_index).
 //
 // One owner for the one rounding — THE COLUMN'S READERS, and what each takes
-// of it since the marks are painted at their exact places (architect
-// 2026-11-14, send J; displayed_x_at below owns that rule and the list of
+// of it, the marks being painted at their exact places (architect
+// 2026-11-14; displayed_x_at below owns that rule and the list of
 // what is painted there; the gates, the hit boxes, the held place and the
-// landings left the column with the no-grid arc, 2026-11-15): THE CULLS AND
+// landings read the exact place, the no-grid arc, 2026-11-15): THE CULLS AND
 // THE CAMERAS' TESTS — the flag iterator's right cull
 // (iterate_visible_flags_impl, render.cpp), the playheads' and the
 // scanner's column (playhead_pixel_x / scanner_pixel_x, main.cpp — the
@@ -507,14 +503,13 @@ inline double lattice_index_ties_right(double x) {
 // THE UNROUNDED SIBLING IS A DIFFERENT CONCEPT AND STAYS SEPARATE: the strip
 // drag's fractional anchor_col wants the SUB-PIXEL position, not a column.
 // THE EXACT PLACE is this owner's sibling below, displayed_x_at
-// (architect 2026-11-14, send J): the same quotient unrounded — paint's,
-// and since the no-grid arc (2026-11-15) the hit geometry's, the ADD SEL
+// (architect 2026-11-14): the same quotient unrounded — paint's,
+// and (the no-grid arc, 2026-11-15) the hit geometry's, the ADD SEL
 // sweep's membership's and the nudge's held place's too (its own head
 // lists them).
 //
-// NO SECOND SPELLING OF K − m STANDS ANYWHERE: the int64 column walk the
-// playhead's step kept beside this owner went with the column step
-// (architect 2026-11-15, the nudge one millisecond).
+// NO SECOND SPELLING OF K − m STANDS ANYWHERE (no step walks columns: the
+// nudge is one millisecond, architect 2026-11-15).
 inline int displayed_column_at(double displayed, double vp_start, double spp,
                                int64_t origin) {
     const double m = viewport_lattice_index(vp_start, spp, origin);
@@ -523,7 +518,7 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
     return static_cast<int>(k - m);
 }
 
-// THE EXACT PLACE (architect 2026-11-14, send J: "the anti-aliasing I would
+// THE EXACT PLACE (architect 2026-11-14: "the anti-aliasing I would
 // like to commit to that as well, the full anti-aliasing"; "I would expect
 // snapping nothing to integers and leaving them rounding to yield decent
 // results"): where a value ALREADY in the displayed domain stands on the
@@ -542,9 +537,10 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 // displayed_column_at's SIBLING ON THE SAME QUOTIENT: the column is that
 // quotient through lattice_index_ties_right less the same m, so column − 0.5
 // <= x < column + 0.5 — the exact place lies within half a px of its column.
-// WHAT THE COLUMN STILL OWNS (architect 2026-11-14, "Agree to all
+// WHAT THE COLUMN OWNS (architect 2026-11-14, "Agree to all
 // decisions."; the gates, the published rects, the hit tests and the pen
-// acts' landings left it 2026-11-15, the no-grid arc): every CULL and the
+// acts' landings are the exact place's, 2026-11-15, the no-grid arc): every
+// CULL and the
 // CAMERAS' VISIBILITY TEST (displayed_frame_on_screen) read
 // displayed_column_at, and nothing lands on a column: A PEN ACT LANDS ON THE
 // FRAME UNDER THE PEN'S REAL PLACE, this expression's inverse
@@ -572,7 +568,7 @@ inline int displayed_column_at(double displayed, double vp_start, double spp,
 //     main.cpp), the selection stems (the flag iterator's exact_x, stashed
 //     as MarkerStem::x), the zoom anchor's stem (strip_anchor_stem_x
 //     below), the waveform's hover line (cursor_frame_exact_x or
-//     strip_anchor_stem_x, GuiPaintHandler::hover_line_x; send FF), the
+//     strip_anchor_stem_x, GuiPaintHandler::hover_line_x), the
 //     lead-in ring's sides and runs
 //     (GuiPaintHandler::phase_reset_overlay_band) and the TRIM sweep's
 //     highlight (trim_bound_column's x_raw through trim_span_columns);
@@ -598,7 +594,7 @@ inline double displayed_x_at(double displayed, double vp_start, double spp,
 }
 
 // THE PEN ACTS' ONE CONVERSION — displayed_x_at's INVERSE (architect
-// 2026-11-15, the no-grid arc, ruling B: "B, yes, also the exact frame
+// 2026-11-15, the no-grid arc: "B, yes, also the exact frame
 // there" — a tap's playhead, a drop, a drag, the trim's edges): the
 // DISPLAYED frame under a real x (device px from the waveform area's left
 // edge) on the caller's lattice,
@@ -662,13 +658,13 @@ inline bool displayed_frame_on_screen(double displayed, double vp_start,
 }
 
 // THE ANCHOR STEM'S EXACT PLACE — displayed_x_at clamped into the waveform's
-// [0, w − 1] in reals (architect 2026-11-14, send J: the edge clamp, on the
+// [0, w − 1] in reals (architect 2026-11-14: the edge clamp, on the
 // exact place), the x render_strip_anchor_stem draws its line
 // at: an anchor pushed to or past a song edge pins to the edge column's
 // place, so the stem draws exactly there, and a clamped place always has
 // its line inside the area. Its two readers, both on the PLATE basis: the
 // stem painter (paint_strip_drag_anchor) and the waveform's hover line with
-// the barrel held (GuiPaintHandler::hover_line_x, send FF), which stands
+// the barrel held (GuiPaintHandler::hover_line_x), which stands
 // where the stem would.
 inline double strip_anchor_stem_x(double displayed, double vp_start,
                                   double spp, int64_t origin, int w) {
@@ -701,7 +697,7 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
 // The click-placement family (the nav click, the scrub click, the
 // ruler head's drag, the empty-lane double-click create) lands
 // active-domain playhead frames through playhead_frame_at_click_x
-// (input_pointer.cpp), on the same item basis since 2026-09-24 (architect,
+// (input_pointer.cpp), on the same item basis (architect 2026-09-24,
 // strictly as painted — the drops at the playhead author at the playhead's
 // frame and convert no place); and the playhead's damage columns come from
 // playhead_pixel_x (main.cpp) on the basis of the pixels they erase.
@@ -721,11 +717,7 @@ inline double strip_anchor_stem_x(double displayed, double vp_start,
 // exactly like paint. The flag EDITOR's unrolled box passes the ITEM basis
 // too, to the exact sibling — damage follows the pixels it erases, so the
 // box unrolls from the place the flag pixels were painted at even
-// mid-publish. (Two other
-// ITEM-basis callers died in row 5 with the marker-text lane: the run
-// centering and the run hit. The selected-stem invalidator was an _on_basis
-// caller until 2026-07-30; it is gone with the singleton selected-marker stem
-// itself.) `spp` must be > 0 (returns 0, a valid column, on a degenerate spp —
+// mid-publish. `spp` must be > 0 (returns 0, a valid column, on a degenerate spp —
 // callers guard the geometry). The domain and the source->target mapping do
 // not depend on the viewport.
 int painted_column_of_source_frame_on_basis(
@@ -783,8 +775,8 @@ double painted_x_of_source_frame_on_basis(
 // rule) and is reachable by zooming in or by the Tab walk. So the refusal is
 // input routing, never an adversarial class: it judges no data and no render
 // stage sees it. Its error arm has a producer (a Right press in the song's
-// last columns, End then `s` at the whole-song zoom; and, since the pen acts
-// take the frame under the pen's real place, a tap in the strip's last half
+// last columns, End then `s` at the whole-song zoom; and, the pen acts
+// taking the frame under the pen's real place, a tap in the strip's last half
 // px at the right wall, whose playhead a drop then authors at); the marker
 // drag needs no copy, its visible-strip clamp stopping at the last column's
 // left edge (viewport_marker_bounds).
@@ -812,11 +804,11 @@ int64_t authored_frame_at_x_on_basis(
 //
 // These four live here, beside the map functions they read, because the
 // question they answer is a MAP question: where the engine's analysis lattice
-// falls in source frames under the map a render would use. They were the
-// painter's alone until 2026-09-09, when the phase-reset column got its own
-// iteration bracket and the walls, the editor's refusal, the arrows' landing
-// and the sweep all had to ask the same lattice the overlay band paints; the
-// P column's Left / Right, whose unit is a hop (2026-09-21), asks it too.
+// falls in source frames under the map a render would use. The phase-reset
+// column's iteration bracket — the walls, the editor's refusal, the arrows'
+// landing and the sweep — asks the same lattice the overlay band paints
+// (2026-09-09), and the P column's Left / Right, whose unit is a hop
+// (2026-09-21), asks it too.
 
 // THE ENGINE'S SEED FRAME FOR A RESET, mirrored in the GUI (2026-09-02): the
 // schedule index m the engine seeds at for a reset authored at source frame
@@ -855,16 +847,15 @@ int64_t phase_reset_window_centre_frame(
 // position_nudge_landing's hop arm, position_nudge.h) — because two meanings
 // of "one hop" on one column would be an asymmetry.
 //
-// THE RULE IS TRANSLATION (architect 2026-09-21, superseding the
-// minimum-displacement rule of 2026-09-09, under which a cell landed on the
-// near end of the window k hops away): the reset's target image moves by
+// THE RULE IS TRANSLATION (architect 2026-09-21): the reset's target image
+// moves by
 // exactly k hops, t' = map_source_to_target(S) + k * kRs, and the landing is
 // the authored frame of map_target_to_source(t') through snap_authored_frame
 // (the one double-to-authored route, banker's rounding). The reset's offset
 // inside its window travels with it, so Right then Left returns it
-// to where it started, give or take a frame of rounding — the minimum rule
-// threw that offset away and the round trip landed up to a hop off. The phase
-// cells had never been used, so nothing was lost by their following.
+// to where it started, give or take a frame of rounding (a landing on the
+// near end of the window k hops away would throw that offset away and land
+// the round trip up to a hop off).
 //   k == 0  ->  S itself, byte for byte (the identity cell renders the resting
 //               store; no arithmetic, so no rounding moves it).
 //
@@ -886,7 +877,7 @@ int64_t phase_reset_window_centre_frame(
 //
 // THE LATTICE IS THE MAP'S, AND THE MAP EVERY CALLER PASSES IS THE LIVE ONE
 // (live_warp_frame_map below) — the map the render uses, and the map the
-// sweep's own cells render under. A sweep is ONE COLUMN'S since 2026-09-10, so
+// sweep's own cells render under. A sweep is ONE COLUMN'S (2026-09-10), so
 // a phase sweep rewrites no tempo and moves no lattice: the displacement is
 // computed under the same map the walls were checked under and every cell
 // renders under, once per reset per k. The hop step asks the same map, because
@@ -942,12 +933,9 @@ bool warp_marker_in_vicinity_of(const AppState& app, int sample_rate,
 //
 // THE INTERVAL IS THE WHOLE ANSWER, and there is no wall-KIND beside it: both
 // readers want the numbers — the editor refuses a value outside them and the
-// step clamps into them — and neither has ever forked on which wall closed a
-// side. (A per-side wall-kind enum rode this struct while the editor's refusal
-// spelled a different sentence per wall; the sentence collapsed into one and
-// the enum lost its last reader with it. The two walls themselves are not
-// gone — they are what the walk below closes each side on, and the DIGIT
-// ceiling survives exactly as the numeric bound the step clamps at.)
+// step clamps into them — and neither forks on which wall closed a
+// side. (The two walls are what the walk below closes each side on, and the
+// DIGIT ceiling is the numeric bound the step clamps at.)
 struct PhaseHopWindow {
     int k_min = 0;
     int k_max = 0;
@@ -965,11 +953,11 @@ struct PhaseHopWindow {
 //   was" (phaseresetmarkers.h).
 //
 // A NEIGHBOURING RESET IS NOT A WALL (architect 2026-09-11): two adjacent
-// ranges may CROSS OR MEET. The neighbour walls that stood from 2026-09-09 are
-// retired — they were order-dependent (each neighbour walled at its bracket's
-// own extreme landing while the walks checked one side each, so a neighbour
-// that moved its bound away vacated space a range could enter and its later
-// retreat or clear left the crossing behind), and the answer is no wall rather
+// ranges may CROSS OR MEET. A neighbour wall would be order-dependent (each
+// neighbour walled at its bracket's own extreme landing while the walks check
+// one side each, so a neighbour that moved its bound away would vacate space
+// a range could enter and its later retreat or clear would leave the crossing
+// behind), and the answer is no wall rather
 // than a tighter one: iteration is wanted in quiet, exposed sections with few
 // resets, and a user who sets two ranges within a few hops of each other is
 // doing it deliberately — the ear catches the contortion, the same latitude
@@ -987,11 +975,11 @@ struct PhaseHopWindow {
 // a bracket exists only while grid iterations is lit, and while it is lit the
 // piece is LOCKED (authoring_locked, app_state.h), so the piece's length
 // cannot change and no warp edit can move the lattice — the two facts these
-// walls are made of. That is what retired the sweep plan's per-read
-// re-verification, which existed because nothing clamps this bracket
-// retroactively: the walls hold by construction now.
+// walls are made of. So the sweep plan needs no per-read re-verification
+// although nothing clamps this bracket retroactively: the walls hold by
+// construction.
 //
-// ONE READER since 2026-09-19: phase_iter_bound_tie_window (app_state.h),
+// ONE READER (2026-09-19): phase_iter_bound_tie_window (app_state.h),
 // which INTERSECTS these windows across a tie's members — one sweep
 // cell displaces every tied reset by the same hop count, so a bound must fit
 // them all. The two roads onto a hop bound reach it through that intersection

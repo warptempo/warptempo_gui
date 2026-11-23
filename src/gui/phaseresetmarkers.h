@@ -37,9 +37,8 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     // ANALYSIS LATTICE, and a cell at +k TRANSLATES the reset by k hops of
     // the target domain, its offset inside its window travelling with it
     // (phase_reset_hop_step_frame, warp_frame_map_view.h — the one owner the
-    // P column's Left / Right, whose unit is a hop, lands through too; the
-    // minimum-displacement rule of 2026-09-09 was superseded by translation
-    // 2026-09-21).
+    // P column's Left / Right, whose unit is a hop, lands through too;
+    // translation, 2026-09-21).
     //
     // A SINGLE DIGIT EACH WAY (kIterHopMax below, his "past nine it is no
     // longer the phase reset it was"). nullopt means "blank" (both cells read
@@ -63,17 +62,14 @@ struct GuiPhaseResetMarker : PhaseResetMarker {
     //
     // NOTHING CLAMPS THIS BRACKET RETROACTIVELY and nothing needs to. The hop
     // window is a fact about the piece's length AND the live warp map
-    // (phase_reset_hop_window, warp_frame_map_view.h), and it once read the
-    // neighbouring resets too, which gave it a dozen writers — a nudge or drag
-    // of the reset or a neighbour, a neighbour dropped or deleted, a disable, a
-    // warp edit that moves the lattice — and the sweep's plan re-verified every
-    // bracket on every read for one day because of it. THE LOCK REFUSES EVERY
-    // ONE OF THOSE WRITERS while a bracket stands, and the neighbour walls
-    // themselves are retired (architect 2026-09-11: two ranges may cross or
-    // meet, the sweep sorting each cell before the request), so the walls that
-    // remain — the piece's edges and the single digit — hold by construction:
-    // the editor's refusal at its commit and the step's clamp at its landing
-    // are their whole enforcement.
+    // (phase_reset_hop_window, warp_frame_map_view.h), never the neighbouring
+    // resets (architect 2026-09-11: two ranges may cross or meet, the sweep
+    // sorting each cell before the request). THE LOCK REFUSES EVERY ACT THAT
+    // COULD MOVE THE WINDOW while a bracket stands — a nudge or drag, a drop or
+    // delete, a disable, a warp edit that moves the lattice — so its walls,
+    // the piece's edges and the single digit, hold by construction: the
+    // editor's refusal at its commit and the step's clamp at its landing are
+    // their whole enforcement.
     std::optional<int> iter_start_hops;
     std::optional<int> iter_end_hops;
 
@@ -184,17 +180,16 @@ inline std::string format_phase_iter_bound_cell(const GuiPhaseResetMarker& m,
 // with no producer for a bracketed reset, kept for the warp predicate's own
 // reason (it states the SWEEP's input, not the bracket's writers). SEVEN
 // READERS, the warp predicate's own inventory in
-// this column's terms (re-greped 2026-09-19, when the TIE's verdict owner
-// joined them — iter_tie_toggle_verdict, app_state.h, which refuses a member
-// the sweep does not read): the sweep's dispatch
+// this column's terms (the TIE's verdict owner among them —
+// iter_tie_toggle_verdict, app_state.h, which refuses a member the sweep does
+// not read, 2026-09-19): the sweep's dispatch
 // (run_iteration_sweep_render, input_key_dispatch.cpp) and its face's plan
 // (iteration_sweep_plan, app_state.h) skip the reset, so its bracket neither
 // multiplies the cell count nor names a cell; the flag painter
 // (render_phase_reset_flags, render.cpp) paints the two bound cells on exactly
 // these resets and none on a disabled flag; the bound step
 // (GuiPhaseResetMarkersOps::adjust_iter_bound_hops) refuses an ineligible
-// focus on a card, the warp twin's own reading since its group arm went
-// (2026-09-10); the bound
+// focus on a card, the warp twin's own reading (2026-09-10); the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
 // paints — no cell, no editor; and the value drag steps a reset's bound
 // only where its cells are painted, asking through the painter's own

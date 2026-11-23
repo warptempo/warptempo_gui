@@ -15,15 +15,14 @@
 #include <cmath>
 
 // THE NAVIGATION RANGE (contract at the declaration): Home/End's jump bounds and
-// the load-time playhead; no GUI playback consumer since 2026-08-05, and ONE
-// playback consumer since 2026-09-17 — the car's loop window, which is this
-// range by ruling (the declaration).
+// the load-time playhead; no GUI playback consumer, and ONE playback
+// consumer — the car's loop window, which is this range by ruling (the
+// declaration).
 //
-// ITS BODY IS A FREE FUNCTION since 2026-08-15 and the member DELEGATES, so
-// there is still exactly ONE arithmetic: playhead_skip_landing_frame (below,
-// declared in app_state.h) must answer the same bounds the two Home/End arms
-// jump to, and it is a free function itself for the same reason. The member
-// keeps its name and its callers; nothing about the range moved.
+// ITS BODY IS A FREE FUNCTION and the member DELEGATES, so there is exactly
+// ONE arithmetic: playhead_skip_landing_frame (below, declared in
+// app_state.h) must answer the same bounds the two Home/End arms jump to,
+// and it is a free function itself for the same reason.
 namespace {
 std::pair<int64_t, int64_t> navigation_trim_range(const AppState& app,
                                                   const GuiAudio& audio) {
@@ -39,7 +38,7 @@ std::pair<int64_t, int64_t> navigation_trim_range(const AppState& app,
         //
         // THE FULL-WINDOW NORMALIZATION (architect 2026-07-30), the target-view
         // half of the rule compute_trim_samples records in full: a full source
-        // pair [0, total-1] is the old unset state, so it returns the whole live
+        // pair [0, total-1] is the unset state, so it returns the whole live
         // domain {0, live_total} — mapping total-1 through the map instead would
         // land an EXCLUSIVE end one target frame short and cost the last frame
         // of the deformed timeline. The recognition is the shared owner
@@ -79,8 +78,8 @@ int64_t Viewport::trim_end_sample()   const { return trim_range().second; }
 
 // WHERE A Home / End JUMP WOULD LAND THE CURSOR — the contract, the two arms,
 // the clamp's purpose and the four readers are all at the declaration
-// (app_state.h): the live Home / End, their shift forms (row 8's START and
-// END buttons' plain and shift presses, 2026-10-24) and the mode's absolute
+// (app_state.h): the live Home / End, their shift forms (the bottom icon
+// row's START and END keys' plain and shift presses) and the mode's absolute
 // jumps spell one bound once instead of once per route, and
 // playhead_end_jump_actionable just below, the jump acts' "would this form
 // change anything" owner, is how the acts' own no-op refusals read this
@@ -92,8 +91,7 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
         // takes it for every jump (architect 2026-08-05: the view reviews the
         // WHOLE piece, so an End stopping at a trim bound would hide the flags
         // past it), and the SHIFT forms take it anywhere (architect 2026-09-26:
-        // frame 0 and the last frame whatever the trim window is; Ctrl until
-        // 2026-10-24). The ends
+        // frame 0 and the last frame whatever the trim window is). The ends
         // are the ACTIVE DOMAIN's own: live_total_frames is what the
         // displayed timeline runs to in either audio view. With a full trim
         // window the two arms coincide.
@@ -112,8 +110,7 @@ int64_t playhead_skip_landing_frame(const AppState& app, const GuiAudio& audio,
 // selection clear's (the live arms' selection-or-focus pair, or the mode
 // arm's diff-flag pair through history_mode_revert_subject_standing — the
 // same two fields clear_history_mode_focus tests), and the landing compare
-// against the resting cursor. (A shown trim overlay was a fourth term until
-// 2026-09-22, when the movement owner stopped hiding it.)
+// against the resting cursor.
 bool playhead_end_jump_actionable(const AppState& app, const GuiAudio& audio,
                                   bool forward, bool whole_piece) {
     if (transport_session_live(app)) return true;
@@ -162,8 +159,8 @@ void damage_window_top_rows(AppState& app, GuiPlatform& gui, int y1) {
     }
 }
 
-// THE PROCESS LINE'S DAMAGE — the status bar's lane whole (send Z,
-// 2026-11-19). The caller inventory and why the writers declare it beside
+// THE PROCESS LINE'S DAMAGE — the status bar's lane whole (2026-11-19).
+// The caller inventory and why the writers declare it beside
 // the tick's comparator are at the declaration, viewport.h. The lane is the
 // lane table's, on the window's foot. NONE WHILE THE ON-SCREEN KEYBOARD
 // STANDS: it covers the bar, whose painter yields under it, and its hide
@@ -188,9 +185,9 @@ void Viewport::invalidate_tab_name_area() {
 }
 
 // THE MODAL'S DAMAGE — every rect the modal can paint and every rect its
-// close must give back, the unified bottom row's lane among them (the modal
-// has stood in the row since 2026-08-13, and the row's own tenants come back
-// on a close). No cell arithmetic: the rects below are the modal family's own
+// close must give back, the bottom icon row's lane among them (the modal
+// stands in the row, and the row's own tenants come back on a close). No
+// cell arithmetic: the rects below are the modal family's own
 // geometry, the lane alone covering only what keeps to the row, which a
 // page's box does not (below) — the stash's owner the one published bit
 // read, and only to say whether a box stood last frame.
@@ -393,15 +390,13 @@ void Viewport::invalidate_standing_scanner() {
 // undo/redo restore's re-land, which scrolls nothing — its twin
 // tow_playhead_to, the marker drag's tow, and
 // reseat_playhead_on_marker — the S/T flip, the map-change re-lands, the
-// coincidence auto-select's no-op), a RESTORE (the tab switch's band swap,
+// coincidence auto-select's no-op), a RESTORE (the tab switch's view swap,
 // which writes the cursor direct — the act's own two tab switches are
 // restores) and THE CAMERA, which writes no playhead at all. The trim family
-// writes no cursor at all (architect 2026-11-07, session 88, the rule at the
+// writes no cursor at all (architect 2026-11-07, the rule at the
 // head of input_trim.cpp), and a trim write stops playback through the one
 // stop body, which ends the act anyway. UNCONDITIONAL, never gated on whether the write moved
-// anything. (From 2026-08-19 to 2026-09-22 these owners also hid the trim
-// region overlay; that hide was deleted with the overlay's resting form.) This
-// is a class statement: the complete clearing-owner inventory is at
+// anything. This is a class statement: the complete clearing-owner inventory is at
 // GuiAuditionSequence (app_state.h) and is not to be restated here.
 //
 // A PLAYHEAD MOVEMENT ALSO PUTS OUT THE HOLD POSTURE (architect 2026-09-23):
@@ -539,16 +534,16 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
 // right edge, in column 0 past the left.
 //
 // THE WRITE ALONE, WITH NO AUDITION END IN IT, and the callers who want it
-// that way are the ones whose write is NOT a movement (2026-08-19). RE-DERIVED BY GREP
-// 2026-09-22 — EIGHT, in two families:
+// that way are the ones whose write is NOT a movement (2026-08-19) —
+// EIGHT, in two families:
 //   * THE MAP-CHANGE RE-LANDS, all in a target-view re-warp tail: both arms of
-//     the Up/Down tempo cent step (warpmarkers_ops.cpp) and, since 2026-08-25,
+//     the Up/Down tempo cent step (warpmarkers_ops.cpp) and
 //     the WARP STATUS/VALUE FAMILY admitted in W+target with them — Ctrl+D,
 //     Ctrl+N and Delete (warpmarkers_ops.cpp) and the flag editor's payload
 //     commit (flag_editor.cpp), whose shared contract is stated at the head of
-//     warpmarkers_ops.cpp; and since 2026-09-02 THE TWO OTHER
-//     WHOLE-MAP REWRITES, which had kept the playhead's NUMBER where the family
-//     keeps its INSTANT — the SETTINGS ENGINE COMMIT (settings_editor.cpp; the
+//     warpmarkers_ops.cpp; and THE TWO OTHER
+//     WHOLE-MAP REWRITES, which keep the playhead's INSTANT as the family
+//     does — the SETTINGS ENGINE COMMIT (settings_editor.cpp; the
 //     engine scale is a warp-map input) and the `h` view's WARP REVERT
 //     (input_key_dispatch.cpp; its phase arm is carved out, phase resets being
 //     no map input). In five of the eight the focus does not change and the
@@ -560,15 +555,14 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
 //     selection outright and so leave no focus at all, and what they follow
 //     into the new domain is the playhead's own musical instant, inverted to a
 //     source frame before the write.
-//   * THE UNDO/REDO RESTORE'S RE-LAND WAS THE NINTH until 2026-09-22 and
-//     left for translate_playhead_to below: the keep-visible edge-align here
-//     scrolled the camera to an offscreen playhead's old instant, and the
+//   * THE UNDO/REDO RESTORE'S RE-LAND is NOT here: it takes
+//     translate_playhead_to below, because the keep-visible edge-align here
+//     would scroll the camera to an offscreen playhead's old instant, and the
 //     restore's camera answers to the markers it restores, never to the
 //     playhead (architect 2026-09-22).
-//   * THE TRIM FAMILY is NOT here: no trim writer writes the cursor since
-//     2026-11-07 (session 88, the rule at the head of input_trim.cpp), so the
-//     trim's surfaces take no suppression, they simply do not pass through
-//     here.
+//   * THE TRIM FAMILY is NOT here: no trim writer writes the cursor
+//     (architect 2026-11-07, the rule at the head of input_trim.cpp), so the
+//     trim's surfaces do not pass through here.
 // EVERY OTHER CALLER GOES THROUGH move_playhead_to — or, the ruler head's
 // drag, its twin drag_playhead_to — and inherits the audition end.
 //
@@ -647,8 +641,8 @@ void Viewport::reseat_playhead(int64_t new_sample, bool own_columns) {
         kick_waveform_sync();
     } else {
         // NO-SCROLL BRANCH: only the cursor moved. FULL WAVEFORM-AREA DAMAGE
-        // (architect 2026-07-30, replacing the narrow old/new column pair
-        // computed on the LIVE viewport) — the cursor's pixels are
+        // (architect 2026-07-30), never a narrow old/new column pair
+        // computed on the LIVE viewport — the cursor's pixels are
         // PLATE-registered, and Viewport sees no GuiPaintHandler, so the site
         // takes the widening shape: an async publish still in flight from an
         // earlier resize or load leaves live and plate on
@@ -684,9 +678,9 @@ void Viewport::reseat_playhead(int64_t new_sample, bool own_columns) {
 // translate_playhead_to: THE CURSOR FOLLOWS ITS OWN MUSICAL INSTANT INTO A
 // REBUILT DOMAIN AND THE CAMERA DOES NOT FOLLOW IT (architect 2026-09-22). The
 // reseat above is the same write plus a keep-visible edge-align, and on the
-// undo/redo restore that edge-align was the whole defect: in target view the
+// undo/redo restore that edge-align would be the defect: in target view the
 // restore re-lands the playhead after the map swap, and a playhead that stood
-// OFFSCREEN dragged the viewport to wherever its instant now painted — a
+// OFFSCREEN would drag the viewport to wherever its instant then paints — a
 // camera move with no subject the user asked about, target view only and so
 // seemingly random. The restore's camera answers to the markers it restores
 // (the visual tail, undo.cpp), and a translation is not a movement, so this
@@ -742,7 +736,7 @@ void Viewport::translate_playhead_to(int64_t new_sample) {
 // narrow rect (playhead_invalidate_rect, main.cpp — the head's painted reach
 // from the viewport's lanes' top row through the waveform's foot, which
 // holds the head in the ruler and the line on the canvas and nothing of the
-// toolbar band) at the cursor's OLD COLUMN AND ITS
+// top icon row) at the cursor's OLD COLUMN AND ITS
 // NEW ONE, BOTH ON THE PLATE BASIS (the playheads' damage rule,
 // playhead_pixel_x, app_state.h: the cursor's pixels are plate-registered) —
 // the old column derived before the write and the new after it, never
@@ -822,12 +816,8 @@ void Viewport::clamp_display_state_to_live_domain() {
         invalidate_clock_area();
     }
 
-    // (THE REGION'S OWN RECLAMP STOOD HERE until 2026-08-18 and is DELETED with
-    // the state it validated: a region held two ACTIVE-domain endpoints of its
-    // own, which a shrinking domain could strand outside [0, live_total - 1].
-    // The region IS the trim now, so there is no stored endpoint left to
-    // validate. The TRIM's own bounds are SOURCE frames, walled at load and at
-    // every gesture, and are not this function's subject.)
+    // The TRIM's bounds are SOURCE frames, walled at load and at every
+    // gesture, and are not this function's subject.
 }
 
 // WHERE ONE ARROW STEP WOULD LAND THE CURSOR — the contract is at the
@@ -835,7 +825,7 @@ void Viewport::clamp_display_state_to_live_domain() {
 // own, which reads this for its landing, the Left / Right buttons' face
 // reading the same owner. The degenerate cases — no audio, a dead sample
 // rate under the millisecond — answer the resting cursor
-// itself, so a step there is the no-op it always was and the face greys.
+// itself, so a step there is a no-op and the face greys.
 int64_t playhead_arrow_step_landing(const AppState& app, const GuiAudio& audio,
                                     HorizontalArrowStep step) {
     if (audio.total_frames() <= 0) return app.playhead_cursor_sample;
@@ -1030,15 +1020,14 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
     // EVERY frame of the drag takes one SYNCHRONOUS full rebuild — the cost
     // any discrete zoom pays, capped at once per pointer frame by
     // the platform's motion coalescing. Level-changed and pan-only frames are
-    // no longer distinguished: the incremental shift-and-strip fast-path the
-    // pan-only frames used was retired 2026-07-26, so the drag renders the same
-    // way whichever axis moved.
+    // one road (2026-07-26), so the drag renders the same way whichever axis
+    // moved.
     if (final && playback.is_playing()) playback.resync_predictor();
     kick_waveform_sync();
 }
 
-// THE ZOOM STEP ZOOMS ABOUT THE VIEWPORT'S CENTRE (architect 2026-09-22,
-// kept when the pair returned 2026-10-27), AN EXACT LANDING
+// THE ZOOM STEP ZOOMS ABOUT THE VIEWPORT'S CENTRE (architect 2026-10-27),
+// AN EXACT LANDING
 // (ViewportLattice::Exact, architect 2026-11-15, the no-grid arc — the start
 // that puts the pivot at the center is the rest, its held pivot below curing
 // the run's accumulation): the frame painted at the
@@ -1054,12 +1043,12 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 // the ceiling the whole song is visible.
 //
 // IT IS A ZOOM LIKE EVERY OTHER, WITH NO EXEMPTION SPELLED HERE (architect
-// 2026-10-27, keeping 2026-09-25's "every zoom clears the camera hold"): the
+// 2026-09-25: "every zoom clears the camera hold"; 2026-10-27): the
 // applier pays what every zoom pays (the synchronous rebuild, the damage, the
 // predictor resync while playing), the chokepoint's compare puts the HOLD
 // out and suspends a following play's scroll (AppState::camera_hold,
 // follow_suspended), its key arm puts out TRIM, ADD SEL, FOLLOW and RESTR
-// when the level moved (architect 2026-11-17, send U; GuiInputHandler::
+// when the level moved (architect 2026-11-17; GuiInputHandler::
 // darken_zoom_lamps_if_level_moved — the lamps are the input layer's, so
 // the test is the arm's, not this body's), and a level move clears Zoom to Fit's whole-song state
 // (ViewState::whole_song_visible), so a step taken while FIT stands drops
@@ -1242,7 +1231,7 @@ int64_t paged_in_viewport_start(int64_t target, int64_t visible) {
 // live origin must both equal it. No frame-0 lattice is asked: any origin
 // counts, provided it is the centring's.
 //
-// NEVER AT A WALL (architect 2026-09-29, the same night): C is the centring's
+// NEVER AT A WALL (architect 2026-09-29): C is the centring's
 // start WITHOUT the wall clamp, and it must lie within
 // [0, max_viewport_start_grid] as well as equal the live start. A centring
 // whose start falls outside the walls — the playhead within half a window of
@@ -1253,15 +1242,13 @@ int64_t paged_in_viewport_start(int64_t target, int64_t visible) {
 // point is unclamped and counts. So `c` armed at a wall stands while the view
 // stays, but a switch away and back arrives dark there; `c` is the repair.
 //
-// THE ONE-COLUMN TOLERANCE WAS STRUCK THE SAME NIGHT: it had been tried so a
-// centred rest would survive the S/T flip, whose anchored start need not be
-// the centring's; the S/T switch's
-// derivation was removed instead (*"then just remove that"*), the flip putting
-// the bit out at the chokepoint as it always had. A tab parked centred while
-// the other tab flips has its band shifted by its playhead's delta, which
-// keeps the centring's start to the frame only where the playhead moved by
-// the same whole delta: where it does not, it arrives dark, the correct
-// answer for a band that is no longer centred.
+// NO ONE-COLUMN TOLERANCE (architect 2026-09-29): the S/T flip, whose
+// anchored start need not be the centring's, derives nothing (*"then just
+// remove that"*) and puts the bit out at the chokepoint. A tab parked
+// centred while the other tab flips has its window shifted by its
+// playhead's delta, which keeps the centring's start to the frame only
+// where the playhead moved by the same whole delta: where it does not, it
+// arrives dark, the correct answer for a window that is not centred.
 bool hold_derived_on_arrival(const AppState& app, const GuiAudio& audio) {
     const GuiRect area = waveform_area(app);
     if (area.w <= 0 || audio.sample_rate() <= 0) return false;
@@ -1352,9 +1339,7 @@ void Viewport::invalidate_all() {
 // held between the waveform's first and last columns' left edges. THE CAMERA IS THE POSTURE'S (nudge_camera, app_state.h, reading
 // AppState::camera_hold, which an explicit centring arms): with it dark the
 // step never calls this and follows the edge through the movement owner's own
-// keep-visible edge-align. (It was the Ctrl modifier's choice from 2026-09-22
-// to 2026-09-23, Ctrl+Left / Ctrl+Right and two buttons of their own; those
-// chords bind nothing now.) So an onscreen subject keeps its exact screen
+// keep-visible edge-align. So an onscreen subject keeps its exact screen
 // place and the waveform slides under it by the nudge's own delta, and a
 // subject that was offscreen lands on the edge column on its side and stays
 // there on later nudges, the window walking with it. NOTHING CENTRES: `c` is
@@ -1382,8 +1367,7 @@ void Viewport::invalidate_all() {
 // places is the one the next frame paints.
 //
 // Every caller has stopped playback before its write, so the cursor is the
-// subject. FOUR CALLERS, re-derived by grep 2026-10-13 (three on 2026-09-25;
-// the drop road joined 2026-10-12), each on its hold arm:
+// subject. FOUR CALLERS, each on its hold arm:
 //   * THE MARKER NUDGE'S COMMIT TAIL (finish_position_nudge,
 //     position_nudge.cpp) passes the PAINTED EXACT x — the focused marker's
 //     pre-write frame through painted_x_of_source_frame_on_basis over
@@ -1458,10 +1442,10 @@ void Viewport::hold_subject_column_after_nudge(double prior_x) {
 
 // FOLLOW'S PAGE-IN (AppState::follow): when the target leaves the viewport,
 // scroll so it lands THE EDGE MARGIN in from the new view's LEFT edge
-// (kViewportEdgeMarginFraction, app_state.h — 5 % since 2026-09-22, the
-// architect finding the old 10 % lead "starts way too late"; the class's
+// (kViewportEdgeMarginFraction, app_state.h — 5 %, architect 2026-09-22:
+// a 10 % lead "starts way too late"; the class's
 // inventory is at that declaration), leaving the rest of the window ahead.
-// THREE CALLERS, the one enumeration (send N, 2026-11-15): the launch of the
+// THREE CALLERS, the one enumeration (2026-11-15): the launch of the
 // view-end entry with FOLLOW dark and the A/B audition's bounded launch, both
 // LaunchCamera::PageIn, and the follow scroll's off-screen-left arm
 // (follow_scanner below) — the play's own camera is that scroll.
@@ -1475,8 +1459,8 @@ void Viewport::hold_subject_column_after_nudge(double prior_x) {
 // (right after the one launch body's seed — launch_playback_window — sets the
 // scanner to the launch position), so the same landing rule places an
 // offscreen launch position the same margin in from the left edge.
-// THE LAUNCH CALL IS THE CALLER'S WORD SINCE 2026-09-18
-// (GuiPlaybackLifecycle::LaunchCamera): every GUI road asks for it with
+// THE LAUNCH CALL IS THE CALLER'S WORD (architect 2026-09-18;
+// GuiPlaybackLifecycle::LaunchCamera): every GUI road asks for it with
 // FOLLOW dark (lit, the follow scroll, follow_scanner below) and starts on
 // screen anyway (Space's cursor launch is the one that a pan can have
 // carried out of view; a scrub click is a visible column already), while the
@@ -1510,27 +1494,24 @@ void Viewport::follow_scroll_if_needed() {
         app.follow_suspended = suspended_before;
         // Viewport actually moved — THE PAGE TAKES THE DISCRETE MOVE'S TAIL,
         // and with it THE SYNCHRONOUS REBUILD (architect 2026-09-02), the same
-        // body every user-driven pan/zoom frame takes. It kicked the ASYNC
-        // worker until that day, and until the worker published, every
-        // surface painted the OLD viewport while the scanner's column sat
-        // outside it: the playhead line VANISHED for a frame or two at every
-        // page (main.cpp's pre-paint documents that offscreen scanner as its
-        // own fallback case). The retired centered pin (2026-08-31 to
-        // 2026-09-13) proved the synchronous rebuild fits inside a frame EVERY
-        // frame; the page-in pays it once per move — and the 2026-08-07 flicker
-        // ruling (republish_history_lane_now) put a reported flicker onto this path the
-        // same way. The tail was spelled here inline until 2026-09-22, minus
-        // the top-strip damage the shared tail carries — which a page owes all
-        // the same, the flags moving with the viewport. A landing that moved
-        // the lattice alone (architect 2026-10-31) is a move too.
+        // body every user-driven pan/zoom frame takes: under an ASYNC rebuild
+        // every surface would paint the OLD viewport until the worker
+        // published, the scanner's column outside it and the playhead line
+        // VANISHING for a frame or two at every page (main.cpp's pre-paint
+        // documents that offscreen scanner as its own fallback case). The
+        // synchronous rebuild fits inside a frame; the page-in pays it once
+        // per move (republish_history_lane_now takes the same road against
+        // a flicker, 2026-08-07). The shared tail carries the top-strip
+        // damage a page owes, the flags moving with the viewport. A landing
+        // that moved the lattice alone (architect 2026-10-31) is a move too.
         if (app.viewport_start_sample != old_vp ||
             app.viewport_lattice_origin != old_origin)
             finish_discrete_viewport_move();
     }
 }
 
-// THE FOLLOW SCROLL (architect 2026-11-15, send N: FOLLOW built as a
-// scrolling follow, KEPT on his glass the same day, "the scroll is actually
+// THE FOLLOW SCROLL (architect 2026-11-15: FOLLOW a scrolling follow,
+// kept on his glass, "the scroll is actually
 // much smoother with follow on ... it's very stable, and the waveform behind
 // it looks a lot ... more stable, even though it's moving"; "run to center,
 // then scroll"; the scroll in place of the page flip, which "is ... more of a
@@ -1621,8 +1602,7 @@ void Viewport::follow_scanner() {
 // neighbour, app_state.h). THE ZOOM IS NEVER WRITTEN HERE.
 //
 // WALK — the Tab walk and the marker drop's landing (architect 2026-10-29,
-// the drop lands as Tab does), always a single frame (the paired march's
-// steps came here until 2026-09-26, when each took bare `c`'s act instead):
+// the drop lands as Tab does), always a single frame:
 //   * AT THE WORKING ZOOM, AS PAINTED (architect 2026-09-28: the painted
 //     step q EQUALS the working column, audio.working_column(); `c`'s level
 //     2.0 paints q = column exactly, and a rest a hair either side of it
@@ -1636,8 +1616,8 @@ void Viewport::follow_scanner() {
 //     (paged_in_viewport_start). A finer zoom is reached only by accident;
 //     `c` is the repair (the working zoom, centred).
 // RESTORE — undo / redo, a singleton (lo == hi) or a group's [earliest,
-// latest], and the phase-reset pastes' changed set (architect 2026-11-17,
-// send U); a restore is a non-linear jump, and centring is the least
+// latest], and the phase-reset pastes' changed set (architect 2026-11-17);
+// a restore is a non-linear jump, and centring is the least
 // prejudicial way of framing one:
 //   * WHOLLY ON SCREEN (lo and hi each painted in the columns [0, w) of
 //     the live viewport, displayed_frame_on_screen — the walk's on-screen
@@ -1707,24 +1687,21 @@ void Viewport::follow_scanner() {
 // there the start compares unchanged and nothing repaints.
 //
 // RULED OUT, never to be re-proposed (architect 2026-09-24):
-//   * LEAST MOVEMENT as a camera (2026-09-22 to 2026-09-24): it "sounds good
-//     but it actually doesn't feel good in practice";
-//   * CENTRE-ONLY-IF-OFF-SCREEN for the walk (dc8b13a8, one day): with three
-//     markers on screen it centred the first, left the next two and centred
-//     the fourth — "we've ignored the left half of the screen";
+//   * LEAST MOVEMENT as a camera: it "sounds good but it actually doesn't
+//     feel good in practice";
+//   * CENTRE-ONLY-IF-OFF-SCREEN for the walk: with three markers on screen
+//     it centres the first, leaves the next two and centres the fourth —
+//     "we've ignored the left half of the screen";
 //   * PAGE-IN for undo / redo: a restore is a non-linear jump, and paging it
 //     "feels odd even at coarse zooms";
-//   * THE AUDIO-VIEW FORK of the walk's camera (2026-09-23, one day): the walk
-//     frames alike in both audio views.
-//   * AN UNDO / REDO CENTRING ARMING THE HOLD (f25778d1, one morning,
-//     2026-09-24): a lamp now shows the posture, so only the walk and `c`
-//     arm it.
-//   * THE WALK CENTRING AT A ZOOM FINER THAN THE WORKING ONE (2026-09-24 to
-//     2026-09-29): it centred, and armed the hold, at every finer zoom; it
-//     centres at the working zoom alone, so the hold stands only there
-//     (architect 2026-09-28).
+//   * AN AUDIO-VIEW FORK of the walk's camera: the walk frames alike in both
+//     audio views.
+//   * AN UNDO / REDO CENTRING ARMING THE HOLD: only the walk and `c` arm it.
+//   * THE WALK CENTRING AT A ZOOM FINER THAN THE WORKING ONE: it centres at
+//     the working zoom alone, so the hold stands only there (architect
+//     2026-09-28).
 //
-// ITS READERS, re-grepped 2026-10-29:
+// ITS READERS:
 //   * WALK: jump_playhead_to_focused_marker's MarkerLandingFrame::Land arm
 //     (input_handler.cpp — bare Tab / Shift+Tab through
 //     cycle_marker_focus), cycle_history_diff_flag_focus's Land arm
@@ -1742,7 +1719,7 @@ void Viewport::follow_scanner() {
 //     callers: restore_history_entry's group arm over the restored markers,
 //     and the phase-reset pastes' landing
 //     (PhaseResetPropagate::land_paste_in_phase_reset_view) over the resets
-//     the paste changed, one member included (architect 2026-11-17, send U).
+//     the paste changed, one member included (architect 2026-11-17).
 // NOT READERS, by ruling: bare `c`, the paired march (live and `h`, each step
 // running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition (its three
 // centrings `c`'s act too, 2026-09-29), which

@@ -36,8 +36,8 @@ bool active_tab_launch_ready_impl(const AppState& app, const GuiAudio& audio,
     return playback_launch_playable(app, playback, audio.total_frames(), frame);
 }
 
-// The tab the act is not standing on, through its own ViewState — the band
-// switch_active_tab_view_to will restore on entry.
+// The tab the act is not standing on, through its own ViewState — the view
+// state switch_active_tab_view_to will restore on entry.
 const ViewState& other_tab_view(const AppState& app) {
     return (app.active_tab_view == 'A') ? app.tab_b : app.tab_a;
 }
@@ -102,8 +102,8 @@ bool GuiAbAudition::other_tab_launch_ready() const {
 // once for the pair, then both tabs' launch readiness, the active tab's term
 // and the other tab's derived-domain term (2026-10-18), the same two
 // spellings start() reads. The running-sequence
-// arm is deliberately not here — and since 2026-08-31 it is not a refusal at
-// all but the act's STOP: a standing sequence is transport_session_live, which
+// arm is deliberately not here — it is not a refusal at all but the act's
+// STOP (2026-08-31): a standing sequence is transport_session_live, which
 // the face reads ahead of this and answers with its lit STOP glyph, so a press
 // on that face always does something. It sits beside start() so the two read as
 // one; a gate added there must be added here. (NO ITERATION-LOCK TAB GATE:
@@ -127,7 +127,7 @@ bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
 void GuiAbAudition::start() {
     using Phase = GuiAuditionSequence::Phase;
     // A SEQUENCE ALREADY RUNNING: THE PRESS STOPS IT (architect 2026-08-31,
-    // superseding the 2026-08-30 "An audition is already running" card). The
+    // no card). The
     // chord is a TOGGLE like the transport it rides: Shift+Space starts the act
     // and Shift+Space ends it, exactly as bare Space already does through the
     // same body — and the Play button, which wears STOP for the act's whole
@@ -176,8 +176,8 @@ void GuiAbAudition::start() {
     }
     const char home  = app.active_tab_view;
     const char other = (home == 'A') ? 'B' : 'A';
-    // BOTH TABS ARE GATED BEFORE THE FIRST SWITCH — and, since 2026-08-30, so
-    // is the device above: an act that could only half-run must not move the
+    // BOTH TABS ARE GATED BEFORE THE FIRST SWITCH — and so is the device
+    // above (2026-08-30): an act that could only half-run must not move the
     // user off his tab and then fall silent, and the promise holds only if
     // EVERY reason the launch body can refuse for has been asked before the
     // first camera write. Those reasons are the device and the playable
@@ -204,8 +204,8 @@ void GuiAbAudition::start() {
             "One of the two tabs has nothing to play from here");
         return;
     }
-    // Step 0: THE `c` COMMAND ON THIS TAB, before the switch carries the band
-    // away — refresh_active_tab_view_from_app pushes the live zoom into the
+    // Step 0: THE `c` COMMAND ON THIS TAB, before the switch carries the
+    // view state away — refresh_active_tab_view_from_app pushes the live zoom into the
     // leaving tab's slot, so the level set here is the level this tab is
     // restored at when the act switches back (and re-run there, the ruling
     // asking for it on every arrival). It runs AFTER the two gates above, so a
@@ -218,8 +218,7 @@ void GuiAbAudition::start() {
     // act — the interrupt rule's own answer.
     //
     // THE ACT'S CENTRINGS ARM THE HOLD POSTURE LIKE `c` (architect
-    // 2026-09-29, superseding 2026-09-23's "the act ignores the hold
-    // posture"; AppState::camera_hold): each of its three `c`s is the centre
+    // 2026-09-29; AppState::camera_hold): each of its three `c`s is the centre
     // key's act (apply_working_zoom), so the bit stands behind every one of
     // them, and nothing is saved or written back. The switch between the two
     // `c`s here puts the bit out and derives it on arrival
@@ -233,7 +232,8 @@ void GuiAbAudition::start() {
     // (AppState::follow_suspended).
     apply_working_zoom();
     // Step 1: Ctrl+Tab's WHOLE ROAD (2026-10-18) — the ordinary tab switch
-    // (the stop of any live audition, the selection clear, the band swap, the
+    // (the stop of any live audition, the selection clear, the view-state
+    // swap, the
     // coincidence auto-select and the synchronous rebuild are all its own),
     // then target_render.trigger(), so the preview follows the tab and the
     // other tab plays ITS OWN trim's render, exactly as after a Ctrl+Tab. The
@@ -340,7 +340,7 @@ void GuiAbAudition::apply_working_zoom() {
     // 2026-09-29): the call is the centre key's act, run_center_key_command
     // — run_center_command, then AppState::camera_hold armed — so the act's
     // centrings are `c`'s in the posture they leave too. BUT NOT IN THE LAMPS
-    // (architect 2026-11-17, send U): the act's internal `c` is no zoom of
+    // (architect 2026-11-17): the act's internal `c` is no zoom of
     // the user's, so it passes user_zoom false and puts out none of the four
     // lamps a user zoom darkens (GuiInputHandler::darken_zoom_lamps).
     if (input != nullptr) input->run_center_key_command(/*user_zoom=*/false);
@@ -400,7 +400,7 @@ void GuiAbAudition::fire_if_due() {
     // takes BEFORE its write — the preview gate, which past the wait above
     // means a preview that FAILED — and which must leave the act ENDED
     // rather than a due rest re-tried on every tick from here on. (The
-    // launch body clears nothing since 2026-09-01; the user launches' clear is
+    // launch body clears nothing; the user launches' clear is
     // launch_playback_from's, which the act's road never passes.)
     clear_audition_sequence(app);
     launch_phase(phase, home_tab);
@@ -410,13 +410,12 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
                                  char home_tab) {
     // RE-ASK THE PREVIEW GATE at every launch, not only at the press: this
     // launch has its own precondition and does not inherit the press-time
-    // verdict — every launch now follows a rest, and the rest after a switch
+    // verdict — every launch follows a rest, and the rest after a switch
     // waited for the switch's own re-dispatch (fire_if_due), so past that
     // wait the one state this refuses is a preview whose render FAILED, and a
-    // refusal here simply ends the act, the interrupt rule's own answer. The
-    // window it was first written for — a target-view mutation landing after
-    // a play's natural end and before the tick observes it — is closed at the
-    // source: GuiTargetRender::trigger() clears the sequence UNCONDITIONALLY
+    // refusal here simply ends the act, the interrupt rule's own answer. A
+    // target-view mutation landing after a play's natural end and before the
+    // tick observes it is closed at the source: GuiTargetRender::trigger() clears the sequence UNCONDITIONALLY
     // on its target-view path, so such a mutation ends the act outright and
     // the tick hands the advance an Idle phase rather than reaching this line
     // against a stale or re-bound preview (the act's own two triggers run
@@ -428,12 +427,11 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
     // From the active tab's RESTING playhead — read, never written.
     const int64_t start = app.playhead_cursor_sample;
     // THE PLAY HALF'S NON-IDLE WRITE, AHEAD OF THE LAUNCH (architect
-    // 2026-09-01; it followed a true return until then, the launch body's head
-    // clear having wiped whatever stood): the launch body finds the act
+    // 2026-09-01): the launch body finds the act
     // standing on this phase, and the body clears no sequence on this road
     // (launch_bounded_audition runs none; the user launches' clear is
     // launch_playback_from's). The sequence is Idle at this line by
-    // fire_if_due's construction, its one caller since 2026-10-18, which
+    // fire_if_due's construction, its one caller (2026-10-18), which
     // clears the rest before calling (start() arms the first play's rest
     // instead) — so this is a write onto Idle, not a re-arm. Nothing between
     // here and the launch body paints or dispatches, so the phase standing a
@@ -441,7 +439,7 @@ bool GuiAbAudition::launch_phase(GuiAuditionSequence::Phase phase,
     // difference from arm_rest's write: the phase named here is SOUNDING, not
     // owed. Every `c` call the act makes precedes an arm — start's two the
     // first play's rest, the switch-back call the advance's — and every arm
-    // precedes this write, so the header's ordering rule holds unchanged.
+    // precedes this write, so the header's ordering rule holds.
     app.audition_sequence.phase         = phase;
     app.audition_sequence.home_tab      = home_tab;
     app.audition_sequence.waiting       = false;

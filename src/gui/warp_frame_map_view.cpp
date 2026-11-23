@@ -33,9 +33,7 @@ std::vector<WarpFrameMapSegment> build_target_view_warp_frame_map(
     // paint_handler construction so hit-test math and waveform paint walk the
     // same segment list. This overload always builds directly and is the entry
     // point for a caller-supplied marker list; live-state consumers go
-    // through target_view_warp_frame_map_cached. (It served HYPOTHETICAL never-live
-    // lists too until 2026-07-29 — the tempo drag's bisection candidates — which is
-    // what the deleted `quiet` forwarding existed for; see the declaration.)
+    // through target_view_warp_frame_map_cached.
     // A build failure (tripwire-class only — the resolver above is a total
     // normalizer that resolves every ambiguous arrangement to tempo 1.00 and
     // cannot fail) returns the empty map and reports the message through
@@ -132,7 +130,7 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
     // normalization fallback as source_idx == -1 with a reason. Three cases
     // redden: a dangling label ref (reason UndefinedLabel — a disabled
     // definition's references among them, participation being each marker's
-    // own flag since 2026-10-29, and a coincident member's references, the
+    // own flag (2026-10-29), and a coincident member's references, the
     // member holding no label for the render, 2026-11-17),
     // a reference to a label two live definitions hold (reason
     // AmbiguousLabel, 2026-10-29) and an extreme-ratio label ref (reason
@@ -410,8 +408,8 @@ const GuiDisplayContext& active_display_context(const AppState& app,
                                                 const GuiAudio& audio) {
     // Function-local static storage, refreshed on every call. The GUI
     // loop is single-threaded, and warp_frame_map aliases the app-owned
-    // cache exactly as the direct cache callers always did — valid until
-    // a changed-key rebuild.
+    // cache exactly as the direct cache callers do — valid until a
+    // changed-key rebuild.
     static GuiDisplayContext ctx;
     static const std::vector<WarpFrameMapSegment> kIdentityMap;
     if (app.active_audio_view == 'T') {

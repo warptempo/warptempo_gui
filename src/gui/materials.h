@@ -10,21 +10,17 @@
 #include <optional>
 #include <span>
 
-// THE MATERIALS — THE FLAT LOOK (architect 2026-11-01, reversing the hi-fi
-// panel of 2026-10-23: "whatever ruling it needs to, we need to reverse to go
-// flat"; Live's grammar, every number measured on his Live 12 shots at
-// 100 %). This header is the one owner of the ground's, the key's, the lit
+// THE MATERIALS — THE FLAT LOOK (architect 2026-11-01: "whatever ruling it
+// needs to, we need to reverse to go flat"). This header is the one owner
+// of the ground's, the key's, the lit
 // face's, the text tones', the well's tones' and the pane's RULES; THEIR
-// NUMBERS ARE ARC-DARK'S, COMPILED (architect 2026-11-21, send GG: the row
+// NUMBERS ARE ARC-DARK'S, COMPILED (architect 2026-11-21: the row
 // kArcDarkTones, gui_theme.h, each line its Arc source; palette_file.h's
 // head) — every painter reads palette()'s member for the role (render.h's
-// GuiPalette; the fill table kGuiPaletteFill, palette_file.h). A number
-// quoted below as DEFAULT'S is a record of the look before Arc, not a
-// painted tone (a later comments' round retells them). The constants that
-// held them (kGround, kKeyFace, kTextInk and the rest, 2026-11-01..05) are
-// retired: nothing outside the compiled row names a color.
+// GuiPalette; the fill table kGuiPaletteFill, palette_file.h); nothing
+// outside the compiled row names a color.
 //
-// TWO GROUNDS (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §2): THE
+// TWO GROUNDS (architect 2026-11-18 / 2026-11-19): THE
 // TITLE BAR ALONE wears the title tone `ground` — 2F343F, Arc's
 // $header_bg: "the darkest color would only apply to the top line, the
 // title bar" (paint_title_bar) — and EVERYTHING ELSE OUTSIDE THE WELL'S
@@ -36,32 +32,30 @@
 // well's lines — under the top icon row, the
 // trough, the ruler and the marker lane, the stereo divider, the well's
 // foot and the status bar's line — are `well_border`, each one W
-// (render.h's hairline_px). NO BAKE, NO GRAIN, NO GRADIENT, NO BEVEL, NO
+// (render.h's hairline_px). FLAT, NO GRADIENT, NO
 // SHADOW: every pixel of either ground is a solid fill through the
 // palette's chokepoint (set_palette_source, render.h), which converts it for
 // the window as it converts every color (display_color), so True Colors
 // holds with no cache of its own. The palette's `face` IS THE BODY TONE
 // (palette_file.h's fill table), the chrome's `ground` role the title tone.
 //
-// THE KEY IS ARC'S BUTTON (architect 2026-11-18 / 2026-11-19, send Z;
-// DESIGN §3, the approved pictures Z_01 / Z_02 and the mock kit's
-// linked_group the reference; G3 `button`, `.linked`; paint_linked_group,
-// paint_word_button and paint_entry below): every key of the band, the
-// bottom icon row and the controls rows — A BOX 36 x 28 W (render.h's
-// kKeyWidthW x kKeyHeightW, its case block; 72 x 56 device px on the
-// tablet at 200 %), BORDER INCLUDED ("the border is
-// clickable"), in A ONE-W `well_border` RING (Default 2A2A2A, ClipBorder;
-// arc_dark 2B2E39) WITH 3 W OUTER CORNERS (kKeyCornerW, the faces' 2 W
-// inside it), its face `key_face` (Default 363636, SurfaceBackground;
-// arc_dark 444A58), every edge at exact coverage. THE KEYS OF ONE GROUP ARE
+// THE KEY IS ARC'S BUTTON (architect 2026-11-18 / 2026-11-19; Arc's gtk3
+// CSS `button`, `.linked`; paint_linked_group,
+// paint_word_button and paint_entry below): every key of the top icon
+// row, the bottom icon row and the controls rows — A BOX 36 x 28 W
+// (render.h's kKeyWidthW x kKeyHeightW, its case block; 72 x 56 device px
+// on the tablet at 200 %), BORDER INCLUDED ("the border is
+// clickable"), in A ONE-W `well_border` RING (arc_dark 2B2E39) WITH 3 W
+// OUTER CORNERS (kKeyCornerW, the faces' 2 W
+// inside it), its face `key_face` (arc_dark 444A58), every edge at exact
+// coverage. THE KEYS OF ONE GROUP ARE
 // ARC'S LINKED BUTTONS: neighbors SHARE ONE SEAM COLUMN, one ring round the
 // group, its four outer corners rounded, the seam wearing the face at rest —
 // no divider line (key_link_pitch_px / linked_group_w_px below). THE
 // DRAWING the set's 16 W canvas centered on the box (paint_key_glyph,
-// paint_handler.cpp). NO LED, NO GLOW, NO DEPTH, NO SHADOW.
+// paint_handler.cpp). NO DEPTH, NO SHADOW.
 // THE STATES ARE ARC'S (key_state below; architect 2026-11-19: "Arc's own
-// answer", superseding the darker press of 2026-11-05 on every key; "we can
-// let go of the green"; "lit but
+// answer" on every key; "we can let go of the green"; "lit but
 // inert: let's do arcs numbers"): REST the face under the drawing in
 // `text`; PRESSED, LIT AND LIT UNDER PRESS ONE LOOK — `:active` and
 // `:checked` are one in Arc — THE ACCENT `cue` (5294E2, Arc's selection
@@ -76,17 +70,15 @@
 // opacity; the arithmetic at their lines of kArcDarkTones, gui_theme.h). A
 // SEAM BETWEEN TWO KEYS OF
 // DIFFERENT STATES WEARS THE LEFT KEY'S FACE, a lit key taking both its
-// seams (the kit's paint order, paint_linked_group).
+// seams (paint_linked_group's paint order).
 // EVERY CHECKED KEY WEARS THE ONE ACCENT: the state lamps (MAGNIFY, Read
 // Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
 // Drag), the render player's Repeat One, THE DOORS, the seven overlay
 // openers (redesign_button_is_door, app_state.h — the class names the keys
 // that may carry a twin on their hold and parts no look), AND THE FOUR
 // EXCLUSIVE PAIRS — SOURCE / TARGET, WARP / PHASE, FOLLOW / RESTR, TRIM /
-// ADD SEL — whose separate color (Live's ScaleAwareness, the radio keys'
-// purple of 2026-11-11, session 107, arc_dark's green) retired with its
-// class 2026-11-19 ("I guess we can let go of the green in order to be more
-// truthful"). A DISABLED KEY UNDER PRESS IS UNCHANGED (his "disable no press
+// ADD SEL — with no color of their own (architect 2026-11-19: "I guess we
+// can let go of the green in order to be more truthful"). A DISABLED KEY UNDER PRESS IS UNCHANGED (his "disable no press
 // is right"): a dead key arms nothing (every press arm refuses a
 // painted-dead face). THE PRESS FOLLOWS THE PRESS ARM'S OWN "on"
 // (point_on_key below: the feint's inside bit, the key returning to rest
@@ -100,12 +92,12 @@
 // (THE FACE'S FADE: FaceLook, FaceMix and mix_looks below; the clock, the
 // damage and what does not fade AppState::FaceFades, app_state.h) — THE ACT
 // IS NEVER DELAYED: the press arms — the slide-off feint, the hold-repeat
-// and the long press — and the lift's act run on the stashed bits as ever,
+// and the long press — and the lift's act run on the stashed bits,
 // the fade being paint alone; THE OTHER FEEDBACK STAYS:
 // the act itself, a stateful key's drawing showing the act its next press
 // runs. A LIST ROW UNDER A PRESS wears the selection pair, the highlight's
 // own look (THE SELECTION PAIR, below), a list row being no key. UNDER AN OVERLAY A DEAD LIT KEY STAYS
-// LIT, DIMMED (architect 2026-11-11, session 107: "for consistency, they
+// LIT, DIMMED (architect 2026-11-11: "for consistency, they
 // should keep that look of darkened. But lit."): every roster key the
 // standing overlay leaves dead is disabled with its lit bit kept
 // (redesign_button_enabled's overlay arm; redesign_button_selected,
@@ -121,8 +113,7 @@
 // overlay's opener under its own question —
 // Arc's own disabled look the dead keys' one sign (redesign_button_enabled's
 // first arm, app_state.h, the owner; architect 2026-11-20). NOTHING
-// IS PRINTED UNDER A KEY (the legends retired 2026-11-18, send Z: "That's
-// from the hi-fi theme"); the tooltip names the act.
+// IS PRINTED UNDER A KEY (architect 2026-11-18); the tooltip names the act.
 // THE HOVER IS ARC'S (architect 2026-11-18: "I think we could consider
 // resurrecting the hover ... this is a low contrast theme, which should
 // support hovers. And actually, that'll help me, especially if the icons
@@ -177,17 +168,17 @@
 // kArcDarkTones, gui_theme.h), across the lit bar's width, in at once
 // and out over Arc's 150 ms `row` transition (paint_handler.cpp's THE LIST
 // VIEW; AppState::FaceFades' THE LIST ROW'S HOVER).
-// THE MARKER LANE HOVERS TOO — A MARKER'S CUE (architect 2026-11-21, send
-// FF: "The markers could get a hover action"): a cue a tap would act on
+// THE MARKER LANE HOVERS TOO — A MARKER'S CUE (architect 2026-11-21: "The
+// markers could get a hover action"): a cue a tap would act on
 // lights its chip and its label's ink, a disabled marker in its own pair, a
 // grey chip and a dimmer label (render.cpp's resolve_flag_face, the table),
 // the mix of its two tones as painted on the keys' 200 ms (StampTone below;
 // AppState::FaceFades' THE MARKER'S FACE). The playhead's triangle has no
-// hover (architect 2026-11-21, send GG: "very hard to see ... very hard to
+// hover (architect 2026-11-21: "very hard to see ... very hard to
 // stably trigger"); over it the waveform's hover line stands with its own
 // triangle (render.h's render_hover_line). A marker's stem, the canvas's
 // lines and the time labels light nothing.
-// THE WORD BUTTONS are Arc's text buttons (his ruling 2026-11-18: "the word
+// THE WORD BUTTONS are Arc's text buttons (architect 2026-11-18: "the word
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and the
 // value sub-page's field are Arc's entry (paint_entry), NOISE's level its
@@ -197,21 +188,20 @@
 // plain text pressing nothing (architect 2026-11-19 / 2026-11-20;
 // paint_handler.cpp's THE TIME FIELDS). THE ON-SCREEN KEYBOARD'S KEYS are
 // one grid of Arc's button tones
-// with shared lines since send AA's stage D2 (paint_handler.cpp's
+// with shared lines (paint_handler.cpp's
 // paint_onscreen_keyboard); THE SCRUB IS ARC'S SCALE — its trough
 // `scale_trough`, its played part the accent, its knob `key_face` in a
 // one-W `scale_slider_border` rim, held the whole disc the accent
-// (render.h's scrub block, paint_scale; architect 2026-11-18 / 19, send Z's
-// design, built in send AA: "I'm hoping we're gonna have a proper arc
-// thumb"). EVERY KEY SURFACE IS ARC'S (architect 2026-11-18 / 19, send Z):
-// nothing in the product wears the flat key of 2026-11-01.
+// (render.h's scrub block, paint_scale; architect 2026-11-18 / 19: "I'm
+// hoping we're gonna have a proper arc thumb"). EVERY KEY SURFACE IS
+// ARC'S (architect 2026-11-18 / 19).
 //
 // THE EDGE RULE IS THE KEYS': both icon rows' and the controls rows'
 // outermost BOXES stand kEdgeInsetW (6 W) inside the panel's first and last
-// columns (render.h's THE EDGE RULE at well_columns; architect 2026-11-19,
-// send Z; the seats' walks, paint_handler.cpp), two groups a run gap apart
-// (render.h's program_run_gap_px, 6 W at the default). THE GROUND IS NOT
-// PRESSABLE (architect 2026-11-02, R5: "ground is not a button"): THE
+// columns (render.h's THE EDGE RULE at well_columns; architect 2026-11-19;
+// the seats' walks, paint_handler.cpp), two groups a run gap apart
+// (render.h's program_run_gap_px, 6 W). THE GROUND IS NOT
+// PRESSABLE (architect 2026-11-02: "ground is not a button"): THE
 // PAINTED BOX IS THE HIT BOX (point_on_key below), a seam belonging to the
 // key on its left, so a press, a lift and the tooltip answer on the box
 // alone and the ground round it — the run gaps, the pads — answers nothing;
@@ -219,60 +209,52 @@
 // lines its keys' (onscreen_keyboard::key_at). THE HOVER'S HIT IS THE
 // PRESS'S (AppState::FaceFades).
 //
-// THE TEXT TONES (architect 2026-11-02, M13; Arc's since 2026-11-19, send
-// Z; every number at its line of kArcDarkTones, gui_theme.h): `text`, Arc's
+// THE TEXT TONES (architect 2026-11-02, 2026-11-19; every number at its
+// line of kArcDarkTones, gui_theme.h): `text`, Arc's
 // font color D3DAE3, on every word, digit and drawing the chrome prints —
 // the clocks, the tab name, the status bar, the lists and their drawings,
-// the dialogs' words, the keyboard's caps, the keys' glyphs (2026-11-02) —
+// the pages' words, the keyboard's caps, the keys' glyphs —
 // and `text_dim`, 7E838F, for the settings page's disabled rows, the
 // tooltip's hint line and an inert marker label. ON THE ARC PAGE (architect
-// 2026-11-19, send Z) the title bar wears `title_text`, the marker labels
+// 2026-11-19) the title bar wears `title_text`, the marker labels
 // `sidebar_text` and the ruler's digits `ruler_text`. ON A LIT KEY'S FACE
 // the print — its glyph, the on-screen keyboard's lit cap — is
-// `text_on_lit`, Arc's white (architect 2026-11-17, session 140), in place
-// of `text` (architect 2026-11-11, session 106, THE KEY above); on a lit
+// `text_on_lit`, Arc's white (architect 2026-11-17), in place
+// of `text`; on a lit
 // disabled key's dimmed face `text_on_lit_dim`, 9AA1AF. A STANDING CARD'S
 // words and glyph wear their own ink, `card_ink`, Arc's white on its
 // destructive red (THE CARDS, below; a normal card's `sidebar_text`). A
 // DISABLED KEY'S glyph takes its own tone, `key_dim_ink`, 7F8591, measured
-// on his Arc-Dark desktop (architect 2026-11-19, send Z; 2026-11-02, on mock
-// b3: "the disabled icons are too similar to enabled ones"), so a dead key
+// on his Arc-Dark desktop (architect 2026-11-19; 2026-11-02: "the disabled
+// icons are too similar to enabled ones"), so a dead key
 // reads dead at a glance; the lists' and the tooltip's dim print keep
-// `text_dim`. NOTHING WEARS A SHADOW (2026-11-01, "no shadow anywhere"; the
-// well's cue labels, triangles and ticks with the rest since 2026-11-02):
+// `text_dim`. NO PRINT WEARS A SHADOW (2026-11-01, "no shadow anywhere"):
 // every word, digit, tick and triangle is ink alone.
 //
-// THE WELL (architect 2026-11-01 night, "THE MAIN PAGE IS SETTLED", M5h;
-// M13's text tones 2026-11-02; the text round's lengths 2026-11-03; THE
-// TROUGH architect 2026-11-17, session 140; EDGE TO EDGE 2026-11-19, send
-// Z): FLAT REGIONS ACROSS THE PANEL'S WHOLE WIDTH, no ring, no bevel, no
-// frame (render.h's well_columns, THE EDGE RULE). THE LINES, `well_border`,
-// Default's 2A2A2A (ClipBorder; Arc's $borders_color, Thunar's pane border,
-// D2): one W under the top icon row, between the lanes, under the canvas,
+// THE WELL (architect 2026-11-01, "THE MAIN PAGE IS SETTLED"; THE TROUGH
+// architect 2026-11-17; EDGE TO EDGE 2026-11-19): FLAT REGIONS ACROSS THE
+// PANEL'S WHOLE WIDTH, no ring, no
+// frame (render.h's well_columns, THE EDGE RULE). THE LINES, `well_border`
+// (Arc's $borders_color, Thunar's pane border): one W under the top icon
+// row, between the lanes, under the canvas,
 // and the stereo divider in the same tone (render.h's THE WELL'S EDGES).
-// Top to bottom — THE TRIM BAR, ARC'S SCROLLBAR (ruling 4): the 12-W
-// trough `trim_bar_face`, Default's 242424 (ScrollbarInnerTrack over the
-// ground; Live's track is transparent), and on it THE PILL, the span,
-// `trim_span_face`, Default's 696969, at rest — its hovered, held and
+// Top to bottom — THE TRIM BAR, ARC'S SCROLLBAR: the 12-W
+// trough `trim_bar_face`, and on it THE PILL, the span,
+// `trim_span_face`, at rest — its hovered, held and
 // swept looks and the caps THE TRIM BAR'S TWO TONES below and render.h's
 // one table, trim_bar_tones; the line; THE RULER `ruler_face`,
-// THE CANVAS'S TONE, Default's 393939 (architect 2026-11-17, session 140,
-// ruling 3: "the ruler lane is light, the marker lane is dark, and then the
-// canvas is lighter"), with the `ruler_text` digits (send Z) and the
-// `ruler_tick` ticks, Default's 919191 (DetailViewRulerMarkings over the
-// ruler); the line; THE MARKER LANE `lane_face`,
-// Default's 2A2A2A (architect 2026-11-03, the retrofit: Live's next real
-// fill above the 242424 ground — Desktop); the line; THE CANVAS (the
-// palette's `waveform_canvas`), its stereo divider the lines' tone.
-// Every Default number is Live's, measured on his Live 12 shots (the
-// ruler's ticks the time ruler's, the lane the clip view's marker lane; the
-// ruler's face the canvas's).
+// THE CANVAS'S TONE (architect 2026-11-17: "the ruler lane is light, the
+// marker lane is dark, and then the canvas is lighter"), with the
+// `ruler_text` digits and the `ruler_tick` ticks; the line; THE MARKER
+// LANE `lane_face`; the line; THE CANVAS (the
+// palette's `waveform_canvas`), its stereo divider the lines' tone. Every
+// number at its line of kArcDarkTones (gui_theme.h).
 // ARC'S ENTRY (NOISE's case, the value sub-page's field; paint_entry below):
 // the ruler's — the canvas's — tone in a one-W `well_border` ring; the
 // marker lane's cell editor the same fill in the accent's square border.
 //
 // THE TRIM BAR'S TWO TONES (render_trim_flags): `trim_bar_face`, the trough,
-// is Arc's scrollbar trough (architect 2026-11-17, session 140);
+// is Arc's scrollbar trough (architect 2026-11-17);
 // `trim_span_face`, the pill at rest, is Arc's scrollbar slider (their
 // numbers at their lines of kArcDarkTones, gui_theme.h). ITS STATES' TONES
 // (architect 2026-11-20; the one table at render.h's trim_bar_tones): the
@@ -286,31 +268,27 @@
 // the caps, Kdenlive's and ours, have no tone of Arc's). No fade: they
 // change at once.
 //
-// THE SELECTION PAIR (architect 2026-11-01 night, M5g / M6): a flat bar in
-// `selection_fill` under its own partner `selection_text` (architect
-// 2026-11-06, session 75) — Arc's one selection, the accent 5294E2 under
-// FFFFFF — the flag editor's and the dialog editors' selected substring and
+// THE SELECTION PAIR (architect 2026-11-01, 2026-11-06): a flat bar in
+// `selection_fill` under its own partner `selection_text` — Arc's one
+// selection, the accent 5294E2 under
+// FFFFFF — the flag editor's and the page editors' selected substring and
 // the lists' highlighted row, across the view's whole width (the chrome's
 // `selected_fill` / `selected_text`). A LIST ROW UNDER A
-// PRESS WEARS THE SAME PAIR (send AA's stage D2, 2026-11-19: Thunar is
-// single-click, a pressed row a selected one; the lighter press row of
-// 2026-11-05, Live's SelectionBackground under SelectionForeground,
-// retired with it): the row a press stands on — the feint's inside bit,
+// PRESS WEARS THE SAME PAIR (2026-11-19: Thunar is
+// single-click, a pressed row a selected one): the row a press stands on — the feint's inside bit,
 // FolderOverlayPress's — in every list of the folder overlay; an inert row
 // (a Disabled row) shows no press — its press arms the scroll drag alone;
 // a press that has become the scroll drag presses no row
 // (paint_handler.cpp's paint_list_view).
 //
-// THE VIEW (send AA's stage D2, 2026-11-19; Thunar's list view): the modal
+// THE VIEW (2026-11-19; Thunar's list view): the modal
 // family's box interior, the canvas's tone `ruler_face` (Arc's $base_color
 // 404552), flat, between the box's two lines, with no frame, ring, shadow
 // or row separator (modal_box.h's head; the score viewer's darker pane,
-// `score_pane_face`, the one exception, is recorded there). (Live's panel
-// face, the keys' face, the pane of 2026-11-01 night, M6 A, retired with
-// it.)
+// `score_pane_face`, the one exception, is recorded there).
 //
-// THE FLOATING SURFACES ARE ARC'S AND NOTIFYD'S (architect 2026-11-19, send
-// Z, "good to build" on Z_07; send AA's stage D1): THE TOOLTIP Arc's — its
+// THE FLOATING SURFACES ARE ARC'S AND NOTIFYD'S (architect 2026-11-19, "good
+// to build"): THE TOOLTIP Arc's — its
 // box the carried fill `tooltip_fill` (arc_dark 4B5162 at .95), rounded,
 // no border, Arc's shadow under it, its words `sidebar_text` (render.h's THE
 // TOOLTIP IS ARC'S); THE CARDS notifyd's bubble — a normal card
@@ -321,14 +299,13 @@
 // its line of kArcDarkTones, gui_theme.h).
 
 // -- ARC'S BUTTON: THE KEY'S STATES, ITS LINKED GROUP, THE WORD BUTTON AND
-//    THE ENTRY (architect 2026-11-18 / 2026-11-19, send Z; DESIGN §3, the
-//    mock kit's linked_group / word_button / body_entry the reference) -----
+//    THE ENTRY (architect 2026-11-18 / 2026-11-19; Arc's gtk3 CSS the
+//    reference) -----
 
-// A KEY'S FOUR STATES, ARC'S (G3 `button`: `:active` and `:checked` are one
-// look; architect 2026-11-19, send Z, "Arc's own answer" superseding the
-// darker press of 2026-11-05, "we can let go of the green", "lit but inert:
-// let's do arcs numbers"): REST; LIT — checked, or a press standing on a
-// live key, or both, ONE LOOK (the accent `cue` over the key's own columns
+// A KEY'S FOUR STATES, ARC'S (gtk3 CSS `button`: `:active` and `:checked` are
+// one look; architect 2026-11-19: "Arc's own answer", "we can let go of the
+// green", "lit but inert: let's do arcs numbers"): REST; LIT — checked, or
+// a press standing on a live key, or both, ONE LOOK (the accent `cue` over the key's own columns
 // between the group's border rows, the print `text_on_lit`); DISABLED (the
 // face `key_dim_face`, the border `key_dim_border` on the key's own stretch
 // of the ring, the drawing `key_dim_ink`); LIT AND INERT — checked and
@@ -338,7 +315,7 @@
 // press is right", 2026-11-05): a dead key arms nothing (every press arm
 // refuses a painted-dead face), so the press bit is read for a live key
 // alone. key_state is the one place the three bits are folded; every Arc
-// button's painter asks it (the band's and the bottom icon row's walks, the
+// button's painter asks it (the top and the bottom icon row's walks, the
 // controls rows, paint_handler.cpp).
 enum class KeyState { Rest, Lit, Disabled, LitInert };
 inline constexpr KeyState key_state(bool checked, bool pressed, bool enabled) {
@@ -512,8 +489,8 @@ inline uint32_t key_ink(KeyState s) {
     }
     return t.text;
 }
-// THE INK OF A WORD BUTTON'S WORD (the kit's word_button; brief of send Z's
-// stage C): the drawing's but disabled, where the word wears `text_dim`, the
+// THE INK OF A WORD BUTTON'S WORD: the drawing's but disabled, where the
+// word wears `text_dim`, the
 // dim text of every inert word (a word button is never checked, so its lit
 // and inert print is never asked).
 inline uint32_t word_button_ink(KeyState s) {
@@ -548,8 +525,8 @@ inline StampTone word_button_ink_tone(const FaceMix& m) {
 // box): THE BOX kKeyWidthW x kKeyHeightW (icon_case_w_px /
 // icon_case_h_px, 36 x 28 W, 72 x 56 device px on the tablet at 200 %), BORDER INCLUDED ("the border is clickable"); THE BORDER one W
 // (hairline_px, the line rule: 2 device px on the tablet, floored at one);
-// THE OUTER CORNER kKeyCornerW, 3 W (Arc's button border-radius, G3), 6
-// device px, floored at one; the faces' corners inside the border the outer
+// THE OUTER CORNER kKeyCornerW, 3 W (Arc's button border-radius, gtk3
+// CSS), 6 device px, floored at one; the faces' corners inside the border the outer
 // less the border (GTK's padding box), 4 device px. Each through scaled_px,
 // rounded at the element.
 inline constexpr double kKeyCornerW = 3.0;
@@ -559,11 +536,11 @@ inline int key_inner_corner_px() {
     return std::max(0, key_corner_px() - key_border_px());
 }
 
-// THE LINKED GROUP'S PITCH (Arc's `.linked`, G3; the kit's group_w): two
+// THE LINKED GROUP'S PITCH (Arc's `.linked`, gtk3 CSS): two
 // neighbors SHARE ONE SEAM COLUMN, so a key stands one box less one border
 // right of the one before it — 70 device px on the tablet (72 − 2), 35 at
 // 100 % — and A GROUP OF n IS key + (n − 1)(key − 1 W) WIDE, each part
-// rounded on its own (0 for none): every group walk's (the band's
+// rounded on its own (0 for none): every group walk's (the top icon row's
 // icon_row_seats, the bottom icon row's row8_block_walk, the controls rows'
 // layouts, paint_handler.cpp). The ground between two GROUPS is the run gap
 // (render.h's program_run_gap_px).
@@ -582,14 +559,14 @@ inline GuiRect linked_key_box(int x, int y, int i) {
 }
 // THE SEAM A MEMBER'S BOX SHARES WITH THE KEY ON ITS LEFT, in device px: its
 // first border's columns, which BELONG TO THE LEFT KEY for every press and
-// hover (architect 2026-11-18 via the design: "a seam column belongs to the
+// hover (architect 2026-11-18: "a seam column belongs to the
 // left key") — one border on every member but a group's first, 0 there.
 inline int linked_key_seam_px(int i) {
     return i > 0 ? key_border_px() : 0;
 }
 
 // ONE LINKED GROUP on the backbuffer: n = states.size() keys from (x, y),
-// each linked_key_box(x, y, i) — THE KIT'S linked_group, in its paint order,
+// each linked_key_box(x, y, i) — in this paint order,
 // every edge at exact coverage over the ground the caller laid under the
 // same clip: (1) THE BORDER, the group's rounded box (its four outer corners
 // key_corner_px), EACH MEMBER'S STRETCH OF IT IN ITS OWN RING TONE —
@@ -646,9 +623,9 @@ void paint_linked_group(cairo_t* cr, int x, int y,
                         std::span<const FaceMix> faces,
                         std::span<const double> seam = {});
 
-// ONE WORD BUTTON on `box` (Arc's text button; architect 2026-11-18, his
-// ruling "the word alone, no glyph", Delete a plain button; the kit's
-// word_button, through GTK's box order, the kit's gtk_box): THE FACE on the
+// ONE WORD BUTTON on `box` (Arc's text button; architect 2026-11-18: "the
+// word alone, no glyph", Delete a plain button; in GTK's box order): THE
+// FACE on the
 // padding box (`box` one border in, its corners key_inner_corner_px), THEN THE
 // RING over it — the outer rounded box (key_corner_px) less the padding box
 // — each at exact coverage, so an outer corner mixes the ground and the ring
@@ -661,8 +638,8 @@ void paint_linked_group(cairo_t* cr, int x, int y,
 // (word_button_ink_tone). One stamp pass, nothing drawn inside it.
 void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 
-// ARC'S ENTRY on `box` (architect 2026-11-19, send Z; DESIGN §3, the kit's
-// body_entry; G3 `entry`) — NOISE's case and the value sub-page's field (the
+// ARC'S ENTRY on `box` (architect 2026-11-19; Arc's gtk3 CSS `entry`) —
+// NOISE's case and the value sub-page's field (the
 // time fields plain text, architect 2026-11-19), ONE PAINTER: GTK's box
 // order as the word
 // button's — THE FILL on the padding box (`box` one border in, corners
@@ -673,15 +650,15 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 // padding box (its own inner corners) CUT to its last kEntryProgressW (2 W)
 // rows and to its first t of its width, in the accent `cue` — so the line's
 // left end follows the inner corner's arc and its right end stands at its
-// real x. FOCUSED (`focused`; send AA's stage D2, 2026-11-19: the value
-// sub-page's entry, which holds the focus for as long as it stands — the
-// kit's body_entry focused, Arc's entry:focus) AN INNER ONE-W LINE OF THE
+// real x. FOCUSED (`focused`, 2026-11-19: the value
+// sub-page's entry, which holds the focus for as long as it stands —
+// Arc's entry:focus) AN INNER ONE-W LINE OF THE
 // ACCENT `cue` on all four sides inside the ring: the padding box in the
 // accent, the fill one W further in over it (its corners one W less). Every
 // edge at exact coverage over the ground the caller laid; one stamp pass,
 // nothing drawn inside it; the text is the caller's.
-// ITS OWN LENGTHS, ARC'S (G3 `entry`: min-height 28 px, padding 8 px inside
-// a 1 px border; every Arc px one W): kEntryHeightW (28 W) THE HEIGHT OF AN
+// ITS OWN LENGTHS, ARC'S (gtk3 CSS `entry`: min-height 28 px, padding 8 px
+// inside a 1 px border; every Arc px one W): kEntryHeightW (28 W) THE HEIGHT OF AN
 // ENTRY THAT STANDS ON NO KEY ROW — the value sub-page's (modal_box.h's
 // modal_page_lines; NOISE's, on the top icon row, is the key's height, 28 W
 // at the default) — and kEntryPenW (9 W) ITS TEXT'S PEN inside its left
@@ -711,18 +688,19 @@ inline uint32_t mix_word(uint32_t a, uint32_t b, double t) {
 }
 
 // A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
-// KEY; architect 2026-11-02, R5 / R11, "ground is not a button"): `key` the
-// PAINTED BOX — border included since send Z ("the border is clickable") —
-// the walk's own rect for every key of the band, the bottom icon row and the
-// controls rows. THE ONE PREDICATE every key hit test of those surfaces
-// asks: the roster's face (AppState::RedesignButtonFace::contains — the
-// press, the lift, the band's modifier gate, the tooltip's owner) and the
+// KEY; architect 2026-11-02: "ground is not a button"): `key` the
+// PAINTED BOX — border included ("the border is clickable") —
+// the walk's own rect for every key of the top icon row, the bottom icon
+// row and the controls rows. THE ONE PREDICATE every key hit test of those
+// surfaces asks: the roster's face (AppState::RedesignButtonFace::contains —
+// the press, the lift, the chrome's modifier gate
+// (chrome_band_modifiers_refused), the tooltip's owner) and the
 // modal family's buttons (GuiInputHandler::modal_dialog_button_hit — the
 // press and the lift). The on-screen keyboard's grid keeps the same rule on
 // its own shared lines (onscreen_keyboard::key_at: a line the key's left of
 // it or above it). Each painter PUBLISHES the box it paints, so a reader
 // re-shapes nothing. A gesture already begun keeps its rules: a press that
-// slides off its key reads "outside" as ever.
+// slides off its key reads "outside".
 inline bool point_on_key(const GuiRect& key, int x, int y) {
     return rect_contains(key, x, y);
 }

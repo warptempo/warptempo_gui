@@ -39,8 +39,8 @@ static std::optional<int64_t> walled_drop_frame(const GuiAudio& audio,
     // reset in the last source frame has nothing left to re-ground, and
     // total-1 keeps every marker inside the playhead's [0, total-1] domain
     // so marker gestures and playhead syncs agree exactly.
-    // SILENT, AND IT HAS NO PRODUCER (re-derived 2026-08-30, the warp twin's
-    // finding): every drop road authors at or BEFORE the playhead or a
+    // SILENT, AND IT HAS NO PRODUCER (2026-08-30, the warp twin's
+    // reason): every drop road authors at or BEFORE the playhead or a
     // marker — the
     // lead-in drop subtracts kN/2 output samples in either audio view, and the
     // playhead and every marker rest in [0, total-1] by every writer's
@@ -234,9 +234,9 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // crossover from the old phase to the new one DIPS from C − 1.5·R_s to
 // C + 0.75·R_s, deepest at C − R_s/2, its depth the old/new phase mismatch
 // (0 dB to a full null, random per channel), and is CLOSED from C + R_s.
-// Nothing "builds to full scale N/2 after the authored frame" — that
-// window-START picture was this comment's until 2026-09-02, and the
-// arithmetic below never rested on it.
+// Nothing "builds to full scale N/2 after the authored frame": that
+// window-START picture is not the engine's, and the arithmetic below does
+// not rest on it.
 //
 // THE DERIVATION. P must be (1) past the dip, P ≥ C + R_s, and (2) OUTSIDE
 // the seed grain, P ≥ C + N/2: inside the grain the content is the seed's
@@ -259,10 +259,7 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 //
 // THE ROUNDING RESIDUE, ACCEPTED AND RECORDED (architect 2026-09-02, "no
 // effect on audio output; accept and record"). THIS IS ITS ONE PROSE HOME;
-// every other site states its own share and points here. IT HAS THREE TERMS
-// (2026-09-02, correcting the first telling — which named one
-// term, put it on the wrong slope, and gave it a universal two-sample
-// ceiling):
+// every other site states its own share and points here. IT HAS THREE TERMS:
 //
 // (1) THE SCHEDULE'S ROUNDING. The engine's placement compare is on the
 // schedule's ROUNDED window start, so a seed centre up to HALF A SOURCE FRAME
@@ -282,9 +279,9 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // [0.125, 8] — the band one authored marker can express — to a plain 1.00
 // owner (resolve_warp_markers_for_render, kRefImpliedTempoMin / Max), and the
 // settings scale's [0.5, 2] divides it like any segment, so a surviving ref's
-// slope lies in the numeric envelope 1/16 .. 16 (Astra's determinism audit,
-// 2026-11-06). Only a list that bypasses the resolver reaches the builder
-// unbounded, and no GUI road does.
+// slope lies in the numeric envelope 1/16 .. 16 (2026-11-06). Only a list
+// that bypasses the resolver reaches the builder unbounded, and no GUI road
+// does.
 //
 // (2) THE DROP'S OWN SNAP. The call below inverse-maps P − N/2 and snaps the
 // result to a WHOLE SOURCE FRAME (active_domain_to_source_frame ends in
@@ -314,8 +311,7 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // OUTPUT and none on the drop: the authored frame is unchanged, the marker is
 // never off, the render is deterministic. His ruling — "prefer slight
 // untruthfulness in an overlay that affects no output to a truthfulness that
-// serves no output reason". IT IS NOT THE TRIM CROP'S ROUNDING CLASS, and
-// that comparison (which this comment carried for one day) is WITHDRAWN: the
+// serves no output reason". IT IS NOT THE TRIM CROP'S ROUNDING CLASS: the
 // trim crop's rounding is TRANSIENT, a tool's own window that the next stroke
 // replaces, while this seam sits in the geometry of every deliverable. Nor is
 // it worth a third rounding rule to remove — a placement-dependent offset, or
@@ -338,8 +334,7 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // whole target frame as the S -> T switch rounds it, takes the same
 // subtraction, and comes back through the same map to a whole source frame
 // (drop_at_playhead_source_frame, warp_frame_map_view.cpp) — so the reset
-// lands exactly where the same press in T+P, or Shift+S's old trip there,
-// would have put it. The forward rounding is a fourth residue term of its
+// lands exactly where the same press in T+P puts it. The forward rounding is a fourth residue term of its
 // own, at most half an output sample between the source playhead's exact
 // image and the protected point, slope-free (the residue's prose home is
 // above). Only the DROP takes it: a drag in S+P applies no offset
@@ -349,9 +344,6 @@ void GuiPhaseResetMarkersOps::drop_phase_resets_at_frames(
 // view: bare `s` and the empty-lane double-click, both P-column routes, and
 // SHIFT+S, which switches the column to P in the standing audio view first
 // (GuiInputHandler::drop_phase_reset_crossing, input_handler.cpp).
-// (From 2026-08-30 to 2026-09-21 S+P's drop took no lead-in, the reset
-// seated exactly at the source cursor; from then until 2026-10-12 S+P was no
-// state.)
 //
 // The body reuses drop_phase_reset_at_position, so the created reset takes the
 // full create path — the EOF wall, undo, the single-select and the playhead
@@ -396,8 +388,7 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
     // THE STALE-INDEX BELT, one policy for every verb that iterates the selection
     // (architect 2026-07-30): a stale member is SILENTLY SKIPPED and the rest of
     // the batch proceeds — the warp delete's twin (fuller statement there). A belt
-    // against a sanitization invariant reports nothing and refuses nothing; this
-    // arm used to print one stderr line and refuse the WHOLE batch.
+    // against a sanitization invariant reports nothing and refuses nothing.
     std::vector<int> live_idx;
     live_idx.reserve(app.selected_markers.size());
     for (int idx : app.selected_markers) {
@@ -416,9 +407,8 @@ void GuiPhaseResetMarkersOps::delete_selected_phase_reset() {
         app.phaseresetmarkers.remove_marker(*it);
     }
     // A DELETE RESTS AN EMPTY SELECTION (architect 2026-07-30, the warp
-    // delete's twin): the demotion that dropped a 2+ delete down to a span over
-    // the deleted positions is gone with the SPAN FORM, and there is no span
-    // state left for one to write into — the region IS the trim.
+    // delete's twin): there is no span state for a 2+ delete to rest — the
+    // region IS the trim.
     selection.clear_selection();
     // THE IDENTITY HINT, the warp delete's twin (delete_selected_marker,
     // warpmarkers_ops.cpp): live_idx names the deleted rows in the PRE-delete
@@ -485,15 +475,14 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // posture's, nudge_camera) is only passed through to finish_position_nudge
 // (NudgeCamera::HoldColumn, position_nudge.h), never a different step or a
 // different wall, and no modifier reaches here — the horizontal ladder
-// retired Shift, and Ctrl+Left / Ctrl+Right bind nothing since 2026-09-23. Every committed value is a
+// binds neither Shift nor Ctrl+Left / Ctrl+Right. Every committed value is a
 // whole source frame. The warp twin takes the same road with one
 // millisecond instead (position_nudge_landing's millisecond arm).
 //
 // HORIZONTAL MOVEMENT IS A FOCUS ACT — GROUPS ARE NEVER MOVED (architect
 // 2026-07-29): a 2+ selection COLLAPSES TO ITS FOCUS in the shared prologue (which
 // also lands the playhead there), so the body below moves exactly one reset. The
-// doctrine and the dead per-member machinery are recorded once at the head of
-// position_nudge.h.
+// doctrine is recorded once at the head of position_nudge.h.
 //
 // Wall semantics against this column's absolute range (zero / total_frames - 1 —
 // the single marker EOF wall both columns share; see drop_phase_reset_at_position
@@ -501,8 +490,7 @@ void GuiPhaseResetMarkersOps::toggle_phase_reset_disabled() {
 // so the wall is exactly reachable by a press that would overshoot it. This is the
 // UNIFIED WALL POLICY (architect 2026-07-30 — singleton steps clamp, group presses
 // refuse whole); the policy and its rationale are stated once at the head of
-// position_nudge.h. The phase twin refused the whole press until that ruling; the
-// warp twin already clamped. The integer walls win over the pixel grid, and a
+// position_nudge.h. The integer walls win over the pixel grid, and a
 // clamped target equal to the current frame writes NOTHING (the silent no-op
 // below). Crossing a neighbor is legal and goes through the reorder-and-remap
 // path below.
@@ -535,8 +523,8 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
 
     const int64_t orig_f = tv[f].time_frame;
 
-    // THE WALL-REGIME MIDDLE, through the shared landing owner since
-    // 2026-08-31 — THE WARP TWIN'S OWN CALL, not a copy of its shape
+    // THE WALL-REGIME MIDDLE, through the shared landing owner
+    // — THE WARP TWIN'S OWN CALL, not a copy of its shape
     // (position_nudge_landing, position_nudge.h; the step in its unit, the
     // headroom clamp with its exact integer compares, and the walls-win belt
     // are all argued at its declaration). This column's step is ALWAYS A HOP
@@ -553,10 +541,9 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
     // (or one whose step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
-    // AND IT IS SILENT AGAIN SINCE 2026-08-31, the warp twin's rule verbatim —
+    // AND IT IS SILENT (2026-08-31), the warp twin's rule verbatim —
     // a benign one-dimensional refusal already at its state says nothing, the
-    // unmoved flag being its own answer; the one-day card "The marker is
-    // already at the edge" is retired in both columns.
+    // unmoved flag being its own answer.
     // WHAT STILL REACHES IT is the 2+ press whose FOCUS rests on a wall, the
     // warp twin's rule verbatim again: the prologue asks the same landing ahead
     // of the coalesce stamp, so a SINGLETON at its wall refuses there instead.
@@ -621,7 +608,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
 // refusal block named whole in a predicate the face reads, the wall asked
 // through the directional face, the
 // value-shaped kind refusal on a card, and the mutation through the one
-// landing owner — AND NO GROUP ARM ON EITHER COLUMN since 2026-09-10, a bound
+// landing owner — AND NO GROUP ARM ON EITHER COLUMN, a bound
 // axis implying a singleton selection by construction (the warp twin's head
 // argues it). THERE IS NO STAMP AND NO ENTRY at the end of it (below). The
 // contracts are at the declarations (phaseresetmarkers_ops.h, app_state.h's
@@ -630,7 +617,7 @@ GuiOpRefusal GuiPhaseResetMarkersOps::nudge_selected_phase_resets(
 // WHAT DIFFERS. The subject is a bound in HOPS of the analysis lattice, so the
 // walls are the reset's own hop window (phase_reset_hop_window,
 // warp_frame_map_view.h — the piece's ends and the single digit, a
-// neighbouring reset not being a wall since 2026-09-11) rather than a tempo
+// neighbouring reset not being a wall) rather than a tempo
 // bracket, and the landing owner takes the app and the audio because that
 // window is a fact about the piece and the live map rather than about one
 // row. The eligibility is this column's
@@ -665,15 +652,13 @@ GuiOpRefusal GuiPhaseResetMarkersOps::adjust_iter_bound_hops(
     // THE WALL IS A SILENT, FACED NO-OP: the face greys on it (the Up/Down
     // arms read this very predicate), so the key says nothing either — a
     // benign one-dimensional refusal already at its state, the cell's own
-    // value being the place to glance. (It was ranked AHEAD OF THE COALESCE
-    // STAMP until 2026-09-10, the key having had to leave the stamp exactly
-    // as the greyed button did; the bound step stamps nothing now, so there
-    // is no ordering left to keep.)
+    // value being the place to glance. (The bound step stamps nothing, so
+    // there is no ordering against a coalesce stamp to keep.)
     if (!iter_bound_step_direction_actionable(app, audio, side, delta_hops))
         return std::nullopt;
     // THE KIND REFUSAL, on a card and behind a LIVE face — the one kind
-    // refusal under the vertical arrows that still keeps one since the tempo
-    // step's began greying (2026-09-13), and a BELT rather than a live
+    // refusal under the vertical arrows that keeps a card (the tempo step's
+    // greys its face, 2026-09-13), and a BELT rather than a live
     // refusal: a bound cell is addressed only where its cell paints, and while
     // the lamp stands the lock refuses every act that could take the carrier
     // away, so no reachable state answers it (iter_bound_step_kind_refusal).

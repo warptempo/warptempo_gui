@@ -14,9 +14,8 @@
 //
 // THE BLOCK AND THE SLOT ARE SPLIT FROM THE PLACEMENT because the placement is
 // the part that carries a column's own meaning, and that split is why these
-// are templates. They had a SECOND INSTANTIATION from 2026-09-15 to
-// 2026-09-19, the since-deleted magnification level propagate's clipboard, so
-// what is left here is the phase family's shape alone.
+// are templates; the phase family is their one instantiation, so what is
+// here is its shape alone.
 
 template <class Placement>
 struct PropagateClipboardBlock {

@@ -60,7 +60,7 @@
 // screen with both system bars hidden (MainActivity.java's head, architect
 // 2026-10-01), so a surface pixel, a window pixel, a GUI pixel and a touch
 // coordinate are one grid (the rule is at width_, platform_android.h; the
-// app paints no window frame since 2026-10-24). The POLICY (the touch
+// app paints no window frame, architect 2026-10-24). The POLICY (the touch
 // state machine, the key-repeat synthesis, the logical pointer, the
 // containment conversion) is in GuiInputCore; every input
 // event decoded below is handed to that object in plain window-pixel doubles.
@@ -78,7 +78,7 @@
 // P3-tagged layer its own way, in closed code. Tagging this window P3 hands
 // the app to the hardware exactly as the viewer is handed. THE MEASUREMENT
 // STANDS (the hardware honors a P3-tagged layer); what the app hands it
-// changed on 2026-10-08 ~05:15: every authored color is an sRGB byte triple,
+// (2026-10-08): every authored color is an sRGB byte triple,
 // and the painters convert each to the Display-P3 triple that presents it as
 // a browser does (display_transform.h's head), so the bytes this file hands
 // the window are the converted ones, placed byte for byte. (While the
@@ -382,9 +382,7 @@ void append_utf16(std::vector<jchar>& out, std::string_view s) {
 
 // THE PANEL'S RATE, ONE NUMBER WITH TWO READERS: adopt_window's setFrameRate
 // vote (the pin and its ruling are there) and THE BEAT below, whose unit T
-// is this rate's period. (The present coalescer's least spacing read it
-// for one commit and went with the coalescer, 2026-10-14; the paint's gate
-// is the vsync callback, pump's tail.) detect_refresh_rate_ms's 5-ms tick
+// is this rate's period. detect_refresh_rate_ms's 5-ms tick
 // is a choice made against this rate and says so there; it reads no number.
 constexpr int     kPanelRefreshHz = 90;
 constexpr int64_t kPanelPeriodNs  = 1'000'000'000LL / kPanelRefreshHz;
@@ -592,7 +590,7 @@ int64_t presentation_stamp_ns(int64_t expected_ns, int64_t period_ns) {
     return expected_ns + (k - 1) * period_ns - period_ns / 2;
 }
 
-// THE DISPLAY KEEP-ALIVE'S CLOCK (architect 2026-11-13, session 118): the
+// THE DISPLAY KEEP-ALIVE'S CLOCK (architect 2026-11-13): the
 // steady clock in ms, present()'s stamp and display_keep_alive_due's now —
 // the platform's two readings compare only with each other (the period,
 // GuiPlatform::kDisplayKeepAliveMs; the facts and the ruling at
@@ -765,7 +763,7 @@ std::atomic<uint32_t> g_battery_word{
 // MainActivity's `private static native void nativeBatteryState(boolean
 // present, int percent, int plugged)`. `percent` is 0..100 or -1 for a level
 // the broadcast did not carry; `plugged` is the Java side's COMPOSED answer to
-// whether the cable is attached (architect 2026-11-05 night; the rule at
+// whether the cable is attached (architect 2026-11-05; the rule at
 // MainActivity.pushBattery, from Android's EXTRA_PLUGGED or Samsung's
 // `online` cable type, which stays up through the battery protection's
 // charging pause) — 0 unplugged, positive attached, and -1 for no answer:
@@ -829,7 +827,7 @@ read_asset_whole(AAssetManager* mgr, const std::string& path) {
 }
 
 // The tablet's device-config template (contract at the declaration). THE
-// SHIPPED DEFAULTS FILE (architect 2026-11-08, session 95; device_config.h's
+// SHIPPED DEFAULTS FILE (architect 2026-11-08; device_config.h's
 // THE FIRST-RUN VALUES): the repository's assets/device_config_defaults,
 // packed by build_apk.sh's assets step as the APK's root asset
 // `device_config_defaults`, read whole and PARSED BY THE CONFIG'S OWN READER
@@ -841,9 +839,7 @@ read_asset_whole(AAssetManager* mgr, const std::string& path) {
 // an asset that will not open or read whole, and a file the reader refuses,
 // both build defects, the file being the program's own (no manager is
 // breach-only, read_asset_dir's below); gui_main answers each exactly as it
-// answers a bad config — one line and no window. (The externalDataPath the projects path was derived from until
-// 2026-11-09 has no reader left: the file names the path, so its breach
-// abort went with the derivation, the type rule.)
+// answers a bad config — one line and no window.
 // A STATIC THAT READS THE BACKEND'S GLOBAL: this accessor is asked before any
 // GuiPlatform exists (gui_main resolves the config ahead of init()), and the
 // glue's android_app* reaches it only through g_android_app, parked by
@@ -936,9 +932,8 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
 
     // THE KEY-REPEAT CADENCE IS HARD-CODED HERE (architect ruling 2026-08-23).
     // Android advertises no repeat rate to a native activity — no system
-    // setting a native app can read — so the numbers are labwc's defaults
-    // (the laptop compositor the product began on, their provenance), taken
-    // BY CONVENTION: the delay is kHoldBeatMs (600, gui_input.h, the
+    // setting a native app can read — so the numbers are labwc's defaults,
+    // taken BY CONVENTION: the delay is kHoldBeatMs (600, gui_input.h, the
     // product's fixed beat — never the hold delay, architect 2026-09-29: a
     // repeat delay measures the cadence of a stream of repeats, not a hand
     // resting until a hold means something) and the rate is 25 Hz, a 40 ms
@@ -1034,11 +1029,9 @@ bool GuiPlatform::init(int width, int height, const char* /*title*/) {
     // then drops or falls back with this line already written.
     //
     // THE THREE IDS ARE ONE LOOKUP BLOCK, off one class object: the car's
-    // mediaState (2026-08-28) and the paste's read pair, clipboardGet
-    // (2026-09-03) and clipboardTime (2026-10-29; the copy writes no system
-    // clipboard since, the rule at clipboard_set_text's declaration).
-    // (Activity's own moveTaskToBack, the caption's Minimise, was a fourth
-    // 2026-10-05 to 2026-10-24 and went with the caption.) Each is
+    // mediaState and the paste's read pair, clipboardGet and clipboardTime
+    // (the copy writes no system clipboard, the rule at clipboard_set_text's
+    // declaration). Each is
     // independent — a missing clipboardTime leaves the head unit's display
     // working and vice versa — so each has its own arm and its own line.
     if (app_->activity && app_->activity->vm) {
@@ -1123,13 +1116,13 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // every frame is followed by one beat of two refreshes of this panel,
     // 45 a second (kFrameBeat, the rule and its measurement), and the
     // plate's costliest measured frame fits two refreshes, 22.2 ms. The
-    // vsync callback that gates the paint (pump's tail, since 2026-10-14)
+    // vsync callback that gates the paint (pump's tail)
     // arrives at the panel's rate, so the pin is the unit of the paint's
     // cadence — 45 is no panel mode, the gate makes it on this one: the
     // Tab S10 FE's panel is variable-refresh and the system otherwise
     // picks a rate from what it sees the app doing, which
     // for a program that paints only on damage reads as "hardly ever" (it
-    // landed on 60 unpinned, 2026-08-27): within the system's range the vote
+    // lands on 60 unpinned): within the system's range the vote
     // makes the rate this decision rather than the system's guess. The
     // scanner and the waveform under a drag are the surfaces that show the
     // rate. THE SYSTEM'S RANGE IS THE TABLET'S SETTING: the vote is honored
@@ -1140,7 +1133,7 @@ void GuiPlatform::adopt_window(bool fire_resize) {
     // UNDER A TOUCH THE VOTE DOES NOT DECIDE:
     // the system's touch boost lifts the panel to the top of the system's
     // range, which under Adaptive is the pinned rate itself. MEASURED on
-    // the tablet (the planner, 2026-11-14, the vote then 60): under Adaptive
+    // the tablet (the planner, 2026-11-14, with a vote of 60): under Adaptive
     // an injected one-finger pan ran at 90 Hz whatever the vote, the
     // window's touch-boost opt-out included; under Standard the same pans
     // ran at 60.
@@ -1371,8 +1364,8 @@ void GuiPlatform::ensure_gl_surface() {
                      reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
                      reinterpret_cast<const char*>(glGetString(GL_VERSION)),
                      p3 ? "accepted" : "refused");
-        // THE EGL CAPABILITY LINE, PERMANENT (2026-11-04; architect
-        // 2026-11-16 night, send S), beside the identity: what the present
+        // THE EGL CAPABILITY LINE, PERMANENT (architect 2026-11-16), beside
+        // the identity: what the present
         // stands on and nothing it does not — the presentation-time
         // extension (the one extension present calls) and the chosen
         // config's samples and red / alpha depths (the byte-space blend's
@@ -1479,7 +1472,7 @@ int GuiPlatform::display_width_px() const { return width_; }
 
 // A NativeActivity under Theme.NoTitleBar has no system titlebar and no
 // task-switcher string a native app can rewrite, so a window title has
-// nowhere to go (the app paints no caption since 2026-10-24; the title bar
+// nowhere to go (the app paints no window chrome; the title bar
 // carries the brand, never the piece). The setter is therefore a silent
 // no-op, kept because the GUI calls it unconditionally from the load path.
 // UNSAVED WORK IS SHOWN by the SAVE BUTTON'S GREY (architect 2026-10-05,
@@ -1693,7 +1686,7 @@ bool GuiPlatform::paint_one_frame(bool held_frame) {
     // keeps both, as it keeps the damage, and the next vsync's frame retries.
     // A FRAME WITH NOTHING VISIBLE TO SHOW (present's PresentOutcome::
     // NothingVisible: every damage rect off the surface, the change
-    // described; architect 2026-11-16 night, send S) CONSUMES ITS DAMAGE as
+    // described; architect 2026-11-16) CONSUMES ITS DAMAGE as
     // a presented frame does — so the gate's tail posts no callback for it
     // and nothing retries — and answers false: nothing reached the window,
     // so the gate records no painted vsync. The hold's frames are never
@@ -1724,16 +1717,15 @@ GuiPlatform::PresentOutcome GuiPlatform::present() {
     // GuiGlCanvas::ready) swaps nothing and keeps the damage.
     //
     // THE SWAP WOULD BLOCK with the queue full (swap interval 1), and the
-    // paint's gate keeps the queue from filling: since 2026-10-14 a gated
+    // paint's gate keeps the queue from filling: a gated
     // paint runs only at a due vsync callback, at most one per beat — two
     // refreshes of the pinned 90 Hz panel (THE BEAT, kFrameBeat; the gate
-    // at pump's tail, where the reversal of the 2026-08-27 "one wakeup, no
-    // Choreographer" ruling and its measurement are), so the unbuffered
+    // and its measurement at pump's tail), so the unbuffered
     // pen's ~500 events a second cost drains and never an extra swap. No
     // glFinish, no glFlush beyond the swap's own, no readback.
     //
     // EVERY PRESENTED FRAME IS DRAWN WHOLE AND SWAPPED PLAIN (architect
-    // 2026-11-16 night, send S: "given that we've gone to 45, one of the
+    // 2026-11-16: "given that we've gone to 45, one of the
     // luxuries that it buys us is not having to worry about this stuff";
     // "the power draw shouldn't be the deciding factor"). present_frame
     // clears and composes the whole surface every frame, and the swap is
@@ -1744,21 +1736,21 @@ GuiPlatform::PresentOutcome GuiPlatform::present() {
     // NARROWING: a frame paints only when damage stands (the gate), the
     // chrome is repainted only under it (paint_one_frame's on_redraw calls)
     // and the texture takes only its rects (present_frame's upload walk);
-    // it no longer selects what the GPU composes. The occasion: a scissored
-    // recompose of a narrow region came out one level off the whole
+    // it does not select what the GPU composes: a scissored recompose of a
+    // narrow region came out one level off the whole
     // composite of the same inputs on the plate's antialiased edge, cause
     // unknown, and the flat-45 beat pays for the whole draw.
     // NOTHING PRESENTS AT REST, which is what made the present's own cost
     // matter. MEASURED (2026-11-04, the planner's measurement on the tablet,
-    // a free fading line at rest, the panel then pinned at 90 Hz and a frame
+    // a free fading line at rest, the panel pinned at 90 Hz and a frame
     // presented every refresh): 90 presents a second, per second of wall
     // time the swap 160 ms, the present 30, cairo 15, the upload 3, the list
     // 1.7, top ~50 % app / ~50 % SurfaceFlinger; with only the changed
     // pixels redrawn, ~46 % / ~53 % — THE PRESENT IS THE COST (the swap
     // ~1.7 ms of the loop thread a frame), the pixels were not.
     //
-    // NOTHING VISIBLE CHANGED, NOTHING PRESENTS (architect 2026-11-16 night,
-    // send S): a frame whose every damage rect lies off the surface, and
+    // NOTHING VISIBLE CHANGED, NOTHING PRESENTS (architect 2026-11-16): a
+    // frame whose every damage rect lies off the surface, and
     // whose change the damage describes (GuiGlCanvas::change_undescribed
     // false), draws nothing, stamps nothing and swaps nothing; it answers
     // NothingVisible, and paint_one_frame consumes its damage as a presented
@@ -1884,7 +1876,7 @@ void GuiPlatform::present_held_frame() {
 // nothing is owed a paint outside the gate, and the
 // release is called inside a pump() pass (the tick), whose tail posts the
 // callback for the damage declared here (pump's tail, the gate's rule). THE
-// RELEASE IS OWED, NOT DONE (2026-10-28, Sol's round): it sets release_owed_
+// RELEASE IS OWED, NOT DONE (2026-10-28): it sets release_owed_
 // and LEAVES THE HOLD STANDING, so presentation_held() reads true — and
 // every open_unseen() gate drops (main.cpp's hook block) — through the vsync
 // wait and the frame's paint: a touch frame in that wait and a car command
@@ -1909,7 +1901,7 @@ int GuiPlatform::detect_refresh_rate_ms() {
     // 5 ms (architect 2026-08-27), and stated as a CHOICE rather than a
     // reading: the NDK exposes no display refresh rate to a native activity
     // below the Choreographer's own vsync callbacks. Those callbacks are the
-    // paint's gate since 2026-10-14 (pump's tail), but they come only while
+    // paint's gate (pump's tail), but they come only while
     // damage asks for one, and the tick is the other cadence — it runs
     // whether or not anything paints — so it stays a number of its own.
     //
@@ -1917,17 +1909,15 @@ int GuiPlatform::detect_refresh_rate_ms() {
     // the window for 90 Hz outright (the ruling and the call are there), so
     // this loop's cadence is chosen against the panel's rather than guessed
     // at: 90 Hz is an 11.1 ms period, its half 5.6 ms, and 5 ms is that
-    // rounded down — the number the first 90 Hz pin took (2026-08-27), kept
-    // through the 60 Hz pin of 2026-11-14 to 2026-11-16 rather than raised:
-    // the direction below costs nothing. There is ONE DEVICE and it is
+    // rounded down, never raised: the direction below costs nothing. There
+    // is ONE DEVICE and it is
     // pinned, which is what makes a hard-coded number honest here.
     //
     // THE DIRECTION THAT COSTS NOTHING is downward: the tick only POLLS
     // deadlines (key repeat, the audition's rests) and drives
     // the playback scanner, so a tick faster than half the refresh is wasted
     // work and never a wrong frame (the paint waits for the vsync callback
-    // either way), while a slower one would visibly step the playhead. It was
-    // 8 ms — 60 Hz's half-period — before the first 90 Hz pin.
+    // either way), while a slower one would visibly step the playhead.
     return 5;
 }
 
@@ -2026,7 +2016,7 @@ void GuiPlatform::drain_looper(int timeout_ms) {
             // prompt, and nothing may block here anyway. BACK ASKS; A DESTROY
             // CANNOT, and that is the residual loss in one sentence: a dirty
             // session killed from the task switcher or by the system goes
-            // unasked, while the user's own BACK now takes the unsaved-work
+            // unasked, while the user's own BACK takes the unsaved-work
             // road (the arm is at on_input_event). The GUI's own teardown
             // still runs on the way out of gui_main.
             should_exit_ = true;
@@ -2047,7 +2037,7 @@ void GuiPlatform::drain_looper(int timeout_ms) {
  *   3. the four worker completions, in registration order;
  *   4. the MEDIA COMMANDS, drained under the mutex and dispatched outside it,
  *      after the workers, so a car button acts before the pass's paint
- *      decision (the reasoning is at the block; since 2026-10-14 its frame
+ *      decision (the reasoning is at the block; its frame
  *      joins this pass IF a vsync is due, else the next callback's, one vsync
  *      at most);
  *   5. paint-if-dirty AT THE VSYNC CALLBACK (2026-10-14): the pass paints
@@ -2065,7 +2055,7 @@ void GuiPlatform::pump() {
 
     // THE POLL BLOCKS until the first of the loop's wake sources: the
     // window-system sources, the four workers, the car's eventfd, and the
-    // loop's TWO CADENCES since 2026-10-14 — the 5-ms timerfd tick (key
+    // loop's TWO CADENCES — the 5-ms timerfd tick (key
     // repeat) and the vsync callback, posted only while
     // damage waits (the tail).
     drain_looper(-1);
@@ -2091,10 +2081,10 @@ void GuiPlatform::pump() {
 
     // THE CAR'S COMMANDS, after the workers and before the paint, so a
     // button acts before the pass's paint decision (the hook's contract, at
-    // its declaration; amended 2026-10-14: the tail paints
+    // its declaration; the tail paints
     // only with the vsync bit, so the command's frame joins this pass if a
     // vsync is due and otherwise the next callback's, one vsync at most — the
-    // dispatch order is unchanged and still the reason it sits here). The queue is swapped out
+    // dispatch order is the reason it sits here). The queue is swapped out
     // under the one mutex and the hook fired per command OUTSIDE it — a
     // command synthesizes keys, and that road is long. With no hook installed
     // (between two projects) the commands are discarded: the third drop
@@ -2144,35 +2134,26 @@ void GuiPlatform::pump() {
     // afresh. A run stop leaves both bits to the next run() on this same
     // object; shutdown clears them and the sink (g_vsync_sink's rule).
     //
-    // WHY (measured 2026-10-14 ~19:15 on his glass with `dumpsys
-    // SurfaceFlinger --timestats`, the display's own per-layer record, the
-    // panel then pinned at 90 Hz):
-    // the present-per-vsync COALESCER that stood here for one commit
-    // (5b303871) spaced the presents by a clock — at least 10.51 ms, the
-    // pinned period less a 0.6-ms slack, measured from the previous
-    // present's RETURN to the next paint's START — so present to present ran
-    // that spacing PLUS the paint (3 ms flagless, 4 to 7 ms with flags),
-    // 14 to 17 ms, free-running against the 11.11-ms vsync: on the display,
-    // during a pen pan, 52 % of frame-to-frame intervals one vsync and 39 %
-    // TWO with flags, 74 % and 20 % flagless — every other display frame
-    // doubled, worse with flags because the paint's cost added to the
-    // spacing. The GPU was never the limit (post to acquire 3 ms). Before
-    // the coalescer the ViewRootImpl's per-vsync input batching had aligned
-    // the paints for free (93 to 95 % of presents ≤ 13 ms apart; after it
-    // none, 92 % at 13 to 24 ms). THE INSTRUMENT LESSON: the coalescer's own
-    // trial was read off an app-side counter (return to return) whose
-    // buckets ran ≤ 13 ms, 13 to 24 ms and on, so its "one vsync apart 1476
-    // times" was the 13-to-24-ms bucket and hid exactly this 11/22-ms
-    // alternation. THE PROOF OF RECORD FOR CADENCE IS SurfaceFlinger's
-    // timestats, never the app's own counter.
+    // WHY A VSYNC GATE AND NOT A CLOCK (measured 2026-10-14 on his glass
+    // with `dumpsys SurfaceFlinger --timestats`, the display's own per-layer
+    // record, the panel pinned at 90 Hz): presents spaced by a clock — at
+    // least 10.51 ms, the pinned period less a 0.6-ms slack, from the
+    // previous present's RETURN to the next paint's START — run present to
+    // present at that spacing PLUS the paint (3 ms flagless, 4 to 7 ms with
+    // flags), 14 to 17 ms, free-running against the 11.11-ms vsync: during a
+    // pen pan 52 % of frame-to-frame intervals one vsync and 39 % TWO with
+    // flags, 74 % and 20 % flagless — every other display frame doubled,
+    // worse with flags because the paint's cost adds to the spacing. The GPU
+    // was never the limit (post to acquire 3 ms). THE INSTRUMENT LESSON: an
+    // app-side counter (return to return) bucketed ≤ 13 ms, 13 to 24 ms and
+    // on hid exactly this 11/22-ms alternation in its 13-to-24-ms bucket.
+    // THE PROOF OF RECORD FOR CADENCE IS SurfaceFlinger's timestats, never
+    // the app's own counter.
     //
-    // THE REVERSAL: this REVERSES the architect's 2026-08-27 "one wakeup, no
-    // Choreographer, no second cadence" ruling, and the same day's earlier
-    // ruling-out of a vsync-driven frame start, which was read off the same
-    // counter: the loop now has two wake sources, the tick and the vsync
-    // callback. The unbuffered dispatch MainActivity.onCreate requests stays
-    // — it removed the input holes, and this gate is what makes its ~500 pen
-    // events a second cost drains and not frames.
+    // So the loop has two wake sources, the tick and the vsync callback
+    // (architect 2026-10-14). The unbuffered dispatch MainActivity.onCreate
+    // requests stays — it removes the input holes, and this gate is what
+    // makes its ~500 pen events a second cost drains and not frames.
     //
     // THE PAINT RUNS AT THE TAIL OF THE PASS THE CALLBACK WOKE, at most once
     // per due vsync (the beat, kFrameBeat), invited, never by a clock — so
@@ -2213,8 +2194,8 @@ void GuiPlatform::pump() {
 }
 
 void GuiPlatform::run() {
-    // THE LOOP HAS TWO WAKE SOURCES of its own since 2026-10-14 (the
-    // 2026-08-27 "one wakeup" ruling reversed; the reason at pump's tail):
+    // THE LOOP HAS TWO WAKE SOURCES of its own (architect 2026-10-14; the
+    // reason at pump's tail):
     // the periodic timerfd, so the blocking poll never waits longer than one
     // tick period for the tick's work (key repeat), and the
     // vsync callback, posted while damage
@@ -2291,8 +2272,8 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             // the surface is the window (width_'s rule) and a re-read is how a
             // move would be seen; ensure_backbuffer and the resize hook are
             // cheap no-ops when nothing moved. APP_CMD_CONTENT_RECT_CHANGED is
-            // NOT among them: nothing on this side reads the content rect any
-            // more (the activity is full screen, architect 2026-10-01), so the
+            // NOT among them: nothing on this side reads the content rect (the
+            // activity is full screen, architect 2026-10-01), so the
             // command falls to the switch's silence like every other one this
             // backend has no use for.
             if (app_->window) adopt_window(/*fire_resize=*/true);
@@ -2401,8 +2382,8 @@ int32_t GuiPlatform::on_input_event(AInputEvent* event) {
         // BACK is handed back to the system rather than swallowed by a GUI
         // with no use for it. The road INTO the core's key path exists and is
         // public — synthesize_key — for the on-screen keyboard this backend
-        // owns, its one producer since the car's commands became direct acts
-        // (2026-09-12; GuiRenderPlayer::on_media_command).
+        // owns, its one producer (the car's commands are direct acts,
+        // GuiRenderPlayer::on_media_command).
         //
         // (THE SYSTEM DESTROY IS NOT THIS ROAD and cannot be: APP_CMD_DESTROY
         // / destroyRequested is the system stating the activity is already
@@ -2623,7 +2604,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // drops the Ctrl bit — the pen has left the glass's reach.
             //
             // THE PEN'S LIFT IS NOT A LEAVE (architect 2026-10-07, his S Pen
-            // on a Windows 2000 toggle: "it blinks the bright color for an
+            // on a toggle: "it blinks the bright color for an
             // instant as I release or just after; my pen still near the
             // screen: it is sunken and the color is dark"). A tip leaving the
             // glass is in the plane by the latch's own rule (a contact report
@@ -2637,25 +2618,24 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // instead of the leave (deliver_touch_translation_end) — and the
             // pointer stays on the key it tapped; the HOVER_ENTER the platform
             // sends after the up is then a MOTION here, not an enter. A
-            // leave there was a blink: a face that read the pointer changed
-            // between the lift and the re-entry for a frame or more. THE HOVER
-            // STILL ENDS where it always did — a HOVER_EXIT, a report above
+            // leave there would blink: a face that read the pointer would
+            // change between the lift and the re-entry for a frame or more. THE
+            // HOVER ENDS — a HOVER_EXIT, a report above
             // the plane, a first down, focus loss — through end_pen_hover's
             // leave (the exit the platform sends just before every tip DOWN
             // arrives in its own delivery, so a frame may paint before the
-            // DOWN: "the word Pick Colors blinks", the record at THE POINTER
-            // LEAVE'S THREE FIRES, input_core.h; the leave carries no reason
-            // since 2026-11-07, every fire read alike). A pen
+            // DOWN, the record at THE POINTER LEAVE'S THREE FIRES,
+            // input_core.h; the leave carries no reason, every fire read
+            // alike). A pen
             // lifting while another contact stays on the glass is no hover
-            // (hovers are dropped under a contact): its end takes the leave as before and its next hover is an enter;
+            // (hovers are dropped under a contact): its end takes the leave and its next hover is an enter;
             // so does every finger's lift (a finger never hovers). A pen
             // withdrawn out of range before the platform reports any hover
             // leaves the pointer resting at the lift until the pen's next
-            // report or the next contact, the way Windows' mouse rests where
-            // it clicked.
+            // report or the next contact.
             // AND NO FACE HOVERS UNTIL MOTION after such a lift (architect
-            // 2026-10-07, the roster's hot face; every hover face
-            // 2026-10-09, Arc's look architect 2026-11-20): the UP arm arms
+            // 2026-10-09, every hover face; Arc's look architect
+            // 2026-11-20): the UP arm arms
             // the GUI's latch (set_pen_lift_hook; the rule at
             // GuiInputHandler::pen_hot_latch_).
             //
@@ -2745,7 +2725,7 @@ void GuiPlatform::on_motion_event(AInputEvent* event) {
             // seat (the GUI clears a RETAINED seat alone), which the stroke
             // keeps; the stroke is marked (pen_stroke_shared_), so its lift
             // keeps nothing. The pen's own first down opens a fresh stroke,
-            // unmarked; whether it releases the anchor was the sampling's
+            // unmarked; whether it releases the anchor is the sampling's
             // answer above (b).
             {
                 const bool finger_down = index < count && !is_pen(index);
@@ -2931,14 +2911,12 @@ void GuiPlatform::set_pen_ctrl(bool held) {
 void GuiPlatform::end_pen_hover() {
     if (!pen_hovering_) return;
     pen_hovering_ = false;
-    // THE PEN'S OWN LEAVE: the pen has left the tool as Windows' mouse leaving
-    // the window has — the tooltip, the in-window bit, the arms and the latch
-    // go. The HOVER_EXIT the platform sends just before every tip DOWN comes
-    // through here in a delivery of its own (architect 2026-10-10, "the word
-    // Pick Colors blinks"; the trace that measured the gap at THE POINTER
-    // LEAVE'S THREE FIRES, input_core.h), which is why this leave once kept
-    // every lit row; no such face is left, and since 2026-11-07 the leave
-    // carries no reason, every fire read alike.
+    // THE PEN'S OWN LEAVE: the pen has left the GUI — the tooltip, the
+    // in-window bit, the arms and the latch go. The HOVER_EXIT the platform
+    // sends just before every tip DOWN comes through here in a delivery of
+    // its own (the trace that measured the gap at THE POINTER LEAVE'S THREE
+    // FIRES, input_core.h); the leave carries no reason, every fire read
+    // alike.
     input_.pointer_leave();
 }
 
@@ -2958,18 +2936,16 @@ void GuiPlatform::end_pen_hover() {
 // is first detected somewhere in 81..117 — so the plane begins close to
 // where the pen is first seen: one first detected at or under 85 enters at
 // its first report, and one detected higher within about 3 mm more of
-// descent. The phase in which they were device keys is closed and the keys
-// struck (device_config.h's record); a retune is a recompile of these two
-// lines. The thresholds once carried the retained zoom anchor through a lift
-// out of range by luck alone: a SLOW lift's firmware button release at the
-// range leave arrives at 101 counts, past the exit, and went unsampled (a
-// fast lift's arrives inside the plane); the release's one-sync deferral
-// (pen_hover_release_pending_, architect 2026-10-31), not these thresholds,
-// now carries that rule.
+// descent. They are no device keys: a retune is a recompile of these two
+// lines. They do not carry the retained zoom anchor through a lift out of
+// range: a SLOW lift's firmware button release at the range leave arrives
+// at 101 counts, past the exit (a fast lift's arrives inside the plane);
+// the release's one-sync deferral (pen_hover_release_pending_, architect
+// 2026-10-31) carries that rule.
 // (The pen's one other distance, the hover face's re-arm after a lift, is a
 // chrome length in W and so lives at the GUI's latch, which owns the
 // scale: kPenHotRearmPx, input_handler.h. THESE TWO THRESHOLDS ARE ARC'S
-// HOVER'S "ON" AND "RELEASED" HEIGHTS too, architect 2026-11-18, send Y:
+// HOVER'S "ON" AND "RELEASED" HEIGHTS too, architect 2026-11-18:
 // a hover face shows only for a pen in the plane, AppState::FaceFades.)
 constexpr float kPenPlaneEnter = 85.0f;
 constexpr float kPenPlaneExit  = 100.0f;
@@ -3319,19 +3295,9 @@ void GuiPlatform::set_touch_slop_px(double px)              { input_.set_touch_s
 
 namespace {
 
-// (THE SOURCE IS NO LONGER RESOLVED HERE. Until 2026-08-27 this backend read
-// a one-line `current` file under <externalDataPath> naming a project folder
-// and walked that folder for the one .wav with a .warpmarkers sibling; the
-// project model retired both halves — the app opens the device config's
-// `last_project`, or the first valid project in name order, through the one
-// portable owner (startup_source, project_model.h), and Open Project is the
-// picker. WHERE the projects are is the shipped defaults file's
-// projects_path line, the first-run value device_config_defaults above
-// reads.)
-
 // LOAD THE PRODUCT'S FACES OUT OF THE APK, or die. The assets are the
 // repository's own font files — every one (gui_font.h's
-// kGuiFontFiles, in its order; architect 2026-10-02 to 2026-10-12; build_apk.sh's asset
+// kGuiFontFiles, in its order; architect 2026-10-12; build_apk.sh's asset
 // step copies every name that list spells), and the abort below covers
 // each of them. A
 // missing or unreadable asset is a BUILD defect — the packaging step puts every
@@ -3346,8 +3312,7 @@ namespace {
 // does. FALSE IS STILL
 // ONLY THE BUILD DEFECT: the install's other false, the once-per-process
 // answer to a second call, cannot meet this caller, because android_main
-// runs once per process (its tail says why; until 2026-10-07 a relaunch into
-// the kept process reached here a second time and aborted).
+// runs once per process (its tail says why).
 //
 // The assets need not stay open for the process's life:
 // gui_font_install_bundled COPIES the bytes it keeps (its LIFETIME comment
@@ -3452,8 +3417,8 @@ void android_main(android_app* app) {
     const char* internal = app->activity ? app->activity->internalDataPath : nullptr;
     if (internal && *internal) {
         setenv("XDG_CACHE_HOME", internal, 1);
-        // XDG_CONFIG_HOME joined 2026-08-27 with the device config
-        // (device_config.h), for the same reason and by the same rule: the
+        // XDG_CONFIG_HOME is the device config's (device_config.h), for
+        // the same reason and by the same rule: the
         // GUI has ONE resolver for that file, the variable alone, and pointing
         // it here is what keeps that resolver free of an Android arm.
         setenv("XDG_CONFIG_HOME", internal, 1);
@@ -3547,7 +3512,7 @@ void android_main(android_app* app) {
     // process ends once that has run. WHAT THE USER SEES: Quit and BACK are
     // one route (the close prompt, then
     // GuiCloseTarget::Exit, then GuiPlatform::request_exit), so each of them
-    // now ends the process, and a relaunch is always cold. The project
+    // ends the process, and a relaunch is always cold. The project
     // picker's reopen is a run stop inside gui_main, not a destroy, and stays
     // in this process.
     pump_glue_until(app, [app] { return app->destroyRequested != 0; });

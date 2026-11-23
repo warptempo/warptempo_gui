@@ -22,9 +22,7 @@
 // Reuse: the several editor surfaces supply different
 // validators and writers but reuse this state shape and keystroke routing.
 //
-// THE TEXT IS UTF-8 (architect 2026-08-02, the relaxation that retired the
-// "non-ASCII unsupported" stance — a fossil of the deleted cairo monospace
-// path). `pending` holds any well-formed UTF-8 the typed path or the filter
+// THE TEXT IS UTF-8 (architect 2026-08-02). `pending` holds any well-formed UTF-8 the typed path or the filter
 // admits, and the free-text settings fields round-trip it; the STRUCTURAL
 // grammars this editor feeds (labels, numeric spellings, settings keys) stay
 // ASCII, but that is their validators' business at commit and not this
@@ -41,17 +39,17 @@
 //   - THE VOCABULARY IS THE ON-SCREEN KEYBOARD'S (architect 2026-10-30, its
 //     one producer): its characters, Backspace, Enter, Esc, Tab (the
 //     completion's, upstream of this module), Copy and Paste
-//     (Ctrl+C / Ctrl+V, the two keys' own ctrl), and since 2026-11-08
-//     (sessions 95 / 96) LEFT and RIGHT — the caret, and with the latched
+//     (Ctrl+C / Ctrl+V, the two keys' own ctrl), and LEFT and RIGHT
+//     (2026-11-08) — the caret, and with the latched
 //     Shift the selection. (The keyboard's pass key, UP and DOWN are the
 //     marker lane editor's own whole-text acts, architect 2026-11-20 / 21,
 //     through this module's incoming filter but not its keymap —
 //     GuiFlagEditor's step_editor_text and toggle_inherit_editor_text.)
 //     THE BARREL HAS NO ROAD ON ANY
-//     KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08, session 94): its
-//     word erase, Ctrl+A and Ctrl+X went with it. It has no Home / End and
+//     KEY, THE KEYBOARD'S INCLUDED (architect 2026-11-08): no word erase,
+//     no Ctrl+A and no Ctrl+X. It has no Home / End and
 //     no Delete. THE SELECTION COMES FROM THE KEYS ALONE (architect
-//     2026-11-08, session 95): the field's tap seats the caret and its drag
+//     2026-11-08): the field's tap seats the caret and its drag
 //     moves it, collapsing (begin_touch_caret_drag's declaration,
 //     input_handler.h); a refused Enter selects the whole text (refuse).
 //   - GRAPHEME CLUSTERS ARE OUT OF SCOPE, deliberately and in the same class as
@@ -68,19 +66,17 @@ namespace text_editor {
 // EVERY CAP BELOW IS IN BYTES — `pending.size()`, which is what every cap test
 // reads. With UTF-8 admitted a multi-byte character spends the bytes it costs,
 // so a field's cap is a storage bound rather than a character count. The names
-// are historical; nothing measures characters anywhere in this module.
+// say Chars; nothing measures characters anywhere in this module.
 //
 // EVERY CAP IS ITS GRAMMAR'S WIDEST SPELLING (architect 2026-09-05): a field
 // whose cap is wider than what it can legally commit advertises longer typing
 // than it allows, which is the truthfulness defect the roster answers. THREE
 // CAPS ARE TIGHT BOUNDS and each derives its own — the flag payload, the
 // iteration bound, and the BPM form's three fields (architect 2026-10-29;
-// the bracket line they replace took its tight bound 2026-09-06, when the
-// beats field stopped admitting leading zeros and so gained a widest
-// spelling like every other field of that grammar). THE SETTINGS VALUE IS A POLICY
-// CEILING and says so where it stands: FREE TEXT, with no widest spelling to
-// be tight against (the commit title was the second, until its editor
-// retired 2026-10-10).
+// the beats field admits no leading zeros, so it has a widest spelling like
+// every other field of that grammar). THE SETTINGS VALUE AND THE TRIM
+// PRESET'S NAME ARE POLICY CEILINGS and say so where they stand: FREE TEXT,
+// with no widest spelling to be tight against.
 //
 // Maximum bytes allowed in `pending`, and it belongs to the FLAG PAYLOAD
 // editor alone: every other Kind names its own cap below, so this default is
@@ -127,11 +123,7 @@ namespace text_editor {
 // 4 + 80 + 1 + 18 + 1 + 4 = 108, spelled whole:
 // `4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00-4.00*0.5000000000000001:a.aa`
 // (the base and then SIXTEEN terms — seventeen `4.00` runs in all).
-// A TIGHT BOUND, not a policy cap. (It was 28 from 2026-09-05 until the
-// deviation chain landed on 2026-09-18, 68 until the term cap became sixteen
-// on 2026-09-19, and 52 before all of that — sized then for a full-double
-// BASE from before tempo became integer cents pinned to N.NN, where the
-// remainder was advertising typing the commit refuses.)
+// A TIGHT BOUND, not a policy cap.
 //
 // An operation that would grow the pending past this cap refuses atomically
 // (the whole edit lands or the buffer is untouched);
@@ -163,10 +155,8 @@ constexpr int kMaxPendingChars = 108;
 // five bytes and nothing else — no surrounding whitespace, no leading zero,
 // no second integer digit — so the cap advertises exactly the spellings the
 // commit accepts, and a pending arriving by any other road is judged the same.
-// (It was 8 until 2026-09-05, left wide so an over-wide spelling would be
-// refused by the commit's own name for it. The sixth character is refused by
-// the field-full card instead, which is the truthful refusal for a field that
-// could never commit one.)
+// (The sixth character is refused by the field-full card, the truthful
+// refusal for a field that could never commit one.)
 static_assert(kTempoMaxCents - kTempoMinCents < 1000,
               "an iteration bound's integer part no longer fits one digit");
 constexpr int kMaxPendingCharsIterBound = 5;
@@ -191,7 +181,7 @@ constexpr int kMaxPendingCharsIterHop = 2;
 // field's key and its reader there are the grammar's one owner). THE BUFFER
 // IS THE FIELD'S VALUE ALONE (architect 2026-11-19: "I agree with
 // your recommendation" — the line editor shows the value under the field's
-// label, Z_06's shape), the key the row's own and never typed, so each cap
+// label), the key the row's own and never typed, so each cap
 // is its value's widest spelling:
 //   BEATS  4 bytes, a positive integer with no leading zeros, capped at
 //          kBpmBeatsMax — so `9999` is the widest there is.
@@ -261,7 +251,7 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // text, the name); and the ITERATION BOUND editor uses IterBound (the text of one of the two
 // bound cells a flag grows in iteration mode — which of the two is
 // State::iter_upper below — judged at its commit against the bracket's walls).
-// ONE KIND, TWO GRAMMARS SINCE 2026-09-09: a warp marker's cell holds a signed
+// ONE KIND, TWO GRAMMARS (2026-09-09): a warp marker's cell holds a signed
 // TWO-DECIMAL CENT bound and a phase reset's a signed WHOLE HOP, and
 // State::iter_hops says which — one kind because the two are the same surface,
 // the same open, the same modal contract and the same commit route, differing
@@ -269,40 +259,28 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // they name. THERE ARE FIVE KINDS AND THREE OF THEM ARE
 // THE LINE EDITORS OF THE VALUE SUB-PAGE, "the dialog editors" in the names
 // (SettingsAssignment, TrimPresetName, BpmField), ALL THREE
-// ON THE SETTINGS EDITOR'S BUFFER (AppState::settings_editor) since the BPM
-// form, architect 2026-10-29; the two top-strip kinds (FlagPayload,
+// ON THE SETTINGS EDITOR'S BUFFER (AppState::settings_editor; architect
+// 2026-10-29); the two top-strip kinds (FlagPayload,
 // IterBound) share the flag editor's State and paint in the marker lane.
 // BpmField (architect 2026-10-29) is THE BPM FORM'S LINE EDITOR, a row's tap
 // on the form (GuiInputHandler::bpm_form_commit): opened prefilled with the
 // row's value (architect 2026-11-19), `target` the field
 // (GuiBpmField, warpmarkers.h), its commit
 // the field's (GuiFlagEditor::commit_bpm_field), its close returning to the
-// form; it retired the bracket line `<beats>@[<lo>,<hi>]` and the kind that
-// edited it on the flag editor's State, BpmBracket. TrimPresetName (architect
+// form. TrimPresetName (architect
 // 2026-10-28 night) is THE TRIM PRESET'S NAME EDITOR, the trim presets list's
 // Save As (GuiInputHandler::trim_presets_save_as, which Save's press on an
 // empty list runs too): it rides the settings
 // editor's State (AppState::settings_editor, the line editor's one
 // buffer), the settings editor's shape — the value sub-page's entry, the
 // on-screen keyboard's Enter and Esc — opened empty, its commit the
-// name's (trim_preset_name_refusal, trim_presets_file.h). (The color picker's
-// one field — its hex field and its name ask, two kinds — stood
-// 2026-10-07..14 and left with the picker. A fifth,
-// MagnificationLevelText, the magnification level markers column's one-digit
-// editor, stood from 2026-09-15 until that column's deletion 2026-09-23;
-// CommitTitle, the `h` view's commit-title editor, from 2026-08-07 until the
-// architect retired it 2026-10-10 — the checkpoint takes the default title
-// with no question asked, GuiInputHandler::run_publish_chord.)
-// IterBound arrived on
-// 2026-09-05, when every cell became a mini flag with its own editor (the
-// MeasureText kind, the marker measure editor, stood from 2026-08-19 until the
-// measures feature was deleted whole 2026-09-16); TWO
-// KINDS RETIRED WHOLE on 2026-08-28 (architect: "we're not allowing
-// free-form typing there") — LoadInPlace, the `h` view's typed load prompt,
-// and OpenProject, the Open project prompt's field, both replaced by the
-// FIELD-LESS PICKER over the folder overlay (AppState::Picker, app_state.h),
+// name's (trim_preset_name_refusal, trim_presets_file.h). IterBound
+// (2026-09-05) is every bound cell's own editor, the cell a mini flag. The
+// `h` view's load and Open Project type nothing (architect 2026-08-28:
+// "we're not allowing free-form typing there"): each is the FIELD-LESS
+// PICKER over the folder overlay (AppState::Picker, app_state.h),
 // which is a modal owner and not an editor. THIS ENUM IS THE AUTHORITATIVE
-// LIST of the editors, and EVERY ONE IS A MODAL since 2026-10-25: the
+// LIST of the editors, and EVERY ONE IS A MODAL (2026-10-25): the
 // modality predicate (GuiInputHandler::keyboard_modal_editor_active) reads
 // AppState::text_editor_session, which covers all five kinds;
 // AppState::dialog_editor_session names the three LINE kinds
@@ -419,7 +397,7 @@ struct State {
     // whose one-line entry scrolls sideways, GtkEntry's adjust_scroll: the
     // offset clamped to the run's own travel past the entry's inner width,
     // then moved only when the caret would leave that width, by just enough.
-    // THE MARKER-LANE FIELD'S TRAVEL IS SUB-PIXEL SINCE 2026-09-06: its box
+    // THE MARKER-LANE FIELD'S TRAVEL IS SUB-PIXEL (2026-09-06): its box
     // is its own two pads and its own
     // run — no lane cap, no on-window clamp — so the whole run is always
     // inside it and the travel it asks for is SUB-PIXEL, the box having
@@ -483,8 +461,8 @@ void deactivate(State& s);
 // A REFUSED ENTER (architect 2026-10-03, Windows' in-place edit): THE WHOLE
 // TEXT SELECTED in the selected pair, the caret at its end — so the first
 // keystroke replaces it (replace_selection). That and the refusing owner's
-// card are the whole refusal: no frame or face changes colour (the red frame
-// retired the same day, "a red outline and the card is redundant"), so the
+// card are the whole refusal: no frame or face changes colour (architect
+// 2026-10-03: "a red outline and the card is redundant"), so the
 // session carries no refusal state. Every commit refusal of every editor
 // calls this; the cap's refusal (replace_selection) leaves the buffer and the
 // selection as they stand, being no Enter, and its caller's card says why.
@@ -549,7 +527,7 @@ enum class KeyClass {
     // (The pass key is no class of this module's: NotEditorKey, the flag
     // editor's Toggle Inherit on its text, architect 2026-11-20 / 21.)
     // BackSpace, BARE, and LEFT / RIGHT, bare or SHIFT-ONLY (architect
-    // 2026-11-08, sessions 95 / 96) — repeat. Any other modifier is
+    // 2026-11-08) — repeat. Any other modifier is
     // NotEditorKey.
     MotionEditKey,
     // No ctrl/alt and a character-bearing codepoint: >= 0x20, not DEL, not a
@@ -568,7 +546,7 @@ enum class KeyClass {
 // chords ctrl-exact, LEFT / RIGHT bare or shift-only, printable already
 // excludes ctrl and alt. So a press wearing a modifier its
 // arm does not bind (Ctrl+Escape, Ctrl+Shift+V, Ctrl+BackSpace — no producer
-// spells one since the barrel left the keyboard, 2026-11-08) is simply
+// spells one, the barrel having no road on the keyboard, 2026-11-08) is simply
 // NotEditorKey: unbound and
 // not-ours need not be told apart, because every keyboard-modal editor drops
 // both at the gate and nothing downstream can act on either. An input routing
@@ -644,8 +622,7 @@ void touch_blink(State& s);
 // kept running through.
 void restart_blink(State& s);
 
-// THE ONE CLICK-X -> BYTE MAPPING (row 7 deleted its monospace predecessor,
-// byte_index_from_click_x, with the face): `boundaries` is the per-byte pen offset vector the
+// THE ONE CLICK-X -> BYTE MAPPING: `boundaries` is the per-byte pen offset vector the
 // shaping chokepoint produces (text_shape::byte_offsets_px — one entry per byte
 // boundary, index 0 at 0.0 and the last at the run's full width), and
 // `text_origin_x` is the window x that boundary 0 paints at (already carrying

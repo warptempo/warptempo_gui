@@ -19,7 +19,7 @@
 // parked (the rule is at ViewState, app_state.h) — a column or tab switch
 // CLEARS it and re-acquires by coincidence at the entry. NOR IS THE HOLD
 // POSTURE (AppState::camera_hold): it is stored per project alone, and the
-// tab switch derives it afresh from the entering band at its tail
+// tab switch derives it afresh from the entering slot at its tail
 // (hold_derived_on_arrival, architect 2026-09-29).
 
 // Overwrite the active tab's snapshot with the live AppState viewport /
@@ -30,7 +30,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     t.viewport_start_sample = app.viewport_start_sample;
     // The camera's lattice origin parks beside its start, with the start and
     // the level it speaks for (ViewState's own comment): the pull rests the
-    // start on it while the band still holds both.
+    // start on it while the slot still holds both.
     t.viewport_lattice_origin = app.viewport_lattice_origin;
     t.lattice_parked_start    = app.viewport_start_sample;
     t.lattice_parked_zoom     = app.zoom_level;
@@ -39,8 +39,8 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
     // Lockstep with switch_active_tab_view_to's pull block: adding a per-tab
     // live-mirror field means updating this push, that pull, and ViewState.
     // NOT EVERY ViewState MEMBER IS MIRRORED and the absent ones are not
-    // omissions: read_only and bare `0`'s TWO records — overview_recall and,
-    // since 2026-09-02, whole_song_visible — are read and written
+    // omissions: read_only and bare `0`'s TWO records — overview_recall and
+    // whole_song_visible — are read and written
     // IN PLACE through active_view_state(app), so they need no boundary sync and
     // must not be given one.
     t.trim                = app.trim;
@@ -62,9 +62,7 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // undo restore (undo.cpp) writes the entry's column tag with its data already
 // installed; and the crossing Shift+S into the P column of the audio view it
 // is pressed in (input_handler.cpp) lands its own drop after the clear
-// (re-grepped 2026-10-13: four callers — the S/T audio switch, which landed
-// T+P on W before it left for source while S+P was no state, 2026-09-21 to
-// 2026-10-12, calls it no longer).
+// (four callers; the S/T audio switch is not one).
 // The clear runs BEFORE the mode flip so clear_selection's stem/overlay damage
 // resolves against the LEAVING column's painted pixels — damage follows the
 // basis of the pixels it erases. Caller decides what further invalidations to
@@ -75,19 +73,15 @@ void GuiActiveViews::refresh_active_tab_view_from_app() {
 // returns, the phase-reset column AUTHORING in source view for transcription
 // — the resets laid down over the steady source waveform in the pattern the
 // warp markers show, fine-tuned later in T+P), so this writer takes no
-// audio-view term. 'P' was refused outside target view from 2026-09-21 to
-// 2026-10-12, while S+P was load-fatal. An unknown letter is refused, writing
-// nothing, clearing nothing, silently. (A third letter, M, refused outside
-// source view while the magnification level markers column stood, 2026-09-15
-// to its deletion 2026-09-23.)
+// audio-view term. An unknown letter is refused, writing nothing, clearing
+// nothing, silently.
 void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     if (target_mode == app.active_markers_view) return;
     if (target_mode != 'W' && target_mode != 'P') return;
     selection.clear_selection();
     // THE SEATED PINCH'S ANCHOR DIES ON THE W/P WRITE, and it is written HERE —
-    // at the writer — rather than in the `p` toggle below, which is where it first sat
-    // and where it left a hole: the toggle is not this
-    // helper's only caller, and the others reach it DIRECT and inherit nothing
+    // at the writer — rather than in the column entry below: the entry is not
+    // this helper's only caller, and the others reach it DIRECT and inherit nothing
     // it spells (the undo restore's column tag, the phase-reset paste's
     // landing tail and the Shift+S crossing's drop from the warp column all call this,
     // each writing its own selection or landing its own act after the clear —
@@ -123,22 +117,21 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // do, so the call stays refusal-shaped.
     // It does not touch the cursor — that is the Space-launch position and was
     // never moved during playback — so the leaving tab's snapshot below captures
-    // it exactly, as it did under the hand-spelled pair this replaced (and which
-    // the two stop edges themselves collapsed onto this same call in 2026-07-30's
-    // one-stop-body ruling). Its canvas damage is
+    // it exactly (both stop edges run this one call: the one-stop-body
+    // ruling, 2026-07-30). Its canvas damage is
     // redundant here either way: the kick_waveform_sync at the tail damages
     // the window-top rect through the waveform's bottom on
     // invalidate_waveform_area's road (damage_window_top_rows, viewport.h),
     // which holds the scanner's own rect the stop declares.
     playback_lifecycle.stop_playback_if_playing();
-    // (THE TAB SWITCH'S OVERLAY HIDE IS DELETED, architect 2026-08-19: the
-    // ENTERING tab has a trim of its own, so a switch has nothing to put away.)
-    // The SEATED PINCH's anchor IS cleared here, this function being the A/B
-    // WRITER and so a member of that rule in its own right — a stale song
+    // The ENTERING tab has a trim of its own, so a switch puts nothing away
+    // (architect 2026-08-19). The SEATED PINCH's anchor IS cleared here,
+    // this function being the A/B WRITER and so a member of that rule in its
+    // own right — a stale song
     // frame across the switch (moved onto the
     // writers; the argument, the whole membership and the
     // do-not-do-this note are at clear_touch_zoom_seat's declaration,
-    // input_handler.h): the entering tab restores another band entirely, so a
+    // input_handler.h): the entering tab restores another slot entirely, so a
     // pinch held across the switch would resume about a point the fingers never
     // grabbed — the FRESH-GRIP half of the rule, the held frame staying
     // arithmetically valid. Its next two-finger frame seats afresh.
@@ -146,11 +139,11 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // A TAB SWITCH CLEARS THE SELECTION (the scope rule, architect 2026-07-29 —
     // a column or tab switch clears; only the `t` audio-view switch carries).
     // Nothing is stashed and nothing is restored: the tab's remembered spot is
-    // its VALUE-shaped band alone (viewport / zoom / playhead / trim /
+    // its VALUE-shaped slot alone (viewport / zoom / playhead / trim /
     // read_only), and the entry re-acquires a selection by coincidence at the
-    // tail — and the hold posture likewise, derived from the entering band at
+    // tail — and the hold posture likewise, derived from the entering slot at
     // the tail (hold_derived_on_arrival, architect 2026-09-29). Placed HERE,
-    // before the band flips, so clear_selection's
+    // before the slot flips, so clear_selection's
     // stem/overlay/playhead-column damage resolves against the LEAVING tab's
     // basis — the basis of the pixels it erases.
     selection.clear_selection();
@@ -167,24 +160,21 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // toggle time. In the common case — both tabs share the one global
     // domain and every stash boundary captures an in-domain live value —
     // the stored value is already in [0, total - 1] and the clamp is a no-op.
-    // THE STORED CURSOR IS HONORED VERBATIM (nothing overrides it any more): the
-    // clause that used to override it — a restored non-empty selection landing on
-    // its focus instead — died with the parked selections it was repairing, so
-    // the tabs' "remembered spot" contract is now simply true, with no exception
-    // to state. The land Ctrl+Tab can still perform is the coincidence
-    // auto-select's, and that one writes back the value already here.
+    // THE STORED CURSOR IS HONORED VERBATIM: the tabs' "remembered spot"
+    // contract holds with no exception (no selection is parked to land on).
+    // The one land Ctrl+Tab performs is the coincidence auto-select's, and
+    // that one writes back the value already here.
     app.playhead_cursor_sample       = clamp_playhead_to_live_domain(
         target.playhead_cursor_sample, app, audio);
     // Lockstep with refresh_active_tab_view_from_app's push block: adding a
     // per-tab live-mirror field means updating that push, this pull, and
     // ViewState.
     app.trim                = target.trim;
-    // THE PARKED CAMERA COMES BACK ON ITS OWN LATTICE (Sol's review,
-    // 2026-11-16): the level was written above, so the parked origin is
-    // judged at the parked step (resting_parked_viewport_start, main.cpp);
-    // a band whose start or level another writer has written since it was
-    // parked comes back as the Exact landing that write is (ViewState's
-    // parked pair).
+    // THE PARKED CAMERA COMES BACK ON ITS OWN LATTICE: the level was written
+    // above, so the parked origin is judged at the parked step
+    // (resting_parked_viewport_start, main.cpp); a slot whose start or level
+    // another writer has written since it was parked comes back as the Exact
+    // landing that write is (ViewState's parked pair).
     if (target.lattice_parked_start == target.viewport_start_sample &&
         target.lattice_parked_zoom == target.zoom_level)
         clamp_viewport_start_parked(app, audio,
@@ -197,8 +187,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // PLACED HERE by domain validity: after the playhead, trim, viewport and zoom
     // of the entering tab are all live, so the scan's land-formula conversion
     // reads the ENTERING tab's state. Its single-select damage is mid-flight
-    // narrow damage superseded by the kick below, exactly as the deleted collapse
-    // at this site was.
+    // narrow damage that the kick below covers.
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     // THE HOLD DERIVED ON ARRIVAL (architect 2026-09-29), the hold's twin of
     // the auto-select above: clamp_viewport_start has just put the bit out
@@ -228,9 +217,8 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     viewport.invalidate_tab_name_area();
 }
 
-// THE COLUMN ENTRY — the absolute form of the deleted `p` toggle (architect
-// 2026-09-15, when the column axis briefly grew a third letter and a toggle
-// stopped naming a destination): the writer above, then the entry's own tail. Its
+// THE COLUMN ENTRY — an absolute entry that names its destination column
+// (architect 2026-09-15): the writer above, then the entry's own tail. Its
 // callers are bare 3 / 4 (and the icon row's view pairs, which
 // synthesize them); the writer's other callers reach it directly (its
 // inventory).
@@ -238,19 +226,16 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
 // THE TAIL RUNS WHENEVER THE COLUMN IS THE TARGET AFTER THE WRITE. The writer
 // refuses only an unknown letter, which no caller names (the settings
 // grammar admits W and P alone), so the read-back is the writer's verdict
-// rather than a road of its own — no audio-view term has refused 'P' since
-// S+P returned (architect 2026-10-12).
+// rather than a road of its own — no audio-view term refuses 'P' (both
+// columns pair with both audio views, architect 2026-10-12).
 void GuiActiveViews::select_active_markers_view(char target_mode) {
     this->switch_active_markers_view_to(target_mode);
     if (app.active_markers_view != target_mode) return;   // refused
     // THE SWAP LEFT THE SELECTION EMPTY (a column switch clears — the rule is at
     // switch_active_markers_view_to), so the entry owes the marker lane no land: with no
     // lane the cursor IS the playhead and keeps its own value, and the playhead is
-    // genuinely untouched across the flip.
-    // (THE SWAP'S OVERLAY HIDE IS DELETED, 2026-08-19, with the A/B tab
-    // switch's and the S/T flip's: the trim belongs to the TAB rather than the
-    // column, so there was nothing to turn away from. The resting overlay
-    // itself went on 2026-09-22.)
+    // genuinely untouched across the flip. The trim belongs to the TAB rather
+    // than the column, so the flip puts nothing away.
     //
     // COINCIDENCE AUTO-SELECT, the column-entry chokepoint (the rule, the formula
     // and the authoritative call-site inventory live at
@@ -263,19 +248,16 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // own comment owns the inventory) — the propagate paste's column landing
     // (land_paste_in_phase_reset_view) writes its own selection one line later, and an auto-select there would
     // be overwritten for nothing.
-    // (NO clear_touch_zoom_seat call here: it moved down onto the W/P WRITER,
-    // switch_active_markers_view_to above — this toggle's own
-    // call was one of the three command-wrapper spellings that let the propagate
-    // paste reach a column switch with a seated pinch intact. The flip this
-    // function performs still clears the seat; it inherits it from the helper,
-    // which is the point.)
+    // (NO clear_touch_zoom_seat call here: the W/P WRITER,
+    // switch_active_markers_view_to above, clears the seat for every caller,
+    // and this entry inherits it from there.)
     auto_select_marker_at_playhead(app, audio, selection, viewport);
     // THE HISTORY MODE'S OWN FOCUS CLEARS ON THIS SWITCH — the W/P half of the
     // rule the S/T toggle carries at its own chokepoint
     // (switch_active_audio_view_to; the contract and the full clearer list
     // are at AppState::HistoryMode::focus). The focus is an ordinal into the
     // PAINTED diff-flag list, and this flip changes that list wholesale: the
-    // mode paints the ACTIVE column's half of a commit's delta, so W, P and M
+    // mode paints the ACTIVE column's half of a commit's delta, so W and P
     // show different flags at different ordinals. Placed before the kick below, which
     // rebuilds the flag cache — `focus` is one of that cache's fingerprint
     // fields. Unconditional, and a no-op with the mode down (the pair rests
@@ -286,24 +268,24 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // and needs nothing: no route into it is admitted while the mode stands.
     clear_history_mode_focus(app.history_mode);
     // SYNCHRONOUS REBUILD, the third member of the view-switch class (architect
-    // 2026-07-30). `p` moves NO viewport and NO domain, so unlike its two
-    // siblings the plate CONTENT is unchanged — but app.active_markers_view is a
-    // flag-cache FINGERPRINT field, and on_redraw is blit-only: the run loop
-    // services the frame callback BEFORE the timerfd tick that runs the
-    // fingerprint-guarded rebuild, so a bare invalidate blitted the LEAVING
-    // column's flag pixels under the entering column's live passes (lane text,
-    // stem, overlay ring all read active_markers_view live) for one frame. This
-    // route is the siblings' shape rather than a flag-only reach because
-    // GuiActiveViews holds no GuiPaintHandler and the flag rebuild is reachable
-    // only through it; the redundant plate render is one discrete keypress's
-    // cost, exactly what `t` and Ctrl+Tab already pay. It subsumes the
-    // invalidate_waveform_area this replaces — the rebuild damages the identical
+    // 2026-07-30). The column entry moves NO viewport and NO domain, so unlike
+    // its two siblings the plate CONTENT is unchanged — but
+    // app.active_markers_view is a flag-cache FINGERPRINT field, and on_redraw
+    // is blit-only: the run loop services the frame callback BEFORE the tick
+    // that runs the fingerprint-guarded rebuild, so a bare invalidate would
+    // blit the LEAVING column's flag pixels under the entering column's live
+    // passes (lane text, stem, overlay ring all read active_markers_view live)
+    // for one frame. This route is the siblings' shape rather than a flag-only
+    // reach because GuiActiveViews holds no GuiPaintHandler and the flag
+    // rebuild is reachable only through it; the redundant plate render is one
+    // discrete press's cost, exactly what `t` and Ctrl+Tab already pay. No
+    // invalidate_waveform_area beside it — the rebuild damages the identical
     // rect on the same road (damage_window_top_rows, viewport.h). THE SYNC
     // ALONE below, with no second
     // damage owner at all: this route MOVES NO PLAYHEAD — the coincidence
     // auto-select only selects the marker the cursor already stands on — so the
-    // clock cell has nothing to repaint, and the selection READOUT this site
-    // used to damage beside it retired whole on 2026-08-29 with the one-day
-    // status bar that carried it.
+    // clock cell has nothing to repaint, and the status bar's selection count
+    // rides the tick's comparator like every selection write
+    // (refresh_status_bar).
     viewport.kick_waveform_sync();
 }

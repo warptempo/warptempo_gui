@@ -74,9 +74,8 @@ struct GuiWarpMarker : WarpMarker {
     //     piece is locked (authoring_locked, app_state.h): the bound cells are
     //     the mode's only authoring surface, so no tempo is stepped or typed
     //     under a bracket, no marker is nudged, dragged, dropped, deleted or
-    //     disabled, and undo and redo refuse. That is what retired the
-    //     RETROACTIVE CLAMP that used to fold a standing bracket onto a moved
-    //     base, and the sweep's per-read wall re-verification with it.
+    //     disabled, and undo and redo refuse — so no bracket is ever folded
+    //     onto a moved base, and the sweep re-verifies no wall at its reads.
     //   * IT NEVER MOVES THE DIRTY MARK, for the ruling's own reason: "The
     //     iterations don't actually do anything to the map itself; they push
     //     that onto the tmp folder as sidecars."
@@ -140,7 +139,7 @@ struct GuiWarpMarker : WarpMarker {
     // The map OUTSIDE the span keeps its shape: every effectively ENABLED
     // owning marker there is rescaled by the owner's own change in each cell
     // (bpm_cell_warp_markers, input_handler.h, the cell rewrite's one owner,
-    // which since 2026-08-29 leaves a disabled marker untouched wherever it
+    // which leaves a disabled marker untouched wherever it
     // sits; the `m` gate's one-tempo
     // rule over the selected run is what makes the owner's change the span's).
     // At most one marker at a time has bpm_owner=true (invariant
@@ -159,9 +158,9 @@ struct GuiWarpMarker : WarpMarker {
 
     // Session-only, set with bpm_owner on the `m`-press section gate.
     // THE INDEX OF THE FIRST EFFECTIVELY-ENABLED MARKER STRICTLY AFTER THE
-    // LAST SELECTED ONE (architect 2026-08-24; it was the raw index one past
-    // the last selected marker until then, which measured the span short
-    // whenever a disabled marker sat at its edge): section_end_index below,
+    // LAST SELECTED ONE (architect 2026-08-24; the raw index one past the
+    // last selected marker would measure the span short whenever a disabled
+    // marker sat at its edge): section_end_index below,
     // called on the last selected marker, is the one owner of that walk and
     // the phase-reset propagate's too. The BPM region runs
     // [this owner, bpm_endpoint) over the store, and the tempo covers the
@@ -270,9 +269,9 @@ inline bool label_def_taken(const std::vector<GuiWarpMarker>& mv,
 // dangling, and paints struck while the render plays it as recorded.
 bool effective_disabled(const std::vector<GuiWarpMarker>& markers, int idx);
 
-// THE SECTION RULE'S ONE OWNER (architect 2026-07-23; in its EFFECTIVE-
-// PARTICIPATION form for the propagate spans since 2026-08-01 and for the BPM
-// sweep since 2026-08-24, so the product now states the rule once). Index of
+// THE SECTION RULE'S ONE OWNER (architect 2026-07-23; its EFFECTIVE-
+// PARTICIPATION form for the propagate spans and the BPM sweep alike,
+// architect 2026-08-24, so the product states the rule once). Index of
 // the marker that CLOSES the section owned by `i`: the first marker after it
 // that PARTICIPATES IN THE RENDER (the next effectively-enabled one), or
 // mv.size() when none follows — the SONG-END sentinel, the section running to
@@ -358,14 +357,12 @@ inline std::string warp_tempo_run(const GuiWarpMarker& m) {
 // Signed tempo-delta cents -> the explicit-sign two-decimal text ("+1.50",
 // "-0.50", "+0.00") — THE ITERATION BRACKET'S FACE ON THE PRODUCT'S ONE
 // SIGNED-CENTS SPELLING. It DELEGATES to format_deviation_cents
-// (value_format.h) since 2026-09-18 (architect approval 2026-09-18), when a
-// serialized TEMPO DEVIATION TERM began wearing the same shape: two domains,
+// (value_format.h; architect approval 2026-09-18), the shape a serialized
+// TEMPO DEVIATION TERM wears too: two domains,
 // one spelling, one body — the term is AUTHORED STATE inside a warp payload
 // while a bracket bound is SESSION-ONLY and never serialized, and the two
 // share the ±kIterDeltaMaxCents magnitude that makes their widest spellings
-// identical. The delegation is byte-for-byte what this body emitted (the
-// magnitude runs through format_tempo_cents either way), so the flag cells
-// and the iteration sweep's delta CSV filenames are unchanged. TWO READERS
+// identical (the magnitude runs through format_tempo_cents). TWO READERS
 // here: the inline iter bracket cell below, and the iteration sweep's
 // per-cell basename (input_key_dispatch.cpp).
 inline std::string format_signed_delta_cents(int64_t cents) {
@@ -388,12 +385,12 @@ inline std::string format_signed_hops(int hops) {
 }
 
 // The cells of a marker's flag run, in painted order (architect 2026-09-04,
-// the bound cells; one enum for the press, the axis and the editors since
-// 2026-09-05). Payload is the flag box itself — the composed line on a warp
+// the bound cells; one enum for the press, the axis and the editors).
+// Payload is the flag box itself — the composed line on a warp
 // marker, the display token on a phase reset — Lower and Upper are the two
 // bound cells iteration mode paints to its right on an eligible marker OF
 // EITHER COLUMN (a warp marker's tempo bracket in cents, a phase reset's hop
-// bracket in whole lattice hops since 2026-09-09). It answers three questions
+// bracket in whole lattice hops). It answers three questions
 // with one value: WHICH BOX a press landed on (hit_test_flag_cell,
 // app_state.cpp, off the painter's published boundaries), WHICH CELL OF THE
 // FOCUS IS ADDRESSED (AppState::addressed_cell — the cell the vertical arrows
@@ -435,13 +432,11 @@ inline std::string format_iter_bound_cell(const GuiWarpMarker& m,
 // that turns a carrier into a non-carrier clears both bounds (the flag
 // editor's commit, Ctrl+N's owner->pass and ref->pass conversions —
 // toggle_inherits, warpmarkers_ops.cpp). DISABLEMENT NEEDS NO CLEAR OF ITS OWN
-// (architect 2026-09-10, superseding the same day's clear-on-disable and the
-// DORMANT bracket of 2026-09-02 alike): a bracket exists only while
+// (architect 2026-09-10): a bracket exists only while
 // grid iterations is lit, and while it is lit the piece is LOCKED — Ctrl+D,
 // the phase toggle and the state paste's disabling arm are all refused
 // (authoring_locked, app_state.h) — so no marker can lose its enabled bit
-// under a standing bracket. The three clears that landed for a few hours are
-// deleted with their producers. THE READERS: the flag editor's commit's
+// under a standing bracket. THE READERS: the flag editor's commit's
 // carrier-loss clear (a marker that stops owning its tempo loses its bracket —
 // the store's rule, not any grammar's) and the bound step's kind refusal
 // (iter_bound_step_kind_refusal).
@@ -452,18 +447,18 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // Iteration mode: which markers THE SWEEP READS — a carrier that is not
 // effectively disabled. The disabled verdict is asked of the ONE owner
 // (effective_disabled above, the resolver's own keep mask — the marker's own
-// bit since 2026-10-29) so the sweep can never count a marker the render
+// bit) so the sweep can never count a marker the render
 // drops, and it is asked through the vector/index form so that a change to
 // the participation verdict lands here for free and no caller can hand a bare
 // marker and lose it — which is why this is the ONE spelling and the
 // single-marker form above carries a different name. ITS DISABLED TERM IS A
 // BELT WITH NO PRODUCER, and is kept as one: no marker that carries a bracket
 // can BECOME disabled (the lock refuses every disabling act while one
-// stands), so the term cannot decide the answer for a bracketed marker today.
+// stands), so the term cannot decide the answer for a bracketed marker.
 // It costs one call and it is what makes this predicate a statement about the
 // SWEEP's own input rather than about the bracket's writers, which is why it
 // stays.
-// SEVEN READERS since 2026-09-19 (the tie's verdict owner joined them —
+// SEVEN READERS (the tie's verdict owner among them —
 // iter_tie_toggle_verdict, app_state.h, which refuses a member the sweep does
 // not read, so a tie can never hold a marker whose cells do not paint),
 // and a disabled marker is invisible at all seven: the sweep's
@@ -474,14 +469,14 @@ inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
 // flag painter (render_flags, render.cpp) paints the two bound cells on
 // exactly these markers and no cells on a disabled flag; the bound step
 // (GuiWarpMarkersOps::adjust_iter_bound_cents) refuses an ineligible focus on
-// a card — the whole of what it does with this predicate since the group arm
-// went (2026-09-10: a bound axis implies a singleton selection); the bound
+// a card — the whole of what it does with this predicate (a bound axis
+// implies a singleton selection, 2026-09-10); the bound
 // editor's open (GuiFlagEditor::enter_iter_bound_edit) refuses where no cell
 // paints — no cell, no editor; and the value drag steps a marker's bound
 // only where its cells are painted, asking through the painter's own
 // composed predicate (marker_paints_iter_cells, app_state.h, this column's
-// arm). (The name is the retired hover popup's — the
-// eligibility rule outlived the surface that first displayed it.)
+// arm). (The name's `popup` names no surface: the predicate is the bound
+// cells' eligibility.)
 inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
                                        int idx) {
     if (idx < 0 || idx >= static_cast<int>(mv.size())) return false;
@@ -499,7 +494,7 @@ inline bool iter_popup_eligible_marker(const std::vector<GuiWarpMarker>& mv,
 // (iter_bound_step_write, app_state.h), which every authoring road onto a
 // bound reaches — the arrows' step, the value drag and the bound editor's
 // commit, whose empty text is the number zero for its own bound alone
-// (architect 2026-11-21, send HH) — and which blanks a pair landing on two
+// (architect 2026-11-21) — and which blanks a pair landing on two
 // zeroes. Two callers clear the tie
 // beside this call because they end the session state whole: the grid
 // iterations mode's exit wipe, both columns (GuiFlagEditor::wipe_iter_state)
@@ -620,20 +615,13 @@ inline const GuiWarpMarker& iter_bracket_governor(
     return mv[static_cast<size_t>(iter_tie_leader_index(mv, idx))];
 }
 
-// (THE ITER BRACKET RODE ITS BASE from 2026-08-02 to 2026-09-10, through one
-// retroactive clamp here that every base-tempo authoring surface called right
-// after writing a new base — the bare Up/Down cent step's two arms and the flag
-// editor's commit — because a base walking toward a tempo wall would otherwise
-// drag the sweep's cells out of [kTempoMinCents, kTempoMaxCents] and render a
-// sidecar the strict tempo parse hard-rejects. THE ITERATION LOCK RETIRED IT
-// WITH ITS THREE CALLERS: a bracket exists only while grid iterations is lit,
-// and while it is lit no base tempo can be stepped or typed at all
+// (A BRACKET NEVER RIDES A MOVING BASE: it exists only while grid iterations
+// is lit, and while it is lit no base tempo can be stepped or typed at all
 // (authoring_locked, app_state.h), so the window a bound was authored inside
 // is the window it still sits in. The bound EDITOR's refusal at its commit and
-// the bound STEP's clamp at its landing are the walls' whole enforcement now.
-// Its one accepted residue — the degenerate [0, 0] bracket a base resting
-// exactly on a tempo wall could produce, which outranked the blank rule — went
-// with it, so the blank rule has no exception left.)
+// the bound STEP's clamp at its landing are the tempo walls' whole
+// enforcement, keeping the sweep's cells inside [kTempoMinCents,
+// kTempoMaxCents]; the blank rule has no exception.)
 
 // STRIP THE SESSION-ONLY ITERATION BRACKET FROM A SNAPSHOT (architect
 // 2026-09-10). Called by every undo push that captures this store — the four
@@ -654,12 +642,11 @@ inline void strip_iter_fields(std::vector<GuiWarpMarker>& v) {
 
 // BPM mode: an owning, enabled marker (owning = !tempo_inherits AND no
 // label_ref). Defined separately from iter so the two predicates can
-// diverge without cascading edits. They diverged first on the disabled term
-// — the bpm owner had to be enabled (!m.disabled) while iter's did not,
-// because a disabled bpm owner was a render-inert rewrite (the sweep
-// authored a tempo onto a marker whose disabled state drops it from the
-// resolved map) — and since 2026-09-02 both carry it, the iteration
-// sweep's through the vector/index form above. THIS ONE KEEPS THE PLAIN
+// diverge without cascading edits. Both carry the disabled term — a
+// disabled bpm owner would be a render-inert rewrite (the sweep would author
+// a tempo onto a marker whose disabled state drops it from the resolved
+// map) — the iteration sweep's through the vector/index form above. (The
+// name's `popup` names no surface.) THIS ONE KEEPS THE PLAIN
 // FLAG, the recorded asymmetry: raw disabled equals effective disabled for
 // every marker (effective_disabled is the own flag, architect 2026-10-29), so
 // no marker-vector/index threading is owed, and the bpm owner is asked of a
@@ -674,7 +661,7 @@ inline bool bpm_popup_eligible_marker(const GuiWarpMarker& m) {
 // line on the folder overlay's BpmForm content and its own commit on the
 // dialog line editor (text_editor::Kind::BpmField, whose session's `target`
 // is the field's index here; the editor holds the field's value alone,
-// architect 2026-11-19, send AA, its sub-page no label, 2026-11-22). The
+// architect 2026-11-19; its sub-page no label, 2026-11-22). The
 // keys are the rows' spellings and the one table the rows and the commit's
 // sentence read.
 enum class GuiBpmField { Beats = 0, Low = 1, High = 2 };

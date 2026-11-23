@@ -332,7 +332,7 @@ std::optional<double> resolve_inherited_tempo_scale(
     const std::vector<WarpMarker>& markers, int index);
 
 // Effective (base_cents, scale, source, reason) a marker resolves to, for
-// display/authoring callers in hover/popup and marker operation paths.
+// display/authoring callers in the GUI's display and marker operation paths.
 // base_cents == 0 means "could not resolve" (mirrors
 // resolved_marker_payload's "" guards; both are display-only safe returns,
 // writing no bytes and printing nothing). scale == nullopt means no typed
@@ -369,8 +369,8 @@ std::optional<double> resolve_inherited_tempo_scale(
 //                is that prior projection entry mapped back to its raw
 //                index, and a SYNTHETIC prior — a coincident member's
 //                1.00 owner or the frame-0 seed — reports -1
-//                (attributing it to any single raw marker would mislead;
-//                the popup then shows the bare resolved value); on the
+//                (attributing it to any single raw marker would
+//                mislead); on the
 //                raw-store path a prior that is a member reports -1 the
 //                same way.
 //                base/scale are still the fully-resolved owner values via
@@ -425,9 +425,8 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 //                of passes; a skipped label ref is never named — architect
 //                approval 2026-09-13);
 //   label_ref -> the label-definition marker.
-// It is LEFT UNTOUCHED in every case where no marker can honestly be named —
-// which is exactly where the retired display string dropped its parenthetical
-// provenance, so the two derivations cannot drift: a marker that does not
+// It is LEFT UNTOUCHED in every case where no marker can honestly be named:
+// a marker that does not
 // qualify at all (the "" return), a pass whose value is a normalization
 // FALLBACK (a first-marker or all-disabled-priors pass — refs alone ahead of
 // it counting as none, architect approval 2026-09-13 — a visible prior that is a
@@ -450,24 +449,14 @@ MarkerEffective marker_effective(const std::vector<WarpMarker>& mv, int idx,
 // out exactly as it renders. GUI callers slice their GuiWarpMarker store to
 // WarpMarker (slice_to_warp_markers) before calling.
 //
-// (IT WAS compute_hover_popup_text, whose product was a DISPLAY string —
-// "~= 1.28*1.0112 (from a.23 @ 00:19.208)": the value under a "= "/"~= "
-// prefix, a parenthetical naming the source marker's own resolved tempo, its
-// label and its format_timestamp'd position, and the payload on an
-// out-parameter beside it. The hover popup it was named for died with the
-// row-5 redesign; the STATUS BAR's right cell carried the string for the one
-// day that bar existed; and on 2026-08-29 the bar folded into row 8 and the
-// readout retired with it. No STATE surface displays a resolved value —
-// Ctrl+C copies the payload, its success card naming the copied value, and
-// Ctrl+J jumps to the source marker — so the display half, its
-// sample_rate parameter and its format_timestamp use are deleted rather than
-// left producer-less. Comment-only, architect approval 2026-09-14; the two
-// chords retold, comment-only, architect approval 2026-09-29. Since
-// 2026-11-09 (architect, session 100) THE HOVER TOOLTIP displays the payload,
-// verbatim and alone, for a cue the copy would act on while the GUI's TIPS
-// lamp is lit (marker_tooltip_value, the GUI's app_state.h) — a hover, not a
-// state surface; no display string returns here. Comment-only, architect
-// approval 2026-11-09.)
+// (NO DISPLAY STRING IS COMPOSED HERE. No STATE surface displays a resolved
+// value — Ctrl+Shift+J (Copy Resolved Value) copies the payload, its success
+// card naming the copied value, and Ctrl+J jumps to the source marker — and
+// THE HOVER TOOLTIP displays the payload, verbatim and alone, for a cue the
+// copy would act on while the GUI's TIPS lamp is lit (marker_tooltip_value,
+// the GUI's app_state.h; architect 2026-11-09) — a hover, not a state
+// surface. Comment-only, architect approvals 2026-08-29, 2026-09-14,
+// 2026-09-29 and 2026-11-09.)
 std::string resolved_marker_payload(const std::vector<WarpMarker>& mv, int idx,
                                     long sample_rate, long total_frames,
                                     int* source_index_out = nullptr);

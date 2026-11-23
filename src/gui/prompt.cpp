@@ -70,16 +70,13 @@ void GuiPrompt::open_revert_confirm() {
     viewport.invalidate_all();
 }
 
-// (THE DISMISS-ONLY ERROR NOTICE RETIRED WHOLE 2026-08-30, with its
-// ERROR_NOTICE trigger, its Esc-only response set and its lone "OK" button.
-// It was the pre-split surface for a sentence the user had to be shown, and
-// the messaging split (notifications.h) left it with nothing to carry: a refusal
-// that answers an act is an EVENT, so its ONE remaining loud caller — the
-// iteration sweep's cell-cap refusal — is a NORMAL CARD now, and its other,
-// the target-view entry gate, refuses SILENTLY the way the load road always
-// did, one stderr line and nothing on screen, because its refusals are
-// unreachable from program-written input. THE PRODUCT'S PROMPTS ARE THE
-// QUESTIONS ALONE: the unsaved-work question with its save-failed rung,
+// (THE PRODUCT'S PROMPTS ARE THE QUESTIONS ALONE (2026-08-30): no prompt
+// merely shows a sentence. A refusal that answers an act is an EVENT (the
+// messaging split, notifications.h) — the iteration sweep's cell-cap refusal
+// is a NORMAL CARD, and the target-view entry gate refuses SILENTLY, the way
+// the load road does, one stderr line and nothing on screen, because its
+// refusals are unreachable from program-written input. The questions: the
+// unsaved-work question with its save-failed rung,
 // the phase reset paste's confirmation, the load confirmation, the revert
 // confirmation, the pull's confirmation, the render player's delete, the
 // score viewer's reset and the trim presets' save and delete — DialogTrigger,
@@ -114,7 +111,7 @@ void GuiPrompt::activate_response(char k) {
     }
 
     if (trigger == DialogTrigger::LOAD_IN_PLACE_CONFIRM) {
-        // THE LOAD CONFIRMATION (2026-08-28; TWO SUBJECTS since 2026-08-29 —
+        // THE LOAD CONFIRMATION (2026-08-28; TWO SUBJECTS, 2026-08-29 —
         // the render player's highlighted batch entry and the `h` view's
         // viewed walk member): OK (`o`, its dispatch char) runs the act the parked subject
         // names, through the input handler; Escape drops both parked subjects.
@@ -177,8 +174,8 @@ void GuiPrompt::activate_response(char k) {
         return;
     }
 
-    // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect 2026-10-28
-    // night): `d` Delete and `s` Save run their act on the parked row
+    // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect
+    // 2026-10-28): `d` Delete and `s` Save run their act on the parked row
     // through the input handler, Escape drops it; the prompt closes first
     // either way, so the act runs with the list standing on the ordinary
     // modal state.
@@ -248,17 +245,16 @@ void GuiPrompt::activate_response(char k) {
                 // A NEW QUESTION, so it goes through the same raise route and
                 // clears the painted bit with it: the new set is answerable
                 // only once this text and these buttons have been painted.
-                // That is what closes the stale-rect press this rung used to
-                // leave answerable (the reasoning is at PromptState).
+                // That is what keeps a stale-rect press from answering this
+                // rung (the reasoning is at PromptState).
                 // EVERY PROMPT IS A QUESTION (architect 2026-09-01, the
-                // capitalization sweep): this rung read "Save failed." — the
-                // one statement-with-a-period among prompts that ask
-                // ("Save unsaved changes?", "Load '…' in place?") — and now
-                // asks what its buttons answer. The response set is untouched.
+                // capitalization sweep): this rung asks what its buttons
+                // answer, like every prompt ("Save unsaved changes?", "Load
+                // '…' in place?").
                 // IT CARRIES NO REASON AND RAISES NO CARD (2026-09-02): the
                 // save owner cards the fault at the arm that met it
                 // (save_ops.cpp) — WHICH file it could not write for a write
-                // failure, or, since 2026-09-24, that a checkpoint is still
+                // failure, or (2026-09-24) that a checkpoint is still
                 // publishing and no file was even attempted
                 // (kCheckpointPublishing) — so this rung inherits whichever
                 // sentence and asks the one thing only it knows to ask.
@@ -311,7 +307,7 @@ void GuiPrompt::cancel_paste_confirmation() {
 // close (Back), the Open project picker's open act and Revert
 // share identical behaviour; what differs between them is the target, seated
 // here for proceed — and, for Revert alone, the question a dirty session is
-// asked — and, since 2026-10-25, whether a standing picker comes down first
+// asked — and (2026-10-25) whether a standing picker comes down first
 // (the exit alone; the reopen and the revert are the picker's own questions).
 void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     if (app.prompt.active) return; // already gated; ignore re-entry
@@ -325,7 +321,7 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     render_player.close();
     // AND SO DOES A STANDING PICKER ON THE EXIT ROAD (2026-08-28), the same
     // shape one mode over — one close body, close_picker, which takes the
-    // overlay's band down with it. ON THE REOPEN AND REVERT ROADS IT STAYS
+    // overlay down with it. ON THE REOPEN AND REVERT ROADS IT STAYS
     // (architect 2026-10-25, one rule for the overlays: an overlay stays
     // standing under its own question, Cancel returning to it, OK ending
     // it): with a picker standing, those two targets are reached only from

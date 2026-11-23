@@ -8,17 +8,17 @@
 using RenderPlayerTransport = AppState::RenderPlayer::Transport;
 
 // THE LAUNCH'S POSITION REFUSAL IS SILENT AT BOTH ITS SITES (architect
-// 2026-08-31, retiring the 2026-08-30 sentence "There is nothing left to play
-// from here" and its shared constant): a benign one-dimensional refusal
-// already at its state says nothing — the playhead rests visibly at the view's
-// end and the Play button greys on that very predicate. The two sites (the one
-// launch body's playable gate and toggle_playback's verdict-identical pre-sum
-// twin) still refuse exactly as before; only the card is gone. The DEVICE
-// refusal keeps its card: a dead device is the one fact the screen cannot show.
+// 2026-08-31): a benign one-dimensional refusal already at its state says
+// nothing — the playhead rests visibly at the view's end and the Play button
+// greys on that very predicate. The two sites are the one launch body's
+// playable gate and toggle_playback's verdict-identical pre-sum twin. The
+// DEVICE refusal has its card: a dead device is the one fact the screen
+// cannot show.
 
 // Gesture-stop: called by any handler that will move the
-// cursor (keys, button press, undo/redo, tab switch) — and, since 2026-07-30, by
-// the two keyboard TRIM MUTATIONS, which stop without touching the cursor at all.
+// cursor (keys, button press, undo/redo, tab switch) — and by the two
+// keyboard TRIM MUTATIONS (2026-07-30), which stop without touching the
+// cursor at all.
 // WHICH KEYBOARD COMMANDS STOP is a ruling, stated once at the declaration (the
 // keyboard stop rule, playback_lifecycle.h); this comment owns only the teardown.
 // Stops the audio thread and DEACTIVATES the scanner. Once inactive the
@@ -42,7 +42,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     // complete edge inventory is at GuiAuditionSequence (app_state.h).
     clear_audition_sequence(app);
     // THE LIMITER LAMP'S SPAN IS VOIDED HERE, AHEAD OF THE GUARD (architect
-    // 2026-11-06, session 73): a stop and a launch in one act (the main
+    // 2026-11-06): a stop and a launch in one act (the main
     // view's scrub click) leave no tick between to see the play stopped, so
     // the stop itself says a span ends (AppState::limiter_lamp_prev_frame).
     app.limiter_lamp_prev_frame = -1;
@@ -96,7 +96,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         if (render_player) render_player->publish_media_state();
         return;
     }
-    // THE SCORE VIEWER'S FORK (2026-10-26 night, score_viewer.h's THE
+    // THE SCORE VIEWER'S FORK (2026-10-26, score_viewer.h's THE
     // TRANSPORT), the player's shape: while the viewer stands the engine
     // plays the score's soundtrack or nothing — the project's audio stopped at
     // its open — so its "a session stood" state is the viewer's LIVE
@@ -121,7 +121,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         return;
     }
     if (!playback.is_playing() && !app.playhead_scanner_active) return;
-    // THE DISPLAY KEEP-ALIVE'S ARMING (architect 2026-11-13, session 118;
+    // THE DISPLAY KEEP-ALIVE'S ARMING (architect 2026-11-13;
     // the facts and the ruling at kDisplayKeepAliveFastStopMs,
     // playback_lifecycle.h): THIS ARM IS THE ONE SEAT EVERY STOP OF A
     // PROJECT PLAY CROSSES — the user's own (bare Space's stop edge, the
@@ -143,7 +143,7 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
     }
     playback.stop();
     // THE SCANNER'S OWN RECT AT ITS PAINTED PLACE, THEN THE BIT (architect
-    // 2026-11-16, send Q: "number 3, narrowing agree";
+    // 2026-11-16: "number 3, narrowing agree";
     // Viewport::invalidate_standing_scanner): the place is read while the
     // bit still stands, from the still-current playhead_scanner_precise on
     // the PLATE basis — the place the last paint drew the line at, by the
@@ -179,9 +179,8 @@ void GuiPlaybackLifecycle::stop_playback_for_modal_open() {
 // body. Pressing space with the cursor at or past that end is a SILENT no-op
 // (architect 2026-08-31; the rule is at the file head).
 // THE CURSOR IS ALWAYS THE START
-// (architect 2026-07-30): the region left-bound launch that used to divert
-// Space's play edge to scrub_launch_at is deleted with the SPAN FORM, so every
-// Space — span resting or not — launches from here. Space-to-stop just
+// (architect 2026-07-30): every Space — span resting or not — launches from
+// here. Space-to-stop just
 // DEACTIVATES the scanner (its value fields go stale by contract — no
 // snap-back, no separate stash; the cursor is the launch point by
 // definition).
@@ -201,7 +200,7 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // rest is transport-live for this fork's purposes because THE FACE SAYS SO
     // — the play/stop button wears the stop glyph for the act's whole duration
     // (redesign_button_glyph_swapped reads the same `phase != Idle` this arm
-    // does), and the transport row must never lie about live state. Without
+    // does), and the bottom icon row must never lie about live state. Without
     // this term a press in one of the few rest frames would start a PLAIN
     // audition instead, and the glyph would flip to Play and back three times
     // per act to stay honest about it.
@@ -223,27 +222,23 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // early-returns having moved no cursor and damaged nothing.
     if (playback.is_playing() ||
         app.audition_sequence.phase != GuiAuditionSequence::Phase::Idle) {
-        // ONE STOP BODY (architect 2026-07-30): this edge used to hand-spell
-        // playback.stop() + restore_playhead_to_lsp() while every other stop in
-        // the product called the gesture stop. That second body's only surplus work was a
-        // full-width TOP-STRIP invalidate, and it was dead here — the scanner
-        // paints a waveform-area line and no top-strip pixel at all (the
-        // playhead's top-strip half — the ruler-lane head and the column's
-        // marker-lane run beneath it — belongs to the CURSOR alone), and a stop moves no cursor.
-        // So the two collapsed onto
-        // this one call, which takes the same QUIESCENCE FENCE through its own
-        // playback.stop() and then deactivates the scanner, damaging its own
-        // rect and the clock cell.
+        // ONE STOP BODY (architect 2026-07-30): this edge calls the gesture
+        // stop like every other stop in the product, which takes the
+        // QUIESCENCE FENCE through its own playback.stop() and then
+        // deactivates the scanner, damaging its own rect and the clock cell.
+        // No top-strip damage is owed: the scanner paints a waveform-area line
+        // and no top-strip pixel (the playhead's top-strip half — the ruler's
+        // head and the column's marker-lane run beneath it — belongs to the
+        // CURSOR alone), and a stop moves no cursor.
         n2_toggle_branch = "stop";
         stop_playback_if_playing();
         return;
     }
     // THE DEVICE IS REOPENED HERE, AHEAD OF THE POSITION (asked 2026-08-30;
-    // a REOPEN since 2026-09-02, architect: the
-    // AAudio backend reopened a dead stream inside play(), and a read ahead of
-    // play() carded forever after a route drop, so the press now reopens
-    // through GuiPlayback::ensure_device_available_for_play and cards only
-    // when the reopen FAILED). The launch
+    // a REOPEN, architect 2026-09-02: a read alone would card forever after a
+    // route drop, so the press reopens through
+    // GuiPlayback::ensure_device_available_for_play and cards only when the
+    // reopen FAILED). The launch
     // body asks it first for the same reason and would answer this press
     // correctly in source view — but the target arm below decides a POSITION
     // refusal of its own before control could reach the body, so a dead device
@@ -367,7 +362,7 @@ bool space_launch_would_play(const AppState& a, const GuiAudio& audio,
 }
 
 // The audition launch entry, the scrub act's launch (which always follows its
-// stop, the scrub always playing since 2026-09-21): begin the scanner from
+// stop, the scrub always playing, 2026-09-21): begin the scanner from
 // `frame` — an
 // absolute active-paint-domain position (the caller hands it in already
 // clamped to the live domain) — with the resting cursor, selection, region, and
@@ -396,8 +391,8 @@ void GuiPlaybackLifecycle::scrub_launch_at(int64_t frame) {
 // THE SONG'S END, the trim window not bounding it at all: source playback is
 // the source file read directly, so the gating bought nothing there and only
 // cost the user the audition past a trim bound he was aiming. The NAVIGATION
-// range is untouched by this — Home/End still jump to the trim bounds
-// (Viewport::trim_range, the shared owner both used to read here). In source
+// range is untouched by this — Home/End jump to the trim bounds
+// (Viewport::trim_range). In source
 // view the paint domain is source frames and the bound buffer is the source
 // file itself, so this is both the domain's end and the buffer's; play()
 // clamps its end bound to the bound total besides.
@@ -412,20 +407,20 @@ int64_t GuiPlaybackLifecycle::active_view_play_end() const {
 // scrub_launch_at (the scrub's clicked frame). Everything else is the one
 // launch body's, below.
 bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
-    // THE USER-LAUNCH CLEAR (architect 2026-08-26 at the launch body's head;
-    // moved up to this entry 2026-09-01): every launch of the user's own
+    // THE USER-LAUNCH CLEAR (architect 2026-08-26; at this entry,
+    // 2026-09-01): every launch of the user's own
     // transport begins a fresh session, so the A/B audition sequence ends
     // here whoever asked and whether or not the body below refuses — any
     // launch DURING ONE OF THE ACT'S RESTS, or inside the sub-tick window
     // after a bounded play's natural end (bare Space reads `phase != Idle` as
     // transport-live and takes the stop side there; the scrub runs the stop
-    // body first since 2026-09-21, which clears the act ahead of its own
-    // guard, so this clear is its second), can then never be taken for the
-    // act's own play when IT ends. It sits ahead of the delegation, so a
-    // REFUSED user launch still ends a standing act — the guarantee the head
-    // clear gave, one call up. THIS ENTRY IS THE ONLY ROAD INTO THE BODY THAT
-    // IS NOT THE ACT'S (the body's two callers are this and
-    // launch_bounded_audition), and the act's own launches need no clear: the
+    // body first, 2026-09-21, which clears the act ahead of its own guard, so
+    // this clear is its second), can then never be taken for the act's own
+    // play when IT ends. It sits ahead of the delegation, so a REFUSED user
+    // launch still ends a standing act. THE ROADS INTO THE BODY THAT ARE NOT
+    // THE ACT'S are this entry and car_toggle_playback, each with its own
+    // clear (the body's third caller is launch_bounded_audition), and the
+    // act's own launches need no clear: the
     // act IS the standing phase, written by GuiAbAudition::launch_phase before
     // it calls the body DIRECTLY — the body itself reads no phase and
     // branches by no act; the distinction is structural alone, carried by
@@ -450,7 +445,7 @@ bool GuiPlaybackLifecycle::launch_playback_from(int64_t launch_pos) {
                              "Playhead is off screen");
         return false;
     }
-    // FOLLOW LIT, THE FOLLOW SCROLL (Viewport::follow_scanner, send N,
+    // FOLLOW LIT, THE FOLLOW SCROLL (Viewport::follow_scanner, architect
     // 2026-11-15); DARK, PageIn: Space launches from the cursor and the scrub
     // from a clicked column, so both roads start on screen except when the
     // cursor has been left offscreen by a pan — which is exactly what the
@@ -696,7 +691,7 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
     // audition's alone (one caller, GuiAbAudition::launch_phase), which
     // arrives with the phase it is launching ALREADY WRITTEN. The clear that
     // every user launch takes is the two user entries' (launch_playback_from
-    // and, since 2026-09-17, car_toggle_playback), the roads into the body
+    // and car_toggle_playback, 2026-09-17), the roads into the body
     // that are not the act's.
     // THE AUDITION IS NEVER RESTRICTED (restrictable_play's exemptions): each
     // play is framed by its own `c` and ends at its own span.
@@ -717,9 +712,8 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // PAINT domain — against the active view's window, seed the scanner, and play
 // [start, end), once or looping to `loop_begin` (the parameter's contract at
 // the declaration). Returns whether it launched; its two refusals — the dead
-// device first, then the launch position — each say so on a notification card
-// (2026-08-30; the "nothing to audition" family, which said nothing until
-// then). Three callers: the view-end launch above
+// device first (a card, 2026-08-30), then the launch position (silent, the
+// rule below). Three callers: the view-end launch above
 // (Space's play edge and the scrub, `end` = the view's end), the bounded
 // audition (`end` = start + span, clamped) and the car's launch
 // (car_toggle_playback, `end` = the trim's end and `loop_begin` its begin,
@@ -738,24 +732,20 @@ bool GuiPlaybackLifecycle::launch_bounded_audition(int64_t start,
 // bounds pass straight through: [domain_begin(), domain_end()) is the
 // target buffer's full-target-frame extent and play() takes the
 // validated launch position unchanged.
-// (THE PER-LAUNCH SPEED PUSH IS GONE — architect 2026-08-27. This site forced
-// 1.0 in target view and applied app.playback_speed otherwise, on the reasoning
-// that target view's whole purpose is to hear the user's authored warp and an
-// extra multiplier on top would defeat it. That reasoning outlived the feature:
-// the key retired, so every view plays at the source's own rate and there is
-// nothing left to force.)
+// Every view plays at the source's own rate (architect 2026-08-27): there is
+// no speed multiplier, so target view hears the authored warp alone.
 bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
                                                   int64_t loop_begin,
                                                   LaunchCamera camera) {
     // THE A/B AUDITION IS NAMED BY ITS STATE HERE, NOT BY ITS ENTRY (architect
     // 2026-09-01): this body clears no sequence. A user launch arrives with
     // the sequence already Idle — the view-end entry launch_playback_from
-    // clears it ahead of its delegation (the clear lived at this head from
-    // 2026-08-26 until then) — and the act's own launch arrives with the phase
-    // it is launching ALREADY STANDING (GuiAbAudition::launch_phase writes it
-    // before calling launch_bounded_audition and clears it again on a false
-    // return), so `phase != Idle` at this body means exactly "this is one of
-    // the act's four plays". Nothing between that write and this body paints
+    // clears it ahead of its delegation — and the act's own launch arrives
+    // with the phase it is launching ALREADY STANDING
+    // (GuiAbAudition::launch_phase writes it before calling
+    // launch_bounded_audition and clears it again on a false return), so
+    // `phase != Idle` at this body means exactly "this is one of the act's
+    // four plays". Nothing between that write and this body paints
     // or dispatches, so the phase standing one call earlier changes no face
     // and no fork (redesign_button_glyph_swapped and toggle_playback read it
     // at their own times). The edge inventory is
@@ -769,32 +759,24 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // with no wrong-domain leak.
     //
     // NO LOOPING ON ANY GUI ROAD (architect 2026-07-30, "looping behavior is
-    // not that useful. ok to remove all looping" — re-ruling the 2026-07-19
-    // loop ruling dead, and standing for every launch the GUI itself makes):
-    // EVERY audition plays once from `start` to `end` and stops there — the
-    // launch verdict and the per-view loop starts of 2026-07-19 stayed gone,
-    // and `end` is the view's end for Space and the scrub and `start +
-    // kAuditionMs` for the bounded audition, a different end, the same
-    // once-to-its-end play. THE ONE ROAD THAT PASSES A LOOP TARGET IS THE
-    // CAR'S (architect 2026-09-17, car_toggle_playback — the head unit's play
-    // with the render player closed loops the trim forever): `loop_begin`
+    // not that useful. ok to remove all looping", standing for every launch
+    // the GUI itself makes): EVERY audition plays once from `start` to `end`
+    // and stops there — `end` is the view's end for Space and the scrub
+    // and `start + kAuditionMs` for the bounded audition, a different end,
+    // the same once-to-its-end play. THE ONE ROAD THAT PASSES A LOOP TARGET
+    // IS THE CAR'S (architect 2026-09-17, car_toggle_playback — the head
+    // unit's play with the render player closed loops the trim forever):
+    // `loop_begin`
     // >= 0 takes the engine's looping face, whose audio-callback wrap, wrap
-    // counter and predictor resync are re-done inside today's packet engine
+    // counter and predictor resync live in the packet engine
     // (playback_common.h); kPlaybackNoLoop, every other caller, takes play().
     //
     // EVERY REFUSAL IS THE ONE PREDICATE (playback_launch_playable,
-    // app_state.h — hoisted out of this body 2026-08-15 so the bottom row's
-    // PLAY button could read the launch's own refusal; the architect reversed
-    // that face arm the same day and the predicate stayed with THIS as its one
-    // reader until the A/B audition's press-time gate became the second on
-    // 2026-08-26 — a gate reader, not a face — and the PLAY button's face
-    // became the third on 2026-08-30 under the truthful-buttons ruling,
-    // through space_launch_would_play below since that evening, which asks
-    // it about the launch position the act would actually form — the
-    // lead-in offset included, the architect reversing the resting-cursor
-    // seam). The
-    // per-arm reasoning moved to
-    // the predicate whole: the target arm's
+    // app_state.h; its other readers the A/B audition's press-time gate and
+    // the PLAY button's face under the truthful-buttons ruling, 2026-08-30,
+    // through space_launch_would_play above, which asks it about the launch
+    // position the act would actually form, the lead-in offset included).
+    // The per-arm reasoning is at the predicate whole: the target arm's
     // buffer-populated check (which must live on this shared path — the scrub
     // launch arrives with no outer gate), the two-frame remainder gate against
     // the bound buffer's own domain end (a one-frame remainder is an isolated
@@ -806,7 +788,7 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // launch-inert by this gate (its render still works: the trimmer's
     // one-frame-fady-trim latitude is a RENDER latitude, not an audition one).
     // A DEAD OR ABSENT DEVICE IS REOPENED FIRST, AND A FAILED REOPEN SAYS SO
-    // (asked 2026-08-30; a REOPEN since 2026-09-02, architect): the
+    // (asked 2026-08-30; a REOPEN, architect 2026-09-02): the
     // launch below would "succeed" — the scanner would seed, the page-in would
     // scroll and play() would return — with nothing coming out of the
     // machine, which is the one refusal the user cannot see for himself. The
@@ -835,7 +817,7 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
         return false;
     }
     // AND A LAUNCH POSITION WITH NOTHING LEFT REFUSES IN SILENCE (architect
-    // 2026-08-31, retiring the 2026-08-30 card; the rule is at the file head).
+    // 2026-08-31; the rule is at the file head).
     // A benign one-dimensional refusal already at its state says nothing: the
     // playhead is one mark resting visibly at the view's end, and the Play
     // button greys on this very predicate, so the grey is the message on the
@@ -849,7 +831,7 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // (`end` is the caller's: the view's end from active_view_play_end for
     // the view-end launch, the clamped bounded window for the audition.)
     // A SCANNER STILL STANDING IS ERASED WHERE IT WAS PAINTED, AHEAD OF THE
-    // SEED (architect 2026-11-16, send Q; Viewport::
+    // SEED (architect 2026-11-16; Viewport::
     // invalidate_standing_scanner): a launch inside the sub-tick window
     // between the audio thread's natural end and the tick that tears the
     // scanner down finds the bit up, and its place — read before the seed
@@ -878,8 +860,8 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // own `c` has centred — so the page-in there is a rescue for a cursor a
     // pan has carried offscreen and a no-op otherwise. WITH FOLLOW LIT the
     // two user entries say Follow: THE FOLLOW SCROLL at the launch
-    // (Viewport::follow_scanner, the rule's one owner; architect 2026-11-15,
-    // send N), a launch position right of the center centered at once. THE
+    // (Viewport::follow_scanner, the rule's one owner; architect 2026-11-15),
+    // a launch position right of the center centered at once. THE
     // CAR'S PLAY IS THE ONE LAUNCH THAT STARTS OFF SCREEN BY DESIGN: its
     // position is the trim's BEGIN, a fixed point the worked passage sits
     // screens downstream of, so it says Leave unless the follow lamp is lit,
@@ -896,13 +878,13 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // the scanner one frame earlier than the tick heartbeat would — honest
     // damage at the press that caused it.
     //
-    // THE SCANNER'S OWN RECT, AFTER THE CAMERA (architect 2026-11-16, send
-    // Q: "number 3, narrowing agree"; Viewport::invalidate_standing_scanner),
+    // THE SCANNER'S OWN RECT, AFTER THE CAMERA (architect 2026-11-16:
+    // "number 3, narrowing agree"; Viewport::invalidate_standing_scanner),
     // not the whole waveform area, which repaints the viewport's lanes down
     // to the waveform's foot and owes the rows above them a check
     // (damage_window_top_rows), the chrome redrawn for pixels that did not
-    // change; the GPU draws the frame whole either way (GuiPlatform::present,
-    // send S). ON THE PLATE
+    // change; the GPU draws the frame whole either way (GuiPlatform::present).
+    // ON THE PLATE
     // BASIS, the one the scanner is painted through, so it names the pixels
     // even while a plate is in flight (live viewport new, plate old), whose
     // publication damages the viewport's lanes whole itself. A camera that
@@ -936,7 +918,7 @@ void GuiPlaybackLifecycle::toggle_follow() {
     // THE LIT EDGE RESUMES THE SCROLL AT ONCE: whatever suspended the play
     // in flight is forgiven, and during a play the predictor re-anchors (as
     // every discrete camera move does) and the follow scroll runs
-    // (Viewport::follow_scanner, send N, 2026-11-15): a scanner right of the
+    // (Viewport::follow_scanner, architect 2026-11-15): a scanner right of the
     // center is placed on it, one off screen to the left paged in, one left
     // of the center left to run. At rest the scroll is skipped: the next
     // launch places the camera for itself. The A/B audition's plays are not
@@ -960,9 +942,3 @@ void GuiPlaybackLifecycle::toggle_restrict() {
     app.follow = false;
 }
 
-// (set_playback_speed IS GONE — architect 2026-08-27, with the
-// `playback_speed` key it was the one writer of. It stored the value, pushed it
-// to the engine outside target view, and resynced the predictor so the speed
-// change could not retroactively rewrite the elapsed-since-anchor period. All
-// three concerns died with the feature; the resync events that remain are
-// listed at playback.h.)

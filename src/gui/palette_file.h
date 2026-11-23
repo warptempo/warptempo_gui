@@ -7,15 +7,14 @@
 #include <cstdint>
 #include <iterator>
 
-// THE PALETTE IS ARC-DARK'S, COMPILED (architect 2026-11-21, send GG: "i am
+// THE PALETTE IS ARC-DARK'S, COMPILED (architect 2026-11-21: "i am
 // committed" — one look; "the alt end state is what i effectively want": the
 // tones a compiled row, kArcDarkTones in gui_theme.h, each line its Arc
-// source). The theme arc of 2026-11-05 reopened 2026-11-01's one-palette
-// ruling ("Agree, let's drop them. We keep the canvas grammar" — "We've
-// taken the design, the layout from CoolEdit, and I think that's enough");
-// one look closes it again, at Arc-Dark's numbers. No per-color key, no
-// Settings row for a color, nothing read from a file. Cool Edit Pro 2.1
-// keeps THE CANVAS GRAMMAR — the view bar, the ruler, the marker lane, the
+// source). No per-color key, no Settings row for a color, nothing read from
+// a file. Cool Edit Pro 2.1 (architect 2026-11-01: "We keep the canvas
+// grammar" — "We've taken the design, the layout from CoolEdit, and I think
+// that's enough") keeps THE CANVAS GRAMMAR — the trim bar, the ruler, the
+// marker lane, the
 // grid and center lines, the cues, the playhead, the stereo divider and
 // their lengths (program_spec.h) — and gives no color.
 //
@@ -25,23 +24,21 @@
 // thing ("chrome means anything the accent color can highlight": the flag
 // editor's field and selection band, the chrome's selected pair). GuiPalette
 // (render.h) holds both halves in one struct — THE CHROME'S ROLES first (the
-// first six Windows' element names, ButtonFace, ButtonText, Hilight /
-// HilightText, WindowText and InfoText, the chrome's painters written
-// against them; then the flat look's, materials.h's head), THE PROGRAM'S
+// ground, the label, the selected pair, the field's text and the card's
+// text; then the flat look's, materials.h's head), THE PROGRAM'S
 // after them (the canvas, its grid and center lines, the markers' chips,
 // hovers and stem, the playhead's head and stem, the hover line, the
 // scanner), and the panel's `face` — so every painter reads palette() and
 // none knows which half a color is.
 //
-// A ROLE STANDS IFF A PAINTER READS IT (the relief quartet, the field ground
-// and the clock pair retired 2026-11-02; the plate's two inks are no
+// A ROLE STANDS IFF A PAINTER READS IT (the plate's two inks are no
 // GuiColor at all — the plate takes the row's words, waveform_plate_inks,
 // render.h). TWO ROLES MAY SHARE A TONE: a role is what it paints, not its
 // value (`label`, `field_text` and `text` all read the font color; the zero
 // line `center` is the waveform's ink; `cue_fill` the accent `cue`'s
-// number). THE LIT KEY'S FACE IS `cue`, THE ACCENT (architect 2026-11-11,
-// session 106): the one program role a chrome painter reads, and the one no
-// well painter reads, the chip reading `cue_fill` (2026-11-13, session 119);
+// number). THE LIT KEY'S FACE IS `cue`, THE ACCENT (architect 2026-11-11):
+// the one program role a chrome painter reads, and the one no well painter
+// reads, the chip reading `cue_fill` (2026-11-13);
 // its inert face is the chrome's `lit_dim_fill` (materials.h's THE KEY).
 // WHAT IS PRINTED ON A KEY has no role: the glyph road takes the row's word
 // (key_ink, materials.h: `text`, `text_on_lit`, `key_dim_ink`,
@@ -65,7 +62,7 @@ struct GuiPaletteFill {
     uint32_t GuiThemeTones::* tone;
 };
 inline constexpr GuiPaletteFill kGuiPaletteFill[] = {
-    // THE CHROME (the first six Windows' element names).
+    // THE CHROME.
     {&GuiPalette::ground,          &GuiThemeTones::ground},
     {&GuiPalette::label,           &GuiThemeTones::text},
     {&GuiPalette::selected_fill,   &GuiThemeTones::selection_fill},
@@ -117,7 +114,7 @@ inline constexpr GuiPaletteFill kGuiPaletteFill[] = {
     {&GuiPalette::playhead_line,   &GuiThemeTones::playhead_line},
     {&GuiPalette::hover_line,      &GuiThemeTones::hover_line},
     {&GuiPalette::scanner,         &GuiThemeTones::scanner},
-    // THE PANEL'S FACE: the body tone (send Z, 2026-11-19).
+    // THE PANEL'S FACE: the body tone (2026-11-19).
     {&GuiPalette::face,            &GuiThemeTones::body_face},
 };
 inline constexpr std::size_t kGuiPaletteFillCount = std::size(kGuiPaletteFill);

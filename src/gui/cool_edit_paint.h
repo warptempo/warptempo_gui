@@ -16,64 +16,53 @@
 // part); the colors Arc-Dark's compiled row's (gui_theme.h) — the flat look's tones
 // (materials.h's THE WELL) and the palette's, every one read from palette(). THE PLAYHEAD'S OWN COLORS are the palette's
 // `playhead_head` — the head in the ruler, A5ABB5, the stem's color
-// (architect 2026-11-21, send GG) — and `playhead_line` — the line's one
-// static tone in the canvas (send FF, 2026-11-21; A5ABB5, Arc's `.h4`) —
+// (architect 2026-11-21) — and `playhead_line` — the line's one
+// static tone in the canvas (2026-11-21; A5ABB5, Arc's `.h4`) —
 // their lines of kArcDarkTones (gui_theme.h), as the
 // marker's chip is the palette's `cue_fill` (the accent, 2026-11-13), a
-// disabled one's `inactive_cue`, no outline (2026-11-19, send AA).
-// THE TRIANGLES ARE SMOOTH-EDGED AT THEIR EXACT PLACES (architect 2026-11-14,
-// send J, reopening 2026-10-26's aliased staircase: "I think the chips
+// disabled one's `inactive_cue`, no outline (2026-11-19).
+// THE TRIANGLES ARE SMOOTH-EDGED AT THEIR EXACT PLACES (architect 2026-11-14:
+// "I think the chips
 // should also go anti-aliased"): the cue's chip and the playhead's head are
 // one drawing, one 45° triangle stamped at exact coverage
 // (CoverageStampPass::chip, below).
 
-// (THE KEY — every key of the band, the bottom icon row and the controls
-// rows, the word buttons and the entries — is Arc's button since send Z's
-// stage C, 2026-11-19, materials.h's paint_linked_group, paint_word_button
-// and paint_entry, on this file's coverage stamp; the on-screen keyboard's
+// (THE KEY — every key of the top icon row, the bottom icon row and the
+// controls rows, the word buttons and the entries — is Arc's button
+// (2026-11-19, materials.h's paint_linked_group, paint_word_button
+// and paint_entry), on this file's coverage stamp; the on-screen keyboard's
 // keys Arc's buttons in one grid and the scrub Arc's scale (render.cpp's
-// paint_scale) on the same stamp since send AA.)
-
-// (THE QUAVER'S PAINTER — paint_quaver, the mock's vector, the
-// caption's icon and the lists' row glyph for the morning of 2026-10-23 — is
-// retired with his pick; the title bar's and the BPM form's rows' note is
-// MusicNote16th, icons.h's THE INK BOX.)
+// paint_scale) on the same stamp.)
 
 // (Every time field is plain text, no box: paint_handler.cpp's THE TIME
 // FIELDS.)
 
-// (THE TAB STRIP — paint_ce_tab_strip, ce_tab_strip_layout, kCeTabCount and
-// ce_tab_growth_px, Cool Edit's Organizer tabs, 2026-10-18 — IS REMOVED with
-// the strip, architect 2026-10-22, the simple layout.)
-
 // -- THE CUE'S CHIP ---------------------------------------------------------------
 
-// THE CUE'S AND THE PLAYHEAD HEAD'S ONE DRAWING (architect 2026-11-14 night,
-// send J, on the mock's moved staircase: "That would make them the odd one
+// THE CUE'S AND THE PLAYHEAD HEAD'S ONE DRAWING (architect 2026-11-14 night:
+// "That would make them the odd one
 // out. It'd make them snap in and out of sharpness. You'd have a sharp chip
 // next to a blurrier one ... I think the chips should also go
 // anti-aliased" — and, to the apex standing exactly on the stem's center,
 // "Agree on both."): A SMOOTH-EDGED DOWN-POINTING TRIANGLE AT EVERY
 // POSITION, the landing's included, ITS APEX EXACTLY ON THE MARK'S EXACT x
-// — the stem's center, the playhead line's center (reopening 2026-11-06's
-// "it should point at the right column", the apex one cell right of the
-// stem's center, and 2026-10-26's aliased staircase). The geometry is
+// — the stem's center, the playhead line's center. The geometry is
 // render.h's cue block (cue_chip_h_exact_px), with H the chip's height and
 // yb THE BOTTOM EDGE of the row the apex stands on: apex (x, yb), height
 // and half-base H, its sides at 45°, ALL OF IT THE FILL — NO OUTLINE, THE
-// BARE TRIANGLE OF THE NOMINAL ROWS (architect 2026-11-19, send AA,
-// RULINGS §8 / §11, fork A 3 of Z_10: "I would consider removing the
+// BARE TRIANGLE OF THE NOMINAL ROWS (architect 2026-11-19: "I would
+// consider removing the
 // outline of the chips because, for example, the scroll bar has no
 // outline"; "I think I prefer the smaller version without the outline"),
 // the apex still on the row's bottom edge. NO SHADOW (architect
 // 2026-11-02, the well's part of the
 // flat look). The color is resolve_flag_face's for a cue (render.cpp, the
 // one table: `cue_fill`, a disabled chip's `inactive_cue`) and the
-// `playhead_head` for the playhead's head (the same chip, mock k1,
+// `playhead_head` for the playhead's head (the same chip,
 // 2026-11-04), `hover_line` for the hover line's triangle in the ruler
-// (architect 2026-11-21, send GG) — A TONE, so a hovered chip is the mix of
+// (architect 2026-11-21) — A TONE, so a hovered chip is the mix of
 // its rest and hover tones as painted (materials.h's StampTone; architect
-// 2026-11-21, send FF: the marker's hover, resolve_flag_face's table and
+// 2026-11-21: the marker's hover, resolve_flag_face's table and
 // AppState::FaceFades' THE MARKER'S FACE), a resting one and both heads its
 // plain color, byte for byte.
 // PAINTED THROUGH THE COVERAGE STAMP (CoverageStampPass::chip, below): the
@@ -90,7 +79,7 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, StampTone fill);
 
 // -- THE COVERAGE STAMP ---------------------------------------------------------
 
-// THE CHROME'S COVERAGE STAMP (architect 2026-11-14, send J: "the
+// THE CHROME'S COVERAGE STAMP (architect 2026-11-14: "the
 // anti-aliasing I would like to commit to that as well, the full
 // anti-aliasing"; "I would expect snapping nothing to integers and leaving
 // them rounding to yield decent results"): the lanes' marks placed by time
@@ -139,9 +128,9 @@ void paint_ce_cue_chip(cairo_t* cr, double x, double yb, StampTone fill);
 // seams (paint_linked_group, in a mixed tone through a fade, materials.h's
 // StampTone);
 // THE ROUNDED RECT, the trim bar's pill
-// (render_trim_flags; architect 2026-11-17, session 140; IN THREE BANDS
+// (render_trim_flags; architect 2026-11-17; IN THREE BANDS
 // with its caps, architect 2026-11-20) and Arc's keys'
-// borders, faces and accents (materials.h's paint_linked_group, send Z,
+// borders, faces and accents (materials.h's paint_linked_group,
 // 2026-11-19); THE ROUNDED RING, a word button's and an entry's border;
 // THE ROUNDED RECT CUT, NOISE's progress line (paint_entry); the
 // down-pointing 45° triangle; and THE CHIP, one of them (THE CUE'S CHIP
@@ -195,14 +184,14 @@ public:
     void rounded_rect_bands(double x0, double y0, double x1, double y1,
                             double rl, double rr, double c0, double c1,
                             GuiColor t0, GuiColor t1, GuiColor t2);
-    // THE ROUNDED RING (send Z, 2026-11-19: a GTK box's border, the word
+    // THE ROUNDED RING (2026-11-19: a GTK box's border, the word
     // buttons' and the entries'): the rounded rect [x0, x1] x [y0, y1] of
     // radius `r` on all four corners LESS its padding box — `bw` inside it
     // on every side, of radius max(r − bw, 0) — each pixel the outer's
     // coverage less the padding box's (the kit's gtk_box), in `color`.
     void rounded_ring(double x0, double y0, double x1, double y1, double r,
                       double bw, StampTone tone);
-    // THE ROUNDED RECT CUT TO A RECT (send Z, 2026-11-19: Arc's entry
+    // THE ROUNDED RECT CUT TO A RECT (2026-11-19: Arc's entry
     // progress, the entry's inner box cut at the level's real end and to its
     // foot's rows): rounded_rect's shape, left corners `rl`, right `rr`,
     // inside [cx0, cx1] x [cy0, cy1], each pixel the shape's area inside the

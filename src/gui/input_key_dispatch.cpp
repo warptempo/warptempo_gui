@@ -30,10 +30,7 @@
 #include "warp_frame_map_view.h"  // source_frame_to_active_domain (the diff-flag
                                   // cycle's playhead-anchored seed)
 #include "warpmarkers.h"
-#include "warp_frame_map_build.h"  // slice_to_warp_markers (the `m` gate's own
-                                   // coincidence refusal moved into
-                                   // bpm_sweep_plan on 2026-09-04; the slice
-                                   // has other callers here)
+#include "warp_frame_map_build.h"  // slice_to_warp_markers
 
 #include <algorithm>
 #include <cstddef>
@@ -51,13 +48,9 @@
 
 namespace {
 
-// (THE HISTORY-UNAVAILABLE SENTENCE moved to history_diff.h on 2026-08-30,
-// beside the module that composes the reason it prefixes: the mode's ENTRY
-// refusal became a card that day, which put a fourth reporter of the fact in
-// this file and a producer of it in another translation unit.)
-
-// (THE CHECKPOINT-PUBLISHING SENTENCE moved to notifications.h on 2026-09-24,
-// when the save owner began raising it from save_ops.cpp: the account of its
+// (THE HISTORY-UNAVAILABLE SENTENCE lives at history_diff.h, beside the module
+// that composes the reason it prefixes; THE CHECKPOINT-PUBLISHING SENTENCE at
+// notifications.h, the save owner raising it too: the account of each one's
 // readers is there.)
 
 }  // namespace
@@ -65,8 +58,8 @@ namespace {
 // The lane model's one predicate — see the declaration for the two readers and
 // the rationale. A non-empty selection IS the marker lane: with a focus standing,
 // the bare horizontal arrows move that MARKER and the cursor rides along. The
-// expression lives at marker_selection_standing (app_state.h) since
-// 2026-08-30, where the bottom row's faces can read it too.
+// expression lives at marker_selection_standing (app_state.h), where the
+// bottom icon row's faces can read it too.
 bool GuiInputHandler::playhead_in_marker_lane() const {
     return marker_selection_standing(app);
 }
@@ -80,34 +73,27 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // in the standing mode, a message rather than an error arm. Where the gate is
 // the SOLE defense for a mutation it says so (the is_playhead_step entry
 // below), and a deeper check on the same route is justified or deleted —
-// an unreachable one is deleted rather than the gate's inventory widened
-// (the 2026-07-28 audit deleted the trim region toggle's and the maximizer's
-// unreachable read-only returns, which would refuse admitted keys today).
+// an unreachable one is deleted rather than the gate's inventory widened.
 //
-// WHAT READ-ONLY PROTECTS, in one sentence (architect 2026-08-07, RECLASSIFYING
-// the old "persistent mutation" standard): read-only protects the AUTHORED
+// WHAT READ-ONLY PROTECTS, in one sentence (architect 2026-08-07): read-only
+// protects the AUTHORED
 // MUSICAL CONTENT — the two marker stores and the engine settings — AND NOTHING
 // ELSE. The per-tab BAND is not content: viewport, zoom, playhead, TRIM and the
 // read_only bit itself are all read-only-LEGAL, and so are SAVE and RENDER,
 // which author nothing — a save writes the state the tab already holds and a
-// render reads it — and so, since 2026-08-28, is THE OPEN PROJECT PROMPT on
-// Ctrl+O, which leaves this session for another project rather than writing
+// render reads it — and so is THE OPEN PROJECT PICKER on Ctrl+O (2026-08-28),
+// which leaves this session for another project rather than writing
 // into it.
 // THE DRIVING CASE IS TRIM'S (the architect's own): a finished section's tab
 // locked against accidental marker movement, while its trim window is moved
 // freely to compare a passage against the other tab in target view, re-rendered,
-// and saved. TRIM'S OWN DATA MODEL ALREADY SAID BAND RATHER THAN CONTENT — it
+// and saved. TRIM'S OWN DATA MODEL SAYS BAND RATHER THAN CONTENT — it
 // lives in ViewState beside the viewport and the zoom, it has NO undo, and it
-// never dirties the session — so the gate treating it as authoring was a
-// classification leftover rather than a ruling.
-// THE OLD STANDARD IS SUPERSEDED WHOLE, and with it the two clauses it produced:
-// "read-only means no save" (Ctrl+S dropped here) and the structural drop of the
-// ctrl+alt render chords (their modifier combination simply matched no
-// predicate). ADMITTING Ctrl+S REMOVES AN INCONSISTENCY rather than creating
-// one: the close prompt's Save answer has always saved from a locked tab —
+// never dirties the session.
+// ADMITTING Ctrl+S IS CONSISTENT with the close prompt's Save answer, which
+// saves from a locked tab —
 // GuiPrompt::respond calls GuiSaveOps::save with no read-only check of its own,
-// and the prompt block sits at the TOP of on_key, far above this gate — so the
-// keyboard chord was the only save route the lock ever stopped.
+// and the prompt block sits at the TOP of on_key, far above this gate.
 // WHAT STAYS BLOCKED, the authoring vocabulary, dropped here at the gate rather
 // than admitted for a deeper owner refusal: the marker drop / status-toggle /
 // position-nudge / Delete chords, the flag editor's and the BPM form's openers,
@@ -119,36 +105,34 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // where it is the load-in-place and replaces the whole authored state. THAT
 // ONE ENTRY READS A STATE (2026-09-01): outside the view the same chord opens
 // the RENDER PLAYER, which is bare `l`'s own admitted act, so the gate admits
-// it there and the entry below is the product's second state-dependent
-// admission beside the horizontal arrows' lane term.
-// `;`, THE SETTINGS EDITOR, IS ADMITTED (2026-10-21, the planner's ruling by
-// the architect's 2026-09-04 rule — THE LOCK GOVERNS THE KEYS, NOT THE
-// EDITOR): the editor authors the device keys as well as the piece's
+// it there and the entry below is a state-dependent admission like the
+// horizontal arrows' lane term.
+// `;`, THE SETTINGS PAGE, IS ADMITTED (2026-10-21, by the architect's
+// 2026-09-04 rule — THE LOCK GOVERNS THE KEYS, NOT THE
+// EDITOR): the settings editor authors the device keys as well as the piece's
 // engine keys, and its engine-key commit refuses under the lock inside
 // it (settings_editor.cpp), so dropping the opener here would leave a locked
-// tab no road to the device keys at all — the Settings popup's rows were that
-// road from 2026-09-04 until the popup retired the same day, and the key was
-// dropped here until then. THE FACE FOLLOWS: the Settings button left
-// redesign_button_enabled's read-only arm and iteration_lock_greys with it.
+// tab no road to the device keys at all. THE FACE FOLLOWS: the Settings
+// button is in neither redesign_button_enabled's read-only arm nor
+// iteration_lock_greys.
 // The deeper owner refusals — do_undo / do_redo's per-entry target-tab check
 // (undo.cpp), and the pointer AUTHORING refusals (input_pointer.cpp: the marker
 // drag arm, the flag editor's double-click open, the empty-lane marker drop) —
-// stay as the cross-tab and pointer paths' own refusals, no longer the
+// are the cross-tab and pointer paths' own refusals, not the
 // primary surface for these chords.
-// THE POINTER TRIM REFUSALS ARE GONE WITH THIS RULING rather than merely
-// bypassed: the plain trim-bar press's band gate (input_pointer.cpp) and
-// trim_bound_click's first gate (input_trim.cpp) were deleted the same day,
+// THE POINTER TRIM ROUTES CARRY NO READ-ONLY REFUSAL either (the plain
+// trim-bar press, input_pointer.cpp; trim_bound_click, input_trim.cpp),
 // so the whole trim family — keyboard and pointer — is read-only-legal by ONE
-// rule with no site left to disagree with it.
+// rule with no site to disagree with it.
 // THE LOCK HAS A FACE, AND THIS FUNCTION OWNS THE CHORD HALF OF IT (architect
 // 2026-08-15): a roster button wears the disabled face while the active tab is
 // locked exactly where its chord is one this allowlist drops, so the toggle
 // looks the way the `h` history view already looks. THE BUTTON SET IS
 // ENUMERATED ONCE, at redesign_button_enabled's read-only mode statement
-// (app_state.h); THE CHORDS, re-derived against the return below 2026-09-19,
+// (app_state.h); THE CHORDS, derived against the return below,
 // are the FOUR marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N), FLATTEN in the
-// icon row's iteration group (Ctrl+F), THE ITERATION PAIR that came back to that same group 2026-09-04
-// (Ctrl+B and bare `i`), UNDO and REDO (Ctrl+Z, Ctrl+Shift+Z), the LOAD IN PLACE
+// top icon row's iteration group (Ctrl+F), THE ITERATION PAIR in that same
+// group (Ctrl+B and bare `i`), UNDO and REDO (Ctrl+Z, Ctrl+Shift+Z), the LOAD IN PLACE
 // (bare `'`, dropped in the `h` view alone — the state-dependent entry above),
 // and THE FOUR CARDINAL ARROWS (Up/Down dropped outright; Left/Right dropped
 // only in the marker lane, through the is_playhead_step entry, whose lane term
@@ -162,7 +146,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // THE PROPAGATE FAMILY ON THE MIRROR: its two PASTES, blocked here, are the
 // PASTE key's tap and hold (2026-11-08), a face that greys on the lock; its
 // COPY, bare P, admitted here, is the COPY key, lit on a locked tab
-// (architect 2026-11-17, send U). The other direction — a button lit on a
+// (architect 2026-11-17). The other direction — a button lit on a
 // locked tab whose chord drops here — is EMPTY. THE MIRROR IS
 // HAND-LISTED at
 // redesign_button_enabled (app_state.h) rather than derived by walking the
@@ -172,9 +156,9 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // THE ADMISSIONS BELOW NEEDS A HAND EDIT THERE; nothing else in the product
 // reads this gate for a face — and the THREE STATE-DEPENDENT admissions a face
 // mirrors are each read off their own owner rather than off this gate: the
-// horizontal arrows' lane term (horizontal_arrow_step_lock_admits), since
-// 2026-09-01 bare `'`, whose admission turns on the `h` view's own bit, which
-// the Load in place button's arm composes for itself, and since 2026-10-13
+// horizontal arrows' lane term (horizontal_arrow_step_lock_admits),
+// bare `'`, whose admission turns on the `h` view's own bit, which
+// the Load in place button's arm composes for itself, and
 // bare `i`'s off edge, whose admission turns on the lamp's own bit, which the
 // Grid Iterations button's arm composes for itself.
 bool read_only_key_blocked(const AppState& app, GuiKey key,
@@ -211,15 +195,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // the dispatch arm's own spelling through the shared predicate.
     const bool is_ab_audition = is_ab_audition_key(key, mods);
     // The horizontal arrows step the PLAYHEAD one step in the active column's
-    // unit (bare only since 2026-09-23; ctrl held the column for the day
-    // before), and
+    // unit (bare only), and
     // they are admitted ONLY in the waveform lane, where that step is pure
     // navigation. In the MARKER lane (a non-empty selection) the very same press
     // steps the playhead AND the marker under it — a position nudge in either
     // column — which is authoring, and this
-    // gate is the sole read-only defense on BOTH routes (TWO since 2026-07-29, the
-    // W+target tempo-image step having been deleted with the tempo-image family —
-    // see marker_drag.h; that combination is a consumed refusal now):
+    // gate is the sole read-only defense on BOTH routes (the W+target
+    // combination is a consumed refusal, marker_drag.h):
     // position_nudge_prologue carries
     // no internal read-only check of its own. So a locked tab holding a selection REFUSES the
     // arrows outright (a consumed no-op); it does not fall back to the
@@ -233,19 +215,18 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // THE LANE TERM READS ITS ONE OWNER (horizontal_arrow_step_lock_admits,
     // app_state.h — 2026-08-30): the Left / Right
     // buttons' disabled face reads the same owner, so the lock's refusal and
-    // the grey are one decision. (It read playhead_in_marker_lane() until
-    // then, the lane predicate whose body that owner now is.)
+    // the grey are one decision.
     // IT ADMITS THE BARE FORM, the one the horizontal pair binds
-    // (chord_is_bound, gui_input.h — the ladder retired 2026-09-21, the ctrl
-    // form 2026-09-23); an unbound modified arrow needs no admission and is
+    // (chord_is_bound, gui_input.h); an unbound modified arrow needs no
+    // admission and is
     // silent whichever side of this gate it lands on.
     const bool is_playhead_step =
         ((key == GuiKeys::Left || key == GuiKeys::Right) &&
          !ctrl && !alt && !shift &&
          horizontal_arrow_step_lock_admits(app));
     // HOME / END IN BOTH FORMS — bare (the trim-bound jump) and SHIFT (the
-    // whole-piece jump, architect 2026-09-26; on Shift since 2026-10-24,
-    // Ctrl until then). Both are pure navigation: they move the cursor, stop
+    // whole-piece jump, architect 2026-09-26; on Shift 2026-10-24). Both are
+    // pure navigation: they move the cursor, stop
     // an audition and clear a selection, and write no store at all, so the
     // shifted shape is admitted on exactly the reason the bare one is. Ctrl
     // and alt forms bind nothing and stay refused.
@@ -261,13 +242,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_zero =
         (key == GuiKeys::Digit0 && !ctrl && !shift && !alt) ||
         is_trim_frame_key(key, mods);
-    // THE ZOOM STEP, `=` / `-` bare and shifted (architect 2026-10-27,
+    // THE ZOOM STEP, `=` / `-` bare (architect 2026-10-27,
     // through the shared predicate the dispatch reads): the camera about the
     // viewport's centre, writing no store, so it is admitted here and under
     // the grid-iterations lock, whose gate falls through to this list.
     const bool is_zoom_step = is_zoom_step_key(key, mods);
-    // WAVEFORM MAGNIFICATION, the bare backtick (architect 2026-09-22;
-    // on the backtick since 2026-09-23): a display
+    // WAVEFORM MAGNIFICATION, the bare backtick (architect 2026-09-22): a
+    // display
     // posture about the picture, authoring nothing the lock protects, so it
     // is admitted on a locked tab — and under the grid-iterations lock, whose
     // gate falls through to this list, where it toggles as anywhere else.
@@ -289,32 +270,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // grid-iterations lock, whose gate falls through to this list.
     const bool is_restrict =
         (key == GuiKeys::R && !ctrl && !shift && !alt);
-    // Bare `t` and bare `p` (the S/T audio-view switch and the W/P column
-    // switch) WERE PURE NAVIGATION, WRITING NO STORE AT ALL since 2026-08-07,
-    // and admitted here on that standard until the architect deleted both
-    // keys whole with their view lamps on 2026-09-15 (the four view selectors
-    // are the axes' only keyboard road now, immediately below). Before that: each
-    // used to write the warp store on one edge — entering target view exited
-    // iteration mode through wipe_iter_state, clearing every bracket and
-    // pushing an undo entry, admitted here because iter brackets are
-    // session-only (never serialized, outside the undo domain since
-    // 2026-09-10, excluded from the render recipe) so the write reached
-    // neither disk nor a render. THAT WIPE WAS DELETED with the ruling that
-    // iteration mode is TARGET-LEGAL (the record is at
-    // switch_active_audio_view_to, input_handler.cpp), so the admission
-    // rested on nothing but the persistent-mutation standard above by the
-    // time the keys themselves went. The former reasoning is kept because
-    // TWO OTHER GATES leaned on it (the history mode's allowlist below, and the
-    // local walk's frozen-stack premise) and both are re-derived by this
-    // history.
-    //
     // Bare 1 / 2 / 3 / 4, the ABSOLUTE selectors, one axis each (Source /
-    // Target / Warp / Phase Reset, architect 2026-10-14). They are
-    // admitted for exactly the reason `t` and `p` were, and by exactly the same
-    // argument: they RUN the `t`/`p` handler BODIES (switch_active_audio_view_to,
-    // switch_active_markers_view_to) and nothing else, so they reach no
-    // store write at all (the S->T iter wipe that was the one exception is
-    // deleted — see above). Nothing new to weigh.
+    // Target / Warp / Phase Reset, architect 2026-10-14), the axes' only
+    // keyboard road: PURE NAVIGATION, WRITING NO STORE AT ALL. They RUN the
+    // `t`/`p` handler BODIES (switch_active_audio_view_to,
+    // switch_active_markers_view_to) and nothing else, and those reach no
+    // store write — iteration mode is TARGET-LEGAL, so entering target view
+    // wipes nothing (switch_active_audio_view_to, input_handler.cpp).
     const bool is_view_selector =
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
@@ -332,17 +294,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // above — architect 2026-10-30, the roster and the on-screen keyboard the
     // two producers of every key.)
     // THE SAVE (architect 2026-08-07). It writes the state the tab already
-    // holds — it authors nothing — and the close prompt's Save answer already saved
-    // from a locked tab through the very same owner (the header's inconsistency
-    // note). Ctrl-exact, exactly the dispatch arm's own spelling. It carried
-    // the Save and Commit act in the `h` view from 2026-08-08 to 2026-10-10,
-    // when that act moved to Ctrl+Shift+S (below): publishing a checkpoint of
-    // the state the tab already holds authors nothing either, which is the
-    // same ruling that admitted the render chords.
+    // holds — it authors nothing — and the close prompt's Save answer saves
+    // from a locked tab through the very same owner (the header's consistency
+    // note). Ctrl-exact, exactly the dispatch arm's own spelling.
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
     // THE PUBLISH CHORD, Ctrl+Shift+S through its shared predicate, the `h`
-    // view's alone (architect 2026-11-17, send U), admitted for the save's
+    // view's alone (architect 2026-11-17), admitted for the save's
     // reason: a checkpoint, a pull's fast-forward or a check authors
     // nothing on this tab (a pull that changes the open piece asks first and
     // reopens it through the Revert road, which this gate admits too).
@@ -353,18 +311,16 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // and no engine setting, so the lock has nothing to protect from it.
     // Ctrl+Alt+R is the single render, or — with the iteration bit set — the
     // sweep; Ctrl+Alt+Shift+R is the miscellaneous-render cell. THE SAVE AND
-    // COMMIT ACT IS ADMITTED THROUGH ITS OWN CHORD INSTEAD — Ctrl+S from
-    // 2026-08-08, Ctrl+Shift+S since 2026-10-10 (is_publish above) — which
-    // changes nothing about this gate's answer: a save and a checkpoint publish
+    // COMMIT ACT IS ADMITTED THROUGH ITS OWN CHORD, Ctrl+Shift+S (is_publish
+    // above): a save and a checkpoint publish
     // the state the tab already holds and author nothing.
     // ONE ADMITTED ROUTE WRITES A STORE, and it is RATIFIED rather than merely
-    // tolerated (architect 2026-08-07, ruling on it as a named consequence of
-    // the reclassification): the ITERATION SWEEP's success tail wipes every
+    // tolerated (architect 2026-08-07): the ITERATION SWEEP's success tail wipes every
     // marker's iter bracket (wipe_iter_state).
     // The bit is global rather than per-tab, so a tab locked while iteration
     // mode already stood can reach that write. THE ARCHITECT'S THREE REASONS:
     // (1) iteration brackets are NEVER SAVED — session-only, outside the undo
-    // domain since 2026-09-10, excluded from the render recipe, so nothing the
+    // domain (2026-09-10), excluded from the render recipe, so nothing the
     // lock protects reaches disk; (2) the wipe MUTATES NO MARKER PERMANENTLY, clearing
     // session-only fields and leaving every authored position, tempo and label
     // exactly as it found them; and (3) the sweep LEAVES ITS OWN TRACE in the
@@ -378,18 +334,16 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
         (ctrl && alt && !shift && key == GuiKeys::R);
     const bool is_render_misc =
         (ctrl && alt && shift && key == GuiKeys::R);
-    // RESET TRIM (architect 2026-08-07, on its key since 2026-11-08):
+    // RESET TRIM (architect 2026-08-07; on its key 2026-11-08):
     // Shift+T, the PRESETS key's hold, maximizes the trim window back to the
     // full song. Trim is
     // BAND, not content (the header), so it is admitted, and its internal
     // behavior is untouched: the maximizer's identity guard, the setter's
     // deselect and the trim-mutation playback stop are all
     // the same code taking the same decisions. The term is named for the ACT
-    // rather than a key, which is what kept each of its moves (the last, to
-    // Shift+T on 2026-11-08) a spelling change here. The trim
-    // region toggle that was admitted beside it is deleted (2026-09-22).
+    // rather than a key, so a move of its key is a spelling change here.
     const bool is_trim_maximize = is_trim_reset_key(key, mods);
-    // BARE `t`, THE TRIM PRESETS LIST (architect 2026-10-28 night): the
+    // BARE `t`, THE TRIM PRESETS LIST (architect 2026-10-28): the
     // list's acts write the TRIM, which is band (the header's 2026-08-07
     // ruling, the maximizer's admission above), and the list's own
     // device-local file, never the piece — so the opener is admitted on a
@@ -398,7 +352,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // dispatch arm's own spelling.
     const bool is_trim_presets =
         (key == GuiKeys::T && !ctrl && !shift && !alt);
-    // BARE `w`, THE TRIM ARM LAMP (architect 2026-11-07, session 87): the
+    // BARE `w`, THE TRIM ARM LAMP (architect 2026-11-07): the
     // sweep it arms writes the TRIM, which is band (the header's 2026-08-07
     // ruling, the maximizer's admission above), so the lamp is admitted on a
     // locked tab and, the iteration gate falling through to this list, under
@@ -426,27 +380,26 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     const bool is_play_renders =
         (!ctrl && !shift && !alt && key == GuiKeys::L);
     // BARE `'` IS ADMITTED OUTSIDE THE `h` VIEW AND BLOCKED INSIDE IT
-    // (architect 2026-09-01, with the Load in place button's move to the
-    // history group): THE STATE SELECTS WHICH ACT THE CHORD IS, and the gate
+    // (architect 2026-09-01): THE STATE SELECTS WHICH ACT THE CHORD IS, and
+    // the gate
     // has to ask the same question the dispatch does. Outside the view `'`
     // OPENS THE RENDER PLAYER — the very act bare `l` above already runs on a
     // locked tab, and the player's own Load in place answers the lock for
     // itself, by key and by button, with kTabReadOnlyCard. Inside the view it
     // is the LOAD, which rewrites the whole authored state, and stays blocked
-    // exactly as it always was — the outermost refusal for that press, since
+    // — the outermost refusal for that press, since
     // the mode's allowlist admits the chord while the walk carries a member.
-    // The chord was blocked in BOTH states from the feature's birth, on its
-    // NAME rather than on its act; the arrows' lane term is the same shape's
-    // precedent (one chord, two acts, the state deciding which is admitted).
-    // THE FACE FOLLOWS: the Play renders button left
-    // redesign_button_enabled's read-only arm with `l`'s admission, and the
-    // Load in place button left it with this one — its lock term rides the
-    // history group's arm now, where it composes with the mode (app_state.h).
+    // The gate judges the act, not the chord's name; the arrows' lane term is
+    // the same shape (one chord, two acts, the state deciding which is
+    // admitted).
+    // THE FACE FOLLOWS: neither the Play renders button nor the Load in place
+    // button is in redesign_button_enabled's read-only arm — the latter's lock
+    // term rides the history group's arm, where it composes with the mode
+    // (app_state.h).
     const bool is_load_in_place_player =
         (!ctrl && !shift && !alt && key == GuiKeys::Apostrophe &&
          !app.history_mode.active);
-    // THE VALUE PAIR — Ctrl+Shift+J and Ctrl+J (2026-08-29; the copy on
-    // Ctrl+Shift+J since 2026-10-14, the jump on Ctrl+J since 2026-09-29) — is
+    // THE VALUE PAIR — Ctrl+Shift+J and Ctrl+J (2026-08-29) — is
     // admitted on the header's own standard: neither authors anything. The
     // copy composes the focused marker's resolved value and hands it to the
     // platform's clipboard; the jump switches the A/B tab, selects the
@@ -460,7 +413,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // lit exactly as it leaves both chords live.
     const bool is_copy_value          = is_copy_value_key(key, mods);
     const bool is_jump_to_value_source = is_jump_to_value_source_key(key, mods);
-    // BARE P, THE PHASE-RESET COPY (architect 2026-11-17, send U: "We should
+    // BARE P, THE PHASE-RESET COPY (architect 2026-11-17: "We should
     // allow copy in read-only, the copy phase resets button."), admitted on
     // the header's own standard, the value copy's beside it: it reads the
     // selected run's phase resets into the session clipboard and writes no
@@ -473,8 +426,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // THE ITERATION LOCK INHERITS THE ADMISSION (iteration_lock_key_blocked
     // falls through to this list).
     const bool is_phase_reset_copy = is_phase_reset_copy_key(key, mods);
-    // BARE `;`, THE SETTINGS PAGE (2026-10-21 for the editor it then opened,
-    // the header's ruling; the page since 2026-10-28): the page authors
+    // BARE `;`, THE SETTINGS PAGE (2026-10-28; the header's ruling): the page
+    // authors
     // nothing, its rows open the settings editor, whose own commit arms carry
     // the lock per key, and its value lists write a device key, never the
     // piece. Bare-exact, the dispatch arm's own
@@ -521,23 +474,18 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // (arm_redesign_press), so the button's long press refuses where the
     // chord refuses.
     // Ctrl+Z (undo) and Ctrl+Shift+Z (redo) — the whole family, alt binding
-    // nothing on it — are NOT on the allowlist: both drop at this gate. The
-    // old design admitted them because an undo entry
-    // may target the OTHER (writable) tab, deferring the real decision to
-    // do_undo / do_redo's per-entry target-tab peek. Under the gate-block,
-    // undoing from a read-only tab first requires switching to the writable
-    // tab (Ctrl+Tab) — accepted for gate legibility, so that authoring
-    // mutations stop uniformly at the gate. The target-tab peek in undo.cpp
-    // survives as a backstop for entries that outlive a mid-history lock.
+    // nothing on it — are NOT on the allowlist: both drop at this gate, so
+    // that authoring mutations stop uniformly there, though an undo entry
+    // may target the OTHER (writable) tab: undoing from a read-only tab
+    // first requires switching to the writable tab (Ctrl+Tab), accepted for
+    // gate legibility. The target-tab peek in undo.cpp (do_undo / do_redo)
+    // stands as a backstop for entries that outlive a mid-history lock.
     // Delete, `i`'s ON edge, `[` (the value drag lamp, 2026-10-11: on a locked
     // tab both flag drags refuse, so the lamp would arm nothing — Toggle
     // Value Drag greys with the verbs) and the phase-reset propagate's two
     // paste chords (Ctrl+P, Ctrl+Shift+P) are likewise absent (blocked
-    // here); `;` LEFT that list on 2026-10-21 (is_settings_
-    // editor above); `'` LEFT it on 2026-09-01 for a
-    // state-dependent entry of its own, blocked in the `h` view and admitted
-    // outside it (is_load_in_place_player above). The trim gesture left it on
-    // 2026-08-07 — see is_trim_maximize above.
+    // here); `'` has a state-dependent entry of its own, blocked in the `h`
+    // view and admitted outside it (is_load_in_place_player above).
     return !(is_o || is_open_project || is_revert_project ||
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
@@ -573,31 +521,26 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // IT IS THE ALLOWLIST ABOVE PLUS TWO DELTAS, NOT A SECOND COPY, which is what
 // keeps "everything the read-only lock refuses the iteration lock refuses too"
 // one statement rather than two lists that drift. THE GATE ASKS BOTH LISTS
-// (authoring_lock_drops_chord, below): the two locks COMPOSE since 2026-10-13
-// (authoring_locked, app_state.h — the lamp lights on a writable tab whatever
+// (authoring_lock_drops_chord, below): the two locks COMPOSE (2026-10-13;
+// authoring_locked, app_state.h — the lamp lights on a writable tab whatever
 // the other tab's bit, and a tab switch under it can stand on a locked one),
 // so a chord either list drops is dropped, the read-only sentence first. The
 // one chord the wider list must not eat under a lit lamp, bare `i`'s off
 // edge, is that list's own state-dependent admission (is_iteration_off_edge,
 // read_only_key_blocked above).
 //
-// DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, and
-// THREE MEMBERS wide since 2026-09-19 (bare `k` left it that day, the
-// paragraph below carrying its record; bare `t`/`p`, the individual axis
-// toggles, were deleted whole with their view lamps on 2026-09-15, so the
-// column switch's only remaining road is the selectors below — see the S/T
-// paragraph's retirement note further down): THE COLUMN SWITCH's four chords — the
+// DELTA (a) — WHAT THE ITERATION LOCK REFUSES THAT READ-ONLY ADMITS, THREE
+// MEMBERS: THE COLUMN SWITCH's four chords — the
 // ABSOLUTE VIEW SELECTORS, bare 1 / 2 / 3 / 4, which run the `t` and `p` handler
-// BODIES (unchanged; only their bare keys are gone) and so carry the column
-// with them (architect 2026-09-10: the mode is lit for the column you are IN,
-// which is also what retired the stamped column that stood beside the mode
-// bit for a few hours of that day) — THE
-// Ctrl+Shift+Tab PAIRED MARCH (architect 2026-09-10, re-ruled 2026-11-02:
+// BODIES and so carry the column
+// with them (architect 2026-09-10: the mode is lit for the column you are
+// IN) — THE
+// Ctrl+Shift+Tab PAIRED MARCH (architect 2026-11-02:
 // "walk both not useful under grid b/c grid is for localize troubleshooting
 // of phase or setting or warp" — grid iterations is for localized
 // troubleshooting of one phase reset, setting or warp, so walking both tabs
 // has no use there) — and BARE `o`, THE READ-ONLY TOGGLE, IN ITS LOCK
-// DIRECTION ALONE (architect 2026-09-10, that morning; narrowed 2026-10-13).
+// DIRECTION ALONE (architect 2026-10-13).
 // The padlock is the odd one out in what it protects: a lock writes no store
 // and pushes nothing, so the undo domain has no interest in it. What it keeps
 // is the ACTIVE tab's exclusion — the mode lights only on a writable tab
@@ -608,17 +551,14 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // lamp, `o` is the read-only lock's own way out — the reason that tab's
 // authoring cards name — and an unlock only widens what is reachable.
 //
-// (BARE `k`, ADD TO SELECTION, WAS A FOURTH MEMBER from 2026-09-10 until
-// 2026-09-19, and the architect retired it by NARROWING THE MODE instead. The
-// refusal's whole subject was the bound cells' reachability: a lit sticky ctrl
-// turned a PLAIN flag press into a MODIFIED one, and a modified press on a
-// Lower or Upper cell is the pointer's SILENT NO-OP, so with both lamps lit
-// the mode's own authoring surface could not be addressed by pointer at all.
-// The fold reaches the PAYLOAD BOX alone now (the `toggle` term at
-// run_marker_click_act, input_pointer.cpp), a cell's plain press survives the
-// lamp, and there is nothing left for the refusal to protect — so the chord
-// left this delta and the IconAddToSelection button left iteration_lock_greys
-// with it. THE TWO LAMPS STAND TOGETHER, which is what the pointer road onto a
+// (BARE `k`, ADD TO SELECTION, IS NO MEMBER (architect 2026-09-19, by
+// NARROWING THE MODE): a modified press on a Lower or Upper cell is the
+// pointer's SILENT NO-OP, so the sticky ctrl's fold reaches the PAYLOAD BOX
+// alone (the `toggle` term at run_marker_click_act, input_pointer.cpp), a
+// cell's plain press survives the lamp, and the mode's own authoring
+// surface stays addressable by pointer — nothing for a refusal to protect,
+// and the IconAddToSelection button is no member of iteration_lock_greys
+// either. THE TWO LAMPS STAND TOGETHER, which is what the pointer road onto a
 // multi-marker selection under the lamp wants: several markers barrel-pressed
 // on their flag boxes, and on glass this lamp is the fingertip's road to ctrl,
 // the S Pen's side button the other. Bare
@@ -628,7 +568,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // neither direction cards.)
 //
 // THE CLIPBOARD COPY, bare P, IS NO DELTA: the base admits it (architect
-// 2026-11-17, send U; is_phase_reset_copy, read_only_key_blocked), and this
+// 2026-11-17; is_phase_reset_copy, read_only_key_blocked), and this
 // gate inherits it — clipboard-only, it writes no store, no undo entry and
 // no dirty bit, nothing this lock protects. The two PASTES, Ctrl+P and
 // Ctrl+Shift+P, stay refused by the base, each rewriting a store and
@@ -642,12 +582,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // 2026-10-13: "allow iterations mode … on a tab if it does not have readonly
 // set, even if the other does").
 //
-// BARE `t`, THE S/T SWITCH, WAS A FIFTH MEMBER FROM 2026-09-13 TO 2026-09-15
-// (architect 2026-09-13: grid iterations lives in target view alone, so a
-// press that would cross back to source refused unconditionally — the mode's
-// own invariant means the only direction bare `t` could have was the refused
-// one). The architect deleted the key itself 2026-09-15 with its view lamp,
-// so there is nothing left for this delta to refuse.
 // Ctrl+Tab IS NOT ONE of them, and that is by construction rather than by
 // exception — the two tabs SHARE the warp and phase-reset stores, so a bracket
 // is common to both tabs and a plain switch can strand nothing.
@@ -661,19 +595,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // ROAD THIS GATE DOES NOT ANSWER, and it is refused a dispatch earlier
 // instead: the history vocabulary is claimed above this gate
 // (handle_history_mode_key, below), so the view's ENTRY carries the lock's
-// refusal at its own arm and nothing here can see the chord. (The brief that landed this lock expected four
-// other subtractions; each named a chord read-only was thought to admit and
-// does not. Re-greped at the base's body.)
+// refusal at its own arm and nothing here can see the chord.
 //
 // DELTA (b) — WHAT THE ITERATION LOCK ADMITS THAT READ-ONLY REFUSES, FIVE
-// entries since 2026-11-17 and each with its own reason (BARE `m` WAS ANOTHER
-// until 2026-09-10:
-// it was admitted as the one road that LEFT this mode by entering another,
-// enter_bpm_mode having run the same wipe the `i` toggle runs, and the
-// architect ruled that swap out the same evening — "we should card the exit,
-// because it is still one button automatically affecting the other" — so the
-// BPM opener (bare `m` then, Ctrl+B since 2026-09-15) falls to the base list,
-// which refuses it, and bare `i` is the only exit):
+// entries, each with its own reason. Bare `i` is the only exit: the BPM
+// opener, Ctrl+B, falls to the base list, which refuses it (architect
+// 2026-09-10: "we should card the exit, because it is still one button
+// automatically affecting the other"):
 //   * BARE `i` — the off edge. A lock that could not be left by the switch
 //     that entered it is a trap; the mode's own lamp stays live for exactly
 //     this reason (IconIter's face, app_state.h).
@@ -681,9 +609,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     mode's own authoring surface. The axis is AppState::addressed_cell:
 //     Lower or Upper runs the bound step or opens that cell's editor, while
 //     the payload axis is the TEMPO step or the payload editor, both of
-//     which push and both of which stay refused. The step
-//     ladder's two magnitudes are admitted together for the arrows (bare
-//     and ctrl, exactly the dispatch arm's own spelling) and Return
+//     which push and both of which stay refused. The arrows are admitted
+//     bare and ctrl alike (the ctrl form binds nothing, the dispatch arm
+//     being bare-exact) and Return
 //     admits its plain form alone. The bound EDITOR's own
 //     keys need no entry here: an open editor claims the keyboard above this
 //     gate (keyboard_modal_editor_active).
@@ -707,8 +635,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //     chord refuses at its own arm instead, a tie existing only where
 //     brackets do.
 //   * BARE `[` — THE VALUE DRAG LAMP (architect 2026-10-11): ADMITTED FOR
-//     ITS OWN CARD — under the lock the lamp is permanently lit (~01:45,
-//     value_drag_armed: every flag drag the value drag on the bound cells,
+//     ITS OWN CARD — under the lock the lamp is permanently lit
+//     (value_drag_armed: every flag drag the value drag on the bound cells,
 //     the mode's own authoring surface, value_drag_target admitting them and
 //     refusing the payload), so the arm changes nothing and answers with
 //     kValueDragIterationsCard, the undo pair's shape (a sentence about the
@@ -717,50 +645,39 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 //
 // THE FACES MIRROR IT BY HAND, exactly as they mirror the base, and the
 // ITERATION HALF OF THAT MIRROR HAS ONE OWNER (iteration_lock_greys,
-// app_state.h — the membership the ENABLED ARMS read, and they alone since
-// 2026-09-12, when the refusal-reason tooltip lines went: a greyed button
+// app_state.h — the membership the ENABLED ARMS read, and they alone: a
+// greyed button
 // names its own act, the grey is the message, and the reason lives at the
 // key's card). Its members are THREE of the marker verbs — the DROP, DELETE
-// and DISABLE buttons (TOGGLE INHERIT
-// left them 2026-09-19 on the twin rule — its shifted chord Ctrl+Shift+N, the
+// and DISABLE buttons (TOGGLE INHERIT is none, on the twin rule — its
+// shifted chord Ctrl+Shift+N, the
 // TIE, is admitted above, so the button stays lit wherever a tie or an untie
-// is possible and its arm composes the fork itself; FLATTEN, which passed
-// through the verbs that same day on its way to the icon row's iteration
-// group, was never one either — its face reads
+// is possible and its arm composes the fork itself; nor is FLATTEN — its
+// face reads
 // tempo_flatten_actionable, which composes authoring_locked itself, so the
 // grey falls out of the act's own predicate with no membership here), the
-// Toggle History View button, the
-// Up/Down pair on a PAYLOAD axis, Left/Right in the marker
-// lane, and — since
-// 2026-09-10 — THE VIEW PAIRS' FOUR SELECTORS (two radio pairs since
-// 2026-10-14: bare 1 / 2 the audio view, bare 3 / 4 the column switch, a
-// press on the lit member selecting the other since 2026-10-23 night), THE
-// PADLOCK, delta (a)'s third member (WALK
-// BOTH TABS was its second until that button's deletion on 2026-09-14, and ADD
-// TO SELECTION was its fourth until 2026-09-19, when the narrowed sticky ctrl
-// retired that refusal and this membership lost the button with it), and BPM
-// ITERATIONS, which left delta (b) that evening. (THE TOGGLE MARKER COLUMN AND TOGGLE
-// AUDIO VIEW LAMPS were members here too, through 2026-09-15 — bare `p`'s and
-// bare `t`'s own faces (the latter since 2026-09-13) — and left the
-// membership whole when the architect deleted both buttons with their
-// group.) The members whose chords the base admits or never sees compose no
+// PASTE key, the Toggle History View button, the
+// Up/Down pair and the EDIT key on a PAYLOAD axis, Left/Right in the marker
+// lane, THE VIEW PAIRS' FOUR SELECTORS (two radio pairs, 2026-10-14: bare
+// 1 / 2 the audio view, bare 3 / 4 the column switch, a press on the lit
+// member selecting the other), THE PADLOCK, delta (a)'s third member, and
+// BPM ITERATIONS (2026-09-10). The members whose chords the base admits or
+// never sees compose no
 // read-only half (the padlock forks on the active tab's bit for its lock
 // direction alone), and the members that do compose one do it for their act.
 // Undo and Redo take the mode through
-// history_step_actionable instead, their sentence naming the act. BPM
-// ITERATIONS IS A MEMBER SINCE 2026-09-10, having been the other exit road
-// until the swap it performed was ruled out, and GRID
-// ITERATIONS — the only exit left — is lit under the lamp and otherwise asks
+// history_step_actionable instead, their sentence naming the act. GRID
+// ITERATIONS — the only exit — is lit under the lamp and otherwise asks
 // the ACTIVE tab's read-only bit (architect 2026-10-13), the base's own
 // answer for its ON edge. A change here needs a hand edit there.
 //
 // TWO ROSTER SURFACES THE GATE EATS ANSWER IT IN THEIR OWN WAY. THE VIEW
-// PAIRS' four selectors ARE in the membership since 2026-09-10, so their
+// PAIRS' four selectors ARE in the membership (2026-09-10), so their
 // PRESS dies at arm_redesign_press's disabled line as a standing overlay's
-// does and their FACE is the icon row's disabled face; their hint names the
-// act, so this gate's card is the only thing that SPEAKS the reason (the
+// does and their FACE is the top icon row's disabled face; their hint names
+// the act, so this gate's card is the only thing that SPEAKS the reason (the
 // account is at their arm in redesign_button_enabled). The propagate
-// family's surface is the COPY / PASTE duo since 2026-11-08: COPY's face is
+// family's surface is the COPY / PASTE duo: COPY's face is
 // the copy's — admitted by the base — so it stays lit under the lamp, and
 // PASTE greys on the membership (iteration_lock_greys).
 bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
@@ -769,16 +686,14 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
     // DELTA (a), ahead of every admission: the view selectors (bare 1/2/3/4,
-    // two radio pairs since 2026-10-14 — 1 / 2 the audio view, 3 / 4 the
-    // column switch, every press moving its axis since the pop of 2026-10-23
-    // night, the key for the standing value selecting the other; bare `t`/`p`, the two individual axis toggles, were
-    // deleted whole with their view lamps on 2026-09-15, so the selectors are
-    // the only road now), BARE `o` ON A WRITABLE TAB (the lock direction alone, the
+    // two radio pairs — 1 / 2 the audio view, 3 / 4 the
+    // column switch, every press moving its axis, the key for the standing
+    // value selecting the other; the column switch's only road), BARE `o` ON A
+    // WRITABLE TAB (the lock direction alone, the
     // header; on a locked tab it falls through to the base, which admits the
     // unlock) and the paired march. Bare-exact on all four and
     // ctrl-and-shift exact on the march, exactly as their dispatch arms spell
-    // them. (BARE `k` STOOD HERE TOO until 2026-09-19, and the header carries
-    // why it left.)
+    // them. (Bare `k` is no member; the header says why.)
     if (!alt && !ctrl && !shift &&
         ((key == GuiKeys::O && !active_view_state(app).read_only) ||
          key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
@@ -794,8 +709,8 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // keeps the plain Ctrl+N, the inherit toggle, out of this admission.
     if (key == GuiKeys::N && ctrl && shift && !alt) return false;
     // THE VALUE DRAG LAMP, bare-exact as its dispatch arm is (2026-10-11),
-    // admitted for its own card: the lamp is permanently lit under the mode
-    // (~01:45), so the arm cards that it is (delta (b)).
+    // admitted for its own card: the lamp is permanently lit under the mode,
+    // so the arm cards that it is (delta (b)).
     if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) return false;
     // THE BOUND AXIS, and it is a STATE-DEPENDENT admission like the base's
     // one (the arrows' lane term): the same chords mean two different acts and
@@ -803,8 +718,9 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     const bool bound_axis = (app.addressed_cell == MarkerCell::Lower ||
                              app.addressed_cell == MarkerCell::Upper);
     if (bound_axis) {
-        // Up / Down at both magnitudes — bare and ctrl — which is
-        // `!alt && !shift`, the dispatch arm's own test.
+        // Up / Down bare, and ctrl with it — `!alt && !shift`; the ctrl
+        // form binds nothing (the dispatch arm is bare-exact,
+        // input_handler.cpp), so admitting it only lets it fall silent there.
         if ((key == GuiKeys::Up || key == GuiKeys::Down) && !alt && !shift)
             return false;
         // Return, plain only, the editor-open arm's own test.
@@ -815,9 +731,9 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
 }
 
 // THE AUTHORING LOCK'S VERDICT, card-free — either lock's list dropping the
-// chord drops it; the two can stand together since 2026-10-13
-// (authoring_locked, app_state.h).
-// ONE READER (re-derived 2026-10-30): the lock's verdict-and-card
+// chord drops it; the two can stand together (2026-10-13;
+// authoring_locked, app_state.h).
+// ONE READER: the lock's verdict-and-card
 // (authoring_lock_refuses_chord), which on_key's gate and the car's undo /
 // redo road both ask.
 bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
@@ -979,9 +895,9 @@ void GuiInputHandler::run_iter_tie_toggle() {
 // every closer calls this rather than clearing fields themselves. Idempotent, so
 // a closer may fire with the mode already down.
 //
-// THE CALLER INVENTORY, and the ONE authoritative site for it (re-derived by
-// grep 2026-10-26) — SEVEN callers, every one of which can run with a view
-// up since the render player opens over it (2026-10-25):
+// THE CALLER INVENTORY, and the ONE authoritative site for it (derived by
+// grep) — EIGHT callers, every one of which can run with a view
+// up, the render player opening over it (2026-10-25):
 //   * handle_history_mode_key — bare `h`, the toggle's close arm;
 //   * on_history_prefetch_ready — THE ONE CLOSER THAT IS NOT A USER ACT
 //     (2026-08-09): a scan that finishes FAILED while the view stands ends the
@@ -989,43 +905,34 @@ void GuiInputHandler::run_iter_tie_toggle() {
 //     history. It is also the one closer that can fire with a QUESTION'S PAGE
 //     up (below);
 //   * run_history_commit — the Save-and-Commit act, once its save has landed;
+//   * execute_history_pull — the pull, on its Pulled ending and its three
+//     late failures (the walk just changed under the view);
 //   * run_history_revert — bare `v`, which rewrites the state the now side was
 //     measured against and so must not leave the lane describing it;
 //   * load_history_commit_in_place and load_history_local_entry_in_place —
-//     the mode's own `'`, one act per walk (the local one back with the
-//     session walk, 2026-10-26);
+//     the mode's own `'`, one act per walk (the local one the session
+//     walk's, 2026-10-26);
 //   * load_render_entry_in_place — the RENDER PLAYER's load, ONE caller
 //     (confirm_load_in_place's player arm), which RUNS WITH THE VIEW
-//     STANDING since 2026-10-25 (architect, "admit both": bare `l` opens the
+//     STANDING (architect 2026-10-25, "admit both": bare `l` opens the
 //     player over the view as Ctrl+O opens the picker), tearing the view
 //     down as a reopen does; with the view down its call is the idempotent
 //     no-op this function's early return exists for, placed at the mutator
-//     so the close travels with the act. (The player's opener refused in
-//     the mode until then.)
-// There is no pointer closer, and no closer outside this file's two acts, its
-// three loads and the prefetch arrival hook.
+//     so the close travels with the act.
+// There is no pointer closer, and no closer outside this file.
 //
-// WHAT IT DOES NOT DO ANY MORE IS TOUCH THE WINDOW (architect 2026-08-18, "this
-// removes machinery"). From 2026-08-05 this was also the ONE site that put the
-// EDITOR'S NAVIGATION BAND back — the entry stashed the live viewport, zoom and
-// playhead and this exit restored them, on the reasoning that the view is a
-// VIEWER and a review's pans and zooms are the review's. The architect reversed
-// that whole ownership: the window is the USER'S throughout, entry and exit
+// IT DOES NOT TOUCH THE WINDOW (architect 2026-08-18, "this removes
+// machinery"): the window is the USER'S throughout, entry and exit
 // included, so the view leaves it exactly where the review left it and each A/B
-// tab keeps whatever band it had. THE THREE LOAD-IN-PLACES ARE UNAFFECTED, and
-// the asymmetry that made this worth stating is GONE: all three route through
+// tab keeps whatever band it had. THE THREE LOAD-IN-PLACES all route through
 // apply_recipe_in_place (2026-08-24), which writes the two marker columns
 // and the engine block and NOTHING ELSE — no tab band, no view bits, no clamps
-// — so the COMMIT load applies no band either now, and there is no restore under or
-// over any of them. AppState::HistoryMode's field block owns the ruling and the
-// record of what went.
-//
-// (THIS OWNER CLOSED NO DROPDOWN, a decision from 2026-08-09 until the last
-// popup, the Settings menu, retired 2026-10-21.)
+// — so there is no restore under or
+// over any of them. AppState::HistoryMode's field block owns the ruling.
 void GuiInputHandler::close_history_mode() {
     if (!app.history_mode.active) return;
-    // (THE EXIT'S OVERLAY HIDE IS DELETED, architect 2026-08-19, with the
-    // walk step's and the reading switch's — THE MODE'S THREE OWN EDGES as one
+    // (NO OVERLAY HIDE, architect 2026-08-19, here or at the walk step or the
+    // reading switch — THE MODE'S THREE OWN EDGES as one
     // class: this view never touches the trim, so its edges have nothing of
     // the trim's to put away.)
     // THE SESSION COUNTER SURVIVES THE RESET, alone among the fields, because it
@@ -1038,13 +945,8 @@ void GuiInputHandler::close_history_mode() {
     // NOTHING OF THE VISIT'S POSITION OUTLIVES IT (architect 2026-11-10):
     // the next entry opens on the most recent commit
     // (open_history_mode_fresh), so the exit remembers no viewed member.
-    // (THE PARKED BAND'S RESTORE IS DELETED — architect 2026-08-18, "this
-    // removes machinery". From 2026-08-05 this exit read the entry's stashed
-    // viewport / zoom / playhead trio and its audio view out before the
-    // whole-struct reset destroyed them and applied them after, translating the
-    // two frame-shaped values through the warp map when a `t` inside the view
-    // had flipped the domain and re-landing a surviving selection on its focus
-    // over the top. THE VIEW OWNS NO NAVIGATION STATE now — the window is the
+    // (NOTHING IS RESTORED — architect 2026-08-18, "this removes machinery".
+    // THE VIEW OWNS NO NAVIGATION STATE — the window is the
     // user's across both edges, which is what lets one A/B tab stand framed
     // wide while the other stands zoomed — so there is nothing to read out,
     // nothing to translate and nothing to put back. The field block at
@@ -1055,18 +957,14 @@ void GuiInputHandler::close_history_mode() {
 
     // AND THE LIVE LANE IS REPUBLISHED IN THIS SAME PRESS (architect 2026-08-07,
     // the FOURTH REPUBLISHING EDGE — so the close is symmetric with the three
-    // in-view ones, and the exit's own one-tick blank, recorded at the drop as
-    // that fix's remainder for a few hours, is closed). THE MODE IS ALREADY DOWN at this point (the
+    // in-view ones and shows no one-tick blank). THE MODE IS ALREADY DOWN at
+    // this point (the
     // whole-struct reset ran above), so the rebuild takes the flag cache's LIVE
     // arm and publishes the session's own markers, their hit rects and their
     // stems — exactly what the leaving view owes the editor.
     //
-    // IT IS THE EXIT'S ONLY REBUILD since 2026-08-18: the parked-band restore
-    // that used to sit above it ran a synchronous rebuild of its own whenever
-    // it MOVED something (apply_zoom_to_start's), so this call had to be placed
-    // strictly below it or be the one erased. With no restore left there is
-    // nothing above it and nothing to order it against — the exit writes no
-    // viewport at all now.
+    // IT IS THE EXIT'S ONLY REBUILD: the exit writes no viewport at all, so
+    // there is nothing above it to order it against.
     //
     // THE LOAD-IN-PLACE CLOSERS PAY A REDUNDANT REBUILD HERE and are
     // deliberately not special-cased: each calls this closer on the first line
@@ -1083,11 +981,6 @@ void GuiInputHandler::close_history_mode() {
     // rect. It covers the republication's own damage too, which is why the
     // rebuild above emits its own and nothing here has to widen for it.
     viewport.invalidate_all();
-
-    // (THE DEFERRED PREFETCH KICK'S FLUSH stood here from 2026-08-07 and is
-    // DELETED 2026-08-29 with the bit it read: no route can park one — the
-    // funnel's own comment carries the kickers' proof — so this was a
-    // flush of a bit nothing could ever set.)
 }
 
 // DROP THE LANE'S PUBLISHED CONTENT AT EVERY MODE EDGE — all THREE members of
@@ -1096,7 +989,7 @@ void GuiInputHandler::close_history_mode() {
 // switch replaces the lane's content exactly as a step does — one edge whether
 // it arrived from bare `g`, the walk lamp's click or bare `u`, all of them
 // going through set_history_delta): the pointer stash (flag_hit_rects), the stem
-// painter's stash (marker_stems — paint-only since the stems-inert ruling,
+// painter's stash (marker_stems — paint-only by the stems-inert ruling,
 // 2026-08-12, but its `marker_index` still changes domain across the edge and
 // the playhead's stem-suppression decider reads it) and the diff-flag LIST
 // their indices name.
@@ -1132,24 +1025,19 @@ void GuiInputHandler::close_history_mode() {
 // empty the answer to every lane hit and every cycle step is "nothing", which is
 // the correct cold answer rather than a wrong warm one. The cost is a frame's
 // stems, absent instead of stale — and the edge's own full-window damage is
-// already repainting. (That span is now a handful of LINES rather than a frame at
-// every one of the four edges; the next paragraph is the whole of it.)
+// already repainting. (That span is a handful of LINES at every one of the
+// four edges; the next paragraph is the whole of it.)
 //
-// A SYNCHRONOUS FLAG REBUILD AT EVERY EDGE IS EXACTLY WHAT THEY DO NOW
-// (architect 2026-08-07), SUPERSEDING this site's own "heavier than a one-tick
-// window warrants" weighing — the window is VISIBLE. Nothing else in a step or a
-// reading switch republishes the lane inside the press: each painted a BLANK
+// A SYNCHRONOUS FLAG REBUILD AT EVERY EDGE (architect 2026-08-07): the window
+// is VISIBLE. Nothing else in a step or a
+// reading switch republishes the lane inside the press — no edge writes a
+// viewport — so without it each would paint a BLANK
 // lane for a frame before the arriving commit's flags landed, and a blank frame
-// between two contents is a flicker whatever removing it costs. (That was true
-// even while those edges framed the viewport, the walk being read at full zoom
-// out where the framing moved nothing; since 2026-08-08 they write no viewport
-// at all — and since 2026-08-18 no edge does — so the call below is the only
-// republication any of them has.) All four edges
-// now call republish_history_lane_now (below) as their last act — the three
+// between two contents is a flicker whatever removing it costs. All four edges
+// call republish_history_lane_now (below) as their last act — the three
 // in-view ones as the tail of the press, the EXIT after the whole-struct reset,
 // where the mode is already down and the rebuild publishes the LIVE lane the
-// editor is coming back to (that fourth call landed hours after the first three,
-// closing the one window this comment recorded as the fix's remainder). So the
+// editor is coming back to. So the
 // lane's new content is drawn and staged inside the press and lands at the
 // very next frame, surface and stash together, with no blank frame between the
 // two contents, and the ENTER and LEAVE edges are symmetric. The one sub-frame
@@ -1157,19 +1045,17 @@ void GuiInputHandler::close_history_mode() {
 // drop has emptied the promoted pair and the promote has not run): the cold
 // answer below, never a stale one, over pixels the frame is about to replace.
 //
-// THE DROP STAYS — as that rebuild's own pre-step, and as the COLD ANSWER for the
+// THE DROP IS that rebuild's own pre-step, and the COLD ANSWER for the
 // frames the rebuild cannot serve: maybe_rebuild_flag_cache refuses while the
 // audio is loading or absent and before the first plate has published, and an
 // edge reached in any of those states leaves the emptied lane exactly as
-// described. So what died is the ROUTINE one-tick window, not the empty answer
-// itself: every reader above still has to answer "nothing" correctly, and still
-// does.
+// described. So the empty answer is not confined to the press: every reader
+// above has to answer "nothing" correctly, and does.
 //
 // A VIEW SWITCH INSIDE THE MODE IS DELIBERATELY NOT ONE OF THESE EDGES
-// (2026-08-04, when `t` / `p` / 1 / 2 / 3 joined the keyboard allowlist; the
-// four bare selectors 1 / 2 / 3 / 4 are its whole keyboard road since 2026-09-15):
+// (2026-08-04; the four bare selectors 1 / 2 / 3 / 4 its whole keyboard road):
 // it already ends in kick_waveform_sync, whose owed rebuild rebuilds the flag
-// cache before the next frame paints — the same republication every edge now
+// cache before the next frame paints — the same republication every edge
 // reaches for, arrived at as part of the switch itself — so there is no frame
 // to protect. THE SWITCH FLUSHES THAT OWED REBUILD ITSELF (2026-10-13, the
 // selector arm at on_key's bare 1 / 2 / 3 / 4), the way republish_history_lane_now
@@ -1187,8 +1073,8 @@ void GuiInputHandler::close_history_mode() {
 // does change domain — warp store index to phase-reset store index — so the
 // mode is asking no more of that route than the live columns already do.)
 //
-// AND THE A/B TAB SWITCH JOINS THAT CLASS RATHER THAN THIS ONE (2026-08-18,
-// when Ctrl+Tab was admitted inside the view). BOTH HALVES OF THE VIEW
+// AND THE A/B TAB SWITCH JOINS THAT CLASS RATHER THAN THIS ONE
+// (2026-08-18). BOTH HALVES OF THE VIEW
 // SWITCH'S ARGUMENT HOLD FOR IT, checked rather than assumed: the mode still
 // owns the lane on both sides, so `marker_index` indexes
 // app.history_mode.flags throughout and no domain changes; and
@@ -1208,9 +1094,8 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 }
 
 // REPUBLISH THE LANE INSIDE THE PRESS — the last act of ALL FOUR mode edges
-// (architect 2026-08-07, the step flicker's fix, extended to the exit the same
-// day: the entry, the walk step, the reading switch and the close; the drop above
-// carries the argument and the weighing this superseded).
+// (architect 2026-08-07: the entry, the walk step, the reading switch and the
+// close; the drop above carries the argument).
 //
 // IT IS THE SAME CALL AT ALL FOUR, and WHICH lane it publishes falls out of where
 // each caller puts it rather than out of an argument here: the three in-view
@@ -1232,30 +1117,21 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // edge has just DROPPED the list (drop_lane_stash_across_history_edge), and
 // its keyboard and click readers (AppState::HistoryMode::flags names them)
 // in a later event of the same drain must find the arriving list, not the
-// emptied one — the drop and the refill stay one swap inside the press, as
-// they were while every kick rendered inline. There is
-// deliberately NO flag-only reach: the `p` column toggle faced this exact choice
-// on 2026-07-30 and joined the view-switch class rather than growing a second
-// kick, on the reasoning that the redundant plate render is one discrete
+// emptied one — the drop and the refill stay one swap inside the press. There
+// is deliberately NO flag-only reach: the column switch (`p`'s body) is of
+// the view-switch class rather than a second kick (2026-07-30), the
+// redundant plate render being one discrete
 // keypress's cost — and the mode is asking no more of that route than the live
 // columns already do.
 //
-// NO EDGE PAYS A DOUBLE RENDER ANY MORE, and the cost is recorded because the
-// shape it argued for is what stayed. An edge whose viewport write MOVED
-// something had already kicked a plate render of its own, so the press rendered
-// the plate twice (the flag cache did not rebuild twice — it is
-// fingerprint-guarded, and the first kick had published the arriving lane).
-// From 2026-08-08 that was two edges, the ENTRY's framing and the exit's
-// parked-band restore, and on 2026-08-18 both writes were deleted with the
-// view's navigation-state ownership — so no edge writes a viewport at all and
-// this call is every edge's only render. ONE SHAPE AT EVERY EDGE is what was
-// worth the redundancy, and skipping the call by testing whether a write moved
-// would have made the fix depend on an inference about another function's
-// internals. The load-in-place closers pay a redundant rebuild for a different
+// NO EDGE PAYS A DOUBLE RENDER: no edge writes a viewport, so this call is
+// every edge's only render. ONE SHAPE AT EVERY EDGE, with no test of whether
+// another function's write moved something. The load-in-place closers pay a
+// redundant rebuild for a different
 // reason, stated at the exit (which owns the closer inventory).
 //
-// THE ORDER IS FIXED at every caller, and it is ONE rule at all four now that
-// the view writes no viewport anywhere: this call comes LAST of the acts that
+// THE ORDER IS FIXED at every caller, ONE rule at all four, the view writing
+// no viewport anywhere: this call comes LAST of the acts that
 // change what the lane should show. In view that is the state write (the walk
 // index, or the source/reading pair), the focus clear and the stash drop,
 // THEN this; at the exit it is the whole-struct reset, the stash
@@ -1263,11 +1139,8 @@ void GuiInputHandler::drop_lane_stash_across_history_edge() {
 // `history_mode.active` decides which arm of the flag cache runs, and the
 // index, focus and compare fields decide what that arm publishes, so a call
 // placed above any of them publishes the state the press is leaving.
-// THERE IS NO VIEWPORT PREREQUISITE LEFT (2026-08-18): the entry's framing and
-// the exit's parked-band restore were the two writes this had to sit below
-// (each ran a synchronous rebuild of its own, so a call placed above one was
-// the one erased), and both are deleted with the view's navigation-state
-// ownership. Only `viewport.invalidate_all()` follows this call at every
+// THERE IS NO VIEWPORT PREREQUISITE (2026-08-18), the view owning no
+// navigation state. Only `viewport.invalidate_all()` follows this call at every
 // caller, damage being the last thing every edge does.
 void GuiInputHandler::republish_history_lane_now() {
     viewport.kick_waveform_sync();
@@ -1281,10 +1154,8 @@ void GuiInputHandler::republish_history_lane_now() {
 // a new commit walk, and a NOW SIDE CAPTURED AT THIS INSTANT, which is what
 // makes the deltas describe the state the user is actually looking at.
 //
-// ONE CALLER since 2026-08-05 — bare `h`, the toggle's open arm. The second was
-// the commit act, which re-entered the mode in place on the checkpoint it had
-// just made; the architect's ruling that day made the act CLOSE the view
-// instead, so the re-entry is gone. This stays a function rather than eight
+// ONE CALLER — bare `h`, the toggle's open arm (the commit act CLOSES the
+// view, architect 2026-08-05). This stays a function rather than eight
 // lines inside the toggle because it is the ENTRY OWNER: everything a visit is
 // made of is here, so a future entry inherits the whole shape — walk, index,
 // cleared focus, generation bump, lane-stash drop — instead of
@@ -1297,9 +1168,8 @@ void GuiInputHandler::republish_history_lane_now() {
 // stands (local_index, below).
 //
 // A BOOTSTRAP THAT REFUSES OPENS THE VIEW ANYWAY, ON THE LOCAL WALK (architect
-// 2026-09-04, from the car on the first real road test: the tablet carries no
-// git binary, `h` answered `could not ask git which clone holds '550 - 1'` and
-// nothing opened, and he does not need git history there). LOCAL HISTORY IS THE
+// 2026-09-04: where git cannot answer he does not need git history, and `h`
+// must still open). LOCAL HISTORY IS THE
 // FALLBACK — the session's own undo/redo timeline as states — and everything
 // that walk supports works exactly as it does when bare `g` chooses it:
 // `,`/`.`, the diff lane, `'`, bare `v`, the paired march, Ctrl+Tab.
@@ -1309,18 +1179,18 @@ void GuiInputHandler::republish_history_lane_now() {
 // (history_remote_walk_available, app_state.h). SO THE ENTRY RAISES NO CARD —
 // init() has already put its one line on stderr naming the reason, and the lit
 // local lamp beside a greyed Save is the cue that this visit has no git. (The
-// tablet has its own clone since 2026-09-27, so this fallback is for a source
+// tablet has its own clone, so this fallback is for a source
 // outside every clone, or a clone that is not the projects home.)
 //
-// THE ENTRY CHECKS GITHUB WHERE NO ANSWER STANDS (architect 2026-09-27's
-// every-entry rule, narrowed 2026-10-28 on his "every time I pop in and out of
-// the history it says checking"): a visit that bootstrapped a clone dispatches
+// THE ENTRY CHECKS GITHUB WHERE NO ANSWER STANDS (architect 2026-10-28: "every
+// time I pop in and out of the history it says checking"): a visit that bootstrapped a clone dispatches
 // the GitHub check (dispatch_github_check) when the status reads UNCHECKED (no
 // reading: the project's own check could not classify, or a checkpoint ended
 // WriteFailed before taking one) or OFFLINE (the link may have come up since —
 // the view's Save key asks again on the same reasoning, run_publish_chord,
 // architect 2026-09-28). UP TO DATE, AHEAD, BEHIND, DIVERGED and REFUSED
-// STAND, and row 8's segment says "as of the last check" truthfully, because
+// STAND, and the status bar's walk line says "as of the last check"
+// truthfully, because
 // every act of this program that can move either side writes its own reading:
 // the PROJECT OPEN dispatches the check (main.cpp's open arm); the CHECKPOINT'S
 // completion writes the act's own fetched reading
@@ -1330,10 +1200,11 @@ void GuiInputHandler::republish_history_lane_now() {
 // met by the act, not the word: the checkpoint fetches first and refuses on a
 // moved remote (RemoteMoved), the pull's plan refuses a branch no longer
 // strictly behind the refs the last fetch left (plan_history_pull's Moved).
-// The cost is a stale word on row 8 until the next act or project open.
+// The cost is a stale word in the walk line until the next act or project
+// open.
 void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
-    // prefetch store now, and a store describing another source, another
+    // prefetch store, and a store describing another source, another
     // projects_repo or a branch tip that has moved would answer this visit out
     // of the wrong history. It runs BEFORE the bind below, so init() binds to
     // the fresh generation — and before `active` goes up, so the kick is not
@@ -1351,10 +1222,8 @@ void GuiInputHandler::open_history_mode_fresh() {
         // stash dropped, the lane republished, the window damaged), so routing
         // through it would only run that work twice.
         //
-        // THE CARD THIS ARM USED TO RAISE IS GONE (2026-08-30 to 2026-09-04):
-        // it answered a press that opened nothing, and this press opens the
-        // view. The fact keeps its other reporters (kHistoryUnavailable,
-        // history_diff.h, enumerates them).
+        // NO CARD: this press opens the view. The fact has its other
+        // reporters (kHistoryUnavailable, history_diff.h, enumerates them).
         fresh.source = GuiHistoryWalkSource::Local;
     }
     // THE SECOND WALK, BOUND TO THE SAME NOW SIDE (2026-08-07). It costs no git
@@ -1364,14 +1233,13 @@ void GuiInputHandler::open_history_mode_fresh() {
     // reason that matters: the now side it takes is the session's own capture,
     // so the two walks cannot come to disagree about what "now" is.
     //
-    // IT CARRIES THE MODE WHERE THE COMMIT SIDE CANNOT (architect 2026-09-04,
-    // superseding "it rides the mode, it does not carry it"). Entry was gated
-    // on the COMMIT side's HEADER resolving — which repository, which piece,
-    // which source — and never on how many members the walk turned out to have,
-    // so a piece whose every checkpoint refuses the strict load opened just as
-    // one with a hundred good ones did, beside a blank Remote lane (architect
-    // 2026-08-09; the empty walk's ruling is at GuiHistoryDiff::init). NOW THE
-    // HEADER'S OWN REFUSAL OPENS TOO, on this walk alone, which is what makes
+    // IT CARRIES THE MODE WHERE THE COMMIT SIDE CANNOT (architect 2026-09-04).
+    // The commit walk may be empty — a piece whose every checkpoint refuses
+    // the strict load opens just as one with a hundred good ones does, beside
+    // a blank Remote lane (architect 2026-08-09; the empty walk's ruling is at
+    // GuiHistoryDiff::init) — and where the COMMIT side's HEADER itself
+    // refuses (which repository, which piece, which source) the view opens on
+    // this walk alone, which is what makes
     // `h` a working key where there is no git at all — the fallback's ruling is
     // at the head of this owner.
     fresh.local.init(app, fresh.session.now_side());
@@ -1385,8 +1253,8 @@ void GuiInputHandler::open_history_mode_fresh() {
     // an assignment the entry makes rather than a default the initializer could
     // carry: only a bound walk knows where its live member is.
     fresh.local_index = fresh.local.live_index();
-    // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, with playback's
-    // removal from the view): the mode consumes bare Space and never runs a
+    // THE ENTRY STOPS A LIVE AUDITION (architect 2026-08-05, the view having
+    // no playback): the mode consumes bare Space and never runs a
     // scrub act, so a session still running from before `h` could not be stopped
     // from inside — it would play on under a view that offers no transport at
     // all. THE OWNER IS THIS ENTRY OWNER rather than the toggle's arm, for the
@@ -1396,7 +1264,7 @@ void GuiInputHandler::open_history_mode_fresh() {
     // UNAVAILABLE return, so a mode that does not open silences nothing.
     playback_lifecycle.stop_playback_if_playing();
     // THE ENTRY PUTS OUT TRIM, ADD SEL, FOLLOW AND RESTR (architect
-    // 2026-11-17, send U; GuiInputHandler::darken_zoom_lamps) — an edge of
+    // 2026-11-17; GuiInputHandler::darken_zoom_lamps) — an edge of
     // its own, the entry moving no camera: the view arrives with no sweep
     // armed and no camera posture lit.
     // In here TRIM, FOLLOW and RESTR stay dark (their keys off the view's
@@ -1415,16 +1283,8 @@ void GuiInputHandler::open_history_mode_fresh() {
     // because this is the one entry owner, so a second caller inherits it.
     fresh.generation = app.history_mode.generation + 1;
     // (THE ENTRY PARKS NOTHING AND FRAMES NOTHING — architect 2026-08-18, "this
-    // removes machinery". From 2026-08-05 it stashed the live viewport, zoom,
-    // playhead and audio view here for close_history_mode to put back, and then
-    // opened the visit at FULL ZOOM OUT through a framing owner of its own —
-    // the whole song in the window, the reading position a checkpoint review
-    // starts from, and THE ONLY EDGE THAT FRAMED since 2026-08-08. Both are
-    // deleted: the view owns no navigation state at all, so it opens over
-    // whatever window the user is already in and leaves it there. That framer
-    // outlived the entry by one caller and is deleted with it later the same
-    // day, the trim bar's framing gesture having gone back to the ordinary
-    // span framing.)
+    // removes machinery": the view owns no navigation state at all, so it
+    // opens over whatever window the user is already in and leaves it there.)
     app.history_mode = std::move(fresh);
     // THE GITHUB CHECK, at an entry that bootstrapped a clone WHERE NO ANSWER
     // STANDS (the ruling and its proof are at the head of this owner):
@@ -1469,15 +1329,11 @@ void GuiInputHandler::open_history_mode_fresh() {
 // checkpoint completion's re-warm runs after run_history_commit has already
 // closed the view, which bare `h` then refuses to reopen while the bit
 // stands; both of the pull's kicks run straight after it closes any
-// standing view, on the GUI thread, in the same call. (A DEFERRAL BIT stood
-// here from 2026-08-07 to 2026-08-29 for the case none of the kickers can
-// produce — a kick parked rather than run because a visit is BOUND to the store's
-// generation and a restart would clear the deque its indices name — and it was
-// deleted with its flush at close_history_mode as producer-less, the project's
-// rule for machinery no route reaches. The ARGUMENT it encoded still holds and
-// is why the entry kicker's placement above `active` is load-bearing rather
-// than incidental: a future kicker that could fire under a standing visit has
-// to answer this question again.)
+// standing view, on the GUI thread, in the same call. (So no kick is parked
+// for later. A visit is BOUND to the store's generation and a restart would
+// clear the deque its indices name, which is why the entry kicker's placement
+// above `active` is load-bearing rather than incidental: a future kicker that
+// could fire under a standing visit has to answer this question.)
 void GuiInputHandler::kick_history_prefetch() {
     history_prefetch.kick(app.source_audio_path, app.projects_repo);
 }
@@ -1499,10 +1355,9 @@ void GuiInputHandler::kick_history_prefetch() {
 // a view stands (the funnel's own proof above).
 //
 // THE TIP READ IS A DISCOVERY AND A HEAD READ on this thread, in process — one
-// deriving the clone from the loaded source (2026-08-11: there is no compiled-in
-// root to read against any more) and one for the tip itself — which is still the
-// whole of what an ordinary entry pays in git, against the walk plus a strict
-// load per candidate it used to.
+// deriving the clone from the loaded source and one for the tip itself — which
+// is the whole of what an ordinary entry pays in git; the walk and its
+// per-candidate strict loads are the prefetch's.
 void GuiInputHandler::kick_history_prefetch_if_stale() {
     const bool same_subject =
         history_prefetch.subject_source_path() == app.source_audio_path &&
@@ -1559,19 +1414,17 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // main.cpp's resize and close callbacks run — so "any end
 // commits" stays true, no cancel semantics appear, and by the time the mode
 // resets the gate's invariant holds again exactly as it does for a key. It runs
-// BEFORE the close so each gesture ends against the state it was made in, and
-// the close's own band restore then lands over the top.
+// BEFORE the close so each gesture ends against the state it was made in.
 //
 // ONE PRODUCER, and it is narrow: a view opened mid-scan ON A BOOTSTRAPPED
 // REMOTE WALK whose run then fails. A run that had already failed lands the
-// entry on the LOCAL fallback instead (2026-09-04, superseding "refuses at init
-// and never opens a view at all"), and such a visit is carved out at the site
+// entry on the LOCAL fallback instead (2026-09-04), and such a visit is carved
+// out at the site
 // below — it never had the premise this closer protects.
 //
-// AND IT RETIRES THE VIEW'S OWN STANDING QUESTION BEFORE IT CLOSES (2026-08-29).
+// AND IT DROPS THE VIEW'S OWN STANDING QUESTION BEFORE IT CLOSES (2026-08-29).
 // TWO SURFACES CAN BE UP WHEN THIS FIRES, and the visit's end has to answer for
-// each (the COMMIT-TITLE EDITOR was a third, left standing, until its
-// retirement 2026-10-10):
+// each:
 //   * THE LOAD CONFIRMATION raised by bare `'` on the viewed member
 //     (history_load_in_place). close_history_mode's whole-struct reset clears
 //     pending_load_member, so a question left painted would name a subject that
@@ -1586,7 +1439,6 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //     too: its plan is parked whole on AppState (pending_history_pull — the
 //     clone, the directory, the base name and both commits), so its answers
 //     need nothing the close takes, and the pull re-reads the refs at the act.
-// The standing-menu decision is above, and unchanged.
 void GuiInputHandler::on_history_prefetch_ready() {
     const GuiHistoryPrefetch::DrainResult r = history_prefetch.drain();
     if (!app.history_mode.active) return;
@@ -1620,17 +1472,13 @@ void GuiInputHandler::on_history_prefetch_ready() {
     viewport.invalidate_all();
 }
 
-// SWITCH WHAT THE LANE SHOWS — the ONE owner (architect 2026-08-05 for the two
-// compare readings, GENERALIZED 2026-08-07 to the (WALK SOURCE, READING) pair),
-// and its callers, re-derived by grep 2026-08-18: TWO ARMS OF
+// SWITCH WHAT THE LANE SHOWS — the ONE owner of the (WALK SOURCE, READING)
+// pair (architect 2026-08-07), and its callers: TWO ARMS OF
 // handle_history_mode_key and nothing else — bare `g`, which steps the WALK in
-// row order, and bare `u`, which flips the READING. THE TWO WALK RADIOS AND THE
+// kRow's order, and bare `u`, which flips the READING. THE WALK LAMP AND THE
 // CUMULATIVE TOGGLE REACH IT THROUGH THOSE SAME ARMS, dispatching their chords
 // on_key like every other roster button, so there is no pointer call site to
-// keep in step with a key. (There WAS one from 2026-08-05 to 2026-08-18: row
-// 3's two repurposed tabs selected a walk directly from the tab row's band
-// claim, with Ctrl+Tab / Ctrl+Shift+Tab as the keyboard's cycle over the same
-// owner. The walk's buttons are ordinary chord buttons now.)
+// keep in step with a key.
 //
 // SWITCHING SOURCE DOES NOT MOVE THE OTHER WALK'S POSITION — neither field is
 // touched here at all, which is what makes the two walks two places a visit can
@@ -1648,26 +1496,26 @@ void GuiInputHandler::on_history_prefetch_ready() {
 //     REPUBLISHED IN THIS SAME PRESS (2026-08-07, republish_history_lane_now):
 //     the arriving reading's list, rects and stems are standing before the press
 //     returns, so the swap is atomic and shows no blank frame;
-//   * THE VIEWPORT IS NOT TOUCHED — the step's own rule since 2026-08-08, and
+//   * THE VIEWPORT IS NOT TOUCHED — the step's own rule (architect
+//     2026-08-08), and
 //     it applies here for the step's own reason: the window is the USER'S while
 //     the view stands, so every walk and reading shares one viewport and a
 //     switch shows
 //     the arriving reading through exactly the frame the leaving one was read
 //     in, which is what makes the two readings of one member comparable at a
-//     glance (architect, SUPERSEDING the 2026-08-05 reset to full zoom out);
+//     glance;
 //   * full-window damage, a discrete command.
 //
-// IDEMPOTENT AT THE TOP, which is where the walk lamp's rule came from: a
+// IDEMPOTENT AT THE TOP: a
 // switch to the walk already shown changes nothing and damages nothing, so it
 // is a consumed nothing without the call site testing for it — and it is what
 // makes bare `g`'s step safe to express as a plain "the next one" without a
-// live-walk test of its own. (The radio pair this lamp replaced on 2026-09-04
-// killed a press on the LIT half one step earlier, at the claim; with one
+// live-walk test of its own. With one
 // button over the chord there is no wrong half and this owner is the whole
-// rule.) The `!active` guard is the same defensive shape
-// the two framers carry — the callers are gated by the mode already.
+// rule. The `!active` guard is defensive — the callers are gated by the mode
+// already.
 //
-// AND IT REFUSES ONE SWITCH SINCE 2026-09-04: toward the REMOTE walk on a
+// AND IT REFUSES ONE SWITCH (2026-09-04): toward the REMOTE walk on a
 // visit that could not bootstrap it. That is the local fallback's other half —
 // the entry lands such a visit on Local, and this is what keeps it there for
 // the visit's life whatever route asks. The refusal is here rather than in
@@ -1677,12 +1525,11 @@ void GuiInputHandler::on_history_prefetch_ready() {
 //
 // IT WRITES THE PAIR, both halves per-visit state on HistoryMode (the walk
 // SOURCE and the READING, `cumulative`, each reset at both mode edges —
-// architect 2026-11-17, send U; the contracts at those fields). Both halves
+// architect 2026-11-17; the contracts at those fields). Both halves
 // arrive here and only here — the `g` step passes (the next walk, the current
 // reading) and the `u` toggle passes (the current walk, the flipped reading).
 //
-// The name covers both axes (renamed from set_history_reading, architect
-// 2026-09-04): the pair this writes is read back through one accessor,
+// The name covers both axes (architect 2026-09-04): the pair this writes is read back through one accessor,
 // AppState::HistoryMode::displayed_delta, so what the switch selects is which
 // delta the lane displays — the reading is only half of it.
 void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
@@ -1695,8 +1542,7 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
     // the refusal lives at the ONE switch owner rather than at bare `g`'s arm,
     // and no route toward the remote walk, present or future, can get past it.
     // The card is the bootstrap's own reason under the product's one spelling
-    // of the fact (kHistoryUnavailable, history_diff.h), which is the same
-    // sentence the ENTRY used to raise before the fallback took its place; the
+    // of the fact (kHistoryUnavailable, history_diff.h); the
     // walk lamp's face reads the same predicate and greys, so the press that
     // reaches here is the KEY's.
     if (source == GuiHistoryWalkSource::Commit &&
@@ -1722,12 +1568,12 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
     viewport.invalidate_all();
 }
 
-// THE MODE'S OWN KEYBOARD SURFACE — the whole membership, re-derived from the
-// arms below (2026-08-05):
+// THE MODE'S OWN KEYBOARD SURFACE — the whole membership, derived from the
+// arms below:
 //   * bare `h`             — the toggle, the ONE shape bound outside the mode;
 //   * bare `u`             — the CUMULATIVE reading's toggle (2026-08-08);
-//   * bare `g`             — the WALK's toggle (2026-08-18), the icon row's
-//     WALK LAMP's chord;
+//   * bare `g`             — the WALK's toggle (2026-08-18), the top icon
+//     row's WALK LAMP's chord;
 //   * bare `,` / `.`       — the walk;
 //   * bare Tab / Shift+Tab — the diff-flag cycle, its landing's camera the
 //     landing owner's exactly as the live walk's is (Viewport::land_subject);
@@ -1736,17 +1582,12 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     switch, the mode's Tab act and its `c`, the switch home and its `c`;
 //   * bare Home / End and Shift+Home / Shift+End — the ABSOLUTE ends of the
 //     song, both forms (the shifted pair's whole-piece jump is what a jump
-//     already means in here, architect 2026-09-26; Ctrl+Home / Ctrl+End
-//     until 2026-10-24);
+//     already means in here, architect 2026-09-26);
 //   * bare `c`             — working zoom, centered on the mode's own focus;
 //   * bare Left / Right    — the playhead step (2026-09-26).
-// NO ALT SHAPE (the Alt Tab family, 2026-09-22, was deleted 2026-09-23) and
-// ONE CTRL SHAPE, the march (2026-08-18; Ctrl+Home / Ctrl+End the second
-// from 2026-09-26 until the whole-piece jump moved to Shift, 2026-10-24).
-// Ctrl+Tab was the walk cycle's
-// forward direction from 2026-08-05 and left with the walk selector; the
-// allowlist admits it as an ordinary A/B switch now. Returns true when the
-// press was consumed.
+// NO ALT SHAPE and ONE CTRL SHAPE, the march (2026-08-18). Ctrl+Tab is not
+// the mode's: the allowlist admits it as an ordinary A/B switch. Returns
+// true when the press was consumed.
 //
 // THE ENTRY GATES ARE POSITIONAL, NOT RE-TESTED, and that is the point: this is
 // reached from on_key's main body, BELOW every gate that must refuse an entry,
@@ -1763,7 +1604,8 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 // ONLY `h` IS BOUND OUTSIDE THE MODE — the toggle arm sits ABOVE the `!active`
 // check and every other arm below it, so with the mode down `u`, `g`, `,`, `.`,
 // Tab, Ctrl+Shift+Tab, Home/End and `c` fall through to the ordinary
-// dispatch and behave exactly as they always have. Bare `u` and bare `g` are
+// dispatch and behave exactly as the ordinary dispatch binds them. Bare `u`
+// and bare `g` are
 // bound NOWHERE there, so falling through is the unbound key's own consumed
 // nothing, and Ctrl+Shift+Tab out there is the LIVE march — the same
 // composition over live markers, reached through its own arm in
@@ -1778,82 +1620,67 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 // the membership twice is exactly how that face would come to lie about the
 // button that opens the view.
 // MOST OF THESE SHAPES ARE ALSO BUTTON CHORDS, and the membership is
-// RE-DERIVED BY READING kToolbarChords rather than remembered — which is what
-// this paragraph got wrong twice, having twice claimed a shape "no roster
-// entry carries" while the roster carried it. The current answer, re-greped:
-//   * BARE `g` — the icon row's WALK LAMP (2026-08-18, a radio pair over this
-//     chord until the 2026-09-04 collapse); this claim is what answers its face
+// RE-DERIVED BY READING kToolbarChords rather than remembered:
+//   * BARE `g` — the top icon row's WALK LAMP (2026-08-18); this claim is
+//     what answers its face
 //     LIVE inside the view, its resting grey outside it being its own arm's;
 //   * BARE `,` / BARE `.` — the walk's own two buttons (2026-08-05), the
 //     roster's first RESTING-DISABLED entries. Outside the view they do not
-//     stand since 2026-10-05 (the icon row's history stand-ins publish empty
+//     stand (the history stand-ins publish empty
 //     rects there), so no press reaches them; their ENABLED BIT still answers
 //     dead out there (redesign_button_enabled reads `history_mode.active` for
-//     them and states the whole succession);
-//   * BARE `u` — the Cumulative toggle's own button (2026-08-08), which joined
-//     that family on exactly the same terms and shares that arm;
-//   * BARE Home / BARE End and SHIFT+HOME / SHIFT+END — row 8's START and
-//     END buttons since 2026-10-24 (the two skips' return; their plain
-//     presses bare, their shift presses the whole-piece pair, Ctrl+Home /
-//     Ctrl+End until then and keys alone from 2026-10-12, when the skips
-//     left), claimed above beside the march, so both stand in the view;
-//   * BARE `c` — the icon row's Center button since the 2026-08-12
-//     relayout, likewise;
-//   * BARE Tab (with its shifted form, the walk button's shift press) — the
-//     bottom row's WALK BUTTON (since 2026-08-15), answered LIVE in the view
-//     by this predicate: it steps the mode's own diff-flag cycle, so it does
-//     not grey in the view. CTRL+SHIFT+TAB, the march over
-//     that same cycle (2026-08-18), is Switch Tab's shifted press since
-//     2026-09-29 and the walk button's ctrl-shift press since 2026-09-26,
-//     neither greying (Ctrl+Tab, their plain and ctrl presses, acting in
+//     them);
+//   * BARE `u` — the Cumulative toggle's own button (2026-08-08), of
+//     that family on exactly the same terms and sharing that arm;
+//   * BARE Home / BARE End and SHIFT+HOME / SHIFT+END — the bottom icon row's
+//     START and END buttons (2026-10-24; their plain
+//     presses bare, their shift presses the whole-piece pair), claimed above
+//     beside the march, so both stand in the view;
+//   * BARE `c` — the bottom icon row's Center button, likewise;
+//   * BARE Tab and SHIFT+TAB — the bottom icon row's NEXT and PREVIOUS
+//     MARKER buttons (TransportWalk / TransportWalkPrevious), answered LIVE in
+//     the view by this predicate: they step the mode's own diff-flag cycle,
+//     so they do not grey in the view. CTRL+SHIFT+TAB, the march over
+//     that same cycle (2026-08-18), is Switch Tab's hold (architect
+//     2026-11-08), not greying (Ctrl+Tab, its plain press, acting in
 //     every state);
-//   * BARE Left / BARE Right — the bottom row's LEFT and RIGHT arrows, the
+//   * BARE Left / BARE Right — the bottom icon row's LEFT and RIGHT arrows, the
 //     playhead step (2026-09-26), answered LIVE by this predicate and greyed
 //     by their own arm (horizontal_arrow_step_actionable's `h` arm: a diff
 //     flag focused, or the wall).
 // Which leaves BARE `h` — the history button's own chord, and the one shape
 // here bound outside the mode at all.
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
-    // EVERY ALT SHAPE IS REFUSED: the mode claims no alt chord (the
-    // least-movement walk's Alt Tab shapes, claimed from 2026-09-22, were
-    // deleted 2026-09-23 when the walk's camera became the audio view's).
+    // EVERY ALT SHAPE IS REFUSED: the mode claims no alt chord.
     if (mods.alt) return false;
     // THE FIRST CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
     // MARCH, read here over the mode's own vocabulary. "Both tab and ctrl+tab
     // are available [in the view], and ctrl+shift+tab is just short for
-    // 'tab, ctrl+tab, tab'" (a round trip through the other tab since
+    // 'tab, ctrl+tab, tab'" (a round trip through the other tab,
     // 2026-09-26, each step centred by `c`, live and here alike) — so the
     // chord means one thing everywhere and only
     // what "Tab" DENOTES changes with the context: live markers outside, the
     // viewed checkpoint's diff flags in here. Claimed rather than left to the
     // allowlist because that is how the walk's two chords, bare Tab and
-    // Shift+Tab (Next and Previous Marker, the step-and-walk group's pair since
-    // 2026-10-18), already answer, both for the key and for the
+    // Shift+Tab (Next and Previous Marker, the step-and-walk group's pair),
+    // already answer, both for the key and for the
     // roster face derived from this predicate.
     //
     // THE SPELLING IS THE LIVE MARCH'S EXACTLY — plain Tab with ctrl+shift —
     // because the live arm binds that one shape too; the mode mirrors what it
     // composes rather than widening it.
     if (mods.ctrl && mods.shift && key == GuiKeys::Tab) return true;
-    // (CTRL+HOME / CTRL+END, the WHOLE-PIECE jump, were the other ctrl shape
-    // claimed here from 2026-09-26 until 2026-10-24, when the jump moved to
-    // SHIFT — claimed below with the mode's other shift-carrying shapes — and
-    // the ctrl pair became unbound, refused by the line that follows.)
-    // EVERY OTHER CTRL SHAPE IS REFUSED, and the branch stays as a REFUSAL
-    // rather than being deleted: every shape below it is BARE (or
+    // EVERY OTHER CTRL SHAPE IS REFUSED, and the branch stands as a REFUSAL
+    // because every shape below it is BARE (or
     // shift-carrying, on Tab, the walk and Home / End), so a ctrl press falling past this
     // line would reach the bare list and be read as its unmodified twin — a
-    // Ctrl+H, which binds nothing anywhere since the revert act left it on
-    // 2026-09-01 and must therefore be as silent as any unbound chord, would
+    // Ctrl+H, which binds nothing anywhere and must therefore be as silent as
+    // any unbound chord, would
     // come out as the mode's own `h` toggle and close the view. One line, and
     // strict modifier validation holds.
     //
-    // (WHAT IT ALSO CLAIMED: from 2026-08-05 Ctrl+Tab stepped the WALK SOURCE
-    // one tab right and, from 2026-08-07, Ctrl+Shift+Tab one tab left. The
-    // walk is bare `g` below now, so Ctrl+Tab falls through to
-    // the allowlist, which ADMITS it — an A/B tab switch works normally in the
-    // view, the architect's own ruling — while Ctrl+Shift+Tab is claimed above
-    // for the march itself rather than for a walk cycle.)
+    // (CTRL+TAB falls through to the allowlist, which ADMITS it — an A/B tab
+    // switch works normally in the view, the architect's own ruling.)
     if (mods.ctrl) return false;
     // THE CYCLE IS ONE OF THREE SHIFT-CARRYING SHAPES, and it is admitted in the
     // live cycle's own two spellings: bare Tab forward, Shift+Tab back.
@@ -1865,8 +1692,8 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // validation makes it (ctrl and alt are already refused above).
     if (key == GuiKeys::Comma || key == GuiKeys::Period) return true;
     // THE THIRD IS SHIFT+HOME / SHIFT+END, THE WHOLE-PIECE JUMP (architect
-    // 2026-09-26; on Shift since 2026-10-24, the Go to Start / Go to End
-    // buttons' long press — Ctrl until then; the bare pair is claimed in the
+    // 2026-09-26; on Shift 2026-10-24, the Go to Start / Go to End
+    // buttons' long press; the bare pair is claimed in the
     // list below). Claimed so the chord means the SAME thing in every
     // state — in this view the bare pair already jumps to the piece's own
     // ends, so the shifted form lands on exactly the same frames and the arm
@@ -1883,8 +1710,8 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // claims add no shape.
     //
     // BARE LEFT / RIGHT ARE THE PLAYHEAD STEP (architect 2026-09-26, the
-    // symmetry with T+W), BARE ONLY as they bind outside: the horizontal
-    // ladder is retired and Ctrl / Shift spell nothing on them, so a modified
+    // symmetry with T+W), BARE ONLY as they bind outside: Ctrl / Shift spell
+    // nothing on them, so a modified
     // arrow falls past this claim to the allowlist, which admits no arrow and
     // answers the unbound chord with the silence chord_is_bound gives it.
     // CLAIMED RATHER THAN ADMITTED because on_key's marker-lane branch reads
@@ -1902,14 +1729,11 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 // the cycle carries — the no-wrap walls, the empty-list nothing, the
 // focus-replaces-selection rest, the landing and its damage — is stated at the
 // arm that spells it, and this is the one body that runs them.
-// EVERY REFUSAL HERE IS SILENT (architect 2026-08-31, retiring the 2026-08-30
-// cards "There are no changed markers to step through" / "This is the last
-// change" / "This is the first change"): a benign one-dimensional refusal
+// EVERY REFUSAL HERE IS SILENT (architect 2026-08-31): a benign
+// one-dimensional refusal
 // already at its state says nothing — the diff lane is on screen, and one
 // glance at it shows both an empty list and a focus resting at its end. The
-// walls and the empty arm are the consumed no-ops they were; only the
-// sentences left. (Which is also why the march's two compositions no longer
-// need the stack's duplicate-text rule to answer once.)
+// walls and the empty arm are consumed no-ops.
 void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
                                                     MarkerLandingFrame frame) {
     // THE STOP IS ONE OWNER'S (history_diff_cycle_target, app_state.h), and
@@ -1999,10 +1823,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         //
         // THE FACE FOLLOWS THE KEY: the Toggle History View button greys while
         // the lamp stands (iteration_lock_greys, app_state.h), and the grey is
-        // all it says — the sentence is this press's, the refusal-reason
-        // tooltip class having gone on 2026-09-12. The view's OWN buttons — Load in place, Revert and
+        // all it says — the sentence is this press's, a tooltip reporting no
+        // state. The view's OWN buttons — Load in place, Revert and
         // the walk's four — need nothing: they are dead outside the view by
-        // their own resting term, and the view can no longer open under a lit
+        // their own resting term, and the view cannot open under a lit
         // lamp for them to light in.
         if (app.iteration_mode_enabled) {
             notifications.notify(AppState::NotificationClass::Normal,
@@ -2018,8 +1842,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // by itself. The CLOSE above is deliberately not gated: leaving a view
         // is always allowed.
         //
-        // AND IT SAYS SO ON A CARD (architect 2026-08-30): the refusal was
-        // the last of the ruled silences and left `h` reading as a dead key
+        // AND IT SAYS SO ON A CARD (architect 2026-08-30): a silent refusal
+        // would leave `h` reading as a dead key
         // for the seconds the worker takes. ONE COMPOSER FEEDS BOTH — the
         // stderr line stays, and the words are the picker's own
         // (kCheckpointPublishing, notifications.h), the same fact met
@@ -2036,9 +1860,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         }
         // ENTRY RE-INITS, always: the diff's now side is frozen at init(), so
         // the visit must measure against the state the user is looking at.
-        // AND IT ALWAYS OPENS since 2026-09-04 — a bootstrap the remote walk
-        // refuses lands on the LOCAL one, so this arm has no refusal to report
-        // and never had anything to add to one.
+        // AND IT ALWAYS OPENS (2026-09-04) — a bootstrap the remote walk
+        // refuses lands on the LOCAL one, so this arm has no refusal to
+        // report.
         open_history_mode_fresh();
         return true;
     }
@@ -2046,19 +1870,15 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     if (!app.history_mode.active) return false;
 
     // BARE `g` — THE WALK'S TOGGLE (architect 2026-08-18), the keyboard half of
-    // the icon row's walk lamp: it steps the WALK SOURCE in row order
+    // the top icon row's walk lamp: it steps the WALK SOURCE in kRow's order
     // with wrap — Git (the committed checkpoints), Session (this session's own
     // undo/redo timeline) — through the ONE switch owner, so the key and the
     // lamp cannot diverge, and it passes the CURRENT reading through
     // untouched (`u` is the only thing that moves that bit).
     //
-    // ONE CHORD, ONE BUTTON, ONE AXIS since the 2026-09-04 collapse: the walk
-    // lamp is this chord's twin and flips the axis in both directions, exactly
-    // as bare `t` and bare `p` and their two view lamps did before the
-    // architect deleted that whole category 2026-09-15. It was a RADIO PAIR
-    // over this chord from 2026-08-18 until then, the `radio` flag making a
-    // press on the lit half a consumed nothing instead of a switch away from
-    // what the user had just clicked; with one button there is no wrong half.
+    // ONE CHORD, ONE BUTTON, ONE AXIS (2026-09-04): the walk lamp is this
+    // chord's twin and flips the axis in both directions; with one button
+    // there is no wrong half to press.
     //
     // NOT REPEAT-ELIGIBLE (repeat_eligible below, which lists the chords
     // that DO repeat and leaves this one out, exactly as it leaves `u` out): a
@@ -2070,16 +1890,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // that walk exists for this visit, carding the bootstrap's reason when it
     // does not — one decision, which the lamp's greyed face reads too.
     //
-    // (THE CHORD WAS CTRL+TAB FROM 2026-08-05 TO 2026-08-18, with
-    // Ctrl+Shift+Tab as its reverse from 2026-08-07, because row 3's tabs were
-    // the walk's surface and their own chord had to become the cycle. The walk
-    // has its own lamp now and Ctrl+Tab switches A/B tabs in here like
-    // everywhere else.)
-    //
-    // THE ROW ORDER IS SPELLED ONCE, as a table read by this step and by
-    // nothing else, and the arithmetic is left general so a third walk would
-    // need no new shape — the two BUTTONS name their own walk at the face
-    // (redesign_button_selected), which is what a radio pair does.
+    // THE WALK ORDER IS SPELLED ONCE, as a table (kRow) read by this step and
+    // by nothing else, and the arithmetic is left general so a third walk
+    // would need no new shape; the lamp lights on its own walk at the face
+    // (redesign_button_selected).
     if (key == GuiKeys::G) {
         static constexpr GuiHistoryWalkSource kRow[] = {
             GuiHistoryWalkSource::Commit,
@@ -2098,8 +1912,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // BARE `u` — THE CUMULATIVE READING'S TOGGLE (architect 2026-08-08), the
-    // axis row 3 carried as two more tabs for one day. It flips the visit's
+    // BARE `u` — THE CUMULATIVE READING'S TOGGLE (architect 2026-08-08). It
+    // flips the visit's
     // reading through the same switch owner the walk toggle above uses, so a
     // reading change is
     // the SAME MODE EDGE a walk change is — focus and selection cleared, lane
@@ -2110,10 +1924,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // chords that DO repeat and leaves this one out): a held toggle can only
     // flap, exactly as the ctrl cycle can.
     //
-    // THE BIT IS THE VISIT'S (architect 2026-11-17, send U: CUMUL "like
+    // THE BIT IS THE VISIT'S (architect 2026-11-17: CUMUL "like
     // session already does"): HistoryMode::cumulative, reset to Iterative at
     // both mode edges with the walk source (its contract at that field), so
-    // this toggle lasts the visit. Its BUTTON is row 4's HistoryCumulative,
+    // this toggle lasts the visit. Its BUTTON is the top icon row's
+    // HistoryCumulative,
     // which dispatches this same bare chord.
     if (key == GuiKeys::U) {
         set_history_delta(app.history_mode.source,
@@ -2135,16 +1950,16 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // NEITHER SHAPE REPEATS (architect 2026-10-30): the two step buttons carry
     // no `repeats` (kToolbarChords), their long press being the jump, and
     // repeat_eligible names neither key.
-    // THE TWO STEP BUTTONS ARE THESE KEYS (2026-08-05,
-    // RedesignButton::HistoryOlder / HistoryNewer — row 8's since 2026-10-11,
-    // in the Left / Right arrows' seats in the view, which keeps bare Left /
+    // THE TWO STEP BUTTONS ARE THESE KEYS (RedesignButton::HistoryOlder /
+    // HistoryNewer, the bottom icon row's, in the Left / Right arrows' seats
+    // in the view, which keeps bare Left /
     // Right as its playhead step below): they dispatch the
     // bare chords through on_key like every other button, so this is the one
     // body and a click at a wall is the same consumed nothing a key press is —
-    // behind a DEAD FACE since 2026-08-30, the buttons greying at the wall
+    // behind a DEAD FACE, the buttons greying at the wall
     // they stand on through the same two predicates (the truthful-buttons
-    // ruling; redesign_button_enabled's companions arm) — and since
-    // 2026-08-07 they are SHIFT-ADMITTING (redesign_button_shift_
+    // ruling, 2026-08-30; redesign_button_enabled's companions arm) — and
+    // they are SHIFT-ADMITTING (redesign_button_shift_
     // admits, app_state.h), so the long press reaches the jump through that same
     // one route and their tooltips carry the shift line that names it; a
     // greyed arrow loses no jump, the jump onto the wall it stands on moving
@@ -2164,19 +1979,16 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         const bool older = (key == GuiKeys::Comma);
         // THE WALL IS ONE PREDICATE PER DIRECTION FOR BOTH SHAPES
         // (history_walk_older_actionable / history_walk_newer_actionable,
-        // app_state.h — 2026-08-30, when the Older / Newer buttons' face began
-        // reading the same walls under the truthful-buttons ruling): a step
+        // app_state.h — the Older / Newer buttons' face reads the same walls
+        // under the truthful-buttons ruling, 2026-08-30): a step
         // that would run off the end and a jump made while already standing
         // at that end are the same consumed no-op, with no edge and nothing
         // moved, and the EMPTY walk — one address (0), stood at — answers
         // false in both directions with no case of its own. The walk has ends,
-        // and reaching one must not wrap — it moves nothing. (Until 2026-08-30
-        // this arm computed `there` and compared it to `here`; the predicate
-        // is that compare, named once for the act and the face.)
+        // and reaching one must not wrap — it moves nothing. (The predicate
+        // is the step's own compare, named once for the act and the face.)
         //
-        // AND THE WALL IS SILENT (architect 2026-08-31, retiring the
-        // 2026-08-30 pair "This is the oldest checkpoint" / "This is the
-        // newest state"): a benign one-dimensional refusal already at its
+        // AND THE WALL IS SILENT (architect 2026-08-31): a benign one-dimensional refusal already at its
         // state says nothing — the walk's own position is on screen and the
         // Older / Newer buttons grey on these very predicates, so the grey is
         // the cue and the unmoved walk is the answer.
@@ -2208,22 +2020,22 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         drop_lane_stash_across_history_edge();
         // (NO OVERLAY HIDE, architect 2026-08-19: a `,` / `.` step is one of THE
         // MODE'S THREE OWN EDGES — the record is at close_history_mode.)
-        // THE VIEWPORT IS THE USER'S ACROSS A STEP (architect 2026-08-08,
-        // SUPERSEDING the 2026-08-05 per-edge reset to full zoom out): he pans
+        // THE VIEWPORT IS THE USER'S ACROSS A STEP (architect 2026-08-08): he
+        // pans
         // and zooms once and reads the SAME WINDOW through every step of the
         // walk, so a checkpoint's flags are compared against the previous one's
         // at the magnification he chose rather than at an overview he has to
-        // re-establish after each press. NO EDGE FRAMES AT ALL since
-        // 2026-08-18, the entry's own framing having gone with the view's
-        // navigation-state ownership: the trim bar's double tap is the view's
+        // re-establish after each press. NO EDGE FRAMES AT ALL (2026-08-18),
+        // the view owning no navigation state: the trim bar's double tap is
+        // the view's
         // one framing gesture, and it frames the TRIM WINDOW in here exactly as
         // it does outside. So this edge writes NO viewport at all.
         //
-        // THE ARRIVING COMMIT'S LANE, PUBLISHED IN THIS PRESS (2026-08-07, the
-        // architect's reported flicker): the drop above emptied the lane and
+        // THE ARRIVING COMMIT'S LANE, PUBLISHED IN THIS PRESS (2026-08-07): the
+        // drop above emptied the lane and
         // nothing else in this press republishes it — the step moves no
-        // viewport, so no kick rides along — and without this the step showed a
-        // blank lane until the next tick.
+        // viewport, so no kick rides along — and without this the step would
+        // show a blank lane, a flicker, until the next tick.
         republish_history_lane_now();
         viewport.invalidate_all();
         return true;
@@ -2241,8 +2053,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // owners. That is where they part from the mode's diff-flag CLICK on the
     // STOP alone — the click lands through the same owner, and it is the stop
     // it deliberately omits.
-    // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway
-    // (recorded at the arms 2026-08-06, where the docs had carried it alone):
+    // THE STOP HALF HAS NO REACHABLE PRODUCER IN HERE, and is kept anyway:
     // the entry owner stops any session running before `h` and nothing in the
     // view can start one — bare Space is consumed and no scrub act exists in
     // here — so
@@ -2269,7 +2080,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // lands nothing. An empty list is a consumed no-op, in all three of its
     // shapes: an empty delta, an active column whose half of the delta is empty,
     // and the DROPPED-AND-NOT-YET-REBUILT list, whose window every mode edge
-    // closed on 2026-08-07 by republishing inside its own press — the rebuild's
+    // closes by republishing inside its own press — the rebuild's
     // own refusals (loading or absent audio, no plate yet) still leave it open, so
     // the cold answer stays this arm's, and it is what a step and a Tab arriving in
     // one key batch would have cycled the leaving commit's flags with
@@ -2282,8 +2093,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // alone, so the march's own Tab would fall into a backward step here.
     if (mods.ctrl && mods.shift && key == GuiKeys::Tab) {
         // THE PAIRED MARCH, MODE-LOCAL — THE LIVE MARCH'S ROUND TRIP over the
-        // view's own vocabulary (architect 2026-09-26; the chord first came
-        // in here 2026-08-18): switch to the other tab, step, centre with the
+        // view's own vocabulary (architect 2026-09-26): switch to the other
+        // tab, step, centre with the
         // mode's `c`; switch home, centre with the mode's `c`. The user ends
         // on the tab he started from and never sees the other one — the whole
         // act is one key dispatch and nothing in it commits a frame (the rule
@@ -2338,8 +2149,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // hide the flags past it. With a full trim window the two answers coincide
     // (trim_window_is_full), so the difference shows only under a set trim.
     // BOTH SHAPES LAND HERE, bare and SHIFT (history_mode_owns_key claims the
-    // shifted pair — architect 2026-09-26, on Shift since 2026-10-24, Ctrl
-    // until then): outside the view shift is what asks for the piece's ends,
+    // shifted pair — architect 2026-09-26, on Shift 2026-10-24): outside the
+    // view shift is what asks for the piece's ends,
     // and in here that is what a jump already means, so the chord means one
     // thing in every state and this arm needs no fork. The Go to Start / Go
     // to End buttons stand in the view for this reason, their plain and
@@ -2372,11 +2183,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // The ACTIVE domain's own ends: live_total_frames is what the displayed
         // timeline runs to in either view, and it is the same total the
         // full-window trim range resolves to. THE ARITHMETIC LIVES AT THE
-        // SHARED OWNER since 2026-08-15 (playhead_skip_landing_frame,
+        // SHARED OWNER (playhead_skip_landing_frame,
         // viewport.cpp), whose whole-piece arm this mode bit already selects —
         // which is why `whole_piece` is passed FALSE here and nothing is
-        // duplicated: one spelling for every jump in the product. Row 8's two
-        // SKIP buttons grey in this view through
+        // duplicated: one spelling for every jump in the product. The bottom
+        // icon row's two SKIP buttons grey in this view through
         // playhead_end_jump_actionable, whose `h` arm reads this same
         // landing and the mode's diff-flag clear. The owner's clamp is
         // idempotent on a value move_playhead_to would clamp anyway, so this
@@ -2420,8 +2231,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 
     // BARE `c` — the live arm's recipe with the MODE's focus in place of the
     // live marker's, and the BODY IS NOT HERE: run_center_command owns both
-    // recipes and picks between them on the mode bit (2026-08-05, when `0`
-    // became a third caller of the same command). This arm is the
+    // recipes and picks between them on the mode bit (2026-08-05). This arm
+    // is the
     // CLAIM alone — `c` is the mode's own vocabulary, so it must return true
     // here rather than fall to the allowlist, which does not admit it.
     if (key == GuiKeys::C) {
@@ -2438,8 +2249,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // faces' reader, below).
 //
 // WHAT IS ADMITTED, the whole list. SPACE IS NOT ON IT (architect 2026-08-05):
-// PLAYBACK IS REMOVED FROM THE VIEW WHOLE — it was slow, the mode's full-song
-// trim forcing a full target preview render, and buggy besides — so bare Space
+// THE VIEW HAS NO PLAYBACK — it is slow there, the mode's full-song trim
+// forcing a full target preview render, and was buggy besides — so bare Space
 // is a consumed no-op in here, the lower half's pointer press is the mode's
 // own navigation press rather than a scrub, and the one entry owner stops a session that was already running
 // (open_history_mode_fresh), since a view that consumes Space could not otherwise
@@ -2459,8 +2270,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             already do. Its shifted and ctrl-shifted presses
 //                             (the trim's frame and reset) are admitted beside
 //                             it (is_zero below).
-//   - t / p / 1 / 2 / 3 / 4 → THE VIEW SWITCHES (architect 2026-08-04, from his
-//     (bare)                  first real session with the mode). THE DELTA IS
+//   - 1 / 2 / 3 / 4 (bare)  → THE VIEW SWITCHES (architect 2026-08-04), which
+//                             run the `t` and `p` handler bodies. THE
+//                             DELTA IS
 //                             VIEW-INDEPENDENT AND THE PAINTED SUBSET IS NOT,
 //                             which is the whole reason they belong here: a
 //                             commit's typed delta is a LINE diff over the three
@@ -2476,24 +2288,21 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             THEY RUN THEIR ORDINARY HANDLERS WHOLE, side
 //                             effects and all, each weighed against the mode's
 //                             own invariants. NONE OF THEM WRITES A STORE OR
-//                             PUSHES AN UNDO ENTRY since 2026-08-07: the S->T
-//                             entry's iteration wipe — the one that did, and
-//                             the one producer both this gate and the LOCAL
-//                             walk's frozen-stack premise had to reason about
-//                             — is deleted with the ruling that iteration mode
-//                             is target-legal (the record is at
-//                             switch_active_audio_view_to,
+//                             PUSHES AN UNDO ENTRY: iteration mode is
+//                             target-legal, so the S->T entry wipes nothing
+//                             (switch_active_audio_view_to,
 //                             input_handler.cpp). `i` is not on this allowlist,
 //                             so the bit cannot toggle in here either, and the
-//                             view now has NO undo-stack producer at all.
-//                             `p` clears the live
+//                             view has NO undo-stack producer at all.
+//                             `p`'s body clears the live
 //                             selection and runs the coincidence auto-select;
 //                             the mode neither reads nor paints that selection
 //                             (the lane suppresses every live flag while it
 //                             stands, and the mode's focus is its own field), so
 //                             those land unseen and leave exactly the state the
 //                             same press leaves outside the mode. The playhead
-//                             moves `t` can make (its selection-gated re-land)
+//                             moves `t`'s body can make (its selection-gated
+//                             re-land)
 //                             are navigation, which is already this mode's
 //                             vocabulary — its own diff-flag click lands the
 //                             playhead too. The
@@ -2517,7 +2326,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             — which the commit act already answers by
 //                             rebuilding the now side fresh (the drift inventory
 //                             is at AppState::HistoryMode).
-//                             THE ICON ROW'S TWO VIEW PAIRS need no rule
+//                             THE TOP ICON ROW'S TWO VIEW PAIRS need no rule
 //                             of their own: their buttons synthesize these very chords
 //                             through the chrome press's release half
 //                             (finish_chrome_press_release), like every other
@@ -2529,7 +2338,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             select two events — the diff consists of two
 //                             events, and I need to select them both if I want
 //                             to revert, for example"). THE LAMP IS A PRODUCER
-//                             OF THE MODE'S OWN MULTI-SELECTION NOW: while it
+//                             OF THE MODE'S OWN MULTI-SELECTION: while it
 //                             stands a PLAIN diff-flag press runs the mode's
 //                             CTRL body (select_history_diff_flags_modified
 //                             with extend=false, at the router's plain lane
@@ -2555,10 +2364,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             LIGHTS FROM THIS LINE WITH NO ARM OF ITS OWN —
 //                             history_mode_disables_button walks
 //                             IconAddToSelection's chord through this
-//                             predicate. Until 2026-09-17 the chord fell out
-//                             of this list and the derived partition greyed
-//                             the button, and what made that honest then was
-//                             that the lamp produced nothing in here.
+//                             predicate.
 //   - \ (bare)              → THE TOOLTIP LAMP, Enable Tooltips (architect
 //                             2026-09-29): chrome, not authoring — it decides
 //                             whether a resting pointer raises hints and
@@ -2578,27 +2384,26 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             no longer exists — and the load-in-place closes
 //                             the mode
 //                             as part of itself, so the mode never outlives the
-//                             state it was measured against. The icon row's
+//                             state it was measured against. The top icon row's
 //                             load button reaches it here, like every other
 //                             redesigned button, by synthesizing this same bare
 //                             chord.
-//                             IT IS ADMITTED ON BOTH WALKS since 2026-08-08
-//                             (architect, superseding the 2026-08-07 ruling that
-//                             the Local walk consumes it): it opens the HISTORY
+//                             IT IS ADMITTED ON BOTH WALKS (architect
+//                             2026-08-08): it opens the HISTORY
 //                             PICKER over the viewed walk's members, and the
 //                             open act on the REMOTE tab loads the commit's
 //                             three sidecars (load_history_commit_in_place),
 //                             on the LOCAL tab that state of the session's own
 //                             timeline as a new undo entry
-//                             (load_history_local_entry_in_place). It is a
-//                             FOURTH session-conditional admission, on THE ACTIVE
-//                             WALK CARRYING A MEMBER — one term for both walks
-//                             since 2026-08-09, when the empty Remote walk became
-//                             a legal standing state (the term at the predicate
-//                             says why).
+//                             (load_history_local_entry_in_place). It is one
+//                             of the TWO session-conditional admissions, on
+//                             THE ACTIVE WALK CARRYING A MEMBER — one term for
+//                             both walks, the empty Remote walk being a legal
+//                             standing state (the term at the predicate says
+//                             why).
 //   - Ctrl+Shift+S          → THE SAVE-AND-COMMIT ACT, the mode's second
 //                             admitted mutator — THE PUBLISH CHORD, bound in
-//                             this view alone (architect 2026-11-17, send U:
+//                             this view alone (architect 2026-11-17:
 //                             commit is any change git sees, from the `h`
 //                             view alone; run_publish_chord: the pull, the
 //                             check, or save and commit under the default
@@ -2612,7 +2417,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             mode stands (finish_chrome_press_release) and
 //                             wears the commit icon and the tooltip "Save and
 //                             Commit".
-//   - Ctrl+S                → THE PLAIN DISK SAVE since 2026-10-10. It
+//   - Ctrl+S                → THE PLAIN DISK SAVE (architect 2026-10-10). It
 //                             writes the state the session already holds and
 //                             touches nothing the view froze; it has no
 //                             button in here.
@@ -2627,7 +2432,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             checkpoint publishes is GuiSaveOps::save's own
 //                             term, mirrored by the Save button's grey.
 //   - Bare `v`              → THE REVERT ACT, the mode's THIRD admitted mutator
-//                             (architect 2026-08-05, on Ctrl+H until
+//                             (architect 2026-08-05; on the bare letter
 //                             2026-09-01) and admitted on the same
 //                             reasoning as the two above: in the mode it is not
 //                             an authoring chord that would leave the frozen now
@@ -2636,34 +2441,27 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             flags backwards into the live store and then
 //                             CLOSES the view, so the mode never outlives the
 //                             state it was measured against.
-//                             IT IS THE SECOND ADMISSION CONDITIONAL ON THE
+//                             IT IS THE OTHER ADMISSION CONDITIONAL ON THE
 //                             SESSION: with no diff flag selected and none
 //                             focused there is nothing to revert, so the chord
 //                             drops here as a consumed no-op
 //                             (history_revert_actionable, app_state.h — the
-//                             subject AND the lock since 2026-08-30,
+//                             subject AND the lock, 2026-08-30,
 //                             whose one code reader is this line). THE FACE
-//                             MIRRORS IT AGAIN SINCE
-//                             2026-08-30: the Revert button greys from this
+//                             MIRRORS IT: the Revert button greys from this
 //                             same line — one decision for the chord and the
 //                             glyph, the cleanest shape the enabled predicate
-//                             has — as it did from 2026-08-05 until the
-//                             architect reversed the face half on 2026-08-15,
-//                             because this bit MOVES DURING A VISIT (every
-//                             click that selects or clears changes it) so the
-//                             grey tracked the diff-flag SELECTION and blinked
-//                             at interaction cadence, the argument that then
-//                             took the four cardinal arrows always-on. The
-//                             truthful-buttons ruling withdrew that argument
-//                             ("Any time a button would be a no-op, grey it")
-//                             and deleted the lift that kept the button lit;
-//                             the full record is at the history companions'
+//                             has — though the bit MOVES DURING A VISIT (every
+//                             click that selects or clears changes it), by
+//                             the truthful-buttons ruling ("Any time a button
+//                             would be a no-op, grey it", 2026-08-30); the
+//                             rule is at the history companions'
 //                             arm in redesign_button_enabled, app_state.h.
 //                             IT IS NOT DISPATCHED FROM HERE, and not from a
 //                             mode arm either: admitting it lets the press fall
 //                             through to on_key's ordinary body, which is what
-//                             puts it BELOW the read-only gate — a backstop
-//                             since decision 58, this admission refusing a
+//                             puts it BELOW the read-only gate — a backstop,
+//                             this admission refusing a
 //                             locked tab first (the lock
 //                             means hands off the piece's authored state, and
 //                             this act writes it; Save-and-Commit, which
@@ -2687,57 +2485,44 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // bare Home / End and Shift+Home / Shift+End (the ABSOLUTE ends of the song,
 // not the trim bounds), bare `c` (working zoom centered on the mode's own
 // focus) and bare Left / Right (the PLAYHEAD STEP, 2026-09-26, refused on a
-// card while a diff flag is focused). Four of those families joined on
-// 2026-08-05, and they are claimed rather than admitted for one reason: each is a MODE-LOCAL re-expression,
+// card while a diff flag is focused). They are claimed rather than admitted
+// for one reason: each is a MODE-LOCAL re-expression,
 // reading the diff-flag list, the mode's focus or the reading bit instead of the
 // live stores and the live tab band the ordinary arms would reach. That
 // function's declaration comment carries the membership; this gate never sees
 // any of it.
 //
 // WHAT IS DELIBERATELY OUT, beyond the obvious authoring chords: `f` (a
-// session-state toggle), `o` and, since 2026-10-26, bare `m`, THE SCORE
-// VIEWER (architect: the `h` view is a view of its own, so the viewer does
-// not open over it; the SCORE key is hidden in here by the derived
-// partition, Settings' own answer). (THE PLAYHEAD STEPS were on this list until
-// 2026-09-26, because in the marker lane the very same press nudges a marker;
-// the architect then gave the view T+W's step, and bare Left / Right are
-// CLAIMED one line above rather than admitted here for exactly that reason —
-// an admitted arrow would reach on_key's marker-lane branch, which reads the
-// live selection, while the mode's arm decides the lane over its own diff
-// flags. CTRL+SHIFT+TAB, the paired-tab march, stood here for the hours of
-// 2026-08-18 before the mode claimed it as its own march — the account is at
-// this gate's Ctrl+Tab admission below.)
+// session-state toggle), `o` and bare `m`, THE SCORE
+// VIEWER (architect 2026-10-26: the `h` view is a view of its own, so the
+// viewer does not open over it; the SCORE key is hidden in here by the
+// derived partition, Settings' own answer). (BARE LEFT / RIGHT, the view's
+// T+W PLAYHEAD STEP (architect 2026-09-26), are CLAIMED one line above
+// rather than admitted here because in the marker lane the very same press
+// nudges a marker — an admitted arrow would reach on_key's marker-lane
+// branch, which reads the live selection, while the mode's arm decides the
+// lane over its own diff flags.)
 //
-// AND BOTH RENDER CHORDS ARE OUT since 2026-08-08 (architect), Ctrl+Alt+R having
-// joined its shifted twin here when the checkpoint act moved onto Ctrl+S: a
-// render is an authoring-adjacent act with no meaning in a viewer, and with
-// nothing left to select between, the chord has no in-mode meaning to admit. The
+// AND BOTH RENDER CHORDS ARE OUT (architect 2026-08-08): a
+// render is an authoring-adjacent act with no meaning in a viewer, so the
+// chord has no in-mode meaning to admit. The
 // consequence is the roster's, and it is the derived partition working: the
-// Render button wears its ORDINARY label and icon in here over the mode's
+// Render button wears its ORDINARY icon in here over the mode's
 // disabled face, joining Undo, Redo and the rest of the consumed roster with no
 // hand entry anywhere.
 //
-// VIEWS AND A/B TAB SWITCHES ARE BOTH ADMITTED, the second since 2026-08-18
-// (architect: "ctrl+tab should work as normal in history view"). A view switch
+// VIEWS AND A/B TAB SWITCHES ARE BOTH ADMITTED (the views architect
+// 2026-08-04; the tabs architect 2026-08-18: "ctrl+tab should work as normal
+// in history view"). A view switch
 // re-reads THE SAME piece — the same three sidecar texts the now side was
 // frozen from, the same delta, another column of it — and SO DOES A TAB SWITCH,
 // which is what makes the admission cheap rather than a re-entry: the tabs hold
 // a value-shaped band alone and share both marker stores and the engine
-// settings, so nothing the delta is made of moves with them. THE OLD REFUSAL'S
-// PREMISE was that a tab switch "swaps the per-tab band the session was
-// measured with", and the band is not what the session is measured with; the
-// architect admitted views on 2026-08-04 and left the tabs out, and both Tab
-// chords then stopped reaching this gate at all (the mode took Ctrl+Tab for its
-// walk cycle on 2026-08-05, Ctrl+Shift+Tab for that cycle's reverse on
-// 2026-08-07) until the walk moved to its own buttons and gave the chord back.
-// The BAND a switch moves is the user's own for the whole visit now, the view
-// having stopped owning navigation state on 2026-08-18.
-// The 2026-08-04 ratification also covered the BARE cycle, on the argument that
-// Tab and `c` navigate by LIVE MARKERS; the architect SUPERSEDED that half on
-// 2026-08-05 by giving the mode its own Tab and its own `c`, which navigate by
-// the diff flags instead — so nothing walks a live marker in here and the
-// argument's premise is gone, while the tab-band argument, which was never about
-// markers, stands untouched.
+// settings, so nothing the delta is made of moves with them. The BAND a switch
+// moves is not what the session is measured with, and it is the user's own
+// for the whole visit, the view owning no navigation state. The bare Tab
+// cycle and `c` are the mode's own (2026-08-05), navigating by the diff flags,
+// so nothing walks a live marker in here.
 //
 // THIS LIST IS THE FACES' ALONE (architect 2026-10-30: the roster and the
 // on-screen keyboard are the two producers of every key, so the press that
@@ -2765,15 +2550,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // term here makes the gate answer the view's own chord with "not available in
 // the history view"). Each
 // condition is decided HERE and restated nowhere, so the face that greys is
-// one decision. THE REVERT ACT'S ADMISSION HAD
-// NO FACE READER from 2026-08-15 to 2026-08-30, a scope rather than a second
-// spelling: its subject term still decided the KEY here while
-// redesign_button_enabled lifted the four history companions over the derived
-// partition, so Revert stayed lit on an empty subject — the architect's
-// reversal of a grey that tracked the diff-flag selection and blinked at
-// interaction cadence; the truthful-buttons ruling deleted that lift, so the
-// face reads this admission through the partition again, recorded at the
-// companions' arm in app_state.h. The whole AppState is taken because the
+// one decision. The whole AppState is taken because the
 // REVERT admission composes the active tab's lock, which is not the mode's.
 //
 // ONE BODY, ASKED TWO WAYS (architect 2026-10-07, the `h` roster): `state` is
@@ -2792,7 +2569,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     const bool alt   = mods.alt;
     const bool bare  = !ctrl && !shift && !alt;
     // ZOOM TO FIT AND FRAME THE TRIM — Zoom to Fit's two presses (bare `0`
-    // and Shift+0, since 2026-10-24; architect 2026-10-30: every press a lit
+    // and Shift+0; architect 2026-10-30: every press a lit
     // button can make is a press the view admits): the camera, touching
     // nothing the view froze — the frame is the trim bar's double tap's
     // act, which the view runs too (handle_history_mode_press's trim-bar
@@ -2802,60 +2579,49 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // trim write.)
     const bool is_zero  = (key == GuiKeys::Digit0 && bare) ||
                           is_trim_frame_key(key, mods);
-    // THE ZOOM STEP (`=` / `-`, bare only since 2026-11-08; architect 2026-10-27): the
+    // THE ZOOM STEP (`=` / `-`, bare only; architect 2026-10-27): the
     // camera, as the Ctrl+drag zoom the view already admits is — so the Zoom
     // In and Zoom Out keys stand live in the view by the derived partition.
     const bool is_zoom_step = is_zoom_step_key(key, mods);
-    // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08, superseding
-    // the 2026-08-07 "the Local walk consumes it": a local member is a STATE of
+    // THE LOAD-IN-PLACE IS EITHER WALK'S ACT (architect 2026-08-08: a local
+    // member is a STATE of
     // this session's timeline, and loading a state in place is exactly what the
     // act does). The two differ only in how the member is SPELLED in the
     // confirmation — a short SHA on the Remote tab, a NUMBER on the Local one
     // — and the routing lives at confirm_load_in_place, not here.
     //
-    // THE TERM IS THE ACTIVE WALK'S, AND IT IS ONE TERM FOR BOTH SINCE
-    // 2026-08-09: the walk must have a member. The act names THE VIEWED one,
+    // THE TERM IS THE ACTIVE WALK'S, ONE TERM FOR BOTH (2026-08-09): the walk
+    // must have a member. The act names THE VIEWED one,
     // so a walk with none has nothing to name and
-    // nothing to load, and one decision refuses the key and greys the icon
-    // row's load-in-place button.
-    //
-    // IT WAS THE LOCAL ARM'S ALONE until the empty COMMIT walk became a legal
-    // standing state: the Local walk carries U + R + 1 members and can only be
-    // empty UNBOUND, while the Remote one now opens at `0/0` whenever a piece
-    // has no eligible checkpoint. So the honest gate against the blank-lane
-    // walk covers both, and the source fork this predicate carried for it is
-    // gone (the vocabulary fork stays where it always was, at member_label's
-    // spelling and at confirm_load_in_place).
+    // nothing to load, and one decision refuses the key and greys the top
+    // icon row's load-in-place button. Both walks can be empty: the Local walk
+    // carries U + R + 1 members and is empty only UNBOUND, and the Remote one
+    // opens at `0/0` whenever a piece has no eligible checkpoint, a legal
+    // standing state (the vocabulary fork is at member_label's spelling and at
+    // confirm_load_in_place).
     const bool is_load_in_place =
         (key == GuiKeys::Apostrophe && bare &&
          (state == nullptr || state->history_mode.walk_count() > 0));
-    // THE REVERT ACT (2026-08-05), the mode's THIRD admitted mutator and its
-    // SECOND session-conditional admission: BARE `v` is admitted only while
-    // there is a subject to revert — a selected diff flag, or the focused one
-    // — so with nothing selected the key drops here as a consumed no-op. (It
-    // was CTRL+H until 2026-09-01, when the architect moved the act onto a
-    // bare letter freed by the render player's Stop; the succession is at the
-    // dispatch arm, input_handler.cpp.) THE
-    // REVERT BUTTON TAKES ITS ROW'S DISABLED FACE FROM THIS SAME LINE — one
-    // decision for the chord and the glyph, through history_mode_disables_
-    // button's walk of the chord — as it did until 2026-08-15, when the
-    // architect reversed the face half alone (the grey tracked the diff-flag
-    // SELECTION, so it blinked at interaction cadence, the same argument that
-    // took the four cardinal arrows always-on) and redesign_button_enabled
-    // lifted the companions over the partition; the 2026-08-30 truthful-
-    // buttons ruling deleted that lift, so the face reads this term again.
-    // THE TERM IS history_revert_actionable SINCE PLANNER DECISION 58 (the
-    // same day): the subject AND the lock composed once, so a locked tab's
-    // Revert greys from this line too — the admission used to ignore the lock
-    // and lit a button whose chord the read-only gate below then dropped. Unlike
+    // THE REVERT ACT (2026-08-05; on the bare letter 2026-09-01, the
+    // dispatch arm in input_handler.cpp), the mode's THIRD admitted mutator
+    // and its other session-conditional admission: BARE `v` is admitted only
+    // while there is a subject to revert — a selected diff flag, or the
+    // focused one — so with nothing selected the key drops here as a consumed
+    // no-op. THE REVERT BUTTON TAKES ITS ROW'S DISABLED FACE FROM THIS SAME
+    // LINE — one decision for the chord and the glyph, through
+    // history_mode_disables_button's walk of the chord (the truthful-buttons
+    // ruling, 2026-08-30). THE TERM IS history_revert_actionable: the subject
+    // AND the lock composed once, so a locked tab's Revert greys from this
+    // line too rather than lighting a button whose chord the read-only gate
+    // below would drop. Unlike
     // the two mutators above it, this key is NOT dispatched from a mode arm:
     // it falls through to on_key's ordinary body, below the read-only gate,
-    // which is a backstop for it now rather than its first refusal.
+    // which is a backstop for it rather than its first refusal.
     const bool is_revert_act =
         (key == GuiKeys::V && bare &&
          (state == nullptr || history_revert_actionable(*state)));
-    // CTRL+SHIFT+S IS THE ACT IN HERE (the publish chord, the view's alone
-    // since 2026-11-17, send U), AND IT IS ADMITTED UNCONDITIONALLY
+    // CTRL+SHIFT+S IS THE ACT IN HERE (the publish chord, the view's alone,
+    // architect 2026-11-17), AND IT IS ADMITTED UNCONDITIONALLY
     // (architect 2026-09-01: a gate's membership test is the CHORD'S ALONE —
     // a chord the mode owns is admitted as vocabulary, and its ACT answers
     // whatever the session cannot do right now, run_publish_chord, by the
@@ -2877,11 +2643,11 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // SESSION AS A WHOLE: an open TEARS THIS VIEW DOWN, which is not a reason
     // to refuse it but a description of what a reopen does to everything.
     // The picker it raises stands OVER the mode — its router runs ahead of
-    // this gate in on_key, its veil consumes the view's presses, and its band
-    // — the modal family's box since 2026-10-14 (modal_box.h) — starts at the
-    // view bar's top row and runs to row 8, covering the canvas column's
-    // lanes (the diff lane with them) and the waveform, with only the
-    // toolbar band standing above it, dead — so a Cancel leaves the view
+    // this gate in on_key, its veil consumes the view's presses, and its view
+    // — the modal family's box (modal_box.h), rows 142..1307 on the tablet —
+    // covers the canvas column's lanes (the diff lane with them) and the
+    // waveform, with only the top icon row standing above it
+    // (overlay_admits_button) — so a Cancel leaves the view
     // exactly as it stood, this view owning no navigation state to disturb.
     //
     // IT IS THE SHARED PREDICATE'S SHAPE and not a second spelling of it
@@ -2900,8 +2666,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // bare-exact, read off its own arm in on_key: the four absolute selectors
     // on bare 1/2/3/4 (one axis each, architect 2026-10-14), which run the
     // `t`/`p` handler bodies
-    // and are their only road since the architect deleted the individual
-    // `t`/`p` keys and their view lamps 2026-09-15. Admitting a shape the
+    // and are their only road (architect 2026-09-15). Admitting a shape the
     // dispatch does not bind would admit a press that then does nothing, which
     // is the allowlist telling a lie about itself.
     const bool is_view_selector =
@@ -2928,16 +2693,14 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // the scale — so the two walks and the frozen now side describe
     // the same piece on either tab.
     // The undo/redo stacks the LOCAL walk indexes are session-global for the
-    // same reason. What the switch does move is the WINDOW, which the view has
-    // not owned since the entry stopped framing and the exit stopped restoring.
+    // same reason. What the switch does move is the WINDOW, which the view
+    // does not own: its entry frames nothing and its exit restores nothing.
     //
     // ITS SHIFTED TWIN NEVER REACHES THIS LIST — Ctrl+Shift+Tab is the mode's
-    // OWN since 2026-08-18 (history_mode_owns_key claims it and
+    // OWN (2026-08-18; history_mode_owns_key claims it and
     // handle_history_mode_key consumes it one line above this gate), where it
     // is the paired march built over the diff-flag cycle: the same chord, the
     // same composition, and only what "Tab" denotes changes with the context.
-    // It was the mode's REVERSE walk cycle from 2026-08-07 until the walk left
-    // row 3 earlier that day, and a blocked no-op for the hours between.
     const bool is_ctrl_tab =
         (ctrl && !shift && !alt && key == GuiKeys::Tab);
     // THE TOOLTIP LAMP (architect 2026-09-29), bare backslash through the
@@ -2949,8 +2712,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // walking history), the bare backtick through the shared predicate: a
     // display posture about the picture, authoring nothing the view froze, so
     // the view admits it and the Waveform Magnification button stands beside
-    // Zoom to Fit in there by the derived partition (it was refused here,
-    // Follow's answer, from 2026-09-24 until then). It
+    // Zoom to Fit in there by the derived partition. It
     // ADMITS UNCONDITIONALLY, the chord's membership alone; the curve's
     // readiness is the act's and the face's own (waveform_magnification_
     // toggle_actionable), as outside the view.
@@ -2965,12 +2727,10 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
     // `'`, its keyboard alias outside the view, stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
-    // (THE NOISE LAMP — BARE `w` — was admitted here 2026-10-28 to
-    // 2026-11-05, the planner's call the architect agreed to, Tooltips'
-    // class: device state the view has no reason to refuse. The lamp went
-    // with the band's level case, which carries no chord: the `h` chord
+    // (NOISE, the top icon row's level case, carries no chord: the `h` chord
     // walk answers it LIVE by its own arm, history_mode_refuses_button_
-    // chord, input_pointer.cpp, on the same reason.)
+    // chord, input_pointer.cpp — device state the view has no reason to
+    // refuse.)
     return !(is_zoom_step || is_zero || is_play_renders ||
              is_view_selector || is_add_to_selection || is_ctrl_tab ||
              is_load_in_place || is_revert_act ||
@@ -2995,13 +2755,12 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 // line about them. What lives here is THE CHORD'S FORK in front of it (the
 // GitHub status), THE SAVE in front of
 // the act (2026-08-04 — the act is "Save and Commit"), the CLOSE of the
-// `h` view behind the save (2026-08-05, re-partitioned 2026-08-07), and the
+// `h` view behind the save (2026-08-07), and the
 // DISPATCH onto the background worker with the report that comes back from it.
 
-// THE CHORD'S ACT, THE `h` VIEW'S ALONE (architect 2026-11-17, send U: commit
+// THE CHORD'S ACT, THE `h` VIEW'S ALONE (architect 2026-11-17: commit
 // is any change git sees in the sidecars, from the `h` view alone; the
-// default title with no question asked since 2026-10-10, the commit-title
-// editor retired). ONE CALLER, on_key's `s` arm for Ctrl+Shift+S
+// default title, no question asked, 2026-10-10). ONE CALLER, on_key's `s` arm for Ctrl+Shift+S
 // (is_publish_key, gui_input.h) behind the view's mode test, whose one
 // producer is the view's Save button: its lift spells this chord there
 // (finish_chrome_press_release). Ctrl+S is the plain save in both views.
@@ -3013,7 +2772,8 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 // status that moved inside that frame is answered here — Checking, Refused,
 // Unchecked and Diverged each card their sentence; OFFLINE ASKS GITHUB AGAIN
 // (dispatch_github_check; architect 2026-09-28) and nothing else, the answer
-// being what the next press acts on, silent, row 8 showing the word; BEHIND
+// being what the next press acts on, silent, the status bar's walk line
+// showing the word; BEHIND
 // is the PULL (run_history_pull_press, its OK / Cancel confirmation when the
 // pull changes the open piece; the press owns the one road); UP TO DATE OR
 // AHEAD COMMITS, whatever the session's change is: the act saves first, and
@@ -3088,7 +2848,7 @@ void GuiInputHandler::run_publish_chord() {
 // frozen side is honest about AUTHORED state — the mode's gates refuse every
 // route that could change a marker or an engine setting — but the settings file
 // also carries the per-tab VIEW BAND, and both allowlists admit routes that move
-// it (membership re-derived 2026-10-30): zoom, the overview command,
+// it (2026-10-30): zoom, the overview command,
 // the touch pan and pinch on the mode's whole navigation surface, and the
 // mode's own cursor-moving acts
 // — the diff-flag click, the deferred click act and the walk's Tab cycle,
@@ -3109,21 +2869,19 @@ void GuiInputHandler::run_publish_chord() {
 // made the answer "nothing" has answered it; leaving the user inside an empty
 // view to press `h` is ceremony.
 //
-// THE PARTITION IS THE SAVE'S SINCE 2026-08-07 (architect, superseding his own
-// "the view closes iff the checkpoint ends up in the repository"): THE VIEW
+// THE PARTITION IS THE SAVE'S (architect 2026-08-07): THE VIEW
 // CLOSES IFF THE SAVE LANDED. That is the last thing this thread knows — the
 // checkpoint's own verdict arrives seconds later, on a worker, and a view held
 // open until then would be a modal wait dressed as a review. So a failed save
 // leaves the view exactly as it was (every refusal's shape) and a successful one
 // closes it, whatever the repository then says; the three failing verdicts
-// report through a CRITICAL NOTIFICATION CARD (architect 2026-08-29; the tab
-// row's permanent critical chip from 2026-08-09, an acknowledge notice before
-// that) instead of through a view left standing.
+// report through a CRITICAL NOTIFICATION CARD (architect 2026-08-29) instead
+// of through a view left standing.
 //
 // AND THE ACT IS ASYNCHRONOUS FROM THAT POINT (same ruling). The save is the
 // user's own bytes and stays synchronous; the checkpoint is a stage, a commit
-// and a network push, which used to freeze the window for as long as the
-// remote took. Everything the act needs is CAPTURED BY VALUE here, on the main
+// and a network push, which on this thread would freeze the window for as long
+// as the remote took. Everything the act needs is CAPTURED BY VALUE here, on the main
 // thread — the two path strings, the projects_repo setting, the title, and the
 // freshly rebuilt now side — and handed to GuiHistoryCommitWorker, so the user
 // can edit, render, undo and even load in place while the checkpoint publishes,
@@ -3136,7 +2894,7 @@ void GuiInputHandler::run_publish_chord() {
 // derives from the same bit — see the note at the dispatch for why that half
 // is structural rather than visible).
 //
-// AND SINCE 2026-08-08 THE BIT ALSO LOCKS OUT EVERY SAVE, globally, which is
+// AND THE BIT ALSO LOCKS OUT EVERY SAVE, globally (2026-08-08), which is
 // what makes the coincident-write paragraph below safe rather than merely
 // unlucky: the worker writes the three sidecars into projects/<id>/ off the main
 // thread, and under the project-folder law a concurrent Ctrl+S would write the
@@ -3148,13 +2906,11 @@ void GuiInputHandler::run_publish_chord() {
 // second entry point.
 //
 // THE ACT SAVES FIRST (architect 2026-08-04): the checkpoint is what you see,
-// SAVED and published, one sentence. Before this the act wrote and committed the
-// repo copies while the session still claimed unsaved changes — incoherent in
-// the architect's own workflow, where the loaded source LIVES in the matched
-// projects/<id>/ and the act's repo write therefore IS the working sidecar set:
-// the bytes on disk were exactly a save's and the session still showed the
-// dirty mark (which rode the window title in that era and is the Save
-// button's grey now). So the prelude below is the REAL Ctrl+S, through its one owner
+// SAVED and published, one sentence. A commit without the save would leave
+// the session claiming unsaved changes over bytes exactly a save's —
+// incoherent in the architect's own workflow, where the loaded source LIVES in
+// the matched projects/<id>/ and the act's repo write therefore IS the
+// working sidecar set. So the prelude below is the REAL Ctrl+S, through its one owner
 // (GuiSaveOps::save — the same three atomic writes beside the source, the same
 // per-write stderr, the same note_saved tail — the reference move, the
 // coalescing stamp's clear and the dirty refold), never a second
@@ -3241,17 +2997,13 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
     app.history_checkpoint_in_flight = true;
     // TWO FACES COME OFF THIS ONE BIT AND ONLY ONE OF THEM IS VISIBLE. The
     // SAVE-AND-COMMIT face greys on it through history_checkpoint_actionable
-    // (app_state.h — the allowlist's Ctrl+S admission derived that grey until
-    // 2026-09-01, when the membership was purified and the term moved to the
-    // act's own predicate; the same one decision, one house over), and that
+    // (app_state.h, the act's own predicate), and that
     // face exists only inside the view — the view has just closed and `h`
     // refuses to reopen one while the bit stands — so that half is structural,
     // kept because it is not a second decision. What the user actually sees is
     // the GLOBAL one: the same bit greys the Save button in every view, and
-    // the grey is now the whole of it — the "Committing..." LABEL died with
-    // row 2's labeled faces at the 2026-08-12 relayout and the "Committing the
-    // checkpoint (Ctrl+S)" TOOLTIP on 2026-09-12, when a tooltip stopped
-    // reporting a state (redesign_button_enabled and
+    // the grey is the whole of it — no label, and no tooltip, a tooltip
+    // reporting no state (redesign_button_enabled and
     // redesign_button_glyph_swapped are the live readers), mirroring the save
     // lockout above.
     job.kind = GuiHistoryJobKind::Checkpoint;
@@ -3269,16 +3021,13 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 // user, at the window, when the checkpoint he asked for did not happen — failed,
 // or had nothing to carry.
 //
-// IT RAISES A CRITICAL NOTIFICATION CARD (architect 2026-08-29; the tab
-// row's permanent critical chip from 2026-08-09 until then, and an
-// acknowledge modal from 2026-08-07 before that): a failed checkpoint is
-// critical, so its card STANDS UNTIL IT IS DISMISSED — no clock, and
-// nothing that comes after takes it down, a later success included. The
-// chip's one clearing route was a later established success, because the
-// chip was a SLOT that held the repository's last answer; a card is an
-// EVENT, and the user closes it once he has read it, whatever the next act
-// answered (the architect: persistent, dismissed only deliberately — by its
-// X until 2026-10-01, by a press on the card since). GuiNotifications owns
+// IT RAISES A CRITICAL NOTIFICATION CARD (architect 2026-08-29): a failed
+// checkpoint is critical, so its card STANDS UNTIL IT IS DISMISSED — no
+// clock, and nothing that comes after takes it down, a later success
+// included: a card is an EVENT, not a slot holding the repository's last
+// answer, and the user closes it once he has read it, whatever the next act
+// answered (the architect: persistent, dismissed only deliberately — by a
+// press on the card, 2026-10-01). GuiNotifications owns
 // the card; this and the pull's late failure (execute_history_pull) are the
 // critical class's two producers.
 //
@@ -3287,7 +3036,7 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 //   THE TWO ENDINGS — Committed (the branch carries these bytes and the push
 //   succeeded), which raises nothing, and NothingToCommit (git saw the three
 //   sidecars clean and the branch was not ahead of its remote), which raises
-//   ONE NORMAL CARD, "Nothing to commit" (architect 2026-11-17, send U: the
+//   ONE NORMAL CARD, "Nothing to commit" (architect 2026-11-17: the
 //   face is lit whenever a commit can be made, so a press on a clean tree is
 //   told so). Neither is a failure; each says what it has to say on stderr.
 //   THE THREE FAILURES — WriteFailed (nothing was committed), CommitFailed (a
@@ -3304,16 +3053,8 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 //   distinguishes them at all. They are SHORT because a card is one line and
 //   the detail is already on stderr, verbatim.
 //
-// THERE WERE FOUR FAILURES UNTIL 2026-09-06: `Unconfirmed` said the act could
-// establish neither the content nor the publication, and it existed because the
-// act could not read its steps' own verdicts and had to observe the repository
-// instead — an observation that could not be made had no verdict left to take.
-// Every step answers its own verdict now, so every question the act asks gets an
-// answer and that verdict is deleted.
-//
 // THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, AND THE RETRY IS THE
-// ACT ITSELF (architect 2026-09-27, superseding the 2026-08-09 "no in-app
-// retry"): a checkpoint that committed and failed to push leaves the GitHub
+// ACT ITSELF (architect 2026-09-27): a checkpoint that committed and failed to push leaves the GitHub
 // status AHEAD, and the `h` view's Save key (the publish chord) runs the act
 // again, whose pre-flight finds the branch still ahead of its remote and
 // pushes it.
@@ -3328,24 +3069,21 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 // fetch failed in the clone itself, the comparison after it could not be
 // read).
 //
-// AND NOTHING ASYNCHRONOUS RAISES A MODAL WITHOUT CLEARING THE WAY FIRST, which
-// is what retired a whole family of guards this function used to owe (the parked
-// notice, its three park classes, the dropdown close and the release-owned scrap
-// clears, all deleted 2026-08-09 as producer-less). One asynchronous modal
-// opener remains, the platform's close request (Back; main.cpp's
+// AND NOTHING ASYNCHRONOUS RAISES A MODAL WITHOUT CLEARING THE WAY FIRST, so
+// this function owes no park or clear on anyone's behalf. The one asynchronous
+// modal opener is the platform's close request (Back; main.cpp's
 // set_on_close), and it
 // owes those guards in its own body: it force-ends every live gesture and hides
-// the hint before raising the unsaved-work prompt. What is gone
-// is an async opener that had to park and clear on someone ELSE's behalf — a
-// card can be pushed from any clock at all, because it takes nothing from
-// anyone.
+// the hint before raising the unsaved-work prompt. This function raises a
+// card, which can be pushed from any clock at all, because it takes nothing
+// from anyone.
 void GuiInputHandler::on_history_checkpoint_complete(
         GuiHistoryCommitOutcome outcome, GuiGitHubStatus github) {
     app.history_checkpoint_in_flight = false;
     if (github != GuiGitHubStatus::Unchecked) app.github_status = github;
 
-    // RE-WARM THE WALK FOR EVERY OUTCOME THAT MAY HAVE MOVED HEAD (2026-08-07,
-    // membership re-derived 2026-08-09 and 2026-09-27). The prefetch store
+    // RE-WARM THE WALK FOR EVERY OUTCOME THAT MAY HAVE MOVED HEAD
+    // (2026-09-27). The prefetch store
     // describes the repository as of one tip, so the next `h` must see a
     // checkpoint this act made — and "made" is not the same set as "succeeded".
     //   TWO MAY HAVE COMMITTED: Committed and CommittedNotPushed — each also
@@ -3392,7 +3130,7 @@ void GuiInputHandler::on_history_checkpoint_complete(
         // user's to close.
         break;
     case GuiHistoryCommitOutcome::NothingToCommit:
-        // A TREE GIT SEES CLEAN CARDS (architect 2026-11-17, send U): the
+        // A TREE GIT SEES CLEAN CARDS (architect 2026-11-17): the
         // Save-and-Commit face is lit whenever a commit can be made
         // (history_checkpoint_actionable), not on a measured change, so the
         // press that found nothing says so — the NORMAL class, an answer to
@@ -3412,9 +3150,7 @@ void GuiInputHandler::on_history_checkpoint_complete(
     case GuiHistoryCommitOutcome::CommittedNotPushed:
         // The bytes are in the branch and the push did not land. The status
         // reads Ahead and the publish chord retries; the card stands until
-        // the user closes it. ONE CLAUSE like its siblings (2026-09-01): it
-        // read "Checkpoint committed; push failed", the one semicolon among
-        // the verdicts.
+        // the user closes it. ONE CLAUSE like its siblings (2026-09-01).
         notifications.notify(AppState::NotificationClass::Critical, "Checkpoint committed but not pushed");
         break;
     // THE THREE PRE-COMMIT REFUSALS (architect 2026-09-27, the act fetching
@@ -3456,7 +3192,8 @@ void GuiInputHandler::dispatch_github_check() {
 
 // THE CHECK'S ANSWER, on the main thread. ADVISORY: a status and nothing else
 // — no card (the failing readings printed their cause on stderr from the
-// worker), and the row-8 word and Save's face are the whole report.
+// worker), and the walk line's GitHub word and Save's face are the whole
+// report.
 void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
     app.github_status = status;
     if (app.history_mode.active) viewport.invalidate_all();
@@ -3630,7 +3367,7 @@ namespace {
 // GuiHistoryWarpEntry::ordinal, history_diff.h — and the two passes address
 // by those identities so that no earlier edit can shift a later target,
 // every item at its one frame (HistoryDiffFlag::time_frame, render.h; one
-// item, one frame since 2026-11-11, session 106):
+// item, one frame, architect 2026-11-11):
 //   1. DELETIONS. Every flag with an ADDED half (an added-only flag, a changed
 //      item) names the now-side row (time_frame, now_ordinal). Each resolves
 //      against the store AS IT STOOD WHEN THE ACT BEGAN — the run's first
@@ -3728,21 +3465,18 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 
 // -- THE REVERT ACT --------------------------------------------------------
 //
-// BARE `v`, THE HISTORY VIEW'S THIRD MUTATOR (architect 2026-08-05 on Ctrl+H,
-// moved onto the bare letter 2026-09-01): apply the
+// BARE `v`, THE HISTORY VIEW'S THIRD MUTATOR (architect 2026-08-05; on the
+// bare letter 2026-09-01): apply the
 // SELECTED diff flags' INVERSES to the live store of the active column, then
 // close the view. The one caller is on_key's own `v` arm, which is reached
 // only while the mode stands, only past the read-only gate, and only with the
 // allowlist having admitted the chord — which it does only while a subject
 // stands on a WRITABLE tab (history_revert_actionable, app_state.h, whose
-// ONE code reader is that key gate; the lock joined the subject there on
+// ONE code reader is that key gate; the lock joins the subject there,
 // 2026-08-30). The Revert BUTTON'S grey reads the same decision
-// through the derived `h` partition — again since 2026-08-30: the architect
-// reversed the face half alone on 2026-08-15, the grey having tracked the
-// diff-flag selection and blinked at interaction cadence (the argument that
-// took the four cardinal arrows always-on), and the truthful-buttons ruling
-// reversed that reversal, so the button greys with no subject and a click on
-// it is the dead face's consumed nothing. The record is at the history companions'
+// through the derived `h` partition (the truthful-buttons ruling,
+// 2026-08-30), so the button greys with no subject and a click on
+// it is the dead face's consumed nothing. The rule is at the history companions'
 // arm in redesign_button_enabled, app_state.h; the predicate keeps its one code
 // reader, the face reaching it through the partition's walk.
 //
@@ -3778,7 +3512,7 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 //     then line back at its own ordinal. It is not an in-place write, because
 //     the two halves may sit at different ordinals of one run, and only the
 //     two inverses composed put the then line where the checkpoint had it.
-//   A MOVED marker is two items (architect 2026-11-11, session 106): its
+//   A MOVED marker is two items (architect 2026-11-11): its
 //   removed item restores the then line at the old frame and its added item
 //   deletes the now row at the new frame, each its own act, in either order —
 //   each resolves against the store as that act finds it, the restore's seat
@@ -3788,11 +3522,12 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 //   neither, as asked (the act always forces).
 //
 // ONE FLAG IS ONE LINE, AND COINCIDENT LINES ARE LEGAL, which is what the
-// ordinal is for: the frame alone reached a run's FIRST pre-act row whichever
-// row the flag showed, so a `4 → 3` flag on the second of two coincident rows
-// replaced the first (`100|1, 100|4` against `100|1, 100|3` reverted to
-// `100|4, 100|3` — the visible gain unchanged and an untouched row rewritten)
-// and reverting an added `3` beside a common `1` deleted the `1`. The one apply
+// ordinal is for: the frame alone would reach a run's FIRST pre-act row
+// whichever row the flag showed, so a `4 → 3` flag on the second of two
+// coincident rows would replace the first (`100|1, 100|4` against
+// `100|1, 100|3` reverting to `100|4, 100|3` — the visible gain unchanged and
+// an untouched row rewritten) and reverting an added `3` beside a common `1`
+// would delete the `1`. The one apply
 // body, apply_history_revert_column above, resolves every subject against the
 // PRE-ACT store and states the order that keeps the identities valid.
 //
@@ -3805,8 +3540,8 @@ void apply_history_revert_column(GuiMarkerStore<GuiM>&               proposed,
 // undo entry whose restore would do nothing and re-triggers no render; and an
 // order-only change on a coincident run reads as the change it is — the
 // sidecar text differs, which is the whole test here, whether or not any
-// surface HEARS or SHOWS the difference (no column does since 2026-09-16: W, P
-// and M all collapse a coincident run to a neutral value).
+// surface HEARS or SHOWS the difference (no column does: W, P and M all
+// collapse a coincident run to a neutral value).
 //
 // THE COLUMN IS THE ACTIVE ONE BY CONSTRUCTION: the lane paints only the active
 // column's half of a delta (rebuild_history_diff_flags), so every ordinal in the
@@ -3858,9 +3593,8 @@ void GuiInputHandler::run_history_revert() {
     // copies f.time_frame into the fresh marker and the warp arm re-spells it with
     // format_authored_frame, so the parsed line lands on exactly this value —
     // which is what lets the check run before the loop parses anything.
-    // The refusal is a notification card beside its stderr line (2026-08-29;
-    // stderr alone until then, the view's own line having outranked the
-    // transient tier it would have written). It sits ABOVE the
+    // The refusal is a notification card beside its stderr line
+    // (2026-08-29). It sits ABOVE the
     // stop below because a refusal is not the act; in this mode the stop is a
     // formality either way (its own comment says why).
     {
@@ -3920,8 +3654,8 @@ void GuiInputHandler::run_history_revert() {
     // THE PROPOSED STORE, BUILT WHOLE BEFORE ANYTHING IS INSTALLED (2026-09-06).
     // The apply below writes THESE copies and the live stores are untouched
     // until the install at the tail, which is what lets `changed` judge the
-    // finished state against the pre-act's with nothing to undo — and, since
-    // 2026-09-16, what lets every flag resolve against the PRE-ACT rows
+    // finished state against the pre-act's with nothing to undo — and what
+    // lets every flag resolve against the PRE-ACT rows
     // (apply_history_revert_column). Both columns are copied
     // and the act writes exactly one; the other copy is a vector's worth
     // of allocation on a keypress and is discarded.
@@ -4014,8 +3748,8 @@ void GuiInputHandler::run_history_revert() {
     // that do wait on a change.
     playback_lifecycle.stop_playback_if_playing();
 
-    // THE SELECTION HAS BEEN SPENT (architect 2026-09-17, the day the sticky
-    // ctrl reached this view): the act's subject IS the mode's multi-selection,
+    // THE SELECTION HAS BEEN SPENT (architect 2026-09-17): the act's subject
+    // IS the mode's multi-selection,
     // so a revert is exactly the "I have already acted" the class is named for,
     // and the ADD TO SELECTION lamp goes out. THE REASON IS WHERE THE PRESS
     // LEAVES THE USER: the act closes the view and returns him to the LIVE
@@ -4086,9 +3820,8 @@ void GuiInputHandler::run_history_revert() {
     // exists — the load-in-place's own argument, applied to a narrower write.
     // Closing AFTER the mutations is what lets the exit owner's own live-lane
     // republish run over the FINISHED state — the view owns no navigation state
-    // and puts nothing back (the parked-band restore died 2026-08-18; the record
-    // is at close_history_mode), so the republish is the whole of what the order
-    // buys. It is also why the act needs no damage of its own:
+    // and puts nothing back (close_history_mode), so the republish is the
+    // whole of what the order buys. It is also why the act needs no damage of its own:
     // close_history_mode invalidates the window whole.
     //
     // IT CLOSES EVEN WHEN NOTHING CHANGED — a subject of added flags with no
@@ -4111,8 +3844,8 @@ bool GuiInputHandler::any_text_editor_active() const {
 // ruling at the declaration, input_handler.h). It is EXACTLY
 // any_text_editor_active, and that identity is structural rather than
 // coincidental: an editor that swallows printable letters MUST own the
-// keyboard, or typing `c` into a flag would recentre the camera — and, since
-// 2026-10-25, owns the pointer too. So this delegates instead of restating
+// keyboard, or typing `c` into a flag would recentre the camera — and owns
+// the pointer too (2026-10-25). So this delegates instead of restating
 // the membership — one expression, two names, and the two concepts can only
 // ever be the same set.
 bool GuiInputHandler::keyboard_modal_editor_active() const {
@@ -4126,7 +3859,7 @@ namespace {
 // route_modal_editor_key), so the spelling cannot drift apart. BARE TAB
 // EXACTLY (architect 2026-10-30: the on-screen keyboard's Tab key, its one
 // producer, carries no shift — the latched Shift rides LEFT and RIGHT alone,
-// since 2026-11-08; Ctrl+Tab is the tab-cycle family's, never an editor's).
+// 2026-11-08; Ctrl+Tab is the tab-cycle family's, never an editor's).
 bool modal_editor_tab(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Tab && !mods.ctrl && !mods.shift && !mods.alt;
 }
@@ -4159,8 +3892,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // leaves a buffer AT its completion, so a second fire could advance
     // nothing; the Tab family classifies NotEditorKey below.)
     if (any_text_editor_active()) {
-        // Only the editor's motion/edit keys — Backspace and, since
-        // 2026-11-08 (sessions 95 / 96), LEFT / RIGHT bare or carrying the
+        // Only the editor's motion/edit keys — Backspace and
+        // (2026-11-08) LEFT / RIGHT bare or carrying the
         // latched Shift, the shift riding every fire — and its
         // printable-insert keys auto-repeat while held (and UP / DOWN, the
         // arm below); its session (bare Escape/Return) and chord (ctrl-exact
@@ -4203,8 +3936,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // UNDO / REDO, Ctrl+Z / Ctrl+Shift+Z. These
     // arms name exactly those rows' chords; every other chord is one-shot.
     // THE FOUR ARROWS REPEAT IN THEIR ONE FORM, BARE (architect 2026-08-31;
-    // every arrow binds bare alone since 2026-11-08, the vertical ladder's
-    // Ctrl rung retired, gui_input.h's THE ARROW STEP): a held Up / Down
+    // every arrow binds bare alone, 2026-11-08, gui_input.h's THE ARROW
+    // STEP): a held Up / Down
     // button walks a cent a fire — the burst continues the gesture the press
     // began, which is the whole meaning of a hold; a held Left / Right
     // button walks one step of the active column's unit a fire, a hop on the
@@ -4231,10 +3964,10 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
     // arm (input_handler.cpp).
     if (mods.ctrl && !mods.alt && key == GuiKeys::Z)
         return true;
-    // THE ZOOM STEP'S `=` / `-` ARE DELIBERATELY ABSENT, bare and shifted
-    // (architect 2026-10-27): the step is one-shot like Home / End, and its
-    // two keys on the band take no repeat either, their long press being the
-    // shift (is_zoom_step_key, gui_input.h). CTRL+0 is absent because it
+    // THE ZOOM STEP'S `=` / `-` ARE DELIBERATELY ABSENT (architect
+    // 2026-10-27): the step is one-shot like Home / End, and its two keys on
+    // the top icon row take no repeat either (is_zoom_step_key, gui_input.h:
+    // bare exactly, no hold). CTRL+0 is absent because it
     // binds nothing at all — and an unbound chord has no repeat to ask about.
     return false;
 }
@@ -4264,8 +3997,8 @@ bool GuiInputHandler::repeat_eligible(GuiKey key, GuiInputState mods) const {
 // alt, on any arm.
 // The strict-modifier rule therefore holds by ONE route: a press wearing a
 // modifier its arm does not bind (Ctrl+Enter, Ctrl+Shift+V, Ctrl+BackSpace —
-// none has a producer since 2026-11-08, when the barrel's road on the
-// keyboard went, claim_onscreen_keyboard_press) is NotEditorKey like any
+// none has a producer, the barrel having no road on the keyboard,
+// claim_onscreen_keyboard_press) is NotEditorKey like any
 // other unbound chord and drops right here, so it cannot cancel, commit,
 // paste or erase. The gate-level
 // carve-outs below are NOT editor consumption — they are gate policy layered
@@ -4355,7 +4088,7 @@ bool GuiInputHandler::cancel_archival_session() {
         // true; once on_completion_event fires it goes Idle). The
         // is_busy() branch above covers that window. This branch is
         // the rare case where queue_running is set but the worker has
-        // already cleared — defensive, mirrors the prior behavior.
+        // already cleared — defensive.
         // Both parked slots are disarmed here too, same pump-resurrection
         // reason as the is_busy() branch.
         app.queue_cancel_requested = true;
@@ -4369,16 +4102,14 @@ bool GuiInputHandler::cancel_archival_session() {
 // THE ITERATION SWEEP — the Cartesian product of the per-marker iter ranges
 // authored in grid iterations, ON THE COLUMN THE LAMP WAS LIT IN AND ON THAT
 // ONE ALONE (architect 2026-09-10: "the iterations land wherever I'm
-// looking"; the two-column product of 2026-09-09 is gone with the two-column
-// mode). That column is simply the LIVE one: the W/P switch is one of the
+// looking"). That column is simply the LIVE one: the W/P switch is one of the
 // acts the iteration lock refuses, so it cannot have moved since the press
 // that lit the lamp.
 // Output lands in `<source parent>/tmp/<N>_iterations/`, one cell per product
 // point; each cell renders one `.wav`.
 //
 // THE BASENAME IS `<seq>_<csv>`, one CSV because there is one column: a warp
-// sweep names byte-identically to what it always has (`03_+1.50,-0.50`) and a
-// phase sweep reads `03_+2,-3`. The CSV holds the lit column's swept deltas in
+// sweep reads `03_+1.50,-0.50` and a phase sweep `03_+2,-3`. The CSV holds the lit column's swept deltas in
 // timeline order through that
 // column's ONE composer — format_signed_delta_cents for the warp bounds and
 // format_signed_hops for the phase ones — so THE ABSENT DECIMALS ARE WHAT TELL
@@ -4391,22 +4122,21 @@ bool GuiInputHandler::cancel_archival_session() {
 // lifecycle).
 //
 // ONE CALLER, Ctrl+Alt+R's iteration arm (architect 2026-08-02: with the mode on
-// that chord IS the sweep, and the former Ctrl+Alt+I is retired). The caller has
+// that chord IS the sweep). The caller has
 // already established both of this body's outer facts — a non-empty
 // source_audio_path and iteration mode ON — so they are not re-tested here; the
 // refusals below (no brackets authored, the inverted-bracket breach, the cell
 // cap) are the SWEEP'S OWN and are stated where they fire. THE WALLS ARE NOT
 // AMONG THEM: a bracket is authored inside its column's window and the lock
 // freezes everything that window is made of while the lamp stands, so there is
-// no wall to re-verify here (the neighbour walls that once needed one are
-// retired, and a cell where two resets cross or meet is legal — the per-cell
-// sort below is what carries it).
+// no wall to re-verify here (a cell where two resets cross or meet is legal —
+// the per-cell sort below is what carries it).
 void GuiInputHandler::run_iteration_sweep_render() {
     // Dispatch validates nothing: the render worker's own resolve->build
     // chain is the tripwire surface (marker arrangements normalize to
     // tempo 1.00, trim never refuses). The per-cell tempo_cents mutations
     // below need no validation either — they are in-bracket by
-    // construction now that the bracket rides its base (the retroactive
+    // construction, the bracket riding its base (the retroactive
     // clamp, warpmarkers.h), so nothing here leans on the async stderr
     // backstop.
 
@@ -4426,7 +4156,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
     const std::vector<GuiPhaseResetMarker> base_phase_resets =
         app.phaseresetmarkers.markers();
     // THE INVERTED-BRACKET BREACH, ONE COMPOSER FOR BOTH COLUMNS (architect
-    // 2026-08-30 for its two surfaces; both columns since 2026-09-09). The
+    // 2026-08-30). The
     // editors enforce start <= end and both brackets are session-only, so
     // start > end is an internal breach — refuse the dispatch loudly and
     // enqueue nothing, repairing no iter state (the state is evidence; the
@@ -4529,7 +4259,7 @@ void GuiInputHandler::run_iteration_sweep_render() {
         per_marker_delta_cents.push_back(std::move(delta_cents));
     }
 
-    // THE PHASE DIMENSIONS (2026-09-09), the same walk in the hop domain. A
+    // THE PHASE DIMENSIONS, the same walk in the hop domain. A
     // swept reset's per-cell list is the integers lo..hi inclusive; the
     // AUTHORED FRAME each of them names is resolved HERE, ONCE per reset per
     // hop, under the LIVE warp map — the same map every cell of this sweep
@@ -4614,10 +4344,9 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // AND IT SAYS SO (architect 2026-08-30): with iteration mode on,
         // Ctrl+Alt+R IS the sweep, so a chord that renders nothing at all
         // must not look like a chord that rendered silently. THE CARD IS THE
-        // WHOLE ANSWER since 2026-09-12: the Render button greys on this same
-        // verdict and carried the sentence on its hint until then, and a
-        // tooltip states no reason any more — the grey is the button's cue and
-        // this card is the key's.
+        // WHOLE ANSWER (2026-09-12): the Render button greys on this same
+        // verdict and a tooltip states no reason — the grey is the button's
+        // cue and this card is the key's.
         std::fprintf(stderr,
             "warptempo_gui: render-iterations: No iter ranges "
             "authored; nothing to render\n");
@@ -4634,24 +4363,14 @@ void GuiInputHandler::run_iteration_sweep_render() {
         //
         // A NORMAL CARD (architect 2026-08-30): a refusal that answers an act
         // the user just gave is an EVENT, and events are cards
-        // (notifications.h's split). It wore the dismiss-only ERROR_NOTICE modal
-        // until the cards landed — the pre-split surface for a sentence the
-        // user had to be shown — and that prompt kind retired whole with this
-        // move, its other caller (the target-view entry gate) having become a
-        // silent one. The sentence was unchanged by that move; the 2026-08-31
-        // rebrand renamed its subject alone ("Iteration sweep" -> the
-        // command's own name, which the Grid Iterations button's tooltip owns
-        // since that menu's 2026-09-04 deletion; the name wears Title Case and
-        // this card keeps sentence case).
+        // (notifications.h's split). Its subject is the command's own name,
+        // which the Grid Iterations button's tooltip owns (the name wears
+        // Title Case and this card keeps sentence case).
         //
         // ONE CLAUSE, ONE NUMBER, NO PERIOD (architect 2026-09-01, the
         // capitalization sweep's sentence-shape rule — notifications.h's card
-        // section). It was the product's only TWO-SENTENCE card, said the cap
-        // twice and closed with an instruction ("more than N cells (cap N).
-        // Narrow the marker brackets and retry."), which was the retired
-        // dismiss-only
-        // modal's shape rather than a card's: the fix is implied by the reason,
-        // the card naming the brackets as what makes too many cells.
+        // section): no instruction, the fix implied by the reason, the card
+        // naming the brackets as what makes too many cells.
         notifications.notify(AppState::NotificationClass::Normal,
                              kIterSweepOverCapCard);
         return;
@@ -4678,14 +4397,11 @@ void GuiInputHandler::run_iteration_sweep_render() {
                              kIterSweepUnloadableCellCard);
         return;
     }
-    // (A PHASE ARM STOOD HERE for one day, 2026-09-09: a phase reset's hop
-    // bracket standing OFF its walls, which the plan re-verified on every read
-    // because a dozen writers could move a wall under a standing bracket. The
-    // ITERATION LOCK retired every one of those writers on 2026-09-10 — while
-    // a bracket stands the mode is lit, and while it is lit the piece is
-    // locked — so those walls hold by construction and nothing re-asks them.
-    // The arm above is not its return: it asks the LOADER about a warp
-    // payload's spelling, which no lock can hold by construction.)
+    // NO ARM ASKS A PHASE RESET'S HOP BRACKET AGAINST ITS WALLS: while a
+    // bracket stands the mode is lit, and while it is lit the ITERATION LOCK
+    // holds the piece (2026-09-10), so those walls hold by construction. The
+    // arm above is a different question: it asks the LOADER about a warp
+    // payload's spelling, which no lock can hold by construction.
 
     // The delta lists built above and the owner's count are the same product
     // by construction — the same two stores, the same two eligibility walks,
@@ -4767,9 +4483,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
         // ONE ENTRY PER AXIS, so a TIE spells ONE entry for all its members
         // and it stands at the tie's FIRST member's position — which falls out
         // of the axes standing in store order of their leaders (the build
-        // above) rather than out of a rule here. The walk and the spelling are
-        // unchanged: an axis was a marker and is now a tie, and the composer
-        // never asked which.
+        // above) rather than out of a rule here. The composer never asks
+        // whether an axis is one marker or a tie.
         std::string csv;
         for (size_t k = 0; k < num_dims; ++k) {
             if (!(phase_column ? phase_is_swept[k] : is_swept[k])) continue;
@@ -4880,10 +4595,10 @@ void GuiInputHandler::run_iteration_sweep_render() {
             }
         }
         // THE VECTOR IS SORTED HERE because the cells MAY CROSS (architect
-        // 2026-09-11): a neighbouring reset is not a wall any more, so two
-        // adjacent ranges may cross or meet and a cell can displace a reset
-        // past the one beside it. A TIE REACHES MORE ROWS AT ONCE (2026-09-19)
-        // — one cell now displaces every member of its axis — so the sort has
+        // 2026-09-11): a neighbouring reset is no wall, so two adjacent
+        // ranges may cross or meet and a cell can displace a reset past the
+        // one beside it. A TIE REACHES MORE ROWS AT ONCE (2026-09-19) — one
+        // cell displaces every member of its axis — so the sort has
         // more to do and no new rule to learn: it is the same one pass over
         // the whole vector, whatever moved it. A crossed cell is the user's
         // own deliberate
@@ -4927,17 +4642,14 @@ void GuiInputHandler::run_iteration_sweep_render() {
     }
 
     // The batch's DISPLAY label — the progress line's counted noun and the
-    // stderr summary's tag. "grid iterations" since the 2026-08-31 rebrand,
-    // which is the command's own name for this mode (the Grid Iterations
-    // button's tooltip owns it since that menu's 2026-09-04 deletion):
-    // the GUI line reads "Rendering 3 of 8 grid iterations...", the label
-    // naming what the two numerals count, and "render" fell out of it
-    // because the sentence already leads with "Rendering". (It was plain
-    // "iterations" from 2026-08-29, when the architect made the label the
-    // counted noun, and "render" before that.) It falls mid-sentence in both
-    // surfaces and so is lowercase by the sentence-case rule itself, no
-    // exception to anything (the product's text rules are stated once at
-    // paint_handler.cpp's text-rules block); the BPM batch's twin label
+    // stderr summary's tag. "grid iterations", the command's own name for
+    // this mode (the Grid Iterations button's tooltip owns it): the GUI line
+    // reads "Rendering 3 of 8 grid iterations...", the label naming what the
+    // two numerals count (architect 2026-08-29), with no "render" in it
+    // because the sentence already leads with "Rendering". It falls
+    // mid-sentence in both surfaces and so is lowercase by the sentence-case
+    // rule itself, no exception to anything (the product's text rules are
+    // stated once at paint_handler.cpp's text-rules block); the BPM batch's twin label
     // capitalizes its acronym and lowercases its noun for the same reason.
     if (async_renderer.is_busy()) {
         // A render dispatch kills the running render. Park the fully
@@ -4957,40 +4669,33 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // phase-reset copies, so nothing dispatched reads the live iter fields.
     //
     // IN TARGET VIEW THIS TAIL IS A GRANTED HOME-VIEW-BINDING EXCEPTION
-    // (architect 2026-08-07, with the ruling that iteration mode is
-    // TARGET-LEGAL — and since 2026-09-13 target view is the only view the
-    // mode, and so the sweep, can stand in: AppState::iteration_mode_enabled). The
-    // wipe writes the WARP store, which off warp's
-    // home view the binding would otherwise refuse; it was what gated this
-    // whole command to source view (bdf4336, 2026-07-22), and that gate is
-    // gone. The exception is admitted on the CENT STEP'S OWN CLASS of
+    // (architect 2026-08-07), target view being the only view the mode, and
+    // so the sweep, can stand in (2026-09-13: AppState::iteration_mode_enabled).
+    // The wipe writes the WARP store, which off warp's home view the binding
+    // would otherwise refuse. The exception is admitted on the CENT STEP'S OWN CLASS of
     // argument, and narrower: iter brackets are SESSION-ONLY fields on both
     // columns — never serialized (no sidecar key, and the two slices drop them
     // at the render boundary), excluded from the render recipe, and outside
     // the undo domain (2026-09-10, so the wipe pushes nothing at all) — so the
     // write can reach neither disk nor a render nor a history entry, and the
-    // state it clears is the very state this command just consumed. Every other route out of the mode already runs
-    // this same clear, so nothing about the mode's lifecycle changed with the
-    // view.
+    // state it clears is the very state this command just consumed. Every
+    // other route out of the mode runs this same clear.
     flag_editor.wipe_iter_state();
     app.iteration_mode_enabled = false;
-    // LEAVING THE MODE PUTS THE VALUE DRAG LAMP OUT (architect 2026-10-11
-    // ~01:50, "it's simpler that way"; AppState::value_drag_lamp): this tail
+    // LEAVING THE MODE PUTS THE VALUE DRAG LAMP OUT (architect 2026-10-11,
+    // "it's simpler that way"; AppState::value_drag_lamp): this tail
     // is the mode's second exit road beside bare `i`'s toggle, which clears it
     // at both edges. The bottom lane is damaged so the button's lit face (the
     // mode's, value_drag_armed) goes dark in this frame.
     app.value_drag_lamp = false;
     viewport.invalidate_rect(bottom_row_area(app));
     viewport.invalidate_top_strip();
-    // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR did,
-    // 2026-08-29: the mode bit is one of the eligibility terms the resolved
-    // READOUT read, so clearing it could bring that cell back. The readout
-    // retired with the bar and nothing outside the top strip changes here.)
 }
 
 // Render-trigger chords. See the declaration for the chord list.
 void GuiInputHandler::card_trim_fallback_if_any() {
-    // THE ARCHIVAL HALF OF ITEM L (architect 2026-09-02). do_render prints the
+    // THE TRIM FALLBACK CARD'S ARCHIVAL HALF (architect 2026-09-02). do_render
+    // prints the
     // "…; rendering untrimmed" line from the WORKER thread, which is the
     // engineering log and nothing the user sees: the deliverable comes out the
     // full length of the piece while the trim bar goes on painting the hairline
@@ -5042,27 +4747,24 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // (.warpmarkers / .phaseresetmarkers / .settings).
     // Title-not-set is a hard error surfaced from do_render.
     //
-    // ONE MODE BIT RE-AIMS THIS CHORD, the iteration one. THE HISTORY MODE HAD
-    // THE OUTER CLAIM FROM 2026-08-04 TO 2026-08-08 and no longer does: the
-    // save-and-commit act moved onto Ctrl+S, the chord the act's own first step
-    // already is (architect 2026-08-08), so this route is a render again in
-    // every mode and the history view simply never reaches it — neither render
-    // chord is on that view's allowlist, which is also where the Render button's
-    // disabled face in there comes from.
+    // ONE MODE BIT RE-AIMS THIS CHORD, the iteration one. The history view
+    // never reaches it — neither render chord is on that view's allowlist,
+    // which is also where the Render button's disabled face in there comes
+    // from; the save-and-commit act is Ctrl+S, the chord the act's own first
+    // step already is (architect 2026-08-08).
     //
     // ITERATION MODE RE-AIMS IT (architect 2026-08-02): with that mode
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
     // under tmp/, the same refusals — and there is no second chord for it.
-    // The single render below is the mode-off meaning, unchanged. THE
-    // SWEEP DISPATCHES FROM TARGET VIEW, the one view the mode can stand in
-    // since 2026-09-13 (AppState::iteration_mode_enabled; from 2026-08-07 it
-    // could rest in either): the bit alone selects the command, and no view
-    // clause is owed. This is also
-    // what keeps the Render button honest, its "Render Grid Iterations" face
-    // following the same bit — and since 2026-09-02 that
-    // face also greys wherever the sweep would refuse before it dispatched,
-    // reading iteration_sweep_plan (app_state.h) through its boolean face,
-    // the verdict this body's own two refusals read. The sweep's own body
+    // The single render below is the mode-off meaning. THE SWEEP DISPATCHES
+    // FROM TARGET VIEW, the one view the mode can stand in (2026-09-13;
+    // AppState::iteration_mode_enabled): the bit alone selects the command,
+    // and no view clause is owed. This is also what keeps the Render button
+    // honest, its "Render Grid Iterations" face following the same bit — and
+    // that face also greys wherever the sweep would refuse before it
+    // dispatched (2026-09-02), reading iteration_sweep_plan (app_state.h)
+    // through its boolean face, the verdict the sweep's own three refusals
+    // read. The sweep's own body
     // carries no view assumption (it builds per-cell marker copies off the
     // LIT COLUMN'S store and renders are view-independent); its success-tail
     // wipe is the granted home-view-binding exception recorded at
@@ -5152,10 +4854,9 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // iteration mode; redesign_button_tooltip, app_state.h), so nothing
     // advertises a press this arm swallows.
     //
-    // WHILE THE HISTORY MODE STANDS THIS CHORD NEVER ARRIVES, and since
-    // 2026-08-08 neither does its unshifted twin — the mode's keyboard allowlist
-    // admits NEITHER render chord, the checkpoint act having moved onto Ctrl+S —
-    // so the press is consumed a gate above and this arm is not reached from
+    // WHILE THE HISTORY MODE STANDS THIS CHORD NEVER ARRIVES, and neither
+    // does its unshifted twin — the mode's keyboard allowlist admits NEITHER
+    // render chord, the checkpoint act being Ctrl+S (2026-08-08) — so the press is consumed a gate above and this arm is not reached from
     // either surface. The Render button is simply dead in there, hint and all,
     // which is the derived partition's own answer.
     if (ctrl && alt && shift &&
@@ -5242,8 +4943,8 @@ std::optional<std::string> GuiInputHandler::in_place_load_wall_defect(
 //
 // The RULE this body exists to state once — a load in place writes exactly what
 // its one undo entry restores, and everything else stays live — is at the
-// declaration (input_handler.h), with the whole-file apply it superseded on
-// 2026-08-24. This comment carries only the sequence's own reasons.
+// declaration (input_handler.h; 2026-08-24). This comment carries only the
+// sequence's own reasons.
 void GuiInputHandler::apply_recipe_in_place(
         std::vector<GuiWarpMarker> warp,
         std::vector<GuiPhaseResetMarker> phase_resets,
@@ -5255,9 +4956,8 @@ void GuiInputHandler::apply_recipe_in_place(
     app.warpmarkers.markers_mut()       = std::move(warp);
     app.phaseresetmarkers.markers_mut() = std::move(phase_resets);
     // Wholesale authoring reset: the ONE selection goes, and there is nothing
-    // else to reset — no per-tab per-mode slot holds a copy (the parked
-    // selections died 2026-07-29, so a wholesale store replace no longer has to
-    // hunt down stale index sets in either ViewState).
+    // else to reset — no per-tab per-mode slot holds a copy, so no stale
+    // index set waits in either ViewState.
     selection.clear_selection();
 
     // ONE cross-file undo entry: the two marker columns plus the OUTGOING engine
@@ -5265,25 +4965,22 @@ void GuiInputHandler::apply_recipe_in_place(
     // BEFORE the incoming block is applied below. It files under the LIVE tab
     // and the LIVE column — W or P (the restore writes the entry's column
     // first and its own audio-view tag after, whichever column it names,
-    // Undo::restore_history_entry) — which are the only ones this act touches
-    // now that it performs no tab or column switch at all.
+    // Undo::restore_history_entry) — which are the only ones this act
+    // touches: it performs no tab or column switch at all.
     undo.push_undo_both(std::move(warp_pre), std::move(phase_reset_pre),
                         app.active_markers_view);
     undo.recompute_dirty();
 
     // THE LOAD IS NOT AN ITERATION-MODE EXIT ROUTE (architect 2026-09-02:
-    // "iteration mode is where you stand"), and SINCE 2026-09-10 IT CANNOT
-    // RUN UNDER A LIT LAMP AT ALL: the load rewrites both marker stores
-    // and the engine block and pushes the entry above, so the ITERATION LOCK
-    // refuses it — by key, by the player's button and by the `h` view's own
-    // road (authoring_locked, app_state.h). The 2026-09-02 ruling therefore
-    // holds vacuously and is kept as the reason this block resets nothing:
-    // the two sweep-mode bits are VIEW STATE, exactly like the S/T and W/P
-    // bits this act already leaves alone, and the mode bit stays as the user
-    // set it — dark, on every road that reaches here. Until that date the
-    // block reset every bracket, wiped the bpm scratch and turned both bits
-    // off inline, a fourth exit route beside the three that run the one
-    // chokepoint wipe_iter_state (flag_editor.cpp).
+    // "iteration mode is where you stand"), and IT CANNOT RUN UNDER A LIT
+    // LAMP AT ALL (2026-09-10): the load rewrites both marker stores and the
+    // engine block and pushes the entry above, so the ITERATION LOCK refuses
+    // it — by key, by the player's button and by the `h` view's own road
+    // (authoring_locked, app_state.h). So this block resets nothing: the two
+    // sweep-mode bits are VIEW STATE, exactly like the S/T and W/P bits this
+    // act leaves alone, and the mode bit stays as the user set it — dark, on
+    // every road that reaches here; the mode's exits run the one chokepoint
+    // wipe_iter_state (flag_editor.cpp).
     //
     // NO BRACKET IS RESET HERE, and each of the three callers' vectors says
     // why: the two sidecar roads (load_render_entry_in_place,
@@ -5292,8 +4989,8 @@ void GuiInputHandler::apply_recipe_in_place(
     // grammar has no bracket field, so every session-only field keeps its
     // default (warpmarkers.cpp) — and the timeline road
     // (load_history_local_entry_in_place) copies a typed undo-timeline
-    // snapshot, whose session-only bracket fields are EMPTY by construction
-    // since 2026-09-10, every push stripping them (strip_iter_fields). So no
+    // snapshot, whose session-only bracket fields are EMPTY by construction,
+    // every push stripping them (strip_iter_fields, 2026-09-10). So no
     // road can carry a bracket in, and the lock means none can be standing to
     // be carried out.
     //
@@ -5366,18 +5063,17 @@ void GuiInputHandler::apply_recipe_in_place(
 // takes an explicit entry, and THE ACT ITSELF OWNS THE VISIBLE REFUSAL — the
 // local `refuse` below, whose contract is stated further down; the caller
 // says nothing at either end. ONE
-// CALLER, re-greped: confirm_load_in_place's player arm, the Load in place
+// CALLER: confirm_load_in_place's player arm, the Load in place
 // button through its confirmation, which acts on the HIGHLIGHTED batch cell
 // and so has no name to fail to resolve — its own refusals (the lock, a
 // running render, a highlight that is not a batch cell) all run before the
-// prompt is raised. The retired two-road sanction is recorded at the
-// declaration.
+// prompt is raised.
 //
 // Reads-then-checks BEFORE any mutation: the entry wav must exist and all
 // three sidecars (.warpmarkers, .phaseresetmarkers, .settings) must read and
 // validate — all three REQUIRED, and a MISSING one is caught by the set rule's own preflight
-// (sidecar_set_presence_core, sidecar_set.h) ahead of every reader since
-// 2026-09-16, so an absence is named as an absence rather than wearing the
+// (sidecar_set_presence_core, sidecar_set.h) ahead of every reader
+// (2026-09-16), so an absence is named as an absence rather than wearing the
 // first strict loader's cannot-open words. On ANY failure — the running-batch
 // self-guard, a missing wav, an incomplete recipe, or a malformed / unreadable
 // sidecar — return false with NO state mutation, so a failure leaves authoring
@@ -5387,8 +5083,8 @@ void GuiInputHandler::apply_recipe_in_place(
 // the reader's own adversarial grammar arm, making no new judgment here —
 // the reader's words, printed verbatim, say which.
 //
-// THE ACT OWNS ITS REFUSALS, on BOTH surfaces (architect 2026-08-30, taking
-// the caller's useless "Load refused" out): every arm names its cause once
+// THE ACT OWNS ITS REFUSALS, on BOTH surfaces (architect 2026-08-30): every
+// arm names its cause once
 // through the local `refuse` below, which writes the STDERR line (architect
 // 2026-08-02 — with the offending path, the debugging surface) AND the
 // NOTIFICATION CARD "Load in place refused: <reason>", which is the `h`
@@ -5397,11 +5093,10 @@ void GuiInputHandler::apply_recipe_in_place(
 // card names the file the BASENAME RULE's way (failure.h) — the cell's own
 // id, or a sidecar through shown_project_path (device_config.h), the SAME
 // folder-and-file composer the loaders and the dry run use, never a full path
-// — SINGLE-QUOTED like every other name in a sentence. Until 2026-09-01 this
-// family wrote the id bare and the sidecar as a bare `.filename()`, which was
-// the product's second path form on a card and its one unquoted name beside
-// quoted ones. Returns true after the
-// recipe is applied and tmp/ wiped, and the caller then says nothing at all.
+// — SINGLE-QUOTED like every other name in a sentence (2026-09-01: one path
+// form on a card, no unquoted name beside quoted ones). Returns true after
+// the recipe is applied and tmp/ wiped, and the caller then says nothing at
+// all.
 bool GuiInputHandler::load_render_entry_in_place(
         const AppState::RenderEntry& e) {
     // THE ONE REFUSAL OWNER for both surfaces: the sentence is composed once
@@ -5573,7 +5268,7 @@ bool GuiInputHandler::load_render_entry_in_place(
     // callers. It stays here rather than moving into the shared recipe apply
     // below: the mode's other load closes it too, but only after reading the
     // session the close clears (see there), so the close is each act's own line.
-    // IT IS A LIVE TEARDOWN since 2026-10-25: the mode admits bare `l`
+    // IT IS A LIVE TEARDOWN (2026-10-25): the mode admits bare `l`
     // (architect, "admit both"), so the render player opens over a standing
     // view and its Load in place reaches this act with the visit up — the
     // view ends here as a reopen ends it. With the view down the call is the
@@ -5595,10 +5290,9 @@ bool GuiInputHandler::load_render_entry_in_place(
     // (remove_batch_folder, renders_dir.h) — so the same bounds hold: only a
     // directory standing directly under the project's `tmp/` goes, `tmp/`
     // itself stays, and nothing else in it is touched. The loaded render
-    // survives through the render cache, not as a folder artifact. (The wipe
-    // went to the desktop trash first from 2026-08-07 until this ruling: the
-    // tablet's trash cannot be recovered, and by the time a cell is loaded in
-    // place its keeper has been chosen.)
+    // survives through the render cache, not as a folder artifact. (No
+    // trash: the tablet has none to recover from, and by the time a cell is
+    // loaded in place its keeper has been chosen.)
     //
     // The folders are listed WHOLE before the first remove (list_batch_folders),
     // so no iterator is live while the folder changes. A failed listing and a
@@ -5637,9 +5331,8 @@ bool GuiInputHandler::load_render_entry_in_place(
 // WHAT IT IS: the same act load_render_entry_in_place performs, with the committed
 // history as its source instead of a render entry. `member` is the VIEWED
 // member's INDEX in the commit walk — the one caller (confirm_load_in_place)
-// hands it the index it parked and nothing else; the typed spelling, and with
-// it the "short SHA pasted out of GitHub's web UI" use case, retired with the
-// load prompt's field (architect 2026-08-28). ONE STATE IN, ONE STATE OUT:
+// hands it the index it parked and nothing else; no address is typed
+// (architect 2026-08-28). ONE STATE IN, ONE STATE OUT:
 // the four sidecars THAT checkpoint carried become the live session, in
 // memory, and the disk is never touched — not the corpus, not the working
 // sidecars, not tmp/.
@@ -5657,8 +5350,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // and the reason no second, looser grammar is written anywhere on this path. A
 // refusal is one stderr line naming its cause with the file it is about (first
 // error only — the gates' own contract) AND a notification card carrying the
-// same sentence (2026-08-29; stderr alone until then, the view's own status
-// line having outranked the transient tier a refusal would have written).
+// same sentence (2026-08-29).
 //
 // THE WAV IS NOT COMPARED, and there is nothing to compare it to: a checkpoint
 // is three sidecars and no audio at all, so the LOADED SOURCE IS
@@ -5687,7 +5379,7 @@ bool GuiInputHandler::load_render_entry_in_place(
 // three-sidecar set being a whole standard-schema state rather than a request:
 // its tab bands (the checkpoint's trim included), its S/T, W/P and A/B keys, its
 // camera, and its session prefs — `projects_repo` among them, so a commit whose
-// settings named a different projects home no longer installs that answer, and
+// settings named a different projects home does not install that answer, and
 // the next `h` reads the live one.
 //
 // AND THE MODE CLOSES, at the first line past the last refusal — the placement
@@ -5710,9 +5402,8 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
     // The address is the store's full SHA and the clone is the session's own,
     // derived from the loaded source at init (history_diff.h), so the `'` act
     // reads the same repository the lane was built from. The SHA is all the
-    // gate takes: the session's matched directory was a parameter until
-    // 2026-08-09, when the folder a commit is about became the folder that
-    // COMMIT TOUCHED rather than a tie the session could break — so a commit
+    // gate takes: the folder a commit is about is the folder that COMMIT
+    // TOUCHED (2026-08-09), not a tie the session could break — so a commit
     // touching this base name in two directories refuses instead of resolving
     // to whichever one this session happens to sit in, and one touching it
     // nowhere refuses too.
@@ -5790,15 +5481,14 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 // -- Load-in-place from a LOCAL HISTORY MEMBER (the `'` confirmation on a
 //    Local tab) --
 //
-// WHAT IT IS: the third of the load-in-place family (architect 2026-08-08,
-// superseding his own "the Local walk consumes `'`"), with A STATE OF THIS
-// SESSION'S OWN UNDO/REDO TIMELINE as its source. `member` is the VIEWED
-// MEMBER'S INDEX in the local walk — what the one caller
-// (confirm_load_in_place) parked and hands over, the same currency its commit
-// sibling takes since 2026-09-17, so the fork passes ONE number and neither
-// arm maps it on the way (the typed number retired with the load prompt's
-// field, and the member's displayed NUMBER — member_number, app_state.h — is
-// now a naming of the index rather than a second address).
+// WHAT IT IS: the third of the load-in-place family (architect 2026-08-08),
+// with A STATE OF THIS SESSION'S OWN UNDO/REDO TIMELINE as its source.
+// `member` is the VIEWED MEMBER'S INDEX in the local walk — what the one
+// caller (confirm_load_in_place) parked and hands over, the same currency its
+// commit sibling takes (2026-09-17), so the fork passes ONE number and
+// neither arm maps it on the way (the member's displayed NUMBER —
+// member_number, app_state.h — is a naming of the index rather than a second
+// address).
 //
 // IT IS NEVER A ROLLBACK. The member's state is applied ON TOP of the current
 // one as ONE NEW UNDO ENTRY, exactly as loading a commit is, so Ctrl+Z
@@ -5818,19 +5508,15 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 // WHAT IS APPLIED: an undo entry carries the two MARKER COLUMNS and the
 // ENGINE BLOCK and nothing else (the carry-everywhere shape at UndoEntry), so that is
 // exactly what this restores — the same three pieces the walk's delta vocabulary
-// is built from, and, since 2026-08-24, exactly what BOTH SIBLINGS write too: a
-// load in place writes what its undo entry restores, so the family's three acts
-// differ only in where the three pieces come from. They differ in NOTHING ELSE
-// since 2026-08-24, this body having joined the two on the one apply owner
-// (GuiInputHandler::apply_recipe_in_place, input_handler.h, which carries the
-// rule and the sequence): what is spelled here is the validation, the mode
-// close and the stderr line, and the apply itself is read there. NO tab bands,
-// NO playback_speed, NO gui_scale, NO trim, NO read_only, NO session prefs —
-// here because a timeline state does not carry them at all, there because the
-// act reads past the ones a sidecar set does. (The first two clauses are
-// tombstones as of 2026-08-27: playback_speed retired whole and gui_scale left
-// the sidecar for the per-device config, so neither is a thing a sidecar set
-// could offer any more.)
+// is built from, and exactly what BOTH SIBLINGS write too: a load in place
+// writes what its undo entry restores, so the family's three acts differ only
+// in where the three pieces come from, and in NOTHING ELSE, all three on the
+// one apply owner (2026-08-24; GuiInputHandler::apply_recipe_in_place,
+// input_handler.h, which carries the rule and the sequence): what is spelled
+// here is the validation, the mode close and the stderr line, and the apply
+// itself is read there. NO tab bands, NO trim, NO read_only, NO session
+// prefs — here because a timeline state does not carry them at all, there
+// because the act reads past the ones a sidecar set does.
 //
 // THE STATE IS TAKEN AS TYPED SNAPSHOTS, never through the member's three TEXTS:
 // those are the DIFF's medium, and re-parsing them would put the strict loaders
@@ -5865,7 +5551,7 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
     if (member < count) state = app.history_mode.local.member_state(member);
     if (!state) {
         // THE MEMBER IS NAMED BY THE WALK, NOT BY A NUMBER THE USER TYPED:
-        // the typed road is gone, so an index past the end has no displayed
+        // no number is typed, so an index past the end has no displayed
         // number to quote and the refusal says what is true of it — the walk
         // does not carry it.
         std::fprintf(stderr,
@@ -5918,8 +5604,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
     // clamps, and the auto-select / sync / invalidate / trigger tail. What is
     // left below is this act's own.
     //
-    // THE TWO STEPS THIS BODY GAINED BY JOINING ARE CORRECT FOR IT, not a cost
-    // of sharing: a wholesale store replace can move the ACTIVE domain's total
+    // THE SHARED BODY'S TWO CLAMP STEPS ARE CORRECT FOR THIS ACT TOO, not a
+    // cost of sharing: a wholesale store replace can move the ACTIVE domain's total
     // under a resting cursor whatever the three pieces came from, so the live
     // playhead's clamp and the cold displayed target basis belong to every
     // recipe apply — a timeline state's included.
@@ -5943,18 +5629,20 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 // All spell ONE modal contract: the on_key gate (modal_editor_key_blocked)
 // admits only the editor's own keys, the settings editor's Tab and the flag
 // editor's Tab (and the flag editor's live extra keys, which are answered
-// ahead of this route, handle_top_flag_editor_key) — NO HATCH since
-// 2026-10-25, every other chord consumed at the gate — so a NotConsumed key
+// ahead of this route, handle_top_flag_editor_key) — NO HATCH
+// (2026-10-25), every other chord consumed at the gate — so a NotConsumed key
 // here is swallowed and this route answers true for every key. The
 // platform's close (Back) still tears the editor down uncommitted on the close
 // road's own step (close_modal_editors_no_commit). Every editor's veil
-// swallows every roster press since 2026-10-25, so the on-screen keyboard is
+// swallows every roster press, so the on-screen keyboard is
 // the one producer of the keys this route sees.
-// `autocomplete` is the optional
-// bare-Tab hook, PASSED BY THE SETTINGS EDITOR AND THE FLAG EDITOR (the trim
-// preset's name, the BPM field and the iteration bound editor have no
-// vocabulary to complete and pass an empty hook, which no Tab reaches: the
-// gate drops it there, onscreen_keyboard::tab_key_live).
+// `autocomplete` is the bare-Tab hook, PASSED BY THE SETTINGS EDITOR AND THE
+// FLAG EDITOR (the trim preset's name, the BPM field and the iteration bound
+// editor have no vocabulary to complete and pass an empty hook, which no Tab
+// reaches: the on-screen keyboard, the one producer under an editor, greys
+// its Tab there, and the gate admits a Tab only where
+// onscreen_keyboard::tab_key_live paints it live, modal_editor_key_blocked —
+// so the hook is called with no emptiness test).
 //
 // THE ONE AUTOCOMPLETE MODEL — the authoritative statement: BARE TAB OFFERS
 // THE COMPLETION, AND A TAB THAT COMPLETES NOTHING IS SILENT (architect
@@ -5982,9 +5670,8 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
 //
 // EVERY OTHER KEY IS THE EDITOR'S OWN (text_editor::handle_key): Enter the
 // commit, Esc the cancel, the rest the buffer's.
-// `repaint` is the caller's text-change damage and is REQUIRED — unlike
-// `autocomplete` it is called unconditionally, with no emptiness test: the
-// line editors pass invalidate_dialog_editor_box (the entry's box, all
+// `repaint` is the caller's text-change damage and is REQUIRED, called on
+// every text change: the line editors pass invalidate_dialog_editor_box (the entry's box, all
 // an edit can change — the rule at its declaration, viewport.h), the
 // top-strip flag editor invalidate_top_strip. Commit and cancel own their own
 // invalidations.
@@ -5994,11 +5681,12 @@ bool GuiInputHandler::route_modal_editor_key(
         const std::function<void()>& commit,
         const std::function<void()>& cancel,
         const std::function<void()>& repaint) {
-    // THE TAB (the one autocomplete model above): the completion offered
-    // where the editor has one, the key consumed whether or not it advanced
-    // the buffer — a Tab that completes nothing is silent.
+    // THE TAB (the one autocomplete model above): it reaches only an editor
+    // with a completer (the gate, tab_key_live), and the key is consumed
+    // whether or not it advanced the buffer — a Tab that completes nothing is
+    // silent.
     if (modal_editor_tab(key, mods)) {
-        if (autocomplete) (void)autocomplete();
+        (void)autocomplete();
         return true;
     }
     const auto action = text_editor::handle_key(ed, key, mods);
@@ -6080,59 +5768,42 @@ void GuiInputHandler::close_modal_editors_no_commit() {
 
 // The Open project picker's opener. Every guard returns without touching
 // playback (a refused open never interrupts a listening session); the shared
-// modal stop runs only once the picker is definitely opening. THREE ROADS
-// REACH IT and all are the same chord: Ctrl+O's own dispatch arm in on_key,
-// the File menu's Open project row, whose release dispatches that chord
-// through on_key with the popup already closed, and since 2026-10-07 the icon
-// row's Open Project button, whose lift dispatches it the same way (its face
-// mirrors the row's, redesign_button_enabled). The guards below serve both —
-// the `h` view's, which the key road also meets one gate earlier at
-// history_mode_key_blocked, and the modal and loading refusals, which the key
-// road meets earlier still.
+// modal stop runs only once the picker is definitely opening. TWO ROADS
+// REACH IT and both are the same chord: Ctrl+O's own dispatch arm in on_key
+// and the top icon row's Open Project button, whose lift dispatches that
+// chord through on_key (its face at redesign_button_enabled). The guards
+// below serve both — the prompt, the standing picker and the loading
+// refusals, which the key road meets earlier too.
 void GuiInputHandler::open_project_picker() {
     // A PROMPT IS SILENT: it VEILS everything and is itself the answer on
-    // screen. (AN EDITOR'S ARM STOOD HERE, carding "Close the editor first",
-    // 2026-08-30 to 2026-10-25, for the Open Project button pressed under a
-    // pointer-transparent lane editor; every editor is a modal since — its
-    // veil swallows the band's press and its key gate Ctrl+O, silently — so
-    // the arm had no producer and went.)
+    // screen. No editor arm is needed: every editor is a modal, its veil
+    // swallowing the Open Project key's press and its key gate Ctrl+O.
     if (app.prompt.active) return;
-    // (THE `h` HISTORY VIEW'S REFUSAL IS DELETED — architect 2026-08-29,
-    // "admit both": the File menu's rows were all live in the view (the menu
-    // row retired 2026-10-21), and Ctrl+O joined the mode's allowlist with it.
-    // The premise was that "a reopen would tear the view down from under
-    // itself", and the answer is that TEARING IT DOWN IS WHAT A REOPEN DOES to
-    // everything. The
-    // picker stands OVER the view (its router runs ahead of the mode's gate in
-    // on_key, its veil consumes the view's presses, and its band — the modal
-    // family's box since 2026-10-14 — starts at the view bar's top row and
-    // covers the canvas column's lanes — the diff lane with them — and the
-    // waveform, the toolbar band alone above it), a Cancel leaves
-    // the view exactly as it stood — this view owns no navigation state — and
-    // a successful open reaches the reopen through the one close request,
-    // whose teardown joins the prefetch and the commit worker with everything
-    // else per project. What the act still refuses in here is what it refuses
-    // everywhere: a publishing checkpoint, at open_project_commit.)
-    // (THE RENDER PLAYER HAS NO ARM HERE AT ALL since 2026-09-03, and this act
-    // cannot be reached under it: the File anchor is LIVE above the band again
-    // since that evening, so its Open Project row IS reachable — but the row
-    // is its chord, and Ctrl+O is
-    // consumed by route_render_player_key's catch-all, the player's whole
-    // vocabulary being its router's. Both of the arms that stood here are
-    // retired with the reasons they rested on: "Close the render player
-    // first", 2026-08-30 to 2026-09-02, and the CLOSE-THEN-OPEN body that
-    // replaced it for the one day the File anchor stayed lit under the panel.
-    // The two modes still never stand together; what keeps that true now is
-    // that neither road exists.)
+    // THE `h` HISTORY VIEW ADMITS IT (architect 2026-08-29, "admit both";
+    // Ctrl+O is on the mode's allowlist): TEARING THE VIEW DOWN IS WHAT A
+    // REOPEN DOES to everything. The picker stands OVER the view (its router
+    // runs ahead of the mode's gate in on_key, its veil consumes the view's
+    // presses, and its band — the modal family's box — starts at the trim
+    // lane's top row and covers the canvas column's lanes — the diff lane
+    // with them — and the waveform, the top icon row alone above it), a
+    // Cancel leaves the view exactly as it stood — this view owns no
+    // navigation state — and a successful open reaches the reopen through
+    // the one close request, whose teardown joins the prefetch and the commit
+    // worker with everything else per project. What the act refuses in here
+    // is what it refuses everywhere: a publishing checkpoint, at
+    // open_project_commit.
+    // THE RENDER PLAYER HAS NO ARM HERE: this act cannot be reached under it,
+    // Ctrl+O being consumed by route_render_player_key's catch-all (the
+    // player's whole vocabulary is its router's), so the two modes never
+    // stand together.
     // A STANDING PICKER IS SILENT: the picker IS this act, so a second
     // Open project over one asks for what is already on screen — the settings
     // editor's own already-open silence, and a one-dimensional refusal at the
     // state it refuses on. Its key road answers earlier (route_picker_key
-    // answers Ctrl+O with the picker's close since 2026-10-25, and the Open
-    // Project key's lift under the panel is that chord); what reached here
-    // was the File menu's row (retired 2026-10-21) — so this arm is the
-    // opener's own shape (the gate lives with the act it refuses) rather
-    // than a road anything takes today.
+    // answers Ctrl+O with the picker's close, and the Open Project key's lift
+    // under the panel is that chord), so this arm is the opener's own shape
+    // (the gate lives with the act it refuses) rather than a road anything
+    // takes.
     if (picker_active()) return;
     if (app.loading) return;
 
@@ -6140,10 +5811,8 @@ void GuiInputHandler::open_project_picker() {
     app.picker.active  = true;
     app.picker.session = text_editor::next_session_id();
     // THE BAND RISES WITH THE PICKER and IS its whole state: the rows and
-    // the highlight, nothing beside them. On glass the band takes the
-    // on-screen keyboard's place, so the picker shows THE LIST there and no
-    // keyboard — the architect's "neither use needs typing" (2026-08-28),
-    // made literal when the picker lost its field.
+    // the highlight, nothing beside them — no field and no on-screen
+    // keyboard, the architect's "neither use needs typing" (2026-08-28).
     build_project_picker_rows();
     // A modal OPEN damages the whole window (the row's rect does not exist
     // before its first paint — the settings opener carries the rule).
@@ -6161,7 +5830,7 @@ void GuiInputHandler::build_project_picker_rows() {
     // is not a row, so the band and the act AGREE BY CONSTRUCTION: an invalid
     // folder simply does not show up (architect 2026-08-28). THE NAME GRAMMAR
     // IS NOT ASKED HERE: is_last_project_name (device_config.h) is the
-    // ENUMERATION's own membership rule now — a folder the device config
+    // ENUMERATION's own membership rule — a folder the device config
     // cannot name is not a project on any opening road — so the walk this
     // loop reads has already
     // dropped those names, and a second copy of the test here would be a
@@ -6220,9 +5889,7 @@ void GuiInputHandler::open_project_commit(int index) {
         app.folder_overlay.rows[static_cast<size_t>(index)].name;
 
     // THE THREE REFUSALS BELOW ARE NOTIFICATION CARDS (2026-08-29), visible
-    // in the `h` view like anywhere else — they were the status chain's
-    // transient tier for one day, invisible under the view's own line — and
-    // the picker STAYS OPEN on every one of them, which is the answer the
+    // in the `h` view like anywhere else, and the picker STAYS OPEN on every one of them, which is the answer the
     // user can act on: press another row, or Cancel. EACH IS A GuiFailure
     // (failure.h, 2026-09-02): the card raises the display clause and the
     // stderr line prints the diagnostic — the same words for the state
@@ -6242,9 +5909,9 @@ void GuiInputHandler::open_project_commit(int index) {
     // forgets the completion fd first, so the worker's verdict never reaches
     // on_history_checkpoint_complete: a CommittedNotPushed or CommitFailed
     // would go to stderr alone, invisible on the tablet, with the critical
-    // chip that verdict owes the user never painted. The wait is seconds and
+    // card that verdict owes the user never painted. The wait is seconds and
     // the bit falls by itself. THE PICKER STAYS OPEN, like its other two
-    // refusals, so the answer is one line and another Enter.
+    // refusals, so the answer is one card and another tap.
     if (app.history_checkpoint_in_flight) {
         refuse(plain_failure(kCheckpointPublishing));
         return;
@@ -6266,11 +5933,10 @@ void GuiInputHandler::open_project_commit(int index) {
         // field's one producer there (AppState::project_name) — so the no-op
         // cannot be missed by a link in the way of either spelling.
         //
-        // AND IT IS SILENT (architect 2026-08-31, retiring the one-day card
-        // "That project is already open"): a benign one-dimensional refusal
-        // already at its state says nothing — the window title names the
-        // project the picker just closed over, which is one glance at one
-        // place. The CLOSE is unchanged; only the sentence left.
+        // AND IT IS SILENT (architect 2026-08-31): a benign one-dimensional
+        // refusal already at its state says nothing — the picker opened
+        // seated on the open project's row, so the row pressed is the one
+        // its highlight named, one glance at one place.
         close_picker();
         return;
     }
@@ -6289,9 +5955,8 @@ void GuiInputHandler::open_project_commit(int index) {
     // redesign_button_enabled's head): the question's page takes the view in
     // place of the list (architect 2026-11-20) and owns the keyboard and the
     // pointer ahead of the picker's router and veil, and its Cancel finds
-    // the picker as it stood, its
-    // highlight and its scroll untouched. (The pick closed the picker before
-    // asking from 2026-08-28 until then.) THE PICKER ENDS WITH ITS SESSION
+    // the picker as it stood, its highlight and its scroll untouched. THE
+    // PICKER ENDS WITH ITS SESSION
     // WHEN THE REOPEN IS CERTAIN: a clean tab's immediate completion or the
     // question's Save / Discard asks the platform to stop run(), and the
     // picker's state — a member of the per-project AppState, built and
@@ -6326,7 +5991,7 @@ void GuiInputHandler::open_project_commit(int index) {
 // THE OPENER — bare `;`, and the Settings button's plain press, which
 // dispatches that chord at the lift, both with no seat key (the page's FIRST
 // KEY ROW); and THE LINE EDITOR'S RETURN, seated on the key the editor was
-// opened from (handle_settings_editor_key, architect 2026-10-28 night). The
+// opened from (handle_settings_editor_key, architect 2026-10-28). The
 // project picker's own guards, for its reasons: a prompt veils everything, a
 // standing picker is what is already on screen (its router answers `;` with
 // the close before this body is reached), and a load has no window to paint
@@ -6346,12 +6011,12 @@ void GuiInputHandler::open_settings_page(std::string_view seat_key) {
 
 // THE LIST: kSettingsEditorKeys exactly (architect 2026-10-28: the per-tab
 // keys and every key with a GUI lever stay off — "I won't set it
-// manually"; the level, shown and edited on the band's NOISE case, too
-// since 2026-11-05 night, the main-page rule) EXCEPT the two the BPM key
+// manually"; the level, shown and edited on the top icon row's NOISE case,
+// too — 2026-11-05, the main-page rule) EXCEPT the two the BPM key
 // writes, `scale` and `bpm`, listed
 // as DISABLED rows (architect 2026-10-29: "bpm and scale should be viewable
 // but disabled. they are useful for notes"); the device keys first and the
-// piece rows after (the mock he verified), these in the settings file's
+// piece rows after (the order he verified), these in the settings file's
 // order (kSettingsPagePieceKeys, settings_editor.h), NO TITLE ROW OVER
 // EITHER (architect 2026-11-22: "the user is expected to have expert
 // knowledge"). Every key's text is ITS `key=value` LINE
@@ -6389,7 +6054,7 @@ void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
 }
 
-// THE RETURN FROM A VALUE LIST (architect 2026-10-28 night: "the cancel
+// THE RETURN FROM A VALUE LIST (architect 2026-10-28: "the cancel
 // button should return to the main setup panel … otherwise it's assumed i
 // am editing one key only. setting a value should also return to the main
 // page"): the list is a SUB-PAGE of the settings page. Its two roads —
@@ -6414,13 +6079,10 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // NOTHING (its lift never reaches here and the highlight never stands on
 // it; the guard states the rule). THE ROW'S KEY is its line's text up to the
 // first `=` (a key carries none). On the row of a key with a value list
-// (settings_key_has_value_list — `true_colors`, `waveform_grow`,
-// `noise`, `noise_crossfade_s`; the theme's and the icon set's lists left
-// 2026-11-21 with their keys, the two levels' lists left
-// 2026-11-05 with the decimal grammar and their rows that night under the
-// main-page rule (kSettingsEditorKeys), the band's case the noise's one
-// editing surface) THAT
-// KEY'S VALUE LIST IS SWAPPED IN,
+// (settings_key_has_value_list, kSettingsValueListKeys; the two levels
+// have no row, the main-page rule at kSettingsEditorKeys, the top icon
+// row's NOISE case the noise's one editing surface) THAT KEY'S VALUE LIST IS
+// SWAPPED IN,
 // in place, under this same picker session (build_value_list_rows), a
 // sub-page whose commit and Cancel return to this page
 // (return_to_settings_page). On every other row THE PAGE
@@ -6432,7 +6094,7 @@ void GuiInputHandler::return_to_settings_page(std::string seat_key) {
 // agree." — the value alone; no label, architect 2026-11-22), THE VALUE
 // SUB-PAGE (architect 2026-11-20; paint_handler.cpp): the on-screen
 // keyboard's Enter and Esc reopen this page on the row's key
-// (handle_settings_editor_key, architect 2026-10-28 night).
+// (handle_settings_editor_key, architect 2026-10-28).
 void GuiInputHandler::settings_page_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -6455,7 +6117,7 @@ void GuiInputHandler::settings_page_commit(int index) {
     settings_editor.open(key);
 }
 
-// -- THE VALUE LIST (architect 2026-10-25, 2026-10-28 night for its keys;
+// -- THE VALUE LIST (architect 2026-10-25, 2026-10-28 for its keys;
 //    the contract is at the declaration) -------------------------------------
 //
 // The picker's third content, the settings page's row for a key with a value
@@ -6506,7 +6168,7 @@ void GuiInputHandler::build_value_list_rows(const std::string& key) {
 // row already live is its unchanged no-op and commits nothing), THEN THE
 // SETTINGS PAGE RETURNS whatever the outcome, seated on the key's row, its
 // line now carrying the value (return_to_settings_page, architect
-// 2026-10-28 night: "setting a value should also return to the main page").
+// 2026-10-28: "setting a value should also return to the main page").
 // No card on success (architect 2026-10-25): the change is the answer — the
 // colors, the sound, the NOISE case's face, the row's own text.
 void GuiInputHandler::value_list_commit(int index) {
@@ -6522,7 +6184,7 @@ void GuiInputHandler::value_list_commit(int index) {
     return_to_settings_page(key);
 }
 
-// -- THE TRIM PRESETS LIST (architect 2026-10-28 night; the contract is at
+// -- THE TRIM PRESETS LIST (architect 2026-10-28; the contract is at
 //    the declaration) ---------------------------------------------------------
 //
 // The picker's fourth content: the opener, its rows, its open act (the
@@ -6576,11 +6238,11 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
 // THE ROWS: one Plain row per preset (wearing PRESETS' bookmark,
 // paint_list_view's list_row_drawing), in the list's order — THE
 // MUSIC'S ORDER (trim_preset_before, trim_presets_file.h; architect
-// 2026-10-28 night), the overlay's presets kept sorted by the read and the
+// 2026-10-28), the overlay's presets kept sorted by the read and the
 // write road (persist_trim_presets) — the text THE PRESET'S NAME ALONE
-// (architect 2026-10-28 night, his glass on 54e62064: "names are descriptive
-// enough and the odd proportional spacing looks bad") — no span; the list's open seat (the preset whose pair is the
-// active tab's trim) is how a match shows. The highlight is seated through
+// (architect 2026-10-28: "names are descriptive enough and the odd
+// proportional spacing looks bad") — no span; the list's open seat (the
+// preset whose pair is the active tab's trim) is how a match shows. The highlight is seated through
 // the one set_highlight, clamped into the listing, -1 for an empty one.
 void GuiInputHandler::build_trim_presets_rows(int highlight) {
     AppState::FolderOverlay& ov = app.folder_overlay;
@@ -6602,9 +6264,9 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 // press-and-lift, whose first half already highlighted it), the one road to
 // it (no Enter reaches a folder-overlay row: no on-screen keyboard stands
 // under the list): THE ROW'S PAIR BECOMES THE ACTIVE TAB'S LIVE TRIM, THE
-// PRESET IS FRAMED, AND THE LIST CLOSES (architect 2026-11-19, send CC: "On
+// PRESET IS FRAMED, AND THE LIST CLOSES (architect 2026-11-19: "On
 // selecting a trim preset, the overlay should close."; the walk, DOWN / UP,
-// still moves the highlight without applying). Both bounds are written and
+// moves the highlight without applying). Both bounds are written and
 // the trim family's one commit tail runs ONCE (commit_trim_mutation), then
 // the setter's deselect, the trim setters' shape. NO PLAYBACK STOP OF ITS
 // OWN: the list's open took the modal stop and nothing plays under it, and
@@ -6612,14 +6274,14 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 // own no-op, nothing written. The pair is in its walls by the read's own
 // rule (a pair past the source's last frame reads the file malformed),
 // strictly begin < end, so the tail's crossed reset never fires here.
-// THE APPLY ALSO FRAMES THE PRESET (architect 2026-10-28 night, his glass on
-// 852a28d9: "selecting a preset should also double click its trim bar and
-// frame it like the long press on FIT"): the one span framer the trim bar's
+// THE APPLY ALSO FRAMES THE PRESET (architect 2026-10-28: "selecting a preset
+// should also double click its trim bar and frame it like the long press on
+// FIT"): the one span framer the trim bar's
 // double tap and Shift+0 (Zoom to Fit's long press) run, called as they
 // call it — run_span_framing_command, a camera act alone (no bound, the
 // playhead and the selection untouched; its applier's chokepoint clears the
 // hold; a level it moves puts out TRIM, ADD SEL, FOLLOW and RESTR, a user
-// zoom's rule, architect 2026-11-17, send U), a proper sub-window framed
+// zoom's rule, architect 2026-11-17), a proper sub-window framed
 // with the edge margin, the full window the whole song, idempotent where the
 // camera already rests there. A WRITTEN PAIR PUTS TRIM OUT in any case,
 // through the shared tail (commit_trim_mutation, the same ruling). The
@@ -6713,8 +6375,8 @@ void GuiInputHandler::commit_trim_preset_name() {
 // SAVE: its question over the list on the highlighted preset (the
 // declaration's contract), or, WITH NO PRESET TO SAVE INTO — an empty list,
 // no highlight — SAVE AS's name editor, no question, there being nothing to
-// overwrite (architect 2026-10-28 night, his glass on 852a28d9: "with no
-// presets yet, both create a new preset"). The greyed face's road is silent
+// overwrite (architect 2026-10-28: "with no presets yet, both create a new
+// preset"). The greyed face's road is silent
 // — the button's press never arms — so this guard is the face's own
 // predicate, stated for a face painted live whose act went dead inside that
 // frame.
@@ -6798,8 +6460,8 @@ void GuiInputHandler::confirm_trim_preset_save() {
     p.end   = app.trim.end_frame;
     const std::string saved = p.name;
     (void)persist_trim_presets(ov.trim_presets);
-    // THE HIGHLIGHT FOLLOWS THE PRESET, NOT THE INDEX (architect 2026-10-28
-    // night): the new pair may move it in the list's order (the write road's
+    // THE HIGHLIGHT FOLLOWS THE PRESET, NOT THE INDEX (architect
+    // 2026-10-28): the new pair may move it in the list's order (the write road's
     // sort), so the saved preset is found BY NAME at its new row, the
     // re-list's seat scrolling it into view (folder_overlay::set_highlight).
     int seat = index;
@@ -6957,7 +6619,7 @@ void GuiInputHandler::bpm_form_render() {
     close_picker();
     // render_bpm_sweep owns the mode teardown on its success path: after the
     // batch is built and accepted (dispatched, or parked behind a killed
-    // render's drain — a busy worker no longer bails) it wipes the
+    // render's drain — a busy worker does not bail) it wipes the
     // session-only bpm state and exits bpm mode, so an accepted sweep leaves
     // no marker carrying bpm state. A guard-bail (false) is an environmental
     // backstop — batch-folder creation failure, no valid cells; the
@@ -7202,13 +6864,13 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     // chord, runs the one close body — under the swapped-in list too, the
     // whole panel closing with nothing applied, the opener key being the way
     // out of the panel where Cancel returns to the page (architect
-    // 2026-10-28 night: "setup button still should close the whole panel").
+    // 2026-10-28: "setup button still should close the whole panel").
     if (settings_opener && bare && key == GuiKeys::Semicolon) {
         close_picker();
         return;
     }
 
-    // BARE `t` CLOSES THE TRIM PRESETS LIST (architect 2026-10-28 night, the
+    // BARE `t` CLOSES THE TRIM PRESETS LIST (architect 2026-10-28, the
     // same rule one content over): the PRESETS key's lift under the list, the
     // opener's own chord, runs the one close body.
     if (trim_presets && bare && key == GuiKeys::T) {
@@ -7217,7 +6879,7 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     }
 
     // SHIFT+T RESETS THE TRIM UNDER THE TRIM PRESETS LIST (architect
-    // 2026-11-08, session 93): the PRESETS key's long press under its own
+    // 2026-11-08): the PRESETS key's long press under its own
     // list, OPEN PROJECT's Revert-under-the-picker shape — the same body the
     // ordinary dispatch's arm calls (handle_trim_maximize), THE LIST STAYING
     // STANDING, its rows and highlight untouched. The list stays truthful:
@@ -7257,18 +6919,14 @@ void GuiInputHandler::route_picker_key(GuiKey key, GuiInputState mods) {
     }
 }
 
-// (THE DROPDOWN ITEMS' ONE ENABLED VERDICT, dropdown_item_enabled — the
-// truthful menus, 2026-09-24 — RETIRED 2026-10-21 with the Settings popup.)
-
 // The phase-reset clipboard family and the I / K / L letter-key handlers. See
 // the declaration for the chord list.
 // THE CLIPBOARD CHORDS' SHARED SENTENCES (architect 2026-08-30, the
 // strictness ruling). THREE CHORDS — the phase-reset propagate's copy and its
-// two pastes (the state paste resurrected 2026-10-24, removed 2026-10-21 to
-// 2026-10-24): where two chords refuse on the same fact they say the same
+// two pastes: where two chords refuse on the same fact they say the same
 // words and the literal lives once.
 //
-// kSelectOneRun's readers, re-greped 2026-09-23: the PHASE copy's contiguity
+// kSelectOneRun's readers: the PHASE copy's contiguity
 // arm and the BPM sweep's below — the same test on the same set for the same
 // reason (the run must have one span meaning), so they answer in one
 // sentence.
@@ -7285,10 +6943,9 @@ constexpr const char* kPastePhaseOntoWarp =
 // THE PHASE COPY'S "NOTHING TO CAPTURE" SENTENCE (2026-08-30), the
 // kNothingMatched twin on the copy side (propagate_blocks.h): its membership
 // is warp_marker_propagates — labeled AND effectively enabled — so a run of
-// unlabeled or disabled markers captures nothing. Since 2026-09-24 that is a
-// REFUSAL asked before the clipboard is touched (phase_reset_copy_captures),
-// so the clipboard keeps what it held; the copy used to run and leave it
-// EMPTY. It names the membership rather than the label alone because a
+// unlabeled or disabled markers captures nothing. That is a REFUSAL asked
+// before the clipboard is touched (2026-09-24; phase_reset_copy_captures),
+// so the clipboard keeps what it held. It names the membership rather than the label alone because a
 // labeled but disabled marker propagates nothing either. ONE READER, the
 // phase copy.
 constexpr const char* kNothingToCopy =
@@ -7336,9 +6993,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // BARE P: copy phase reset placements from the selected warp markers
     // into the session clipboard (architect 2026-10-24, the Copy Phase Resets
-    // key's plain press; it was Ctrl+P from 2026-07-23, the pigeon's Ctrl+J in
-    // the phase-reset view for the evening of 2026-10-21, and Ctrl+Return on
-    // the Open Text Editor seat from that night). Section-based (architect 2026-07-23):
+    // key's plain press). Section-based (architect 2026-07-23):
     // each selected marker contributes the block it owns — its time to the next
     // EFFECTIVELY-ENABLED marker's time, or to the song end when none follows
     // (a disabled marker never reaches the warp map, so it bounds no section;
@@ -7354,22 +7009,20 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // block, and the paste's destination walk skips unlabeled markers
     // identically, so the two label sequences stay aligned regardless.
     // W-mode only. EVERY REFUSAL IN THE THREE CLIPBOARD CHORDS SAYS SO ON A
-    // CARD since 2026-08-30 (architect, the strictness ruling), each naming
-    // the gate it failed: the 2026-07-23 "gesture refusals are silent by
-    // convention" ruling was withdrawn for this family with the rest.
+    // CARD (architect 2026-08-30, the strictness ruling), each naming the
+    // gate it failed.
     if (is_phase_reset_copy_key(key, mods)) {
         // THE LADDER IS phase_reset_copy_refusal (phase_reset_propagate.h),
         // the one decision the Copy Phase Resets key greys on (2026-10-24,
         // phase_reset_copy_actionable), so a lit key's press passes it and a
-        // keyboard press cards each rung. Its first rung is the WARP COLUMN,
-        // unchanged (architect 2026-10-21: "phase clipboard only in warp").
-        // Each rung cards in its
-        // own sentence. The contiguity rung is the
-        // `m` sweep's own test. THE LAST RUNG IS ASKED BEFORE THE CLIPBOARD
-        // IS TOUCHED (2026-09-24): a run holding no labeled, enabled marker
-        // captures nothing, and until that day the copy ran anyway and then
-        // found an EMPTY clipboard — having erased whatever it held. Now it
-        // refuses on kNothingToCopy and the clipboard stands. PAST IT THE
+        // keyboard press cards each rung. Its first rung is the WARP COLUMN
+        // (architect 2026-10-21: "phase clipboard only in warp"). Each rung
+        // cards in its own sentence. The contiguity rung is the `m` sweep's
+        // own test. THE NOTHING-TO-COPY RUNG IS ASKED BEFORE THE CLIPBOARD IS
+        // TOUCHED (2026-09-24): a run holding no labeled, enabled marker
+        // captures nothing, and a copy that ran would erase whatever the
+        // clipboard held, so it refuses on kNothingToCopy and the clipboard
+        // stands. PAST IT THE
         // STRUCK RUNG (architect 2026-11-17: "phase rest copy and apste
         // shoudl fails and card saying something like 'range contains struck
         // marker'"): a struck warp row in the copy's range refuses on
@@ -7403,7 +7056,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // use case): a copy is one of the acts he named — "copy/paste
         // reset/measure" — so a copy that runs ends Add to selection's
         // building pass. Past every refusal, the nothing-to-copy rung
-        // included since it became one (selection_consumed, app_state.h,
+        // included (selection_consumed, app_state.h,
         // where the class lives).
         selection_consumed(app);
         phase_reset_propagate.copy_from_selection();
@@ -7418,17 +7071,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // CTRL+P: paste clipboard phase resets onto the destination anchored at
-    // the single selected warp marker (architect 2026-10-24; since 2026-11-08
-    // the PASTE key's base chord). W-mode only; the four
-    // gates — the P view, an empty clipboard, a selection that is not
-    // exactly one marker and, since 2026-11-17, a struck warp row in the
-    // destination range (the ladder's struck rung, asked before the prompt
-    // opens) — EACH SAY SO ON A CARD since 2026-08-30 (the
-    // strictness ruling; the sentences are the family's shared literals, so
-    // the three clipboard chords answer one state in one wording). They were
-    // silent no-ops under the 2026-07-30 "every refusal in this family is
-    // silent" ruling, withdrawn with the rest of that convention. STILL NO
-    // GESTURE-CLASS STDERR: a wrong selection count is an ordinary "not ready
+    // the single selected warp marker (architect 2026-10-24; the PASTE key's
+    // base chord, 2026-11-08). W-mode only; the four gates — the P view, an
+    // empty clipboard, a selection that is not exactly one marker and a
+    // struck warp row in the destination range (2026-11-17; the ladder's
+    // struck rung, asked before the prompt opens) — EACH SAY SO ON A CARD
+    // (2026-08-30, the strictness ruling; the sentences are the family's
+    // shared literals, so the three clipboard chords answer one state in one
+    // wording). NO GESTURE-CLASS STDERR: a wrong selection count is an ordinary "not ready
     // yet" state the user can see on screen, not a fault worth a terminal
     // line — the card is the whole answer.
     // Opens a confirmation prompt before any mutation.
@@ -7440,13 +7090,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // CTRL+SHIFT+P: propagate the enabled/disabled *state* of clipboard
     // placements onto the matching destination region's phase resets, in
-    // order (architect 2026-10-24, PASTE PHASE RESET STATE resurrected; since
-    // 2026-11-08 the PASTE key's hold). Positions are not modified. W-mode
-    // only; its four gates are its Ctrl+P sibling's term for term and CARD
-    // in that sibling's own sentences (since 2026-08-30), where the
-    // rationale is stated. Unlike Ctrl+P, no confirmation prompt — applies
-    // directly. Divergence/mismatch is reported as a notification card
-    // rather than a modal dialog.
+    // order (architect 2026-10-24; the PASTE key's hold, 2026-11-08).
+    // Positions are not modified. W-mode only; its four gates are its Ctrl+P
+    // sibling's term for term and CARD in that sibling's own sentences
+    // (2026-08-30), where the rationale is stated. Unlike Ctrl+P, no
+    // confirmation question — applies directly. Divergence/mismatch is
+    // reported on a notification card.
     if (is_phase_reset_state_paste_key(key, mods)) {
         // THE FOUR GATES ARE ITS SIBLING'S, TERM FOR TERM, so they answer in
         // its sentences (2026-08-30): it is the same family, and a silent arm
@@ -7456,10 +7105,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         return true;
     }
 
-    // `i` (no modifiers) toggles grid iterations, IN EITHER COLUMN since
-    // 2026-09-09 (the arm below carries the ruling; the P-column card it used
-    // to answer with is deleted with the premise that a phase reset had
-    // nothing to iterate), AND IT LIGHTS THE MODE FOR THE COLUMN IT IS
+    // `i` (no modifiers) toggles grid iterations, IN EITHER COLUMN (the arm
+    // below carries the ruling), AND IT LIGHTS THE MODE FOR THE COLUMN IT IS
     // PRESSED IN, which the lock then holds still — IN TARGET VIEW, crossing
     // there first when pressed in source (2026-09-13). The
     // editor-active branch above already swallows any
@@ -7468,20 +7115,16 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // so the bound cells appear or vanish in one frame.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) {
         // THE MODE IS ONE LAMP ADMITTED IN BOTH COLUMNS (architect
-        // 2026-09-09, his (b)): the phase-reset column has an iteration
-        // bracket of its own — a HOP bracket over the reset's position — and
-        // one `I` admits both. So this
-        // arm has NO COLUMN TEST at all and the P-column card
-        // ("Grid iterations work on warp markers") is deleted, its premise
-        // having been that a phase reset carries no value to iterate.
+        // 2026-09-09): the phase-reset column has an iteration bracket of its
+        // own — a HOP bracket over the reset's position — and one `I` admits
+        // both. So this arm has NO COLUMN TEST at all.
         //
         // AND THE LAMP IS LIT FOR ONE COLUMN AT A TIME — the column it was
         // pressed in (architect 2026-09-10: "I'm usually in target mode, and
         // then, either in warp or phase, I press iterations mode in whatever
         // mode I want it to be located in. So the iterations land wherever I'm
         // looking, and they stay there for the duration of the lamp being
-        // lit."). It needs NO STAMP to be, and had one for a few hours of that
-        // day: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
+        // lit."). It needs NO STAMP: THE W/P SWITCH IS ONE OF THE ACTS THE ITERATION LOCK REFUSES
         // (the four absolute view selectors, bare 1/2/3/4, at
         // iteration_lock_key_blocked; the view pairs' four buttons grey with
         // the key carding the sentence), so the column cannot move while the lamp stands
@@ -7493,17 +7136,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // the ON edge pressed in SOURCE view CROSSES TO TARGET FIRST, through
         // the S/T chokepoint, below, past every refusal, a refused entry
         // stopping the whole press. The column is unchanged: S+W lights in
-        // T+W and S+P in T+P (both source views again since S+P's return,
-        // architect 2026-10-12). While the lamp
+        // T+W and S+P in T+P (S+P a source view too, architect 2026-10-12).
+        // While the lamp
         // stands the lock refuses every road back to source (the four
         // selectors are iteration_lock_key_blocked's
         // delta (a)), so the OFF edge always runs in target and needs no
         // crossing;
         // the invariant is stated once at AppState::iteration_mode_enabled.
-        // (From 2026-08-07 until this ruling the mode was TARGET-LEGAL in both
-        // views and this arm had no audio-view term at all; before that it
-        // read active_column_authoring_allowed, which pinned the toggle to
-        // warp's SOURCE home.) THE READ-ONLY LOCK IS STILL THE WHOLE OF WHAT
+        // THE READ-ONLY LOCK IS THE WHOLE OF WHAT
         // THE GRID ITERATIONS BUTTON'S FACE READS (redesign_button_enabled,
         // app_state.h) — a press in source view is live, its crossing being
         // part of the act, so the face greys for no view (the twin rule) —
@@ -7526,18 +7166,17 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // the lamp and greys on the active tab's bit otherwise
         // (redesign_button_enabled's IconIter arm, app_state.h), so the face
         // and the key refuse together.
-        // ADD TO SELECTION NEEDS NO REFUSAL HERE AND NO LONGER HAS ONE
-        // (architect 2026-09-12, the lamps resolved by use case: "most of the
-        // conflicts are conflicts because they indicate different use cases; we
-        // analyze the use cases and target them as such"). The USE CASES are
-        // sequential rather than rival: raising the bound cells is an act that
-        // says the selecting is over. So the ON EDGE below PUTS THAT LAMP OUT,
-        // through the act class's own writer, and the card that stood here is
-        // deleted. THE OTHER DIRECTION IS NO REFUSAL EITHER SINCE 2026-09-19:
-        // the pair CAN stand together now, the sticky ctrl folding a plain
-        // press into the toggle on the PAYLOAD BOX alone, so a bound cell keeps
-        // the plain press it is addressed by; bare `k` left the lock's delta
-        // (a) that day (iteration_lock_key_blocked, above) and Add to
+        // ADD TO SELECTION NEEDS NO REFUSAL HERE (architect 2026-09-12, the
+        // lamps resolved by use case: "most of the conflicts are conflicts
+        // because they indicate different use cases; we analyze the use cases
+        // and target them as such"). The USE CASES are sequential rather than
+        // rival: raising the bound cells is an act that says the selecting is
+        // over. So the ON EDGE below PUTS THAT LAMP OUT, through the act
+        // class's own writer. THE OTHER DIRECTION IS NO REFUSAL EITHER
+        // (2026-09-19): the pair CAN stand together, the sticky ctrl folding a
+        // plain press into the toggle on the PAYLOAD BOX alone, so a bound
+        // cell keeps the plain press it is addressed by; bare `k` is outside
+        // the lock's delta (a) (iteration_lock_key_blocked, above) and Add to
         // Selection greys nowhere.
         // THE CROSSING, ON THE ON EDGE ALONE AND PAST EVERY REFUSAL ABOVE (the
         // gate's read-only and modal refusals), so a refused `i` switches
@@ -7559,23 +7198,21 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
             // Turning iteration mode OFF wipes BOTH stores' session-only iter
             // brackets — exiting the mode is the clear (wipe_iter_state,
             // shared with the sweep's success tail so the two exit routes
-            // cannot drift; bare `m` was a third until 2026-09-10, when it
-            // stopped swapping the modes and started refusing). Runs before
-            // the flag flips.
+            // cannot drift). Runs before the flag flips.
             // OFF EITHER COLUMN'S HOME THAT WIPE IS A GRANTED
             // home-view-binding exception, the same one the sweep's success
             // tail takes (architect 2026-08-07, recorded at
             // run_iteration_sweep_render's tail where the class is argued in
             // full): iter brackets are session-only fields, never serialized
             // and excluded from the render recipe, so the write reaches
-            // neither disk nor a render — and since 2026-09-10 it pushes no
-            // undo entry either, the bracket having left the undo domain, so
-            // the clear is FINAL and the mode's own lamp is the warning.
+            // neither disk nor a render — and it pushes no undo entry either
+            // (2026-09-10), the bracket being outside the undo domain, so the
+            // clear is FINAL and the mode's own lamp is the warning.
             flag_editor.wipe_iter_state();
         }
         app.iteration_mode_enabled = !app.iteration_mode_enabled;
         // ENTERING OR LEAVING THE MODE PUTS THE VALUE DRAG LAMP OUT (architect
-        // 2026-10-11 ~01:50, "it's simpler that way"; AppState::value_drag_lamp):
+        // 2026-10-11, "it's simpler that way"; AppState::value_drag_lamp):
         // through the mode the drag is armed by the mode itself
         // (value_drag_armed), and on the way out the lamp is dark. Both
         // edges, the same write; the sweep's success tail, the mode's other
@@ -7596,29 +7233,24 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // THE DAMAGE IS BOTH LANES on both edges: the Grid Iterations lamp
         // is the icon row's, and the Add to Selection lamp and the Toggle
         // Value Drag face (lit and grey through the mode, 2026-10-11) the
-        // bottom row's, and a mode toggle must light in the frame it was
+        // bottom icon row's, and a mode toggle must light in the frame it was
         // asked for rather than on the per-tick face comparator's next pass.
         if (app.iteration_mode_enabled) selection_consumed(app);
         viewport.invalidate_rect(bottom_row_area(app));
         viewport.invalidate_top_strip();
-        // (A SECOND DAMAGE CALL STOOD HERE for the one day the STATUS BAR
-        // did, 2026-08-29: the mode bit is one of the eligibility terms
-        // the resolved READOUT read, so the toggle hid or restored that
-        // cell. The readout retired with the bar and nothing outside the
-        // top strip changes here.)
         return true;
     }
 
     // Ctrl+B: open the BPM form on the FIRST of a contiguous
     // run of selected markers whose sections define the sweep span. Warp
     // view only, and the P column is answered on a card. MUTUAL EXCLUSION WITH
-    // GRID ITERATIONS IS A REFUSAL AND NOT A SWAP since 2026-09-10 (architect:
+    // GRID ITERATIONS IS A REFUSAL AND NOT A SWAP (architect 2026-09-10:
     // "we should card the exit, because it is still one button automatically
     // affecting the other"): this arm cannot be reached under a lit lamp at
     // all — the keyboard gate eats this chord with the lock's card and the BPM
-    // Iterations button greys — so enter_bpm_mode's forced iter-off is
-    // deleted and nothing here turns the other lamp off. The section rule (architect
-    // 2026-07-23, in its EFFECTIVE-PARTICIPATION form here since 2026-08-24):
+    // Iterations button greys — so nothing here turns the other lamp off.
+    // The section rule (architect 2026-07-23, in its EFFECTIVE-PARTICIPATION
+    // form, 2026-08-24):
     // a marker owns the section from itself to the next marker that
     // PARTICIPATES IN THE RENDER, and a marker trailed only by disabled ones
     // owns the section to the song end — so the selected run's LAST section is
@@ -7626,22 +7258,22 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // (warpmarkers.h) is that rule's one owner, shared with the phase-reset
     // propagate. The gate requires a NON-EMPTY, CONTIGUOUS run of selected
     // markers with no effectively-enabled label_ref in
-    // [owner .. boundary marker] inclusive and, since 2026-08-26, ONE TEMPO
-    // across the run (each selected marker a pass or the owner's own value)
-    // and no enabled coincident member in the selected run; any other
-    // selection is refused, and SAYS WHICH RULE IT BROKE since 2026-08-30 (the arm-by-arm
-    // ruling is at the first test below). THE LADDER IS bpm_sweep_plan SINCE
-    // 2026-09-04, a const owner this arm and the BPM Iterations button's face
-    // share (the contract is at its declaration, app_state.h).
+    // [owner .. boundary marker] inclusive, ONE TEMPO across the run
+    // (2026-08-26; each selected marker a pass or the owner's own value) and
+    // no enabled coincident member in the selected run; any other selection
+    // is refused, and SAYS WHICH RULE IT BROKE (the arm-by-arm ruling is at
+    // the first test below). THE LADDER IS bpm_sweep_plan, a const owner this
+    // arm and the BPM Iterations button's face share (the contract is at its
+    // declaration, app_state.h).
     // Under the contiguity rule every in-span marker up to the last
     // selected one IS selected, so a selected span-internal marker may be
-    // disabled — and since 2026-08-29 the sweep cell LEAVES IT EXACTLY AS IT
-    // IS rather than converting it to a plain pass, as it leaves the disabled
+    // disabled — and the sweep cell LEAVES IT EXACTLY AS IT IS (2026-08-29)
+    // rather than converting it to a plain pass, as it leaves the disabled
     // markers the extended boundary sweeps in past it (a disabled marker is
     // invisible to the act in the span and out of it, the ruling at
     // bpm_cell_warp_markers, input_handler.h); a disabled OWNER is rejected
-    // (bpm_popup_eligible_marker excludes disabled — a disabled owner was a
-    // render-inert rewrite).
+    // (bpm_popup_eligible_marker excludes disabled — a disabled owner's
+    // rewrite would be render-inert).
     // There is no toggle-off branch: while the BPM FORM stands Ctrl+B is its
     // router's close (route_picker_key, close_bpm_form), while its line
     // editor stands the chord is consumed at the modal gate, and bpm mode
@@ -7649,18 +7281,17 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // every road out).
     if (key == GuiKeys::B && ctrl && !shift && !alt) {
         // EVERY ARM OF THIS GATE NAMES THE RULE IT BROKE (architect
-        // 2026-08-30, the strictness ruling). The ladder is ten tests deep and
-        // its whole answer used to be one indistinguishable non-response — the
-        // state a card exists for. Each arm now returns on its own sentence, so
+        // 2026-08-30, the strictness ruling). The ladder is ten tests deep,
+        // and one indistinguishable non-response for all of them is the
+        // state a card exists for. Each arm returns on its own sentence, so
         // ONE press raises ONE card carrying the FIRST rule the selection
         // failed; the sweep's own later refusals (the RENDER gate's bracket
         // walls) belong to the form and are untouched.
         //
-        // THE LADDER ITSELF LEFT THIS BODY ON 2026-09-04, when the BPM
-        // ITERATIONS BUTTON came back to the icon row and its face needed the
-        // same verdict: it is bpm_sweep_plan (warpmarkers_ops.cpp, declared in
-        // app_state.h) now, one const walk this arm switches on for its card
-        // and redesign_button_enabled asks for its grey — the roster's own
+        // THE LADDER IS bpm_sweep_plan (2026-09-04; warpmarkers_ops.cpp,
+        // declared in app_state.h), because the BPM ITERATIONS BUTTON's face
+        // needs the same verdict: one const walk this arm switches on for its
+        // card and redesign_button_enabled asks for its grey — the roster's own
         // rule that a face never restates an act's condition. THE SENTENCES
         // STAY HERE, where the notifications are; the plan carries the verdict
         // and the two indices the act needs past it, the span's OWNER and its
@@ -7672,8 +7303,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                                      "BPM iterations work on warp markers");
                 return true;
             // The BPM form is DELIBERATELY OMITTED from the warp
-            // status/value family admitted in W+target on 2026-08-24
-            // (architect: "add the ones we can, and omit the ones we must
+            // status/value family admitted in W+target (architect
+            // 2026-08-24: "add the ones we can, and omit the ones we must
             // omit"; the inventory is at active_column_authoring_allowed,
             // app_state.h). Its reason is its own rather than placement: it
             // rewrites tempo through a DERIVATION over a SPAN — the selected
@@ -7726,7 +7357,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
                     "A label reference lies inside or at the end of the span");
                 return true;
             // Owner must satisfy the BPM-eligibility predicate (owning, no
-            // ref, and — now — enabled).
+            // ref, enabled).
             case BpmSweepRefusal::OwnerIneligible:
                 notifications.notify(
                     AppState::NotificationClass::Normal,
@@ -7781,8 +7412,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // endpoint is explicit, so record it on the owner and keep the whole
         // selected run highlighted as the span cue.
         flag_editor.enter_bpm_mode();
-        // THE ONE SILENT ARM OF THE TEN, and unreachable (verified against
-        // enter_bpm_mode's head 2026-08-30): that route's five bails are the
+        // THE ONE SILENT ARM OF THE TEN, and unreachable (by
+        // enter_bpm_mode's head): that route's five bails are the
         // W column, an empty selection, an out-of-range owner and
         // bpm_popup_eligible_marker — every one of them re-asked from the
         // ladder above, which has already carded it — plus a bpm mode already
@@ -7813,14 +7444,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // EARLIEST selected (`owner` is the set's first member,
         // bpm_sweep_plan), while the focus that built this span sits
         // wherever the multi-select click left it. THE MEMBERSHIP STAYS THE
-        // SPAN'S, through the whole-set replace (2026-11-05): a single-select
-        // followed by a hand re-insert of the members stood here, and once
-        // the select published its stems in the same event (the ONE-STATE
-        // RULE, paint_marker_stems) the frame between would have shown the
-        // owner's stem alone and the members' a tick late. NOTHING
-        // re-derives a region here (the extent re-derive died with the SPAN
-        // FORM, architect 2026-07-30): the group's cue is its members'
-        // stems plus the visible cursor on `owner`. No second land.
+        // SPAN'S, through the whole-set replace (2026-11-05): one write, so
+        // the select publishes every member's stem in the same event (the
+        // ONE-STATE RULE, paint_marker_stems) and no frame shows the owner's
+        // stem alone. NOTHING re-derives a region here: the group's cue is
+        // its members' stems plus the visible cursor on `owner`. No second
+        // land.
         selection.replace_selection(span_selection, owner);
         land_playhead_on_marker(app, audio, viewport, owner);
         return true;
@@ -7828,26 +7457,22 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
 
     // `k` (no modifiers): toggle ADD TO SELECTION, the sticky ctrl (architect
     // 2026-08-18). It is `i`'s and `p`'s shape exactly — one bit, flipped both
-    // ways by one key, with the bottom row's button dispatching this same
-    // chord — and, since 2026-09-10, THE ONLY ROUTE THAT WRITES THE BIT AT
-    // ALL, in both directions: the lamp is a session tool posture that nothing
-    // else clears, its six Selection-layer auto-clears and the load's belt
-    // having been deleted that day (the whole contract, the posture and the
-    // shift rule are at AppState::add_to_selection).
+    // ways by one key, with the bottom icon row's button dispatching this
+    // same chord — and THE ONLY ROUTE THAT LIGHTS THE BIT: no selection
+    // mutator clears it (architect 2026-09-10); its off roads (an act that
+    // spends the selection, its own sweep's lift, TRIM's lit edge, a user
+    // zoom and the `h` view's entry), the posture and the shift rule are at
+    // AppState::add_to_selection.
     //
-    // IT HAS NO GATE AT ALL SINCE 2026-09-19 (architect). GRID ITERATIONS was
-    // its one gate from 2026-09-10: bare `k` sat in
-    // iteration_lock_key_blocked's delta (a), the gate carded `Turn off grid
-    // iterations first` and this body never ran under a lit lamp, because the
-    // sticky ctrl turned every plain flag press into a MODIFIED one and a
-    // modified press on a bound cell is the pointer's silent no-op — the
-    // mode's own authoring surface would have been unreachable. THE MODE IS
-    // NARROWED INSTEAD: the fold reaches the PAYLOAD BOX alone
+    // IT HAS NO GATE AT ALL (architect 2026-09-19). GRID ITERATIONS IS
+    // NARROWED INSTEAD, so a bound cell stays reachable under the sticky
+    // ctrl (a modified press on a bound cell is the pointer's silent no-op):
+    // the fold reaches the PAYLOAD BOX alone
     // (run_marker_click_act, input_pointer.cpp), a bound cell's plain press is
     // a plain press with both lamps lit, and the two stand together — which is
     // what a pointer road onto a multi-marker selection under the lamp needs,
     // this lamp being glass's fingertip road to ctrl (the S Pen's side button
-    // is the other). Bare `i`'s ON edge still puts
+    // is the other). Bare `i`'s ON edge puts
     // THIS lamp out (architect 2026-09-12), a use case ending rather than a
     // refusal.
     // THE VALUE DRAG LAMP IS NO GATE EITHER: the two may stand lit together
@@ -7860,15 +7485,12 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // columns and both audio views (a selection is not authored content, so
     // the home-view binding has nothing to say about it), legal on a LOCKED
     // tab (read_only_key_blocked admits it, where it drops the marker verbs'
-    // own chords), and LEGAL IN THE `h` VIEW SINCE 2026-09-17 (architect,
-    // from the
-    // tablet: "it should work in the Git history… so that I can select two
-    // events") — history_mode_key_blocked admits the chord, so the press
-    // reaches this arm from in there too and the lamp lights the same bit for
-    // the mode's DIFF flags: a plain diff-flag press then runs the mode's ctrl
-    // body, the only road onto that multi-selection a finger has. The view
-    // consumed the chord until that day, when the lamp produced nothing in it.
-    // It stops no playback: turning the mode on IS NOT a selection act — the
+    // own chords), and LEGAL IN THE `h` VIEW (architect 2026-09-17: "it
+    // should work in the Git history… so that I can select two events") —
+    // history_mode_key_blocked admits the chord, so the press reaches this
+    // arm from in there too and the lamp lights the same bit for the mode's
+    // DIFF flags: a plain diff-flag press then runs the mode's ctrl body, the
+    // only road onto that multi-selection a finger has. It stops no playback: turning the mode on IS NOT a selection act — the
     // click that follows is, and that click runs the marker act's own stop.
     //
     // THE REPAINT IS THE BOTTOM LANE'S — the button's lamp lives there, so
@@ -7878,14 +7500,14 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // drift on the NEXT tick, and a mode toggle must light in the frame it was
     // asked for.
     //
-    // THE RADIO WITH TRIM (architect 2026-11-10, session 101, "1 radio"):
+    // THE RADIO WITH TRIM (architect 2026-11-10, "1 radio"):
     // the lit edge puts the TRIM arm lamp out through its one writer, as
-    // FOLLOW's puts RESTRICT out (toggle_follow) — each lamp now arms the
+    // FOLLOW's puts RESTRICT out (toggle_follow) — each lamp arms the
     // next waveform drag, the two sweeps one drag apart; TRIM's face darkens
     // in this frame too, through its setter's own damage (set_trim_armed
     // damages TRIM's own face on every edge). The off edge puts nothing
     // out. In the `h` view TRIM stands dark: the view's entry puts it out
-    // (darken_zoom_lamps, architect 2026-11-17, send U) and bare `w` is off
+    // (darken_zoom_lamps, architect 2026-11-17) and bare `w` is off
     // the view's allowlist.
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {
         app.add_to_selection = !app.add_to_selection;
@@ -7895,10 +7517,11 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // BARE `[` (no modifiers): toggle THE VALUE DRAG LAMP (architect
-    // 2026-10-11 ~00:40), the one-shot that arms the flag's value drag — lit,
+    // 2026-10-11), the one-shot that arms the flag's value drag — lit,
     // every flag drag is the value drag in every view; dark, none is
     // (value_drag_posture, app_state.h, owns the rule). `k`'s shape exactly:
-    // one bit flipped both ways by one key, row 8's Toggle Value Drag button
+    // one bit flipped both ways by one key, the bottom icon row's Toggle
+    // Value Drag button
     // dispatching this same chord. Its OTHER writer is the drag it arms
     // (ValueDragOps::commit puts it out at the lift of a value drag that
     // began). ITS GATES ARE ABOVE THIS DISPATCH: the read-only gate drops it
@@ -7906,19 +7529,18 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // the lamp would arm nothing), the grid-iterations gate admits it (the
     // bound cells are the drag's targets — delta (b)), and the `h` view's
     // allowlist refuses it (its flags arm no drag). UNDER GRID ITERATIONS IT
-    // CHANGES NOTHING AND CARDS WHY (architect 2026-10-11 ~01:45): the lamp is
+    // CHANGES NOTHING AND CARDS WHY (architect 2026-10-11): the lamp is
     // permanently lit there (value_drag_armed, app_state.h), the stored bit
     // dark and unread through the mode, and a bound chord is never silent —
     // kValueDragIterationsCard; the button greys lit there, so its press dies
     // before reaching this arm. IN THE PHASE RESET VIEW WITH THE MODE DARK
-    // IT CHANGES NOTHING AND CARDS WHY (architect 2026-10-11 ~02:05, "it has
+    // IT CHANGES NOTHING AND CARDS WHY (architect 2026-10-11, "it has
     // no meaning there"): no flag there is a target, the button greys unlit
     // (value_drag_armed), and the stored bit is left as it was —
     // kValueDragPhaseResetViewCard. It stops no playback and
     // writes no store, no undo entry and no dirty mark. THE REPAINT IS THE
     // BOTTOM LANE'S, `k`'s reason: the lamp must light in the frame it was
-    // asked for. (Bare `x` toggled the first value drag lamp from 2026-09-10
-    // to 2026-09-13 and binds nothing.)
+    // asked for.
     if (key == GuiKeys::BracketLeft && !ctrl && !shift && !alt) {
         if (app.iteration_mode_enabled) {
             notifications.notify(AppState::NotificationClass::Normal,
@@ -7936,19 +7558,16 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     }
 
     // `l` (no modifiers): "Play renders" — THE RENDER PLAYER (architect
-    // design 2026-08-28, retiring the external `audio_player` spawn whole):
-    // the in-app player over the project's `tmp/` batch cells (it walked
-    // `render/` too until 2026-09-01),
-    // through the product's own engine. TWO PRODUCERS, ONE
+    // design 2026-08-28): the in-app player over the project's `tmp/` batch
+    // cells, through the product's own engine. TWO PRODUCERS, ONE
     // ROUTE: this key and the icon row's Play renders button, which
     // synthesizes exactly this bare chord. The modal / editor / loading gates
     // in on_key run before this handler, so `l` is inert while any of them
-    // owns the keyboard; the `h` view's allowlist ADMITS it since 2026-10-25
-    // (the player opens over the view); inside the player the key is the mode's
-    // own closer (route_render_player_key) and never reaches here, so this
-    // arm opens. "Nothing to play: no renders under tmp/" and, since
-    // 2026-09-15, "Render player is unavailable while rendering" are the
-    // opener's two card refusals.
+    // owns the keyboard; the `h` view's allowlist ADMITS it (2026-10-25:
+    // the player opens over the view); inside the player the key is the
+    // mode's own closer (route_render_player_key) and never reaches here, so
+    // this arm opens. The opener's card refusals are its own
+    // (GuiRenderPlayer::open).
     if (key == GuiKeys::L && !ctrl && !shift && !alt) {
         open_render_player();
         return true;
@@ -8034,9 +7653,8 @@ void GuiInputHandler::confirm_score_reset() {
 
 // -- THE VALUE PAIR: Ctrl+Shift+J copies, Ctrl+J jumps ---------------------
 //
-// (architect 2026-08-29, replacing the resolved readout, which retired with
-// the status bar the same day; the copy is on Ctrl+Shift+J since 2026-10-14,
-// Jump to Defining Marker's shift twin.)
+// (architect 2026-08-29; the copy is Ctrl+Shift+J, Jump to Defining Marker's
+// shift twin, 2026-10-14.)
 // BOTH ACT ON THE SELECTION'S FOCUS, and both compose through the ONE parser
 // composer resolved_marker_payload (warp_frame_map_build.h), which returns the
 // pasteable value and — through its out-parameter — the marker that value came
@@ -8050,12 +7668,11 @@ void GuiInputHandler::confirm_score_reset() {
 // "1.00", the render's truth, and the jump finds no source) or an effectively
 // enabled pass or ref (effective_disabled, the own flag). An ineligible
 // focus — an owner, a phase reset, a disabled marker, the `P` column, nothing
-// focused — and an empty payload alike SAY SO ON A CARD since 2026-08-30
-// (architect, the strictness ruling), and they say the SAME words: from the
+// focused — and an empty payload alike SAY SO ON A CARD (architect
+// 2026-08-30, the strictness ruling), and they say the SAME words: from the
 // user's side both are "this marker has no resolved value", the difference
-// between them being which layer discovered it. Iteration mode stopped
-// being a term the same day — the line was the retired readout's, and under it
-// the copy carded "no resolved value" on a marker that had one. THE JUMP TO
+// between them being which layer discovered it. Iteration mode is no term of
+// the gate: a marker with a resolved value has it in either mode. THE JUMP TO
 // DEFINING MARKER BUTTON, which carries both acts (the copy its shift twin,
 // 2026-10-14), GREYS ONLY WHERE BOTH REFUSE (redesign_button_enabled, the twin
 // rule), so a lift can reach either act's cards wherever the other would act;
@@ -8095,19 +7712,18 @@ void GuiInputHandler::copy_focused_marker_value() {
     // AND THE SUCCESS SAYS SO (architect 2026-08-30, the strictness ruling's
     // invariant that an accepted press shows something): A CLIPBOARD WRITE IS
     // THE ONE SUCCESS IN THE PRODUCT THAT PAINTS NOTHING — no surface displays
-    // a clipboard, and since the resolved readout retired with the status bar
-    // no standing surface displays a resolved value either — THE HOVER
-    // TOOLTIP DOES SINCE 2026-11-09 (architect, session 100: with the TIPS
-    // lamp lit an eligible cue's tooltip is its resolved value, composed
-    // through this gate and this composer, marker_tooltip_value), but that is
-    // the pen's hover, never the press's answer — so this card is the whole
+    // a clipboard, and no standing surface displays a resolved value either;
+    // THE HOVER TOOLTIP DOES (architect 2026-11-09: with the TIPS lamp lit an
+    // eligible cue's tooltip is its resolved value, composed through this
+    // gate and this composer, marker_tooltip_value), but that is the pen's
+    // hover, never the press's answer — so this card is the whole
     // of what the press shows, AND IT NAMES THE VALUE (architect
     // 2026-09-13): reading what was copied otherwise needs a terminal or a
     // text editor, and a card is an event, so no state surface returns. The
     // value is the very `payload` handed to the clipboard, single-quoted as
     // every named thing on a card is. The save and a render stay silent by
-    // ruling: each has its own visible answer (row 8's clock
-    // suffix — the `*` a save clears — and the file on disk). THE BUTTON
+    // ruling: each has its own visible answer (the SAVE key greying as the
+    // save lands, plain_save_actionable, and the file on disk). THE BUTTON
     // INHERITS IT: Jump to Defining Marker's long press
     // dispatches this same Ctrl+Shift+J through on_key at its lift
     // (2026-10-14), so the sentence lives once and every road says it.
@@ -8155,15 +7771,15 @@ void GuiInputHandler::copy_focused_marker_value() {
 // NO UNDO ENTRY: a tab switch, a selection and a playhead move record nothing
 // anywhere in the product, so there is nothing here to push.
 //
-// IT HAS A SECOND SUBJECT SINCE 2026-09-19 AND ONE TAIL (architect): with a
+// IT HAS A SECOND SUBJECT AND ONE TAIL (architect 2026-09-19): with a
 // BOUND CELL addressed on a TIE FOLLOWER the destination is that tie's LEADER
 // — "he looks at the leader on the other tab without losing his place among
 // the followers on this one" — and the five acts above run on it unchanged.
 // The fork is at the HEAD, ahead of the payload gates, and it is the whole
 // fork: a follower's eligibility is a fact about its TIE, not about a resolved
 // value, so an owner or a phase reset is a legal subject on this road where
-// the payload road refuses it. On the PAYLOAD axis
-// the chord keeps today's meaning exactly. The destination is an index into
+// the payload road refuses it. On the PAYLOAD axis the destination is the
+// value's source. The destination is an index into
 // the ACTIVE column's store on either road, which is what the tail's two
 // owners resolve against.
 void GuiInputHandler::jump_to_value_source() {
@@ -8201,15 +7817,14 @@ void GuiInputHandler::jump_to_value_source() {
         // pass, a walk that ended on a ref, a synthetic prior, a normalized
         // ref): there is nothing to jump to, so the press is a consumed
         // nothing.
-        // AND THEY SAY SO SINCE 2026-08-30, all three in ONE sentence:
+        // AND THEY SAY SO (2026-08-30), all three in ONE sentence:
         // whichever of them answered, the fact the press needs is that this
         // value names no marker to stand on. (The third is a belt — a source
         // index past the store — and shares the sentence rather than earning
         // one, since a separate wording would describe an invariant breach to
         // the user.)
-        // THE THREE ARE ONE OWNER since 2026-09-01 — value_source_marker
-        // (app_state.cpp), which wraps the composer call this body made
-        // inline and which Jump to Defining Marker's face reads too
+        // THE THREE ARE ONE OWNER — value_source_marker (app_state.cpp),
+        // which wraps the composer call and which Jump to Defining Marker's face reads too
         // (jump_to_value_source_actionable), so the button greys exactly
         // where this cards.
         destination = value_source_marker(app, audio);
@@ -8234,15 +7849,14 @@ void GuiInputHandler::jump_to_value_source() {
 void GuiInputHandler::render_player_load_in_place() {
     if (!app.render_player.active) return;
     if (app.prompt.active) return;
-    // THE LOCK REFUSES AND SAYS SO (architect 2026-08-30, ending the silence
-    // it kept until then): a load in place writes the marker stores and the
-    // engine block, exactly what the read-only tab protects. SINCE THE SAME
-    // DAY THE BUTTON GREYS on this refusal and on a recipe-less highlight
-    // (render_player_button_enabled — a greyed face never arms, the grey
-    // being the message), so this card and the highlight one below are the
-    // KEYBOARD's, bare `'`'s own — and so is the running-render card since
-    // 2026-09-01, when that refusal became a face term too (the roster's
-    // shape: the grey is the button's message, the key keeps its card). A
+    // THE LOCK REFUSES AND SAYS SO (architect 2026-08-30): a load in place
+    // writes the marker stores and the engine block, exactly what the
+    // read-only tab protects. THE BUTTON GREYS on this refusal, on a running
+    // render and on a recipe-less highlight (render_player_button_enabled —
+    // a greyed face never arms, the grey being the message), so this card,
+    // the running-render one and the highlight one below are the KEYBOARD's,
+    // bare `'`'s own (the roster's shape: the grey is the button's message,
+    // the key keeps its card). A
     // button still PAINTED live when one of these refusals lands reaches this
     // body too and takes the same card (architect 2026-09-24, strictly
     // as-painted: the act answers for itself). It is
@@ -8253,32 +7867,29 @@ void GuiInputHandler::render_player_load_in_place() {
     // available on a read-only tab"). One lock; the wording differs exactly
     // where what the site knows differs.
     //
-    // AND IT IS BOTH LOCKS SINCE 2026-09-10 (authoring_locked, app_state.h):
+    // AND IT IS BOTH LOCKS (2026-09-10; authoring_locked, app_state.h):
     // the load rewrites both marker stores and the engine block and
     // pushes one undo entry, so grid iterations refuses it exactly as the
     // read-only bit does — through the one composer that forks the sentence
     // (authoring_lock_card). Bare `'` still OPENS the player under a lit lamp,
     // the key being admitted; it is the LOAD that refuses, by key and by
-    // button, which is the same division the read-only lock has always kept
-    // here.
+    // button, the same division the read-only lock keeps here.
     if (authoring_locked(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              authoring_lock_card(app));
         return;
     }
-    // THE RUNNING-RENDER REFUSAL SAYS SO ON A CARD (architect 2026-08-29, the
-    // status bar's fold into row 8): the load wipes tmp/, which must never
-    // race a batch publishing into it, so the refusal itself stays — and it
-    // is no longer silent. It was silent for one day on the ground that the
-    // progress line was its explanation; the status bar shows that line under
-    // the player since 2026-11-19 (send Z), but the card stays (no card
-    // retires into the bar, his ruling that day), a refusal with no answer at
-    // the press reading as a dead button (the reasoning at load_in_place_render_blocked, and the
-    // batch-cell refusal one arm down is the same class). THE SENTENCE NAMES
-    // THE ACT IT REFUSES (architect 2026-08-30, his own example): a bare "Render
-    // running" was a fact with no verb, and a card answers a press. THE
-    // CONDITION IS ONE OWNER (load_in_place_render_blocked, app_state.h —
-    // 2026-09-01), read by the mutator's backstop and the button's face too.
+    // THE RUNNING-RENDER REFUSAL SAYS SO ON A CARD (architect 2026-08-29):
+    // the load wipes tmp/, which must never race a batch publishing into it.
+    // The status bar shows the progress line under the player, but the card
+    // stays (no card retires into the bar, architect 2026-11-19), a refusal
+    // with no answer at the press reading as a dead button (the reasoning at
+    // load_in_place_render_blocked; the batch-cell refusal one arm down is
+    // the same class). THE SENTENCE NAMES THE ACT IT REFUSES (architect
+    // 2026-08-30, his own example): a card answers a press, so it carries
+    // the verb. THE CONDITION IS ONE OWNER (load_in_place_render_blocked,
+    // app_state.h — 2026-09-01), read by the mutator's backstop and the
+    // button's face too.
     if (load_in_place_render_blocked(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              "Cannot load in place while a render is running");
@@ -8293,13 +7904,10 @@ void GuiInputHandler::render_player_load_in_place() {
         // NAMES THE EXCLUDED SET (2026-08-30) AND NAMES ONLY WHAT IS REACHABLE
         // (2026-09-01, the gates-stop-lying rule — a refusal's wording, like a
         // gate's membership, must describe the state the user can actually be
-        // in): it named the `..` row and the DELIVERABLE under render/ too,
-        // and NEITHER CAN BE HIGHLIGHTED ANY MORE — the deliverable left the
-        // listing when the player moved inside tmp/, and `..` became the Up
-        // button on the modal row — so a FOLDER ROW is the whole of what can
-        // reach this arm. ONE CLAUSE since 2026-09-01 (the sentence-shape
-        // rule): it read "Only a render can be loaded in place; a folder
-        // carries no recipe", one fact told twice across a semicolon.
+        // in): the player lists tmp/ alone, so no deliverable under render/
+        // is a row, and there is no `..` row (Up is a button), so a FOLDER
+        // ROW is the whole of what can reach this arm. ONE CLAUSE (2026-09-01,
+        // the sentence-shape rule).
         notifications.notify(
             AppState::NotificationClass::Normal,
             "A folder carries no recipe to load in place");
@@ -8314,8 +7922,7 @@ void GuiInputHandler::render_player_load_in_place() {
     app.render_player.pending_load = *entry;
     // THE CONFIRMATION: the entry's id in its one spelling (render_entry_id,
     // renders_dir.h) and SINGLE-QUOTED like every other name in a sentence
-    // (2026-09-01, the product's one quoting form on cards and prompts alike;
-    // both raisers of this prompt body wore backticks until that day),
+    // (2026-09-01, the product's one quoting form on cards and prompts alike),
     // OK / Cancel — Cancel LAST like every prompt's; `o` is OK's dispatch
     // char. The ONE LOAD PROMPT, raised from its TWO subjects (architect
     // 2026-08-28): it is this same prompt body that the `h` view's Load in
@@ -8357,13 +7964,11 @@ void GuiInputHandler::render_player_delete(bool all) {
         folders.push_back(
             ov.rows[static_cast<size_t>(ov.highlight_row)].path);
     }
-    // THE QUESTION RISES OVER THE ROOT'S IDLE TRANSPORT: nothing is loaded at
-    // the root — Up unloads the item before it enters the root
-    // (GuiRenderPlayer::up), the player's open loads nothing, and the root
-    // lists folders alone — so the pause below, the load confirmation's
-    // opening step, finds nothing live and does nothing; a belt.
-    if (app.render_player.transport == AppState::RenderPlayer::Transport::Live)
-        render_player.toggle_pause();
+    // THE QUESTION RISES OVER THE ROOT'S IDLE TRANSPORT, so it pauses
+    // nothing (the load confirmation's opening pause has no twin here):
+    // nothing is loaded at the root — Up unloads the item before it enters
+    // the root (GuiRenderPlayer::up), the player's open binds nothing, and
+    // the root lists folders alone, so no play can start there.
     app.render_player.pending_delete = folders;
     // THE QUESTION (a prompt is a question, notifications.h): the one folder is
     // NAMED — its own name, the path's last component, SINGLE-QUOTED and
@@ -8406,11 +8011,9 @@ void GuiInputHandler::cancel_render_player_delete() {
 // (AppState::RenderPlayer::pending_load, raised by its Load in place button or
 // bare `'` inside it) or the `h` VIEW's viewed walk member
 // (AppState::HistoryMode::pending_load_member, raised by bare `'` there). The
-// two raises cannot coexist — the player opens over the view since
-// 2026-10-25, but its router ranks ahead of the view's `'` while it stands,
-// and no opener runs under the view's standing prompt — so the order between
-// the arms is free,
-// and each arm re-asks its own mode live because the prompt outlives neither.
+// two raises cannot coexist — the player opens over the view, but its router
+// ranks ahead of the view's `'` while it stands, and no opener runs under the
+// view's standing prompt — so the order between the arms is free, and each arm re-asks its own mode live because the prompt outlives neither.
 void GuiInputHandler::confirm_load_in_place() {
     if (app.render_player.pending_load) {
         if (!app.render_player.active) return;
@@ -8425,7 +8028,7 @@ void GuiInputHandler::confirm_load_in_place() {
             // view the load's own trigger() has already dispatched (or
             // parked) the preview for the generation this load made, so the
             // fork's ensure_ready HONOURS that standing dispatch and its
-            // completion rebinds — it no longer cancels and redispatches the
+            // completion rebinds — it does not cancel and redispatch the
             // identical render (architect 2026-09-02; the guard and its
             // state table at GuiTargetRender).
             render_player.close();
@@ -8434,9 +8037,7 @@ void GuiInputHandler::confirm_load_in_place() {
         // NOTHING IS SAID HERE (2026-08-30): the act names every refusal on
         // its own route, on a card and on stderr alike — the same rule the
         // `h` view's two arms below follow — so a sentence composed here
-        // could only be a vaguer copy of one already on screen. It said
-        // "Load refused" until that day, which told the user nothing the
-        // dead player did not.
+        // could only be a vaguer copy of one already on screen.
         return;
     }
     if (app.history_mode.pending_load_member) {
@@ -8448,16 +8049,14 @@ void GuiInputHandler::confirm_load_in_place() {
         // loads the commit walk's member at that INDEX through
         // load_history_commit_in_place, the Local tab the local walk's member
         // at the same index through load_history_local_entry_in_place. THE
-        // INDEX IS ALL THAT CROSSES, on both arms since 2026-09-17 — the
-        // commit walk has two roads and two spellings of a member's address,
-        // so that act reads the address inside itself, ahead of the close that
-        // drops the session, and the local arm stopped mapping the index onto
-        // a displayed number when the walks' counting reversed (the number is
-        // a naming of the index now, HistoryMode::member_number).
+        // INDEX IS ALL THAT CROSSES, on both arms (2026-09-17) — the commit
+        // walk has two roads and two spellings of a member's address, so that
+        // act reads the address inside itself, ahead of the close that drops
+        // the session, and the local arm maps the index onto no displayed
+        // number (the number is a naming of the index,
+        // HistoryMode::member_number).
         // Each act owns every refusal on its own route and names it on stderr
-        // AND on a notification card (2026-08-29; stderr alone until then, the
-        // view's own line having outranked the transient tier), so nothing is
-        // said here.
+        // AND on a notification card (2026-08-29), so nothing is said here.
         (void)(app.history_mode.source == GuiHistoryWalkSource::Local
                    ? load_history_local_entry_in_place(member)
                    : load_history_commit_in_place(member));
@@ -8541,7 +8140,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // whose trim the preview is already bound to, and plays nothing on the
     // other one in between, so there is nothing for a re-dispatch to serve.
     // (The A/B audition, which PLAYS on the other tab, takes the trigger at
-    // both of its switches since 2026-10-18, ab_audition.h.) The playback
+    // both of its switches, ab_audition.h.) The playback
     // stop is the switch's own (switch_active_tab_view_to).
     //
     // IT NEVER RUNS WHILE GRID ITERATIONS IS LIT (architect 2026-09-10): the
@@ -8579,7 +8178,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // runs first and returns, so Ctrl+Tab is consumed before reaching here;
     // the explicit !ctrl guards below keep Ctrl+Shift+Tab out of the cycle
     // path, and the !alt guards make every Alt spelling of Tab an unbound
-    // no-op (the Alt walk, 2026-09-22, was deleted 2026-09-23).
+    // no-op.
     constexpr MarkerLandingFrame walk_frame = MarkerLandingFrame::Land;
     if (!ctrl && !alt && key == GuiKeys::Tab && !shift) {
         cycle_marker_focus(true,  walk_frame); return true;
@@ -8594,7 +8193,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // Bare-key (no-modifier) dispatch. See the declaration for the binding list;
 // the caller gates on no modifiers held.
 // THE Home / End JUMP, one body for four arms — bare Home, bare End and their
-// two SHIFT forms (since 2026-10-24; CTRL until then), row 8's START and END
+// two SHIFT forms (2026-10-24), the bottom icon row's START and END
 // buttons' plain and shift presses — so the three unconditional acts are
 // spelled once and the landings differ only in the flags handed to the
 // arithmetic owner.
@@ -8611,32 +8210,24 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
 // position and the next bare arrow would tow the playhead back onto the marker,
 // silently discarding the jump.
 //
-// THE LANDING FRAME COMES FROM THE SHARED OWNER since 2026-08-15
+// THE LANDING FRAME COMES FROM THE SHARED OWNER
 // (playhead_skip_landing_frame, viewport.cpp), whose two arms this body selects
 // between with `whole_piece`: FALSE takes Viewport::trim_range's own bounds (the
 // bare pair), TRUE forces the piece's ends whatever the trim is (the shift
-// pair since 2026-10-24, the ctrl pair from architect 2026-09-26 until then).
-// Both come back pre-clamped, and the clamp is idempotent
+// pair). Both come back pre-clamped, and the clamp is idempotent
 // on what move_playhead_to would clamp anyway.
 //
 // THE STEPS STILL RUN UNGATED past the head refusal: the audition stop and
 // the lane exit's selection clear are unconditional wherever the body runs,
 // and the head refusal fires only when both WOULD do nothing and the jump
 // would not move — the actionability owner's terms are this body's own
-// writes, so the two cannot disagree. (A third step, the trim overlay's hide,
-// left with the overlay's resting form on 2026-09-22.)
-// THE SUCCESSION: the skips did not grey from 2026-08-15 to 2026-08-30 (a
-// landing-only grey promised less than this body delivers, and gating the
-// three steps to make it honest would change behaviour); the truthful-buttons
-// ruling greyed them again that morning, knowingly forgoing the side acts on
-// the dead face; the twin rule that evening folded the side acts into
-// playhead_end_jump_actionable, so the grey, this body's refusal and the body
-// are one decision — the full record is at the skips' case in
-// redesign_button_enabled. (The refusal CARDED for one day, 2026-08-30 to
-// 2026-08-31, when the one-dimensional rule silenced it; the grey stayed.)
+// writes, so the two cannot disagree: the side acts are folded into
+// playhead_end_jump_actionable (the truthful-buttons ruling and the twin
+// rule, 2026-08-30), so the grey, this body's refusal and the body are one
+// decision — the rule is at the skips' case in redesign_button_enabled.
 void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
-    // A FORM THAT WOULD CHANGE NOTHING IS SILENT (architect 2026-08-31,
-    // superseding the 2026-08-30 card): a benign one-dimensional refusal
+    // A FORM THAT WOULD CHANGE NOTHING IS SILENT (architect 2026-08-31): a
+    // benign one-dimensional refusal
     // already at its state says nothing — the playhead is one mark in one
     // place, and the glance that asks "did it move?" is the same glance that
     // answers it; the greyed skip button is the standing cue. The owner's
@@ -8655,19 +8246,16 @@ void GuiInputHandler::run_playhead_end_jump(bool forward, bool whole_piece) {
         playhead_skip_landing_frame(app, audio, forward, whole_piece));
 }
 
-// THE WAVEFORM-LANE PLAYHEAD STEP, one act owner (architect 2026-08-31,
-// when the step ladder made it three magnitudes; ONE STEP IN THE ACTIVE
-// COLUMN'S UNIT since 2026-09-21, the horizontal ladder retired on every
-// column). The unit is horizontal_arrow_step's (gui_input.h): one
-// millisecond on the warp column, ONE HOP — kRs target frames — on the phase-reset column,
-// the recorded exception keyed on the column and never on the subject. The
-// landing owner forks on the unit (playhead_arrow_step_landing, app_state.h);
-// everything below — the stop, the clear, the camera — is the same for
-// both. TWO CALLERS: handle_plain_bare_keys' Left / Right case below, and
-// since 2026-09-26 the `h` view's own Left / Right arm
-// (handle_history_mode_key), the history view stepping the playhead like
-// T+W. (On_key's Ctrl+Left / Ctrl+Right arm was a caller from 2026-09-22,
-// deleted with the chord.) It stays extracted because the stop, the
+// THE WAVEFORM-LANE PLAYHEAD STEP, one act owner: ONE STEP IN THE ACTIVE
+// COLUMN'S UNIT (architect 2026-09-21). The unit is horizontal_arrow_step's
+// (gui_input.h): one millisecond on the warp column, ONE HOP — kRs target
+// frames — on the phase-reset column, the recorded exception keyed on the
+// column and never on the subject. The landing owner forks on the unit
+// (playhead_arrow_step_landing, app_state.h); everything below — the stop,
+// the clear, the camera — is the same for both. TWO CALLERS:
+// handle_plain_bare_keys' Left / Right case below, and the `h` view's own
+// Left / Right arm (handle_history_mode_key, 2026-09-26), the history view
+// stepping the playhead like T+W. It stays extracted because the stop, the
 // stale-focus clear, the step and the camera read as one act.
 //
 // LIVE IT IS REACHED ONLY WITH AN EMPTY SELECTION, because on_key's
@@ -8706,14 +8294,14 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // Navigation playhead step, through the MOVEMENT OWNER
     // (move_playhead_by_arrow_step -> move_playhead_to). AT THE WALL the
     // landing is the cursor itself (playhead_arrow_step_landing, the owner the
-    // Left button's face reads since 2026-08-30): the key still runs
+    // Left button's face reads): the key still runs
     // the stop and the clear, the greyed button neither of them. THE
     // WALL IS THE SAME WALL IN BOTH UNITS — the landing owner clamps into the
     // live domain, so a hop near the end lands exactly ON the end and one
     // already resting there moves nothing; the buttons' face asks the same
     // step the press takes (horizontal_arrow_step_actionable).
-    // THE CAMERA, AT EVERY ZOOM, IS THE HOLD POSTURE'S (architect 2026-09-23;
-    // the press's modifier chose it from 2026-09-22): dark, the step follows
+    // THE CAMERA, AT EVERY ZOOM, IS THE HOLD POSTURE'S (architect
+    // 2026-09-23): dark, the step follows
     // the edge — the landing's own keep-visible edge-align and nothing more,
     // so the camera holds while the cursor stays on screen and walks with it
     // at the edge once it would leave. Standing, the step HOLDS THE COLUMN
@@ -8739,8 +8327,8 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
     // the playhead's own registration: every user-driven camera write
     // (this hold's own included) rebuilds the plate synchronously, so a held
     // key's next repeat reads the column the last step's write placed even
-    // before a frame promotes the item mirror. THAT REBUILD IS OWED since
-    // 2026-10-13 (the pre-paint hook pays it, Viewport::kick_waveform_sync),
+    // before a frame promotes the item mirror. THAT REBUILD IS OWED (the
+    // pre-paint hook pays it, Viewport::kick_waveform_sync),
     // so this site FLUSHES it before the read: a repeat delivered in the same
     // drain as the previous step would otherwise read the plate that step's
     // camera write replaced, and the held column would creep by the step.
@@ -8777,7 +8365,7 @@ void GuiInputHandler::run_waveform_lane_playhead_step(
 
 void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     switch (key) {
-    // (NO ESCAPE ARM: bare Esc is the editors' alone since 2026-10-30, the
+    // (NO ESCAPE ARM: bare Esc is the editors' alone (2026-10-30), the
     // on-screen keyboard its one producer — on_key's Esc statement. The
     // notification stack's whole-stack clear is the card's own long press,
     // notifications.h.)
@@ -8785,8 +8373,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // THE WAVEFORM-LANE STEP — one step back in the active column's unit
         // (horizontal_arrow_step, gui_input.h: a painted column, or a hop on
         // the phase-reset column), through the act owner directly above this
-        // dispatch, whose camera is the hold posture's; the whole body lived
-        // here until 2026-08-31.
+        // dispatch, whose camera is the hold posture's.
         run_waveform_lane_playhead_step(
             horizontal_arrow_step(-1, app.active_markers_view));
         break;
@@ -8799,7 +8386,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // in GuiPlaybackLifecycle::toggle_follow, shared with the icon-row
         // button's synthesized chord and, for its dark edge alone, the four
         // lamps' darkening a user zoom or the `h` view's entry runs
-        // (darken_zoom_lamps, architect 2026-11-17, send U). History-less,
+        // (darken_zoom_lamps, architect 2026-11-17). History-less,
         // legal on a locked tab and under the grid-iterations lock; refused in
         // the `h` view at that mode's allowlist.
         playback_lifecycle.toggle_follow();
@@ -8809,17 +8396,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // partner. The whole body lives in GuiPlaybackLifecycle::
         // toggle_restrict, shared with the icon-row button's synthesized
         // chord and, for its dark edge alone, darken_zoom_lamps (architect
-        // 2026-11-17, send U). History-less, legal on a locked tab and
+        // 2026-11-17). History-less, legal on a locked tab and
         // under the grid-iterations lock; refused in the `h` view at that
         // mode's allowlist. Inside the render player bare `r` is Repeat One,
         // taken by the player's router before this dispatch is reached.
         playback_lifecycle.toggle_restrict();
         break;
     case GuiKeys::W:
-        // Toggle the TRIM arm lamp (architect 2026-11-07, session 87; the
-        // NOISE lamp's toggle stood on the letter 2026-10-28 to 2026-11-05).
-        // The setter is GuiInputHandler::set_trim_armed, shared with the
-        // band's TRIM key's synthesized chord and the off edges its
+        // Toggle the TRIM arm lamp (architect 2026-11-07). The setter is
+        // GuiInputHandler::set_trim_armed, shared with the top icon row's
+        // TRIM key's synthesized chord and the off edges its
         // declaration lists (the sweep's commit, ADD SEL's lit edge, every
         // other trim write, a user zoom and the `h` view's entry); its own
         // lit edge puts ADD SEL out (the radio, 2026-11-10).
@@ -8829,9 +8415,8 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         set_trim_armed(!app.trim_armed);
         break;
     case GuiKeys::Grave:
-        // Toggle the Waveform Magnification lamp (architect 2026-09-22,
-        // reversed and universal 2026-09-24; the bare backtick since
-        // 2026-09-23): lit shows the continuous gain derived from the source
+        // Toggle the Waveform Magnification lamp (architect 2026-09-24; the
+        // bare backtick 2026-09-23): lit shows the continuous gain derived from the source
         // (GuiAudio::gain_curve) in both audio views, dark the raw picture.
         // The one bare form reaches here (is_waveform_magnification_key, the
         // caller having gated on no modifiers). Silent: the lamp's face shows
@@ -8840,7 +8425,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // icon-row button's synthesized chord and with nothing else.
         // History-less, one-shot, legal on a locked tab and under the
         // read-only lock and in the `h` view (admitted at that mode's
-        // allowlist since 2026-10-12).
+        // allowlist, 2026-10-12).
         //
         // NOT BEFORE THE CURVE IS READY (architect 2026-09-24): the gain curve
         // is derived on its own thread after the load (GuiAudio::gain_curve),
@@ -8898,14 +8483,11 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // key reaching here binds nothing at all in this state (bare `u`, `g`,
         // `v`, `,` and `.` outside the `h` view; the digits 4..9; a keysym with
         // no spelling), and saying nothing is what identifies it as unbound.
-        // AND THE GATES AGREE WITH THIS ARM SINCE 2026-09-01 (U4): the
-        // read-only lock, the two drag gates and the loading gate carded those
-        // five (and the walk's two shifted spellings) for the one state term
-        // they were missing, so the same press said "not available on a
-        // read-only tab" a lock away from the silence it gets here.
-        // chord_is_bound reads the mode bit now (gui_input.h), and every one of
-        // them answers a mode-only chord outside its mode exactly as this
-        // default does. The rule and its consequences for the gates are at the
+        // AND THE GATES AGREE WITH THIS ARM (2026-09-01): the read-only lock,
+        // the two drag gates and the loading gate ask chord_is_bound, which
+        // reads the mode bit (gui_input.h), so each answers those five (and
+        // the walk's two shifted spellings) outside the `h` view with this
+        // default's silence, never a card. The rule and its consequences for the gates are at the
         // tail this arm pairs with (the end of on_key, input_handler.cpp).
         break;
     }
@@ -8916,7 +8498,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
 // and differ only in their commit / cancel bodies: the FlagPayload editor
 // commits the flag's own payload and the IterBound editor commits its bound,
 // both drawing in the TOP strip. Esc / Enter are the session's only exits:
-// NO HATCH since 2026-10-25, every other chord consumed at the gate.
+// NO HATCH (2026-10-25), every other chord consumed at the gate.
 //
 // THE EDITOR'S EXTRA KEYS ARE ANSWERED HERE, AHEAD OF THE ROUTE (architect
 // 2026-11-20 / 21; onscreen_keyboard.h's THE EDITOR'S EXTRA KEYS):
@@ -8974,8 +8556,8 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // prefix with no match or already at its common prefix, an empty value
 // recalled onto an empty entry) are exactly the Tabs that do nothing.
 //
-// THE EDITOR'S CLOSE RETURNS TO THE SETTINGS PAGE (architect 2026-10-28
-// night, "1 yes": "otherwise it's assumed I am editing one key only" — the
+// THE EDITOR'S CLOSE RETURNS TO THE SETTINGS PAGE (architect 2026-10-28:
+// "otherwise it's assumed I am editing one key only" — the
 // line editor a sub-page of the page, as the value lists are), and THIS IS
 // ITS ONE HOOK: every road that closes the editor without leaving the
 // program passes through this route — the on-screen keyboard's Enter and
@@ -8985,12 +8567,13 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // (open_settings_page: its guards, a fresh session, its modal stop a no-op
 // with playback already stopped for the editor), seated on the row the
 // editor was opened from (GuiSettingsEditor::page_key — the open's key, the
-// one the commit wrote, nothing typed naming another since 2026-11-19, send
-// AA). A REFUSED commit leaves the editor standing and reopens nothing. THE EXIT ROAD does not come here (GuiPrompt::request_close tears
-// the editor down through close_modal_editors_no_commit, the picker already
-// closed for the quit): a quit reopens no page.
+// one the commit wrote, nothing typed naming another; architect 2026-11-19).
+// A REFUSED commit leaves the editor standing and reopens nothing. THE EXIT
+// ROAD does not come here (GuiPrompt::request_close tears the editor down
+// through close_modal_editors_no_commit, the picker already closed for the
+// quit): a quit reopens no page.
 // THE TRIM PRESET'S NAME EDITOR RIDES THIS ROUTE AND THIS HOOK (architect
-// 2026-10-28 night): the line editor's buffer carries its kind
+// 2026-10-28): the line editor's buffer carries its kind
 // (Kind::TrimPresetName, AppState::settings_editor), so the same roads reach
 // here — the on-screen keyboard's Enter and Esc —
 // and the KIND, read before the route (a close resets it), forks the route

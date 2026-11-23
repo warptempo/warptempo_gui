@@ -59,7 +59,7 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
     // HORIZONTAL MOVEMENT IS A FOCUS ACT; the doctrine and the whole dead rigid
     // group-drag machinery are recorded at the head of position_nudge.h). THE
     // ARMING PRESS single-selected `hit` and landed the playhead on it —
-    // the flag's click acts AT THE PRESS since 2026-08-17
+    // the flag's click acts AT THE PRESS (2026-08-17)
     // (run_marker_click_act), and nothing mutates the store between press and
     // crossing, which is what keeps the drag subject exactly the grabbed
     // marker.
@@ -82,7 +82,7 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
     d.dragging_markers.assign(1, hit);
     d.original_times.assign(1, t_of(hit));
 
-    // Anchor mouse position — computed at mouse_x in the waveform's X axis,
+    // Anchor pointer position — computed at mouse_x in the waveform's X axis,
     // as a plain ACTIVE-domain frame double (one expression, both views; no
     // inverse map). The on_motion delta (mouse_frame -
     // anchor_mouse_time_frame) therefore lives in active-domain frames, and
@@ -102,11 +102,10 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
         basis.vp_start + (mouse_x - static_cast<double>(area.x)) * basis.spp;
 
     // Compute scalar delta_min / delta_max as the dragged marker's ACTIVE-domain
-    // wall headroom (architect 2026-07-23, retiring the earlier source-domain
-    // bounds and their target-view squash).
+    // wall headroom (architect 2026-07-23).
     // The absolute source walls are zero on the left and the marker EOF wall on
-    // the right — total_frames minus one source frame for BOTH columns (the
-    // per-column split, warp total-1 vs phase reset total, is retired: warp is
+    // the right — total_frames minus one source frame for BOTH columns (one
+    // wall for both: warp is
     // structural, build_warp_frame_map refuses sub-frame segments; phase reset
     // walls at total-1 by ruling — a reset in the last source frame has nothing
     // left to re-ground, and total-1 keeps every marker inside the playhead's
@@ -170,29 +169,28 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
     } else {
         d.pre_drag_snapshot = app.warpmarkers.markers();
     }
-    // NO PRE-GESTURE CAPTURES HERE (all three deleted 2026-07-29): the selection
-    // snapshot, the grab-playhead sample and the pre-drag region existed only for
-    // a cancel, and POINTER GESTURES HAVE NO CANCEL — the rule and its
+    // NO PRE-GESTURE CAPTURES HERE (2026-07-29): a selection snapshot, a
+    // grab-playhead sample or a pre-drag region would serve only a cancel,
+    // and POINTER GESTURES HAVE NO CANCEL — the rule and its
     // reasoning are at the drag-modal gate (input_handler.cpp's on_key). The drag
     // still captures the pre-drag STORE above, but that is the undo payload
     // commit_drag pushes, not cancel machinery: undo is what takes a committed drag
-    // back. Playhead-follows-marker is unchanged as a live mechanic
+    // back. Playhead-follows-marker stands as a live mechanic
     // (apply_drag_motion's follow and commit_drag's land, the ruling at DragState).
     app.drag = std::move(d);
-    // NO SELECTION WRITE HERE, and the deletion of the one that stood here
-    // (2026-08-15) is the point rather than a tidy-up: the ARMING PRESS ran
+    // NO SELECTION WRITE HERE (2026-08-15): the ARMING PRESS ran
     // run_marker_click_act, whose plain
-    // arm single-selects the grabbed marker — so the re-assert was the SECOND
-    // mutation of one invariant. set_single_selection is not an assertion: it
-    // clears and rebuilds the selection and runs the flag cache's rebuild for
-    // the stems' damage, so every successful drag start did that work twice, and two
-    // owners for one invariant is exactly the shape that diverges when one of them
-    // is later changed. THE CLICK ACT IS THE OWNER AT ITS ONE SITE (the arming
+    // arm single-selects the grabbed marker, so a write here would be the
+    // SECOND mutation of one invariant. set_single_selection is not an
+    // assertion: it clears and rebuilds the selection and runs the flag
+    // cache's rebuild for the stems' damage, so every drag start would do
+    // that work twice, and two owners for one invariant is exactly the shape
+    // that diverges when one of them is changed. THE CLICK ACT IS THE OWNER
+    // AT ITS ONE SITE (the arming
     // press, 2026-08-17), so the drag machinery writes no selection
     // at all — which is also the honest arrangement, begin_drag,
     // apply_drag_motion and commit_drag READing no selection either.
-    // THE ARGUMENT THE OLD ASSERT CARRIED IS KEPT, because it is why the write was
-    // not merely unnecessary: the subject must be named at the ARM rather
+    // WHY THE SUBJECT IS NAMED AT THE ARM: it must be named there rather
     // than behind an any_changed test, since a WALL-SATURATED drag (the clamped
     // delta pins the proposal — the marker at the EOF wall, or the viewport clamp
     // saturated) never changes a position, yet it is a real drag whose grabbed
@@ -228,7 +226,7 @@ bool MarkerDragOps::begin_drag(int hit, double mouse_x) {
 // worth of px in source view: q = 23.5, F = 4853, origin 0 paints the flag
 // at x = 4853 / 23.5 = 206.5106, and 37 px of travel proposes 5722.5,
 // painted from frame 5722 at x = 243.4894 — 36.9787 px of painted travel,
-// 0.0213 px short of the pointer's 37 (Sol's review, 2026-11-16). This is
+// 0.0213 px short of the pointer's 37 (2026-11-16). This is
 // the one
 // deliberate revision of the "gesture mechanics stay on the live map" rule:
 // the drag's contract is
@@ -313,13 +311,11 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // moveable_times, miss commit's bit-exact untouched branch, and could
     // commit a marker that had NO permitted motion a frame off its own (a
     // visually motionless, forbidden drag committing a move). Testing clamped == 0.0 returns orig
-    // verbatim ALWAYS. The downstream no-commit chain (no change -> moved never
-    // latches -> commit's untouched short-circuit -> the original stands) holds for
-    // a drag whose EVERY event was zero-clamped. A drag that moved inward first
-    // and then wandered back to a zero-clamped position is different: the
-    // return-to-original event correctly latches moved (so the repaint is correct),
-    // and it still commits nothing — commit's bit-exact `proposed == original`
-    // untouched branch and the net_changed gate see the restored original. So
+    // verbatim ALWAYS, so a drag whose EVERY event was zero-clamped keeps the
+    // proposal at orig and the original stands. A drag that moved inward first
+    // and then wandered back to a zero-clamped position repaints at the
+    // restored original and still commits nothing — commit's whole-frame
+    // net_changed gate sees the restored original. So
     // verbatim-on-return is right either way. It subsumes the raw_delta == 0 case
     // (the bounds contain 0, so clamp(0) == 0).
     const double proposed = (clamped == 0.0)
@@ -336,7 +332,7 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     if (new_t > eof_wall) new_t = eof_wall;
     if (app.drag.moveable_times[0] == new_t) return;
     app.drag.moveable_times[0] = new_t;
-    // NO SELECTION WORK HERE, and none anywhere in this file since 2026-08-15:
+    // NO SELECTION WORK HERE, and none anywhere in this file (2026-08-15):
     // the subject is named at the THRESHOLD CROSSING, by the CLICK ACT the
     // crossing runs before begin_drag, unconditionally. That placement is
     // load-bearing rather than convenient — a wall-saturated drag (the clamped
@@ -352,15 +348,15 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // TRUE rather than merely intended (2026-08-01). The painters do not map the
     // free double: frame_to_paint_sample (render.cpp) rounds the source frame
     // FIRST and rounds the map's output second, and painted_column_of_source_-
-    // frame_on_basis restates that shape for the gesture-commit helpers. This
-    // site mapped the fraction directly, so on a compressing segment the cursor
+    // frame_on_basis restates that shape for the gesture-commit helpers. Mapped
+    // as a fraction directly, on a compressing segment the cursor
     // could land a target frame off the flag's own paint sample and paint one
     // column beside the stem it is supposed to be riding — measured at ~0.08% of
     // motion events over a swept zoom range. Rounding here first makes the two
     // one expression; it also matches the COMMIT below, which maps an integer
-    // frame by construction, so the ride and its landing now agree too.
-    // Reachable through the PHASE-RESET column in either audio view (S+P
-    // since 2026-10-12, where the map below is the identity and the drag
+    // frame by construction, so the ride and its landing agree too.
+    // Reachable through the PHASE-RESET column in either audio view (S+P,
+    // 2026-10-12, where the map below is the identity and the drag
     // takes no lead-in offset) — a warp drag is source-home
     // because the THRESHOLD CROSSING drops T+W (horizontal_flag_drag_refused,
     // or the lit lamp's value drag, value_drag_posture) before it begins this
@@ -417,17 +413,15 @@ void MarkerDragOps::apply_drag_motion(double raw_delta) {
     // body): no rect is declared here.
     viewport.refresh_flag_cache();
     // NO REGION WORK OWED HERE: the region is the trim, which a marker drag
-    // never writes. The group live-track
-    // that used to re-derive an extent span per
-    // motion event died with the group drag (architect 2026-07-29 — groups are
-    // never moved; the doctrine is at the head of position_nudge.h).
+    // never writes, and no group extent is tracked (architect 2026-07-29 —
+    // groups are never moved; the doctrine is at the head of position_nudge.h).
 }
 
 // Commit the current drag. Caller ensures drag was active. Sets dirty
 // only if the marker actually moved. Playhead rule (drag and nudge,
 // the button and pointer counterparts, share it): the playhead follows the dragged
-// marker UNCONDITIONALLY (architect 2026-07-23, reversing the 2026-07-20
-// decoupling). The crossing's own click act already landed the playhead on it and the
+// marker UNCONDITIONALLY (architect 2026-07-23). The crossing's own click
+// act already landed the playhead on it and the
 // mid-motion follow slid it along, and this land runs regardless of net change (a
 // wall-saturated drag never moved it), so the playhead lands with the marker here,
 // matching the selection, and a later Space auditions FROM it. Every marker click
@@ -481,8 +475,7 @@ void MarkerDragOps::commit_drag() {
     }
     // Commit gates on NET CHANGE, not on whether motion occurred — the COMMITTED
     // frame against the pre-drag one, which is the only form of the question worth
-    // asking (the `moved` latch that used to be tracked beside it was never read
-    // and is deleted, 2026-07-29). A drag that wanders and returns exactly to its
+    // asking. A drag that wanders and returns exactly to its
     // original position therefore commits nothing: pushing an undo entry there would
     // record a snapshot byte-equal to the live store, a no-op history entry that
     // both undo and redo restore invisibly. The compare runs on the WHOLE-FRAME
@@ -581,11 +574,9 @@ void MarkerDragOps::commit_drag() {
     // enabled or disabled, 2026-11-11 — the full-waveform damage covers it,
     // so nothing here keys on selection or the disabled bit).
     // NO REGION WORK OWED HERE: the region is the trim, which a marker drag
-    // never writes.
-    // The extent re-derive that used to snap a live-tracked group span back to its
-    // resting extent here died with the group drag (architect 2026-07-29 — groups
-    // are never moved; the doctrine is at the head of position_nudge.h).
-    // No synchronous re-warp at commit: a marker drag can no longer change the
+    // never writes, and no group extent is re-derived (architect 2026-07-29 —
+    // groups are never moved; the doctrine is at the head of position_nudge.h).
+    // No synchronous re-warp at commit: a marker drag cannot change the
     // displayed target plate. Warp marker drags author in warp's SOURCE home
     // view only (the home-view binding, architect 2026-07-22 — the THRESHOLD
     // CROSSING drops T+W, into the lit lamp's value drag or into nothing,
@@ -604,9 +595,7 @@ void MarkerDragOps::commit_drag() {
     //   picture's gain is the curve derived from the source, gated by the
     //   magnification lamp alone — and the lamp is
     //   gesture-gated with a synchronous kick of its own, so the release has no
-    //   gain change to publish (the staleness branch that once rendered here
-    //   lost its last producer with the magnification level markers column,
-    //   2026-09-23).
+    //   gain change to publish.
     //   THE FLAGS ARE REFRESHED ON EVERY RELEASE: a drag-time rebuild keyed
     //   the flag bitmap to the drag overlay, and the reorder/remap and the
     //   DragState reset above change what it must show, so a vsync frame

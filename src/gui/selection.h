@@ -28,16 +28,12 @@ struct Selection {
     // REPLACE THE WHOLE MEMBERSHIP WITH A SET, focus `focus` (2026-08-29).
     // set_single_selection's own body one arity up (the STICKY CTRL is a tool
     // posture no Selection body writes; the contract is at
-    // AppState::add_to_selection). FIVE CALLERS,
-    // re-grepped 2026-11-10, in four classes. THE PASTE LANDING installs a
+    // AppState::add_to_selection). FIVE CALLERS, in four classes. THE PASTE LANDING installs a
     // set it just wrote — the resets the placement paste created, the ones
-    // the state paste flipped (architect 2026-11-17, send U): the
+    // the state paste flipped (architect 2026-11-17): the
     // phase-reset propagate's landing in the P column
     // (PhaseResetPropagate::land_paste_in_phase_reset_view), for which this arity
-    // was added — it wrote the two fields directly until 2026-08-29, leaning
-    // on the column switch two lines above it to clear them (behaviour-neutral
-    // — the paste is W-gated, so that switch always fires — but a property of
-    // the paste's entry gate rather than of the replace) — AND THE CROSSING'S
+    // exists — AND THE CROSSING'S
     // GROUP DROP is of its class (architect 2026-11-10,
     // GuiPhaseResetMarkersOps::drop_phase_resets_at_frames: the resets it
     // created, focused on the warp focus's reset). THE UNDO RESTORE is
@@ -45,10 +41,9 @@ struct Selection {
     // TOUCHED set rather than a created one, and its own comment carries why
     // the mutator rather than a hand-written pair. THE BPM FORM'S OPEN
     // (Ctrl+B, input_key_dispatch.cpp, 2026-11-05) is the third: it keeps
-    // the span's membership and moves the focus to its first member, where
-    // a single-select and a hand re-insert stood. THE ADD SEL SWEEP
+    // the span's membership and moves the focus to its first member. THE ADD SEL SWEEP
     // (apply_selection_sweep_to, input_pointer.cpp, architect
-    // 2026-11-10, session 101) is the fourth: per motion it installs the
+    // 2026-11-10) is the fourth: per motion it installs the
     // selection standing at its down plus the markers its span covers,
     // focused on the last swept member (or the prior focus), and only when
     // the membership or the focus moved. So a write of the
@@ -78,7 +73,8 @@ struct Selection {
     // offscreen refusal) are deliberately NOT here: they are not selection
     // state, and neither is the band's `h` HISTORY VIEW suppression (2026-08-05
     // — the view paints no live marker surface, a display fact); the divergence
-    // is unobservable, Space being consumed in that view since playback left it.
+    // is unobservable, Space being consumed in that view, which has no
+    // playback.
     // Frame, not index: a reorder remap
     // preserves frames, so a remap is
     // subject-stable. ONE DELIBERATE DIVERGENCE from the band during a live
@@ -95,7 +91,7 @@ struct Selection {
     // mutator that runs no rebuild asks whether the subject changed. The
     // other is the LEAD-IN LAUNCH OFFSET OWNER
     // (phase_reset_lead_in_launch_offset, defined beside this in
-    // selection.cpp since 2026-08-30): a start-edge Space with a subject
+    // selection.cpp, 2026-08-30): a start-edge Space with a subject
     // launches the lead-in audition at cursor + kN/2 (input_handler.cpp,
     // architect 2026-07-28), and the PLAY button's face reads the same
     // offset ahead of time (space_launch_would_play), so the key and the

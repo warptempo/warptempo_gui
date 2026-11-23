@@ -39,21 +39,19 @@ std::vector<uint8_t> compute_live_render_fingerprint(const AppState& app,
 // completes, or is killed and redispatched by the next trigger, leaves the label
 // standing — so a torrent of triggers shows one steady label instead of a blink
 // per event. When the input goes quiet the run ends on the tick and the label
-// clears once the work is idle. A SINGLE isolated trigger never starts a run and
-// behaves exactly as it always did: stamp at the dispatch, clear at the
-// completion, no hold and no linger. The one accepted blink is the gap between
+// clears once the work is idle. A SINGLE isolated trigger never starts a run:
+// stamp at the dispatch, clear at the completion, no hold and no linger. The one accepted blink is the gap between
 // the first trigger's completion and the second trigger — unavoidable, since
 // nothing can know a run has begun until its second event arrives.
 //
 // TWO NAMES SO THEY TUNE INDEPENDENTLY: they answer different questions ("is
-// this a run?" and "is the run over?") and today they happen to share a value,
+// this a run?" and "is the run over?") and they happen to share a value,
 // which is coincidence, not coupling — change one without the other freely.
 
 // DETECT: a trigger arriving within this of the previous one makes a RUN. It
 // covers the MACHINE-CADENCE producers with headroom and nothing else — roughly
-// TWICE the architect's measured 40 ms key-repeat interval (labwc repeatRate 25
-// per second, measured on the laptop; the tablet's hold-repeat keeps the
-// number, platform_android.cpp's set_repeat_info) and far above a drag's
+// TWICE the 40 ms hold-repeat interval (25 a second, platform_android.cpp's
+// set_repeat_info) and far above a drag's
 // per-pointer-frame cadence (~8-16 ms) —
 // while deliberately EXCLUDING leisurely manual tapping, which is a series of
 // distinct actions and keeps the one-off lifecycle.
@@ -152,8 +150,8 @@ struct GuiTargetRender {
     // the callers that must tell "still settling" from "settled with
     // nothing" — the scrub's silent target-view refusal
     // (input_pointer.cpp), this class's own status and re-establishment
-    // paths, and since
-    // 2026-10-18 THE A/B AUDITION'S DUE REST (GuiAbAudition::fire_if_due,
+    // paths, and THE A/B AUDITION'S DUE REST (2026-10-18;
+    // GuiAbAudition::fire_if_due,
     // which waits on it the same way after the act's switch re-dispatched
     // the preview, then launches through the preview gate once).
     bool is_updating() const {
@@ -164,16 +162,14 @@ struct GuiTargetRender {
     // audio to play right now": no update in flight or pending (the bound
     // buffer is stale by definition while one is) AND a populated target
     // buffer (no successful preview render yet in this session means the bind
-    // would play stale source-domain samples). FOUR READERS as re-grepped
-    // 2026-11-20: Space's play
+    // would play stale source-domain samples). FOUR READERS: Space's play
     // edge (input_handler.cpp, where Space-to-stop is honored first), THE
     // CAR'S OWN PLAY (GuiCarTransport::car_toggle, which asks this in exactly
-    // Space's shape and for exactly Space's reason, ahead of the launch), the A/B
-    // audition's press-time gate (GuiAbAudition, which asks it for the ACTIVE
-    // tab before its first switch — since 2026-10-18 the other tab has no
-    // preview yet, its switch dispatching one — and again at every launch)
-    // and, since
-    // 2026-08-30, the play/stop button's enabled face (redesign_button_enabled
+    // Space's shape and for exactly Space's reason, ahead of the launch), the
+    // A/B audition's press-time gate (GuiAbAudition, which asks it for the
+    // ACTIVE tab before its first switch — the other tab has no preview yet,
+    // its switch dispatching one — and again at every launch) and the
+    // play/stop button's enabled face (2026-08-30; redesign_button_enabled
     // through the trampoline target_preview_ready, target_render.cpp — the
     // truthful-buttons ruling greys Play at rest in target view with no
     // preview to play, exactly where Space's edge refuses). The
@@ -193,8 +189,8 @@ struct GuiTargetRender {
     // than leaving the outcome to do_render's worker-thread stderr line. It
     // asks compute_buffer_start_frame_for and nothing else — THE ONE VERDICT
     // OWNER on this thread, so nothing here can drift from anything else here.
-    // ACROSS THE THREAD BOUNDARY IT IS A MIRROR, not a shared body (stated
-    // plainly 2026-09-02): the worker's answer is the trimmer's own span rule
+    // ACROSS THE THREAD BOUNDARY IT IS A MIRROR, not a shared body
+    // (2026-09-02): the worker's answer is the trimmer's own span rule
     // inside plan_trim, which this side cannot call — it has no plan — so
     // this re-derives the same test from the same exact-double images through
     // the same map. Identical BY CONSTRUCTION and kept so deliberately; there
@@ -347,11 +343,11 @@ private:
     // mapped through the target-view warp_frame_map (the engine renders
     // only the trim range, so buffer frame 0 is the trim's target-frame
     // start). The FULL window [0, total-1] renders untrimmed and anchors 0
-    // exactly like the old unset state, and that is NOT a fallback —
+    // exactly like no trim, and that is NOT a fallback —
     // trim_fell_back stays false there. It is true only for a proper SUB-WINDOW
     // that plan_trim refuses: a target span rounding below one output sample
-    // (reachable), or "Trim end at or before trim begin" (a breach shape now —
-    // a sub-window cannot rest crossed) — either way the render is the FULL,
+    // (reachable), or "Trim end at or before trim begin" (a breach shape — a
+    // sub-window cannot rest crossed) — either way the render is the FULL,
     // untrimmed deliverable. This
     // verdict is the one GUI-thread read that must mirror the orchestrators' own
     // completion-then-refusal outcome, and it cannot see the worker's plan — so
@@ -425,8 +421,8 @@ private:
     // samples never embodied.
     int64_t dispatched_buffer_start_frame_ = 0;
 
-    // THE PREVIEW CARD'S EDGE (architect 2026-09-02; since
-    // SCOPED TO ITS SUBJECT): the trim_fell_back verdict of the
+    // THE PREVIEW CARD'S EDGE (architect 2026-09-02), SCOPED TO ITS
+    // SUBJECT: the trim_fell_back verdict of the
     // PREVIOUS dispatch TOGETHER WITH THE SUBJECT THAT PRODUCED IT, so
     // dispatch_render_now cards kTrimFallbackCard when the whole record changes
     // into a fallback — it fell back now, and the last dispatch was not this
@@ -498,8 +494,8 @@ private:
     // True from the moment a second trigger arrives within kUpdatingRunDetectMs
     // of the previous one until kUpdatingRunQuietMs of quiet ends it on the tick.
     // While it stands, the two work-completion clears hold their fire — that
-    // deferral IS the hold. A single isolated trigger never sets it, which is
-    // what keeps one-shot behavior byte-identical to the pre-hold shape.
+    // deferral IS the hold. A single isolated trigger never sets it, so a
+    // one-shot stamps at the dispatch and clears at the completion.
     bool run_active_ = false;
 
     // Set true by trigger() when a dispatch is wanted but the worker
@@ -522,20 +518,18 @@ private:
     // THE THREE GENERATIONS (architect 2026-09-02).
     // is_dirty_ alone cannot
     // tell "stale, and nothing is doing anything about it" from "stale, and
-    // the render that will make it current is already on its way", so
-    // ensure_ready used to call trigger() in both cases — and on every
+    // the render that will make it current is already on its way", and
+    // ensure_ready must not call trigger() in the second case: on every
     // mutate-then-re-enter road (a load in place followed by the player's
     // close, the S→T tail behind a trigger, maybe_reestablish_target_buffer)
-    // the second trigger() found the worker busy with the FIRST dispatch,
-    // cancelled it, parked pending_, and the cancelled completion redispatched
-    // an identical render. The buffer was never wrong; the preview landed one
-    // worker round trip late.
+    // a second trigger() would find the worker busy with the FIRST dispatch,
+    // cancel it, park pending_, and the cancelled completion would redispatch
+    // an identical render — the preview landing one worker round trip late.
     //
     // dirty_generation_ COUNTS THE MUTATIONS: it is incremented at the ONE
     // writer that sets is_dirty_ true (trigger()'s top — every
     // output-affecting mutation site calls it, the 2026-07-17 unconditional-
-    // trigger ruling; re-grepped 2026-09-02: no other site writes the bit
-    // true). Construction is generation 1, the buffer's own initial dirtiness.
+    // trigger ruling; no other site writes the bit true). Construction is generation 1, the buffer's own initial dirtiness.
     //
     // dispatched_generation_ IS THE GENERATION THE STANDING DISPATCH IS FOR:
     // stamped with dirty_generation_ at trigger()'s pending_ = true, the one
@@ -551,17 +545,17 @@ private:
     //
     // in_flight_generation_ IS THE GENERATION THE WORKER IS ACTUALLY RENDERING
     // (2026-09-02) — a DIFFERENT question from
-    // dispatched_generation_, which the two-generation shape conflated. That stamp
+    // dispatched_generation_. That stamp
     // is a PROMISE ("a dispatch stands for this generation") and every later
     // trigger() overwrites it, including one that arrives while the worker is
     // still completing an older preview; this one is a RECEIPT, written once
     // at dispatch_render_now's hand-off to the worker and never touched again
     // until that render's own callback consumes it. Without it on_render_done
-    // had no identity at all and every Success cleared is_dirty_, so an
+    // would have no identity and every Success would clear is_dirty_, so an
     // obsolete preview's completion could bless itself as current — and where
     // the idle beat then went to a parked archival command, leaving the
-    // successor pending, a T->S cancel dropped that successor and the next T
-    // entry took the clean path onto the pre-mutation buffer for good.
+    // successor pending, a T->S cancel would drop that successor and the next
+    // T entry take the clean path onto the pre-mutation buffer for good.
     //
     // Zero means no render is in flight, which the pairing invariant makes
     // exact: it is stamped beside in_flight_ = true and zeroed beside
@@ -575,8 +569,8 @@ private:
     //     (in_flight_ || pending_) && dispatched_generation_ == dirty_generation_
     // — the one predicate below, ensure_ready's one reader. A render of an
     // OLDER generation in flight is NOT honoured: its completion would bind
-    // the pre-mutation recipe, so ensure_ready still replaces it through
-    // trigger() exactly as before.
+    // the pre-mutation recipe, so ensure_ready replaces it through
+    // trigger().
     uint64_t dirty_generation_      = 1;
     uint64_t dispatched_generation_ = 0;
     uint64_t in_flight_generation_  = 0;

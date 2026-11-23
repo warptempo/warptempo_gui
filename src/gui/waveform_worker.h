@@ -50,7 +50,7 @@ struct WaveformJob {
     // bars' rung and stretches them (p = b / q); the worker must not
     // re-derive it from live state.
     double    painter_spp      = 0.0;
-    // THE BARS' OTHER INPUT (architect 2026-11-14, send G; render.h's
+    // THE BARS' OTHER INPUT (architect 2026-11-14; render.h's
     // waveform_bar_frames and waveform_fade_band), a snapshot like the rest:
     // the audio's WORKING COLUMN, the ladder's unit
     // (GuiAudio::working_column, fixed for the audio's life). (The fade's
@@ -100,10 +100,9 @@ struct WaveformJob {
     GuiPlateColumns* columns = nullptr;
 
     // Audio handle the render reads (see lifetime invariant above). Always
-    // main.cpp's single long-lived source audio — the one GuiAudio for the
-    // process lifetime. It outlives every in-flight job, so the job needs no
-    // shared_ptr keepalive to pin the audio: a raw pointer is sufficient (the
-    // former audio-identity / lifetime-pinning axis is retired).
+    // the project's single long-lived source audio — run_project's one
+    // GuiAudio (main.cpp). It outlives every in-flight job, so the job needs no
+    // shared_ptr keepalive to pin the audio: a raw pointer is sufficient.
     const GuiAudio* audio = nullptr;
 };
 
@@ -194,17 +193,17 @@ private:
 // (render_waveform_columns), each band stored exactly
 // where its bounds cover it whole — stereo is structural, channels != 2
 // refuses at load (file_loader). THE COLUMNS ARE THE PLATE'S BARS (architect
-// 2026-11-14, send G; render.h's THE PLATE'S BARS): from the displayed
+// 2026-11-14; render.h's THE PLATE'S BARS): from the displayed
 // viewport (vp_start, lattice_origin, painter_spp, area_w) and the working
 // column this picks the rung, the stored range with
 // its halo and the draw transform (waveform_bar_frames,
 // waveform_bar_geometry), hands the producer the bar basis over a row of
 // that many bars, and writes the geometry into `dest` beside the columns
 // (`dest.width` x `dest.height` stays the plate's device-px size) — and IN
-// THE FADE BAND (architect 2026-11-14, send H; waveform_fade_band, from the
+// THE FADE BAND (architect 2026-11-14; waveform_fade_band, from the
 // same step and the working column) each band holds the
 // fine rung's own uniform row beside the main one, unmixed (the two-picture
-// blend, architect 2026-11-15, send O), its geometry and the band's weight
+// blend, architect 2026-11-15), its geometry and the band's weight
 // riding `dest` with the transform. The inks ride the paint instead (the
 // published fingerprint's, GuiCanvasSink::plate), so none is taken here.
 // Thread-agnostic: it runs either on the waveform worker thread (the async
@@ -226,7 +225,7 @@ private:
 // slot, and the completion handler discards the old bounds and
 // redispatches). When integer waveform geometry changed, dirty-detect drives
 // a replacement either way; otherwise none is needed.
-// THE KEPT BARS (architect 2026-11-15, send L; WaveformKeptBars, render.h,
+// THE KEPT BARS (architect 2026-11-15; WaveformKeptBars, render.h,
 // owns the rule): `kept_or_null` is the store or null, and the three after
 // it the store's key — the render inputs' view bit, warp-map hash and gain
 // field. NULL IS THE ROAD ABOVE, every bar of the row asked of the producer:

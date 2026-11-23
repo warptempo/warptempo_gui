@@ -19,9 +19,8 @@ struct GuiTargetRender;
 // BPM form's field commit and its RENDER gate (architect 2026-10-29), and the
 // BPM-mode enter/exit transitions. Damage is reached through viewport.
 //
-// AN OPEN IS GTK'S IN-PLACE CELL EDITOR (a field since architect
-// 2026-10-09; Arc's look 2026-11-18 / 19, send Z's design, built in send
-// AA): the marker-lane editors paint a square box in the entry's fill with
+// AN OPEN IS GTK'S IN-PLACE CELL EDITOR (a field, architect 2026-10-09;
+// Arc's look 2026-11-18 / 19): the marker-lane editors paint a square box in the entry's fill with
 // a one-W border of the accent over the edited segment, the selected
 // substring in the chrome's selected pair — the picture is
 // render_flag_editor_box's (render.h's EDITING paragraph owns the look and
@@ -34,7 +33,7 @@ struct GuiFlagEditor {
     Undo&                 undo;
     GuiTargetRender&   target_render;
     // THE REFUSAL'S REASON (architect 2026-08-30, the strictness ruling;
-    // 2026-10-03, the red frame retired): every commit refusal in this cluster
+    // 2026-10-03, no red frame): every commit refusal in this cluster
     // composes ONE sentence and feeds it to the stderr line AND to a normal
     // card, because the refused field itself only selects its whole text
     // (text_editor::refuse) and says nothing of why — the card is the
@@ -159,7 +158,7 @@ struct GuiFlagEditor {
     // start — an empty text the blank's 0 — clamped into the tie's window and
     // at the committed partner (iter_bound_step_landing_from and its phase
     // twin), the wall silent. AN EMPTY TEXT IS A COMMIT'S ZERO (architect
-    // 2026-11-21, send HH): where zero falls on the wrong side of the
+    // 2026-11-21): where zero falls on the wrong side of the
     // stored other bound the empty text is a refused commit, so the step
     // cards the commit's partner sentence and the text stays empty.
     void step_editor_text(int delta);
@@ -204,7 +203,7 @@ struct GuiFlagEditor {
     // double-click" — its double tap, or EDIT on the addressed cell).
     // `column` is 'P' for the phase-reset store and anything
     // else for the warp store, and it is the ACTIVE markers view at every call
-    // site, the bound editor being BOTH COLUMNS' since 2026-09-09. `side` is Lower or Upper, the cell the editor
+    // site, the bound editor being BOTH COLUMNS' (2026-09-09). `side` is Lower or Upper, the cell the editor
     // opens over, and the open takes the cell's own eligibility (that column's
     // sweep predicate under a lit mode: no cell, no editor), refusing on the
     // bound step's kind sentence where the marker carries no live bracket. The
@@ -212,7 +211,7 @@ struct GuiFlagEditor {
     // the marker single-selected and landed, the addressed cell written to
     // `side` behind that select, the seed the cell's own token (`+0.00` or
     // `+0` on a blank bracket, the column deciding) fully selected.
-    // A modal (keyboard, pointer and touch since 2026-10-25) whose open stops
+    // A modal (keyboard, pointer and touch, 2026-10-25) whose open stops
     // play past its guards, as every editor's open does (architect
     // 2026-11-20; stop_playback_for_modal_open). Read-only refuses
     // at the callers, as the flag editor's open does.
@@ -220,7 +219,7 @@ struct GuiFlagEditor {
     // Commit the open bound session, ON THE LIVE COLUMN (which is the open's
     // column — the view cannot move under an open session): AN EMPTY BUFFER
     // IS THE NUMBER ZERO for its own bound, the other bound left as it
-    // stands (architect 2026-11-21, send HH: "erased bound should not affect
+    // stands (architect 2026-11-21: "erased bound should not affect
     // the other one"), a non-empty one must parse as that column's grammar —
     // the signed two-decimal cent bound on warp, the signed whole hop on
     // phase — and either must satisfy the walls, which are the partner bound
@@ -255,7 +254,7 @@ struct GuiFlagEditor {
     // hook returns to the form (handle_settings_editor_key).
     void commit_bpm_field();
     // THE BPM FORM'S RENDER GATE (the derived-value bracket gate, at the
-    // RENDER press since 2026-10-29): with the three fields set and in order
+    // RENDER press, 2026-10-29): with the three fields set and in order
     // (the key's face, bpm_form_button_enabled), true iff the sweep's two
     // ends derive in bracket — the base tempo and scale
     // (compute_base_tempo_scale) and every rescaled marker outside the span
@@ -267,22 +266,18 @@ struct GuiFlagEditor {
     void exit_bpm_mode();
     // Wipe BOTH stores' session-only iter brackets AND THEIR TIES
     // (2026-09-19, a tie being the bracket's own kind of state) — the single
-    // clear every iteration-mode exit route shares, TWO routes re-greped
-    // 2026-09-10: the `i` toggle's turning-off branch and the iteration
-    // sweep's success tail (the S->T
-    // audio-view toggle left the list 2026-08-07; enter_bpm_mode's forced
-    // iter-off left it 2026-09-10, when bare `m` stopped being an exit and
-    // became a refusal; the load in place is NOT a
-    // route since 2026-09-02 — it leaves the mode bit alone, the record at
-    // apply_recipe_in_place). It also puts an addressed BOUND cell back on
-    // the payload, the cells going with the mode. HISTORY-LESS since
-    // 2026-09-10: the clear pushes nothing at all, the bracket having left the
-    // undo domain whole, so a wipe is final; callers own the mode flip and
-    // repaint.
+    // clear every iteration-mode exit route shares, TWO routes: the `i`
+    // toggle's turning-off branch and the iteration sweep's success tail
+    // (bare `m` is a refusal, not an exit; the load in place is NOT a route
+    // — it leaves the mode bit alone, the record at apply_recipe_in_place).
+    // It also puts an addressed BOUND cell back on the payload, the cells
+    // going with the mode. HISTORY-LESS (2026-09-10): the clear pushes
+    // nothing at all, the bracket being outside the undo domain whole, so a
+    // wipe is final; callers own the mode flip and repaint.
     void wipe_iter_state();
     // Wipe every marker's session-only bpm state (owner flag, beats,
     // bracket bounds, endpoint). History-less; callers own the repaint. TWO
-    // CALLERS (re-greped 2026-09-02): exit_bpm_mode, the mode's one
+    // CALLERS: exit_bpm_mode, the mode's one
     // off-chokepoint, and apply_recipe_in_place, where it is a statement
     // over a set that already carries defaults.
     void wipe_bpm_state();

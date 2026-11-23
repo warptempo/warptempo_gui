@@ -4,7 +4,7 @@
 #include <cmath>
 #include <cstdint>
 
-// THE CHROME'S COVERAGE ARITHMETIC (architect 2026-11-14, send J: "the
+// THE CHROME'S COVERAGE ARITHMETIC (architect 2026-11-14: "the
 // anti-aliasing I would like to commit to that as well, the full
 // anti-aliasing"; "I would expect snapping nothing to integers and leaving
 // them rounding to yield decent results"): the pure functions the chrome's
@@ -91,7 +91,7 @@ inline uint32_t blend_word_bands(uint32_t d, const uint32_t* s,
 }
 
 // A PIXEL'S COVERAGE BY THE DOWN-POINTING 45° TRIANGLE (architect
-// 2026-11-14, send J: the chip and the ruler's head, "I think the chips
+// 2026-11-14: the chip and the ruler's head, "I think the chips
 // should also go anti-aliased"): the triangle of APEX (ax, ay) AND HEIGHT h,
 // y down — its top edge the row line y = ay − h from ax − h to ax + h, its
 // two sides at 45° meeting at the apex below:
@@ -156,8 +156,8 @@ inline double coverage_of_triangle(int px, int py, double ax, double ay,
     return std::clamp(area, 0.0, 1.0);
 }
 
-// A PIXEL'S COVERAGE BY A ROUNDED RECT (architect 2026-11-17, session 140,
-// ruling 4: the trim bar's span is Arc's scrollbar slider, A PILL, its
+// A PIXEL'S COVERAGE BY A ROUNDED RECT (architect 2026-11-17:
+// the trim bar's span is Arc's scrollbar slider, A PILL, its
 // edges at real places — the seat inside each bound, 2026-11-18 — at exact
 // coverage): the rect [x0, x1] x [y0, y1] with
 // real edges whose LEFT two corners are quarter disks of radius `rl` and
@@ -257,7 +257,7 @@ inline double coverage_of_rounded_rect(int px, int py, double x0, double y0,
     return std::clamp(cov, 0.0, 1.0);
 }
 
-// THE AREA OF A ROUNDED RECT INSIDE A RECT (architect 2026-11-19, send Z:
+// THE AREA OF A ROUNDED RECT INSIDE A RECT (architect 2026-11-19:
 // the entry's progress line, Arc's entry progress, cut at its real end): the
 // rounded rect of coverage_of_rounded_rect's shape — [x0, x1] x [y0, y1],
 // left corners of radius `rl`, right of `rr`, the same clamp owed — inside

@@ -148,8 +148,8 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // cache hit). The key is a conservative over-approximation of byte identity,
 // and that direction is the point: a match guarantees byte-identical output;
 // a mismatch at worst re-renders redundantly. THE KEY NAMES AUTHORED STATE AND
-// RECIPE ONLY — the library-environment term is retired (2026-08-09, record at
-// the version block below), so the guarantee holds WITHIN ONE LIBRARY EPOCH and a reuse
+// RECIPE ONLY — no library-environment term (2026-08-09, the reason at the
+// version block below), so the guarantee holds WITHIN ONE LIBRARY EPOCH and a reuse
 // that crosses a glibc or FFTW upgrade may differ at the accepted inaudible
 // class rather than byte-exactly.
 // CALLERS OWN THE RESOLVE AND THE TRIM ARM: render_fingerprint is pure
@@ -161,50 +161,41 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // by construction. The result is hashed to name a cache file and stored
 // verbatim for an exact-compare confirm on lookup.
 //
-// THE TRIM-AWARE PHASE-RESET COMPONENT BUMPED THIS VERSION 18 -> 19
-// (2026-08-01), and the bump is FORCED — the field it changed is not a
-// dropped field but a RE-DOMAINED one. Pre-fix a TRIMMED render serialized
-// every full-map reset query in SOURCE-side deliverable frames; post-fix it
-// serializes each SURVIVING reset's TRANSLATED query, the same value minus
-// plan_trim's cut_begin. Same field, same spelling, different domain — so a
-// post-fix key whose translated query is P byte-matches a PRE-FIX artifact
-// whose UNSHIFTED query was P (pick a late positive cut_begin: that old reset
-// sat before the window and never reached its engine at all), with the version
-// byte, the trimmed flag and both bounds identical on either side. The
-// persistent .fingerprint compare (fingerprint_sidecar_matches, below) and
-// both reuse rungs — the target-view cache/artifact rungs and do_render's
-// up-to-date rung — would then serve that old audio for a genuinely DIFFERENT
-// reset schedule. That is the one unsafe direction, and a fresh namespace is
-// exactly what the version byte is for.
+// THE FIRST BUMP RULE — THE KEY'S BYTES: ANY change to the key's byte SHAPE,
+// or to the DOMAIN of a field it serializes, forces a fresh namespace, because
+// a pre-change key and a post-change key naming different input could
+// otherwise byte-collide. The trim-aware phase-reset component is the case
+// that shows why a DOMAIN change counts (2026-08-01): a TRIMMED render
+// serializes each SURVIVING reset's TRANSLATED query, the source-side value
+// minus plan_trim's cut_begin. Had it been serialized in the source domain
+// under the same spelling, a translated query P would byte-match an older
+// artifact whose UNSHIFTED query was P (a late positive cut_begin: that reset
+// sat before the window and never reached its engine at all), with the
+// version byte, the trimmed flag and both bounds identical on either side.
+// The persistent .fingerprint compare (fingerprint_sidecar_matches, below)
+// and both reuse rungs — the target-view cache/artifact rungs and
+// do_render's up-to-date rung — would then serve that old audio for a
+// genuinely DIFFERENT reset schedule. That is the one unsafe direction, and a
+// fresh namespace is exactly what the version byte is for.
 // WHY THE trim_window_is_full PRECEDENT DOES NOT REACH HERE: that one keeps
 // the OLD BYTES for an UNCHANGED meaning, so its reuse is byte-identical by
-// construction. The same-spelling-different-domain hazard above is the
-// opposite arrangement, and the first reading of this change missed it by
-// reasoning only over NEW keys ("the key drops information only where that
-// information cannot reach the engine, so a sub-window state merely joins its
-// out-of-window-reset twin") — true of two new keys, silent about old
-// sidecars written under the other domain.
-// ACCEPTED COST: every pre-bump cache entry and .fingerprint sidecar goes
-// unreachable, full-window ones included — a one-time cold cache, aged out by
-// the LRU budget on the cache side, warning-only on the sidecar side (single
-// user, tmp/ transient).
+// construction. A same-spelling-different-domain change is the opposite
+// arrangement: reasoning only over new keys ("the key drops information only
+// where that information cannot reach the engine") is true of two new keys
+// and silent about old sidecars written under the other domain.
+// ACCEPTED COST of every bump: every pre-bump cache entry and .fingerprint
+// sidecar goes unreachable, full-window ones included — a one-time cold
+// cache, aged out by the LRU budget on the cache side, warning-only on the
+// sidecar side (single user, tmp/ transient).
 //
-// THE LIBRARY-ENVIRONMENT QUARTET'S RETIREMENT BUMPED IT 19 -> 20 (2026-08-09).
-// The key used to open with the stat-identity digests of the four libraries
-// mapped into the rendering process; it now names authored state and recipe
-// only, so a library upgrade no longer moves it and a reused preview may cross
-// one. The bump follows the rule the 18 -> 19 entry above states: ANY change to
-// the key's byte SHAPE forces a fresh namespace, because a pre-change key and a
-// post-change key naming different input could otherwise byte-collide — here a
-// post-change key beginning with the source path can equal a pre-change key
-// whose first digest happened to serialize those same bytes. Same accepted cost
-// as above. WHY THE TERM WENT (architect 2026-08-09, overruling the one-day
-// reading that kept it as a silent-wrong guard): with -ffp-contract=off in the
-// build, library drift is measured and bounded at inaudible classes (the
-// -38 dBFS / two-samples limiter class), and anything material fails loudly
-// through the limiter's knife-edge rather than silently — the argument that
-// retired the four attestation keys (settings_file.cpp's retired-key record)
-// kills this term identically. Byte-comparison across a library epoch is the
+// NO LIBRARY-ENVIRONMENT TERM (architect 2026-08-09): the key names authored
+// state and recipe only, so a library upgrade does not move it and a reused
+// preview may cross one. With -ffp-contract=off in the build, library drift
+// is measured and bounded at inaudible classes (the -38 dBFS / two-samples
+// limiter class), and anything material fails loudly through the limiter's
+// knife-edge rather than silently — the argument that keeps attestation keys
+// out of the .settings file (settings_file.cpp's retired-key record) keeps
+// this term out identically. Byte-comparison across a library epoch is the
 // user's own discipline: re-render what you keep comparing.
 //
 // THE SECOND BUMP RULE — DSP IDENTITY (architect 2026-09-02; stated here as the
@@ -232,8 +223,8 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // preview: the fix looks like it never landed. The bump is the whole remedy —
 // a fresh namespace, every pre-bump sidecar unreachable, the same accepted
 // cost the entries above already take.
-// RECORDED RESIDUAL: the reuse is TOOLCHAIN-BLIND, since the
-// library-environment quartet retired at 19 -> 20. A sidecar written before a
+// RECORDED RESIDUAL: the reuse is TOOLCHAIN-BLIND (no library-environment
+// term, above). A sidecar written before a
 // `pacman -Syu` that moves libm or FFTW can hand back the previous toolchain's
 // bytes — the accepted inaudible class, and the reason the byte-reproducibility
 // claim in perf_campaign_2026_07.md §15 is per toolchain and per host (that
@@ -585,8 +576,8 @@ bool read_fingerprint_sidecar(const std::string& wav_path,
     if (lines[0] != kSidecarMagic) return false;
     // Composed from kSidecarVersion exactly as the writer composes it, so a
     // future layout bump moves reader and writer together instead of silently
-    // accepting a file the writer no longer produces (the drift the hardcoded
-    // spelling here carried until 2026-08-06).
+    // accepting a file the writer does not produce (a hardcoded spelling
+    // here would drift).
     if (lines[1] != "sidecar_layout=" + std::to_string(kSidecarVersion))
         return false;
 

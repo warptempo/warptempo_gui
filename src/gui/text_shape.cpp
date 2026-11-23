@@ -60,9 +60,9 @@ private:
 // address reused by its successor), and a second cache in the owner would
 // pull HarfBuzz into the face owner for no gain. Built inside the caller's
 // lock, so hb-ft reads its scale off the face at this scaled font's own
-// size, exactly as the per-call build did, and the advances are the same
+// size, exactly as an uncached build would, and the advances are the same
 // bits (checked 2026-10-07 on every face at 300 and the body at 138, the
-// widths and every glyph's offsets and advances compared before and after).
+// widths and every glyph's offsets and advances compared cached and not).
 //
 // THE HB FONT LOADS OUTLINES ONLY (gui_font_bundled.cpp's head, the strike
 // rule's glyph-load road): hb-ft's own default, unhinted, plus
@@ -105,7 +105,8 @@ private:
 // MARK'S Y OFFSET TAKES ITS LIFT where the live set lifts it
 // (gui_sign_lift_px, gui_font.h — the four math signs onto the hyphen's
 // axis, 2026-10-09, the lift negative in Liberation Sans, added as it
-// comes; the pipe onto the digits' band, 2026-10-09 ~21:20: matched by glyph id after substitution,
+// comes; the pipe onto the digits' band, 2026-10-09: matched by glyph id
+// after substitution,
 // HarfBuzz's up-positive sense, the advance untouched). THE ONE FEATURE
 // SWITCH is `kern` (Kerning, text_shape.h): shaped with no feature list
 // under Kerning::On, the face's own GPOS kerning applied as HarfBuzz's
@@ -176,7 +177,7 @@ SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
     // another run of the same bytes), then the text's: the uses' faces
     // differ in the first, so the ruler's
     // timestamps, the cue labels, the word buttons' words and the title bar's runs never collide, and
-    // the size (the Keys face's live `osk_font_px`, 2026-10-29 night) keys a
+    // the size (the Keys face's live `osk_font_px`, 2026-10-29) keys a
     // committed size's runs apart from the old size's.
     constexpr std::size_t kMemoCap = 4096;
     static std::unordered_map<std::string, SharedRun> memo;
@@ -228,17 +229,16 @@ void show_shaped_run(cairo_t* cr, const ShapedRun& run, double x, double y) {
     if (run.glyphs.empty()) return;
     // THE PAINTER'S ONE REUSED PLACEMENT BUFFER (2026-10-13, a cost cut that
     // paints the same pixels): every paint refills it (place_glyphs) instead
-    // of allocating a vector of its own, which the label kinds did per run
-    // (a cue label and the ruler's major label each place their ink). It
-    // keeps its
-    // capacity, so the steady state allocates nothing. NOTHING ELSE TOUCHES
+    // of allocating a vector per run (a cue label and the ruler's major
+    // label each place their ink). It keeps its capacity, so the steady
+    // state allocates nothing. NOTHING ELSE TOUCHES
     // IT: the fill and the text_raster::show_glyphs that reads it are back
     // to back here, this function calls only the raster road between them
     // and is never re-entered from inside itself, and the ink measure
     // (run_ink_box) places into a buffer of its own. GUI THREAD ONLY, the
     // declaration's contract (the raster road it feeds holds unlocked
-    // statics, text_raster.h); the buffer's thread_local storage predates
-    // that contract and costs nothing on the one thread that paints.
+    // statics, text_raster.h); the buffer's thread_local storage costs
+    // nothing on the one thread that paints.
     //
     // THE GLYPHS GO DOWN THROUGH THE RASTER ROAD (architect 2026-11-15, the
     // no-grid arc; text_raster.h's head holds the road and why it is not
@@ -322,12 +322,12 @@ std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {
     // declaration.
     //
     // THE WALK IS BY CLUSTER, NOT BY GLYPH, and that distinction is the whole
-    // correctness argument. A first draft filled boundaries up to each glyph's
-    // cluster as it arrived, which quietly gave every INTERIOR byte of a cluster
-    // the pen of where that cluster ENDS — so an `fi` ligature's byte 1 reported
-    // the ligature's right edge, and a click just past the rendered ligature
-    // tied against that interior boundary and put the caret between the `f` and
-    // the `i`. Here the fill for a cluster happens only once its SUCCESSOR is
+    // correctness argument. Filling boundaries up to each glyph's cluster as
+    // it arrives would quietly give every INTERIOR byte of a cluster the pen
+    // of where that cluster ENDS — so an `fi` ligature's byte 1 would report
+    // the ligature's right edge, and a press just past the rendered ligature
+    // would tie against that interior boundary and put the caret between the
+    // `f` and the `i`. Here the fill for a cluster happens only once its SUCCESSOR is
     // known, using the pen recorded at the cluster's FIRST glyph, so every byte
     // the cluster covers reports that one start.
     std::vector<double> out(byte_count + 1, 0.0);
@@ -351,9 +351,8 @@ std::vector<double> byte_offsets_px(const ShapedRun& run, size_t byte_count) {
         pen += glyph.x_advance_px;
     }
     // The LAST cluster's bytes, by the same rule — its successor is the end of
-    // the string rather than another cluster, which is the arm the first draft
-    // also got wrong (a run ending in a ligature reported its end pen for its
-    // interior bytes).
+    // the string rather than another cluster (without it a run ending in a
+    // ligature would report its end pen for its interior bytes).
     if (open) {
         for (size_t b = cluster_lo; b <= byte_count; ++b) out[b] = cluster_pen;
     }

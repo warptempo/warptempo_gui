@@ -56,8 +56,7 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, double origin_y) {
         // PASS the EFFECTIVE base and scale it resolves to, and the motion arm
         // freezes a pass to owning at the stepped value exactly as the arrow
         // step does (architect 2026-09-10, "the pass inherits whatever it was
-        // and then applies on up and down"; restored 2026-09-13 when the
-        // arrow step began converting a pass in target view too). The seed is
+        // and then applies on up and down"). The seed is
         // one body for the two hands, which is what keeps the pointer and the
         // keyboard from resolving the same pass differently.
         const std::vector<GuiWarpMarker>& mv = app.warpmarkers.markers();
@@ -230,9 +229,10 @@ void ValueDragOps::apply_motion(double mouse_y) {
     // fields it compares per cue). NOTHING ELSE ON SCREEN READS THE VALUE AT
     // PAINT TIME: no stem moves (the stem is the selection's), no ring (it
     // reads the reset's frame and the seed lattice, never a bracket), the
-    // clock and row 8's line read the cursor and the render; the KEYS whose
-    // face reads the value — the arrows at a bracket's wall, INHERIT at a
-    // pass's freeze, a band key that asks the store — are the tick's
+    // clock and the status bar's process line read the cursor and the
+    // render; the KEYS whose face reads the value — the arrows at a
+    // bracket's wall, INHERIT at a pass's freeze, a top-row key that asks
+    // the store — are the tick's
     // comparator's (main.cpp). And NO MAP IS RE-LAID: in target view the
     // flags keep sitting on the DISPLAYED basis until the commit's own tail
     // re-warps the plate — the marker drag's precedent exactly, where the
@@ -245,7 +245,7 @@ void ValueDragOps::apply_motion(double mouse_y) {
     // the write above lands in the LIVE store, so the target
     // map's hash moves with it and the per-tick dirty-detect would dispatch a
     // full waveform render — and publish its map and rebuild the flags — every
-    // eight pixels of travel. The gesture is a member of displayed_basis_frozen
+    // step of travel (kValueDragPxPerStep). The gesture is a member of displayed_basis_frozen
     // (app_state.h), which shuts the worker's dispatch AND its publication for
     // the drag's life, and the tick's live-total backstop (main.cpp) is gated
     // on the same bit, so no clamp can page the viewport sideways under a hand
@@ -277,7 +277,7 @@ void ValueDragOps::commit() {
     // outlive its drag. The lane is damaged here so the face goes dark in the
     // frame the lift ends, as the key's toggle lights it (AppState::
     // value_drag_lamp; the rule at value_drag_posture). UNDER GRID ITERATIONS
-    // NOTHING IS SPENT (architect 2026-10-11 ~01:45): the drag is armed by
+    // NOTHING IS SPENT (architect 2026-10-11): the drag is armed by
     // the mode (value_drag_armed), the stored bit already dark there (put
     // out at the mode's edges, `[` refused), so this write changes nothing
     // and the next drag is armed as this one was.

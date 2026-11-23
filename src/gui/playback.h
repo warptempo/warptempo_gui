@@ -6,8 +6,7 @@ struct GuiNoiseVoice;   // noise.h
 
 // Audio playback engine. Owns ONE audio device and drives itself from that
 // device's callback thread. The device half is an AAudio output stream
-// (playback_aaudio.cpp, the one implementation since the laptop GUI's drop,
-// architect 2026-10-30), while the render body, the cursor predictor and
+// (playback_aaudio.cpp, the one implementation), while the render body, the cursor predictor and
 // every main-thread helper below live in playback_common.{h,cpp}. THIS
 // HEADER IS THE CONTRACT; the device's proofs are at its definitions.
 // The sample buffer is borrowed, not owned: the caller must keep the
@@ -21,8 +20,7 @@ struct GuiNoiseVoice;   // noise.h
 // the sum clipped to [-1, 1] (playback_common.h's head). The two output
 // channels carry both; the noise reads its own bank and never the bound
 // buffer, so every clause below about the bound buffer stands as written.
-// The engine's own voice is summed UNSCALED, at 0 dB (the audio level that
-// scaled it 2026-10-31 night to 2026-11-11 retired with the AUDIO case;
+// The engine's own voice is summed UNSCALED, at 0 dB (architect 2026-11-11,
 // playback_common.h's head).
 //
 // One bind API, and the domain offset travels with the buffer: init() and
@@ -51,14 +49,12 @@ struct GuiNoiseVoice;   // noise.h
 //     observation, below).
 //
 // PLAYBACK PLAYS THE BOUND BUFFER AT ITS OWN RATE (the source's, or the score
-// soundtrack's since 2026-10-26 night, GuiBoundAudio). The read is fractional —
+// soundtrack's, 2026-10-26 night, GuiBoundAudio). The read is fractional —
 // the device may ask for frames at a rate the buffer is not recorded at, and
 // the render body's one increment rescales for exactly that (playback_common.h)
-// — but there is no SPEED factor on top of it any more: the variable-speed
-// machinery and its `playback_speed` settings key retired together
-// (architect 2026-08-27, the architect running 1.0 everywhere in his one live
-// project). What it did was naive sample-rate rescaling — speed 0.7 read every
-// 0.7th source sample, shifting pitch along with tempo.
+// — but there is no SPEED factor on top of it (architect 2026-08-27, the
+// architect running 1.0 everywhere in his one live project): a speed factor
+// is naive sample-rate rescaling, shifting pitch along with tempo.
 //
 // Predictor design note
 // ---------------------
@@ -70,7 +66,7 @@ struct GuiNoiseVoice;   // noise.h
 // follow's page-in (follow_scroll_if_needed — during a play the follow
 // scroll's off-screen-left arm alone; the scroll's own placements,
 // Viewport::follow_scanner, are pan frames and resync nothing) and the
-// follow toggle's lit edge — AND, SINCE 2026-09-17, THE LOOP WRAP. (The C key's recenter, center_viewport_on_playhead, shares
+// follow toggle's lit edge — AND THE LOOP WRAP (2026-09-17). (The C key's recenter, center_viewport_on_playhead, shares
 // the discrete move's resync but meets no live session: `c` stops playback
 // before it centres.) THE CONSOLE'S SEEK (architect 2026-11-20,
 // GuiPlaybackLifecycle::seek_live_session_by) is a jump of the read position
@@ -103,23 +99,19 @@ struct GuiNoiseVoice;   // noise.h
 // two part by `L_audio − D + phase`, differently on every launch. His words
 // for it: "two continuous streams that we sort of happen to pick up here and
 // there — sometimes they match, sometimes they don't, and that's exactly what
-// they are." A compensated predictor — the anchor moved onto the audio
-// thread's first fill, the reported output latency added at every anchor
-// under a per-epoch re-anchor, a self-measured display lead added to the
-// position read, and a natural-end hold keeping the line alive until the last
-// queued frame had been heard — was built on 2026-09-01/02 and rolled back
-// whole on 2026-09-03. It is in git history; nothing in this tree reads a
-// latency figure any more. THE ONE PIECE THAT STAYED is the RESYNC'S ANCHOR
-// (below): it takes a stamp rather than the main thread's `now`, which is
-// accuracy about the same raw line, not compensation. The whole ruling — why
-// the compensated line went, every correction that stays and on what ground,
-// and that it is not re-proposed — is the record above playback_publish_play
-// (playback_common.cpp), its one owner.
+// they are." NO COMPENSATION: no anchor on the audio thread's first fill, no
+// output latency added at an anchor, no display lead added to the position
+// read, no natural-end hold keeping the line alive until the last queued
+// frame is heard; nothing in this tree reads a latency figure. The RESYNC'S
+// ANCHOR (below) takes a stamp rather than the main thread's `now`, which is
+// accuracy about the same raw line, not compensation. The whole ruling —
+// why there is no compensated line, every correction that stands and on
+// what ground, and that it is not re-proposed — is the record above
+// playback_publish_play (playback_common.cpp), its one owner.
 //
 // THE RESYNC IS EVENT-DRIVEN, AND THE REASON IS THE TOOL'S PLAY LENGTHS
-// (architect 2026-09-02; a periodic cadence was proposed that day and does
-// NOT land). Every resync is an EVENT — NINE
-// call sites at this writing (re-counted 2026-11-20), in classes: the zooms
+// (architect 2026-09-02; no periodic cadence). Every resync is an EVENT —
+// NINE call sites, in classes: the zooms
 // (apply_zoom_change, apply_strip_drag_zoom's final frame,
 // apply_zoom_to_start), the discrete viewport move's shared tail
 // (finish_discrete_viewport_move: the centring jump, follow's page-in), the
@@ -131,9 +123,9 @@ struct GuiNoiseVoice;   // noise.h
 // above). Grep `resync_predictor` and re-count; never inherit this number.
 // EVERY RESYNC ANCHORS ON THE AUDIO THREAD'S CYCLE STAMP — (the read cursor,
 // the instant that cursor's frame enters the output port) — and not on the
-// main thread's `now`, which sat anywhere inside the period before that fill
-// and re-rolled that whole phase into the line at every pan end or page
-// turn. So a resync's step is the accumulated DRIFT alone.
+// main thread's `now`, which sits anywhere inside the period before that
+// fill and would re-roll that whole phase into the line at every pan end or
+// page turn. So a resync's step is the accumulated DRIFT alone.
 // A session that is launched and left alone — the architect's own `c`,
 // Space, no pan — runs the
 // whole play on steady_clock against the DAC's crystal with no re-anchor at
@@ -154,20 +146,17 @@ struct GuiNoiseVoice;   // noise.h
 // without one would be wrong: its step is the drift alone and it lands in the
 // same frame as the reflow that masks it (the criterion below).
 //
-// THE OLD PERCEPTUAL ARGUMENT IS RETIRED, NOT CARRIED. A continuous
+// NO PERIODIC RE-ANCHOR, AND NOT ON PERCEPTUAL GROUNDS: a continuous
 // audio-thread timestamp publish with main-thread extrapolation against the
-// latest publish used to be rejected here on perceptual grounds — a 100 Hz
-// re-anchor "produces a periodic high-frequency signal the user is sensitive
-// to". That was an argument against the OLD `now` anchoring, which re-rolled
-// the period-wide phase residual and could step by a whole buffer period;
-// today's anchor is the stamp, whose step is the drift alone — about one
-// source frame, 0.02 px at the working zoom, fifty re-anchors under a single
-// pixel — so a periodic re-anchor would not be VISIBLE. It is not built
-// because it is not NEEDED. (The cycle stamp above is that publish's DATA
-// without its cadence: the main thread reads it only at the resync events,
-// never per frame, so motion between resyncs stays the smooth wall-clock
-// line.) A device-clock predictor stays set aside: the perceptual argument
-// above is the whole ruling.
+// latest publish would step, against a `now` anchor, by the period-wide phase
+// residual — a periodic high-frequency signal; against the stamp its step is
+// the drift alone — about one source frame, 0.02 px at the working zoom,
+// fifty re-anchors under a single pixel — so a periodic re-anchor would not
+// be VISIBLE. It is not built because it is not NEEDED. (The cycle stamp
+// above is that publish's DATA without its cadence: the main thread reads it
+// only at the resync events, never per frame, so motion between resyncs
+// stays the smooth wall-clock line.) A device-clock predictor stays set
+// aside: the ±10 ms band above is the whole ruling.
 //
 // The masking criterion for the chosen design is single-frame: each
 // resync's discontinuity — the accumulated drift since the last anchor —
@@ -363,8 +352,7 @@ public:
     // cursor at rest. cursor() reports the DOMAIN position: the internal
     // buffer-local cursor plus the bound buffer's domain offset. IT IS THE
     // ONE POSITION LINE — painting and resting reads take the same raw line
-    // (architect 2026-09-03: a second, lead-free face lived
-    // beside it while the display lead did, and went with it), this face at
+    // (architect 2026-09-03), this face at
     // `now`, the scanner's advance at its frame's time (position_at below).
     bool    is_playing() const;
     int64_t cursor()     const;
@@ -399,14 +387,14 @@ public:
     // ensure_device_available_for_play below (or the render player's own play
     // road reaches play(), which reopens at its head): a dead stream waits for
     // a launch press (or the struck clip lamp's tap, below). FOUR READERS,
-    // re-grepped 2026-11-05 night, and all are TICKS: the render player's (a
+    // all TICKS: the render player's (a
     // dead stream mid-play must PAUSE, not advance), the A/B audition's,
     // GuiAbAudition::fire_if_due, which ends the whole act
     // through the one stop body and cards
     // kPlaybackDeviceUnavailableCard, the score viewer's
     // (GuiScoreViewer::tick, Live transport), which pauses the held cursor
-    // and cards the same sentence for a dropped soundtrack, and the logo
-    // lane's (refresh_logo_lamps, main.cpp, architect 2026-11-05 night),
+    // and cards the same sentence for a dropped soundtrack, and the title
+    // bar's lamps' (refresh_logo_lamps, main.cpp, architect 2026-11-05 night),
     // which STRIKES THE CLIP LAMP while this answers true and a piece is
     // open (render.h's THE TWO LAMPS' STRIKE). Plus the
     // reopen's own post-reopen read
@@ -421,7 +409,7 @@ public:
     // under a live stream until the first reopen attempt closes that stream.
     // `impl_ && impl_->stream_dead` (acquire). THE LATCH HAS TWO MAIN-THREAD
     // READERS THAT RESET THE NOISE VOICE'S SEQUENCE (2026-10-28, noise.h's
-    // head, the two roads; the sequence alone since 2026-11-05, the level
+    // head, the two roads; the sequence alone, 2026-11-05, the level
     // and the switch untouched, the bed resuming at the next reopen): (1)
     // THIS MEMBER, whose one caller is gui_main's per-tick poll beside
     // noise.tick() (main.cpp), which, while the latch stands, audible or
@@ -446,7 +434,7 @@ public:
     // would change nothing): `!impl_ || !impl_->device_ready` — the
     // `stream_dead` latch and
     // the null stream are NOT terms, being exactly what the press reopens.
-    // FOUR READERS, re-grepped 2026-10-28: the two PLAY-face predicates
+    // FOUR READERS: the two PLAY-face predicates
     // space_launch_would_play and ab_audition_preflight_ok, the render
     // player's modal
     // Play/Pause face, whose arm in render_player_button_enabled takes this
@@ -469,10 +457,9 @@ public:
     // (GuiInputHandler::finish_clip_lamp_press_release, architect 2026-11-05
     // night: "the strike + the tap"), which plays nothing — the reopen and
     // the start are the whole act, the bed resuming through the running
-    // callback — and cards alike. (THE NOISE LAMP'S LIT PRESS was a caller
-    // 2026-10-28 to 2026-11-05, the `w` case; the lamp went with the level
-    // cases, and nothing asks the device question for the bed: the music's
-    // reopen is the bed's resume, noise.h's head.) No road reopens without a
+    // callback — and cards alike. (Nothing asks the device question for
+    // the bed: the music's reopen is the bed's resume, noise.h's head.) No
+    // road reopens without a
     // press. It closes a dead stream — the noise voice's sequence reset
     // first (close_dead_stream, noise.h's head) — and reopens a dead or null
     // one at the head — play()'s own

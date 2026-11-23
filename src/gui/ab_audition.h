@@ -47,7 +47,7 @@ struct GuiInputHandler;
 // tab he started from. THE RESTING PLAYHEAD NEVER MOVES BY THE ACT'S OWN
 // DOING: a play drives the scanner and a stop moves no cursor (the
 // lifecycle's doctrine), the tick's natural-end branch parks nothing, and each
-// switch restores the entering tab's own band — so after the whole act both
+// switch restores the entering tab's own view state (ViewState) — so after the whole act both
 // tabs' playheads are exactly where they were, and each pair of plays is
 // identical by construction. The `c` each half opens with is the one thing
 // that can write a cursor here, and only as `c` itself writes one: it lands
@@ -71,8 +71,7 @@ struct GuiInputHandler;
 // last one deciding the plate that frame. Each half is therefore read at the
 // working zoom, centered, whatever level the tab was left at.
 //
-// AND EACH CENTRING ARMS THE HOLD POSTURE AS `c` DOES (architect 2026-09-29,
-// superseding 2026-09-23's "the act ignores the hold posture";
+// AND EACH CENTRING ARMS THE HOLD POSTURE AS `c` DOES (architect 2026-09-29;
 // AppState::camera_hold): the key's act arms the bit behind its centring, and
 // nothing in the act saves or writes it back. The plays and the stops between
 // the centrings move no camera and keep it; each switch puts it out and
@@ -93,8 +92,8 @@ struct GuiInputHandler;
 // before the first play's arm (the refusal guard has returned by then; the
 // first call's stop ends a play the press found, which the switch behind it
 // would end anyway), and the switch-back call after the tick's stop and the
-// switch and BEFORE arm_rest. SINCE 2026-10-18 THE RULE IS ONE AT BOTH ENDS:
-// start() no longer launches its first play but ARMS it (a rest of zero),
+// switch and BEFORE arm_rest. THE RULE IS ONE AT BOTH ENDS (2026-10-18):
+// start() does not launch its first play but ARMS it (a rest of zero),
 // so the second `c` at the press precedes an arm exactly as the switch-back
 // call does, and each switch's trigger() — whose target-view path clears the
 // sequence unconditionally — precedes it too, which is the same reason the
@@ -119,19 +118,19 @@ struct GuiInputHandler;
 // (a rest is not paint-idle: the tick damages the clock cell every tick while
 // a rest stands, main.cpp's tick body says why, 2026-10-18) —
 // but THE ACT IS ONE TRANSPORT SESSION FROM ITS FIRST PLAY TO ITS LAST
-// (architect 2026-08-26; since 2026-10-18 from the press, whose first play
-// is armed behind that rest of zero), so a rest is transport-LIVE where the
+// (architect 2026-08-26; from the press, 2026-10-18, its first play
+// armed behind that rest of zero), so a rest is transport-LIVE where the
 // user can see or press it: the play/stop button wears its STOP face for the
 // act's whole duration and bare Space is the act's stop throughout (the fork
 // at GuiPlaybackLifecycle::toggle_playback, the face at
 // redesign_button_glyph_swapped, both reading `phase != Idle` beside the
 // scanner bit). The alternative would flip the glyph to Play and back three
-// times per act, and the transport row must never lie about live state.
+// times per act, and the bottom icon row must never lie about live state.
 // AND SHIFT+SPACE IS THE ACT'S STOP TOO (architect 2026-08-31): the chord is a
 // TOGGLE like the transport it rides — start() routes a press that finds a
 // standing sequence into that same one stop body instead of refusing, so the
 // button's long press agrees with the STOP face it already
-// wears, and the "An audition is already running" card retires with the arm.
+// wears.
 //
 // THE SWITCH IS CTRL+TAB'S WHOLE ROAD (architect 2026-10-18, on his saved
 // state: each tab played alone, the act carded): switch_active_tab_view_to
@@ -161,11 +160,11 @@ struct GuiInputHandler;
 // already acting, so no return to the starting tab. A REST IS INTERRUPTED
 // EXACTLY AS A PLAY IS: no clearing owner tests for live playback on the way
 // in (the stop body's clear sits ahead of its own nothing-to-do guard, the
-// user launch's ahead of its entry's delegation — launch_playback_from, since
-// 2026-09-01), so a stop, a Space or a scrub that lands in one
-// of the rests ends the act just as it would mid-play — a Space landing in a
-// rest reaching the stop body rather than the launch body since the fork became
-// transport-live, which is the same end by the same owner. Every path is a
+// user launch's ahead of its entry's delegation — launch_playback_from), so
+// a stop, a Space or a scrub that lands in one of the rests ends the act just
+// as it would mid-play — a Space landing in a rest reaching the stop body
+// rather than the launch body, the fork being transport-live, which is the
+// same end by the same owner. Every path is a
 // clearing owner listed at GuiAuditionSequence, whose inventory is the one
 // authoritative copy; the class that matters here is that A PLAYHEAD MOVEMENT
 // IS ONE OF THEM (the two movement owners, the rule at
@@ -174,18 +173,14 @@ struct GuiInputHandler;
 // structural rather than a list of routes — while a TRANSLATION and a RESTORE
 // are not, which is what lets the act's own two tab switches run inside it.
 // Bare Esc ends it AS A PRESS (2026-10-28, the hands-off rule), not as an Esc
-// binding — its eight bindings are closed and unchanged (the card dismissal
-// joined them on 2026-08-31; the enumeration is input_handler.cpp's).
+// binding (the enumeration of Esc's bindings is input_handler.cpp's).
 // AND A DEVICE LOST MID-ACT IS AN INTERRUPT LIKE ANY OTHER (architect
 // 2026-09-04): fire_if_due asks GuiPlayback::device_unavailable on every tick
 // the act stands, in a play as in a rest, and ends it through that same one
 // stop body with the launch gate's own card. The tick is therefore a CALLER of
 // clearing owner (1) rather than a fifth owner, and the tab stays where the act
-// had it, exactly as every other interruption leaves it. Until that day the
-// tick had no device fork at all and an AAudio disconnect read as the play's
-// natural end, so the act advanced one rest and the rest's launch either
-// reopened the device or carded at the belt; the ruling replaces that with one
-// end and one sentence.
+// had it, exactly as every other interruption leaves it: one end and one
+// sentence, never an AAudio disconnect read as the play's natural end.
 //
 // THE RUNNING CASE IS NOT A REFUSAL (architect 2026-08-31): a Shift+Space that
 // finds `phase != Idle` STOPS the act through the one stop body and launches
@@ -195,15 +190,14 @@ struct GuiInputHandler;
 // the test is the same `phase != Idle` it always was (and the same term the
 // transport fork and the play/stop glyph read); Space is one-shot in
 // repeat_eligible, so no repeat arrives.
-// No card: the silence stops, which is the answer, and the "An audition is
-// already running" sentence retired with the arm that said it.
+// No card: the silence stops, which is the answer.
 //
-// REFUSALS, all at the press, all at start, and EACH ONE CARDED since
-// 2026-08-30 (the strictness ruling: the whole act is silence and a camera
+// REFUSALS, all at the press, all at start, and EACH ONE CARDED
+// (2026-08-30, the strictness ruling: the whole act is silence and a camera
 // move, so a refusal that said nothing was indistinguishable from one):
 // A DEAD OR ABSENT DEVICE, asked once for the pair ahead of everything below
 // it because nothing will sound on either tab (the launch body's own literal,
-// kPlaybackDeviceUnavailableCard) — and since 2026-09-02 the question REOPENS
+// kPlaybackDeviceUnavailableCard) — and the question REOPENS (2026-09-02)
 // a dead AAudio stream first (GuiPlayback::ensure_device_available_for_play,
 // the reopen at the press), so it cards only a device that stayed dead after
 // the reopen or never came up at all;
@@ -224,9 +218,8 @@ struct GuiInputHandler;
 // carded on the preview's own road, and the launch it refuses ends the act).
 // The `h` view consumes the chord at its allowlist
 // (playback is removed from the view whole); loading-or-absent audio consumes
-// it at on_key's head. A read-only tab admits it (it authors nothing). SINCE
-// THE SAME EVENING the same press-time gates are composed for the PLAY
-// button's face by ab_audition_preflight_ok (ab_audition.cpp, beside start)
+// it at on_key's head. A read-only tab admits it (it authors nothing). The
+// same press-time gates are composed for the PLAY button's face by ab_audition_preflight_ok (ab_audition.cpp, beside start)
 // — the face's shift-twin term under the twin rule, so a runnable audition
 // keeps a refused plain Play lit. Undo:
 // none. Damage: the tab switch's and the scanner's, nothing new.
@@ -339,7 +332,7 @@ private:
     bool launch_phase(GuiAuditionSequence::Phase phase, char home_tab);
     // Arm the REST that precedes `phase`: the sequence takes that phase with
     // waiting = true and a deadline `gap_ms` out (the rest half's non-Idle
-    // writer). Called from the advance and, since 2026-10-18, from start()
+    // writer). Called from the advance and from start() (2026-10-18)
     // for the first play (a gap of zero), and at both only after the tab
     // switch, its trigger() and the `c` that transition owes — the switch's
     // stop body, the trigger's target-view clear and `c`'s stop would each

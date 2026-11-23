@@ -97,9 +97,9 @@ std::string range_bound_rejected(const std::string& why) {
 // hops, each exact in int64_t): the lower never rises above the upper, the
 // upper never falls below the lower, the partner the STORED other bound (0
 // for a blank bracket). Null where the bound stands, else the refusal's
-// reason. THREE READERS (architect 2026-11-21, send HH: "erased bound should
-// not affect the other one. card should disallow the erase if it would make
-// it invalid"): the two commits, a typed bound and an EMPTY TEXT alike — an
+// reason. THREE READERS (architect 2026-11-21: "erased bound should not
+// affect the other one. card should disallow the erase if it would make it
+// invalid"): the two commits, a typed bound and an EMPTY TEXT alike — an
 // erased bound is judged as the number zero, the value it commits — and the
 // bound editor's UP / DOWN from an empty text, where a zero this refuses is a
 // refused commit with no start to step from (step_editor_text).
@@ -181,10 +181,10 @@ void GuiFlagEditor::enter_text_edit(int idx,
     // clicks' adjacency convention (selection then land, on the next line).
     // Reached in the WARP column alone — all three open routes gate the marker
     // view to it — so `idx` resolves against the warp store this helper reads.
-    // BOTH AUDIO VIEWS SINCE 2026-08-24 (the payload editor is the home-view
+    // BOTH AUDIO VIEWS (2026-08-24; the payload editor is the home-view
     // binding's fifth ruled exception; the inventory is at
-    // active_column_authoring_allowed, app_state.h), so the domain is no
-    // longer the identity one: land_playhead_on_marker translates through the
+    // active_column_authoring_allowed, app_state.h), so the domain is not
+    // always the identity one: land_playhead_on_marker translates through the
     // ACTIVE domain itself (source_frame_to_active_domain at its body), so the
     // land is right in target view with nothing to add here.
     // THE LAND IS A MOVEMENT OWNER: an open moves the playhead onto one
@@ -394,8 +394,8 @@ void GuiFlagEditor::commit_iter_bound_edit() {
 
     std::vector<GuiWarpMarker> proposed = mv_const;
     GuiWarpMarker& m = proposed[static_cast<size_t>(idx)];
-    // AN ERASED BOUND IS THE NUMBER ZERO (architect 2026-11-21, send HH:
-    // "erased bound should not affect the other one"): an empty text
+    // AN ERASED BOUND IS THE NUMBER ZERO (architect 2026-11-21: "erased
+    // bound should not affect the other one"): an empty text
     // commits that bound as 0 and leaves the other as it stands, judged on
     // the very walls a typed +0.00 meets — the window always admits it
     // (iter_bound_tie_window's intersection holds 0), so where zero falls
@@ -420,8 +420,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
     // iter_bound_partner_refusal, the one judge). Neither window nor
     // tie can move under the bracket afterwards: while grid iterations
     // stands the piece is locked and no base tempo can be authored
-    // (authoring_locked, app_state.h), which is what retired the
-    // retroactive clamp this refusal used to name.
+    // (authoring_locked, app_state.h), so no retroactive clamp is owed.
     //
     // ONLY THE NOUN FORKS on whether a tie stands, the tie's own verdict
     // owner's rule: the wall a typed bound broke may be another marker's.
@@ -508,7 +507,7 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     std::vector<GuiPhaseResetMarker> proposed = pv_const;
     GuiPhaseResetMarker& m = proposed[static_cast<size_t>(idx)];
     // AN ERASED BOUND IS THE NUMBER ZERO, the warp arm's rule (architect
-    // 2026-11-21, send HH): an empty text commits that bound as 0 and leaves
+    // 2026-11-21): an empty text commits that bound as 0 and leaves
     // the other as it stands, judged on the very walls a typed `+0` meets —
     // the hop window always admits it (phase_iter_bound_tie_window's
     // intersection holds 0), so where zero falls on the wrong side of the
@@ -823,9 +822,8 @@ std::expected<PayloadCommit, std::string> propose_payload_commit(
     // below is a BELT over two already-empty optionals — kept because it is
     // the store's own rule stated at the surface that could otherwise break
     // it (Ctrl+N's owner->pass / ref->pass carrier-loss clears are its
-    // siblings), and because it costs two resets. THE RETROACTIVE CLAMP THAT
-    // FOLLOWED IT IS DELETED with its owner: this commit can move the base
-    // tempo, but never under a bracket.
+    // siblings), and because it costs two resets. No clamp follows it: this
+    // commit can move the base tempo, but never under a bracket.
     if (!iter_bracket_carrier(m)) {
         clear_iter_bracket(m);
         // AND THE TIE GOES WITH IT (2026-09-19), the belt's own second
@@ -851,11 +849,10 @@ std::expected<PayloadCommit, std::string> propose_payload_commit(
         m.disabled       != before.disabled ||
         n_refs_renamed > 0;
 
-    // (A SECOND TERM ASKED WHETHER THE SESSION-ONLY BRACKET HAD MOVED, and
-    // it went with the bracket's exit from the undo domain on 2026-09-10:
-    // this editor cannot open under a standing bracket, so the belt above
-    // clears nothing and no commit here is bracket-only. `canonical_changed`
-    // is the whole store-change question now.)
+    // `canonical_changed` IS THE WHOLE STORE-CHANGE QUESTION: the bracket is
+    // outside the undo domain (2026-09-10) and this editor cannot open under
+    // a standing bracket, so the belt above clears nothing and no commit here
+    // is bracket-only.
 
     PayloadCommit out;
     out.canonical_changed = canonical_changed;
@@ -905,11 +902,10 @@ void GuiFlagEditor::payload_commit_tail(int reland_idx) {
     // AND canonical_changed IS THE SECOND TERM — the callers', who run this
     // tail on a changed write alone — which is exactly the map-input
     // set (tempo_inherits / tempo_cents / tempo_scale / label_def / label_ref /
-    // disabled / renamed refs; position is not editable here) and which, since
-    // 2026-09-10, is also the whole store-change question the commit asks: the
-    // BRACKET-ONLY commit the second term was carved out for — the carrier-loss
-    // clear and the retired retroactive clamp — cannot happen under the
-    // iteration lock, so the two gates collapsed into one. THE LABEL PASTE
+    // disabled / renamed refs; position is not editable here) and which is
+    // also the whole store-change question the commit asks: no BRACKET-ONLY
+    // commit can happen under the iteration lock (2026-09-10), so one gate
+    // serves both. THE LABEL PASTE
     // re-lands on ITS FOCUS (app.last_selected_marker, a member of the pasted
     // selection), the group verbs' own re-land (toggle_disabled_body and
     // toggle_inherits, warpmarkers_ops.cpp).
@@ -1117,7 +1113,7 @@ void GuiFlagEditor::step_editor_text(int delta) {
         // this editor (enter_iter_bound_edit refuses to open on either).
         //
         // AN EMPTY TEXT STEPS ONLY WHERE IT WOULD COMMIT (architect
-        // 2026-11-21, send HH): read as if committed, an erased bound is the
+        // 2026-11-21): read as if committed, an erased bound is the
         // number zero and the other bound stays as stored
         // (commit_iter_bound_edit), so where zero falls on the wrong side of
         // the stored other bound the empty text is a refused commit with no
@@ -1332,33 +1328,29 @@ bool GuiFlagEditor::complete_label_reference() {
 // (the mode's own cells are what show a bracket, and they are gone by then).
 // No arm reads the stamp here and none should: the wipe runs at the OFF EDGE,
 // where the stamp is already meaningless. The single clear every
-// iteration-mode exit route shares, TWO routes since 2026-09-10: the `i`
-// toggle's turning-off branch and the iteration sweep's success tail —
-// exiting the mode is the clear on every route, so a bracket exists only while
-// the mode paints it on the flags. ENTER_BPM_MODE'S FORCED ITER-OFF WAS THE
-// THIRD and it is gone with the swap it performed (architect 2026-09-10: NO
-// SILENT SWAPS — the BPM opener (bare `m` then, Ctrl+B since 2026-09-15) is
-// REFUSED under a lit lamp now rather than being
-// its second exit), so bare `i` is the only key that reaches this. THE S->T AUDIO-VIEW TOGGLE IS NO LONGER ONE
-// OF THEM (2026-08-07): iteration mode is target-legal, so entering target view
+// iteration-mode exit route shares, TWO routes: the `i` toggle's turning-off
+// branch and the iteration sweep's success tail — exiting the mode is the
+// clear on every route, so a bracket exists only while the mode paints it on
+// the flags. The BPM opener is no route: it is REFUSED under a lit lamp
+// (architect 2026-09-10: NO SILENT SWAPS; enter_bpm_mode), so bare `i` is the
+// only key that reaches this. THE S->T AUDIO-VIEW TOGGLE IS NO ROUTE
+// (2026-08-07): iteration mode is target-legal, so entering target view
 // neither exits the mode nor clears anything (the record is at
-// switch_active_audio_view_to, input_handler.cpp). BOTH
-// surviving callers can run in TARGET view, where the write is the granted
-// home-view-binding exception argued at the sweep's tail
-// (run_iteration_sweep_render, input_key_dispatch.cpp).
+// switch_active_audio_view_to, input_handler.cpp). BOTH callers can run in
+// TARGET view, where the write is the granted home-view-binding exception
+// argued at the sweep's tail (run_iteration_sweep_render,
+// input_key_dispatch.cpp).
 // THE LOAD IN PLACE IS NOT A ROUTE EITHER (architect 2026-09-02): iteration
 // mode is where you stand, so apply_recipe_in_place leaves the mode bit alone
-// and resets no bracket — and since 2026-09-10 the load CANNOT RUN while the
-// mode is lit at all, the iteration lock refusing it on every road, so the
-// ruling holds vacuously (the record is at that body,
-// input_key_dispatch.cpp).
+// and resets no bracket — and the load CANNOT RUN while the mode is lit at
+// all, the iteration lock refusing it on every road, so the ruling holds
+// vacuously (the record is at that body, input_key_dispatch.cpp).
 // IT PUSHES NOTHING AT ALL (architect 2026-09-10: "Iterations are the least
 // durable thing in this GUI as far as the flags. It's okay to clear them and
 // not remember them very often. They just don't go in the undo stack at all;
-// they're considered transient by design"). It pushed one both-columns entry
-// until then, so that leaving the mode by accident could be undone; the
-// bracket left the undo domain whole with that ruling, and a wipe that pushed
-// would be the one entry able to put a bracket back. So the clear is FINAL —
+// they're considered transient by design"). The bracket is outside the undo
+// domain whole, and a wipe that pushed would be the one entry able to put a
+// bracket back. So the clear is FINAL —
 // "a bracket exists only on a marker that is on screen or it is gone for
 // good" — and it moves no dirty flag either, neither bracket ever having
 // serialized.
@@ -1432,9 +1424,9 @@ void GuiFlagEditor::wipe_iter_state() {
 // own (see commit_bpm_field), so no undo entry is pushed, and undo can never
 // resurrect bpm state — the bpm session is modal, so no snapshot-taking op can
 // run while a marker carries live bpm fields, and outside the session every
-// marker is already wiped. THE ITER WIPE IS THE SAME SHAPE SINCE 2026-09-10
-// and no longer the contrast it was: it pushes nothing either, and the
-// bracket's own snapshots are stripped at every push. Callers own the repaint.
+// marker is already wiped. THE ITER WIPE IS THE SAME SHAPE (2026-09-10): it
+// pushes nothing either, and the bracket's own snapshots are stripped at
+// every push. Callers own the repaint.
 void GuiFlagEditor::wipe_bpm_state() {
     auto& mv = app.warpmarkers.markers_mut();
     for (auto& m : mv) {
@@ -1503,10 +1495,10 @@ void GuiFlagEditor::commit_bpm_field() {
 
 // THE BPM FORM'S RENDER GATE (the contract is at the declaration). Every
 // sweep cell carries a derived base tempo into its cell markers, a derived
-// scale into its cell .settings, and — since 2026-08-26 — a rescaled tempo
-// into every effectively ENABLED owning marker outside the span (a disabled
-// one is invisible to the act since 2026-08-29, in the span and out of it,
-// so it can neither be rescaled nor refuse a bracket); the derivation
+// scale into its cell .settings, and a rescaled tempo (2026-08-26) into
+// every effectively ENABLED owning marker outside the span (a disabled one
+// is invisible to the act, 2026-08-29, in the span and out of it, so it can
+// neither be rescaled nor refuse a bracket); the derivation
 // (compute_base_tempo_scale) is monotone in bpm and the rescale rides it, so
 // the bracket ends bound every cell: if either endpoint bpm refuses — the
 // derived base tempo lands outside [kTempoMinCents, kTempoMaxCents], the
@@ -1599,12 +1591,11 @@ void GuiFlagEditor::enter_bpm_mode() {
     if (owner < 0 || owner >= static_cast<int>(mv_const.size())) return;
     if (!bpm_popup_eligible_marker(mv_const[owner])) return;
 
-    // NO FORCED ITER-OFF (architect 2026-09-10, that evening: "we should card
-    // the exit, because it is still one button automatically affecting the
-    // other" — NO SILENT SWAPS ANYWHERE). Bare `m` used to be grid iterations'
-    // second exit, wiping every bracket on its way in; it is REFUSED under a
-    // lit lamp now, at the keyboard gate with the lock's own card and on the
-    // BPM Iterations button's greyed face (iteration_lock_key_blocked and
+    // NO FORCED ITER-OFF (architect 2026-09-10: "we should card the exit,
+    // because it is still one button automatically affecting the other" —
+    // NO SILENT SWAPS ANYWHERE). The BPM opener is REFUSED under a lit
+    // iterations lamp, at the keyboard gate with the lock's own card and on
+    // the BPM Iterations button's greyed face (iteration_lock_key_blocked and
     // iteration_lock_greys), so this body can only ever run with the lamp
     // dark and there is no bracket here to smuggle out. Bare `i` is the
     // mode's one exit.

@@ -42,10 +42,9 @@ void report(GuiNotifications& notifications, const GuiFailure& f) {
 bool GuiSaveOps::save() {
     // NO SAVE WHILE A CHECKPOINT IS PUBLISHING (architect 2026-08-08). The
     // checkpoint worker writes the three sidecars into projects/<id>/ on its own
-    // thread, and that folder is the one the loaded SOURCE sits in — the
-    // coincident workflow when this landed, and since 2026-08-09 the only shape
-    // a checkpointable piece has, the source's folder BEING the project
-    // directory — so those are EXACTLY the three paths this function writes,
+    // thread, and that folder is the one the loaded SOURCE sits in — the only
+    // shape a checkpointable piece has (2026-08-09), the source's folder BEING
+    // the project directory — so those are EXACTLY the three paths this function writes,
     // through the same fixed `<path>.tmp` temp name. Two writers on one
     // temp name is a torn temp or a rename of captured-older bytes over a newer
     // save, so the window is closed by refusing the save rather than by naming
@@ -77,13 +76,12 @@ bool GuiSaveOps::save() {
     //
     // A CARD, raised here for every caller (architect 2026-09-24: "cards
     // being preferred over no-ops on a face that falsely advertises an
-    // action"). It was silent from 2026-09-02, the Save button's grey on this
-    // same bit standing as the message, but that grey is not what a reader
-    // sees on every road the key reaches: under the render player, whose
-    // router passes Ctrl+S through, the roster is greyed by the overlay and
-    // says nothing about the checkpoint, and under the picker and the stats
-    // panel likewise — those two routers carded the bit themselves ahead of
-    // the call, and defer to this arm now. The close prompt's Save answer
+    // action"). The Save button's grey on this same bit is not the message:
+    // it is not what a reader sees on every road the key reaches — under the
+    // render player, whose router passes Ctrl+S through, the roster is greyed
+    // by the overlay and says nothing about the checkpoint, and under the
+    // picker likewise; no router cards the bit itself, every one defers to
+    // this arm. The close prompt's Save answer
     // inherits it as it inherits the write arms' cards: the refusal takes the
     // prompt's "Retry the failed save?" rung and the card is its reason. The
     // commit act's prelude save never meets it (ordering, above).
@@ -155,8 +153,8 @@ bool GuiSaveOps::save() {
     }
 
     // .settings carries settings/state that Ctrl+S persists, so a failed
-    // write fails the save: dirty must survive so the unsaved-work dialog can
-    // offer retry instead of silently baselining in-memory-only state.
+    // write fails the save: dirty must survive so the unsaved-work question
+    // can offer retry instead of silently baselining in-memory-only state.
     if (!app.settings_path.empty()) {
         const NonEngineSettingsSnapshot gui{
             app.tab_a, app.tab_b,

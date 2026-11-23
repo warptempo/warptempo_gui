@@ -126,7 +126,7 @@ void GuiWaveformWorker::worker_loop() {
         // the render still gets reported (last_ok_=false) to the
         // completion handler.
         // The plate's slot is the job's column bounds (WaveformJob::columns).
-        // NO KEPT BARS ON THIS ROUTE (architect 2026-11-15, send L;
+        // NO KEPT BARS ON THIS ROUTE (architect 2026-11-15;
         // WaveformKeptBars, render.h): the store is the GUI thread's alone,
         // so the worker passes none and the render runs its store-less road,
         // asking the producer for every bar of the row — this route serves

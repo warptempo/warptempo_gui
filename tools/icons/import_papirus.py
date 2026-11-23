@@ -108,7 +108,6 @@ ROSTER = [
     ('DocumentSave', 'devices/media-floppy.svg',
      'media-floppy, a floppy disk, his pick over document-save '
      '(re-picked 2026-11-22)'),
-    ('DocumentSaveAs', SYM + 'actions/document-save-as-symbolic.svg', ''),
     ('VcsPull', SYM + 'actions/arrow-pointing-at-line-down-symbolic.svg',
      'no vcs-pull; an arrow down onto a line'),
     ('NetworkConnect', SYM + 'status/network-transmit-receive-symbolic.svg',
@@ -230,9 +229,7 @@ ROSTER = [
     ('ZoneOut', 'actions/view-readermode.svg',
      'view-readermode, an open book, his pick over zone-out '
      '(re-picked 2026-11-22)'),
-    ('WindowClose', SYM + 'actions/window-close-symbolic.svg', ''),
     ('EditClear', SYM + 'actions/edit-clear-symbolic.svg', ''),
-    ('ViewRefresh', SYM + 'actions/view-refresh-symbolic.svg', ''),
     ('Folder', SYM + 'places/folder-symbolic.svg', ''),
     ('DialogInformation', SYM + 'status/dialog-information-symbolic.svg', ''),
     ('DialogError', SYM + 'status/dialog-error-symbolic.svg', ''),

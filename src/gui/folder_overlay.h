@@ -1,26 +1,20 @@
 #pragma once
 
-// THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28; the
-// keyboard slot's band until 2026-10-14, the modal family's box since,
-// modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER PLAYER's output folders
-// and their wavs, the OPEN PROJECT PICKER's valid project folders, THE
-// SETTINGS PAGE's eighteen keys as `key=value` lines, no title row
-// (architect 2026-10-28, on a mock he verified on the glass: "yes" to
-// the list; the titles gone 2026-11-22: "the user is expected to have
-// expert knowledge") — the sixteen editable keys and,
-// among the piece's lines, `scale` and `bpm` as disabled rows (architect
-// 2026-10-29) — and THE VALUE LIST, one listed key's
-// values, the page's row for that key's content (architect 2026-10-25: "maybe
-// a drop down would make it quicker, because I don't like having to type it
-// in every time. We rejected drop downs because it was too much work to make
-// them Windows identical, but now we don't have the responsibility" — "brief
-// it as a scrolling list", "Yes"; this widget as it stands, no new chrome) —
-// since 2026-10-28 night for `true_colors`, `noise` and
-// `noise_crossfade_s` and since 2026-10-31 for `waveform_grow`
-// (kSettingsValueListKeys, settings_editor.h; the themes' of 2026-11-05
-// and the icon set's of 2026-11-17 went with their keys 2026-11-21; the color
-// presets' list of 2026-10-25 went with the presets 2026-11-01, the two
-// levels' lists 2026-11-05 with the band's sliders) — a SUB-PAGE of the settings
+// THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28), laid in
+// the modal family's box (modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER
+// PLAYER's output folders and their wavs, the OPEN PROJECT PICKER's valid
+// project folders, THE SETTINGS PAGE's eighteen keys as `key=value` lines
+// (architect 2026-10-28: "yes" to the list; no title row, architect
+// 2026-11-22: "the user is expected to have expert knowledge") — the
+// sixteen editable keys of kSettingsEditorKeys and, among the piece's
+// lines, `scale` and `bpm` as disabled rows (architect 2026-10-29) — and
+// THE VALUE LIST, one listed key's values, the page's row for that key's
+// content (architect 2026-10-25: "maybe a drop down would make it quicker,
+// because I don't like having to type it in every time. We rejected drop
+// downs because it was too much work to make them Windows identical, but
+// now we don't have the responsibility" — "brief it as a scrolling list",
+// "Yes"; this widget as it stands, no new chrome) — for the four keys of
+// kSettingsValueListKeys (settings_editor.h), a SUB-PAGE of the settings
 // page, whose Cancel and commit return to the page on that key's row
 // and whose opener key closes the whole panel (architect 2026-10-28 night,
 // GuiInputHandler::return_to_settings_page); and THE TRIM PRESETS LIST
@@ -28,23 +22,20 @@
 // (trim_presets_file.h), each row the preset's name alone
 // (build_trim_presets_rows), a row's tap applying
 // its pair to the active tab's trim, framing it and closing the list
-// (architect 2026-11-19, send CC),
+// (architect 2026-11-19),
 // its controls row the render player's shape — the highlight pair, Save,
 // Save As, Delete and Close, one cluster flush right (his word: "we would be
 // breaking symmetry if we did it differently"); and THE BPM FORM (architect
 // 2026-10-29: "since settings has a multiline page, we should make bpm a
 // form like settings"), the settings page's shape — the
 // sweep's three `key=value` lines, `beats=`, `low=` and `high=`, a row's tap
-// opening the line editor on it — its controls row RENDER and Cancel in the
+// opening the line editor on it — its controls row Render and Cancel in the
 // trim list's cluster.
-// (The AV Sync Stats panel's inert text lines stood 2026-09-03..30 and went
-// with the panel; the `h` view's history picker for one day, retired
-// 2026-08-29 as overengineered, that view's `'` raising its confirmation on
-// the viewed member with no list at all.) Which one fills it is
+// Which one fills it is
 // AppState::FolderOverlay::owner, and that tag IS the standing predicate
 // (folder_overlay_stands, app_state.h; stands() below forwards to it). This
 // header is the panel's ONE OWNER of everything that is not pixels, a press
-// body or a content: the geometry (the band, the row pitch, the scroll
+// body or a content: the geometry (the view, the row pitch, the scroll
 // clamp), the one walk over the rows, and the highlight and scroll mechanics
 // every content drives.
 // The PAINTER lives in paint_handler.cpp beside every other painter
@@ -55,53 +46,36 @@
 //
 // WHAT IT IS. A flat list of rows, EVERY ROW A DRAWING AND A NAME —
 // FOLDER rows and WAV rows; PLAIN rows wearing their listing's opener key's
-// drawing (architect 2026-11-22, send KK: the value list's values since
-// 2026-10-25 and the settings page's key lines since 2026-10-28 SETUP's
-// gear, the trim presets since 2026-10-28 night PRESETS' bookmark, the BPM
-// form's three lines since 2026-10-29 BPM's note; paint_list_view's
+// drawing (architect 2026-11-22: the settings page's key lines and the
+// value lists' values SETUP's gear, the trim presets PRESETS' bookmark, the
+// BPM form's three lines BPM's note; paint_list_view's
 // list_row_drawing); and the INERT rows, which the
 // highlight never stands on (row_is_inert, the walk below): the page's
 // DISABLED rows, drawing and name in the dim print (`text_dim`), the `scale`
 // and `bpm` lines (architect 2026-10-29). NO LIST CARRIES A TITLE ROW
 // (architect 2026-11-22). Every list seats its rows alike: the drawing's box
 // 6 W in, the name at 28 W, cut 6 W inside the right edge (the painter's
-// names' column, paint_list_view) (a glyph-less
-// TEXT kind went with
-// the AV Sync Stats panel on 2026-09-30, and an UP row, `..`, was a kind
-// until 2026-09-01, when
-// the player moved inside `tmp/` and going up became a button on its modal
-// row) — painted in THE MODAL FAMILY'S BOX (architect 2026-10-14,
-// modal_box.h, the one owner of the shape: "overlays/modals can take over the
-// area from the trim bar on down, with just the bottom new border
-// remaining"; the simple layout 2026-10-22): from THE VIEW BAR'S TOP ROW
-// down, one box — THE VIEW between two lines, no frame — and under it the CONTROLS
-// ROW on row 8's rows (the modal dialog's, paint_modal_dialog) — so EVERY
-// LANE FROM THE VIEW BAR TO ROW 8 is under it, and THE ICON ROW STANDS ABOVE
-// IT, as the main window paints it, the icon row
-// CARRYING THE `h` VIEW'S OWN PARTITION (architect 2026-09-03 evening: "leave
-// File open, because Quit should still be enabled — everything else like what
-// we do with history ... Leave that for the player, the picker and the AV
-// stats"; the File menu that ruling kept live retired with the menu row
-// 2026-10-21, Quit being Android's Back): every icon-row button —
-// the view pairs' four included — greys through redesign_button_enabled's
-// overlay arm (each content's opener key excepted, its own closer:
-// Play Renders 2026-10-13, Open Project and Settings 2026-10-25, Settings
-// over the page and the value list it swaps in 2026-10-28, Trim Presets over
-// its list 2026-10-28 night, BPM over its form 2026-10-29 —
-// is_folder_overlay_opener — and the tooltip lamp, live under every content
-// since 2026-11-10, overlay_admits_button; a lit key left dead keeps its
-// lit face, dimmed, architect 2026-11-11, session 107,
+// names' column, paint_list_view) — painted in THE MODAL FAMILY'S BOX
+// (architect 2026-10-14, modal_box.h, the one owner of the shape:
+// "overlays/modals can take over the area from the trim bar on down, with
+// just the bottom new border remaining"): from THE TRIM LANE'S FIRST ROW
+// down, one box — THE VIEW between two lines, no frame — and under it the
+// CONTROLS ROW on the bottom icon row's rows (paint_modal_dialog) — so
+// EVERY LANE FROM THE TRIM LANE TO THE BOTTOM ICON ROW is under it, and THE
+// TOP ICON ROW STANDS ABOVE IT, as the main page paints it: every top-row
+// key greys through redesign_button_enabled's overlay arm but each
+// content's opener key, its own closer (is_folder_overlay_opener), and the
+// tooltip lamp (overlay_admits_button, architect 2026-11-10); a lit key
+// left dead keeps its lit face, dimmed (architect 2026-11-11,
 // redesign_button_selected's head). The waveform's own
 // passes paint nothing
 // (onscreen_keyboard::waveform_paint_area, whose gate reads both tenants and
-// whose clip reads the STANDING one's own rect, and which this band reduces
-// to a zero-height rect, its top above the canvas's) while the lanes it
-// covers paint and are covered. THE VIEW'S EDGE IS THE BAND'S ONE EDGE; the
-// FIRST ROW STANDS UNDER THE LIST'S HEAD PAD, which seats its capitals on
-// THE PAGE MARGIN's top and scrolls with the rows (head_pad_px below;
-// architect 2026-11-20), no header above it (the folder-name
-// header that stood above the player's list 2026-10-10 to 2026-10-14 is
-// removed, content_rect's note).
+// whose clip reads the STANDING one's own rect, and which this panel
+// reduces to a zero-height rect, its top above the canvas's) while the
+// lanes it covers paint and are covered. THE VIEW'S EDGE IS THE PANEL'S ONE
+// EDGE; the FIRST ROW STANDS UNDER THE LIST'S HEAD PAD, which seats its
+// capitals on THE PAGE MARGIN's top and scrolls with the rows (head_pad_px
+// below; architect 2026-11-20), no header above it.
 // The architect's ruling (2026-08-28): no use of the panel needs typing.
 // So THE OVERLAY AND THE KEYBOARD NEVER BOTH STAND, structurally rather
 // than by a gate term: the panel's owners are modes that are not editors
@@ -118,39 +92,30 @@
 // A TAP ON A ROW MOVES IT NOT AT ALL (seat_tapped_row, architect
 // 2026-11-21).
 //
-// THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S (architect
-// 2026-08-28, the row then the icon row's button; Windows' list row since
-// 2026-10-02; the band the keyboard slot's from 2026-08-28 and the modal
-// family's box since 2026-10-14). Two owners, neither restated here:
+// THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S. Two owners,
+// neither restated here:
 //   * THE BAND is the family's PANEL and its rows live in the BOX'S INTERIOR
 //     (modal_box.h: modal_panel_rect, modal_box_interior_rect). ITS HEIGHT IS
 //     FIXED, every time it stands, whatever the listing's length — architect
 //     2026-08-28: "we should automatically make the height ... so that it's
-//     not a fluid height — it's always a fixed height". A
-//     SHORT LISTING LEAVES THE REST OF THE VIEW EMPTY and a long one
-//     scrolls. The fixed height retired the growing half of the day's
-//     earlier ceiling ruling (which read "it grows with its content up to
-//     that cap, then scrolls") the same day, the panel having jumped under
-//     the pointer as the listings changed size; the rest of it stands, and
-//     only WHERE the band starts has moved — the waveform's midpoint until
-//     2026-09-02, the icon row's foot from 2026-09-09 and the view bar's top
-//     row since 2026-10-14. The content's height
+//     not a fluid height — it's always a fixed height": a panel that grew
+//     with its content jumped under the pointer as the listings changed
+//     size. A SHORT LISTING LEAVES THE REST OF THE VIEW EMPTY and a long one
+//     scrolls. The content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
 //   * THE ROW IS THUNAR'S DETAILS ROW, GIVEN AIR (architect 2026-11-19:
 //     "use tunar"; the height ours, architect 2026-11-21): a row 24 W,
 //     edge to edge, no gap (kListRowW below, where Thunar's own and the air
 //     are told). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
-//     ("project and file names will be short"), the painter cutting it THE
-//     PAGE MARGIN inside the view's right edge (modal_box.h, 12 W; architect
-//     2026-11-20). (The AV Sync Stats panel's text rows stood at a
-//     monospace line's pitch, the row geometry's one fork, from 2026-09-03
-//     until the panel's deletion on 2026-09-30.)
+//     ("project and file names will be short"), the painter cutting it 6 W
+//     inside the view's right edge, the drawing's margin's twin
+//     (paint_handler.cpp's THE ROW'S DRAWING AND NAME; architect 2026-11-22).
 // The panel's own authored number is the row height below; the head
 // pad is derived (head_pad_px), the margin's two numbers modal_box.h's.
 //
-// THE FACES ARE THUNAR'S LIST UNDER ARC (architect 2026-11-19, his approval
-// of the picture Z_04; the ladder at the painter, paint_list_view): the
+// THE FACES ARE THUNAR'S LIST UNDER ARC (architect 2026-11-19; the ladder at
+// the painter, paint_list_view): the
 // box's interior is THE VIEW, the canvas's
 // tone (`ruler_face`, Arc's $base_color 404552), a surface you pick from,
 // a line above and below it and no frame. IT COVERS EVERY CONTENT, this one
@@ -169,9 +134,7 @@
 // and out over Arc's row transition (the look at paint_handler.cpp's THE
 // LIST VIEW; the state, the gate and the fade AppState::FaceFades; the
 // inventory at GuiInputHandler::pen_hot_latch_),
-// NO ALTERNATING ROWS, no scrollbar. (Live's browser list on the pane,
-// 2026-11-01 night, M6 A, and its lighter press row of 2026-11-05 retired
-// with send AA's stage D2.)
+// NO ALTERNATING ROWS, no scrollbar.
 //
 // THE ROWS ARE CHROME (the timing doctrine at GuiInputHandler::on_key): a
 // row press ARMS —
@@ -181,30 +144,29 @@
 // not scrolled (seat_tapped_row, architect 2026-11-21: the press never
 // scrolls). A CLICK ACTIVATES (architect 2026-08-29): Plasma's
 // single-click, which he runs, and GNOME's touch agree. The arm's whole state is
-// AppState::FolderOverlayPress; a shift or ctrl press on a row is a consumed
-// no-op, and no row reads a hold. WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift
-// highlights under every owner — the picker has no field beside the band):
-// under the PLAYER an open enters a folder or plays a wav; under
+// AppState::FolderOverlayPress; a ctrl press on a row is a consumed no-op
+// (claim_folder_overlay_press), and no row reads a modifier or a hold.
+// WHAT THE OPEN ACT MEANS IS THE OWNER'S (a lift highlights under every
+// owner): under the PLAYER an open enters a folder or plays a wav; under
 // the PROJECT PICKER it reopens the row's project; under the SETTINGS PAGE
 // it closes the page and opens the settings editor on the row's key, its
 // entry the key's value alone (architect 2026-11-19; the value sub-page,
 // architect 2026-11-20), whose Enter and Esc reopen
-// the page on that row (2026-10-28 night,
+// the page on that row (architect 2026-10-28 night,
 // GuiInputHandler::handle_settings_editor_key), or on the row of a key with
-// a value list swaps that list in (settings_page_commit, 2026-10-28); under
+// a value list swaps that list in (settings_page_commit); under
 // the VALUE LIST
 // it commits the row's value to the listed key and returns to the settings
-// page (value_list_commit, 2026-10-25, four keys more 2026-10-28 night, a
-// sixth 2026-10-31; the
-// return 2026-10-28 night); under the TRIM PRESETS LIST the row's tap
+// page on that key's row (value_list_commit, return_to_settings_page);
+// under the TRIM PRESETS LIST the row's tap
 // applies the row's preset to the active tab's trim, frames it and closes
-// the list (trim_presets_apply, 2026-10-28 night; the close architect
-// 2026-11-19, send CC: "On selecting a trim preset, the overlay should
+// the list (trim_presets_apply; the close architect
+// 2026-11-19: "On selecting a trim preset, the overlay should
 // close."); under
 // the BPM FORM it opens the line editor prefilled
 // with the row's value, its line past the `=`, the form closing until the
 // editor's return
-// (bpm_form_commit, 2026-10-29). AN
+// (bpm_form_commit). AN
 // INERT ROW HAS NO OPEN and no
 // highlight: its motionless lift is a consumed nothing
 // (finish_folder_overlay_release asks row_is_inert). THE ROW'S TAP (its
@@ -215,9 +177,9 @@
 
 // THIS HEADER DELIBERATELY DOES NOT INCLUDE onscreen_keyboard.h, and the
 // dependency runs the other way (that header includes this one, for the
-// standing tenant's rect in waveform_paint_area): since the rows became
-// buttons the panel borrows nothing from the keyboard, and its band is the
-// modal family's (modal_box.h).
+// panel's standing in its slot comparator and the modal family's box in
+// waveform_paint_area): the panel borrows nothing from the keyboard, and
+// its band is the modal family's (modal_box.h).
 #include "app_state.h"
 #include "modal_box.h"
 #include "render.h"
@@ -231,17 +193,16 @@ namespace folder_overlay {
 // -- The geometry ------------------------------------------------------------
 //
 // THE ROW IS THUNAR'S DETAILS ROW AT 9 pt, GIVEN AIR (architect 2026-11-19,
-// "use tunar", his approval of the picture Z_04; the overlays' design, its
-// §B, at 12 W text, the mock kit's list_row the reference;
+// "use tunar", at 12 W text;
 // THE HEIGHT OURS, architect 2026-11-21, below): the panel owns the
 // row height, the row's face and baseline (kListRowFace,
 // row_baseline_px) and the head pad derived from them (head_pad_px); the
 // row's drawing and its pens stand at the painter's own constants
 // (paint_handler.cpp's THE LIST VIEW, kListDrawing*), the right cut too
-// (the box's 6 W margin's twin, architect 2026-11-22, send KK).
+// (the box's 6 W margin's twin, architect 2026-11-22).
 
-// THE CARDS' FOOT MARGIN (notifications.cpp, its one reader since
-// 2026-10-23): ONE W, the line rule's hairline_px (render.h: 2 device px on
+// THE CARDS' FOOT MARGIN (notifications.cpp, its one reader): ONE W, the
+// line rule's hairline_px (render.h: 2 device px on
 // the tablet at 200 %, 1 at 100 % and below). The rows read none of it:
 // they stand edge to edge across the view under the head pad (below).
 inline int pad_px()               { return hairline_px(); }
@@ -313,7 +274,7 @@ inline double row_baseline_px() {
 // (gui_font_bundled.cpp's head), so the painted capitals' first row stands
 // at the margin exactly. ON THE TABLET (200 %; the cap band 16.51 px of the
 // 24-px em, 17 rows as hinted; the view's top row 142, the margin row 168;
-// the row of 2026-11-21, 24 W), every list alike — the picker, the player,
+// the row 24 W), every list alike — the picker, the player,
 // the settings page, a value list, the trim presets, the BPM form: the caps
 // 32 − 16.51 = 15.49 px deep, the pad 26 − 15.49 = 10.51 -> 11 px; the
 // first row 153..200, its baseline 185, the painted caps' first row 168
@@ -353,7 +314,7 @@ inline bool stands(const AppState& a) {
 // The content's whole height: the head pad (head_pad_px, content like the
 // rows) and every row's height, top to bottom, no gap and no foot pad. Zero
 // for an empty listing.
-// IT SIZES NOTHING (the band's height is fixed since 2026-08-28): its ONE
+// IT SIZES NOTHING (the band's height is fixed, architect 2026-08-28): its ONE
 // consumer is the scroll ceiling below, which is how far the content runs
 // past the band.
 inline int content_height_px(const AppState::FolderOverlay& ov) {
@@ -367,16 +328,14 @@ inline int content_height_px(const AppState& a) {
 // THE BAND: THE MODAL FAMILY'S PANEL (architect 2026-10-14, modal_box.h —
 // the box, from the line under the top icon row to the line over the bottom
 // icon row), a FIXED height
-// whatever the listing's length (2026-08-28, the ruling above). Like the
-// keyboard's own accessor it does not ask whether the panel stands.
+// whatever the listing's length (architect 2026-08-28, the ruling above).
+// Like the keyboard's own accessor it does not ask whether the panel stands.
 //
-// IT IS THE PANEL'S ONE RECT, and that is what the fixed height bought: the
+// IT IS THE PANEL'S ONE RECT, and that is what the fixed height buys: the
 // band a damage must erase is the band that was painted, so a listing that
 // SHRANK leaves nothing standing above a shorter one and there is no second
-// "the band at its ceiling" rect to remember to use. (There was one —
-// band_damage_rect, whose single reader was the player's listing rebuild — and
-// it went with the growing band that gave it its reason: a rect exists iff it
-// answers a question, and the two answers are now the same rect.) It is what
+// "the band at its ceiling" rect to remember to use (a rect exists iff it
+// answers a question). It is what
 // the painter grounds, what a damage erases and what the band's OUTER CLAIM
 // contains — the press router asks this rect to decide that the band, not the
 // waveform under it, owns the press. The controls row under it is the modal
@@ -402,20 +361,14 @@ inline GuiRect surface_rect(const AppState& a) {
 
 // The rows' band: THE BOX'S INTERIOR, THE VIEW (modal_box_interior_rect) —
 // from the row under the top icon row's line to the row over the bottom icon
-// row's line, the panel's whole width (send Z, edge to edge).
+// row's line, the panel's whole width (edge to edge).
 // Every geometry below reads this and not the surface — the rows,
 // the scroll ceiling, the keep-visible walk, the painter's row-walk clip and
 // row_at's containment — so a row can never paint onto the lines round the
 // view or be pressed through them. AT SCROLL 0 THE HEAD PAD STANDS ON THE
-// VIEW'S TOP ROWS AND THE FIRST ROW UNDER IT (head_pad_px), no header above.
-// (THE FOLDER NAME ABOVE THE PLAYLIST — the viewed folder's name in one list
-// row and an etched pair under it, the render player's alone, 2026-10-10 to
-// 2026-10-14 — IS REMOVED, architect 2026-10-14: "it was icon padding but no
-// icon, the dividing line sits awkwardly". If it is ever wanted back, the one
-// road that broke no pattern was the folder name in the caption's title (no
-// caption of the app's own since 2026-10-24). The
-// car's MediaSession artist line keeps its own folder name, the playing
-// item's, GuiRenderPlayer's.)
+// VIEW'S TOP ROWS AND THE FIRST ROW UNDER IT (head_pad_px), no header above
+// (architect 2026-10-14: a folder name over the player's list "was icon
+// padding but no icon, the dividing line sits awkwardly").
 inline GuiRect content_rect(const AppState& a) {
     return modal_box_interior_rect(a);
 }
@@ -523,7 +476,7 @@ inline int row_at(const AppState& a, double x, double y) {
 
 // DOES ROW `index` HEAD THE LISTING: no acting row stands above it — row 0,
 // or the first acting row under any inert rows that open the listing (no
-// content opens with one today: the settings page's first row is an
+// content opens with one: the settings page's first row is an
 // editable key, its disabled rows among the piece rows below). It is the
 // highest row a seat or a
 // walk can name (set_highlight seats no inert row), so it is where "the
@@ -539,7 +492,7 @@ inline bool row_heads_listing(const AppState::FolderOverlay& ov, int index) {
 
 // THE LEAST MOVE THAT SHOWS ROW `index` WHOLE in the band `band`, from the
 // offset `scroll`, clamped onto the listing's walls there: the offset the
-// keyboard row walk's "keep the focused row visible" writes (below).
+// row walk's "keep the focused row visible" writes (below).
 // THE ROW THAT HEADS THE LISTING SHOWS WITH THE LISTING'S HEAD (architect
 // 2026-11-20, the head pad's rule: bringing the first row into
 // view shows the pad too): for row_heads_listing's row the answer is SCROLL
@@ -566,7 +519,7 @@ inline double scroll_showing_row(const AppState::FolderOverlay& ov,
                       static_cast<double>(max_scroll_px(ov, band)));
 }
 
-// Scroll so row `index` lies wholly inside the band — the keyboard row
+// Scroll so row `index` lies wholly inside the band — the row
 // walk's owner of "keep the focused row visible", moving the offset by the
 // least amount that does it and nothing when the row already shows, the
 // row that heads the listing bringing the listing's head with it
@@ -595,8 +548,8 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // fresh listing — the page's first key row, row 0, lands at the listing's
 // head, scroll 0, the clamp ruling a centered row 0 out,
 // and a value list's return seats the page on that key's row); the
-// highlight pair's walk keeps scroll_row_into_view's least-move rule (an
-// arrow step scrolls by one row, every list widget's rule), and a tap
+// highlight pair's walk keeps scroll_row_into_view's least-move rule (a
+// step scrolls by one row, every list widget's rule), and a tap
 // moves the offset not at all (seat_tapped_row, architect 2026-11-21).
 // Returns whether the offset moved.
 inline bool scroll_row_centered(AppState& a, int index) {
@@ -692,14 +645,12 @@ inline bool seat_tapped_row(AppState& a, int index) {
 
 // THE ROW A WALK STEPS FROM: the highlight, or row 0 where the band has no
 // seat (an empty listing, or one whose rows have not been seated yet). ONE
-// OWNER, TWO READERS as re-greped 2026-09-12 — move_highlight below, the step
-// itself, and THE CAR'S PREVIOUS, whose rest arm asks whether the walk is at
+// OWNER, TWO READERS — move_highlight_target below, the step itself, and
+// THE CAR'S PREVIOUS, whose rest arm asks whether the walk is at
 // the band's first row before leaving the folder instead
 // (GuiRenderPlayer::car_previous). They must not drift: a fork that measured
 // from the raw field and a step that measures from this would disagree about
-// where a seatless band begins. (Two walk walls and a hint bit read it, and
-// the router's bare Up arm with them, for the one day on which the tablet's
-// skips walked the band too.)
+// where a seatless band begins.
 inline int walk_origin_row(const AppState::FolderOverlay& ov) {
     return ov.highlight_row < 0 ? 0 : ov.highlight_row;
 }
@@ -749,8 +700,9 @@ inline bool move_highlight(AppState& a, int delta) {
 // render player's Highlight Previous / Next buttons): the walk's landing row
 // differs from the row the highlight stands on. False on an empty listing and
 // at the wall the walk clamps to; a -1 highlight is actionable, the walk
-// starting FROM row 0 (walk_origin_row) and applying its delta exactly as the
-// arrow keys do: Down lands on row 1, Up on row 0. It reads the one landing
+// starting FROM row 0 (walk_origin_row) and applying its delta exactly as
+// the highlight pair's step does: DOWN lands on row 1, UP on row 0. It
+// reads the one landing
 // owner, so it agrees with the walk about the inert rows: a step that the
 // skip clamps back onto the highlight's own row is no step. The band's scroll-into-view
 // alone (a highlight already on the wall row but partly out of view) is not

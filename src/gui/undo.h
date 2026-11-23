@@ -15,17 +15,9 @@
 struct GuiTargetRender;
 struct GuiInputHandler;
 
-// UNDO COALESCING, A HYBRID OF TWO RULES (architect 2026-08-01, superseding the
-// pure repeat-identity model's "separate presses are separate entries" clause on
-// the live complaint that rapid manual taps each pushed their own entry). A burst
-// of eligible keyboard
-// gestures — THREE of them, re-grepped 2026-09-23 from GestureKind below (it
-// was three from 2026-07-29, when the W+target tempo-IMAGE step was deleted
-// with the whole tempo-image family, marker_drag.h; four from 2026-09-04 with
-// the iteration bound step, which left the undo domain 2026-09-10; six from
-// 2026-09-15 with the magnification level column's nudge and level step,
-// five once the measure step left with the measures feature 2026-09-16, and
-// three again since that column's deletion 2026-09-23): the
+// UNDO COALESCING, A HYBRID OF TWO RULES (architect 2026-08-01: rapid manual
+// taps must not each push their own entry). A burst of eligible keyboard
+// gestures — THREE of them, GestureKind below: the
 // TWO COLUMNS' position nudges (Left/Right in the
 // marker lane) and the one coalescing arm of the Up/Down VALUE STEP on the
 // addressed cell — the tempo cent step — each
@@ -49,13 +41,12 @@ struct GuiInputHandler;
 //       cadence.
 //   (2) THE TAP WINDOW, for consecutive PHYSICAL presses: a press of the same
 //       kind arriving within kTapCoalesceMs of the last ACCEPTED coalesce event
-//       merges too. FIXED compiled constant, no settings key, no compositor
-//       coupling — the full derivation (and why this is NOT the retired
-//       kGestureCoalesceMs reborn) is at the constant below.
+//       merges too. FIXED compiled constant, no settings key, no platform
+//       coupling — the full derivation is at the constant below.
 // Either way the visible move, reorder/remap, dirty tracking, and the target-view
 // preview stay per-press and unchanged — only the redundant history push is
 // suppressed, and a single Ctrl+Z reverts the whole burst.
-// Presses BEYOND the window are separate entries, as they always were.
+// Presses BEYOND the window are separate entries.
 // AND A SAVE ENDS THE BURST (architect 2026-09-02): Ctrl+S moves the saved
 // reference onto the burst's LIVE state without touching a stack top, and a
 // merge after it would rewrite that very state with no entry between it and
@@ -64,9 +55,9 @@ struct GuiInputHandler;
 // and the next press opens its own entry; the derivation is at note_saved.
 // AND A BURST THAT NETS TO ZERO POPS ITS OWN ENTRY (architect 2026-09-01, the
 // byte-equal pop): a merge skips the push and skipped the push sites' NET
-// CHANGE gate with it, so a tap Right then a tap Left inside the window left an
-// entry byte-equal to the live store — one Ctrl+Z that changed nothing, over a
-// Save that stayed lit. The merge tail now asks the producers' own
+// CHANGE gate with it, so a tap Right then a tap Left inside the window would
+// leave an entry byte-equal to the live store — one Ctrl+Z that changed
+// nothing, over a Save that stayed lit. The merge tail asks the producers' own
 // question post-mutation and takes the entry back off the stack when the answer
 // is equal. The rule, its reach and what it deliberately does not give back are
 // at Undo::record_gesture.
@@ -89,20 +80,10 @@ struct GuiInputHandler;
 // THE ELIGIBLE KINDS, one per coalescing gesture plus None: the TWO position
 // nudges and the Up/Down value step's one coalescing arm — the cent step
 // (TempoStep, singleton and group) — each its own kind, so a nudge burst and
-// a tempo burst stay separate.
-// TempoImageStep was a kind until 2026-07-29 and went caller-less with the
-// tempo-image family's deletion (marker_drag.h). ITERBOUNDSTEP WAS A FOURTH
-// FROM 2026-09-04 TO 2026-09-10 — the same arrows' second body, stepping a
-// bound cell of the iteration bracket — and it went with the bracket's exit
-// from the undo domain (architect 2026-09-10: "They just don't go in the undo
-// stack at all; they're considered transient by design"). The bound step
-// pushes nothing now, so it has nothing to coalesce INTO, and the two subject
-// terms that kind alone read — the addressed cell and the W/P column — went
-// with it. MEASURESTEP, the warp marker's measure step, was a kind from
-// 2026-09-14 until the measures feature was deleted whole 2026-09-16.
-// MAGNIFICATIONLEVELNUDGE AND MAGNIFICATIONLEVELSTEP, the magnification level
-// markers column's two bursts, were kinds from 2026-09-15 until that column's
-// deletion 2026-09-23.
+// a tempo burst stay separate. The iteration bound step is no kind: the
+// bracket is outside the undo domain (architect 2026-09-10: "They just don't
+// go in the undo stack at all; they're considered transient by design"), so
+// the step pushes nothing and has nothing to coalesce INTO.
 enum class GestureKind {
     None, WarpNudge, PhaseResetNudge, TempoStep
 };
@@ -114,24 +95,17 @@ enum class GestureKind {
 // alike), so a whole run of taps extends the window press by press rather than
 // racing one fixed deadline from the first.
 //
-// IT IS NOT kGestureCoalesceMs REBORN, and the distinction is what keeps the
-// undo history legible: that retired constant gated ALL coalescing, held keys
-// included, so it had to EXCEED the compositor's key-repeat delay — a number
-// this process cannot see, which is precisely why repeat identity replaced it.
-// This one gates ONLY the tap arm; held keys coalesce by identity with no clock
-// at all (arm (1) at the head of this file), so the value has one job — cover
-// the interval a human leaves between deliberate taps of the same key — and is
-// compositor-independent by construction. Both halves of that still hold, and
-// neither is what the value is: nothing here reads a compositor setting, and
-// the held-key arm still consults no clock.
+// IT GATES ONLY THE TAP ARM, and that is what keeps the undo history
+// legible: held input coalesces by identity with no clock at all (arm (1) at
+// the head of this file), so a clock that gated ALL coalescing would have to
+// exceed the platform's key-repeat delay, a number this process cannot see.
+// This one has one job — cover the interval a human leaves between
+// deliberate taps of the same key — and reads no platform setting.
 //
-// IT IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 600 ms, the
-// architect's own labwc <repeatDelay> on the laptop, matched by convention
-// when the beat was set (architect
-// 2026-08-28: "increase the coalesce wait to 575 ms, the global wait time for
-// long press, key repeat, etc."; the beat and his repeatDelay moved to 600
-// together 2026-09-29). It was its own 500 from 2026-08-01 until
-// that ruling. THE JOB IS UNCHANGED and so is the argument for the SIZE of it
+// IT IS kHoldBeatMs (gui_input.h), THE PRODUCT'S FIXED BEAT — 600 ms
+// (architect 2026-08-28: "increase the coalesce wait to 575 ms, the global
+// wait time for long press, key repeat, etc."; the beat set at 600,
+// 2026-09-29). The argument for the SIZE of it
 // — the interval a human leaves between deliberate taps of one key is the
 // same interval a deliberate second tap has to arrive inside — so the product
 // asks the hand for ONE cadence rather than for a number per surface. The
@@ -142,10 +116,9 @@ enum class GestureKind {
 // it changes meaning).
 inline constexpr long long kTapCoalesceMs = kHoldBeatMs;
 
-// Undo-cluster operations, extracted from main.cpp's inline lambdas.
+// Undo-cluster operations.
 // The struct holds references to the long-lived state the methods read and
-// write; bodies are byte-identical to the originals modulo `this->` access
-// on the captured references. The viewport reference is reached through
+// write. The viewport reference is reached through
 // viewport; stop_playback_if_playing is reached through playback_lifecycle;
 // switch_active_tab_view_to and switch_active_markers_view_to are reached
 // through active_views (so do_undo / do_redo can restore the originating A/B tab
@@ -192,29 +165,22 @@ struct Undo {
     // can carry a bracket, and no restore can install one — which is the
     // mechanical half of "they just don't go in the undo stack at all"; the
     // other half is the LOCK, which refuses everything that would push while
-    // grid iterations stands (authoring_locked, app_state.h). The two
-    // bracket-only pushes that used to seat one — push_undo_iter_bracket and
-    // push_undo_phase_iter_bracket, with the `affects_persistence` and
-    // `addressed_cell` parameters they existed to fix — are retired with them.
+    // grid iterations stands (authoring_locked, app_state.h).
     void push_undo_warp(std::vector<GuiWarpMarker> pre_state,
                         std::vector<int> touched_snapshot = {},
                         std::vector<int> touched_live = {});
     void push_undo_phase_reset(std::vector<GuiPhaseResetMarker> pre_state,
                              std::vector<int> touched_snapshot = {},
                              std::vector<int> touched_live = {});
-    // Files under the LIVE tab like the two helpers around it. (A
-    // `tab_override` parameter stood here for the load-in-place, which used to
-    // switch to the tab its file named; it lost its last producer on 2026-08-24
-    // when the act stopped writing view state, and went with it.)
+    // Files under the LIVE tab like the two helpers around it (the load in
+    // place writes no view state, 2026-08-24).
     //
     // `op_mode` (and with it `landing_column`, UndoEntry) names the COLUMN
     // the restore returns to and whose
     // post-restore rules run; both snapshots are written back whatever it says
-    // (restore_history_entry). ONE CALLER, the load in place. (The
-    // iteration-mode wipe was a second until 2026-09-10, pushing a
-    // session-only entry over both stores; it pushes nothing now, the bracket
-    // having left the undo domain, and the `affects_persistence` parameter
-    // that existed for it went with it.)
+    // (restore_history_entry). ONE CALLER, the load in place (the
+    // iteration-mode wipe pushes nothing, the bracket being outside the undo
+    // domain, 2026-09-10).
     void push_undo_both(
         std::vector<GuiWarpMarker> warp_pre,
         std::vector<GuiPhaseResetMarker> phase_reset_pre,
@@ -236,16 +202,14 @@ struct Undo {
     // entry's three view tags (tab, audio view, landing column) from the
     // live view. The caller calls it only on a
     // press that pushed (its own push condition), so it can never touch an
-    // older entry beneath. ITS CALLERS, re-grepped 2026-10-24: the two
-    // phase-reset pastes (paste_apply / paste_state_apply,
-    // phase_reset_propagate.cpp; the state paste removed 2026-10-21 to
-    // 2026-10-24), W-column acts that land in the SAME audio
-    // view's P column through land_paste_in_phase_reset_view (architect
-    // 2026-10-14, the symmetry with Shift+S: S+W lands in S+P, T+W in T+P;
-    // they crossed into T+P until then) — so of the three tags only the
-    // column crosses, W to P, and the tab and the audio view are rewritten
-    // with the values they already hold. (push_undo_phase_reset already
-    // writes landing column 'P', so on today's two callers every tag the
+    // older entry beneath. ITS CALLERS, two: the phase-reset pastes
+    // (paste_apply / paste_state_apply, phase_reset_propagate.cpp), W-column
+    // acts that land in the SAME audio view's P column through
+    // land_paste_in_phase_reset_view (architect 2026-10-14, the symmetry
+    // with Shift+S: S+W lands in S+P, T+W in T+P) — so of the three tags
+    // only the column crosses, W to P, and the tab and the audio view are
+    // rewritten with the values they already hold. (push_undo_phase_reset
+    // already writes landing column 'P', so on both callers every tag the
     // restamp writes holds its value already; the call keeps the entry's
     // landing view the landing's word rather than the push helper's
     // constant.) Every other crossing act (Shift+S,
@@ -253,8 +217,7 @@ struct Undo {
     // or pushes nothing. op_mode is NOT restamped: it names the store the
     // entry changed, which recompute_dirty's per-column walk and the
     // post-restore rules read; the column the restore returns to is the
-    // landing column (2026-09-23 — before it, a paste
-    // whose target entry refused kept op_mode 'P' as its column). Nothing between the push and
+    // landing column (2026-09-23). Nothing between the push and
     // this call reads the tags — the push clears the coalesce stamp, the
     // dirty walk reads op_mode alone, and the saved reference counts
     // entries — and the redo counter-entry copies them VERBATIM from the
@@ -282,21 +245,19 @@ struct Undo {
     // event that reached the handler — a held BUTTON burst's first fire
     // arrives here PHYSICAL by its producer's own flip (the opener; arm (1)
     // at the head of this file). When it returns true the caller SKIPS its
-    // undo push — and a coalesced press has NO other side effect since row 5
-    // (note_coalesced_commit mirrored the push helpers' hover-popup clear, and
-    // died with the popup). Either way the caller then calls record_gesture.
-    // NOT A PURE QUERY since 2026-07-29: a PHYSICAL
+    // undo push — and a coalesced press has NO other side effect. Either way
+    // the caller then calls record_gesture.
+    // NOT A PURE QUERY (2026-07-29): a PHYSICAL
     // press (synthesized_repeat false) INVALIDATES the coalescing stamp here, on
     // arrival, AFTER computing its own verdict — so a press that goes on to REFUSE
     // leaves no stamp for anything later to merge through, while a press that
     // COMMITS re-stamps in record_gesture. It stays callable
     // anywhere before record_gesture and in any order with the handler's own
-    // refusals, and WHERE EACH CALLER PUTS IT IS RULED BY THE FACE since
-    // 2026-08-31: behind every refusal the act's BUTTON GREYS ON — the walls,
-    // which therefore leave the stamp exactly as a greyed press does — and
-    // ahead of every refusal a per-tick face cannot see, which is what keeps a
-    // key and its button coalescing alike. The full rule, its cost and its
-    // supersession of the older "at the ENTRY, before its own refusals" shape
+    // refusals, and WHERE EACH CALLER PUTS IT IS RULED BY THE FACE
+    // (2026-08-31): behind every refusal the act's BUTTON GREYS ON — the
+    // walls, which therefore leave the stamp exactly as a greyed press does —
+    // and ahead of every refusal a per-tick face cannot see, which is what
+    // keeps a key and its button coalescing alike. The full rule and its cost
     // are at the definition.
     bool coalesce_gesture(GestureKind kind, bool synthesized_repeat);
     // SETTLE THE BURST at the tail of an eligible press. Two outcomes, and
@@ -315,14 +276,10 @@ struct Undo {
     //     question is asked here and not at the call sites.
     //   * OTHERWISE THE STAMP, written as one unit: the KIND, the
     //     ACCEPTED-EVENT TIMESTAMP the tap window measures from, and the
-    //     SUBJECT — the selection, the A/B tab and
-    //     the S/T AUDIO VIEW since 2026-08-29, which both the tap arm and the
-    //     held-key arm
-    //     re-test (the audio view joined when the A/B audition's tick-driven
-    //     switch was found able to land between a burst's opener and its
-    //     repeats). (The ADDRESSED CELL and the W/P COLUMN were stamped here
-    //     too from 2026-09-04 and 2026-09-09, read by the iteration bound step
-    //     alone; both went with that kind on 2026-09-10.)
+    //     SUBJECT — the selection, the A/B tab and the S/T AUDIO VIEW
+    //     (2026-08-29), which both the tap arm and the held-key arm re-test
+    //     (the audio view because the A/B audition's tick-driven switch can
+    //     land between a burst's opener and its repeats).
     // Call after the push / skip and after the mutation — and ONLY on the
     // accepted path, which is what makes a refusing press leave the stamp
     // invalid and is what keeps the pop off every no-op press.
@@ -368,15 +325,15 @@ struct Undo {
     // OWN kind, which is what keeps a nudge burst and a tempo-step burst separate.
     // FOUR writers: record_gesture stamps it at each eligible commit; every route
     // that changes the undo-stack top OR THE SAVED REFERENCE CLEARS it — the
-    // five push helpers plus the do_undo/do_redo restore core (the stack top),
+    // four push helpers plus the do_undo/do_redo restore core (the stack top),
     // so a stale stamp cannot outlive the entry it named, and note_saved (the
-    // reference, since 2026-09-02), so a merge cannot rewrite the state the
+    // reference, 2026-09-02), so a merge cannot rewrite the state the
     // file was just written from — the file load resets the history whole and
     // needs no clear (the stamp is inert against an empty stack, see
     // note_saved); and coalesce_gesture itself clears it when the arriving
     // press is PHYSICAL, so a press that then refuses for a reason its button
     // cannot show leaves nothing behind — a press refused AT A WALL never
-    // reaches the call at all since 2026-08-31 (both reasons, and the face rule
+    // reaches the call at all (2026-08-31; both reasons, and the face rule
     // that divides them, are stated at coalesce_gesture's definition).
     GestureKind last_gesture_kind_ = GestureKind::None;
     // The last ACCEPTED coalesce event's instant, read ONLY by the tap arm.
@@ -384,12 +341,12 @@ struct Undo {
     // constructed epoch value is never consulted — the kind stamp gates every
     // read and starts None.
     std::chrono::steady_clock::time_point last_gesture_time_{};
-    // THE SUBJECT the stamped burst acted on. It was the tap arm's alone until
-    // 2026-08-29, standing in for the structural adjacency the platform's
-    // repeat contract gives arm (1) for free and arm (2) not at all; the
-    // repeat arm now tests it too (clause (c) at coalesce_gesture — the run
-    // loop's tick is not an input edge, so the A/B audition can switch tabs
-    // between a burst's opener and its repeats). All three eligible gesture
+    // THE SUBJECT the stamped burst acted on, standing in for the structural
+    // adjacency the platform's repeat contract gives arm (1) for free and
+    // arm (2) not at all; the repeat arm tests it too (2026-08-29; clause (c)
+    // at coalesce_gesture — the run loop's tick is not an input edge, so the
+    // A/B audition can switch tabs between a burst's opener and its
+    // repeats). All three eligible gesture
     // families derive their target from the selection (the nudges from its
     // focus, the tempo step from its members) and AN UNDO
     // ENTRY IS FILED UNDER THREE VIEW TAGS — the A/B
@@ -403,10 +360,6 @@ struct Undo {
     // eligible press on the other column is a fresh selection act — which
     // changes the selection term the moment it names a different marker, and
     // cannot name the same one, there being no second body to merge into.
-    // (THE ITERATION BOUND STEP WAS THE ONE KIND THAT NEEDED MORE than the
-    // selection could carry — the addressed cell and the column, two
-    // kind-specific terms — and it left the undo domain with the bracket on
-    // 2026-09-10, taking both fields with it.)
     // Captured POST-act (record_gesture), so the position nudges' focus
     // collapse and their reorder remap are already reflected and a steady run
     // of taps compares like against like.

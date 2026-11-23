@@ -31,7 +31,7 @@ std::string line_error(int ln, const std::string& words) {
 
 std::filesystem::path GuiScorePages::page_file(int i) const {
     // The tool's page_name: the number padded to max(3, the count's digits),
-    // a grayscale JPEG since 2026-10-26.
+    // a grayscale JPEG (2026-10-26).
     const std::size_t width = std::max<std::size_t>(
         3, std::to_string(count()).size());
     std::string number = std::to_string(i + 1);

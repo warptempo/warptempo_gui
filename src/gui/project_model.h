@@ -28,9 +28,8 @@
 // (sidecar_set_presence, settings_io.h), not this model's, and any other file
 // beside the source is unrecognized and unread on every road. A folder with NO
 // sidecar at all is a NEW project iff it holds EXACTLY ONE `.wav`: that wav is
-// the source, and the first open writes the template sidecars beside it as it
-// always has. Every
-// other state is INVALID and says why, one sentence each: more than one sidecar
+// the source, and the first open writes the template sidecars beside it.
+// Every other state is INVALID and says why, one sentence each: more than one sidecar
 // stem, the whole sorted set named so the words do not depend on the walk's
 // order; no wav for the sidecar's stem; several wavs and no sidecar; no wav at
 // all. The settings `title=` is never consulted — a title names the RENDER, and
@@ -39,7 +38,7 @@
 // it: the program makes none of these states, so each is a hand's, refused
 // first error only; the unwalkable-folder and failed-status arms are IO.
 //
-// A WAV IN THE ROOT THAT IS NOT THE SOURCE IS THE LEGACY LAYOUT. Outputs live
+// A WAV IN THE ROOT THAT IS NOT THE SOURCE IS AN OUTPUT OUT OF PLACE. Outputs live
 // outside the project root (the deliverable in `render/`, named by the parser's
 // render_output_naming.h because both products write it; the batch cells in
 // `tmp/`, named by renders_dir.h), so a second wav beside the source is
@@ -47,14 +46,13 @@
 // guessing: "Move '<name>.wav' into render/". The folder is not opened until it
 // is done. WHAT `render/` THEN KEEPS IS THE CURRENT TITLE'S DELIVERABLE ALONE
 // (prune_render_folder, renders_dir.h): a wav moved in under a PREVIOUS title
-// is deleted the first time a deliverable publishes into it (the render
-// player's listing was a second trigger until 2026-09-01, when the player
-// moved inside `tmp/`), so the refusal's move is the right home for the current
-// title's wav and a parking spot for nothing else.
+// is deleted the first time a deliverable publishes into it, so the
+// refusal's move is the right home for the current title's wav and a parking
+// spot for nothing else.
 // BOTH OUTPUT FOLDERS ARE INVISIBLE TO THE SOURCE RULE BY
 // CONSTRUCTION: the walk below reads regular files only, so a directory —
 // `render/`, `tmp/`, `peaks/`, `score/`, `trim/` (the trim presets' file,
-// trim_presets_file.h, 2026-10-28 night) — can never be a candidate and
+// trim_presets_file.h, 2026-10-28) — can never be a candidate and
 // neither folder needs an exclusion rule of its own.
 //
 // A PROJECT'S NAME MUST BE ONE THE DEVICE CONFIG CAN CARRY. Validity is folder
@@ -73,14 +71,13 @@
 // committed pieces name every file this way, so a `.WAV` is simply not a source, and no case folding or
 // other leniency is offered — strict knowledge required, no fallbacks.
 //
-// WHAT THIS DISSOLVES, recorded because each was an open question once: which
-// render to print is the deliverable in `render/` (batches are auditions);
+// WHAT THE MODEL ANSWERS BY ITSELF: which render to print is the deliverable
+// in `render/` (batches are auditions);
 // there is no recents list — `last_project`
 // plus a dozen folder names is the whole of it; the picker's candidates are
 // built when it opens and never kept fresh; source versus render is the
 // sidecar stem versus the two output folders; and how the tablet knows the
-// current project is that the app remembers it (`last_project`), the `current`
-// file the sync script used to write having retired with the model.
+// current project is that the app remembers it (`last_project`).
 
 // A resolved project: the folder's NAME (the project's name), the folder
 // itself, and the SOURCE wav's full path — everything gui_main reads.
@@ -117,7 +114,7 @@ std::vector<std::string> enumerate_project_names(
     const std::filesystem::path& projects_path);
 
 // WHAT THE PROGRAM OPENS AT STARTUP, one road (the tablet has no command
-// line; the explicit-source argument went with the laptop GUI, 2026-10-30):
+// line):
 // `last_project`, when it is non-empty and resolves; otherwise the FIRST
 // folder in enumerate_project_names order that resolves; and with none, the
 // error "No project under <projects_path>", which the caller prints as its
@@ -128,6 +125,6 @@ std::vector<std::string> enumerate_project_names(
 // program-written file.
 //
 // The app always has a project open: there is no empty state and no picker
-// at startup — the picker is Open Project, a dialog over a running project.
+// at startup — the picker is Open Project, an overlay over a running project.
 std::expected<GuiProjectSource, std::string> startup_source(
     const DeviceConfig& config);

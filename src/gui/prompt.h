@@ -111,63 +111,32 @@ struct GuiPrompt {
     // `question_asked` SKIPS THE QUESTION, for the one road that has asked its
     // own already: the pull's reload (architect 2026-09-27), whose
     // confirmation "Pull GitHub's newer checkpoint and reload this piece?"
-    // (OK / Cancel since 2026-10-19) is the discard question, completes its
+    // (OK / Cancel) is the discard question, completes its
     // Revert with no second one.
     void request_close(GuiCloseTarget target, bool question_asked = false);
     void activate_response(char k);
 
-    // (NO COMMIT CONFIRMATION HERE ANY MORE. The `h` history view's
-    // Save-and-Commit act was guarded by a fourth prompt — HISTORY_COMMIT, one
-    // question with `y` and Esc — until 2026-08-07, when the architect replaced
-    // it with the COMMIT-TITLE EDITOR, itself retired 2026-10-10 when the act
-    // stopped asking anything (GuiInputHandler::run_publish_chord, the default
-    // title). The prompt kind, this opener and the back-pointer to the input
-    // handler that its `y` reached the act through were all deleted. THE BACK-POINTER IS BACK
-    // SINCE 2026-08-28 for a different question — the render player's load
-    // confirmation, whose raise lives on the input handler beside the act it
-    // confirms; the member above records its one reader.)
-
-    // (THE DISMISS-ONLY ERROR NOTICE — ERROR_NOTICE, open_error_notice —
-    // RETIRED WHOLE 2026-08-30, architect. It was the pre-split surface for a
-    // sentence the user had to be shown: the environmental and tripwire-class
-    // refusals, painted in the modal like every other prompt, dismissed by its
-    // lone "OK" on Esc. The messaging split (notifications.h) left it with
-    // nothing to carry. A refusal that answers an act is an EVENT, so the
-    // ITERATION SWEEP'S CELL-CAP refusal is a NORMAL CARD now, with the same
-    // sentence; and the TARGET-VIEW ENTRY GATE refuses SILENTLY the way its
-    // twin the load restore always did — one stderr line, nothing on screen —
-    // because its refusals are unreachable from program-written input (the
-    // ruling and its reason are at validate_target_view_entry,
-    // input_handler.h). The CHECKPOINT ACT'S FAILURE REPORT was a third caller
-    // from 2026-08-07: it arrived on a worker's clock, past every gate, and
-    // had to make room for itself; on 2026-08-09 the architect replaced it
-    // with the bottom row's permanent paint-only critical slot, and since
-    // 2026-08-29 it is a CRITICAL NOTIFICATION CARD.
-    //
-    // WHAT SURVIVES THIS STRUCT ARE THE QUESTIONS ALONE — the unsaved-work
-    // question with its save-failed rung, the phase reset paste's
-    // confirmation, the load confirmation, the revert confirmation
-    // (2026-09-13) and the pull's, the render player's delete, the score
+    // EVERY PROMPT IN THE PRODUCT IS A QUESTION, the messaging split's own
+    // rule read back into the type (notifications.h): a refusal that answers
+    // an act is an EVENT and cards, so no prompt merely shows a sentence. The
+    // questions are the unsaved-work question with its save-failed rung, the
+    // phase reset paste's confirmation, the load confirmation, the revert
+    // confirmation and the pull's, the render player's delete, the score
     // viewer's reset and the trim presets' save and delete (DialogTrigger,
-    // app_state.h, the one list) — so EVERY
-    // PROMPT IN THE PRODUCT IS NOW A QUESTION, which is the messaging split's
-    // own rule read back into the type.
+    // app_state.h, the one list). The Save-and-Commit act asks nothing
+    // (GuiInputHandler::run_publish_chord, the default title).
     //
-    // THE PRODUCT STILL HAS ONE ASYNCHRONOUS MODAL OPENER, and it never was
-    // this one: the platform's close (Back) raises the unsaved-work prompt
-    // (GuiPrompt::request_close from main.cpp's set_on_close) on the
-    // platform's clock, with no key and no gesture behind it. It is safe
-    // because it CLEARS THE WAY IN ITS OWN BODY first — force-ending every
-    // live gesture through their release bodies and hiding the floating hint
-    // (GuiInputHandler::on_window_close) — so the honest rule is that
-    // nothing asynchronous raises a modal without doing that, rather than
-    // that nothing asynchronous raises one at all. THE SECOND, since
-    // 2026-10-14, is a batch's completion opening the RENDER PLAYER, and it
-    // raises no modal
-    // over the user's work: it REPLACES the progress modal that has stood
-    // since the Render press (GuiInputHandler::swap_batch_progress_for_player),
-    // and it clears the way the same way — the held press on that modal
-    // dropped and the hint hidden before the player opens.)
+    // TWO ASYNCHRONOUS MODAL OPENERS, each CLEARING THE WAY IN ITS OWN BODY
+    // first — the rule is that nothing asynchronous raises a modal without
+    // doing that: (1) the platform's close (Back) raises the unsaved-work
+    // prompt (GuiPrompt::request_close from main.cpp's set_on_close) on the
+    // platform's clock, with no key and no gesture behind it, force-ending
+    // every live gesture through their release bodies and hiding the floating
+    // hint (GuiInputHandler::on_window_close); (2) a batch's completion opens
+    // the RENDER PLAYER, which raises no modal over the user's work: it
+    // REPLACES the progress modal that has stood since the Render press
+    // (GuiInputHandler::swap_batch_progress_for_player), the held press on
+    // that modal dropped and the hint hidden before the player opens.
 
     // Real abandon for an active PASTE_CONFIRM prompt: dismiss the
     // prompt and clear the pending paste anchor, which is the phase reset

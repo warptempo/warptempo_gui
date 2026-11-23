@@ -60,16 +60,15 @@ void remap_marker_indices_after_reorder(AppState& app,
     }
 }
 
-// hit_test_* promoted from lambdas in main(). The captured `app` and `audio`
-// references are now explicit arguments. There is no grab tolerance left:
-// the trim grabs are the trim bar's span's end zones since 2026-10-09 (the
-// painted arrow buttons from 2026-10-03), each from 2 W outside its bound
-// to 12 W inside it, a narrow trim's two split at the midpoint (architect
-// 2026-11-20: an authored zone, not a tolerance round a target; render.h's
-// THE TRIM BAR'S CAPS AND GRABS), and the marker surfaces (the cues'
-// triangles and labels) hit on their painted rects, neither with a halo. Both families read a PAINTER'S STASH: the flag
-// lane's (AppState::flag_hit_rects) and, since 2026-09-24, the trim lane's
-// (AppState::trim_bar_hit).
+// The hit tests, `app` and `audio` explicit arguments. There is no grab
+// tolerance: the trim grabs are the trim bar's span's end zones, each from
+// 2 W outside its bound to 12 W inside it, a narrow trim's two split at the
+// midpoint (architect 2026-11-20: an authored zone, not a tolerance round a
+// target; render.h's THE TRIM BAR'S CAPS AND GRABS), and the marker
+// surfaces (the cues' triangles and labels) hit on their painted rects,
+// neither with a halo. Both families read a PAINTER'S STASH: the flag
+// lane's (AppState::flag_hit_rects) and the trim lane's
+// (AppState::trim_bar_hit, 2026-09-24).
 
 // Event-synchronized hit map (ruling at the declaration in app_state.h): in
 // target view with a warm displayed map, the item painters and the gesture
@@ -206,10 +205,10 @@ TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
                              double mouse_y) {
     // THE PAINTER'S STASH IS THE HIT GEOMETRY (architect 2026-09-24, strictly
     // as-painted; the contract is at AppState::trim_bar_hit). The grabs are
-    // the view bar's span's two end zones as GuiPaintHandler::paint_trim last
+    // the trim bar's span's two end zones as GuiPaintHandler::paint_trim last
     // DREW the span — on the displayed item basis and the displayed map,
     // through trim_endcap_rect, each published over the lane's whole height
-    // (2026-10-09; the arrow buttons from 2026-10-03) — so a press between a
+    // (2026-10-09) — so a press between a
     // trim write and its repaint grabs the span still on screen, a zone
     // sliding off an edge by its visible columns alone, and one wholly off
     // the lane answers nothing. Nothing here reads app.trim or re-runs the
@@ -217,16 +216,14 @@ TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return TrimHit::None;
 
-    // The buttons span the trim bar LANE the painter drew them in, so a press
-    // outside that band is not on one. (The y-gate spanned the merged
-    // trim-bar + ruler band for the trim surface arc's one day, 2026-08-11..12,
-    // and came back to the lane with the arc's revert; the ruler is the
-    // REGION FORMER's band since 2026-08-12.)
+    // The zones span the trim bar LANE the painter drew them in, so a press
+    // outside that lane is not on one (the ruler below is the REGION
+    // FORMER's, 2026-08-12).
     if (mouse_y < h.lane.y || mouse_y >= h.lane.y + h.lane.h)
         return TrimHit::None;
 
-    // THE ZONE IS THE TARGET (architect 2026-10-03, for the buttons the zones
-    // replaced): each published rect is tested as it is, with no tolerance,
+    // THE ZONE IS THE TARGET (architect 2026-10-03): each published rect is
+    // tested as it is, with no tolerance,
     // THE POINTER'S REAL PLACE AGAINST THE ZONE'S REAL EDGES, half-open
     // (architect 2026-11-15, the no-grid arc).
     // The two rects never overlap — each zone reaches 2 W past its bound and
@@ -256,8 +253,8 @@ bool point_in_trim_bridge_span(const AppState& app, double mouse_x,
     // the no-audio answer, the trim pass painting only over loaded audio.
     const TrimBarHit& h = app.trim_bar_hit;
     if (!h.published) return false;
-    // The TRIM BAR LANE ONLY — the band the view bar was painted in, and the
-    // exact band hit_test_trim_endcap gates on. A top-strip point BELOW it
+    // The TRIM BAR LANE ONLY — the lane the trim bar is painted in, and the
+    // exact lane hit_test_trim_endcap gates on. A top-strip point BELOW it
     // (the ruler, then the marker lane) is not the bridge handle.
     if (mouse_y < h.lane.y || mouse_y >= h.lane.y + h.lane.h) return false;
     return mouse_x >= h.bridge_lo && mouse_x < h.bridge_hi;
@@ -306,10 +303,9 @@ static const FlagHitRect* topmost_flag_rect(const AppState& app,
     //
     // IT IS THE LAST PAINTED FRAME'S TRUTH, like the stash below and for the
     // same reason: a reader resolves against the run the user is looking at.
-    // (No PRESS reaches this walk while the editor stands since 2026-10-25 —
-    // every editor a modal, its veil consuming a press outside the field;
-    // until then a riding-cell press closed the editor and resolved its hit
-    // here after the close.) The publication is rewritten (and zeroed) by
+    // (No PRESS reaches this walk while the editor stands, 2026-10-25 —
+    // every editor a modal, its veil consuming a press outside the field.)
+    // The publication is rewritten (and zeroed) by
     // the next paint, which the editor's close damage schedules. It cannot
     // outlive its column into the `h` view either — the editor is
     // keyboard-modal and swallows bare `h`, so the mode cannot be entered with
@@ -391,7 +387,7 @@ uint64_t marker_lane_listing(const AppState& app) {
 int hit_test_flag(const AppState& app, const GuiAudio& audio,
                   double mouse_x, double mouse_y) {
     (void)audio;
-    // THE PAINTER'S STASH IS THE HIT GEOMETRY (row 5, 2026-08-01). A marker box
+    // THE PAINTER'S STASH IS THE HIT GEOMETRY (2026-08-01). A marker box
     // is as wide as its SHAPED label, so there is no formula to re-derive it
     // from — recomputing here would mean a second HarfBuzz pass that could
     // disagree with the pixels. The flag-cache rebuild publishes
@@ -400,9 +396,7 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     // — which also settles the event-synchronised-hit-geometry question
     // outright: the rects ARE the rects on screen, on the displayed basis
     // those pixels were laid out against, flipping at the blit rather than by
-    // two derivations agreeing. The old live rebuild — item_viewport_basis + the displayed map +
-    // the drag overlay, threaded into compute_flag_hit_rects — is gone with the
-    // functions it called.
+    // two derivations agreeing.
     //
     // Cold (nothing painted yet) the stash is empty and nothing is clickable,
     // which is the honest answer: a flag with no pixels has no box to grab.
@@ -420,12 +414,9 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
     return r ? r->marker_index : -1;
 }
 
-// (hit_test_marker_stem IS DELETED — architect 2026-08-12, the seventh glass
-// ruling: marker stems are pointer-inert in all contexts, the flag box being
-// the marker's one pointer surface. Its two callers — the live views' plain
-// stem click and the `h` view's diff-flag stem click — died with it, and
-// kMarkerStemGrabPx with them. The marker_stems stash it read survives as the
-// stem PAINTER's input alone.)
+// MARKER STEMS ARE POINTER-INERT in all contexts (architect 2026-08-12): the
+// flag box is the marker's one pointer surface, and the marker_stems stash
+// is the stem PAINTER's input alone.
 
 // THE WALK'S SEAT — contract at the declaration (app_state.h).
 int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
@@ -539,15 +530,14 @@ PayloadEligibility payload_eligibility(const AppState& app,
     //     would not apply the marker's value, and a member's value is applied
     //     (or would be) as 1.00 whatever its kind or bit;
     //   * the DISABLED marker — resolve_warp_markers_for_render drops it
-    //     outright (its own flag alone since 2026-10-29; a ref under a
+    //     outright (its own flag alone, 2026-10-29; a ref under a
     //     disabled definition is live, normalized to 1.00 with no source)
     //     — asked of the one owner effective_disabled (warpmarkers.h), the
     //     same call the diff lane, the sweep and the group step read;
     //   * an OWNER has no resolved value to reach for — its flag shows its
     //     number — so only a pass or a ref goes on.
-    // Iteration mode is not a term (2026-09-02): the readout-era line
-    // that refused under it survived the readout and made `j` card "no
-    // resolved value" on a marker that had one. A ref whose definition is
+    // Iteration mode is not a term (2026-09-02): a marker that has a
+    // resolved value keeps it under the mode. A ref whose definition is
     // missing entirely stays Eligible — resolved_marker_payload reads it out
     // as the render's own 1.00 normalization — and a ref whose walk has no
     // successor composes the empty string, which both acts refuse, so it
@@ -753,8 +743,7 @@ HistoryCueTooltipText history_cue_tooltip_text(const AppState& app,
 // its row — and the backend runs the redraw callback once per pending
 // damage rectangle, so during playback the scanner's damage would re-run the
 // marker copy and the parser composer at paint cadence on an answer that had
-// not changed. (From 2026-09-01 until 2026-09-29 that seat was the Copy
-// resolved value button's tooltip, whose shift line named the jump.) The key
+// not changed. The key
 // is exactly what this body reads (the fields are at
 // AppState::ValueSourceMarkerCache): the focused index, the sample rate (the
 // coincidence's millisecond, 2026-11-17), the
