@@ -387,10 +387,11 @@ void paint_level_case(cairo_t* cr, const GuiRect& entry, bool enabled,
 // END's two, the transport rule: "two arrows with a bar" on every
 // to-the-end step);
 // REPEAT MediaRepeatSingle (the row's one lamp); DOWN / UP GoDown / GoUp;
-// FOLDER GoParentFolder; LOAD DialogOkApply (the top icon row's LOAD key's,
-// the same act); DELETE EditDelete. (The player has no Close key, architect
-// 2026-11-11. The word buttons carry no drawing: architect 2026-11-18, "the
-// word alone".) THE PLAY
+// FOLDER GoParentFolder, the folder with an up arrow cut out of it (our
+// own, architect 2026-11-23); LOAD DialogOkApply (the top icon row's LOAD
+// key's, the same act); DELETE EditDelete. (The player has no Close key,
+// architect 2026-11-11. The word buttons carry no drawing: architect
+// 2026-11-18, "the word alone".) THE PLAY
 // KEY'S GLYPH NAMES ITS NEXT PRESS (architect 2026-10-25; the roster's rule
 // at redesign_button_icon's stateful overload) BY ITS FACE
 // (render_player_play_face, the owner the tooltip reads too): PAUSE

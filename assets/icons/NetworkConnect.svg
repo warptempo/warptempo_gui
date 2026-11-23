@@ -1,4 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
- <path style="fill:currentColor" d="M 10,9.01 15.5,4.51 10,0.01 C 10,0.01 10,1.34 10,2.01 H 7 V 7.01 H 10 Z"/>
- <path style="fill:currentColor" d="M 6,6.01 0.5,10.51 6,15.01 C 6,15.01 6,13.68 6,13.01 H 9 V 8.01 H 6 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+ <!-- CHECK'S DRAWING, OURS (architect 2026-11-23, send OO, his pick off the
+      mock, "N2"): Commit's arrow and Pull's side by side, one up on the
+      left and one down on the right, no line, each in the grammar of
+      Papirus's actions/go-up.svg / actions/go-down.svg (papirus-icon-theme
+      20260801), the head's arms at 45 degrees with square ends, each arrow
+      8 wide and 14 tall at a stroke of 2 of 16 (the ink x 0 to 16, y 1 to
+      15). Check (NetworkConnect) wears it as drawn
+      (tools/icons/import_papirus.py). A modified copy of papirus-icon-theme
+      drawings, GPL-3.0 (assets/icons/LICENSE-GPL-3.txt). -->
+ <path style="fill:currentColor" d="M 4,1 8,5 6.5,6.5 5,5 V 15 H 3 V 5 L 1.5,6.5 0,5 Z"/>
+ <path style="fill:currentColor" d="M 12,15 16,11 14.5,9.5 13,11 V 1 H 11 V 11 L 9.5,9.5 8,11 Z"/>
 </svg>

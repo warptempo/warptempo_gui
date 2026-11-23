@@ -1,4 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
- <circle style="fill:currentColor" cx="2" cy="8" r="2"/>
- <path style="fill:currentColor" d="M 16,7 H 9 L 12.5,3.5 11,2 5,8 11,14 12.5,12.5 9,9 H 16 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+ <!-- RESTRICT'S DRAWING, OURS (architect 2026-11-23, send OO, his pick off
+      the mock, "C2"): the playhead stopped at the window's edge, a dot and a
+      wall with nothing between and no arrow. The dot is Papirus's
+      actions/go-first.svg (papirus-icon-theme 20260801) dot, r 2, at cx 6,
+      cy 8; the wall is the marker pair's line (tools/icons/own/BboxPrev.svg),
+      2 of 16 wide, rows 2 to 14 with square ends, at x 10 to 12; the clear
+      gap between them 2; the ink x 4 to 12, centered in the 16 canvas.
+      Restrict (TimelineUseZoneOn) wears it as drawn
+      (tools/icons/import_papirus.py). A modified copy of a
+      papirus-icon-theme drawing, GPL-3.0 (assets/icons/LICENSE-GPL-3.txt). -->
+ <circle style="fill:currentColor" cx="6" cy="8" r="2"/>
+ <rect style="fill:currentColor" x="10" y="2" width="2" height="12"/>
 </svg>

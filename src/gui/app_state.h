@@ -17923,7 +17923,8 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 
 // THE KEY'S GLYPH (THE ROSTER AS RULED, architect 2026-11-02, and
 // Papirus's, 2026-11-17, re-picked by him 2026-11-22 and 2026-11-23 — the
-// marker pair and DRAG's double arrow our own, from Papirus's go-first —
+// marker pair, DRAG, RESTRICT, CUMULATIVE and SAVE's Commit / Pull / Check
+// faces wearing our own drawings (icons.h's head) —
 // rows of the importer's table: EDIT, HISTORY, SOURCE, TARGET, SESSION and
 // LOCK one glyph each, no state swap; PLAYER the headphones, shared with the
 // render player's wav rows (architect 2026-11-22); BPM shares the title

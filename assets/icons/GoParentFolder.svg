@@ -1,4 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" version="1.1">
- <path style="fill:currentColor" d="M 2,1 C 2,1 1,1 1,2 V 13 C 1,13 1,14 2,14 H 10.5 V 12.5 L 10,13 8,11 12,7 15,10 V 4 C 15,3 14,3 14,3 H 9 L 7,1 Z"/>
- <path style="fill:currentColor" d="M 12,8 9,11 10,12 11,11 V 14 H 13 V 11 L 14,12 15,11 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+ <!-- THE PICKER'S UP DRAWING, OURS (architect 2026-11-23, send OO, his pick
+      off the mock, "U1"): Papirus's symbolic/places/folder-symbolic.svg
+      (papirus-icon-theme 20260801), the folder, its path data verbatim,
+      with a head-and-stem up arrow cut out of its body by the even-odd
+      rule, as Papirus cuts its own folder emblems (actions/folder-new.svg's
+      plus): the arrow 8 by 8 (x 4 to 12, y 4.5 to 12.5), the stroke 2 of
+      16, the head's arms at 45 degrees with square ends, Value Drag's head's
+      grammar (tools/icons/own/TransformMoveVertical.svg). The picker's Up
+      (GoParentFolder) wears it as drawn (tools/icons/import_papirus.py). A
+      modified copy of a papirus-icon-theme drawing, GPL-3.0
+      (assets/icons/LICENSE-GPL-3.txt). -->
+ <path style="fill:currentColor;fill-rule:evenodd" d="M 1,2 V 13 C 1,13 1,14 2,14 H 14 C 14,14 15,14 15,13 V 4 C 15,3 14,3 14,3 H 9 L 7,1 H 2 C 2,1 1,1 1,2 Z M 8,4.5 12,8.5 10.5,10 9,8.5 V 12.5 H 7 V 8.5 L 5.5,10 4,8.5 Z"/>
 </svg>

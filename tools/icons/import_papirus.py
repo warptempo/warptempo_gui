@@ -9,11 +9,18 @@ either papirus-icon-theme's, a path under the checkout's `Papirus/16x16/`
 (the 16-px symbolic set, `symbolic/...-symbolic.svg`, or, where the
 architect's pick lives there, the 16-px `actions/`, `devices/` and `panel/`
 trees), or, on a path that starts with OWN, OURS: a hand-made drawing in
-this repository's tools/icons/own/, derived from a Papirus drawing and
-named so in its own XML comment (two such files: the marker pair's arrow to
-a line, from Papirus's go-first, architect 2026-11-22, send MM; and Value
-Drag's double arrow, go-first's arrow upright with a head each way,
-architect 2026-11-23, send NN). Both kinds take the same road: for each row
+this repository's tools/icons/own/, its derivation named in its own XML
+comment (eleven such files: the marker pair's arrow to a line, from
+Papirus's go-first, architect 2026-11-22, send MM; Value Drag's double
+arrow, go-first's arrow upright with a head each way, architect
+2026-11-23, send NN; and, architect 2026-11-23, send OO, his picks off the
+mocks: Cumulative's sigma, drawn outright with no Papirus source; the
+score's page keys' head, go-previous's without its stem; the score's Start
+and End, view-readermode's book with a plus or a minus in its own moat;
+Restrict's dot and wall, go-first's dot and the marker pair's line; the
+picker's Up, folder-symbolic's folder with an up arrow cut out of it;
+Commit and Pull, go-up's and go-down's arrows on a line; and Check, the two
+arrows side by side). Both kinds take the same road: for each row
 it writes assets/icons/<Enumerator>.svg by THE RECOLOR RULE
 (assets/icons/README.md):
 
@@ -31,8 +38,9 @@ wraps every child of the root <svg> in ONE `<g transform="...">` about the
 center of the drawing's box (its viewBox, else its width and height),
 `matrix(-1 0 0 1 2cx 0)`. The path data inside stays verbatim; resvg
 applies the group at the parse. A row with no fourth field is written
-untransformed. One row wears it: BboxNext, the own marker drawing mirrored
-(send MM).
+untransformed. Two rows wear it: BboxNext, the own marker drawing mirrored
+(send MM), and GoNextViewPage, the score's own page head mirrored (send
+OO).
 
 A written file (the transform's group included) that would leave a literal
 color, a class, a style block, or a shape painting resvg's default black (no
@@ -88,19 +96,26 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # SESSION 123 (the parked importer's picks, the architect's sheets of session
 # 140) WITH TWO ROWS RE-PICKED BY HIM 2026-11-17, session 140 ("the first
 # alternative for each one"): TabDetach and GoParentFolder (the 16-px actions
-# tree, no symbolic twin); AND TWENTY-ONE ROWS RE-PICKED BY HIM 2026-11-22,
-# send II, off the alternates sheet: BboxPrev / BboxNext, ViewMediaLyrics,
+# tree, no symbolic twin; GoParentFolder re-picked once more, below); AND
+# TWENTY-ONE ROWS RE-PICKED BY HIM 2026-11-22, send II, off the alternates
+# sheet: BboxPrev / BboxNext, ViewMediaLyrics,
 # ViewMediaTrack, TransformMoveVertical, GoJump, TimelineUseZoneOn,
 # GoJumpDeclaration, Mathmode, ViewMediaVisualization, ZoomInY, Speedometer,
 # ZoomPrevious, KeyframePrevious, KeyframeNext, DeepHistory, ZoneIn, ZoneOut,
 # DocumentSave, BlackSum and Merge, most from the 16-px actions, devices and
-# panel trees; AND EIGHT OF THOSE RE-PICKED AGAIN BY HIM 2026-11-22, send MM:
-# TransformMoveVertical (re-picked once more, below), BlackSum,
-# GoJump, TimelineUseZoneOn (go-first-rtl / go-first, the one arrow and dot
-# each way), DeepHistory, Merge, and BboxPrev / BboxNext (our own drawing,
-# OWN + 'BboxPrev.svg', Next's mirrored); AND TransformMoveVertical RE-PICKED
-# AGAIN BY HIM 2026-11-23, send NN, his pick "B3" off the mock (our own
-# drawing, OWN + 'TransformMoveVertical.svg', no transform). A note names a
+# panel trees (ZoneIn / ZoneOut re-picked once more, below); AND EIGHT OF
+# THOSE RE-PICKED AGAIN BY HIM 2026-11-22, send MM: TransformMoveVertical,
+# BlackSum and TimelineUseZoneOn (each re-picked once more, below), GoJump
+# (go-first-rtl, an arrow right to a dot), DeepHistory, Merge, and BboxPrev /
+# BboxNext (our own drawing, OWN + 'BboxPrev.svg', Next's mirrored); AND
+# TransformMoveVertical RE-PICKED AGAIN BY HIM 2026-11-23, send NN, his pick
+# "B3" off the mock (our own drawing, OWN + 'TransformMoveVertical.svg', no
+# transform); AND TEN ROWS
+# RE-PICKED BY HIM 2026-11-23, send OO, his picks off the mocks, every one
+# our own drawing, OWN + '<Enumerator>.svg': BlackSum ("S1"),
+# GoPreviousViewPage / GoNextViewPage ("P1", one source, Next's mirrored),
+# ZoneIn / ZoneOut ("K5"), TimelineUseZoneOn ("C2"), GoParentFolder ("U1"),
+# VcsCommit / VcsPull ("V1") and NetworkConnect ("N2"). A note names a
 # pick that is not the enumerator's own name and the date of a re-pick.
 SYM = 'symbolic/'
 ROSTER = [
@@ -108,12 +123,16 @@ ROSTER = [
     ('DocumentSave', 'devices/media-floppy.svg',
      'media-floppy, a floppy disk, his pick over document-save '
      '(re-picked 2026-11-22)'),
-    ('VcsPull', SYM + 'actions/arrow-pointing-at-line-down-symbolic.svg',
-     'no vcs-pull; an arrow down onto a line'),
-    ('NetworkConnect', SYM + 'status/network-transmit-receive-symbolic.svg',
-     'no network-connect; the two-way network arrows'),
-    ('VcsCommit', SYM + 'actions/arrow-pointing-away-from-line-up-symbolic.svg',
-     'no vcs-commit; an arrow up from a line'),
+    ('VcsPull', OWN + 'VcsPull.svg',
+     'no vcs-pull; ours, go-down\'s arrow, its tip landing on a line 2 '
+     'thick (re-picked 2026-11-23, send OO)'),
+    ('NetworkConnect', OWN + 'NetworkConnect.svg',
+     'no network-connect; ours, two arrows side by side, one up and one '
+     'down, in go-up\'s and go-down\'s grammar (re-picked 2026-11-23, '
+     'send OO)'),
+    ('VcsCommit', OWN + 'VcsCommit.svg',
+     'no vcs-commit; ours, go-up\'s arrow, its stem standing on a line 2 '
+     'thick (re-picked 2026-11-23, send OO)'),
     ('EditUndo', SYM + 'actions/edit-undo-symbolic.svg', ''),
     ('EditRedo', SYM + 'actions/edit-redo-symbolic.svg', ''),
     ('MediaRecord', SYM + 'actions/media-record-symbolic.svg', ''),
@@ -133,9 +152,10 @@ ROSTER = [
     ('GoJump', SYM + 'actions/go-first-rtl-symbolic.svg',
      'go-first-rtl, an arrow right to a dot, his pick over go-jump '
      '(re-picked 2026-11-22, send MM)'),
-    ('TimelineUseZoneOn', 'actions/go-first.svg',
-     'no timeline-use-zone-on; go-first, an arrow left to a dot, '
-     'go-first-rtl\'s exact mirror (re-picked 2026-11-22, send MM)'),
+    ('TimelineUseZoneOn', OWN + 'TimelineUseZoneOn.svg',
+     'no timeline-use-zone-on; ours, go-first\'s dot and the marker '
+     'pair\'s wall with nothing between, no arrow (re-picked 2026-11-23, '
+     'send OO)'),
     ('EditCut', SYM + 'actions/edit-cut-symbolic.svg', ''),
     ('Bookmarks', SYM + 'actions/bookmarks-symbolic.svg', ''),
     ('MusicNote16th', SYM + 'actions/music-note-single-symbolic.svg',
@@ -160,9 +180,9 @@ ROSTER = [
     ('DeepHistory', 'panel/network-unavailable.svg',
      'no deep-history; network-unavailable, a faded network port and a '
      'cross (re-picked 2026-11-22, send MM)'),
-    ('BlackSum', 'actions/games-difficult.svg',
-     'no black_sum; games-difficult, three bars rising '
-     '(re-picked 2026-11-22, send MM)'),
+    ('BlackSum', OWN + 'BlackSum.svg',
+     'no black_sum; ours, a sigma, no Papirus source (re-picked '
+     '2026-11-23, send OO)'),
     ('DocumentRevert', SYM + 'actions/document-revert-symbolic.svg', ''),
     ('KeyframePrevious', 'actions/keyframe-previous.svg',
      'a stopwatch and a triangle back (re-picked 2026-11-22)'),
@@ -215,20 +235,24 @@ ROSTER = [
     ('ZoomOriginal', SYM + 'actions/zoom-original-symbolic.svg', ''),
     ('GoPrevious', SYM + 'actions/go-previous-symbolic.svg', ''),
     ('GoNext', SYM + 'actions/go-next-symbolic.svg', ''),
-    ('GoParentFolder', 'actions/go-parent-folder.svg',
-     'the 16-px actions tree, no symbolic twin (re-picked 2026-11-17)'),
-    ('GoPreviousViewPage', SYM + 'actions/lucide-chevron-left-symbolic.svg',
-     'no go-previous-view-page; a chevron of its own'),
-    ('GoNextViewPage', SYM + 'actions/lucide-chevron-right-symbolic.svg',
-     'no go-next-view-page; a chevron of its own'),
+    ('GoParentFolder', OWN + 'GoParentFolder.svg',
+     'ours, folder-symbolic\'s folder with an up arrow cut out of its '
+     'body, his pick over go-parent-folder (re-picked 2026-11-23, send OO)'),
+    ('GoPreviousViewPage', OWN + 'GoPreviousViewPage.svg',
+     'no go-previous-view-page; ours, go-previous\'s head without its '
+     'stem, as drawn, pointing left (re-picked 2026-11-23, send OO)'),
+    ('GoNextViewPage', OWN + 'GoPreviousViewPage.svg',
+     'no go-next-view-page; ours, go-previous\'s head without its stem, '
+     'mirrored left-right to point right (re-picked 2026-11-23, send OO)',
+     'mirror'),
     ('EditReset', SYM + 'actions/object-rotate-left-symbolic.svg',
      'no edit-reset; the counter-clockwise arrow'),
-    ('ZoneIn', 'actions/view-readermode-active.svg',
-     'view-readermode-active, an open book and a dot, his pick over zone-in '
-     '(re-picked 2026-11-22)'),
-    ('ZoneOut', 'actions/view-readermode.svg',
-     'view-readermode, an open book, his pick over zone-out '
-     '(re-picked 2026-11-22)'),
+    ('ZoneIn', OWN + 'ZoneIn.svg',
+     'ours, view-readermode\'s open book with a plus in its own moat, his '
+     'pick over zone-in (re-picked 2026-11-23, send OO)'),
+    ('ZoneOut', OWN + 'ZoneOut.svg',
+     'ours, view-readermode\'s open book with a minus in its own moat, his '
+     'pick over zone-out (re-picked 2026-11-23, send OO)'),
     ('EditClear', SYM + 'actions/edit-clear-symbolic.svg', ''),
     ('Folder', SYM + 'places/folder-symbolic.svg', ''),
     ('DialogInformation', SYM + 'status/dialog-information-symbolic.svg', ''),

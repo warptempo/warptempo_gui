@@ -9,27 +9,35 @@ Files of other names here (this README, the licence text) are never looked up.
 
 ## Papirus, recolored
 
-EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT THE MARKER PAIR'S AND VALUE DRAG'S, OURS FROM PAPIRUS'S `go-first`
-(THE OWN DRAWINGS, below): papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the
-drawings first imported at commit 33d971eb are byte-identical in it), its 16-px symbolic set (`Papirus/16x16/symbolic/`, whose names are mostly links
-into the 16-px `actions/`, `apps/` and `panel/` trees) and drawings of the 16-px `actions/`, `devices/` and `panel/`
-trees where his pick lives there. THE ROSTER is the parked picks of session 123 (his sheets of session 140) WITH ROWS
-RE-PICKED BY HIM: 2026-11-17 ("the first alternative for each one"), TAB (`TabDetach`) `focus-windows`, two windows,
-and the picker's Up (`GoParentFolder`) `actions/go-parent-folder.svg`; 2026-11-22 (send II, off the alternates
-sheet; eight of them re-picked again the same day, send MM, each marked so), TWENTY-ONE ROWS — Previous / Next Marker
-(`BboxPrev` / `BboxNext`) OUR OWN arrow to a line (send MM, THE OWN DRAWINGS below), Next's mirrored to point right;
-Score (`ViewMediaLyrics`) `folder-music`, two beamed notes; Source (`ViewMediaTrack`) `media-optical`, a disc; Value
-Drag (`TransformMoveVertical`) OUR OWN double arrow, one head up and one down on one stem (re-picked once more
-2026-11-23, send NN, THE OWN DRAWINGS below); Follow
-(`GoJump`) `go-first-rtl`, an arrow right to a dot, and Restrict (`TimelineUseZoneOn`) `go-first`, its exact mirror
-(send MM); Jump to Defining (`GoJumpDeclaration`) `go-jump-declaration`; Grid Iterations (`Mathmode`)
-`insert-math-expression`; Target (`ViewMediaVisualization`) `kdenlive-show-audiothumb`; Magnification (`ZoomInY`)
-`audio-volume-high`; Warp (`Speedometer`) `slow_off`, a gauge; FIT's recall (`ZoomPrevious`) `view-restore`; Older /
-Newer (`KeyframePrevious` / `KeyframeNext`) `keyframe-previous` / `keyframe-next`; Session History (`DeepHistory`)
-`network-unavailable`, a faded network port and a cross (send MM); the score's Start / End (`ZoneIn` / `ZoneOut`)
-`view-readermode-active` / `view-readermode`; Save (`DocumentSave`) `media-floppy`; Cumulative (`BlackSum`)
-`games-difficult`, three bars rising (send MM); Flatten (`Merge`) `tool-brush`, a brush (send MM). Papirus names few
-of the enumerators' acts, so many rows are the nearest drawing by another name (the Note column).
+EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT THIRTEEN, OURS, FROM ELEVEN SOURCES OF OUR OWN (THE OWN DRAWINGS,
+below): papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the
+drawings first imported at commit 33d971eb are byte-identical in it), its 16-px symbolic set (`Papirus/16x16/symbolic/`,
+whose names are mostly links into the 16-px `actions/`, `apps/` and `panel/` trees) and drawings of the 16-px
+`actions/`, `devices/` and `panel/` trees where his pick lives there. THE ROSTER is the parked picks of session 123
+(his sheets of session 140) WITH ROWS RE-PICKED BY HIM: 2026-11-17 ("the first alternative for each one"), TAB
+(`TabDetach`) `focus-windows`, two windows, and the picker's Up (`GoParentFolder`), re-picked once more 2026-11-23
+(send OO, below); 2026-11-22 (send II, off the alternates sheet; eight of them re-picked again the same day, send MM, and some again
+2026-11-23, sends NN and OO, each marked so), TWENTY-ONE ROWS — Previous / Next Marker (`BboxPrev` / `BboxNext`) OUR
+OWN arrow to a line (send MM, THE OWN DRAWINGS below), Next's mirrored to point right; Score (`ViewMediaLyrics`)
+`folder-music`, two beamed notes; Source (`ViewMediaTrack`) `media-optical`, a disc; Value Drag
+(`TransformMoveVertical`) OUR OWN double arrow, one head up and one down on one stem (re-picked once more 2026-11-23,
+send NN, THE OWN DRAWINGS below); Follow (`GoJump`) `go-first-rtl`, an arrow right to a dot (send MM), and Restrict
+(`TimelineUseZoneOn`) OUR OWN dot and wall with nothing between, the playhead stopped at the window's edge, no arrow
+(re-picked once more 2026-11-23, send OO); Jump to Defining (`GoJumpDeclaration`) `go-jump-declaration`; Grid
+Iterations (`Mathmode`) `insert-math-expression`; Target (`ViewMediaVisualization`) `kdenlive-show-audiothumb`;
+Magnification (`ZoomInY`) `audio-volume-high`; Warp (`Speedometer`) `slow_off`, a gauge; FIT's recall
+(`ZoomPrevious`) `view-restore`; Older / Newer (`KeyframePrevious` / `KeyframeNext`) `keyframe-previous` /
+`keyframe-next`; Session History (`DeepHistory`) `network-unavailable`, a faded network port and a cross (send MM);
+the score's Start / End (`ZoneIn` / `ZoneOut`) OUR OWN, `view-readermode`'s open book with a plus or a minus in its
+own moat (re-picked once more 2026-11-23, send OO); Save (`DocumentSave`) `media-floppy`; Cumulative (`BlackSum`)
+OUR OWN sigma (re-picked once more 2026-11-23, send OO); Flatten (`Merge`) `tool-brush`, a brush (send MM); and
+2026-11-23 (send OO, his picks off the mocks; with Restrict, Start / End and Cumulative above, ten rows, every one
+OUR OWN, THE OWN DRAWINGS below), SIX MORE ROWS — the picker's Up (`GoParentFolder`) `folder-symbolic`'s folder with
+an up arrow cut out of it; the score's Previous / Next Page (`GoPreviousViewPage` / `GoNextViewPage`)
+`go-previous`'s head without its stem, Next's mirrored to point right; and SAVE's three history-view faces, Commit
+(`VcsCommit`) `go-up`'s arrow standing on a line, Pull (`VcsPull`) `go-down`'s arrow landing on it, and Check
+(`NetworkConnect`) the two arrows side by side, one up and one down. Papirus names few of the enumerators' acts, so
+many rows are the nearest drawing by another name (the Note column).
 
 WHICH SEAT WEARS WHICH DRAWING is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
 `render_player_button_icon` in `src/gui/paint_handler.cpp`, `score_viewer_button_icon` in `src/gui/score_viewer.h`),
@@ -52,27 +60,61 @@ It writes only its rows' files and removes nothing, so a rerun leaves the licenc
 THE TWO CARDS ARE IMPORTED AS PAPIRUS DRAWS THEM: Papirus's `dialog-information` and `dialog-error` already cut their
 mark (an i, an !) out of a filled disc, the mark's subpaths wound against the disc's, so one color shows it.
 EVERY FILE IS A DISTINCT DRAWING, by its written shapes and transforms rather than by name (the importer flags a
-share; there is none — the score viewer's page keys wear chevrons of their own, not GoPrevious's / GoNext's arrows).
-ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM: `BboxPrev` and `BboxNext` are both the marker pair's own drawing, Prev's as drawn
-and Next's mirrored (the importer notes the shared source).
+share; there is none — the score viewer's page keys wear our own head without a stem, not GoPrevious's / GoNext's
+arrows). ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM, twice: `BboxPrev` and `BboxNext` are both the marker
+pair's own drawing, and `GoPreviousViewPage` and `GoNextViewPage` both the score's own page head, Previous's as
+drawn and Next's mirrored (the importer notes the shared source).
 
-THE OWN DRAWINGS, the two sources that are no Papirus file, both made from Papirus's `actions/go-first.svg`. THE MARKER
-PAIR'S (architect 2026-11-22, send MM, his pick off the mock, "gap 0"), `tools/icons/own/BboxPrev.svg`: go-first with
-its dot turned into a line 2 of 16 wide (the arrow stem's thickness), rows 2 to 14 with square ends, the arrow's tip
-touching it, the whole ink re-centered in the 16 canvas (shifted 1.5 left, ink x 1.5 to 14.5); the arrow's path data is
-go-first's verbatim. VALUE DRAG'S (architect 2026-11-23, send NN, his pick off the mock, "B3"),
-`tools/icons/own/TransformMoveVertical.svg`: go-first's arrow turned upright, one head up and one head down
-superimposed on one stem, the stroke kept at 2 of 16, the arms shortened — each head 10 wide and 6.5 deep (go-first's
-head corner 6 in from the tip -> 5), tip to tip 16 (ink y 0 to 16, x 3 to 13), the heads 3 of 16 apart — drawn as
-the two arrows' union, one outline. Every shape of both already paints `currentColor`, and the importer reads each
-through the same recolor rule and check as a Papirus file; each one's XML comment, which names its derivation, rides
-into its written files.
+THE OWN DRAWINGS, the eleven sources that are no Papirus file, in `tools/icons/own/`, all at Papirus's weight in a 16
+x 16 box (the numbers below in its units), ten made from Papirus drawings whose path data they keep verbatim wherever
+a part is Papirus's, and one, the sigma, drawn outright. THE OWN DRAWINGS' STRAIGHT ARROWS WEAR PAPIRUS'S HEAD AND
+STEM (`go-previous` / `go-up` / `go-down` / `go-first`) rather than a solid triangle head, the shape he keeps for the
+keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings keep the heads Papirus drew.
+- THE MARKER PAIR'S (architect 2026-11-22, send MM, his pick off the mock, "gap 0"), `BboxPrev.svg`: `actions/go-first.svg`
+  with its dot turned into a line 2 wide (the arrow stem's thickness), rows 2 to 14 with square ends, the arrow's tip
+  touching it, the whole ink re-centered in the 16 canvas (shifted 1.5 left, ink x 1.5 to 14.5); the arrow's path data
+  is go-first's verbatim. Previous Marker wears it as drawn, Next Marker mirrored (THE TRANSFORM, below).
+- VALUE DRAG'S (architect 2026-11-23, send NN, his pick off the mock, "B3"), `TransformMoveVertical.svg`: go-first's
+  arrow turned upright, one head up and one head down superimposed on one stem, the stroke kept at 2, the arms
+  shortened — each head 10 wide and 6.5 deep (go-first's head corner 6 in from the tip -> 5), tip to tip 16 (ink y 0
+  to 16, x 3 to 13), the heads 3 apart — drawn as the two arrows' union, one outline.
+- CUMULATIVE'S (architect 2026-11-23, send OO, "S1"), `BlackSum.svg`: a sigma, OURS OUTRIGHT, no Papirus source (the
+  16-px set has no sigma under any name tried); its shape follows Material Design Icons' `sigma`, two bars and a
+  45-degree fold, no serifs, REDRAWN at Papirus's weight with none of its path data: 10 wide and 12 tall (ink x 3 to
+  13, y 2 to 14), the bars 2 thick, the fold 3 across (go-previous's arm).
+- THE SCORE'S PAGE KEYS' (send OO, "P1"), `GoPreviousViewPage.svg`: `actions/go-previous.svg`'s head with the stem
+  removed — its vertices 2,8 8,2 9.5,3.5 and 9.5,12.5 8,14 kept, the stem's two inner corners replaced by the arms'
+  own meeting point 5,8 — the ink re-centered (shifted 2.25 right, ink x 4.25 to 11.75, y 2 to 14). Previous Page
+  wears it as drawn, Next Page mirrored (THE TRANSFORM, below).
+- THE SCORE'S START AND END (send OO, "K5"), `ZoneIn.svg` and `ZoneOut.svg`: `actions/view-readermode.svg`'s open book,
+  its path verbatim, with a mark in the bottom-right corner standing in its own moat 1 wide cut out of the book — Start
+  a PLUS 6 x 6 at a stroke of 2 (ink x 10 to 16, y 10 to 16; the size of Papirus's own plus in `actions/folder-new.svg`),
+  End a MINUS, the plus's bar (ink x 10 to 16, y 12 to 14). The moat is a `<clipPath>` on the book (the box less the mark
+  grown by 1, even-odd), so the drawing keeps one color and no literal one.
+- RESTRICT'S (send OO, "C2"), `TimelineUseZoneOn.svg`: the playhead stopped at the window's edge, a dot and a wall
+  with nothing between and no arrow — go-first's dot (r 2) at cx 6, cy 8, the marker pair's wall, 2 wide, rows 2 to
+  14, at x 10 to 12, the clear gap 2, the ink x 4 to 12, centered. Follow keeps Papirus's `go-first-rtl`, an arrow
+  right to a dot.
+- THE PICKER'S UP (send OO, "U1"), `GoParentFolder.svg`: `symbolic/places/folder-symbolic.svg`'s folder, its path
+  verbatim, with a head-and-stem up arrow cut out of its body by the even-odd rule, as Papirus cuts its own folder
+  emblems (`folder-new`'s plus): the arrow 8 x 8 (x 4 to 12, y 4.5 to 12.5), the stroke 2, the head in Value Drag's
+  grammar (45-degree arms, square ends).
+- COMMIT AND PULL (send OO, "V1"), `VcsCommit.svg` and `VcsPull.svg`: `actions/go-up.svg`'s / `actions/go-down.svg`'s
+  arrow, its path verbatim, touching a line 2 thick and 12 wide (x 2 to 14) under it with nothing between (the marker
+  pair's "gap 0") — Commit's stem stands on the line, Pull's tip lands on it — the whole shifted up 1, the ink rows 1
+  to 15.
+- CHECK (send OO, "N2"), `NetworkConnect.svg`: Commit's arrow and Pull's side by side, one up and one down, no line,
+  each 8 wide and 14 tall at a stroke of 2 (ink x 0 to 16, y 1 to 15).
+
+Every shape of every own source already paints `currentColor` (the moats' clip paths included, which paint nothing),
+and the importer reads each through the same recolor rule and check as a Papirus file; each one's XML comment, which
+names its derivation, rides into its written files.
 
 THE TRANSFORM (architect 2026-11-22, send II). A row of the importer's table may name one, `mirror` (left-right, the
 one kind); the importer then wraps every child of the drawing's root `<svg>` in one `<g transform="...">` about the
 center of the drawing's box (its viewBox, else its width and height) — `matrix(-1 0 0 1 16 0)` for a 16-px drawing —
-and resvg applies it at the parse. The path data inside stays verbatim. One row wears it: `BboxNext`, the marker
-pair's own drawing mirrored (send MM).
+and resvg applies it at the parse. The path data inside stays verbatim. Two rows wear it: `BboxNext`, the marker
+pair's own drawing mirrored (send MM), and `GoNextViewPage`, the score's own page head mirrored (send OO).
 
 THE RECOLOR RULE. Every literal color in a `fill`, `stroke`, `stop-color`, `color`, `flood-color` or `lighting-color`
 attribute or `style` declaration is `currentColor`; `none`, `currentColor`, `inherit` and `url(...)` stay, and every
@@ -100,15 +142,15 @@ The source column is the file under the checkout's `Papirus/16x16/` (a source th
 resolves to), or, for an own drawing, its path in this repository; the sha256 is of the source's bytes, in
 papirus-icon-theme 20260801 (the run's checkout its installed package's icon root; every row kept from 33d971eb has
 the same bytes there) or in this repository. The files here are their recolored transcriptions, with no path data
-changed, one of them wrapped in its transform.
+changed, two of them wrapped in their transform.
 
 | Enumerator | Source (Papirus/16x16/, papirus-icon-theme 20260801; or ours, its repository path) | sha256 of the source | Note |
 |---|---|---|---|
 | `DocumentOpen` | `symbolic/actions/document-open-symbolic.svg (-> actions/document-open.svg)` | `f1917ee23fee2eb4cb5af289f6210cb945d97eb739c5a6c71f5ed94b38680867` |  |
 | `DocumentSave` | `devices/media-floppy.svg` | `d3fad61e83d95be524bb5273b30079ac40da971fd042028fa9830a3ce3927c41` | media-floppy, a floppy disk, his pick over document-save (re-picked 2026-11-22) |
-| `VcsPull` | `symbolic/actions/arrow-pointing-at-line-down-symbolic.svg` | `cac4c212c16b35932194517e326ae706a458b89dbdbab477325ff8e7db27f238` | no vcs-pull; an arrow down onto a line |
-| `NetworkConnect` | `symbolic/status/network-transmit-receive-symbolic.svg (-> panel/network-transmit-receive.svg)` | `5b97c62c89249267a0c190fa81503ef84b46a7148f7c422f6cd0d539d6e10d81` | no network-connect; the two-way network arrows |
-| `VcsCommit` | `symbolic/actions/arrow-pointing-away-from-line-up-symbolic.svg` | `18b60022d01e028e9243c5c34479b286b958ad8164e762d097b24715bc90b03b` | no vcs-commit; an arrow up from a line |
+| `VcsPull` | `tools/icons/own/VcsPull.svg` | `9d24b394659ae02c6f97efbef85aab9f0b157b91dd14496bbe001afe577f16f1` | no vcs-pull; ours, go-down's arrow, its tip landing on a line 2 thick (re-picked 2026-11-23, send OO) |
+| `NetworkConnect` | `tools/icons/own/NetworkConnect.svg` | `734454cabbe50fc6f9d63b057da8e833230860a906de1c2945bfa8c147fde04a` | no network-connect; ours, two arrows side by side, one up and one down, in go-up's and go-down's grammar (re-picked 2026-11-23, send OO) |
+| `VcsCommit` | `tools/icons/own/VcsCommit.svg` | `1a679df4864ef4c9455e7244a1227c125118346dc5de8271f7c06e96a39d456b` | no vcs-commit; ours, go-up's arrow, its stem standing on a line 2 thick (re-picked 2026-11-23, send OO) |
 | `EditUndo` | `symbolic/actions/edit-undo-symbolic.svg (-> actions/edit-undo.svg)` | `a9a6d908951617f2e557df2ebdcd4f9c0115577e1c8d2a29f2c78d710dfe34cb` |  |
 | `EditRedo` | `symbolic/actions/edit-redo-symbolic.svg (-> actions/edit-redo.svg)` | `e086ac6ba7eb5475557feb75ba735f57119f5243f9d41249184e6dc6fca5a6f2` |  |
 | `MediaRecord` | `symbolic/actions/media-record-symbolic.svg (-> actions/media-record.svg)` | `9fd1b5e4b13ac6ff139400e63f80a83025d579b88fb4806ead5fda5b4b002721` |  |
@@ -121,7 +163,7 @@ changed, one of them wrapped in its transform.
 | `ZoomPrevious` | `actions/view-restore.svg` | `e7dccd470d9e616c2e577fe4a0b6b8f0117495ba9e378883fe887c7aa8cd0867` | no zoom-previous; view-restore, four corners turned in (re-picked 2026-11-22) |
 | `ZoomInY` | `actions/audio-volume-high.svg` | `f3b25582adcb2b020cb83bb6576d1013d3ee64785af312bee6d7cf88c054b2c9` | no zoom-in-y; audio-volume-high, a speaker and its waves (re-picked 2026-11-22) |
 | `GoJump` | `symbolic/actions/go-first-rtl-symbolic.svg (-> actions/go-last.svg)` | `824fa2be70b7d33e089e7ee7817e8ddb3bdbddc7375cef7692a86030c7514b33` | go-first-rtl, an arrow right to a dot, his pick over go-jump (re-picked 2026-11-22, send MM) |
-| `TimelineUseZoneOn` | `actions/go-first.svg` | `1e70e6234a23875ec4c8b8f6ce4688c225701bcf2b837c2abf0506859416ce3c` | no timeline-use-zone-on; go-first, an arrow left to a dot, go-first-rtl's exact mirror (re-picked 2026-11-22, send MM) |
+| `TimelineUseZoneOn` | `tools/icons/own/TimelineUseZoneOn.svg` | `ce0fd3977a4ae6c07cbb6a141e5e4a0389ec434cbf7b6e4ba6a60b2ab80fb0b2` | no timeline-use-zone-on; ours, go-first's dot and the marker pair's wall with nothing between, no arrow (re-picked 2026-11-23, send OO) |
 | `EditCut` | `symbolic/actions/edit-cut-symbolic.svg (-> actions/edit-cut.svg)` | `a77a41d3c41147cfee808ef99dc97bc005e50c5bd7297cf60f27814a49681e38` |  |
 | `Bookmarks` | `symbolic/actions/bookmarks-symbolic.svg (-> actions/bookmarks.svg)` | `49c3baac8e3c875ec7f7f3975062f89c81c0d97ca8100b3e5266cb81dac489cd` |  |
 | `MusicNote16th` | `symbolic/actions/music-note-single-symbolic.svg` | `5d3b0f21a7313e430fdeb4995b071caa1cb3d9d234848df511359df983448be5` | no 16th note; the single note |
@@ -134,7 +176,7 @@ changed, one of them wrapped in its transform.
 | `ViewMediaLyrics` | `symbolic/places/folder-music-symbolic.svg` | `01ffd6e4ff6b24a1980a2965a62719df2d1c8faa1d314406baf73f15aefa387d` | no view-media-lyrics; folder-music, two beamed notes (re-picked 2026-11-22) |
 | `ShallowHistory` | `symbolic/actions/recent-symbolic.svg (-> actions/document-open-recent.svg)` | `9b16854c8865286e4aacac9086b0e1a595c9e2029d3e8e2c346fcb54be7af3b6` | no shallow-history; recent (a clock) |
 | `DeepHistory` | `panel/network-unavailable.svg (-> panel/network-wired-offline.svg)` | `ffd38f78062e37210ae4d1c38b985b7fdee67f71bfca5fbd99c2b319a37dee65` | no deep-history; network-unavailable, a faded network port and a cross (re-picked 2026-11-22, send MM) |
-| `BlackSum` | `actions/games-difficult.svg` | `a9a4ff45f2f735c988ff69c754d89af6bd0f585fe4ec140ea65543194b9c6b87` | no black_sum; games-difficult, three bars rising (re-picked 2026-11-22, send MM) |
+| `BlackSum` | `tools/icons/own/BlackSum.svg` | `8ac5edbed9f201f2f6533375eb78e2475e36532079ec01efb50a3913335042da` | no black_sum; ours, a sigma, no Papirus source (re-picked 2026-11-23, send OO) |
 | `DocumentRevert` | `symbolic/actions/document-revert-symbolic.svg (-> actions/document-revert.svg)` | `3ebae2dd73ccf42a5f0d12d7e5548e025f3dd2dced023a73f98fc60f67cd0118` |  |
 | `KeyframePrevious` | `actions/keyframe-previous.svg` | `dcb56a7748d890872d1e1566d192691b5c65300a9e13d629dbdd3830c33789c2` | a stopwatch and a triangle back (re-picked 2026-11-22) |
 | `KeyframeNext` | `actions/keyframe-next.svg` | `649db167a62c4c238f4febefb2f2cc376ada0bae88e9bb158187067f0c1f501d` | a stopwatch and a triangle forward (re-picked 2026-11-22) |
@@ -169,12 +211,12 @@ changed, one of them wrapped in its transform.
 | `ZoomOriginal` | `symbolic/actions/zoom-original-symbolic.svg (-> actions/zoom-original.svg)` | `4ccc559527aecd140fd0e8b5de9881ce6bfff978b4cd28be366f0b5d509a489f` |  |
 | `GoPrevious` | `symbolic/actions/go-previous-symbolic.svg (-> actions/go-previous.svg)` | `5bc42db4e2cbf4bdc12a91f3430cf01447ba558645cffd499b318861df771d92` |  |
 | `GoNext` | `symbolic/actions/go-next-symbolic.svg (-> actions/go-next.svg)` | `9a99f8bd24357cf56535e3c50d97874056c5928f12bca038025316309597ba07` |  |
-| `GoParentFolder` | `actions/go-parent-folder.svg` | `21769fc225e7827e63393f8185e827a70d96a8d08d47cd712bf16deb4f6f89f8` | the 16-px actions tree, no symbolic twin (re-picked 2026-11-17) |
-| `GoPreviousViewPage` | `symbolic/actions/lucide-chevron-left-symbolic.svg` | `8d430458fc57a73c41df6abbe8537e39af0234c74edd01b21d25ecf811438395` | no go-previous-view-page; a chevron of its own |
-| `GoNextViewPage` | `symbolic/actions/lucide-chevron-right-symbolic.svg` | `bc4e87c2eb4f0cfe9f59fa527174e22a2420591d442e85e9b8ffb1623e6a60ee` | no go-next-view-page; a chevron of its own |
+| `GoParentFolder` | `tools/icons/own/GoParentFolder.svg` | `4ce683ce9e12073ec478a87fa7c0c36d65d983a3ced004fc3ac4011f0528f02f` | ours, folder-symbolic's folder with an up arrow cut out of its body, his pick over go-parent-folder (re-picked 2026-11-23, send OO) |
+| `GoPreviousViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `2ace6a993255466adb18f55cea123a41c7e84321dcd25e5e4090b503718e9aa5` | no go-previous-view-page; ours, go-previous's head without its stem, as drawn, pointing left (re-picked 2026-11-23, send OO) |
+| `GoNextViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `2ace6a993255466adb18f55cea123a41c7e84321dcd25e5e4090b503718e9aa5` | no go-next-view-page; ours, go-previous's head without its stem, mirrored left-right to point right (re-picked 2026-11-23, send OO); one source with GoPreviousViewPage, another drawing by the transform |
 | `EditReset` | `symbolic/actions/object-rotate-left-symbolic.svg (-> actions/object-rotate-left.svg)` | `d99b6f9e536672447d619a3d789b7b459a0bb2f0accd9e4c5c0a4570775a005b` | no edit-reset; the counter-clockwise arrow |
-| `ZoneIn` | `actions/view-readermode-active.svg` | `04727ace22235ef7066825fb910949500ac8bf924f71648fde357d99c1fb57af` | view-readermode-active, an open book and a dot, his pick over zone-in (re-picked 2026-11-22) |
-| `ZoneOut` | `actions/view-readermode.svg` | `82c7174d12e1636afb96658e288e6ca9c2452575820ca551b23d22efa43c1999` | view-readermode, an open book, his pick over zone-out (re-picked 2026-11-22) |
+| `ZoneIn` | `tools/icons/own/ZoneIn.svg` | `de0b3ba35d9c2105856de8755e179baa888934c42b2ac315d5342a57e66b4db0` | ours, view-readermode's open book with a plus in its own moat, his pick over zone-in (re-picked 2026-11-23, send OO) |
+| `ZoneOut` | `tools/icons/own/ZoneOut.svg` | `42c9aeae9564c29081fae2fbce03c9fe8d5eee86b5ab9987fe5bbba67710790f` | ours, view-readermode's open book with a minus in its own moat, his pick over zone-out (re-picked 2026-11-23, send OO) |
 | `EditClear` | `symbolic/actions/edit-clear-symbolic.svg (-> actions/edit-clear.svg)` | `c51332adb04993f9984a1e2c49aa6fd1ba8657f3e298c340a90b97a9b5256e69` |  |
 | `Folder` | `symbolic/places/folder-symbolic.svg` | `7820cddb76eb60b759d9c82dd35036898363588e7b3de8f0f8643d9e7de4dff3` |  |
 | `DialogInformation` | `symbolic/status/dialog-information-symbolic.svg (-> panel/state-information.svg)` | `2b8d444c6d5b27562d3b9042bd6c0e0e404eb941fa18dd58d7a18a885f35c9a1` |  |
@@ -196,9 +238,10 @@ look's tones, `kArcDarkTones` in `src/gui/gui_theme.h` (its `.text` and `.ground
 ## Licence
 
 Papirus's icons are licensed under the GNU General Public License, version 3 — GPL-3.0; copyright the papirus-icon-theme
-authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above), the marker pair's and
-Value Drag's of our own drawings, each itself a modified copy of Papirus's `go-first` under the same licence
-(`tools/icons/own/BboxPrev.svg`, `tools/icons/own/TransformMoveVertical.svg`). The licence text is
+authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above); thirteen are of
+our own drawings (`tools/icons/own/`, THE OWN DRAWINGS above): ten of those sources are themselves modified copies of
+Papirus drawings under the same licence, and Cumulative's sigma (`tools/icons/own/BlackSum.svg`) is ours outright,
+under the repository's own licence. The licence text is
 `LICENSE-GPL-3.txt` (the checkout's `LICENSE`, verbatim), the same licence as the repository's own `LICENSE`.
 
 The drawings are data, read at run time (the launcher's at build time) and never linked or compiled into the

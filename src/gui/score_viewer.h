@@ -444,10 +444,12 @@ inline bool score_viewer_button_enabled(const AppState& a,
 // THE KEYS' GLYPHS (architect 2026-11-01; the acts' drawings as ruled
 // 2026-11-02, icons.h's roster), on each key's face, the act's name the
 // tooltip's (score_viewer_button_hint below): PREV / NEXT
-// GoPreviousViewPage / GoNextViewPage (the page road, chevrons of their
-// own), BACK / FWD MediaSeekBackward / MediaSeekForward, RESET EditReset,
-// START ZoneIn, the open book with its dot, END ZoneOut, the open book
-// (architect 2026-11-22: his re-picks, the importer's table).
+// GoPreviousViewPage / GoNextViewPage (the page road, our own head
+// without a stem, Next's mirrored: architect 2026-11-23), BACK / FWD
+// MediaSeekBackward / MediaSeekForward, RESET EditReset, START ZoneIn, the
+// open book with a plus in its own moat, END ZoneOut, the open book with a
+// minus (architect 2026-11-23: his re-picks, our own drawings in the
+// importer's table).
 // PLAY / PAUSE's is the render player's Play key's, by its
 // face (render_player_button_icon, paint_handler.cpp, which the painter
 // asks); this table's PlayPause the resting MediaPlaybackStart. The skips

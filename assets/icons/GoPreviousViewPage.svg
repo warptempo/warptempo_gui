@@ -1,3 +1,17 @@
-<svg width="16" height="16" version="1.1" xmlns="http://www.w3.org/2000/svg">
- <path d="m10.55468 1.1679687a1 1 0 0 0-1.3867192 0.2773438l-4.0000001 6a1.0001 1.0001 0 0 0 0 1.109375l4.0000001 6.0000005a1 1 0 0 0 1.3867192 0.277343 1 1 0 0 0 0.277343-1.386718l-3.6308591-5.445313 3.6308591-5.4453125a1 1 0 0 0-0.277343-1.3867188z" style="fill:currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+ <!-- THE SCORE'S PAGE KEYS' DRAWING, OURS (architect 2026-11-23, send OO,
+      his pick off the mock, "P1"): Papirus's actions/go-previous.svg
+      (papirus-icon-theme 20260801) head with its stem removed, the set's
+      head-and-stem arrow kept in place of a solid triangle: its vertices
+      2,8 8,2 9.5,3.5 and 9.5,12.5 8,14 kept verbatim, the stem's two inner
+      corners (6,7 and 6,9) replaced by the arms' own meeting point 5,8, the
+      whole ink re-centered in the 16 canvas (shifted 2.25 right, its ink x
+      4.25 to 11.75, y 2 to 14). Previous Page (GoPreviousViewPage) wears it
+      as drawn and Next Page (GoNextViewPage) its exact left-right mirror,
+      the importer's transform (tools/icons/import_papirus.py). A modified
+      copy of a papirus-icon-theme drawing, GPL-3.0
+      (assets/icons/LICENSE-GPL-3.txt). -->
+ <g transform="translate(2.25,0)">
+  <path style="fill:currentColor" d="M 2,8 8,2 9.5,3.5 5,8 9.5,12.5 8,14 Z"/>
+ </g>
 </svg>

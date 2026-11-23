@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+ <!-- PULL'S DRAWING, OURS (architect 2026-11-23, send OO, his pick off the
+      mock, "V1"): Papirus's actions/go-down.svg (papirus-icon-theme
+      20260801), the arrow, its path data verbatim, its tip landing on a line
+      2 of 16 thick and 12 wide (x 2 to 14) with nothing between, the marker
+      pair's "gap 0"; the whole shifted up 1 so the ink is rows 1 to 15.
+      Pull (VcsPull) wears it as drawn; Commit (VcsCommit) is go-up's arrow
+      standing on the same line (tools/icons/own/VcsCommit.svg;
+      tools/icons/import_papirus.py). A modified copy of a papirus-icon-theme
+      drawing, GPL-3.0 (assets/icons/LICENSE-GPL-3.txt). -->
+ <g transform="translate(0,-1)">
+  <path style="fill:currentColor" d="M 7,2 V 10 L 3.5,6.5 2,8 8,14 14,8 12.5,6.5 9,10 V 2 Z"/>
+  <rect style="fill:currentColor" x="2" y="14" width="12" height="2"/>
+ </g>
+</svg>
