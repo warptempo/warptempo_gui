@@ -51,7 +51,8 @@
 // and the bpm bracket's own parse plus the bpm derivation's refusal — so an
 // out-of-bracket value on disk is a state the GUI can never produce, and it
 // hard-fails the load (stderr, first error only).
-// Bare Up/Down is the whole tempo-step surface and its clamp lives at
+// Bare Up/Down and the Value Drag are the whole tempo-step surface, the drag
+// stepping through the arrows' own landing owner; the clamp lives at
 // GuiWarpMarkersOps::adjust_tempo_cents (architect approval 2026-08-12,
 // comment only).
 inline constexpr int64_t kTempoMinCents = 25;  // marker tempo, derived base tempo

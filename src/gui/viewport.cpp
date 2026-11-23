@@ -535,9 +535,12 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
 //
 // THE WRITE ALONE, WITH NO AUDITION END IN IT, and the callers who want it
 // that way are the ones whose write is NOT a movement (2026-08-19) —
-// EIGHT, in two families:
+// NINE ROUTES, in two families (counted by route; the three tempo routes
+// share one call site, warp_tempo_write_tail, so the direct call sites are
+// seven):
 //   * THE MAP-CHANGE RE-LANDS, all in a target-view re-warp tail: both arms of
-//     the Up/Down tempo cent step (warpmarkers_ops.cpp) and
+//     the Up/Down tempo cent step (warpmarkers_ops.cpp) and the tempo Value
+//     Drag (value_drag.cpp), all three through warp_tempo_write_tail, and
 //     the WARP STATUS/VALUE FAMILY admitted in W+target with them — Ctrl+D,
 //     Ctrl+N and Delete (warpmarkers_ops.cpp) and the flag editor's payload
 //     commit (flag_editor.cpp), whose shared contract is stated at the head of
@@ -546,7 +549,7 @@ int64_t edge_aligned_viewport_start(int64_t subject, double q, int w,
 //     does — the SETTINGS ENGINE COMMIT (settings_editor.cpp; the
 //     engine scale is a warp-map input) and the `h` view's WARP REVERT
 //     (input_key_dispatch.cpp; its phase arm is carved out, phase resets being
-//     no map input). In five of the eight the focus does not change and the
+//     no map input). In six of the nine the focus does not change and the
 //     playhead does not leave it — the marker's IMAGE moved out from under the
 //     cursor and the cursor follows it into the new domain. That is the `t`
 //     flip's translation in another spelling, and a translation is not a

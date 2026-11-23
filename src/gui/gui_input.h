@@ -583,8 +583,8 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
             return bare;
 
         // THE SETTINGS PAGE (architect 2026-10-28: "plain press only"; its
-        // shifted twin, Shift+;, is unbound and silent); the load in place /
-        // render player, bare alone.
+        // shifted twin, Shift+;, is unbound and silent); the `h` view's load
+        // in place, bare alone.
         case GuiKeys::Semicolon: return bare;
         case GuiKeys::Apostrophe: return bare;
         // Toggle Waveform Magnification (architect 2026-09-22), on the
@@ -688,7 +688,7 @@ static_assert(!chord_is_bound(GuiKeys::Escape,
                   !chord_is_bound(GuiKeys::Escape,
                                   GuiInputState{false, true, false}, false),
               "Esc is bare-exact: no modified Escape binds anywhere, Ctrl+Esc "
-              "included since it retired on 2026-09-01");
+              "included, so the editors' cancel is one key");
 static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::C,
                                   GuiInputState{true, false, false}, false) &&
@@ -698,7 +698,7 @@ static_assert(chord_is_bound(GuiKeys::C, GuiInputState{}, false) &&
                                   GuiInputState{true, true, false}, false) &&
                   chord_is_bound(GuiKeys::F, GuiInputState{}, false),
               "bare `c` centres; Ctrl+C, Shift+C and Ctrl+Shift+C bind nothing "
-              "in the main window (the copy is Ctrl+Shift+J since 2026-10-14); "
+              "in the main window, the value copy being Ctrl+Shift+J; "
               "bare `f` is the follow lamp");
 static_assert(chord_is_bound(GuiKeys::Home, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::End, GuiInputState{}, false) &&
@@ -768,8 +768,8 @@ static_assert(chord_is_bound(GuiKeys::Digit0, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Digit0,
                                   GuiInputState{true, true, true}, false),
               "bare `0` is Zoom to Fit and Shift+0 frames the trim; "
-              "Ctrl+Shift+0, the reset until 2026-11-08, and every other "
-              "decoration of `0` bind nothing");
+              "Ctrl+Shift+0 and every other decoration of `0` bind nothing, "
+              "the trim's reset being PRESETS' hold");
 static_assert(chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Minus, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Equal,
@@ -784,9 +784,9 @@ static_assert(chord_is_bound(GuiKeys::Equal, GuiInputState{}, false) &&
                                   GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Minus,
                                   GuiInputState{false, false, true}, false),
-              "bare `=` / `-` step the zoom one level in / out; Shift+= / "
-              "Shift+-, the two-level step until 2026-11-08, and every ctrl "
-              "or alt form bind nothing");
+              "bare `=` / `-` step the zoom one level in / out, one level a "
+              "press; Shift+= / Shift+- and every ctrl or alt form bind "
+              "nothing");
 // `l` binds bare only, so its anchor witnesses the "only" whole: the one
 // positive, then EVERY non-bare combination of the three modifiers as a
 // negative. A widening onto any of them trips here.
@@ -985,9 +985,9 @@ static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                                   GuiInputState{false, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Up,
                                   GuiInputState{true, true, false}, false),
-              "a vertical arrow binds bare alone — one unit — and Ctrl+Up / "
-              "Ctrl+Down (the three-step until 2026-11-08), Shift and "
-              "Ctrl+Shift spell nothing");
+              "a vertical arrow binds bare alone — one unit, the step's whole "
+              "ladder — and Ctrl+Up / Ctrl+Down, Shift and Ctrl+Shift spell "
+              "nothing");
 static_assert(chord_is_bound(GuiKeys::Left, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Right, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Left,
@@ -1000,11 +1000,11 @@ static_assert(chord_is_bound(GuiKeys::Left, GuiInputState{}, false) &&
                                   GuiInputState{true, true, false}, false) &&
                   !chord_is_bound(GuiKeys::Right,
                                   GuiInputState{false, true, false}, true),
-              "Left / Right bind bare only on every column — the horizontal "
-              "ladder is retired, so Shift and Ctrl+Shift spell nothing, and "
-              "Ctrl+Left / Ctrl+Right are unbound since 2026-09-23: the "
-              "nudge's camera is the hold posture's (AppState::camera_hold), "
-              "not a modifier's");
+              "Left / Right bind bare only on every column — placement is "
+              "graphical, so there is no horizontal ladder and Shift and "
+              "Ctrl+Shift spell nothing, and Ctrl+Left / Ctrl+Right are "
+              "unbound: the nudge's camera is the hold posture's "
+              "(AppState::camera_hold), not a modifier's");
 // THE MODE TERM, pinned in both directions (2026-09-01). Bare `v` is the
 // architect's own instance — the revert act, which binds nothing outside the
 // view, so the gates below it must say nothing there.

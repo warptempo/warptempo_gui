@@ -909,7 +909,8 @@ struct GuiPaintHandler {
     // viewport. This is the ONE authoritative enumeration of the
     // PLATE-REGISTERED overlays (derived by grep over this accessor's
     // callers): the phase-reset ring (through
-    // phase_reset_overlay_band), the playhead head (the ruler pass), the
+    // phase_reset_overlay_band), the ruler pass (its ticks, its digits, the
+    // playhead head and the hover line's triangle, paint_ruler_row), the
     // cursor playhead, the scanner — plus its two per-frame narrow damage sites in
     // main.cpp and the two seams wired there (plate_playhead_column_,
     // plate_scanner_x_) — the strip-drag anchor and the waveform's hover

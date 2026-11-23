@@ -367,8 +367,8 @@ inline GuiRect surface_rect(const AppState& a) {
 // row_at's containment — so a row can never paint onto the lines round the
 // view or be pressed through them. AT SCROLL 0 THE HEAD PAD STANDS ON THE
 // VIEW'S TOP ROWS AND THE FIRST ROW UNDER IT (head_pad_px), no header above
-// (architect 2026-10-14: a folder name over the player's list "was icon
-// padding but no icon, the dividing line sits awkwardly").
+// — no folder name over the player's list (architect 2026-10-14: "it was
+// icon padding but no icon, the dividing line sits awkwardly").
 inline GuiRect content_rect(const AppState& a) {
     return modal_box_interior_rect(a);
 }

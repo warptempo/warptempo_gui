@@ -756,11 +756,7 @@ bool redesign_button_hit(const AppState& app, RedesignButton id,
 // the one-finger ctrl zoom (GuiTouchNavFrame::ctrl), the trim bar's barrel
 // bound set and every other waveform barrel rule stay at their owners, none
 // of which reads this gate.
-bool chrome_band_modifiers_refused(const AppState& app, int x, int y,
-                                   GuiInputState mods) {
-    (void)app;
-    (void)x;
-    (void)y;
+bool chrome_band_modifiers_refused(GuiInputState mods) {
     return mods.ctrl;
 }
 
@@ -4646,7 +4642,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // barrel's ctrl on both icon rows (architect 2026-11-08, the barrel
     // no chrome modifier).
     const auto claim_button_row_press = [&] {
-        if (chrome_band_modifiers_refused(app, x, y, mods)) return;
+        if (chrome_band_modifiers_refused(mods)) return;
         if (arm_redesign_press(at)) return;
         if (arm_level_case_press(at)) return;
         arm_clip_lamp_press(at);

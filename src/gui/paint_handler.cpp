@@ -350,8 +350,8 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 // (`enabled` false — no folder or a failed load, and the roster's blanket
 // greys: a load, an overlay, the on-screen keyboard standing, a question's
 // page or the progress page; roster_greyed_whole, architect 2026-11-20): THE
-// NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry; the mix per
-// channel of the row's words, rounded) and NO LINE.
+// NUMBER AT 35 % OVER THE FILL (Arc's insensitive entry; the row's
+// `entry_dim_text`, its arithmetic at its line, gui_theme.h) and NO LINE.
 // The run shaped through the memo (memoized_run: a few dozen spellings).
 // THE REPAINT: every change of the case's level damages its box explicitly
 // (GuiInputHandler::apply_level_case) — the per-tick comparator watches no
@@ -366,8 +366,7 @@ void paint_level_case(cairo_t* cr, const GuiRect& entry, bool enabled,
     const text_shape::SharedRun run =
         text_shape::memoized_run(font, format_level_db_face(level_db));
     const GuiThemeTones& tones = kArcDarkTones;
-    const uint32_t ink =
-        enabled ? tones.text : mix_word(tones.ruler_face, tones.text, 0.35);
+    const uint32_t ink = enabled ? tones.text : tones.entry_dim_text;
     cairo_save(cr);
     cairo_rectangle(cr, entry.x, entry.y, entry.w, entry.h);
     cairo_clip(cr);
@@ -656,9 +655,10 @@ AppState::RedesignButtonFace& publish_button_face(
 }
 
 // THE TOP ICON ROW (architect 2026-10-09, the program is Cool Edit;
-// program_spec.h's head). Its metrics — the case and its glyph seat, Arc's
-// toolbar pads and the run gap — live in render.h's program block, where
-// the lane table and the bottom icon row read them too; its ends are the
+// program_spec.h's head). Its metrics — the case and its glyph seat and the
+// run gap (render.h's THE KEY'S BOX AND THE RUN GAP), Arc's toolbar pads
+// (render.h's ARC'S TOOLBAR PADS) — live in render.h, where the lane table
+// and the bottom icon row read them too; its ends are the
 // panel's seats (render.h's well_columns, 2026-10-23); this row spells none
 // of them.
 //
@@ -1832,8 +1832,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // THE BUTTONS ARE THE TOP ICON ROW'S ("the same size as the other icon
 // buttons": bigger finger targets without stealing waveform height): the
 // program's key (36 x 28 W, render.h's kKeyWidthW x kKeyHeightW, 72 x 56
-// device px on the tablet) — read from the same accessors (render.h's
-// program block) so the rows cannot drift apart — on THE ROW'S OWN GROUND,
+// device px on the tablet) — read from the same accessors (render.h's THE
+// KEY'S BOX AND THE RUN GAP) so the rows cannot drift apart — on THE ROW'S OWN GROUND,
 // Arc's pad above the case and the same pad below it (7 W each side,
 // architect 2026-11-20; render.h's ARC'S TOOLBAR PADS).
 //
@@ -3545,7 +3545,8 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
 //     well's line.
 //   MODEL, from Reaper (architect 2026-08-01): WHERE the ticks go. A round
 //     ladder of labeled steps, the smallest rung whose label pitch clears the
-//     minimum, and eight binary minors inside each step; the labels' text.
+//     minimum, each step halved three times into eight parts (its major and
+//     seven interior minors); the labels' text.
 //
 // PAINT-ONLY. Nothing here snaps, authors, or hit-tests: the ladder decides
 // pixels and nothing else. (The lane keeps its PLACEMENT-LANE role for the
@@ -3562,12 +3563,14 @@ constexpr int64_t kRulerLadderMs[] = {
     125, 250, 500, 1000, 2000, 5000, 10000, 30000,
     60000, 120000, 300000, 600000, 1800000, 3600000,
 };
-// Eight binary minors inside each labeled step: the step halves three times, so
-// a minor is always a musically-round fraction of its label.
+// Eight binary parts to each labeled step, the comb's eight ticks a step (the
+// major and seven interior minors): the step halves three times, so a minor
+// is always a musically-round fraction of its label.
 constexpr int  kRulerMinorsPerStep = 8;
 // The pitch rule, stated on the MINOR because that is the crowding that matters:
 // a rung is admissible while its minors stay at least this far apart, which puts
-// its labels at least 8x that apart. 14 W, A WHOLE W (architect 2026-11-05:
+// its labels at least 8x that apart, 112 W (224 device px on the tablet) — save
+// the coarsest rung's fallback below. 14 W, A WHOLE W (architect 2026-11-05:
 // "round each up" — every authored number a whole W, as kHoverSlopW,
 // render.h, and kNavZoomPxPerLevel, app_state.h): a gesture threshold, a
 // double compare against gui_scale_factor(), not a painted length — the
@@ -3944,7 +3947,9 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     // stands at or left of column 0, and runs ONE STEP PAST the last column
     // (the loop's break), the major just right of the end whose label's left
     // half reaches in — a label is narrower than a step (the ladder keeps a
-    // step at least 72 W), so one step each side is all there is.
+    // step at least 112 W, 224 device px, kRulerMinMinorPitchPx times the
+    // eight parts, save the coarsest rung's fallback at an absurd zoom-out),
+    // so one step each side is all there is.
     // THE TICK'S WIDTH IS THE CANVAS'S LINE, ONE W (hairline_px, the line
     // rule; architect 2026-11-04, the unit), CENTERED ON ITS TIME'S EXACT
     // PLACE (architect 2026-11-14; waveform_line_span).
@@ -4971,7 +4976,8 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
     // zones just published, before the pill and the caps are stamped
     // (resolve_trim_bar_lift; AppState::TrimBarHover's `lift_pending`).
     // NO PLAYHEAD IN THE BAR (architect 2026-10-09, "no dots on the
-    // trim bar"; render.h's view-bar paragraph).
+    // trim bar"; render.h's THE CANVAS COLUMN: THE TRIM BAR, THE RULER, THE
+    // PLAYHEAD).
     render_trim_flags(cr, top_strip, trim_row, wave_rect,
                       basis.vp_start_frame, basis.vp_end_frame,
                       basis.lattice_origin, trim,

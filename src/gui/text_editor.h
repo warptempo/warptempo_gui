@@ -136,9 +136,11 @@ namespace text_editor {
 // canonical-line parser that this cap is derived from, so no over-cap
 // payload can reach the editor at all.
 static_assert(kTempoMaxCents < 1000,
-              "a tempo's integer part no longer fits one digit");
+              "a tempo's integer part fits one digit, as kMaxPendingChars's "
+              "derivation assumes");
 static_assert(kIterDeltaMaxCents < 1000,
-              "a deviation term's integer part no longer fits one digit");
+              "a deviation term's integer part fits one digit, as "
+              "kMaxPendingChars's derivation assumes");
 constexpr int kMaxPendingChars = 108;
 // The ITERATION BOUND editor (a double tap, or Enter — EDIT on glass — on
 // one of the two bound cells a flag grows in iteration mode, the addressed
@@ -158,7 +160,8 @@ constexpr int kMaxPendingChars = 108;
 // (The sixth character is refused by the field-full card, the truthful
 // refusal for a field that could never commit one.)
 static_assert(kTempoMaxCents - kTempoMinCents < 1000,
-              "an iteration bound's integer part no longer fits one digit");
+              "an iteration bound's integer part fits one digit, so five "
+              "bytes hold its widest spelling");
 constexpr int kMaxPendingCharsIterBound = 5;
 // THE SAME KIND ON THE PHASE-RESET COLUMN (2026-09-09), whose bracket is a
 // count of LATTICE HOPS rather than a tempo delta: its grammar is EXACTLY a
@@ -174,7 +177,8 @@ constexpr int kMaxPendingCharsIterBound = 5;
 // below: ONE Kind serves both columns, and this module cannot see the app to
 // ask which column is live.
 static_assert(kIterHopMax < 10,
-              "a hop bound's magnitude no longer fits one digit");
+              "a hop bound's magnitude fits one digit, so two bytes hold its "
+              "widest spelling");
 constexpr int kMaxPendingCharsIterHop = 2;
 // THE BPM FORM'S FIELDS (architect 2026-10-29), ONE CAP PER FIELD, the
 // session's `target` naming the field (GuiBpmField, warpmarkers.h — the
@@ -203,9 +207,10 @@ constexpr int kMaxPendingCharsIterHop = 2;
 // fourteen bytes past anything its commit admits, the advertised-typing
 // defect this module's head rules out.
 static_assert(kBpmBeatsMax < 10000,
-              "a beats count no longer fits four digits");
+              "a beats count fits four digits, the BEATS field's cap");
 static_assert(kBpmMin >= 1.0 && kBpmMax < 1000.0,
-              "a bpm bound no longer fits three significant integer digits");
+              "a bpm bound has at most three integer digits, the LOW / HIGH "
+              "cap's derivation");
 constexpr int kMaxPendingCharsBpmField[3] = {
     4,    // 9999
     18,   // 10.000000000000002

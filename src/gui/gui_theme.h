@@ -12,7 +12,7 @@
 // (palette_file.h's fill table); the few readers that need the sRGB word
 // itself (the glyph road's ink, key_ink in materials.h; the plate's two
 // inks, waveform_plate_inks; the carried fills' opacity, tone_alpha;
-// NOISE's dimmed number) read the row directly.
+// NOISE's dimmed number, entry_dim_text) read the row directly.
 
 // Every sRGB word the GUI paints (0xRRGGBB; THE THREE CARRIED FILLS
 // 0xAARRGGBB, below). What reads each member and where its number comes from
@@ -27,6 +27,7 @@ struct GuiThemeTones {
     uint32_t inactive_cue_label_hover;
     uint32_t text_on_lit;
     uint32_t key_dim_ink;
+    uint32_t entry_dim_text;
     uint32_t key_dim_face;
     uint32_t key_dim_border;
     uint32_t text_on_lit_dim;
@@ -123,7 +124,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     .body_face = 0x383C4A,
     // THE FONT COLOR: Arc's $fg_color (`@define-color fg_color #D3DAE3`).
     // Every word, digit and drawing the chrome prints — the palette's
-    // `text`, `label` and `field_text`; a key's drawing at rest (key_ink,
+    // `text` and `field_text`; a key's drawing at rest (key_ink,
     // materials.h); NOISE's number — and the launcher icon's ink
     // (apk/build_apk.sh).
     .text = 0xD3DAE3,
@@ -157,6 +158,11 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // B3b, 2026-11-18; architect 2026-11-19), opaque over the key
     // face (key_ink, materials.h; the palette's `key_dim_ink`).
     .key_dim_ink = 0x7F8591,
+    // A DISABLED ENTRY'S NUMBER, OURS: the level case's number while NOISE
+    // is greyed (paint_level_case, paint_handler.cpp), after Arc's
+    // insensitive entry — the font color D3DAE3 at 35 % over the entry's
+    // fill 404552 -> 737985.
+    .entry_dim_text = 0x737985,
     // A DISABLED KEY'S AND WORD BUTTON'S FACE: Arc's `button:disabled {
     // background-color: rgba(68, 74, 88, 0.55); }` — the key face 444A58 at
     // 55 % over the body tone 383C4A -> 3F4452 (one level off on two

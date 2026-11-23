@@ -1,9 +1,9 @@
 #pragma once
 
 // The platform seam's ONE include: the backend class is GuiPlatform,
-// platform_android.h's — THE ONE BACKEND since the laptop GUI's drop
-// (architect 2026-10-30: the tablet the one platform, the GL canvas the one
-// road). A consumer includes this and never the backend header.
+// platform_android.h's — THE ONE BACKEND (architect 2026-10-30: the tablet
+// the one platform, the GL canvas the one road). A consumer includes this
+// and never the backend header.
 //
 // THE LOOP CONTRACT (architect 2026-08-27, with the project model): ONE
 // GuiPlatform per process, MANY run() calls. gui_main (main.cpp) constructs

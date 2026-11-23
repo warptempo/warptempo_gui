@@ -1044,20 +1044,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
             return;
         case MarkerCell::Lower:
         case MarkerCell::Upper:
-            // A bound cell addressed on a marker whose kind carries no
-            // bracket cards the bound step's own kind sentence — a fact about
-            // the marker's kind, behind a live face, the Up/Down pair's
-            // shape. It is the pair's BELT: a bound cell is addressed only
-            // where its cell paints, and while the lamp stands the lock
-            // refuses every act that could take the carrier away, Ctrl+D
-            // included — so the predicate has no reachable answer. The
-            // predicate forks on the live column, so this arm opens the
-            // addressed cell's editor on either.
-            if (const char* refusal = iter_bound_step_kind_refusal(app)) {
-                notifications.notify(AppState::NotificationClass::Normal,
-                                     refusal);
-                return;
-            }
+            // A bound cell is addressed only where its cell paints, on a
+            // marker whose kind carries a bracket, and while the lamp stands
+            // the lock refuses every act that could take the carrier away,
+            // Ctrl+D included. This arm opens the addressed cell's editor on
+            // either column.
             flag_editor.enter_iter_bound_edit(app.active_markers_view, focus,
                                               app.addressed_cell);
             return;
@@ -1712,31 +1703,23 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // BARE `'` IS LOAD IN PLACE, AND THE MODE BIT PICKS WHICH ROAD (architect
-    // design 2026-08-28). OUTSIDE the `h` view it opens the RENDER PLAYER,
-    // which is where a render entry is chosen — a highlighted batch cell and
-    // the modal row's Load in place button, `'` again inside the player. IN
-    // the view it RAISES THE LOAD CONFIRMATION ON THE VIEWED MEMBER — a
+    // BARE `'` IS THE `h` VIEW'S LOAD IN PLACE (architect design
+    // 2026-08-28): it RAISES THE LOAD CONFIRMATION ON THE VIEWED MEMBER — a
     // commit by its short SHA, or a local member by its number
     // (history_load_in_place; the mode admits this one key through
     // history_mode_key_blocked above) — the view's own road, with no list
     // (architect 2026-08-29: "overengineered; I don't really need it": `,`
     // and `.` already walk the members and the lane shows the one they stand
-    // on). The fork is HERE rather than inside either road, so each owns one
-    // surface whole. THE POINTER'S PRODUCER is the top icon row's load
-    // button, which synthesizes exactly this bare chord through the chord
-    // table and reaches only the view's road, its face dead outside the `h`
-    // view (the record is at its roster entry); the PLAYER's pointer opener
-    // is Play renders. THE LOCK ANSWERS PER STATE (2026-09-01,
-    // read_only_key_blocked): outside the view this press is bare `l`'s own
-    // admitted act and passes on a locked tab, inside it the load is blocked.
-    // Each road is a modal surface and owns its own
-    // no-source guard AND the playback stop: playback halts only when the
-    // modal actually opens, so a refused raise leaves a listening session
-    // undisturbed.
+    // on). THE ONE PRODUCER is the top icon row's load button, which
+    // synthesizes exactly this bare chord through the chord table, its face
+    // dead outside the `h` view (the record is at its roster entry), so
+    // outside the view the press does nothing; the PLAYER's pointer opener is
+    // Play renders. THE LOCK BLOCKS IT (2026-09-01, read_only_key_blocked).
+    // The road is a modal surface and owns its own no-source guard AND the
+    // playback stop: playback halts only when the modal actually opens, so a
+    // refused raise leaves a listening session undisturbed.
     if (key == GuiKeys::Apostrophe && !shift && !ctrl && !alt) {
         if (app.history_mode.active) history_load_in_place();
-        else                         open_render_player();
         return;
     }
 
@@ -1871,11 +1854,12 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // wears a combination nothing binds, and the product says nothing at all.
     //
     // THIS IS THE RULE'S HOME on the key path, stated once here and pointed at
-    // from the gates: because every OTHER refusal answers — an act's own
-    // reason, a gate's state, a wall — a press that produces no card and no
-    // visible change can only be a press with no binding, which is a stronger
+    // from the gates: an unbound chord is always silent, which is a stronger
     // answer than a sentence saying so and costs no card for a mistyped
-    // modifier. THE GATES ABOVE ASK chord_is_bound (gui_input.h) FOR EXACTLY
+    // modifier. THE CONVERSE DOES NOT HOLD: a bound act may be silent at its
+    // state too, where its key greys instead (the singleton tempo step's
+    // bracket end, the Up / Down arm above), so silence names no binding by
+    // itself; the grey face tells the two apart. THE GATES ABOVE ASK chord_is_bound (gui_input.h) FOR EXACTLY
     // THIS REASON: a chord that would be silent here must not be given a
     // sentence by a gate it happened to meet on the way down, or the same
     // press would say two different things depending on the state it landed

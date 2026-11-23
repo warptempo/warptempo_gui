@@ -3020,7 +3020,7 @@ GuiColor surface_text(GuiSurface surface) {
     case GuiSurface::ListRow:         return pal.field_text;
     case GuiSurface::ListRowLit:      return pal.selected_text;
     }
-    return pal.label;
+    std::unreachable();
 }
 uint64_t palette_generation() { return g_palette_generation; }
 WaveformPlateInks waveform_plate_inks() {

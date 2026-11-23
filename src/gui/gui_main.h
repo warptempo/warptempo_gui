@@ -1,8 +1,8 @@
 #pragma once
 
 // The one GUI body, called by the one entry point, android_main
-// (platform_android.cpp; the laptop GUI and its main() dropped, architect
-// 2026-10-30). It does everything from the locale check on: the signal
+// (platform_android.cpp; architect 2026-10-30: the tablet the one
+// platform). It does everything from the locale check on: the signal
 // dispositions, the device config, the platform's init, and then THE PROJECT
 // LOOP — the AppState and subsystem construction, the hook wiring, the run
 // loop and the teardown, once per project the process opens (the loop

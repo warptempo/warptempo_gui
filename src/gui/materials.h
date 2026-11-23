@@ -74,8 +74,9 @@
 // EVERY CHECKED KEY WEARS THE ONE ACCENT: the state lamps (MAGNIFY, Read
 // Only, Tooltips, the walk lamp, Cumulative, the iteration lamp, Value
 // Drag), the render player's Repeat One, THE DOORS, the seven overlay
-// openers (redesign_button_is_door, app_state.h — the class names the keys
-// that may carry a twin on their hold and parts no look), AND THE FOUR
+// openers (THE DOORS, app_state.h — lit by redesign_button_selected's
+// overlay arms; a door may carry a twin on its hold, the membership being
+// redesign_button_shift_admits', and the class parts no look), AND THE FOUR
 // EXCLUSIVE PAIRS — SOURCE / TARGET, WARP / PHASE, FOLLOW / RESTR, TRIM /
 // ADD SEL — with no color of their own (architect 2026-11-19: "I guess we
 // can let go of the green in order to be more truthful"). A DISABLED KEY UNDER PRESS IS UNCHANGED (his "disable no press
@@ -148,8 +149,9 @@
 // nothing, a pressed key goes toward the accent. THE FACE FADES, ARC'S
 // TRANSITION (`button { transition: all 200ms cubic-bezier(0.25, 0.46,
 // 0.45, 0.94) }`, the scale's slider the same): rest to hover and hover to
-// rest over 200 ms on that curve, as every other change of a key's look
-// (THE KEY above), each painted tone THE MIX OF ITS LOOKS' TONES AS PAINTED
+// rest over 200 ms on that curve, as every change into an unchecked look
+// (a change into a checked look — pressed, lit, lit and inert — runs 50 ms:
+// THE KEY above, AppState::FaceFades::duration_ms), each painted tone THE MIX OF ITS LOOKS' TONES AS PAINTED
 // — per channel between the colors' own words (StampTone below), the
 // seam's line between the tone the seam wears without it and the border
 // tone BY THE SEAM'S OWN MIX: the line is one inset shadow on the right key
@@ -671,21 +673,6 @@ inline constexpr double kEntryPenW      = 9.0;
 void paint_entry(cairo_t* cr, const GuiRect& box,
                  std::optional<double> progress = std::nullopt,
                  bool focused = false);
-
-// A PAINT-TIME MIX OF TWO WORDS OF THE ROW, `t` of `b` over `a`, per
-// channel, rounded half to even (the row's own rounding, gui_theme.h): the
-// disabled entry's number, the text at 35 % over the entry's fill (Arc's
-// insensitive entry).
-inline uint32_t mix_word(uint32_t a, uint32_t b, double t) {
-    uint32_t out = 0;
-    for (int shift = 0; shift < 24; shift += 8) {
-        const double ca = static_cast<double>((a >> shift) & 0xFFu);
-        const double cb = static_cast<double>((b >> shift) & 0xFFu);
-        const double v  = std::nearbyint(ca + t * (cb - ca));
-        out |= static_cast<uint32_t>(std::clamp(v, 0.0, 255.0)) << shift;
-    }
-    return out;
-}
 
 // A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
 // KEY; architect 2026-11-02: "ground is not a button"): `key` the

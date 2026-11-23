@@ -24,7 +24,7 @@
 // thing ("chrome means anything the accent color can highlight": the flag
 // editor's field and selection band, the chrome's selected pair). GuiPalette
 // (render.h) holds both halves in one struct — THE CHROME'S ROLES first (the
-// ground, the label, the selected pair, the field's text and the card's
+// ground, the selected pair, the field's text and the card's
 // text; then the flat look's, materials.h's head), THE PROGRAM'S
 // after them (the canvas, its grid and center lines, the markers' chips,
 // hovers and stem, the playhead's head and stem, the hover line, the
@@ -34,7 +34,7 @@
 // A ROLE STANDS IFF A PAINTER READS IT (the plate's two inks are no
 // GuiColor at all — the plate takes the row's words, waveform_plate_inks,
 // render.h). TWO ROLES MAY SHARE A TONE: a role is what it paints, not its
-// value (`label`, `field_text` and `text` all read the font color; the zero
+// value (`field_text` and `text` both read the font color; the zero
 // line `center` is the waveform's ink; `cue_fill` the accent `cue`'s
 // number). THE LIT KEY'S FACE IS `cue`, THE ACCENT (architect 2026-11-11):
 // the one program role a chrome painter reads, and the one no well painter
@@ -64,7 +64,6 @@ struct GuiPaletteFill {
 inline constexpr GuiPaletteFill kGuiPaletteFill[] = {
     // THE CHROME.
     {&GuiPalette::ground,          &GuiThemeTones::ground},
-    {&GuiPalette::label,           &GuiThemeTones::text},
     {&GuiPalette::selected_fill,   &GuiThemeTones::selection_fill},
     {&GuiPalette::selected_text,   &GuiThemeTones::selection_text},
     {&GuiPalette::field_text,      &GuiThemeTones::text},

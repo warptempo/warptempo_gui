@@ -59,16 +59,15 @@ namespace {
 //
 // Quantization: v in [-1, 1] -> int16 nearbyint(clamp(v) * 32767), computed
 // in DOUBLE — quantize_unit below, where the rule is stated in full.
-// Out-of-range source peaks clip at the boundary. A file older than v9 holds
-// a float `std::lround(v * 32767.0f)` quantization, whose values differ on
-// more than ties, so it carries another version: one version number may
-// never name two different bodies.
+// Out-of-range source peaks clip at the boundary. A file of any other
+// version takes the stale path (the version compare in try_load_cache): one
+// version number may never name two different bodies.
 
 constexpr char     kCacheMagic[8]         = "WTPEAKS";
 // Bumped whenever the BYTES CHANGE MEANING — the ladder's shape or the values
 // on it. v9's body is the thirteen-rung powers-of-four ladder carrying
-// quantize_unit's (double nearbyint) int16 words; an older version holds a
-// sparser ladder or the float quantizer's words. VERSION 8 IS NEVER USED: it
+// quantize_unit's (double nearbyint) int16 words; an older version holds
+// another body (another ladder or other words). VERSION 8 IS NEVER USED: it
 // named a different body in a withdrawn build and files of it may rest on
 // disk. An older file therefore fails
 // the version compare and takes the ordinary STALE path — logged, rebuilt,

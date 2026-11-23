@@ -250,9 +250,8 @@ struct GuiPlaybackLifecycle {
     //   * VALUE STEPS STOP (architect 2026-10-14): the Up/Down tempo step on
     //     the addressed cell writes the warp store, so it is a marker mutation
     //     and stops, its group arm as well as its singleton — the
-    //     group-preserving shape of the tempo arm buys no play-on. The step
-    //     ladder's magnitude (bare one cent, three with ctrl, ten shifted)
-    //     changes the number and not the class. The BOUND arm stops
+    //     group-preserving shape of the tempo arm buys no play-on. The step is
+    //     bare Up / Down alone, one cent a press. The BOUND arm stops
     //     nothing, being iteration state (the bullet above).
     //   * PURE VIEWPORT MOVES DO NOT STOP: bare `0`'s ZOOM-OUT ARM,
     //     PageUp/PageDown, the zoom gestures and the zoom step (`=` / `-`,

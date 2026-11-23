@@ -941,7 +941,9 @@ struct Viewport {
     // stack below a card that left or under one that arrived. One rect
     // because the changed cards are one run of the stack, each held whole
     // in the one clip rectangle; a card whose rect stands is outside it (a
-    // card's words and class never change under its id). A change that
+    // card's class never changes under its id, and its words change under it
+    // on one road alone, the struck card's re-wording, which damages the
+    // card's own painted rect itself before calling here). A change that
     // moves nothing visible damages nothing. THE ROOM
     // (notification_stack_bound, notifications.h) stays the answer where
     // the layout hook is unwired, and the painter's clip.

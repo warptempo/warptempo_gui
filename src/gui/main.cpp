@@ -3724,12 +3724,15 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // this same tick body, which is where the launch happens. A play that
         // was not the act's hands over Idle and the advance does nothing; the
         // natural end of the act's LAST play hands over HomeSecond and the
-        // advance arms nothing. THE RESTS BEGIN AT THE FLAG'S DROP: this
-        // branch — and so the advance and the rest it arms — runs when the
-        // play's last fill ends, ahead of its last sound by the output
-        // latency plus that fill's valid prefix (the arithmetic at this
-        // branch's head), a lead nothing compensates (playback.h's design
-        // note).
+        // advance arms nothing. A REST IS TIMED FROM ITS ARM (arm_rest's
+        // monotonic_ms(), ab_audition.cpp): this branch runs on the tick
+        // that sees the playing bit down — the bit drops when the play's
+        // last fill ends, ahead of its last sound by the output latency plus
+        // that fill's valid prefix (the arithmetic at this branch's head) —
+        // and the advance arms the rest after the stop body's fence and, on
+        // the switch-back leg, after the tab switch, its trigger and the
+        // working zoom. Nothing waits for the last audible frame and nothing
+        // compensates (playback.h's design note).
         // The stop body's
         // fence-before-flag-clear ordering above is exactly what the next
         // launch relies on too, a rebind-safe, quiesced device under the fresh

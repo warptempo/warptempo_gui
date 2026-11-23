@@ -416,7 +416,7 @@ RenderOutcome do_render(const RenderRequest& req,
                 // This file is written ONCE here and never touched again.
                 //
                 // THE VIEW KEYS ARE WRITTEN FOR THE FILE, NOT FOR THE `'` LOAD.
-                // Since 2026-08-24 the load-in-place applies only the recipe —
+                // The load-in-place (2026-08-24) applies only the recipe —
                 // the two marker columns and the engine block — and IGNORES
                 // active_audio_view, both tab bands and every session pref this
                 // writer emits (the rule at

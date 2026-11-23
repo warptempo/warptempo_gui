@@ -46,14 +46,10 @@
 #include <utility>
 #include <vector>
 
-namespace {
-
 // (THE HISTORY-UNAVAILABLE SENTENCE lives at history_diff.h, beside the module
 // that composes the reason it prefixes; THE CHECKPOINT-PUBLISHING SENTENCE at
 // notifications.h, the save owner raising it too: the account of each one's
 // readers is there.)
-
-}  // namespace
 
 // The lane model's one predicate — see the declaration for the two readers and
 // the rationale. A non-empty selection IS the marker lane: with a focus standing,
@@ -101,12 +97,8 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // undo/redo (Ctrl+Z / Ctrl+Shift+Z), the propagate's two PASTES (Ctrl+P and
 // Ctrl+Shift+P, the PASTE key's tap and hold — each rewrites a store and
 // pushes; their COPY, bare P, is admitted, is_phase_reset_copy below) — and
-// `'` IN THE `h` VIEW,
-// where it is the load-in-place and replaces the whole authored state. THAT
-// ONE ENTRY READS A STATE (2026-09-01): outside the view the same chord opens
-// the RENDER PLAYER, which is bare `l`'s own admitted act, so the gate admits
-// it there and the entry below is a state-dependent admission like the
-// horizontal arrows' lane term.
+// `'`, the `h` view's load-in-place, which replaces the whole authored state
+// (2026-09-01).
 // `;`, THE SETTINGS PAGE, IS ADMITTED (2026-10-21, by the architect's
 // 2026-09-04 rule — THE LOCK GOVERNS THE KEYS, NOT THE
 // EDITOR): the settings editor authors the device keys as well as the piece's
@@ -133,7 +125,7 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // are the FOUR marker verbs (bare `s`, Delete, Ctrl+D, Ctrl+N), FLATTEN in the
 // top icon row's iteration group (Ctrl+F), THE ITERATION PAIR in that same
 // group (Ctrl+B and bare `i`), UNDO and REDO (Ctrl+Z, Ctrl+Shift+Z), the LOAD IN PLACE
-// (bare `'`, dropped in the `h` view alone — the state-dependent entry above),
+// (bare `'`, the `h` view's),
 // and THE FOUR CARDINAL ARROWS (Up/Down dropped outright; Left/Right dropped
 // only in the marker lane, through the is_playhead_step entry, whose lane term
 // is the shared owner horizontal_arrow_step_lock_admits that the face reads
@@ -154,11 +146,9 @@ bool GuiInputHandler::playhead_in_marker_lane() const {
 // are recorded there — chords claimed ABOVE this gate, whose "blocked" here is
 // vacuous, and the buttons the ruling deliberately leaves lit. SO A CHANGE TO
 // THE ADMISSIONS BELOW NEEDS A HAND EDIT THERE; nothing else in the product
-// reads this gate for a face — and the THREE STATE-DEPENDENT admissions a face
+// reads this gate for a face — and the TWO STATE-DEPENDENT admissions a face
 // mirrors are each read off their own owner rather than off this gate: the
-// horizontal arrows' lane term (horizontal_arrow_step_lock_admits),
-// bare `'`, whose admission turns on the `h` view's own bit, which
-// the Load in place button's arm composes for itself, and
+// horizontal arrows' lane term (horizontal_arrow_step_lock_admits) and
 // bare `i`'s off edge, whose admission turns on the lamp's own bit, which the
 // Grid Iterations button's arm composes for itself.
 bool read_only_key_blocked(const AppState& app, GuiKey key,
@@ -379,26 +369,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // refuses on a locked tab inside the player (the lock's rule, at the act).
     const bool is_play_renders =
         (!ctrl && !shift && !alt && key == GuiKeys::L);
-    // BARE `'` IS ADMITTED OUTSIDE THE `h` VIEW AND BLOCKED INSIDE IT
-    // (architect 2026-09-01): THE STATE SELECTS WHICH ACT THE CHORD IS, and
-    // the gate
-    // has to ask the same question the dispatch does. Outside the view `'`
-    // OPENS THE RENDER PLAYER — the very act bare `l` above already runs on a
-    // locked tab, and the player's own Load in place answers the lock for
-    // itself, by key and by button, with kTabReadOnlyCard. Inside the view it
-    // is the LOAD, which rewrites the whole authored state, and stays blocked
-    // — the outermost refusal for that press, since
-    // the mode's allowlist admits the chord while the walk carries a member.
-    // The gate judges the act, not the chord's name; the arrows' lane term is
-    // the same shape (one chord, two acts, the state deciding which is
-    // admitted).
-    // THE FACE FOLLOWS: neither the Play renders button nor the Load in place
-    // button is in redesign_button_enabled's read-only arm — the latter's lock
-    // term rides the history group's arm, where it composes with the mode
-    // (app_state.h).
-    const bool is_load_in_place_player =
-        (!ctrl && !shift && !alt && key == GuiKeys::Apostrophe &&
-         !app.history_mode.active);
     // THE VALUE PAIR — Ctrl+Shift+J and Ctrl+J (2026-08-29) — is
     // admitted on the header's own standard: neither authors anything. The
     // copy composes the focused marker's resolved value and hands it to the
@@ -484,8 +454,11 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // tab both flag drags refuse, so the lamp would arm nothing — Toggle
     // Value Drag greys with the verbs) and the phase-reset propagate's two
     // paste chords (Ctrl+P, Ctrl+Shift+P) are likewise absent (blocked
-    // here); `'` has a state-dependent entry of its own, blocked in the `h`
-    // view and admitted outside it (is_load_in_place_player above).
+    // here); so is `'`, the `h` view's LOAD (architect 2026-09-01), which
+    // rewrites the whole authored state — the outermost refusal for that
+    // press, the mode's allowlist admitting the chord while the walk carries
+    // a member; the Load in place button's lock term rides the history
+    // group's arm (redesign_button_enabled, app_state.h).
     return !(is_o || is_open_project || is_revert_project ||
              is_play_pause || is_ab_audition ||
              is_playhead_step ||
@@ -499,7 +472,6 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_trim_maximize || is_trim_presets || is_trim_arm ||
              is_add_to_selection ||
              is_play_renders ||
-             is_load_in_place_player ||
              is_copy_value || is_jump_to_value_source ||
              is_phase_reset_copy ||
              is_settings_page ||
@@ -718,10 +690,9 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     const bool bound_axis = (app.addressed_cell == MarkerCell::Lower ||
                              app.addressed_cell == MarkerCell::Upper);
     if (bound_axis) {
-        // Up / Down bare, and ctrl with it — `!alt && !shift`; the ctrl
-        // form binds nothing (the dispatch arm is bare-exact,
-        // input_handler.cpp), so admitting it only lets it fall silent there.
-        if ((key == GuiKeys::Up || key == GuiKeys::Down) && !alt && !shift)
+        // Up / Down, bare-exact as the dispatch arm is (input_handler.cpp).
+        if ((key == GuiKeys::Up || key == GuiKeys::Down) &&
+            !ctrl && !shift && !alt)
             return false;
         // Return, plain only, the editor-open arm's own test.
         if (key == GuiKeys::Return && !ctrl && !shift && !alt)
@@ -2725,7 +2696,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // veil over the view's presses, and its close leaves the view as it
     // stood — while the player's LOAD IN PLACE tears the view down as a
     // reopen does (load_render_entry_in_place's close_history_mode). Bare
-    // `'`, its keyboard alias outside the view, stays the view's own load.
+    // `'` stays the view's own load.
     const bool is_play_renders = (key == GuiKeys::L && bare);
     // (NOISE, the top icon row's level case, carries no chord: the `h` chord
     // walk answers it LIVE by its own arm, history_mode_refuses_button_

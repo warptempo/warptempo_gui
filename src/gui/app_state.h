@@ -1841,7 +1841,8 @@ enum class RedesignButton {
     OpenProject, Save, Undo, Redo,
     Render,
     // ZOOM IN AND ZOOM OUT, IN and OUT (architect 2026-10-27: "the zoom in
-    // and out to the left of FIT") — THE ZOOM STEP:
+    // and out to the left of FIT ... basically as they used to be, including
+    // the position in the toolbar") — THE ZOOM STEP:
     // bare `=` and bare `-`, ONE LEVEL deeper or shallower (×2, the map's
     // own step; is_zoom_step_key, gui_input.h), each
     // ABOUT THE VIEWPORT'S CENTRE (Viewport::zoom_step) and saturating at the
@@ -6630,11 +6631,14 @@ struct AppState {
         bool     level_changed = false; // some motion moved the level: the lift writes
         // N2, THE STOP THAT PLAYS (architect 2026-11-17: "add the two lines -
         // i assume these will run only when the button face shows stop and
-        // the button actually does a play?"): a diagnostic for N2, to be
-        // removed once N2 is understood. The Roster kind's painted glyph
-        // index at the down (RedesignButtonFace::glyph), so the PLAY key's
-        // lift can tell the face the user pressed from the face at its lift;
-        // unread by every other kind.
+        // the button actually does a play?"): a LIVE, LOG-ONLY diagnostic,
+        // kept until N2 is understood — its family still logs on live roads,
+        // the Play/Stop lift (input_pointer.cpp, this field's reader), the
+        // car's toggle and a car-triggered launch (main.cpp's media hook) —
+        // and no act reads it. The Roster kind's painted glyph index at the
+        // down (RedesignButtonFace::glyph), so the PLAY key's lift can tell
+        // the face the user pressed from the face at its lift; unread by
+        // every other kind.
         int      painted_glyph = 0;
     };
     ChromePress chrome_press;
@@ -11926,8 +11930,9 @@ inline void phase_iter_bound_step_write(GuiPhaseResetMarker& m,
 // Up/Down face with a bound addressed: it compares iter_bound_step_landing
 // against the focused marker's resting bound — silent at the key when walled,
 // the grey being the whole cue, as the tempo step's bracket end is. An
-// INELIGIBLE focus answers TRUE: its refusal is a fact about the marker's
-// kind, carded by the act through iter_bound_step_kind_refusal below. Defined
+// INELIGIBLE focus answers TRUE and is unreachable: a bound cell is addressed
+// only where its cell paints, on an eligible marker, and while the lamp
+// stands the lock refuses every act that could take the carrier away. Defined
 // in warpmarkers_ops.cpp.
 //
 // THE FOCUS IS THE WHOLE SUBJECT, where the tempo step's own directional half
@@ -11945,19 +11950,6 @@ bool iter_bound_step_direction_actionable(const AppState& a,
                                           const GuiAudio& audio,
                                           MarkerCell side,
                                           int64_t delta);
-
-// WOULD A BOUND STEP REFUSE ON THE FOCUS'S KIND — the sentence it
-// would card with, or nullptr: on the WARP column a marker without a tempo of
-// its own (a pass or a label ref) has no bracket to step and a disabled marker
-// has no range at all (no disable road is admitted while a bracket can stand,
-// and the mode's wipe clears every bracket before one is); on the
-// PHASE-RESET column every reset is a carrier, so the one refusal there is the
-// DISABLED one, in that column's own words. Magnitude-blind on both. TWO
-// READERS: the act's card (either act's) and bare Return's bound arm
-// (input_handler.cpp, a belt). Defined in warpmarkers_ops.cpp, where its
-// warp arm's atoms live; the phase arm is two lines beside it rather than a
-// second owner, because the FACES read one predicate.
-const char* iter_bound_step_kind_refusal(const AppState& a);
 
 // -- THE TIE TOGGLE'S ONE VERDICT (architect 2026-09-19) --------------------
 //
@@ -12477,12 +12469,12 @@ inline MarkerCell iter_bound_editor_side(const text_editor::State& ed) {
 // column — the flag's payload editor is the warp column's (the P view has no
 // per-flag editor), while the BOUND editor is both
 // columns' (2026-09-09): a bound cell is addressed on either column's
-// eligible flags, so that arm asks no column. A bound cell's kind refusal
-// (an owner disabled after its cell was addressed) stays the act's own
-// card behind a live face, as the Up/Down pair's is. ITS READERS: the Return
-// arm (input_handler.cpp), whose refusal cards; the Open Text Editor key's
-// face (redesign_button_enabled); and label_paste_actionable below, the
-// key's hold.
+// eligible flags, so that arm asks no column. A bound cell is addressed only
+// on an eligible marker, and while the lamp stands the lock refuses every act
+// that could make it ineligible, so the bound arm asks no kind. ITS READERS:
+// the Return arm (input_handler.cpp), whose refusal cards; the Open Text
+// Editor key's face (redesign_button_enabled); and label_paste_actionable
+// below, the key's hold.
 inline bool flag_editor_open_actionable(const AppState& app) {
     if (!marker_focus_standing(app)) return false;
     switch (app.addressed_cell) {
@@ -15516,8 +15508,10 @@ inline bool redesign_button_enabled(const AppState& a,
     // Close (the render player and the score viewer, which have a scrub,
     // leaving by their opener alone: the rule at kModalCancelLabel, architect
     // 2026-11-11; the opener's tooltip naming the leave act
-    // there, overlay_leave_word), the openers lit and live under them (the overlay arm
-    // below, redesign_button_selected), the rest of the roster grey but the
+    // there, overlay_leave_word), the openers lit and live under them (the
+    // overlay arm below, redesign_button_selected; architect 2026-10-25:
+    // "the only reason they still show the one button lit is that you can
+    // exit by pressing it"), the rest of the roster grey but the
     // tooltip lamp (architect 2026-11-10, the arm below) — a lit one
     // keeping its lit face, dimmed (architect 2026-11-11) — and EVERY DEAD
     // KEY'S HINT SUPPRESSED, the two live keys keeping theirs (architect
@@ -16070,9 +16064,7 @@ inline bool redesign_button_enabled(const AppState& a,
         // greys it through the derived partition
         // above (its allowlist does not name Return) and, the refusal holding
         // in every session there, does not paint it at all
-        // (history_mode_hides_button). The bound cell's kind refusal past the
-        // gate (iter_bound_step_kind_refusal, a belt with no producer)
-        // stays the key's card behind a lit face. ITS HOLD, THE LABEL PASTE
+        // (history_mode_hides_button). ITS HOLD, THE LABEL PASTE
         // (Shift+Return, architect 2026-11-10), ADDS NOTHING HERE under the
         // twin rule: the paste acts only where the plain open does, on the
         // payload axis (label_paste_actionable), so the weaker, plain
@@ -16865,29 +16857,17 @@ inline std::string view_pair_label(char audio, char column) {
 // overlay stands and closes it (redesign_button_selected's overlay arms
 // below). THEY LIGHT AS THE LAMPS DO (architect 2026-11-11): the whole face
 // the accent (Arc's lit button, 2026-11-19), no fill of the class's own, so no
-// painter asks this. Exactly the seven: the
+// painter asks the class. Exactly the seven: the
 // history opener (the `h` view), Open Project (the picker), Play Renders (the
 // render player),
 // Settings (the settings page and its value list), Presets (the trim
-// presets list), BPM (the BPM form) and Score (the score viewer). The class
-// is the twin rule's (redesign_button_shift_admits' head: a lamp carries no
-// second action, a door may), which names it and walks no table, so no code
-// reads the predicate. The `h` view's stand-ins
-// (kIconRowHistoryStandIns, paint_handler.cpp) hold none of the seven.
-inline constexpr bool redesign_button_is_door(RedesignButton b) {
-    switch (b) {
-        case RedesignButton::IconHistory:
-        case RedesignButton::OpenProject:
-        case RedesignButton::IconListen:
-        case RedesignButton::IconSettings:
-        case RedesignButton::IconTrimPresets:
-        case RedesignButton::IconBpm:
-        case RedesignButton::IconScore:
-            return true;
-        default:
-            return false;
-    }
-}
+// presets list), BPM (the BPM form) and Score (the score viewer). In code a
+// door is its overlay's opener (is_overlay_opener for the six overlays, the
+// `h` view's own arm for the history opener); the class is the twin rule's
+// (redesign_button_shift_admits' head: a lamp carries no second action, a
+// door may), whose membership names the doors with a twin. The `h` view's
+// stand-ins (kIconRowHistoryStandIns, paint_handler.cpp) hold none of the
+// seven.
 
 // THE RADIO PAIRS — SOURCE / TARGET, WARP / PHASE, FOLLOW / RESTR and TRIM /
 // ADD SEL — wear the one accent every lit key wears, Arc's (architect
@@ -17322,7 +17302,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 //
 // A LAMP CARRIES NO SECOND OR THIRD ACTION; A DOOR MAY (architect
 // 2026-11-08). A lamp — a toggle, its lit face its state — admits
-// nothing; a door — an overlay opener (redesign_button_is_door) — may
+// nothing; a door — an overlay opener (THE DOORS, above) — may
 // carry a twin on its hold, his reason: "the fact that they're modal
 // guarantees that the lamp or their on state doesn't conflict with the
 // secondary action". The doors with twins: OPEN PROJECT's Revert and
@@ -17428,8 +17408,8 @@ static_assert(!redesign_button_shift_admits(RedesignButton::TransportLeft) &&
                   !redesign_button_shift_admits(RedesignButton::TransportUp) &&
                   !redesign_button_shift_admits(RedesignButton::TransportDown),
     "the four arrows admit no modifier: a held repeat outranks the long-press "
-    "shift (ToolbarChord::repeats), the horizontal ladder is retired and the "
-    "barrel's Ctrl+Up / Ctrl+Down step left with the barrel's chrome road "
+    "shift (ToolbarChord::repeats), Left / Right carry no ladder, Up / Down "
+    "step one unit alone and the barrel has no chrome road "
     "(architect 2026-11-08)");
 static_assert(!redesign_button_shift_admits(RedesignButton::TransportWalk) &&
                   !redesign_button_shift_admits(RedesignButton::TransportWalkPrevious) &&
@@ -17459,8 +17439,8 @@ static_assert(redesign_button_shift_admits(RedesignButton::IconZoomFitBest) &&
     "2026-11-08)");
 static_assert(!redesign_button_shift_admits(RedesignButton::IconZoomIn) &&
                   !redesign_button_shift_admits(RedesignButton::IconZoomOut),
-    "Zoom In / Zoom Out (bare = / -) admit nothing since 2026-11-08: the "
-    "two-level Shift+= / Shift+- step is retired");
+    "Zoom In / Zoom Out (bare = / -) admit nothing: one level a press, "
+    "Shift+= / Shift+- binding nothing (architect 2026-11-08)");
 static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
                   redesign_button_shift_admits(RedesignButton::TransportSkipForward),
     "Go to Start / Go to End (Home / End) admit Shift, reaching the whole "

@@ -635,11 +635,9 @@ void GuiTargetRender::dispatch_render_now() {
     //
     // It stamps rather than re-stamps in general, because trigger() often has
     // not stamped at all: it never does on the idle path, so the label can be
-    // down here whatever the busy branch did. (Until 2026-09-04 a cancelled
-    // archival's on_done could also take a preview's label down on its way
-    // past — finalize_render_run cleared the slot whatever stood in it — and
-    // that cross-owner erase is what the ownership guard there ended; a
-    // finalize now leaves a label it never promoted alone.) Mid-run the label
+    // down here whatever the busy branch did. (No other owner takes a
+    // preview's label down: finalize_render_run's ownership guard, 2026-09-04,
+    // leaves a label it never promoted alone.) Mid-run the label
     // is usually already showing, held
     // there by the completion clears' deferral, and the helper's own
     // already-showing return makes this a no-op. Target-render status uses

@@ -270,7 +270,7 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
     // reads while the mode is lit ON THAT COLUMN (warp_iter_cells /
     // phase_iter_cells, render.cpp, off the same two predicates under the same
     // column verdict), so an editor opens on exactly
-    // those. The callers card the kind refusal ahead of this belt; a mode-off
+    // those, and the lock keeps an addressed cell's marker eligible; a mode-off
     // call cannot arrive, the axis falling back to the payload with the mode,
     // and an UNLIT-COLUMN call cannot either, a column switch clearing the
     // selection and so seating the axis back on the payload.

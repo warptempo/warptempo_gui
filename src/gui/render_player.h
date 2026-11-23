@@ -229,17 +229,15 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // the modal row damaged instead of the scanner teardown), so the keyboard stop
 // rule and the fence-before-rebind ordering hold by construction.
 //
-// ENTER AND LEAVE. open() is the ONE opener — bare `l`, bare `'` outside the
-// `h` view and ONE top icon row button (Play renders) all reach
+// ENTER AND LEAVE. open() is the ONE opener — bare `l` and ONE top icon row
+// button (Play renders) both reach
 // it through on_key, and A COMPLETE BATCH reaches it at its
 // terminal: the progress page that stood from the Render press is replaced
 // by the player on the batch's folder — the newest, which is the open's own
 // seat below — with the held press dropped first
 // (GuiInputHandler::swap_batch_progress_for_player; architect 2026-10-14).
 // The LOAD IN PLACE button lives in the history group (its roster
-// entry, app_state.h). The KEYS stay, an alias being a keyboard fact
-// and the no-second-road doctrine a pointer one — and
-// it refuses with "Nothing to play: no renders under tmp/" when
+// entry, app_state.h). It refuses with "Nothing to play: no renders under tmp/" when
 // `tmp/` holds no cell and (2026-09-15) with
 // kRenderPlayerWhileRenderingCard while a render run stands (the close's
 // re-express would kill the run — app_state.h's load_in_place_render_blocked);
@@ -264,8 +262,8 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // same body past its root wall with the Up tail, which is why going up leaves
 // the player standing with nothing loaded, exactly as an open leaves it.
 //
-// THE LOAD ROAD is not here: the Load in place button (bare `'` inside the
-// player) and its confirmation live on GuiInputHandler, which owns the shared
+// THE LOAD ROAD is not here: the Load in place button and its confirmation
+// live on GuiInputHandler, which owns the shared
 // act (load_render_entry_in_place); this cluster answers only which entry is
 // highlighted (highlighted_entry) and closes on the act's success.
 //
@@ -325,7 +323,7 @@ struct GuiRenderPlayer {
 
     // THE OPENER (the contract above). Returns whether the mode opened; a
     // refusal has already raised its card or has nothing to say. Its roads:
-    // on_key's (bare `l`, bare `'`, the Play renders lift) and a complete
+    // on_key's (bare `l`, the Play renders lift) and a complete
     // batch's terminal (swap_batch_progress_for_player, 2026-10-14).
     bool open();
     // THE CLOSER (the contract above). A no-op when the mode is down.

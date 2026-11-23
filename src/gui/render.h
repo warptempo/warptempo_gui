@@ -201,9 +201,12 @@ struct TrimRange {
 // fills it are the fill table (kGuiPaletteFill, palette_file.h, the one
 // owner). THE APP PAINTS NO WINDOW CHROME (the title bar block, below).
 // There is NO LEVEL (architect 2026-10-04) and no second look (architect
-// 2026-11-21). The app computes no color at paint time: every one is a word
-// of the compiled row, each computed tone's arithmetic told at its line
-// there (gui_theme.h).
+// 2026-11-21). The app derives no palette color: every steady tone is a
+// word of the compiled row, each computed tone's arithmetic told at its
+// line there (gui_theme.h). The standing mixes at paint time are between
+// compiled words alone — a fading face's tone between its looks' endpoints
+// (StampTone, materials.h) and the sweep highlight's blend toward white
+// (paint_sweep_highlight).
 // EVERY COLOUR A PAINTER HANDS CAIRO is one of GuiPalette's fields through the
 // one accessor palette() — the chrome's flat-look tones among them
 // (materials.h, 2026-11-01: the ground, the key's faces (rest, disabled
@@ -265,7 +268,6 @@ struct TrimRange {
 // THE MAPPING (architect 2026-10-03), field -> what it paints:
 //   ground        the title bar alone (paint_title_bar; everything under it
 //                 is the panel's `face`, below);
-//   label         surface_text's fallback;
 //   selected pair the folder
 //                 overlay's and the picker's highlighted row (its name; the
 //                 glyph keeps its own inks, icons.h), the selection
@@ -404,7 +406,6 @@ inline constexpr double tone_alpha(uint32_t word) {
 struct GuiPalette {
     // THE CHROME'S GROUND AND ITS TEXT AND SELECTION PAIRS.
     GuiColor ground;          // the title bar's tone (paint_title_bar)
-    GuiColor label;           // surface_text's fallback
     GuiColor selected_fill;   // the selection's fill (a lit list row, a held trim end, an editor's selected text)
     GuiColor selected_text;   // the selection's text
     GuiColor field_text;      // an entry's and a list row's text
@@ -818,7 +819,8 @@ void install_true_colors(bool on);
 // stem — the two never cross (architect 2026-11-11); the strike
 // rides every row):
 //   UNSELECTED  the `cue_fill` fill alone, no outline,
-//             the label in the text tone (materials.h's `text`); no stem,
+//             the label in `sidebar_text` at rest and `text` under the
+//             hovering pen (cue_label_ink, render.cpp); no stem,
 //             the playhead on it or not (architect 2026-11-05);
 //   SELECTED  a member of the selection set, enabled or disabled: its own
 //             chip as at rest (the `cue_fill` fill, or the disabled grey), and A SOLID
@@ -975,9 +977,10 @@ void install_true_colors(bool on);
 // two inks alone); then THE STEREO DIVIDER'S ROW between the two
 // wells (architect 2026-10-16, chrome on the canvas, waveform_divider;
 // render_waveform_divider, over the plate so a plate from before a resize
-// never crosses them); then the lead-in ring, the
-// playhead's line, the selection stems over it, the scanner and the zoom
-// anchor; and LAST, while a sweep's pointer is down, THE SWEEP HIGHLIGHT
+// never crosses them); then THE WAVEFORM'S HOVER LINE, the first vertical
+// line, under every other (ITS ORDER at render_hover_line below); then
+// the lead-in ring, the playhead's line, the selection stems over it, the
+// scanner and the zoom anchor; and LAST, while a sweep's pointer is down, THE SWEEP HIGHLIGHT
 // (paint_sweep_highlight, architect 2026-11-12: a blend toward white over
 // everything in the waveform area — the canvas, the grid, the ink, the
 // core, the center lines and every line above them) (build_canvas_list's

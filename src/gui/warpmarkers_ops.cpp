@@ -1515,7 +1515,7 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_tempo_cents_group(
     const int n = static_cast<int>(mv.size());
     std::vector<GuiWarpMarker> pre_state = mv;
     // Apply the press's own signed cent count to each selected member —
-    // ±1 bare, ±3 shifted, ±10 with ctrl (plain integer arithmetic — the
+    // ±1, the bare arrow's one cent (plain integer arithmetic — the
     // structural producer discipline), a DISABLED member included
     // (2026-09-13); none of them is walled
     // (checked above, and the scan asks whether the member can take the WHOLE
@@ -1664,16 +1664,14 @@ bool iter_bound_step_direction_actionable(const AppState& a,
     // A TIE FOLLOWER GREYS BOTH ARROWS (architect 2026-09-19, ahead of the
     // column fork because the rule is one rule on both): the cell's numbers
     // are the LEADER's and only the leader's cells step, so nothing visible
-    // would move. IT IS NOT THE INELIGIBLE-FOCUS SHAPE one line down — that
-    // keeps a LIVE face and lets the act card — because this refusal is the
-    // roster's ordinary division: the GREY is the button's message and the
-    // KEY still cards, the act asking this same predicate ahead of the wall
-    // test (kBoundCellTiedCard, app_state.h).
+    // would move. The GREY is the button's message and the KEY still cards,
+    // the act asking this same predicate ahead of the wall test
+    // (kBoundCellTiedCard, app_state.h).
     if (addressed_bound_cell_is_tie_follower(a)) return false;
     // THE PHASE ARM: the same singleton compare in the hop domain. An
-    // INELIGIBLE focus (a disabled reset) answers TRUE, its refusal being a
-    // fact about the reset's state that the act cards through the kind refusal
-    // below — the warp arm's own rule.
+    // INELIGIBLE focus (a disabled reset) is unreachable, the warp arm's own
+    // rule below, and answers TRUE so the landing owner is asked only of an
+    // eligible reset.
     if (a.active_markers_view == 'P') {
         const auto& pv = a.phaseresetmarkers.markers();
         const int   f  = a.last_selected_marker;
@@ -1690,46 +1688,18 @@ bool iter_bound_step_direction_actionable(const AppState& a,
     const auto& mv = a.warpmarkers.markers();
     const int   f  = a.last_selected_marker;
     if (f < 0 || f >= static_cast<int>(mv.size())) return true;  // belt
-    // An INELIGIBLE focus keeps a live face and a card of its own (the kind
-    // refusal below, a belt with no reachable producer); only an eligible marker's bound can rest on a wall, and
-    // its wall is the landing owner's own answer.
+    // An INELIGIBLE focus is unreachable — a bound cell is addressed only
+    // where its cell paints, on an eligible marker, and while the lamp stands
+    // the lock refuses every act that could take the carrier away — and
+    // answers TRUE so the landing owner is asked only of an eligible marker;
+    // only an eligible marker's bound can rest on a wall, and its wall is the
+    // landing owner's own answer.
     if (!iter_popup_eligible_marker(mv, f)) return true;
     const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
     const int64_t start = side == MarkerCell::Upper
                               ? m.iter_end_cents.value_or(0)
                               : m.iter_start_cents.value_or(0);
     return iter_bound_step_landing(mv, f, side, delta_cents) != start;
-}
-
-// THE SINGLETON'S KIND REFUSAL — the contract and the readers are at the
-// declaration (app_state.h). Two sentences for the three ineligible kinds: a
-// pass and a label ref share one fact (no tempo of their own, so no bracket
-// to ride it), and a disabled owner's is that it has no range at all — no
-// disable road is admitted while a bracket can stand, and the mode's own wipe
-// clears every bracket before one is, so the two states never meet.
-const char* iter_bound_step_kind_refusal(const AppState& a) {
-    // THE PHASE ARM has ONE sentence, not two: every phase reset is a carrier
-    // (there is no pass and no label ref on this column), so the only thing a
-    // focused reset's kind can refuse on is being DISABLED — and a disabled
-    // reset has no range, disablement and a standing bracket being mutually
-    // unreachable on this column too.
-    if (a.active_markers_view == 'P') {
-        const auto& pv = a.phaseresetmarkers.markers();
-        const int   pf = a.last_selected_marker;
-        if (pf < 0 || pf >= static_cast<int>(pv.size())) return nullptr;
-        if (pv[static_cast<size_t>(pf)].disabled)
-            return "A disabled phase reset has no range";
-        return nullptr;
-    }
-    const auto& mv = a.warpmarkers.markers();
-    const int   f  = a.last_selected_marker;
-    if (f < 0 || f >= static_cast<int>(mv.size())) return nullptr;
-    const GuiWarpMarker& m = mv[static_cast<size_t>(f)];
-    if (!iter_bracket_carrier(m))
-        return "Only a marker that owns its tempo has a range";
-    if (effective_disabled(mv, f))
-        return "A disabled marker has no range";
-    return nullptr;
 }
 
 GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
@@ -1756,14 +1726,6 @@ GuiOpRefusal GuiWarpMarkersOps::adjust_iter_bound_cents(
     // value being the place to glance.
     if (!iter_bound_step_direction_actionable(app, audio, side, delta_cents))
         return std::nullopt;
-    // THE KIND REFUSAL, on a card and behind a LIVE face — the one kind
-    // refusal under the vertical arrows that keeps one, the tempo step's
-    // greying (2026-09-13), and a BELT rather than a live
-    // refusal: a bound cell is addressed only where its cell paints, and while
-    // the lamp stands the lock refuses every act that could take the carrier
-    // away, so no reachable state answers it (iter_bound_step_kind_refusal).
-    if (const char* refusal = iter_bound_step_kind_refusal(app))
-        return refusal;
     const auto& mv_const = app.warpmarkers.markers();
     const int f = app.last_selected_marker;
     // A stale focus is a belt against the selection layer's own invariant
@@ -1875,8 +1837,7 @@ GuiOpRefusal GuiWarpMarkersOps::nudge_selected_markers(
     // (or one whose step resolved to the same frame) writes NOTHING — no
     // undo push, no damage, no playback stop. This is what makes the keyboard stop
     // rule's refusal gating exact for the nudges.
-    // AND IT IS SILENT AGAIN SINCE 2026-08-31 (architect, retiring the
-    // one-day card "The marker is already at the edge"): a benign
+    // AND IT IS SILENT (architect 2026-08-31: no card for the wall): a benign
     // one-dimensional refusal already at its state says nothing — the marker
     // is one flag in one place, and the glance that asks whether it moved is
     // the glance that answers. (A zero-step press cannot arise off a wall

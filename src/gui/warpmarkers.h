@@ -438,8 +438,8 @@ inline std::string format_iter_bound_cell(const GuiWarpMarker& m,
 // (authoring_locked, app_state.h) — so no marker can lose its enabled bit
 // under a standing bracket. THE READERS: the flag editor's commit's
 // carrier-loss clear (a marker that stops owning its tempo loses its bracket —
-// the store's rule, not any grammar's) and the bound step's kind refusal
-// (iter_bound_step_kind_refusal).
+// the store's rule, not any grammar's) and the iteration eligibility
+// (iter_popup_eligible_marker).
 inline bool iter_bracket_carrier(const GuiWarpMarker& m) {
     return !m.tempo_inherits && m.label_ref.empty();
 }
