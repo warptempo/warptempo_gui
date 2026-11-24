@@ -244,11 +244,13 @@ ROSTER = [
      'no bboxnext; ours, go-first\'s arrow to a line 2 wide, mirrored '
      'left-right to point right (re-picked 2026-11-22, send MM)', 'mirror'),
     ('TabA', OWN + 'TabA.svg',
-     'ours, Liberation Sans Bold\'s own outline of the capital A, 9.5 tall '
-     'in the 16 box (2026-11-24, send QQ; resized, "TL3_4")'),
+     'ours, Liberation Sans Bold\'s own outline of the capital A, 10 tall '
+     'in the 16 box, on Papirus\'s grid (2026-11-24, send QQ; resized, '
+     '"PG_1_P1")'),
     ('TabB', OWN + 'TabB.svg',
-     'ours, Liberation Sans Bold\'s own outline of the capital B, 9.5 tall '
-     'in the 16 box (2026-11-24, send QQ; resized, "TL3_4")'),
+     'ours, Liberation Sans Bold\'s own outline of the capital B, 10 tall '
+     'in the 16 box, on Papirus\'s grid (2026-11-24, send QQ; resized, '
+     '"PG_1_P1")'),
     ('ZoomOriginal', SYM + 'actions/zoom-original-symbolic.svg', ''),
     ('GoPrevious', SYM + 'actions/go-previous-symbolic.svg', ''),
     ('GoNext', SYM + 'actions/go-next-symbolic.svg', ''),

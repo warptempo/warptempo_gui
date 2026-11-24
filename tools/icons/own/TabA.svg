@@ -1,19 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
  <!-- TAB A'S DRAWING, OURS (architect 2026-11-24, send QQ, his pick off
       the mock, "L1": "Apply the A and the B as glyphs in the dimensions
-      discussed"; resized the same day, his pick "TL3_4" off the height
-      mocks, "vary the height, not the weight"): Liberation Sans Bold's own
-      outline of the capital A (fonts/LiberationSans-Bold.ttf, version
-      2.1.5, 2048 units to the em, cap height 1409), scaled by 9.5 / 1409 so
-      the capital stands on rows 3.25 to 12.75 of the 16 box, centered, the
-      ink centered across it (x 3.368 to 12.632), the face's quadratic
-      curves kept as it draws them, coordinates to three decimals; nothing
-      redrawn. The key's ink-box fit (icons.cpp's fit_for) shows it 9.31 W
-      tall on the tablet. The counter winds against the outer contour, as
-      the face draws it, so the nonzero fill leaves it hollow. The tab
-      pair's Tab A (TabA) wears it as drawn; Tab B (TabB) is the face's B
-      the same way (tools/icons/own/TabB.svg;
-      tools/icons/import_papirus.py). The face's own outline, under the
-      SIL Open Font License 1.1 (fonts/LICENSE-Liberation-OFL.txt). -->
- <path style="fill:currentColor" d="M 10.663,12.75 L 9.82,10.323 L 6.2,10.323 L 5.357,12.75 L 3.368,12.75 L 6.834,3.25 L 9.18,3.25 L 12.632,12.75 Z M 8.007,4.713 L 7.966,4.861 Q 7.899,5.104 7.804,5.414 Q 7.71,5.724 6.645,8.826 L 9.375,8.826 L 8.438,6.095 L 8.148,5.178 Z"/>
+      discussed"; resized the same day, his pick "PG_1_P1": "treat the
+      letters as if they were just Papirus glyphs following their
+      convention"): Liberation Sans Bold's own outline of the capital A
+      (fonts/LiberationSans-Bold.ttf, version 2.1.5, 2048 units to the em,
+      cap height 1409), scaled uniformly by 10 / 1409 so the capital stands
+      on rows 3 to 13 of the 16 box, the cap top and the baseline on whole
+      units, centered; across the box the ink's left edge on the whole unit
+      nearest centered, as Papirus seats a size that does not divide
+      (x 3 to 12.752, 0.124 left of center); the face's quadratic curves
+      kept as it draws them, coordinates to three decimals; nothing
+      redrawn. The key's ink-box fit (icons.cpp's fit_for) draws it at zoom
+      2 on the tablet, 10 W tall, its top, baseline and left edge on whole
+      pixels. The counter winds against the outer contour, as the face
+      draws it, so the nonzero fill leaves it hollow. The tab pair's Tab A
+      (TabA) wears it as drawn; Tab B (TabB) is the face's B the same way
+      (tools/icons/own/TabB.svg; tools/icons/import_papirus.py). The face's
+      own outline, under the SIL Open Font License 1.1
+      (fonts/LICENSE-Liberation-OFL.txt). -->
+ <path style="fill:currentColor" d="M 10.679,13 L 9.792,10.445 L 5.981,10.445 L 5.094,13 L 3,13 L 6.648,3 L 9.118,3 L 12.752,13 Z M 7.883,4.54 L 7.84,4.696 Q 7.769,4.952 7.67,5.278 Q 7.571,5.605 6.449,8.869 L 9.324,8.869 L 8.337,5.995 L 8.032,5.03 Z"/>
 </svg>
