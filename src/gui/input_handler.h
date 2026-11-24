@@ -1386,8 +1386,8 @@ struct GuiInputHandler {
     //    definitions in input_pointer.cpp) -----------------------------------
     // THE POINTER'S HALF OF THE GATE, AND THE ONE EVERY HOVER LOOK ASKS —
     // "may a hover face show for the pen where it is now?": the pen hovering
-    // in the plane (AppState::pointer_in_window: every leave drops it, the
-    // platform's plane among them; every motion sets it, a finger's too —
+    // in range (AppState::pointer_in_window: every leave drops it, the
+    // pen's HOVER_EXIT among them; every motion sets it, a finger's too —
     // its contact's motions carry the held button, and the one unheld
     // motion a finger delivers, its hard end's lost-button motion, is
     // followed in the same delivery by the leave, which drops the bit
@@ -1403,7 +1403,7 @@ struct GuiInputHandler {
     // own walk adds what a press there would meet (the faces' walk below;
     // the well's targets through hover_admitted_on_main_page).
     bool hover_admitted() const;
-    // THE SAME HALF LESS THE BARREL TERM — the pen in the plane, no contact
+    // THE SAME HALF LESS THE BARREL TERM — the pen in range, no contact
     // down, the pen latch not holding: hover_admitted is this and the barrel
     // not held; the waveform's hover line reads it alone and takes the barrel
     // on its own terms (walk_hover_line below; pointer_barrel_held_'s one
@@ -1448,7 +1448,7 @@ struct GuiInputHandler {
     // takes only the framing double tap on the bar), and NOT THE BARREL
     // (pointer_barrel_held_: a barrel press on the bar is the bound-set
     // click, another act than the grab the hover promises). The frozen
-    // answer's terms: the pen in the plane with no contact, the main page
+    // answer's terms: the pen in range with no contact, the main page
     // taking a press there and the bar's own — the
     // pointer's half less the latch. The part under the pointer by the
     // press's own two hits (hit_test_trim_endcap, point_in_trim_bridge_span).
@@ -1629,7 +1629,7 @@ struct GuiInputHandler {
     // roster walk's tail for a dialog owner whose surface closed or was
     // replaced, the pointer-leave hook (main.cpp: every reason alike — the
     // ordinary leave, a translated contact's lift, the pen's hover leaving
-    // the plane), the TIPS lamp's dark edge (set_show_tooltips), and
+    // range), the TIPS lamp's dark edge (set_show_tooltips), and
     // main.cpp's activation edge. Damages the box's last painted rect and
     // nothing else (the box hangs outside its strip; the argument is at
     // take_tooltip_box_down, input_pointer.cpp).
@@ -3334,7 +3334,7 @@ private:
     //   end's zone, past the partner, on the ruler) and after any other
     //   lift, and the walk keeps that answer, pending or resolved, never
     //   re-reading the pen's place, while
-    //   trim_bar_frozen_part_kept holds (the pen in the plane with no
+    //   trim_bar_frozen_part_kept holds (the pen in range with no
     //   contact, no veil or card there, audio and no live drag, and the
     //   bar's own terms), until the pen rearms or leaves; so the
     //   caps do not blink at the lift.
@@ -3388,8 +3388,7 @@ private:
     // bar, with no fade, holds its hovered part across that leave instead
     // (AppState::TrimBarHover's `leave_ms`).
     // A TIMER WOULD NOT DO: expiring with the pen still hovering in place, it
-    // would light the very face it withheld; the latch is a DISTANCE, as
-    // the plane's own hysteresis is.
+    // would light the very face it withheld; the latch is a DISTANCE.
     //   ARMED only by the Android backend's pen lift off an empty glass
     //   (GuiPlatform::set_pen_lift_hook) — never by a finger (it never
     //   hovers), so the finger is untouched. IT ARMS AFTER THE LIFT'S OWN DELIVERY
@@ -3414,7 +3413,7 @@ private:
     //   Chebyshev, the drag gate's own metric (on_motion's prologue) — the
     //   same motion's hover walk then answers as usual, the face under the
     //   pen fading in; (b) by every leave (the pointer-leave
-    //   hook, main.cpp): a HOVER_EXIT, a report above the plane, focus loss —
+    //   hook, main.cpp): a HOVER_EXIT, focus loss —
     //   and THE NEXT DOWN, which is one of them: the latch stands only while
     //   the pen's hover does, and every first down ends that hover through
     //   its leave (end_pen_hover).
@@ -3462,7 +3461,7 @@ private:
     //     stem replaces it in place when the zoom starts; over the ruler and
     //     the marker lane it hides the line as it hides every hover.
     // THE BIT IS THE LAST MOTION'S, NOT THE BUTTON'S, and lags it in one
-    // case that shows: A BARREL EDGE WITH THE PEN STILL IN THE PLANE — the
+    // case that shows: A BARREL EDGE WITH THE PEN HOVERING — the
     // platform sets the core's bit and delivers no motion for the edge
     // itself (platform_android.cpp's BUTTON_PRESS / BUTTON_RELEASE arm) —
     // so the hovered face stays, or stays away, until the pen's next hover
@@ -3472,7 +3471,7 @@ private:
     // the in-window bit refuses first and the return's own motion rewrites
     // this one ahead of its walk — save the trim bar's held clear, which
     // with the pointer out re-asks it for at most kTrimBarLeaveHoldMs and
-    // so keeps, at most that long, the part the last report in the plane
+    // so keeps, at most that long, the part the last report in range
     // answered under that same bit; at the pen latch's arm and through its
     // hold (the lift's restore motion wrote the stroke's last bit) the
     // latch refuses first; a finger's motions carry the held button.

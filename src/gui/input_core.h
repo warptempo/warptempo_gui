@@ -71,10 +71,11 @@
 //     (architect 2026-10-07): the Android backend focuses the pointer at the
 //     lift, so the fork's restore arm runs — pointer_focus_at.
 //   * THE PEN'S HOVER END, the Android backend's S Pen hover ending
-//     (GuiPlatform::end_pen_hover, through pointer_leave: a HOVER_EXIT —
-//     which the platform sends just before every tip DOWN — a report above
-//     the GUI's plane, any first down, focus loss; architect 2026-09-27,
-//     every pen hover effect acts only within the plane). THE HOVER END
+//     (GuiPlatform::end_pen_hover, through pointer_leave: a HOVER_EXIT,
+//     which the platform sends when the pen leaves its range and just
+//     before every tip DOWN; any first down; focus loss. The range is the
+//     platform's own, architect 2026-11-23, GuiPlatform::
+//     pen_report_in_range). THE HOVER END
 //     BEFORE A TIP DOWN DARKENS NOTHING A FRAME COULD SHOW (architect
 //     2026-10-10, his S Pen touching down on a hover-lit row, the row
 //     blinking): THE STYLUS HOVER_EXIT AND ITS DOWN ARRIVE IN
@@ -237,9 +238,8 @@ public:
     // the button state, so the press and the motions read the bit that event
     // carried; the pen's own lift is not sampled (its last leg keeps the
     // stroke's bit), and the bit drops after that lift, at a cancel, a hover
-    // exit (or any pen report above the GUI's plane, 2026-09-27), a finger's
-    // first down and focus loss. It owes the touch machine ONE thing of its
-    // own: a ctrl edge under a live single-finger nav is announced to the GUI
+    // exit, a finger's first down and focus loss. It owes the touch machine
+    // ONE thing of its own: a ctrl edge under a live single-finger nav is announced to the GUI
     // as a nav frame (the exemption at set_touch_nav_hooks' update contract),
     // so the one-finger zoom's pivot seats and clears at the edge itself.
     void set_ctrl(bool ctrl);

@@ -354,7 +354,7 @@ public:
     // S Pen made with its side button held outlives the pen's lift while the
     // button stays held, so the next stroke zooms about the same anchor. The
     // platform owns the pen facts (its
-    // button, its plane, its contacts) and the GUI owns the seat
+    // button, its range, its contacts) and the GUI owns the seat
     // (TouchNavZoomState, app_state.h); these two members are the whole of
     // the traffic between them.
     //
@@ -373,19 +373,16 @@ public:
     //       retained, inert on the live stroke's own), and the stroke is
     //       marked so its lift keeps nothing;
     //   (b) THE PEN LANDING WITHOUT ITS BUTTON (its DOWN, sampled released);
-    //   (c) THE SECOND CONSECUTIVE IN-PLANE HOVERING SYNC SHOWING THE BUTTON
-    //       UP (the first arms a pending release; the firmware reports the
-    //       barrel button released at every range leave, in its own sync just
-    //       before the HOVER_EXIT, which drops the pending — architect
-    //       2026-10-31, measured on the raw stream: a fast lift leaves range
-    //       from 61-66 counts, inside the plane; the rule and its drops at
-    //       pen_hover_release_pending_); ON THE GLASS, THE FIRST REPORT
-    //       SHOWING IT UP. The plane is pen_report_in_plane's latch (a hover
-    //       report or hovering button edge entering at or under
-    //       kPenPlaneEnter and staying in until one rises past kPenPlaneExit,
-    //       and every contact report). A button state reported ABOVE the
-    //       plane, a HOVER_EXIT, or nothing at all (out of range) releases
-    //       nothing (the first two drop a pending);
+    //   (c) THE SECOND CONSECUTIVE HOVERING SYNC SHOWING THE BUTTON UP, at
+    //       any height in the platform's range (pen_report_in_range,
+    //       architect 2026-11-23) (the first arms a pending release; the
+    //       firmware reports the barrel button released at every range
+    //       leave, in its own sync just before the HOVER_EXIT, which drops
+    //       the pending — architect 2026-10-31, measured on the raw stream;
+    //       the rule and its drops at pen_hover_release_pending_); ON THE
+    //       GLASS, THE FIRST REPORT SHOWING IT UP. A HOVER_EXIT, or nothing
+    //       at all (out of range), releases nothing (the exit drops a
+    //       pending);
     //   (d) THE HARD ENDS — a CANCEL and focus loss.
     // The GUI's body (GuiInputHandler::release_pen_zoom_anchor) clears only a
     // RETAINED seat, so a fire that meets a live gesture's seat is inert.
@@ -660,8 +657,8 @@ private:
     // pen's translated HOVER_ENTER (the core's pointer_enter) — or the pen's
     // lift off an empty glass, which is that enter (pointer_focus_at; the
     // rule at on_motion_event's hover arm, architect 2026-10-07) — and the
-    // edge that ends it — HOVER_EXIT, a hover report or hovering button edge
-    // above the GUI's plane (pen_report_in_plane), ANY first contact down (the pen's tip or a
+    // edge that ends it — HOVER_EXIT (the pen leaving the platform's range,
+    // pen_report_in_range), ANY first contact down (the pen's tip or a
     // finger), or focus loss, each delivering the core's pointer_leave
     // (end_pen_hover). What
     // makes the doors sequence sanely is that one owner: a hover never
@@ -672,8 +669,7 @@ private:
     // THE STANDING CTRL BIT WAS SET BY THE PEN'S BUTTON (set_pen_ctrl's
     // record): true from a sampled pen event reporting the button, while the
     // pen owns what it would steer, until the pen's lift, a cancel, a hover
-    // exit or any pen report above the GUI's plane, a finger's first down or
-    // focus loss clears it. The clears read
+    // exit, a finger's first down or focus loss clears it. The clears read
     // this record rather than the clearing event's own stylus metadata, so a
     // cancel that does not enumerate the pen still drops the bit.
     bool pen_ctrl_ = false;
@@ -681,16 +677,9 @@ private:
     // pointer is the pen until its own lift, a cancel or focus loss. KEYED ON
     // THE ACTIONS, never on the distance axis (the driver writes distance 0
     // when the pen leaves range, so 0 is not "touching"); read by
-    // pen_report_in_plane for the one action that can arrive either way, a
-    // BUTTON_PRESS / BUTTON_RELEASE.
+    // on_motion_event's sampling (its `hovering_report`) for the one action
+    // that can arrive either way, a BUTTON_PRESS / BUTTON_RELEASE.
     bool pen_on_glass_ = false;
-    // THE GUI'S PLANE'S LATCH — the pen is within the plane (architect
-    // 2026-09-27, the plane's hysteresis). pen_report_in_plane owns it whole:
-    // it reads and writes it once per pen-carrying event, the transitions
-    // being listed at its definition (platform_android.cpp). Besides that
-    // owner only the hard ends write it, OUT: a cancel and focus loss, which
-    // clear it unconditionally as they clear pen_on_glass_.
-    bool pen_in_plane_ = false;
     // A FINGER LANDED DURING THE PEN'S LIVE STROKE (release inventory (a) at
     // set_pen_zoom_anchor_release_hook): set at such a finger's down, reset
     // at the pen's first down; the stroke's lift then keeps no anchor.
@@ -701,29 +690,30 @@ private:
     // THE PEN'S PENDING HOVER RELEASE (release inventory (c) at
     // set_pen_zoom_anchor_release_hook; architect 2026-10-31). THE RULE: a
     // HOVERING pen releases the retained zoom anchor at the SECOND
-    // CONSECUTIVE IN-PLANE SYNC SHOWING THE BUTTON UP. The first such report
+    // CONSECUTIVE HOVERING SYNC SHOWING THE BUTTON UP. The first such report
     // the pen steers (a HOVER_ENTER / HOVER_MOVE or a hovering
     // BUTTON_RELEASE) arms the pending, stamped with its event time; the
-    // next in-plane hovering report still showing the button up with a
-    // STRICTLY LATER event time fires the release (the reports of one sync
-    // share a time, so the deferral is one sync, about 2 ms at the pen's
-    // ~480 Hz hover rate, invisible). Anything that breaks the run DROPS it,
-    // no release: a HOVER_EXIT and every report above the plane (the hover
-    // arm's and the button edge's above-plane answers), an in-plane report
-    // showing the button held or one the pen does not steer, every contact
-    // report (the pen's DOWN: sampled released it releases at once, (b);
-    // sampled held the anchor stands), a CANCEL and focus loss. WHY
-    // (measured 2026-10-31 on the raw stylus stream, `getevent -lt` on
-    // sec_e-pen): the S Pen's firmware reports the barrel button RELEASED the
-    // instant the pen leaves sensing range — the hand never let go — in its
-    // own sync, the last sampled height still standing, and 0.15 ms later
-    // the range leave Android turns into the HOVER_EXIT. A slow lift's
-    // release arrives at 101 counts, above the plane, but a fast one outruns
-    // the sampler and leaves from 61-66 counts, inside it, so no height tells
-    // the firmware's release from the hand's. The SIGNATURE does: the
+    // next hovering report still showing the button up with a STRICTLY
+    // LATER event time fires the release (the reports of one sync share a
+    // time, so the deferral is one sync, about 2 ms at the pen's ~480 Hz
+    // hover rate, invisible). Anything that breaks the run DROPS it, no
+    // release: a HOVER_EXIT (the hover arm), a hovering report showing the
+    // button held or one the pen does not steer, every contact report (the
+    // pen's DOWN: sampled released it releases at once, (b); sampled held the
+    // anchor stands), a CANCEL and focus loss. WHY (measured 2026-10-31 on
+    // the raw stylus stream, `getevent -lt` on sec_e-pen): the S Pen's
+    // firmware reports the barrel button RELEASED the instant the pen leaves
+    // sensing range — the hand never let go — in its own sync, the last
+    // sampled height still standing, and 0.15 ms later the range leave
+    // Android turns into the HOVER_EXIT. That release is in range like every
+    // button edge (pen_report_in_range), so the one-sync wait is what carries
+    // the rule at EVERY height (architect 2026-11-23): the app reads no
+    // height, and none would tell the firmware's release from the hand's (a
+    // slow lift's arrives at 101 counts, but a fast one outruns the sampler
+    // and leaves from 61-66 counts). The SIGNATURE does tell: the
     // firmware's is followed by the range leave and never by another
-    // in-plane report with the button up; a real release in reach is
-    // followed within ~2 ms by further in-plane hover reports showing it up.
+    // hovering report with the button up; a real release in reach is
+    // followed within ~2 ms by further hover reports showing it up.
     bool    pen_hover_release_pending_ = false;
     // The pending's event time (AMotionEvent_getEventTime, ns).
     int64_t pen_hover_release_time_ns_ = 0;
@@ -948,15 +938,13 @@ private:
     // END A PEN HOVER — the core's pointer_leave (THE POINTER LEAVE'S THREE
     // FIRES, input_core.h), and its frame, iff one stands (pen_hovering_ above).
     void end_pen_hover();
-    // THE GUI'S PLANE — the one predicate both pen rules read (the hover
-    // doors and the retained anchor's release), and the owner of the plane's
-    // latch (pen_in_plane_): it UPDATES the latch as it answers, so it is
-    // asked exactly once per pen-carrying event (on_motion_event's one
-    // `pen_in_plane` const, its only caller). The two thresholds
-    // (kPenPlaneEnter / kPenPlaneExit), the transitions and the measured
-    // scale are at its definition, platform_android.cpp.
-    bool pen_report_in_plane(const struct AInputEvent* event, int32_t masked,
-                             size_t pen_index);
+    // THE PEN'S RANGE — whether a pen-carrying event of this masked action
+    // reports the pen in the platform's own range (architect 2026-11-23): a
+    // pure function of the action, no distance read and no state. One
+    // caller, on_motion_event's `pen_in_range`; the per-action table, the
+    // range's measured extent and the stream's two facts are at its
+    // definition, platform_android.cpp.
+    static bool pen_report_in_range(int32_t masked);
     // Fire the release hook (set_pen_zoom_anchor_release_hook), null-safe.
     void release_pen_zoom_anchor();
 };

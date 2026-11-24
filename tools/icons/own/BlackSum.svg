@@ -1,12 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
- <!-- CUMULATIVE'S DRAWING, OURS (architect 2026-11-23, send OO, his pick
-      off the mock, "S1"): a sigma, no serifs, with no Papirus source (the
-      16-px set has no sigma under any name tried). Its shape follows
-      Material Design Icons' `sigma`, two bars and a 45-degree fold, REDRAWN
-      at Papirus's weight with none of its path data: 10 wide and 12 tall
-      (the ink x 3 to 13, y 2 to 14), the bars 2 of 16 thick, the fold 3 of
-      16 across (go-previous's arm). Cumulative (BlackSum) wears it as drawn
-      (tools/icons/import_papirus.py). Ours outright, under the repository's
-      own licence, GPL-3.0 (LICENSE). -->
- <path style="fill:currentColor" d="M 3,2 H 13 V 4 H 6 L 10,8 6,12 H 13 V 14 H 3 V 12 L 7,8 3,4 Z"/>
+ <!-- CUMULATIVE'S DRAWING, OURS (architect 2026-11-23, send PP, his pick
+      off the mock, "S2": "changed my mind - sigma should use serif"): a
+      serifed sigma, with no Papirus source (the 16-px set has no sigma
+      under any name tried). Its shape follows Material Design Icons'
+      `sigma`, two bars and a 45-degree fold, REDRAWN at Papirus's weight
+      with none of its path data: 10 wide and 12 tall (the ink x 3 to 13,
+      y 2 to 14), the bars 2 of 16 thick, the fold 3 of 16 across
+      (go-previous's arm); at the free end of each bar an upright serif,
+      the bar turning 2 toward the middle, a tick 2 wide and 2 long (x 11
+      to 13, y 4 to 6 above and y 10 to 12 below). Cumulative (BlackSum)
+      wears it as drawn (tools/icons/import_papirus.py). Ours outright,
+      under the repository's own licence, GPL-3.0 (LICENSE). -->
+ <path style="fill:currentColor" d="M 3,2 H 13 V 6 H 11 V 4 H 6 L 10,8 6,12 H 11 V 10 H 13 V 14 H 3 V 12 L 7,8 3,4 Z"/>
 </svg>

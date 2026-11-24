@@ -112,7 +112,8 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # "B3" off the mock (our own drawing, OWN + 'TransformMoveVertical.svg', no
 # transform); AND TEN ROWS
 # RE-PICKED BY HIM 2026-11-23, send OO, his picks off the mocks, every one
-# our own drawing, OWN + '<Enumerator>.svg': BlackSum ("S1"),
+# our own drawing, OWN + '<Enumerator>.svg': BlackSum (re-picked again by
+# him 2026-11-23, send PP, "S2", the serifed sigma),
 # GoPreviousViewPage / GoNextViewPage ("P1", one source, Next's mirrored),
 # ZoneIn / ZoneOut ("K5"), TimelineUseZoneOn ("C2"), GoParentFolder ("U1"),
 # VcsCommit / VcsPull ("V1") and NetworkConnect ("N2"). A note names a
@@ -181,8 +182,8 @@ ROSTER = [
      'no deep-history; network-unavailable, a faded network port and a '
      'cross (re-picked 2026-11-22, send MM)'),
     ('BlackSum', OWN + 'BlackSum.svg',
-     'no black_sum; ours, a sigma, no Papirus source (re-picked '
-     '2026-11-23, send OO)'),
+     'no black_sum; ours, a serifed sigma, no Papirus source (re-picked '
+     '2026-11-23, send PP)'),
     ('DocumentRevert', SYM + 'actions/document-revert-symbolic.svg', ''),
     ('KeyframePrevious', 'actions/keyframe-previous.svg',
      'a stopwatch and a triangle back (re-picked 2026-11-22)'),

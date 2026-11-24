@@ -4294,7 +4294,7 @@ void render_playhead(GuiCanvasSink& sink,
 //     (pointer_barrel_held_'s one exception, input_handler.h), WITH NO
 //     TRIANGLE (the anchor's stem it previews has no head); once the zoom
 //     seats, the white anchor stem is the mark and no hover line is drawn.
-//     The gate — the pen in the plane with no contact, the pen latch not
+//     The gate — the pen in range with no contact, the pen latch not
 //     holding (no line after a lift until 18 W of motion or a leave: "it
 //     should wait to prevent every lift turning into a hover blip"), the
 //     main page taking a press there, no seat — is the walk's
@@ -4393,7 +4393,7 @@ void render_playhead(GuiCanvasSink& sink,
 //     (GuiInputHandler::set_hover_line, two compares against the places
 //     last declared: the line's, and the triangle's, which carries whether
 //     it stands, so the barrel's Tap <-> Anchor edge at one x damages the
-//     triangle alone) — so a pen resting or away from the plane costs
+//     triangle alone) — so a pen resting or out of range costs
 //     nothing and the app presents nothing; while the pen moves in hover
 //     range nearly every report that moves its real x moves the line (the
 //     Tap place where the x crosses a frame's edge, a frame being 1/20 px

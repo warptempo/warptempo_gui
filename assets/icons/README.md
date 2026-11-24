@@ -30,7 +30,8 @@ Magnification (`ZoomInY`) `audio-volume-high`; Warp (`Speedometer`) `slow_off`, 
 `keyframe-next`; Session History (`DeepHistory`) `network-unavailable`, a faded network port and a cross (send MM);
 the score's Start / End (`ZoneIn` / `ZoneOut`) OUR OWN, `view-readermode`'s open book with a plus or a minus in its
 own moat (re-picked once more 2026-11-23, send OO); Save (`DocumentSave`) `media-floppy`; Cumulative (`BlackSum`)
-OUR OWN sigma (re-picked once more 2026-11-23, send OO); Flatten (`Merge`) `tool-brush`, a brush (send MM); and
+OUR OWN serifed sigma (re-picked once more 2026-11-23, send OO, its serifs send PP); Flatten (`Merge`) `tool-brush`,
+a brush (send MM); and
 2026-11-23 (send OO, his picks off the mocks; with Restrict, Start / End and Cumulative above, ten rows, every one
 OUR OWN, THE OWN DRAWINGS below), SIX MORE ROWS — the picker's Up (`GoParentFolder`) `folder-symbolic`'s folder with
 an up arrow cut out of it; the score's Previous / Next Page (`GoPreviousViewPage` / `GoNextViewPage`)
@@ -78,10 +79,12 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
   arrow turned upright, one head up and one head down superimposed on one stem, the stroke kept at 2, the arms
   shortened — each head 10 wide and 6.5 deep (go-first's head corner 6 in from the tip -> 5), tip to tip 16 (ink y 0
   to 16, x 3 to 13), the heads 3 apart — drawn as the two arrows' union, one outline.
-- CUMULATIVE'S (architect 2026-11-23, send OO, "S1"), `BlackSum.svg`: a sigma, OURS OUTRIGHT, no Papirus source (the
-  16-px set has no sigma under any name tried); its shape follows Material Design Icons' `sigma`, two bars and a
-  45-degree fold, no serifs, REDRAWN at Papirus's weight with none of its path data: 10 wide and 12 tall (ink x 3 to
-  13, y 2 to 14), the bars 2 thick, the fold 3 across (go-previous's arm).
+- CUMULATIVE'S (architect 2026-11-23, send PP, "S2": "changed my mind — sigma should use serif"), `BlackSum.svg`: a
+  serifed sigma, OURS OUTRIGHT, no Papirus source (the 16-px set has no sigma under any name tried); its shape follows
+  Material Design Icons' `sigma`, two bars and a 45-degree fold, REDRAWN at Papirus's weight with none of its path
+  data: 10 wide and 12 tall (ink x 3 to 13, y 2 to 14), the bars 2 thick, the fold 3 across (go-previous's arm); at
+  the free end of each bar an upright serif, the bar turning 2 toward the middle, a tick 2 wide and 2 long (x 11 to
+  13, y 4 to 6 above and y 10 to 12 below).
 - THE SCORE'S PAGE KEYS' (send OO, "P1"), `GoPreviousViewPage.svg`: `actions/go-previous.svg`'s head with the stem
   removed — its vertices 2,8 8,2 9.5,3.5 and 9.5,12.5 8,14 kept, the stem's two inner corners replaced by the arms'
   own meeting point 5,8 — the ink re-centered (shifted 2.25 right, ink x 4.25 to 11.75, y 2 to 14). Previous Page
@@ -176,7 +179,7 @@ changed, two of them wrapped in their transform.
 | `ViewMediaLyrics` | `symbolic/places/folder-music-symbolic.svg` | `01ffd6e4ff6b24a1980a2965a62719df2d1c8faa1d314406baf73f15aefa387d` | no view-media-lyrics; folder-music, two beamed notes (re-picked 2026-11-22) |
 | `ShallowHistory` | `symbolic/actions/recent-symbolic.svg (-> actions/document-open-recent.svg)` | `9b16854c8865286e4aacac9086b0e1a595c9e2029d3e8e2c346fcb54be7af3b6` | no shallow-history; recent (a clock) |
 | `DeepHistory` | `panel/network-unavailable.svg (-> panel/network-wired-offline.svg)` | `ffd38f78062e37210ae4d1c38b985b7fdee67f71bfca5fbd99c2b319a37dee65` | no deep-history; network-unavailable, a faded network port and a cross (re-picked 2026-11-22, send MM) |
-| `BlackSum` | `tools/icons/own/BlackSum.svg` | `8ac5edbed9f201f2f6533375eb78e2475e36532079ec01efb50a3913335042da` | no black_sum; ours, a sigma, no Papirus source (re-picked 2026-11-23, send OO) |
+| `BlackSum` | `tools/icons/own/BlackSum.svg` | `2392ce32f645000760e5c1dc1439b12d42be2ac5a62c6271955be19c3642a2a4` | no black_sum; ours, a serifed sigma, no Papirus source (re-picked 2026-11-23, send PP) |
 | `DocumentRevert` | `symbolic/actions/document-revert-symbolic.svg (-> actions/document-revert.svg)` | `3ebae2dd73ccf42a5f0d12d7e5548e025f3dd2dced023a73f98fc60f67cd0118` |  |
 | `KeyframePrevious` | `actions/keyframe-previous.svg` | `dcb56a7748d890872d1e1566d192691b5c65300a9e13d629dbdd3830c33789c2` | a stopwatch and a triangle back (re-picked 2026-11-22) |
 | `KeyframeNext` | `actions/keyframe-next.svg` | `649db167a62c4c238f4febefb2f2cc376ada0bae88e9bb158187067f0c1f501d` | a stopwatch and a triangle forward (re-picked 2026-11-22) |

@@ -1447,7 +1447,7 @@ struct ScrollDragState {
 //     RETAINED SEAT DIES
 //     (release_pen_zoom_anchor, through clear_touch_zoom_seat, erase
 //     included) at the platform's release hook — every finger down, the pen
-//     landing without its button, the pen's button up sampled in its plane
+//     landing without its button, the pen's button up sampled in its range
 //     (on the glass the first report, hovering the second consecutive sync,
 //     the firmware's release at a range leave never firing it), a cancel
 //     and focus loss
@@ -6750,9 +6750,10 @@ struct AppState {
     // THE GATE — A FACE HOVERS ONLY WHERE A PRESS THERE WOULD ACT (ON SCREEN
     // IS AS PAINTED), two halves, each one predicate:
     //   * THE POINTER'S (GuiInputHandler::hover_admitted, the gate every
-    //     hover look asks): the pen hovering in the plane (the platform's
-    //     pen_report_in_plane: a report above it is a leave; A FINGER NEVER
-    //     HOVERS — its every motion is a contact's), no contact down
+    //     hover look asks): the pen hovering in range (the platform's own,
+    //     HOVER_ENTER to HOVER_EXIT, architect 2026-11-23: GuiPlatform::
+    //     pen_report_in_range; A FINGER NEVER HOVERS — its every motion is a
+    //     contact's), no contact down
     //     anywhere (a pen or finger in contact is a press or a gesture: a
     //     gesture begun elsewhere and dragged over a key lights nothing),
     //     THE BARREL NOT HELD (every surface that hovers consumes a press
@@ -6776,7 +6777,7 @@ struct AppState {
     //     button's box less its seam, the keyboard's key_at, the knob's disc
     //     as painted), under no card.
     // EVERY LEAVE FADES OUT, as Arc's does when the pointer leaves the
-    // widget: the pen rising out of the plane, a HOVER_EXIT, focus loss (the
+    // widget: the pen rising out of range (its HOVER_EXIT), focus loss (the
     // pointer-leave hook, main.cpp, through the walk). THE HOVER_EXIT THE
     // PLATFORM SENDS A MILLISECOND BEFORE EVERY TIP DOWN (input_core.h's THE
     // POINTER LEAVE'S THREE FIRES) starts that fade-out, and the DOWN's
@@ -6859,7 +6860,7 @@ struct AppState {
     //   hit_test_flag over the published stash, its chip's hit extent or its
     //   label's box, the rightmost on top) — under the main page's
     //   form of the pointer's gate (hover_admitted_on_main_page: the pen in
-    //   the plane, no contact, the barrel not held, the latch not holding,
+    //   range, no contact, the barrel not held, the latch not holding,
     //   no veil, no overlay, no card there, audio and no load, no live
     //   drag). Every flag a tap there acts on: enabled and
     //   disabled, selected or not, struck or not, a live column's marker and
@@ -7274,7 +7275,7 @@ struct AppState {
     // settle beside settle_face_fades, ahead of every frame.
     //   `part` the part under the pen as the press reads it (an end's grab
     //     zone or the bridge, TrimBarHit), under the gate
-    //     hover_admitted_on_main_page — the pen in the plane, no contact, the
+    //     hover_admitted_on_main_page — the pen in range, no contact, the
     //     pen latch not holding, no modal, no overlay, no card there, audio
     //     loaded and no load running, no live drag — and the bar's own
     //     terms, only where a press
@@ -7330,7 +7331,7 @@ struct AppState {
     //     would let a frame painted in the gap show the bare pill between
     //     the hover look and the held look — the keys hide the same gap
     //     behind their 200 ms fade, the bar has none. So a POINTER LEAVE
-    //     (the hook's one road, the plane's exit and the HOVER_EXIT alike:
+    //     (the hook's one road, the HOVER_EXIT and every other leave alike:
     //     it carries no reason) does not clear a standing part: it stamps
     //     monotonic_ms() here (stamp_trim_bar_leave), the hover's own clock,
     //     and the walk keeps the part, damaging nothing, while the stamp is
@@ -7550,7 +7551,7 @@ struct AppState {
     //     ms: ANY POINTER PRESS OR RELEASE (a click hides the hint), a modal
     //     opening with no press to carry it (the platform's close, the
     //     progress modal's open and its swap for the player), the pointer
-    //     leaving the window or the pen's hover leaving the plane (every leave
+    //     leaving the window or the pen's hover leaving range (every leave
     //     alike, a translated contact's lift included), the window's
     //     activation flipping either way, a dialog owner whose surface closed
     //     or was replaced, and the TIPS lamp's dark edge. KEYS DO NOT HIDE IT:
@@ -19088,8 +19089,8 @@ SweepHighlightChange sweep_highlight_change(
 // between the body and an end or off the bar, a contact going down (the
 // press's walk and the DOWN's own motion), the zones moving under a resting
 // pen or a gate term turning (the tick's walk) — the leave's held clear
-// dropping the part on the first tick 10 ms after the pen's leave or the
-// plane's exit (AppState::TrimBarHover's `leave_ms`; a press, a motion or
+// dropping the part on the first tick 10 ms after the pen's leave
+// (AppState::TrimBarHover's `leave_ms`; a press, a motion or
 // a veil inside those 10 ms resolving it first), the latch's arm writing
 // none (its pending answer for a grab's lift resolved by the next frame's
 // publishing pass, which repaints the lane whole under the lift's own

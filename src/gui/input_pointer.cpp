@@ -7265,7 +7265,7 @@ bool GuiInputHandler::trim_bar_takes_grab() const {
 }
 
 // THE FROZEN ANSWER'S TERMS (the declaration): the pointer's half of the
-// gate less the latch — the pen in the plane, no contact down — the main
+// gate less the latch — the pen in range, no contact down — the main
 // page taking a press at the pointer and the bar's own.
 bool GuiInputHandler::trim_bar_frozen_part_kept() const {
     return app.pointer_in_window && !app.redesign_tooltip.button_held &&
@@ -7375,10 +7375,10 @@ void GuiInputHandler::settle_trim_bar_hover() {
 //    the order and the place rule at render.h's render_hover_line;
 //    architect 2026-11-21) -------------------------------------------------
 
-// THE WALK (the declaration). THE LINE STANDS IFF the pen hovers in the
-// plane with no contact and the pen latch not holding (pen_hovers_unlatched:
+// THE WALK (the declaration). THE LINE STANDS IFF the pen hovers in range
+// with no contact and the pen latch not holding (pen_hovers_unlatched:
 // "it should wait to prevent every lift turning into a hover blip"; a finger
-// never reports in the plane — the platform's hover doors take the pen's
+// never hovers — the platform's hover doors take the pen's
 // HOVER actions alone, and a finger's motions carry its held button — so a
 // finger never shows one), the main page takes a press at the place
 // (main_page_takes_press_at_pointer: no modal, no overlay, no card there,
