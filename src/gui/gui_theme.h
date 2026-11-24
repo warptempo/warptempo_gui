@@ -153,7 +153,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // checked blue. A lit key's glyph and the on-screen keyboard's lit cap
     // (key_ink, materials.h).
     .text_on_lit = 0xFFFFFF,
-    // A DISABLED KEY'S GLYPH and the struck clip lamp's square: an
+    // A DISABLED KEY'S GLYPH: an
     // insensitive button's drawing MEASURED ON HIS ARC-DARK DESKTOP (shot
     // B3b, 2026-11-18; architect 2026-11-19), opaque over the key
     // face (key_ink, materials.h; the palette's `key_dim_ink`).
@@ -287,7 +287,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // (`@define-color warning_color #F27835`) (architect 2026-11-05: "orange
     // for limiter and red for clipper").
     .limiter_lamp = 0xF27835,
-    // THE TITLE BAR'S CLIP LAMP, LIT AND NOT STRUCK — THE CLOSE RED: Arc's
+    // THE TITLE BAR'S CLIP LAMP, LIT — THE CLOSE RED: Arc's
     // xfwm4 / headerbar close disc, `@define-color wm_button_close_bg
     // #cc575d;` (its hover D7787D, its press BE3841), on the clip lamp alone
     // (architect 2026-11-14: red reads as a warning or a close).

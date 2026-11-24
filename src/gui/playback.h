@@ -386,20 +386,21 @@ public:
     // to it until a LAUNCH PRESS reopens through
     // ensure_device_available_for_play below (or the render player's own play
     // road reaches play(), which reopens at its head): a dead stream waits for
-    // a launch press (or the struck clip lamp's tap, below). FOUR READERS,
-    // all TICKS: the render player's (a
+    // a launch press (or NOISE's wake, below). THREE TICK READERS: the
+    // render player's (a
     // dead stream mid-play must PAUSE, not advance), the A/B audition's,
     // GuiAbAudition::fire_if_due, which ends the whole act
     // through the one stop body and cards
-    // kPlaybackDeviceUnavailableCard, the score viewer's
+    // kPlaybackDeviceUnavailableCard, and the score viewer's
     // (GuiScoreViewer::tick, Live transport), which pauses the held cursor
-    // and cards the same sentence for a dropped soundtrack, and the title
-    // bar's lamps' (refresh_logo_lamps, main.cpp, architect 2026-11-05 night),
-    // which STRIKES THE CLIP LAMP while this answers true and a piece is
-    // open (render.h's THE TWO LAMPS' STRIKE). Plus the
+    // and cards the same sentence for a dropped soundtrack. ONE LIFT READER:
+    // the NOISE case's (GuiInputHandler::finish_level_press_release for the
+    // tap, take_chrome_press for a moved press; architect 2026-11-24), read
+    // live to decide whether the lift wakes the stream through the reopen
+    // below — nothing on screen shows the answer. Plus the
     // reopen's own post-reopen read
-    // inside ensure_device_available_for_play. A tick is where this belongs
-    // and a press is not: a press reopens.
+    // inside ensure_device_available_for_play. A launch press does not read
+    // it: a launch press reopens.
     // The launch FACES do not read it — they read device_absent below, the
     // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;
@@ -453,12 +454,12 @@ public:
     // kPlaybackDeviceUnavailableCard only when this answers FALSE; by the
     // car's Play (car_toggle_playback's play arm, which cards alike, and the two media
     // Play arms, GuiCarTransport::on_media_command and the render player's,
-    // which ignore the answer); and BY THE STRUCK CLIP LAMP'S LIFT
-    // (GuiInputHandler::finish_clip_lamp_press_release, architect 2026-11-05
-    // night: "the strike + the tap"), which plays nothing — the reopen and
-    // the start are the whole act, the bed resuming through the running
-    // callback — and cards alike. (Nothing asks the device question for
-    // the bed: the music's reopen is the bed's resume, noise.h's head.) No
+    // which ignore the answer); and BY NOISE'S WAKE
+    // (GuiInputHandler::wake_device_for_level_case, architect 2026-11-24: the
+    // level case's lift over a dead stream), which plays nothing — the
+    // reopen and the start are the whole act, the bed resuming through the
+    // running callback — and cards alike. (The bed itself asks nothing:
+    // every press's reopen is the bed's resume, noise.h's head.) No
     // road reopens without a
     // press. It closes a dead stream — the noise voice's sequence reset
     // first (close_dead_stream, noise.h's head) — and reopens a dead or null

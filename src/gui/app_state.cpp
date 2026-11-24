@@ -419,27 +419,60 @@ int hit_test_flag(const AppState& app, const GuiAudio& audio,
 // is the stem PAINTER's input alone.
 
 // THE WALK'S SEAT — contract at the declaration (app_state.h).
-int marker_walk_current_stop(const AppState& a, const GuiAudio& audio) {
+int marker_walk_current_stop(const AppState& a, const GuiAudio& audio,
+                             int focus, int64_t playhead) {
     // Both columns through the one store selector pair
     // (active_marker_count / active_marker_time_frame, app_state.h).
     const int n = active_marker_count(a);
-    const int last = a.last_selected_marker;
-    if (last < 0 || last >= n) return -1;
-    const int64_t src_f = active_marker_time_frame(a, last);
-    return source_frame_to_active_domain(a, audio, src_f) ==
-                   a.playhead_cursor_sample
-               ? last
+    if (focus < 0 || focus >= n) return -1;
+    const int64_t src_f = active_marker_time_frame(a, focus);
+    return source_frame_to_active_domain(a, audio, src_f) == playhead
+               ? focus
                : -1;
+}
+
+// THE COINCIDENCE SCAN — contract at the declaration (app_state.h); the rule
+// at auto_select_marker_at_playhead (input_pointer.cpp).
+int coincident_marker_at(const AppState& a, const GuiAudio& audio,
+                         int64_t playhead) {
+    const int n = active_marker_count(a);
+    for (int i = 0; i < n; ++i) {
+        const int64_t sample = clamp_playhead_to_live_domain(
+            source_frame_to_active_domain(a, audio,
+                                          active_marker_time_frame(a, i)),
+            a, audio);
+        if (sample == playhead) return i;
+    }
+    return -1;
+}
+
+// THE LIVE TAB'S LANDING — contract at the declaration (app_state.h).
+int marker_walk_landing(const AppState& a, const GuiAudio& audio,
+                        bool forward) {
+    return marker_walk_landing_from(a, audio, forward, a.last_selected_marker,
+                                    a.playhead_cursor_sample);
+}
+
+// THE ENTERED TAB'S LANDING — contract and the argument that it is the
+// step's own answer at the declaration (app_state.h): the entry's clamp, the
+// entry's auto-select scan, the one landing body.
+int marker_walk_landing_on_entry(const AppState& a, const GuiAudio& audio,
+                                 int64_t parked_playhead, bool forward) {
+    const int64_t playhead =
+        clamp_playhead_to_live_domain(parked_playhead, a, audio);
+    return marker_walk_landing_from(a, audio, forward,
+                                    coincident_marker_at(a, audio, playhead),
+                                    playhead);
 }
 
 // Promoted from a lambda in main(). The captured `app`
 // reference is now an explicit argument.
-// THE MARKER WALK'S LANDING — contract at the declaration (app_state.h). This
-// body is Selection::cycle_selection's own scan, hoisted whole on 2026-08-30
-// so the act and the walk button's face
-// read one landing; the act calls it and selects what it returns.
-int marker_walk_landing(const AppState& a, const GuiAudio& audio,
-                        bool forward) {
+// THE MARKER WALK'S LANDING, ITS ONE BODY — contract at the declaration
+// (app_state.h). This body is Selection::cycle_selection's own scan, hoisted
+// whole on 2026-08-30 so the act and the walk button's face read one
+// landing; the act calls it and selects what it returns.
+int marker_walk_landing_from(const AppState& a, const GuiAudio& audio,
+                             bool forward, int focus, int64_t playhead) {
     const std::vector<GuiWarpMarker>& warp_vec = a.warpmarkers.markers();
     const std::vector<GuiPhaseResetMarker>& phase_reset_vec =
         a.phaseresetmarkers.markers();
@@ -466,11 +499,11 @@ int marker_walk_landing(const AppState& a, const GuiAudio& audio,
     // sharing one active-domain frame are traversed by the in-group step so
     // every member is reachable (stacks are legal at rest). Disabled markers
     // are skipped as if absent. Trim bounds are not stops.
-    const int64_t ph_f = a.playhead_cursor_sample;
+    const int64_t ph_f = playhead;
     // Current stop: the focused marker when it sits on the playhead frame (a
     // playhead moved elsewhere breaks the equality and disables the in-group
     // step naturally) — the ONE seat owner above.
-    const int cur_marker = marker_walk_current_stop(a, audio);
+    const int cur_marker = marker_walk_current_stop(a, audio, focus, playhead);
     // In-group step first: one place within the shared frame in the walk
     // direction (ascending index forward, descending backward).
     if (cur_marker >= 0) {

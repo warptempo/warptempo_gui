@@ -1711,9 +1711,12 @@ bool GuiHistoryDiff::init(const AppState&           app,
     // refusing the strict load — open exactly like the mid-scan window does, so
     // emptiness is nowhere a refusal and `done` is nowhere a term.
     //
-    // WHAT THE OLD REFUSAL COST is why it went: SAVE AND COMMIT LIVES ONLY
-    // INSIDE THIS VIEW, so refusing entry on an empty walk made the one act that
-    // can CREATE an eligible member unreachable from the state that has none —
+    // WHAT THE OLD REFUSAL COST is why it went: FORCE SAVE AND COMMIT LIVES
+    // ONLY INSIDE THIS VIEW (the main page's Save and Commit, SAVE's long
+    // press, runs only while there is an authored change to save; the two
+    // acts at GuiInputHandler::run_publish_chord's head), so refusing entry on
+    // an empty walk made the one act that can always CREATE an eligible
+    // member unreachable from the state that has none —
     // a deadlock, and not a theoretical one: RETIRING A SETTINGS KEY EMPTIES
     // EVERY PIECE'S WALK AT A STROKE, every committed sidecar then failing the
     // strict load, so the whole corpus loses the act that would write the first

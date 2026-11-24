@@ -11,11 +11,11 @@ APK: Liberation Sans and Liberation Sans Bold (2.1.5; SIL Open Font License 1.1,
 papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the drawings
 first imported at commit 33d971eb are byte-identical in it; GPL-3.0, the text in `assets/icons/LICENSE-GPL-3.txt`),
 recolored copies of its 16-px symbolic drawings and of drawings of its 16-px `actions/`, `devices/` and `panel/`
-trees, and fifteen drawings of our own from thirteen sources in `tools/icons/own/` — ten modified from its
+trees, and fourteen drawings of our own from twelve sources in `tools/icons/own/` — nine modified from its
 drawings (from `go-first` the marker pair's arrow to a line, Value Drag's double arrow and Restrict's dot and wall;
-from `go-previous` the score's page head; from `view-readermode` the score's Start and End; from `folder-symbolic`
-the picker's Up; from `go-up` / `go-down` Commit, Pull and Check; the marker pair's source and the page head's each
-written twice, once mirrored), Cumulative's sigma
+from `go-previous` the score's page head; from `folder-symbolic` the picker's Up; from `go-up` / `go-down` Commit,
+Pull and Check; from `view-restore` FIT's recall; the marker pair's source and the page head's each written twice,
+once mirrored), Cumulative's sigma
 (`tools/icons/own/BlackSum.svg`), ours outright under the repository's own licence, and the tab pair's A and B
 (`tools/icons/own/TabA.svg`, `TabB.svg`), Liberation Sans Bold's own outlines of the two capitals, under the face's
 SIL Open Font License 1.1 (architect 2026-11-24) — written by

@@ -174,8 +174,11 @@ public:
     // ONE PLAIN std::thread that holds its own reference to them, derives the
     // curve, prints its own stderr line (`gain_derive=... ms`, which the
     // tablet routes to logcat with every other stderr line) and sets the
-    // ready flag. Nothing needs the curve at load — the magnification lamp is
-    // dark at every open — so the load does not wait out the derivation and
+    // ready flag. Nothing needs the curve at load — the magnification bit
+    // starts dark at every open and stays dark while the curve is pending;
+    // stored lit, it is seated lit from the device key `lit_lamps` as soon
+    // as the curve is ready (AppState::magnification_seat_pending,
+    // 2026-11-24) — so the load does not wait out the derivation and
     // THE LIT SUMMARY built inside it (waveform_gain.h; architect 2026-11-15;
     // the derivation alone was measured at ~115 ms on the tablet, the
     // summary's build about as much again by the Mac's measure).

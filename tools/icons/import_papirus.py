@@ -10,19 +10,20 @@ either papirus-icon-theme's, a path under the checkout's `Papirus/16x16/`
 architect's pick lives there, the 16-px `actions/`, `devices/` and `panel/`
 trees), or, on a path that starts with OWN, OURS: a hand-made drawing in
 this repository's tools/icons/own/, its derivation named in its own XML
-comment (thirteen such files: the marker pair's arrow to a line, from
+comment (twelve such files: the marker pair's arrow to a line, from
 Papirus's go-first, architect 2026-11-22, send MM; Value Drag's double
 arrow, go-first's arrow upright with a head each way, architect
 2026-11-23, send NN; and, architect 2026-11-23, send OO, his picks off the
 mocks: Cumulative's sigma, drawn outright with no Papirus source; the
-score's page keys' head, go-previous's without its stem; the score's Start
-and End, view-readermode's book with a plus or a minus in its own moat;
-Restrict's dot and wall, go-first's dot and the marker pair's line; the
-picker's Up, folder-symbolic's folder with an up arrow cut out of it;
-Commit and Pull, go-up's and go-down's arrows on a line; and Check, the two
-arrows side by side; and, architect 2026-11-24, send QQ, his pick "L1", the
-tab pair's A and B, Liberation Sans Bold's own outlines of the two
-capitals). Both kinds take the same road: for each row
+score's page keys' head, go-previous's without its stem; Restrict's dot
+and wall, go-first's dot and the marker pair's line; the picker's Up,
+folder-symbolic's folder with an up arrow cut out of it; Commit and Pull,
+go-up's and go-down's arrows on a line; and Check, the two arrows side by
+side; and, architect 2026-11-24, send QQ, his pick "L1", the tab pair's A
+and B, Liberation Sans Bold's own outlines of the two capitals; and,
+architect 2026-11-24, his pick "V1", Fit's recall, view-restore's four
+corners with the left and right pairs 1 closer, both gaps 2). Both kinds
+take the same road: for each row
 it writes assets/icons/<Enumerator>.svg by THE RECOLOR RULE
 (assets/icons/README.md):
 
@@ -105,7 +106,8 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # GoJumpDeclaration, Mathmode, ViewMediaVisualization, ZoomInY, Speedometer,
 # ZoomPrevious, KeyframePrevious, KeyframeNext, DeepHistory, ZoneIn, ZoneOut,
 # DocumentSave, BlackSum and Merge, most from the 16-px actions, devices and
-# panel trees (ZoneIn / ZoneOut re-picked once more, below); AND EIGHT OF
+# panel trees (ZoomPrevious and ZoneIn / ZoneOut re-picked once more,
+# below); AND EIGHT OF
 # THOSE RE-PICKED AGAIN BY HIM 2026-11-22, send MM: TransformMoveVertical,
 # BlackSum and TimelineUseZoneOn (each re-picked once more, below), GoJump
 # (go-first-rtl, an arrow right to a dot), DeepHistory, Merge, and BboxPrev /
@@ -117,12 +119,16 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # our own drawing, OWN + '<Enumerator>.svg': BlackSum (re-picked again by
 # him 2026-11-23, send PP, "S2", the serifed sigma),
 # GoPreviousViewPage / GoNextViewPage ("P1", one source, Next's mirrored),
-# ZoneIn / ZoneOut ("K5"), TimelineUseZoneOn ("C2"), GoParentFolder ("U1"),
-# VcsCommit / VcsPull ("V1") and NetworkConnect ("N2"); AND TWO ROWS ADDED BY
-# HIM 2026-11-24, send QQ, his pick "L1", the tab pair's TabA / TabB, our own
-# drawings, Liberation Sans Bold's own outlines of the capitals (OWN +
-# '<Enumerator>.svg'). A note names a pick that is not the enumerator's own
-# name and the date of a re-pick.
+# ZoneIn / ZoneOut ("K5"; re-picked again, below), TimelineUseZoneOn ("C2"),
+# GoParentFolder ("U1"), VcsCommit / VcsPull ("V1") and NetworkConnect
+# ("N2"); AND TWO ROWS ADDED BY HIM 2026-11-24, send QQ, his pick "L1", the
+# tab pair's TabA / TabB, our own drawings, Liberation Sans Bold's own
+# outlines of the capitals (OWN + '<Enumerator>.svg'); AND THREE ROWS
+# RE-PICKED BY HIM 2026-11-24: ZoomPrevious ("V1", view-restore's corners
+# with the halves 1 closer, our own drawing, OWN + 'ZoomPrevious.svg'), and
+# ZoneIn / ZoneOut ("G", Papirus's actions/bookmark-new and bookmark-remove,
+# untouched). A note names a pick that is not the enumerator's own name and
+# the date of a re-pick.
 SYM = 'symbolic/'
 ROSTER = [
     ('DocumentOpen', SYM + 'actions/document-open-symbolic.svg', ''),
@@ -149,9 +155,10 @@ ROSTER = [
     ('ZoomIn', SYM + 'actions/zoom-in-symbolic.svg', ''),
     ('ZoomOut', SYM + 'actions/zoom-out-symbolic.svg', ''),
     ('ZoomFitBest', SYM + 'actions/zoom-fit-best-symbolic.svg', ''),
-    ('ZoomPrevious', 'actions/view-restore.svg',
-     'no zoom-previous; view-restore, four corners turned in '
-     '(re-picked 2026-11-22)'),
+    ('ZoomPrevious', OWN + 'ZoomPrevious.svg',
+     'no zoom-previous; ours, view-restore\'s four corners turned in, the '
+     'left pair 1 right and the right pair 1 left, both gaps 2 (re-picked '
+     '2026-11-24, "V1")'),
     ('ZoomInY', 'actions/audio-volume-high.svg',
      'no zoom-in-y; audio-volume-high, a speaker and its waves '
      '(re-picked 2026-11-22)'),
@@ -257,12 +264,12 @@ ROSTER = [
      'mirror'),
     ('EditReset', SYM + 'actions/object-rotate-left-symbolic.svg',
      'no edit-reset; the counter-clockwise arrow'),
-    ('ZoneIn', OWN + 'ZoneIn.svg',
-     'ours, view-readermode\'s open book with a plus in its own moat, his '
-     'pick over zone-in (re-picked 2026-11-23, send OO)'),
-    ('ZoneOut', OWN + 'ZoneOut.svg',
-     'ours, view-readermode\'s open book with a minus in its own moat, his '
-     'pick over zone-out (re-picked 2026-11-23, send OO)'),
+    ('ZoneIn', 'actions/bookmark-new.svg',
+     'no zone-in; bookmark-new, a bookmark ribbon with a plus cut out of '
+     'it, his pick (re-picked 2026-11-24, "G")'),
+    ('ZoneOut', 'actions/bookmark-remove.svg',
+     'no zone-out; bookmark-remove, a bookmark ribbon with a minus cut out '
+     'of it, his pick (re-picked 2026-11-24, "G")'),
     ('EditClear', SYM + 'actions/edit-clear-symbolic.svg', ''),
     ('Folder', SYM + 'places/folder-symbolic.svg', ''),
     ('DialogInformation', SYM + 'status/dialog-information-symbolic.svg', ''),

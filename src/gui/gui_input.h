@@ -500,11 +500,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // Shift+J bind nothing.
         case GuiKeys::J: return cl || cs;
         // Drop on the live column / drop a phase reset from the warp column / save,
-        // and CTRL+SHIFT+S, THE PUBLISH CHORD, in the `h` view alone
-        // (architect 2026-11-17, is_publish_key: its one producer is
-        // that view's SAVE lift, the commit; outside the view nothing spells
-        // it).
-        case GuiKeys::S: return bare || sh || cl || (cs && history_view);
+        // and CTRL+SHIFT+S, THE PUBLISH CHORD, in both modes (architect
+        // 2026-11-24, is_publish_key: SAVE's long press spells it on the main
+        // page, Save and Commit, and the `h` view's SAVE lift spells it there,
+        // Force Save and Commit).
+        case GuiKeys::S: return bare || sh || cl || cs;
         // The read-only toggle, Open project and Revert.
         case GuiKeys::O: return bare || cl || ca;
         // THE PHASE-RESET PROPAGATE, ONE LETTER (architect 2026-10-24): bare
@@ -647,7 +647,9 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // landing camera is the landing owner's, Viewport::land_subject) and,
         // under the ctrl, the two marches with the walk's own direction bit,
         // Ctrl+Tab forward and Ctrl+Shift+Tab back (architect 2026-11-24, the
-        // walk keys' holds; is_march_key). No Alt spelling of Tab binds.
+        // walk keys' holds; is_march_key) — bound in both modes, the `h` view
+        // claiming both and doing nothing with them (no march runs there,
+        // handle_history_mode_key). No Alt spelling of Tab binds.
         case GuiKeys::Tab: return bare || sh || cl || cs;
         // The value step on the addressed cell (the tempo or a bound), ONE
         // UNIT, BARE ONLY (architect 2026-11-08; the head of THE ARROW STEP
@@ -974,16 +976,18 @@ static_assert(chord_is_bound(GuiKeys::Return, GuiInputState{}, false) &&
               "Enter binds bare (open the editor) and Shift (paste the "
               "label); Ctrl+Enter, Ctrl+Shift+Enter and the alt spellings "
               "bind nothing");
-// THE PUBLISH CHORD binds in the `h` view alone (architect 2026-11-17); its
-// Alt spelling nowhere.
-static_assert(!chord_is_bound(GuiKeys::S,
-                              GuiInputState{true, true, false}, false) &&
+// THE PUBLISH CHORD binds in both modes (architect 2026-11-24); its Alt
+// spelling nowhere.
+static_assert(chord_is_bound(GuiKeys::S,
+                             GuiInputState{true, true, false}, false) &&
                   chord_is_bound(GuiKeys::S,
                                  GuiInputState{true, true, false}, true) &&
                   !chord_is_bound(GuiKeys::S,
+                                  GuiInputState{true, true, true}, false) &&
+                  !chord_is_bound(GuiKeys::S,
                                   GuiInputState{true, true, true}, true),
-              "Ctrl+Shift+S, the publish chord, binds in the history view "
-              "alone; Ctrl+Alt+Shift+S stays unbound");
+              "Ctrl+Shift+S, the publish chord, binds in both modes; "
+              "Ctrl+Alt+Shift+S stays unbound");
 static_assert(chord_is_bound(GuiKeys::Up, GuiInputState{}, false) &&
                   !chord_is_bound(GuiKeys::Up,
                                   GuiInputState{true, false, false}, false) &&
@@ -1106,8 +1110,7 @@ inline bool is_revert_project_key(GuiKey key, GuiInputState mods) {
 // MULTI-SELECTION in the warp column it drops one at each selected marker's
 // place instead (architect 2026-11-10, the group drop;
 // GuiInputHandler::drop_phase_reset_crossing). Ctrl+S is
-// the save on this letter and Ctrl+Shift+S the `h` view's publish
-// (is_publish_key).
+// the save on this letter and Ctrl+Shift+S the publish (is_publish_key).
 //
 // IT IS BARE `s`'s ACT WITH THE COLUMN SWITCH IN FRONT, not a second one:
 // from the W column the difference is exactly the column writer Shift+S
@@ -1130,15 +1133,16 @@ inline bool is_phase_reset_drop_key(GuiKey key, GuiInputState mods) {
 }
 
 // True for THE PUBLISH CHORD (architect 2026-10-10 ~18:35): CTRL+SHIFT+S
-// exactly — no alt. IT BINDS IN THE `h` VIEW ALONE (architect 2026-11-17:
-// the commit is that view's act alone), where it runs
-// GuiInputHandler::run_publish_chord: the pull while GitHub is behind, the
-// check while offline, else save and commit under the default title with no
-// question asked. ITS ONE PRODUCER is the `h` view's Save button, which
-// spells it at its lift (finish_chrome_press_release); outside the view
-// nothing spells it and it is unbound (chord_is_bound). Ctrl+S beside it is
-// the plain save in both views. THREE READERS, one shape: on_key's `s` arm
-// (input_handler.cpp, behind the view's mode test), the read-only allowlist
+// exactly — no alt. IT BINDS IN BOTH VIEWS (architect 2026-11-24), where it
+// runs GuiInputHandler::run_publish_chord, which carries the TWO ACTS: on the
+// main page SAVE AND COMMIT, and in the `h` view FORCE SAVE AND COMMIT — each
+// the pull while GitHub is behind, the check while offline, else save and
+// commit under the default title with no question asked. ITS TWO PRODUCERS
+// are the Save button's: its long press on the main page (the twin,
+// redesign_button_shift_admits) and its plain lift in the `h` view
+// (save_button_publishes), both spelled at finish_chrome_press_release.
+// Ctrl+S beside it is the plain save in both views. THREE READERS, one
+// shape: on_key's `s` arm (input_handler.cpp), the read-only allowlist
 // (read_only_key_blocked, which admits it as it admits the save — a
 // checkpoint of the state the tab already holds authors nothing) and the `h`
 // view's allowlist (history_mode_key_blocked, which admits it as the view's
@@ -1254,9 +1258,11 @@ inline bool is_tab_selector_key(GuiKey key, GuiInputState mods) {
 // finish_chrome_press_release). Ctrl-exact on the key with either shift, no
 // alt. ONE ANSWER FOR BOTH DIRECTIONS at every gate that names the march:
 // the iteration lock's delta (a), the read-only allowlist and the `h` view's
-// own vocabulary (history_mode_owns_key); the direction is
-// march_key_forward's alone. Readers: those three, the live march
-// (handle_tab_switch_keys) and the mode's march (handle_history_mode_key).
+// own vocabulary (history_mode_owns_key, which claims both to consume them
+// as nothing: no march runs in the view, architect 2026-11-24); the
+// direction is march_key_forward's alone. Readers: those three, the march
+// itself (handle_tab_switch_keys) and the view's consuming arm
+// (handle_history_mode_key).
 inline bool is_march_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Tab && mods.ctrl && !mods.alt;
 }

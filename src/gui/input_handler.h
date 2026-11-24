@@ -524,9 +524,9 @@ void land_and_frame_active_markers(AppState& app, const GuiAudio& audio,
 //     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
 //     walk), bare Tab / Shift+Tab (the diff-flag cycle, its
 //     camera the landing owner's, Viewport::land_subject),
-//     Ctrl+Tab / Ctrl+Shift+Tab (the PAIRED MARCHES over that cycle,
-//     2026-08-18, both directions 2026-11-24 — the one ctrl-carrying
-//     family), bare `g` (the WALK toggle over the two
+//     Ctrl+Tab / Ctrl+Shift+Tab (the PAIRED MARCHES' chords, claimed to be
+//     consumed as nothing, no march running in the view, architect
+//     2026-11-24 — the one ctrl-carrying family), bare `g` (the WALK toggle over the two
 //     sources, the WALK LAMP's chord, 2026-08-18), bare and shifted
 //     Home / End (the shifted pair, 2026-10-24), bare `c` and bare
 //     Left / Right (the playhead step,
@@ -1189,6 +1189,54 @@ struct GuiInputHandler {
     // preset's apply) and the centre command (run_center_command, its
     // `user_zoom` true: `c`, the Center key, both marches, Ctrl+J).
     void darken_zoom_lamps_if_level_moved(double level_before);
+    // THE STICKY LAMPS' SEAT AT EVERY OPEN (architect 2026-11-24: the lamps
+    // "constant when opening a project or opening the program"; the device
+    // key `lit_lamps`, device_config.h's head): run_project (main.cpp) hands
+    // the fresh AppState the stored lit set here — at every project's open,
+    // and so at the launch, the first open — once the clusters are wired and
+    // before the loop's first tick, so ahead of the first frame that shows
+    // the piece (the open's held frame shows every lamp dark,
+    // redesign_button_selected's no-piece term, and the face comparator
+    // lights the keys once the piece is there). EACH BIT THROUGH ITS OWN
+    // OWNER, no second writer beside it: FOLLOW through
+    // GuiPlaybackLifecycle::toggle_follow's lit edge and RESTRICT through
+    // toggle_restrict's — at rest, nothing playing at an open, so the lit
+    // edge writes its bit, the radio partner's and the suspension alone, and
+    // the first play launches as under a pressed lamp — and TIPS through
+    // set_show_tooltips. The grammar never stores FOLLOW beside RESTRICT
+    // (parse_lit_lamps), so at most one toggle runs. MAGNIFY IS SEATED WHEN
+    // ITS CURVE IS READY: its bit may not stand lit before the source's gain
+    // curve exists (waveform_magnified's declaration, warp_frame_map_view.h:
+    // the plate job reads GuiAudio::gain_curve under the bit alone, the read
+    // asserting the curve ready), and the curve is derived on its own thread
+    // after the load, so the seat sets AppState::magnification_seat_pending
+    // to the stored word instead and settle_pending_magnification below
+    // lights the lamp on the first tick the curve is ready.
+    void seat_lit_lamps(const DeviceLitLamps& lamps);
+    // MAGNIFY'S DEFERRED SEAT, ITS ONE BODY (architect 2026-11-24): called on
+    // every tick at its head, ahead of the early returns and right before the
+    // sticky lamps' comparator (main.cpp's refresh_lit_lamps). With
+    // AppState::magnification_seat_pending standing and the curve ready
+    // (waveform_magnification_toggle_actionable) it drops the bit and lights
+    // the lamp through its one setter, set_show_waveform_magnification(true),
+    // which kicks the plate's synchronous rebuild and so owes the picture's
+    // damage itself; the key's face rides the face comparator. Otherwise one
+    // compare. NO PRESS CAN COME FIRST: while the seat is owed the MAGNIFY
+    // key is greyed and the backtick's arm refuses, whether or not the curve
+    // is ready yet (waveform_magnification_key_actionable: the readiness AND
+    // no seat owed; redesign_button_enabled), so a curve published between
+    // this head and a paint cannot show a live dark key; a press acts on the
+    // face as painted, which the face comparator ungreys only in a tick
+    // whose head ran this seat — so the key's first enabled face is the
+    // seated, lit one and the user's first possible press lands on it. This
+    // seat itself asks the readiness alone
+    // (waveform_magnification_toggle_actionable). UNDER ANY STANDING STATE:
+    // the setter is a display posture's write and a kick, both safe under
+    // every overlay, modal and
+    // the `h` view (the owed rebuild is paid by the pre-paint hook on every
+    // frame, main.cpp); the admission rules there are the press's, not the
+    // bit's, so nothing holds the seat back.
+    void settle_pending_magnification();
 
     // THE TOUCH REGION HOOKS — THE ARMED SWEEP (architect 2026-11-07: "if I
     // turn it on, it's deliberate and for a sweep"; THE ADD SEL SWEEP their
@@ -1729,9 +1777,18 @@ struct GuiInputHandler {
     // finish_level_press_release is the lift's: THE TAP (architect
     // 2026-11-10) — a motionless press of any duration lifted on the face
     // toggles the case off and back, a finite level remembered and -inf
-    // set, or from -inf the remembered level set (0 dB with none;
-    // GuiLevelRecall, app_state.h) — through apply_level_case, then
-    // settle_level_case.
+    // set, or from -inf the remembered level set (the device key
+    // `noise_restore_level`, DeviceConfig::noise_restore_level, architect
+    // 2026-11-24; 0 dB as the defaults file ships it) — through
+    // apply_level_case, then settle_level_case, whose one write carries the
+    // level and the restore level together; ON A DEAD DEVICE STREAM (architect 2026-11-24) the
+    // tap on an audible level wakes the stream and toggles nothing, the tap
+    // at -inf restores and wakes (wake_device_for_level_case, below).
+    // wake_device_for_level_case is the wake's one body, the tap's and a
+    // moved press's (take_chrome_press, after the settle, on an audible
+    // level): GuiPlayback::ensure_device_available_for_play — the launch
+    // gates' device question, nothing played — and
+    // kPlaybackDeviceUnavailableCard on a false answer.
     // apply_level_case writes the level into the live struct, hands it to
     // the bed's voice (GuiNoise::set_level_db) and DAMAGES THE CASE'S FACE
     // RECT — the one damage of a level edge: the
@@ -1752,24 +1809,7 @@ struct GuiInputHandler {
                                     const GuiPointerPlace& at);
     void apply_level_case(RedesignButton id, double db);
     void settle_level_case(bool level_changed);
-
-    // THE STRUCK CLIP LAMP'S ARM (architect 2026-11-05,
-    // "the strike + the tap"; the contract at AppState::ChromePress's Lamp
-    // kind, the rule at render.h's THE TWO LAMPS' STRIKE).
-    // arm_clip_lamp_press is the button rows' claim's third half, asked where
-    // neither arm_redesign_press nor arm_level_case_press claimed the press:
-    // WHILE AppState::clip_lamp_struck STANDS, a press on the clip lamp's
-    // square (logo_lamp_rects(...).clip, THE PAINTED SQUARE'S REAL RECT,
-    // asked with the pointer's real place, architect 2026-11-15, the no-grid
-    // arc; the tick damages its hull) arms the
-    // Lamp kind, no face damaged (no press look); unstruck it claims nothing.
-    // Returns whether it armed. finish_clip_lamp_press_release is the lift's
-    // (finish_chrome_press_release's Lamp arm): on the square and the strike
-    // standing, GuiPlayback::ensure_device_available_for_play — the launch
-    // gates' device question, nothing played — and
-    // kPlaybackDeviceUnavailableCard on a false answer.
-    bool arm_clip_lamp_press(const GuiPointerPlace& at);
-    void finish_clip_lamp_press_release(const GuiPointerPlace& at);
+    void wake_device_for_level_case();
 
     // THE ARM'S THIRD BODY — the HOLD-REPEAT's firing tick (architect
     // 2026-08-16), driven from the run loop beside the hover recompute. While a
@@ -2703,11 +2743,23 @@ private:
     // switch A/B tabs (the key for the tab standing selecting the other);
     // Ctrl+Tab and Ctrl+Shift+Tab are the two paired marches, forward and
     // back, each a round trip through the other tab that steps and centres
-    // both (bare `c`'s act) and ends on the tab it started; Tab /
+    // both (bare `c`'s act) and ends on the tab it started, run only where
+    // both tabs have a stop that way (refuse_march below) and on the main
+    // page alone (the `h` view claims both chords ahead of this and consumes
+    // them as nothing, architect 2026-11-24); Tab /
     // Shift+Tab cycle marker focus with the landing owner's
     // camera (Viewport::land_subject). No Alt spelling of Tab binds. Returns true
     // if key+mods matched one (on_key then returns), false otherwise.
     bool handle_tab_switch_keys(GuiKey key, GuiInputState mods);
+
+    // THE MARCHES' ONE REFUSAL (architect 2026-11-24), asked first by the
+    // marches' arm (handle_tab_switch_keys; the `h` view runs no march)
+    // before anything moves: true where
+    // either tab has no stop in `forward`'s direction (the gate,
+    // march_refusing_tab, app_state.h), having raised ONE timed card naming
+    // that tab, "Tab B has no next marker" / "Tab A has no previous marker";
+    // false, saying nothing, where the march runs.
+    bool refuse_march(bool forward);
 
     // THE WAVEFORM-LANE PLAYHEAD STEP'S ONE ACT BODY (2026-08-31): the
     // stop, the stale-focus clear, the signed step and the camera, called by
@@ -3511,12 +3563,14 @@ private:
     // hover face's, Arc's hover (architect 2026-11-20).
     static constexpr double kPenHotRearmPx = 18.0;
 
-    // THE PUBLISH CHORD'S ACT — Ctrl+Shift+S, the `h` view's alone, the
-    // view's Save button's lift (architect 2026-11-17): the pull
+    // THE PUBLISH CHORD'S ACT — Ctrl+Shift+S, THE TWO ACTS (architect
+    // 2026-11-24): SAVE AND COMMIT, SAVE's long press on the main page, and
+    // FORCE SAVE AND COMMIT, the `h` view's Save button's lift — the pull
     // while GitHub is behind, the check while offline, else save and commit
     // under the default title with no question asked. Its one caller is
-    // on_key's `s` arm (is_publish_key, gui_input.h); the fork and its order
-    // are at the definition (input_key_dispatch.cpp). NO TITLE IS ASKED:
+    // on_key's `s` arm (is_publish_key, gui_input.h); the two acts, the fork
+    // and its order are at the definition (input_key_dispatch.cpp). NO TITLE
+    // IS ASKED:
     // "I'm always just using the same
     // title, the default. And if I make a mistake, a revert is just a quick
     // load in place away" (architect 2026-10-10).
@@ -4168,11 +4222,13 @@ private:
 
     // THE WAVEFORM MAGNIFICATION LAMP'S ONE SETTER (architect 2026-09-24)
     // — set_tab_read_only's shape
-    // with ONE road: the bare backtick, which the top icon row's button reaches
+    // with ONE press road: the bare backtick, which the top icon row's button reaches
     // by synthesizing that press, in either audio view. The bit
-    // (AppState::show_waveform_magnification) is a per-project session
-    // posture, dark at every project open (the raw picture), never
-    // serialized and never in the undo domain. LIT, the waveform picture
+    // (AppState::show_waveform_magnification) is a STICKY LAMP, the
+    // device's (architect 2026-11-24): stored in the device key `lit_lamps`
+    // at every edge and seated, once its curve is ready, by
+    // settle_pending_magnification — this setter's second caller; never in
+    // the undo domain. LIT, the waveform picture
     // carries the continuous gain derived from the source
     // (GuiAudio::gain_curve) in both audio views; DARK, it is the raw
     // picture. Writes the field, then kicks the synchronous rebuild iff the
@@ -4187,9 +4243,12 @@ private:
     // synthesizing that press, in every state the roster is live (both locks
     // and the `h` view admit it) AND UNDER EVERY OVERLAY (architect
     // 2026-11-10: the three overlays' routers answer the same key with this
-    // setter, the TIPS key live through their veils). The bit (AppState::show_tooltips) is a
-    // per-project session posture, dark at every project open, never
-    // serialized and never in the undo domain. THE DARK EDGE ENDS THE MODEL
+    // setter, the TIPS key live through their veils) — AND THE OPEN'S SEAT
+    // (GuiInputHandler::seat_lit_lamps, architect 2026-11-24). The bit
+    // (AppState::show_tooltips) is a STICKY LAMP, the device's: seated
+    // from the device key `lit_lamps` at every open and stored there at
+    // every edge by the tick's comparator (main.cpp's refresh_lit_lamps), never in the
+    // undo domain. THE DARK EDGE ENDS THE MODEL
     // WHOLE: a standing box goes down, the wait stops, the chain breaks and
     // the column is forgotten (the hard end's own body), so nothing is left
     // to ripen; from then on note_tooltip_hover keeps that state clear.
@@ -4318,11 +4377,7 @@ private:
     // "so the user can quickly toggle it on/off by pressing the same button
     // twice"): it stays live, SITS LIT while the player stands (2026-10-25,
     // redesign_button_selected), and its lift, bare `l`, is the player's
-    // close — the picker's Open Project likewise. THE STRUCK CLIP LAMP'S
-    // TAP is the veil's other admission, under every overlay (architect
-    // 2026-11-05: "we should make it respond under the overlay"): its
-    // lift the main page's device reopen, nothing playing
-    // (arm_clip_lamp_press). The
+    // close — the picker's Open Project likewise. The
     // roster's hint dwell is suppressed for every dead key — the opener and
     // the tooltip lamp, the two live ones, keep their hints (architect
     // 2026-11-11, tooltip_dwell_suppressed) — the modal buttons' own standing. A
@@ -4599,12 +4654,13 @@ private:
     // AppState::HistoryMode (app_state.h); each body states only its own
     // membership.
     //   * handle_history_mode_key owns the mode's whole keyboard vocabulary —
-    //     the toggle, the walk, the diff-flag cycle, the two marches that compose
-    //     that cycle with a round trip through the other tab, the absolute
-    //     Home/End, `c` and the Left / Right playhead step — and returns true when it consumed the press. The membership is
+    //     the toggle, the walk, the diff-flag cycle, the absolute
+    //     Home/End, `c` and the Left / Right playhead step, and the two
+    //     march chords, consumed as nothing (architect 2026-11-24: no march
+    //     in the view) — and returns true when it consumed the press. The membership is
     //     re-derived at history_mode_owns_key; its position in on_key IS its
     //     entry-gate list. Its cycle is a member of its own
-    //     (cycle_history_diff_flag_focus) because the marches compose it too.
+    //     (cycle_history_diff_flag_focus).
     //   * history_mode_key_blocked is the allowlist, read_only_key_blocked's
     //     shape: true when the chord is not admitted while the mode stands.
     //     It DECIDES THE ROSTER'S FACES in the view (history_mode_disables_
@@ -4690,7 +4746,7 @@ private:
     //   * the PUBLISH CHORD'S ACT forks in front of it (run_publish_chord,
     //     declared above, beside the picker), asking nothing (2026-10-10).
     //   * run_history_commit is that act's commit arm: save, rebuild the bytes,
-    //     close the view, and hand the captured job to the background
+    //     close a standing view, and hand the captured job to the background
     //     worker. Its body owns the close partition (THE VIEW CLOSES IFF THE
     //     SAVE LANDED, architect 2026-08-07) and the capture list.
     //   * on_history_checkpoint_complete is the worker's completion, back on
@@ -4716,13 +4772,12 @@ private:
     bool handle_history_mode_key(GuiKey key, GuiInputState mods);
     // The mode's Tab act, one step over the viewed checkpoint's diff flags in
     // the given direction, treating the camera as the REQUIRED `frame` says
-    // (MarkerLandingFrame, app_state.h — the live walk's own type). Two
-    // callers, both in handle_history_mode_key: its Tab arm, stating
+    // (MarkerLandingFrame, app_state.h — the live walk's own type). One
+    // caller, handle_history_mode_key's Tab arm, stating
     // MarkerLandingFrame::Land, the landing owner's walk
     // (Viewport::land_subject, LandingKind::Walk), exactly as the live walk
-    // does; and its two marches, Ctrl+Tab and Ctrl+Shift+Tab, stating MarkerLandingFrame::Center
-    // with the mode's `c` behind it, exactly as the live march does. Every
-    // walk rule it obeys is stated at those arms.
+    // does; the view runs no march (architect 2026-11-24). Every walk rule
+    // it obeys is stated at that arm.
     void cycle_history_diff_flag_focus(bool forward, MarkerLandingFrame frame);
     void open_history_mode_fresh();
     void drop_lane_stash_across_history_edge();
@@ -4735,13 +4790,15 @@ private:
     void focus_history_diff_flag(int hit);
     void select_history_diff_flags_modified(int hit);
     void close_history_mode();
-    // The session is the `h` visit's own (run_publish_chord's).
+    // The session is the press's (run_publish_chord's own): the `h` visit's,
+    // or the main page's transient bind.
     void run_history_commit(const GuiHistoryDiff& session,
                             const std::string&    title);
     void on_history_checkpoint_complete(GuiHistoryCommitOutcome outcome,
                                         GuiGitHubStatus         github);
-    // THE PULL (architect 2026-09-27): the `h` view's Save key (the publish
-    // chord) while the GitHub status reads Behind, on the visit's session. The press plans it (plan_history_pull, local
+    // THE PULL (architect 2026-09-27): the publish chord (SAVE's long press
+    // on the main page, the `h` view's Save key) while the GitHub status reads
+    // Behind, on the session that press read. The press plans it (plan_history_pull, local
     // and synchronous), asks its OK / Cancel confirmation only when the pull
     // changes the open piece, and runs it (execute_history_pull) at once
     // otherwise — the one road.
@@ -4754,14 +4811,16 @@ public:
     //
     // START A FRESH SCAN of the loaded source's committed history — the ONE
     // funnel for all four kickers (main.cpp's startup load tail, the
-    // checkpoint completion's re-warm, the staleness kick of the `h` entry,
-    // and the pull's re-warm after it wrote the working tree), none of which can fire
+    // checkpoint completion's re-warm, the staleness kick of the `h` entry and
+    // of the main page's publish chord, and the pull's re-warm after it wrote
+    // the working tree), none of which can fire
     // with a visit standing (the definition carries the proof, so no
     // deferral bit stands for that case).
     void kick_history_prefetch();
     // THE GITHUB CHECK'S ONE DISPATCH (architect 2026-09-27): at every project
     // open (main.cpp's load tail, beside the prefetch kick), every `h` entry
-    // that bootstrapped a clone, and the `h` view's Save key under Offline
+    // that bootstrapped a clone, and the publish chord in either view (SAVE's
+    // long press on the main page, the `h` view's Save key) under Offline
     // (run_publish_chord, architect 2026-09-28). The status reads Checking until the
     // worker answers (on_github_check_complete). A worker already busy
     // dispatches nothing: a check in flight answers soon, and a checkpoint's
@@ -4769,8 +4828,9 @@ public:
     void dispatch_github_check();
     // The same question with the staleness test in front of it: kick only when
     // the store describes another source, another projects_repo, or a branch tip
-    // that has moved. Public for symmetry with the funnel; its one caller is
-    // the mode's entry owner.
+    // that has moved. Public for symmetry with the funnel; its two callers are
+    // the mode's entry owner and the main page's publish chord
+    // (run_publish_chord's transient bind, architect 2026-11-24).
     void kick_history_prefetch_if_stale();
     // THE ARRIVAL HOOK, from the platform's prefetch ready fd (main.cpp's
     // wiring): drain the worker's queue into the store and, while the view

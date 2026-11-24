@@ -1611,13 +1611,49 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
     if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
 }
 
+// THE STICKY LAMPS' ONE WRITER (architect 2026-11-24: the sticky lamps are
+// stored as they stand): ON EVERY TICK, ahead of the tick's early returns,
+// so every mode reaches it (an overlay's TIPS, the `h` view's entry), the
+// live bits — AppState::show_waveform_magnification, ::follow, ::restrict
+// and ::show_tooltips — are held against the struct's
+// DeviceConfig::lit_lamps, and on a difference the struct takes the live
+// set and the config is written ONCE, by the level case's own road
+// (GuiSettingsEditor::persist_device_config: a failure prints and cards,
+// the struct keeping the live set, so a failed write is not retried every
+// tick). WHY HERE, ONE SITE: it reads the bits, not the acts, so EVERY
+// WRITER OF A LAMP, PRESENT AND FUTURE, IS CAUGHT — the user's press, the
+// radio's lit edge, darken_zoom_lamps (a user zoom, the `h` view's entry:
+// stored dark), the open's own seat (which leaves no difference) and
+// MAGNIFY's deferred seat — with no config write threaded through any of
+// them. A tick with no difference costs the struct's four compares.
+// WHILE MAGNIFY'S SEAT IS PENDING its word is CARRIED, NOT COMPARED
+// (AppState::magnification_seat_pending: the stored word names a lamp
+// whose curve is not ready yet), so the open's dark bit is never stored
+// over it; the tick's head runs GuiInputHandler::settle_pending_magnification
+// just before this, so the tick that seats the lamp compares it lit and
+// finds no difference, and from then on — and from the open whenever
+// nothing was pending — the bit is compared like the other three.
+void refresh_lit_lamps(AppState& app, GuiSettingsEditor& settings_editor) {
+    DeviceConfig& cfg = *app.device_config;
+    const DeviceLitLamps live{
+        .magnify  = app.magnification_seat_pending
+                        ? cfg.lit_lamps.magnify
+                        : app.show_waveform_magnification,
+        .follow   = app.follow,
+        .restrict = app.restrict,
+        .tips     = app.show_tooltips};
+    if (live == cfg.lit_lamps) return;
+    cfg.lit_lamps = live;
+    (void)settings_editor.persist_device_config();
+}
+
 // THE TWO LAMPS BY THE BATTERY, THEIR ONE WRITER (architect 2026-11-05;
-// render.h's THE TWO LAMPS owns every number and reason; the seven fields'
+// render.h's THE TWO LAMPS owns every number and reason; the six fields'
 // contract at AppState::clip_lamp_lit): called ON EVERY TICK right after
 // refresh_logo_legend, ahead of the tick's early returns, because the clip
 // is the device's — it clamps under the render player, the score viewer and
-// the silence between plays alike — and a lamp's dark edge and the strike's
-// edges are owed whatever mode stands. THE HOLD (architect 2026-11-05:
+// the silence between plays alike — and a lamp's dark edge is owed
+// whatever mode stands. THE HOLD (architect 2026-11-05:
 // the tick is the
 // platform's 5 ms timer (GuiPlatform::detect_refresh_rate_ms,
 // platform_android.cpp) while only the PRESENT waits for the vsync, one
@@ -1632,18 +1668,10 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 // blocks keeps the lamp lit until the hold after its last block), the dark
 // edge lands on the first tick at or past the stamp, and 85 ms is about
 // three and four fifths presents at the beat. NO TIMER OF ITS OWN: the tick is the clock, the
-// stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh). THE STRIKE
-// (architect 2026-11-05): the clip lamp's third bit,
-// GuiPlayback::device_unavailable() read on every tick — the error
-// callback's dead latch or no stream standing, "nothing will sound" — a
-// pure read that reopens nothing (no timer, no retry: the tap on the struck
-// lamp and every launch press are the reopens). NO PIECE, NO STRIKE: before
-// the load — the fresh set's first ticks and the open's held frame, which
-// paints the title bar as always — no engine exists yet (GuiPlayback is
-// brought up by the load, GuiFileLoader::load_file), and the read answers
-// true for a device nothing has asked for; so the strike is read only once
-// a piece is open (no_audio_to_dispatch_on, the roster's own no-piece term),
-// else every open's held frame would wear it. Each EDGE of a bit damages
+// stamps' arithmetic independent of the poll cadence (`now_ms`, monotonic_ms(), read once per refresh).
+// A DEAD DEVICE STREAM SHOWS NOTHING HERE (architect 2026-11-24: the clip
+// lamp is lit or at rest, no third face; the reconnect is NOISE's tap,
+// finish_level_press_release). Each EDGE of a bit damages
 // that lamp's own square (logo_lamp_rects, the painter's own layout)
 // through the platform's damage road, and nothing is damaged while a bit
 // holds.
@@ -1676,7 +1704,7 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 // painted.
 inline constexpr int64_t kLampHoldMs = 85;
 void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
-                        const GuiAudio& audio, const GuiPlayback& playback) {
+                        const GuiPlayback& playback) {
     const int64_t now_ms  = monotonic_ms();
     const int64_t hold_ms = kLampHoldMs;
 
@@ -1705,20 +1733,13 @@ void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
     const bool limiter_lit =
         limiter_event || now_ms < app.limiter_lamp_lit_until_ms;
 
-    // THE STRIKE, once a piece is open.
-    const bool struck =
-        !no_audio_to_dispatch_on(app, audio.total_frames()) &&
-        playback.device_unavailable();
-
     // THE EDGES, each damaging its own square; the layout is asked only
     // when a bit flips.
-    if (clip_lit == app.clip_lamp_lit && limiter_lit == app.limiter_lamp_lit &&
-        struck == app.clip_lamp_struck)
+    if (clip_lit == app.clip_lamp_lit && limiter_lit == app.limiter_lamp_lit)
         return;
     const LogoLampRects rects = logo_lamp_rects(app, app.logo_legend);
-    if (clip_lit != app.clip_lamp_lit || struck != app.clip_lamp_struck) {
-        app.clip_lamp_lit    = clip_lit;
-        app.clip_lamp_struck = struck;
+    if (clip_lit != app.clip_lamp_lit) {
+        app.clip_lamp_lit = clip_lit;
         // The square's hull: the whole pixels it touches (render.h).
         const GuiRect r = hull(rects.clip);
         if (r.w > 0 && r.h > 0) gui.invalidate_region(r.x, r.y, r.w, r.h);
@@ -1733,13 +1754,11 @@ void refresh_logo_lamps(AppState& app, GuiPlatform& gui,
 // ONE PROJECT'S SESSION — everything that is ONE PER PROJECT, built around
 // `project`'s source, run, and torn down before this returns (the loop
 // contract is at platform.h; gui_main below is the loop). The window, the
-// input core, the device config, the noise, the level case's recall, the
-// held display width and the render cache are the caller's and outlive
-// every call.
+// input core, the device config, the noise, the held display width and the
+// render cache are the caller's and outlive every call.
 GuiProjectOutcome run_project(GuiPlatform&            gui,
                               DeviceConfig&           device_config,
                               GuiNoise&               noise,
-                              GuiLevelRecall&         level_recall,
                               int&                    held_display_width_px,
                               RenderCache&            render_cache,
                               const GuiProjectSource& project,
@@ -1775,10 +1794,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // (AppState::noise): the NOISE case's face, its drag and tap and
     // the settings editor's three noise arms read it.
     app.noise         = &noise;
-    // THE LEVEL CASE'S RECALL, the app's one, the same way (architect
-    // 2026-11-10; GuiLevelRecall, app_state.h): the level a tap turned off
-    // in an earlier project is the one a tap restores in this one.
-    app.level_recall  = &level_recall;
 
     // THE WINDOW, ONCE PER PROCESS: the first project's session opens it and
     // every later one inherits it standing (the loop contract, platform.h).
@@ -1850,8 +1865,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             "warptempo_gui: Failed to start waveform worker; exiting\n");
         return {1, {}};
     }
-    // THE CHECKPOINT WORKER (2026-08-07): the `h` history view's Save-and-Commit
-    // act runs its git steps here, off the GUI thread, so the window never
+    // THE CHECKPOINT WORKER (2026-08-07): the publish chord's two acts — the
+    // main page's Save and Commit and the `h` view's Force Save and Commit
+    // (GuiInputHandler::run_publish_chord's head) — run their git steps here,
+    // off the GUI thread, so the window never
     // freezes for as long as the remote takes, and so does the GitHub check
     // (2026-09-27). Single job in flight, completion delivered through
     // its own eventfd below; shutdown() JOINS an act in progress at quit (the
@@ -2010,6 +2027,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // while the view stands, damages the window for a walk that just grew.
     gui.set_history_prefetch_completion_fd(history_prefetch.completion_fd(),
         [&input_handler]() { input_handler.on_history_prefetch_ready(); });
+
+    // THE STICKY LAMPS, SEATED FROM THE DEVICE CONFIG (architect 2026-11-24;
+    // the rule at GuiInputHandler::seat_lit_lamps): here, with their owners
+    // built and before the loop's first tick, whose comparator
+    // (refresh_lit_lamps) then finds no difference.
+    input_handler.seat_lit_lamps(device_config.lit_lamps);
 
     // Viewport worker kick: NOTHING REQUESTS IT DIRECTLY —
     // kick_waveform_render's one call site is kick_waveform_sync's
@@ -2588,13 +2611,19 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // wall clock and the battery move whatever the project is doing
         // (refresh_logo_legend, its rule and its damage). THE TWO LAMPS
         // BESIDE IT the same way (refresh_logo_lamps, 2026-11-05): the clip
-        // and the strike are the device's under every mode below, and a lit
-        // lamp owes its dark edge to the first tick past its hold.
+        // is the device's under every mode below, and a lit lamp owes its
+        // dark edge to the first tick past its hold.
         refresh_logo_legend(app, gui);
-        refresh_logo_lamps(app, gui, audio, playback);
+        refresh_logo_lamps(app, gui, playback);
         // THE STATUS BAR the same way (refresh_status_bar): its
         // string is standing state, compared each tick with the one painted.
         refresh_status_bar(app, gui);
+        // THE STICKY LAMPS the same way (2026-11-24): MAGNIFY's deferred
+        // seat first (GuiInputHandler::settle_pending_magnification, one
+        // compare once seated), then the one writer of their device key
+        // (refresh_lit_lamps), four compares on a still tick.
+        input_handler.settle_pending_magnification();
+        refresh_lit_lamps(app, settings_editor);
 
         // THE DISPLAY KEEP-ALIVE (architect 2026-11-13; the
         // facts and the ruling — a brief window after a fast Stop — at
@@ -4157,6 +4186,10 @@ int gui_main() {
     // device_config.h's). A first run stamps the BACKEND's
     // own template — the seam's device_config_defaults(), the shipped
     // defaults file parsed — and then reads it back like any other launch.
+    // A file that loads but stands otherwise than the writer would write it
+    // (a line the sync script's setup appended, a hand reorder) is written
+    // back once in the writer's form inside the load, advisory on failure
+    // (load_device_config's THE CANONICAL REWRITE, 2026-11-24).
     //
     // IT IS FATAL AND IT IS EARLY. A malformed config is the adversarial class
     // (the file is program-written, so a violation is a hand edit): one blunt
@@ -4263,13 +4296,6 @@ int gui_main() {
     noise.set_level_db(device_config.noise_level);
     noise.set_crossfade_s(device_config.noise_crossfade_s);
 
-    // THE LEVEL CASE'S RECALL (architect 2026-11-10: the tap's memory,
-    // "session only"; GuiLevelRecall, app_state.h): EMPTY AT THE LAUNCH,
-    // one for the process — the level it remembers is the config's, device
-    // state every project shares — handed to every project's session and
-    // written to no file.
-    GuiLevelRecall level_recall;
-
     // WHICH PROJECT OPENS FIRST — the project model's question (startup_source,
     // project_model.h): the remembered project and then the first valid one
     // in name order. None is the blunt terminal line and exit 1: the app
@@ -4335,7 +4361,7 @@ int gui_main() {
     int  exit_status = 0;
     for (;;) {
         const GuiProjectOutcome outcome =
-            run_project(gui, device_config, noise, level_recall,
+            run_project(gui, device_config, noise,
                         held_display_width_px, render_cache, project,
                         window_up);
         if (outcome.reopen.empty()) {

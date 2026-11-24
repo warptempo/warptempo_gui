@@ -249,13 +249,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // grid-iterations lock, whose gate falls through to this list.
     const bool is_center =
         (key == GuiKeys::C && !ctrl && !shift && !alt);
-    // FOLLOW, bare `f` (architect 2026-09-23): a session lamp about the
+    // FOLLOW, bare `f` (architect 2026-09-23): a sticky lamp about the
     // camera during playback, authoring nothing the lock protects, so it is
     // admitted on a locked tab and under the grid-iterations lock.
     const bool is_follow =
         (key == GuiKeys::F && !ctrl && !shift && !alt);
     // RESTRICT, bare `r` (architect 2026-10-29): Follow's radio partner, a
-    // session lamp about where the user's play may run, authoring nothing
+    // sticky lamp about where the user's play may run, authoring nothing
     // the lock protects, so it is admitted on a locked tab and under the
     // grid-iterations lock, whose gate falls through to this list.
     const bool is_restrict =
@@ -293,8 +293,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // note). Ctrl-exact, exactly the dispatch arm's own spelling.
     const bool is_save =
         (ctrl && !shift && !alt && key == GuiKeys::S);
-    // THE PUBLISH CHORD, Ctrl+Shift+S through its shared predicate, the `h`
-    // view's alone (architect 2026-11-17), admitted for the save's
+    // THE PUBLISH CHORD, Ctrl+Shift+S through its shared predicate, in both
+    // views (architect 2026-11-24: Save and Commit on the main page, Force
+    // Save and Commit in the `h` view), admitted for the save's
     // reason: a checkpoint, a pull's fast-forward or a check authors
     // nothing on this tab (a pull that changes the open piece asks first and
     // reopens it through the Revert road, which this gate admits too).
@@ -304,9 +305,9 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // authored state and writes audio beside the source; it changes no marker
     // and no engine setting, so the lock has nothing to protect from it.
     // Ctrl+Alt+R is the single render, or — with the iteration bit set — the
-    // sweep; Ctrl+Alt+Shift+R is the miscellaneous-render cell. THE SAVE AND
-    // COMMIT ACT IS ADMITTED THROUGH ITS OWN CHORD, Ctrl+Shift+S (is_publish
-    // above): a save and a checkpoint publish
+    // sweep; Ctrl+Alt+Shift+R is the miscellaneous-render cell. THE TWO
+    // COMMIT ACTS ARE ADMITTED THROUGH THEIR ONE CHORD, Ctrl+Shift+S
+    // (is_publish above): a save and a checkpoint publish
     // the state the tab already holds and author nothing.
     // ONE ADMITTED ROUTE WRITES A STORE, and it is RATIFIED rather than merely
     // tolerated (architect 2026-08-07): the ITERATION SWEEP's success tail wipes every
@@ -885,7 +886,7 @@ void GuiInputHandler::run_iter_tie_toggle() {
 //     visit, the view's premise being that this session knows the piece's
 //     history. It is also the one closer that can fire with a QUESTION'S PAGE
 //     up (below);
-//   * run_history_commit — the Save-and-Commit act, once its save has landed;
+//   * run_history_commit — Force Save and Commit, once its save has landed;
 //   * execute_history_pull — the pull, on its Pulled ending and its three
 //     late failures (the walk just changed under the view);
 //   * run_history_revert — bare `v`, which rewrites the state the now side was
@@ -1153,7 +1154,7 @@ void GuiInputHandler::republish_history_lane_now() {
 // must still open). LOCAL HISTORY IS THE
 // FALLBACK — the session's own undo/redo timeline as states — and everything
 // that walk supports works exactly as it does when bare `g` chooses it:
-// `,`/`.`, the diff lane, `'`, bare `v`, the paired marches, the tab switch.
+// `,`/`.`, the diff lane, `'`, bare `v`, the diff-flag cycle, the tab switch.
 // WHAT NEEDS GIT IS REFUSED TRUTHFULLY AND ELSEWHERE, at the press that asks
 // for it: the walk lamp's own chord and the checkpoint act each card the
 // bootstrap's reason, and both faces grey off the one predicate
@@ -1168,7 +1169,7 @@ void GuiInputHandler::republish_history_lane_now() {
 // the GitHub check (dispatch_github_check) when the status reads UNCHECKED (no
 // reading: the project's own check could not classify, or a checkpoint ended
 // WriteFailed before taking one) or OFFLINE (the link may have come up since —
-// the view's Save key asks again on the same reasoning, run_publish_chord,
+// the publish chord asks again on the same reasoning, run_publish_chord,
 // architect 2026-09-28). UP TO DATE, AHEAD, BEHIND, DIVERGED and REFUSED
 // STAND, and the status bar's walk line says "as of the last check"
 // truthfully, because
@@ -1301,7 +1302,9 @@ void GuiInputHandler::open_history_mode_fresh() {
 // bumps the generation, clears the queue and replaces the pending run, so a scan
 // begun against an older tip is abandoned between candidates and its queued
 // members are dropped by tag. The freshness short-circuit that can DECLINE to
-// kick lives one function down, and only the `h` entry goes through it.
+// kick lives one function down, and only the `h` entry and the main page's
+// publish chord (run_publish_chord's transient bind, architect 2026-11-24)
+// go through it.
 //
 // NO KICK CAN ARRIVE WHILE THE VIEW STANDS, and the four kickers are the whole
 // proof: the startup load tail runs once with the view down and no way to have
@@ -1310,7 +1313,9 @@ void GuiInputHandler::open_history_mode_fresh() {
 // checkpoint completion's re-warm runs after run_history_commit has already
 // closed the view, which bare `h` then refuses to reopen while the bit
 // stands; both of the pull's kicks run straight after it closes any
-// standing view, on the GUI thread, in the same call. (So no kick is parked
+// standing view, on the GUI thread, in the same call; and the main page's
+// publish chord kicks through the staleness test only with the view down
+// (run_publish_chord). (So no kick is parked
 // for later. A visit is BOUND to the store's generation and a restart would
 // clear the deque its indices name, which is why the entry kicker's placement
 // above `active` is load-bearing rather than incidental: a future kicker that
@@ -1319,7 +1324,8 @@ void GuiInputHandler::kick_history_prefetch() {
     history_prefetch.kick(app.source_audio_path, app.projects_repo);
 }
 
-// THE STALENESS TEST, and the `h` entry's own kick. The store is FRESH for this
+// THE STALENESS TEST, the `h` entry's own kick and the main page's publish
+// chord's (run_publish_chord's transient bind). The store is FRESH for this
 // visit when all three of its subject terms still hold: the same source, the
 // same projects_repo, and the same branch tip it was built against. Anything
 // else and the walk describes a repository this session is no longer asking
@@ -1558,18 +1564,17 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //   * bare `,` / `.`       — the walk;
 //   * bare Tab / Shift+Tab — the diff-flag cycle, its landing's camera the
 //     landing owner's exactly as the live walk's is (Viewport::land_subject);
-//   * Ctrl+Tab / Ctrl+Shift+Tab — the TWO PAIRED MARCHES, forward and back
-//     (2026-08-18; both directions, architect 2026-11-24), the diff-flag
-//     cycle composed with a round trip through the other tab (2026-09-26):
-//     the tab switch, the mode's Tab act and its `c`, the switch home and
-//     its `c`;
+//   * Ctrl+Tab / Ctrl+Shift+Tab — the TWO PAIRED MARCHES' chords, CLAIMED
+//     AND CONSUMED AS NOTHING (architect 2026-11-24: no march runs in the
+//     view);
 //   * bare Home / End and Shift+Home / Shift+End — the ABSOLUTE ends of the
 //     song, both forms (the shifted pair's whole-piece jump is what a jump
 //     already means in here, architect 2026-09-26);
 //   * bare `c`             — working zoom, centered on the mode's own focus;
 //   * bare Left / Right    — the playhead step (2026-09-26).
-// NO ALT SHAPE and ONE CTRL FAMILY, the marches (2026-08-18; both
-// directions, 2026-11-24). The tab switch, bare 5 / 6, is not the mode's:
+// NO ALT SHAPE and ONE CTRL FAMILY, the marches' two chords, claimed only
+// to be consumed (architect 2026-11-24). The tab switch, bare 5 / 6, is not
+// the mode's:
 // the allowlist admits it as an ordinary A/B switch. Returns true when the
 // press was consumed.
 //
@@ -1587,13 +1592,12 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //
 // ONLY `h` IS BOUND OUTSIDE THE MODE — the toggle arm sits ABOVE the `!active`
 // check and every other arm below it, so with the mode down `u`, `g`, `,`, `.`,
-// Tab, the two marches, Home/End and `c` fall through to the ordinary
+// Tab, the two march chords, Home/End and `c` fall through to the ordinary
 // dispatch and behave exactly as the ordinary dispatch binds them. Bare `u`
 // and bare `g` are
 // bound NOWHERE there, so falling through is the unbound key's own consumed
-// nothing, and Ctrl+Tab / Ctrl+Shift+Tab out there are the LIVE marches —
-// the same composition over live markers, reached through their own arm in
-// handle_tab_switch_keys. A claim costs a shape outside the mode nothing: it is
+// nothing, and Ctrl+Tab / Ctrl+Shift+Tab out there are the LIVE marches,
+// reached through their own arm in handle_tab_switch_keys. A claim costs a shape outside the mode nothing: it is
 // a membership test, and the arm below it is not reached with the mode down.
 //
 // THE SHAPE IS ITS OWN PREDICATE (history_mode_owns_key) because it has a SECOND
@@ -1618,15 +1622,15 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //     that family on exactly the same terms and sharing that arm;
 //   * BARE Home / BARE End and SHIFT+HOME / SHIFT+END — the bottom icon row's
 //     START and END buttons (2026-10-24; their plain
-//     presses bare, their shift presses the whole-piece pair), claimed above
-//     beside the marches, so both stand in the view;
+//     presses bare, their shift presses the whole-piece pair), claimed
+//     below, so both stand in the view;
 //   * BARE `c` — the bottom icon row's Center button, likewise;
 //   * BARE Tab and SHIFT+TAB — the bottom icon row's NEXT and PREVIOUS
 //     MARKER buttons (TransportWalk / TransportWalkPrevious), answered LIVE in
 //     the view by this predicate: they step the mode's own diff-flag cycle,
-//     so they do not grey in the view. CTRL+TAB and CTRL+SHIFT+TAB, the
-//     marches over that same cycle (2026-08-18), are their holds (architect
-//     2026-11-24), claimed here too;
+//     greying only at its walls (their arm in redesign_button_enabled).
+//     CTRL+TAB and CTRL+SHIFT+TAB, their holds' chords (architect
+//     2026-11-24), are claimed here too, and consumed as nothing;
 //   * BARE Left / BARE Right — the bottom icon row's LEFT and RIGHT arrows, the
 //     playhead step (2026-09-26), answered LIVE by this predicate and greyed
 //     by their own arm (horizontal_arrow_step_actionable's `h` arm: a diff
@@ -1636,22 +1640,20 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // EVERY ALT SHAPE IS REFUSED: the mode claims no alt chord.
     if (mods.alt) return false;
-    // THE ONE CTRL FAMILY (architect 2026-08-18; both directions 2026-11-24):
-    // CTRL+TAB AND CTRL+SHIFT+TAB, THE TWO PAIRED MARCHES, forward and
-    // back, read here over the mode's own vocabulary. A march is short for
-    // a tab switch, a step and a switch home (architect 2026-08-18: a round
-    // trip through the other tab, 2026-09-26, each step centred by `c`, live
-    // and here alike) — so each chord means one thing everywhere and only
-    // what "Tab" DENOTES changes with the context: live markers outside, the
-    // viewed checkpoint's diff flags in here. Claimed rather than left to the
-    // allowlist because that is how the walk's two chords, bare Tab and
-    // Shift+Tab (Next and Previous Marker, the step-and-walk group's pair,
-    // whose holds the marches are), already answer, both for the key and for
-    // the roster face derived from this predicate.
+    // THE ONE CTRL FAMILY: CTRL+TAB AND CTRL+SHIFT+TAB, THE TWO PAIRED
+    // MARCHES' CHORDS, CLAIMED TO BE CONSUMED AS NOTHING (architect
+    // 2026-11-24: "I don't use the walk in history view, so we can just
+    // refuse the walk in all cases in history view"). They arrive as the
+    // holds of Next and Previous Marker (the lift's ctrl translation,
+    // finish_chrome_press_release), which stay lit in the view for their
+    // plain steps; the view's handle_history_mode_key consumes them silently,
+    // no card. CLAIMED, NOT LEFT UNCLAIMED, because an unclaimed key falls
+    // past this mode to the ordinary dispatch (on_key keeps no gate on the
+    // view's allowlist, architect 2026-10-30), whose handle_tab_switch_keys
+    // binds these very chords to the LIVE marches.
     //
-    // THE SPELLING IS THE LIVE MARCHES' EXACTLY (is_march_key) because the
-    // live arm binds those two shapes; the mode mirrors what it composes
-    // rather than widening it.
+    // THE SPELLING IS THE LIVE MARCHES' EXACTLY (is_march_key), the two
+    // shapes the live arm binds.
     if (is_march_key(key, mods)) return true;
     // EVERY OTHER CTRL SHAPE IS REFUSED, and the branch stands as a REFUSAL
     // because every shape below it is BARE (or
@@ -1707,10 +1709,9 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
            key == GuiKeys::Left || key == GuiKeys::Right;
 }
 
-// THE DIFF-FLAG CYCLE'S ONE ACT — the mode's Tab, factored out because the
-// mode's two marches compose it too (2026-08-18; both directions,
-// 2026-11-24). Two callers, both
-// in handle_history_mode_key below: its Tab arm and its march arm. Every rule
+// THE DIFF-FLAG CYCLE'S ONE ACT — the mode's Tab, its one caller the Tab arm
+// of handle_history_mode_key below (the view runs no march, architect
+// 2026-11-24). Every rule
 // the cycle carries — the no-wrap walls, the empty-list nothing, the
 // focus-replaces-selection rest, the landing and its damage — is stated at the
 // arm that spells it, and this is the one body that runs them.
@@ -1721,10 +1722,9 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 // walls and the empty arm are consumed no-ops.
 void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
                                                     MarkerLandingFrame frame) {
-    // THE STOP IS ONE OWNER'S (history_diff_cycle_target, app_state.h), and
-    // this body is its one reader: the walk keys' faces do not ask it, their
-    // holds (the two marches, architect 2026-11-24) keeping them lit in the
-    // view.
+    // THE STOP IS ONE OWNER'S (history_diff_cycle_target, app_state.h), the
+    // walk keys' faces in the view asking it too (architect 2026-11-24), so
+    // a key greys exactly where this refuses.
     // The seed, the walls and the empty arm are stated there; each is a
     // silent consumed no-op here.
     const int there = history_diff_cycle_target(app, audio, forward);
@@ -1760,10 +1760,10 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // on-screen flag moves nothing and an off-screen one is paged in; the
     // zoom is never written. A single
     // flag always fits, so the owner's cannot-fit verdict is dropped. The
-    // Center arm is the marches' step (2026-09-26), the live marches' own
-    // statement, and centres at the standing zoom, as the live jump's does;
-    // the march runs the mode's `c` (run_center_command's mode arm) behind
-    // it, which writes the working zoom and centres again.
+    // Center arm centres at the standing zoom, as the live jump's does; no
+    // caller in the view states it today (the view runs no march, architect
+    // 2026-11-24), and the frame stays the caller's statement, the live
+    // walk's required-frame rule mirrored.
     switch (frame) {
         case MarkerLandingFrame::Center:
             viewport.center_viewport_on_playhead();
@@ -2050,7 +2050,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // own stop carries the same note at its site.
 
     // THE TAB FAMILY IN THE VIEW — the diff-flag cycle, and above it the two
-    // marches that compose the cycle with the A/B switch.
+    // march chords, consumed as nothing.
     //
     // BARE TAB / SHIFT+TAB — THE DIFF-FLAG CYCLE, mode-local. Tab
     // steps to the next flag, Shift+Tab to the previous, in the
@@ -2072,61 +2072,29 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // one key batch would have cycled the leaving commit's flags with
     // (drop_lane_stash_across_history_edge owns the whole argument).
     //
-    // THE ACT IS ITS OWN MEMBER (cycle_history_diff_flag_focus) because the
-    // marches below compose it; this arm is its spelling, not its body.
+    // THE ACT IS ITS OWN MEMBER (cycle_history_diff_flag_focus); this arm is
+    // its spelling, not its body.
     //
-    // THE MARCHES RANK ABOVE IT and must: the test below reads the KEY
-    // alone, so a march's own Tab would fall into a step here.
-    if (is_march_key(key, mods)) {
-        // THE PAIRED MARCHES, MODE-LOCAL — THE LIVE MARCHES' ROUND TRIP over
-        // the view's own vocabulary (architect 2026-09-26), Ctrl+Tab forward
-        // and Ctrl+Shift+Tab back (architect 2026-11-24, the backward one the
-        // forward one mirrored and nothing else): switch to the other
-        // tab, step in the march's direction, centre with the
-        // mode's `c`; switch home, centre with the mode's `c`. The user ends
-        // on the tab he started from and never sees the other one — the whole
-        // act is one key dispatch and nothing in it commits a frame (the rule
-        // and the saved-band mechanics are at the live march,
-        // handle_tab_switch_keys).
-        //
-        // THE CENTRING IS THE MODE'S `c` EXACTLY (run_center_key_command, whose
-        // mode arm in run_center_command re-lands the playhead on the focused
-        // diff flag, writes the working zoom and centres, and whose tail arms
-        // the hold posture) — the live march's own call, the fork being
-        // inside it.
-        //
-        // ONE STEP, NOT TWO, and that is the honest re-expression of "advance
-        // one marker next in both tabs" (or back): the mode's focus is ONE
-        // index over
-        // one diff-flag list, shared by both tabs (the tabs share both marker
-        // stores, so the list is the same on either side, and the tab switch
-        // leaves the index standing). The other tab's step moves that shared
-        // focus to the next flag; a second step at home would move it again
-        // and put the visible tab two flags on, past the one the other tab
-        // stands on. So the home half is the mode's `c` alone, which lands
-        // the home tab's playhead on the same focused flag — both tabs end on
-        // one flag, which is lockstep. A step that refuses at the end flag
-        // in its direction (the cycle's silent wall) leaves the focus where
-        // it stood, and both `c`s centre on it, as a bare `c` would.
-        //
-        // No preview trigger, the live march's reason (the round trip ends on
-        // the tab it started from); the view has no playback in any case.
-        const char home = app.active_tab_view;
-        active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
-        cycle_history_diff_flag_focus(march_key_forward(mods),
-                                      MarkerLandingFrame::Center);
-        run_center_key_command(/*user_zoom=*/true);
-        active_views.switch_active_tab_view_to(home);
-        run_center_key_command(/*user_zoom=*/true);
-        return true;
-    }
+    // NO MARCH RUNS IN THE VIEW (architect 2026-11-24: "I don't use the walk
+    // in history view, so we can just refuse the walk in all cases in
+    // history view"): Ctrl+Tab and Ctrl+Shift+Tab, the holds of Next and
+    // Previous Marker, are a silent consumed no-op here — nothing moves, no
+    // card. WHY: the tabs share one diff-flag focus in the view, so a march
+    // could only land both tabs on the one flag the other tab's step
+    // reached, which with the playheads apart can move the tab on screen
+    // against the march's direction. The tooltips drop the hold's line here
+    // (redesign_button_tooltip_forks' march roads).
+    //
+    // THIS ARM RANKS ABOVE THE CYCLE and must: the test below reads the KEY
+    // alone, so a march chord's Tab would fall into a step there.
+    if (is_march_key(key, mods)) return true;
     // THE STEP'S CAMERA IS THE LIVE WALK'S OWN ANSWER (architect 2026-09-16,
     // the sibling's rule; "navigation commands that can be symmetric in the
     // history view should be", 2026-09-22): MarkerLandingFrame::Land, the
     // landing owner's walk (Viewport::land_subject, LandingKind::Walk), so the
     // walks frame alike at every level in both worlds. No alt term here:
     // history_mode_owns_key refuses every alt shape ahead of this body; the
-    // marches above rank first.
+    // march chords' arm above ranks first.
     if (key == GuiKeys::Tab) {
         cycle_history_diff_flag_focus(!mods.shift, MarkerLandingFrame::Land);
         return true;
@@ -2196,8 +2164,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // press is the live waveform lane's step, the SAME BODY
     // (run_waveform_lane_playhead_step): one step in the active column's unit
     // (a painted column on W, a hop on P), the camera the hold posture's
-    // (nudge_camera — `c`, the diff-flag walk's centring and the marches arm it
-    // in here), the hold kept across the step, the key repeating as live.
+    // (nudge_camera — `c` and the diff-flag walk's centring arm it in
+    // here), the hold kept across the step, the key repeating as live.
     // That body's live-selection clear is skipped in the view: the live
     // selection is the live world's and the view writes none of it, and the
     // mode's own pair is empty by this very branch, so the step clears
@@ -2391,21 +2359,22 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             both walks, the empty Remote walk being a legal
 //                             standing state (the term at the predicate says
 //                             why).
-//   - Ctrl+Shift+S          → THE SAVE-AND-COMMIT ACT, the mode's second
-//                             admitted mutator — THE PUBLISH CHORD, bound in
-//                             this view alone (architect 2026-11-17:
-//                             commit is any change git sees, from the `h`
-//                             view alone; run_publish_chord: the pull, the
-//                             check, or save and commit under the default
-//                             title with no question asked). The act is
-//                             save-FIRST by definition — it runs the ordinary
-//                             save through its own owner and only then
-//                             writes, commits and pushes. The dispatch is the
-//                             `s` arm in on_key (input_handler.cpp); nothing
-//                             is dispatched from here. The Save button reaches
-//                             it by spelling this chord at its lift while the
-//                             mode stands (finish_chrome_press_release) and
-//                             wears the commit icon and the tooltip "Save and
+//   - Ctrl+Shift+S          → FORCE SAVE AND COMMIT, the mode's second
+//                             admitted mutator — THE PUBLISH CHORD, in here
+//                             the view's own act (architect 2026-11-24; the
+//                             two acts at run_publish_chord's head: the pull,
+//                             the check, or a save of whatever the dirty mark
+//                             says and a commit of any change git sees, under
+//                             the default title with no question asked). The
+//                             act is save-FIRST by definition — it runs the
+//                             ordinary save through its own owner and only
+//                             then writes, commits and pushes. The dispatch
+//                             is the `s` arm in on_key (input_handler.cpp);
+//                             nothing is dispatched from here. The Save
+//                             button reaches it by spelling this chord at its
+//                             lift while the mode stands
+//                             (finish_chrome_press_release) and wears the
+//                             commit icon and the tooltip "Force Save and
 //                             Commit".
 //   - Ctrl+S                → THE PLAIN DISK SAVE (architect 2026-10-10). It
 //                             writes the state the session already holds and
@@ -2526,9 +2495,10 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // twins are this list's members too, and every one is: Open Project's
 // Ctrl+Alt+O, Zoom to Fit's Shift+0 and the tab pair's bare 5 / 6 are
 // admitted below, Save's lift is the publish chord in here, and the walk's,
-// the marches', the skips' and the history steps' forms are the mode's own
-// vocabulary (history_mode_owns_key) — so no press a lit button makes is
-// one this list refuses.
+// the skips' and the history steps' forms are the mode's own vocabulary
+// (history_mode_owns_key), the walk pair's holds — the march chords — claimed
+// there and consumed as nothing (architect 2026-11-24) — so no press a lit
+// button makes is one this list refuses.
 //
 // THE PREDICATE IS FREE, NOT A MEMBER, for exactly that reader: it is
 // pure, and the face derivation asks it about a table of chords with no press
@@ -2610,8 +2580,8 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     const bool is_revert_act =
         (key == GuiKeys::V && bare &&
          (state == nullptr || history_revert_actionable(*state)));
-    // CTRL+SHIFT+S IS THE ACT IN HERE (the publish chord, the view's alone,
-    // architect 2026-11-17), AND IT IS ADMITTED UNCONDITIONALLY
+    // CTRL+SHIFT+S IS THE ACT IN HERE (the publish chord, in this view FORCE
+    // SAVE AND COMMIT, architect 2026-11-24), AND IT IS ADMITTED UNCONDITIONALLY
     // (architect 2026-09-01: a gate's membership test is the CHORD'S ALONE —
     // a chord the mode owns is admitted as vocabulary, and its ACT answers
     // whatever the session cannot do right now, run_publish_chord, by the
@@ -2687,12 +2657,10 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // same reason. What the switch does move is the WINDOW, which the view
     // does not own: its entry frames nothing and its exit restores nothing.
     //
-    // THE TWO MARCHES NEVER REACH THIS LIST — Ctrl+Tab and Ctrl+Shift+Tab
-    // are the mode's OWN (2026-08-18; both directions 2026-11-24;
-    // history_mode_owns_key claims them and handle_history_mode_key consumes
-    // them one line above this gate), where each is the paired march built
-    // over the diff-flag cycle: the same chord, the same composition, and
-    // only what "Tab" denotes changes with the context.
+    // THE TWO MARCH CHORDS NEVER REACH THIS LIST — Ctrl+Tab and
+    // Ctrl+Shift+Tab are claimed by the mode (history_mode_owns_key) and
+    // consumed as nothing by handle_history_mode_key one line above this
+    // gate: no march runs in the view (architect 2026-11-24).
     const bool is_tab_selector = is_tab_selector_key(key, mods);
     // THE TOOLTIP LAMP (architect 2026-09-29), bare backslash through the
     // shared predicate: it is chrome — whether a resting pointer raises hints
@@ -2739,45 +2707,107 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
     return history_mode_allowlist_refuses(key, mods, nullptr);
 }
 
-// -- THE PUBLISH CHORD'S GUI HALF (Ctrl+Shift+S, the `h` view's) -----------
+// -- THE PUBLISH CHORD'S GUI HALF (Ctrl+Shift+S, both views) ---------------
 //
 // The act itself is commit_history_checkpoint (history_diff.h): the fetch
 // first, the three writes, the three-path commit, the push, and every stderr
 // line about them. What lives here is THE CHORD'S FORK in front of it (the
-// GitHub status), THE SAVE in front of
-// the act (2026-08-04 — the act is "Save and Commit"), the CLOSE of the
-// `h` view behind the save (2026-08-07), and the
-// DISPATCH onto the background worker with the report that comes back from it.
+// GitHub status), THE SAVE in front of the act (2026-08-04 — the act saves
+// first), the CLOSE of a standing `h` view behind the save (2026-08-07), and
+// the DISPATCH onto the background worker with the report that comes back
+// from it.
 
-// THE CHORD'S ACT, THE `h` VIEW'S ALONE (architect 2026-11-17: commit
-// is any change git sees in the sidecars, from the `h` view alone; the
-// default title, no question asked, 2026-10-10). ONE CALLER, on_key's `s` arm for Ctrl+Shift+S
-// (is_publish_key, gui_input.h) behind the view's mode test, whose one
-// producer is the view's Save button: its lift spells this chord there
-// (finish_chrome_press_release). Ctrl+S is the plain save in both views.
-// The session is the visit's own.
+// THE TWO ACTS, ONE CHORD, ONE BODY (architect 2026-11-24: "the history save
+// and commit should really be a forced save and commit, because it saves,
+// it's the only act that's allowed to violate the view only authoring rule
+// for what counts as dirty dot or not ... So in history, it should really be
+// called forced save and commit. And so then we're talking about two separate
+// acts"). This is their one statement; the other owners point here.
+//   1. SAVE AND COMMIT — THE MAIN PAGE'S, SAVE'S LONG PRESS (the twin,
+//      redesign_button_shift_admits; architect 2026-11-24: "save should
+//      retain both save and save plus commit ... the long press should stay
+//      on save"). A CONVENIENCE OVER THE PLAIN SAVE: it exists only while
+//      SAVE is lit, i.e. while there is an authored change to save
+//      (plain_save_actionable, SAVE IS THE DIRTY MARK, architect 2026-10-05;
+//      his words: "the long press is a convenience if the dirty dot rule
+//      means the save is gray, then the convenience is not available"). It
+//      saves, then commits and pushes. A grey SAVE refuses the hold with the
+//      tap.
+//   2. FORCE SAVE AND COMMIT — THE `h` VIEW'S SAVE KEY, whose plain lift
+//      spells this chord there (save_button_publishes,
+//      finish_chrome_press_release). The one act allowed to write a view-only
+//      change: it saves whatever the dirty mark says and commits any change
+//      git sees in the sidecars, the view band and the trim included
+//      (architect 2026-11-17).
+// Both run under THE DEFAULT TITLE (history_checkpoint_title, the one owner
+// of the `Update <id>` spelling) with no question asked (architect
+// 2026-10-10, the commit-title editor retired). ONE CALLER, on_key's `s` arm
+// for Ctrl+Shift+S (is_publish_key, gui_input.h), the two producers being
+// the Save button's two lifts above. Ctrl+S is the plain save in both views.
 //
-// THE FORK IS THE GITHUB STATUS (architect 2026-09-27), read live: the face
-// (history_checkpoint_actionable and its two siblings, app_state.h) greys
-// every status the act cannot run, but the lift asks the painted face, so a
-// status that moved inside that frame is answered here — Checking, Refused,
-// Unchecked and Diverged each card their sentence; OFFLINE ASKS GITHUB AGAIN
-// (dispatch_github_check; architect 2026-09-28) and nothing else, the answer
-// being what the next press acts on, silent, the status bar's walk line
-// showing the word; BEHIND
-// is the PULL (run_history_pull_press, its OK / Cancel confirmation when the
-// pull changes the open piece; the press owns the one road); UP TO DATE OR
-// AHEAD COMMITS, whatever the session's change is: the act saves first, and
-// the worker commits whatever git sees in the three sidecars — the view band
-// and the trim included — and pushes, or pushes what the branch already
-// owes; a tree git sees clean and a branch owing nothing end NothingToCommit,
-// which cards (on_history_checkpoint_complete).
-// (A standing view never meets a checkpoint in flight — the act closes the
-// view before the bit rises and bare `h` refuses to reopen one while it
-// stands — nor a session without a clone, the face greying there for the
-// whole visit; so this body asks neither.)
+// THE SESSION IS THE VIEW'S OR THE PRESS'S: inside the `h` view the act reads
+// the visit's own; outside it the press binds a TRANSIENT session to the
+// prefetch store exactly as the `h` entry does — the staleness kick first,
+// then GuiHistoryDiff::init on a local, a discovery and two config reads at
+// worst and no strict load — which dies with the press (run_history_commit
+// and the pull's plan take its strings by value). One body for both, so the
+// forks below cannot come to read differently in the two views.
+//
+// THE FORK, in order:
+//   - A CHECKPOINT ALREADY IN FLIGHT cards the publishing sentence
+//     (kCheckpointPublishing) — single in flight, the wait seconds — and is
+//     asked BEFORE the transient bind, so no press kicks a scan of a clone the
+//     worker is mid-mutation on (bare `h`'s own refusal, for its reason). The
+//     face greys on the same bit, but the lift asks the painted face, so a
+//     checkpoint that rose inside that frame is answered here. (A standing
+//     view never meets it: the act closes the view before the bit rises and
+//     bare `h` refuses to reopen one while it stands.)
+//   - OUTSIDE THE VIEW, NOTHING TO SAVE IS A SILENT CONSUMED NO-OP — the
+//     face's own predicate, plain_save_actionable, asked by the act too, so
+//     the face and the act are one decision; the plain save's own answer to a
+//     clean session (GuiSaveOps::save_from_key). Asked ahead of the transient
+//     bind, so no press on a clean piece kicks a scan.
+//   - NO CLONE TO COMMIT INTO (architect 2026-09-04) cards the bootstrap's
+//     reason under the product's one spelling of the fact,
+//     kHistoryUnavailable — a main-page press's answer; in the view the face
+//     greys without a clone for the whole visit.
+//   - THE GITHUB STATUS (architect 2026-09-27), read live: in the view the
+//     face (history_checkpoint_actionable and its two siblings, app_state.h)
+//     greys every status the act cannot run, and on the main page the face is
+//     the dirty mark alone, so every status reaches here — Checking, Refused,
+//     Unchecked and Diverged each card their sentence; OFFLINE ASKS GITHUB
+//     AGAIN (dispatch_github_check; architect 2026-09-28) and nothing else,
+//     the answer being what the next press acts on — silent in the view, whose
+//     status bar's walk line shows the asking, and a card outside it, where
+//     the status bar carries no GitHub word; BEHIND is the PULL
+//     (run_history_pull_press, its OK / Cancel confirmation when the pull
+//     changes the open piece; the press owns the one road); UP TO DATE OR
+//     AHEAD COMMITS: the act saves first, and the worker commits whatever git
+//     sees in the three sidecars and pushes, or pushes what the branch already
+//     owes; a tree git sees clean and a branch owing nothing end
+//     NothingToCommit, which cards (on_history_checkpoint_complete).
 void GuiInputHandler::run_publish_chord() {
-    const GuiHistoryDiff& session = app.history_mode.session;
+    if (app.history_checkpoint_in_flight) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             kCheckpointPublishing);
+        return;
+    }
+    const bool in_view = app.history_mode.active;
+    if (!in_view && !plain_save_actionable(app)) return;
+    GuiHistoryDiff        transient;
+    const GuiHistoryDiff* session = &app.history_mode.session;
+    if (!in_view) {
+        kick_history_prefetch_if_stale();
+        transient.init(app, history_prefetch);
+        session = &transient;
+    }
+    if (!session->available()) {
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            std::string(kHistoryUnavailable) + ": " +
+                session->unavailable_reason().display);
+        return;
+    }
     switch (app.github_status) {
     case GuiGitHubStatus::Checking:
         notifications.notify(AppState::NotificationClass::Normal,
@@ -2792,11 +2822,18 @@ void GuiInputHandler::run_publish_chord() {
         // BE STALE — a view opened while the link was still coming up would
         // read offline for its whole life — so the act never answers from it.
         // The press asks again through the check's one dispatcher and does
-        // nothing else: the status bar's walk line turns to `checking...` and then the answer, and
-        // the next press acts on it (Behind puts the Pull face up; the Save
-        // key reads CHECK on these terms, redesign_button_glyph's fourth
-        // glyph, 2026-10-28). No card — the walk line shows the asking.
+        // nothing else: in the view the status bar's walk line turns to
+        // `checking...` and then the answer, and the next press acts on it
+        // (Behind puts the Pull face up; the Save key reads CHECK on these
+        // terms in the view, redesign_button_glyph's fourth glyph,
+        // 2026-10-28). No card in the view — the walk line shows the asking;
+        // OUTSIDE IT the status bar carries no GitHub word, so the press says
+        // what it did.
         dispatch_github_check();
+        if (!in_view) {
+            notifications.notify(AppState::NotificationClass::Normal,
+                                 "Asking GitHub again");
+        }
         return;
     case GuiGitHubStatus::Refused:
         notifications.notify(AppState::NotificationClass::Normal,
@@ -2821,18 +2858,19 @@ void GuiInputHandler::run_publish_chord() {
                              "This device and GitHub have both moved");
         return;
     case GuiGitHubStatus::Behind:
-        run_history_pull_press(session);
+        run_history_pull_press(*session);
         return;
     case GuiGitHubStatus::Ahead:
         break;
     }
-    const std::string& dir = session.project_directory();
-    if (dir.empty() || session.sidecar_base_name().empty()) return;
-    run_history_commit(session, history_checkpoint_title(dir));
+    const std::string& dir = session->project_directory();
+    if (dir.empty() || session->sidecar_base_name().empty()) return;
+    run_history_commit(*session, history_checkpoint_title(dir));
 }
 
 // THEN DO IT — the one caller is run_publish_chord, above, which hands it the
-// `h` visit's own session and the default title.
+// session it read (the `h` visit's own, or the transient one it bound for a
+// main-page press) and the default title.
 //
 // THE BYTES ARE REBUILT FRESH, NEVER THE SESSION'S FROZEN NOW SIDE, and this is
 // the one place in the mode where the difference between them is real. The
@@ -2855,7 +2893,8 @@ void GuiInputHandler::run_publish_chord() {
 // the user has since navigated away from — invisible in the diff (which displays
 // only `scale=`) and wrong on disk.
 //
-// THE ACT CLOSES THE VIEW (architect 2026-08-05). The view asks one question —
+// THE ACT CLOSES A STANDING VIEW (architect 2026-08-05; from the main page
+// there is none to close). The view asks one question —
 // what differs between this session and a checkpoint — and an act that has just
 // made the answer "nothing" has answered it; leaving the user inside an empty
 // view to press `h` is ceremony.
@@ -2880,10 +2919,10 @@ void GuiInputHandler::run_publish_chord() {
 // the close, deliberately: the two strings are the closing session's.
 //
 // SINGLE IN FLIGHT: the in-flight bit goes up at the dispatch below and comes
-// down at the completion, and while it stands bare `h` will not open a new
-// view, so no press reaches this function (the Save-and-Commit button's grey
-// derives from the same bit — see the note at the dispatch for why that half
-// is structural rather than visible).
+// down at the completion, and while it stands the chord's act refuses ahead of
+// this function (run_publish_chord's publishing card; Save's grey in both
+// views derives from that same bit — see the note at the dispatch) and bare
+// `h` will not open a new view.
 //
 // AND THE BIT ALSO LOCKS OUT EVERY SAVE, globally (2026-08-08), which is
 // what makes the coincident-write paragraph below safe rather than merely
@@ -2934,13 +2973,16 @@ void GuiInputHandler::run_publish_chord() {
 // against the repo root and then carrying a skip, to save three renames of bytes
 // we already hold.
 //
-// AND THE SAVE BUTTON STAYS (architect's explicit reasoning): saving to disk is
-// its own act and the common one; this act is a save that also PUBLISHES. Two
-// buttons because one is to disk and one is to disk and the remote.
+// AND THE PLAIN SAVE STAYS (architect's explicit reasoning): saving to disk is
+// its own act and the common one; this act is a save that also PUBLISHES. One
+// SAVE key carries both on the main page — its tap the plain save, its long
+// press Save and Commit — and in the `h` view its lift is Force Save and
+// Commit; Ctrl+S is the plain save in both views and Ctrl+Shift+S the
+// publish chord in both (the two acts at run_publish_chord's head).
 void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
                                          const std::string&    title) {
-    // A SECOND ACT CANNOT ARRIVE HERE — no view stands while one is in
-    // flight — and a GitHub check holds the worker only while the status
+    // A SECOND ACT CANNOT ARRIVE HERE — the chord's act refuses while one is
+    // in flight — and a GitHub check holds the worker only while the status
     // reads Checking, which the act cards; so this guard is unreachable, and
     // it asks THE WORKER rather than
     // the AppState mirror the act reads, because what it protects is that
@@ -2977,9 +3019,11 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
     job.title         = title;
     job.bytes         = build_history_now_side(app);
 
-    // THE VIEW CLOSES ON THE SAVE, and the session's three strings — the
-    // derived clone, the project directory and the base name — are already
-    // captured above, so the close cannot take them with it.
+    // A STANDING VIEW CLOSES ON THE SAVE, and the session's three strings —
+    // the derived clone, the project directory and the base name — are
+    // already captured above, so the close cannot take them with it. (A
+    // main-page press has no view to close; its transient session dies with
+    // the press.)
     if (app.history_mode.active) close_history_mode();
 
     // THE BIT GOES UP AFTER THE SAVE, WHICH IS THE WHOLE EXEMPTION the act's own
@@ -2987,7 +3031,7 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
     // the save three statements above ran while nothing was in flight.
     app.history_checkpoint_in_flight = true;
     // TWO FACES COME OFF THIS ONE BIT AND ONLY ONE OF THEM IS VISIBLE. The
-    // SAVE-AND-COMMIT face greys on it through history_checkpoint_actionable
+    // FORCE SAVE AND COMMIT face greys on it through history_checkpoint_actionable
     // (app_state.h, the act's own predicate), and that
     // face exists only inside the view — the view has just closed and `h`
     // refuses to reopen one while the bit stands — so that half is structural,
@@ -3046,8 +3090,9 @@ void GuiInputHandler::run_history_commit(const GuiHistoryDiff& session,
 //
 // THERE IS NO RETRY KEY AND NOTHING TO ACKNOWLEDGE, AND THE RETRY IS THE
 // ACT ITSELF (architect 2026-09-27): a checkpoint that committed and failed to push leaves the GitHub
-// status AHEAD, and the `h` view's Save key (the publish chord) runs the act
-// again, whose pre-flight finds the branch still ahead of its remote and
+// status AHEAD, and the `h` view's Save key, Force Save and Commit, runs the
+// act again (the save having landed, the main page's hold greys with SAVE),
+// whose pre-flight finds the branch still ahead of its remote and
 // pushes it.
 //
 // THE GITHUB STATUS TAKES THE ACT'S OWN READING (`github`, the reading its
@@ -3121,11 +3166,12 @@ void GuiInputHandler::on_history_checkpoint_complete(
         // user's to close.
         break;
     case GuiHistoryCommitOutcome::NothingToCommit:
-        // A TREE GIT SEES CLEAN CARDS (architect 2026-11-17): the
-        // Save-and-Commit face is lit whenever a commit can be made
-        // (history_checkpoint_actionable), not on a measured change, so the
-        // press that found nothing says so — the NORMAL class, an answer to
-        // the press, not a failure.
+        // A TREE GIT SEES CLEAN CARDS (architect 2026-11-17): Force Save and
+        // Commit's face is lit whenever a commit can be made
+        // (history_checkpoint_actionable), and the main page's Save and
+        // Commit whenever SAVE is (plain_save_actionable), neither on a
+        // change git was asked about, so the press that found nothing says
+        // so — the NORMAL class, an answer to the press, not a failure.
         notifications.notify(AppState::NotificationClass::Normal,
                              "Nothing to commit");
         break;
@@ -3191,8 +3237,11 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
 }
 
 // THE PULL'S PRESS (architect 2026-09-27) — the publish chord, Ctrl+Shift+S,
-// the `h` view's Save key, with the GitHub status BEHIND, reached from
-// run_publish_chord's status fork with the visit's own session. SYNCHRONOUS AND NETWORK-FREE: the plan reads the local refs the last
+// in either view (SAVE's long press on the main page, the `h` view's Save
+// key), with the GitHub status BEHIND, reached from run_publish_chord's status
+// fork with the session that press read (the `h` visit's own, or the main
+// page's transient one; the plan copies its strings, so the question may
+// outlive it). SYNCHRONOUS AND NETWORK-FREE: the plan reads the local refs the last
 // check fetched (plan_history_pull) and refuses unless the branch is still
 // strictly behind them — a terminal commit or pull since the check is
 // `Pull refused: this device has moved`, the status taking what the refs now
@@ -4742,8 +4791,8 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
     // ONE MODE BIT RE-AIMS THIS CHORD, the iteration one. The history view
     // never reaches it — neither render chord is on that view's allowlist,
     // which is also where the Render button's disabled face in there comes
-    // from; the save-and-commit act is Ctrl+S, the chord the act's own first
-    // step already is (architect 2026-08-08).
+    // from; the view's Force Save and Commit is the publish chord,
+    // Ctrl+Shift+S (the two acts at run_publish_chord's head).
     //
     // ITERATION MODE RE-AIMS IT (architect 2026-08-02): with that mode
     // on, Ctrl+Alt+R IS the iteration sweep — the same body, the same output
@@ -8062,6 +8111,17 @@ void GuiInputHandler::cancel_load_in_place() {
     app.history_mode.pending_load_member.reset();
 }
 
+// THE MARCHES' REFUSAL — contract at the declaration (input_handler.h); the
+// gate is march_refusing_tab (app_state.h).
+bool GuiInputHandler::refuse_march(bool forward) {
+    const char tab = march_refusing_tab(app, audio, forward);
+    if (tab == '\0') return false;
+    notifications.notify(AppState::NotificationClass::Normal,
+                         std::string("Tab ") + tab + " has no " +
+                             (forward ? "next" : "previous") + " marker");
+    return true;
+}
+
 // Tab-key family. See the declaration for the chord list.
 bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     const bool ctrl  = mods.ctrl;
@@ -8107,7 +8167,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // it to play a portion and back; the march walks the pair in lockstep.
     // Their pointer roads are the walk keys' holds (Next Marker's the
     // forward march, Previous Marker's the backward one; the lift's ruled
-    // translation, finish_chrome_press_release).
+    // translation, finish_chrome_press_release). ON THE MAIN PAGE ALONE: the
+    // `h` view claims both chords ahead of this family and consumes them as
+    // nothing (handle_history_mode_key, architect 2026-11-24).
     //
     // THE ORDER: switch to the OTHER tab, step its focus one marker in the
     // march's direction and centre it as bare `c` does; switch HOME, step its
@@ -8124,11 +8186,22 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // both tabs — where the bare Tab walk (below) still writes none and lands
     // through the landing owner's walk. The step states
     // MarkerLandingFrame::Center, `c`'s own statement to the jump, so the
-    // step itself frames nothing `c` does not immediately re-frame. A step
-    // that refuses at a wall (cycle_marker_focus's silent refusal) leaves that
-    // tab's focus where it stood, and its `c` still centres on it, as a bare
-    // `c` would — which is why a march always acts (the walk keys' faces, the
-    // twin rule at redesign_button_enabled).
+    // step itself frames nothing `c` does not immediately re-frame.
+    //
+    // A MARCH RUNS ONLY WHERE BOTH TABS HAVE A STOP THAT WAY (architect
+    // 2026-11-24: "The walk is useless unless both tabs have a marker in
+    // front of, ahead or behind the current position"). THE GATE IS ASKED
+    // BEFORE ANYTHING MOVES — march_refusing_tab (app_state.h), a pure
+    // predicate whose answer for each tab is that tab's own step right
+    // after its entry, by construction (the argument is there). Where either
+    // tab has none THE MARCH DOES NOTHING — no tab switch, no step, no
+    // centring, no zoom write, no playback stop, the selection untouched —
+    // and says so on ONE timed card naming the tab that has none, "Tab B
+    // has no next marker" / "Tab A has no previous marker" (the tab on
+    // screen named where both have none; one clause, no key named,
+    // notifications.h's head). With the gate in front neither step below
+    // refuses; each still asks cycle_marker_focus's own gate, the same
+    // answer.
     //
     // THE USER NEVER SEES THE OTHER TAB: the whole act runs inside this one
     // key dispatch, and nothing in it commits a frame — each switch's and
@@ -8159,6 +8232,7 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // cycle_marker_focus).
     if (is_march_key(key, mods)) {
         const bool forward = march_key_forward(mods);
+        if (refuse_march(forward)) return true;
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
         cycle_marker_focus(forward, MarkerLandingFrame::Center);
@@ -8181,7 +8255,9 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // marker_walk_landing).
     //
     // The `h` view's own Tab arm states the same Land over its diff-flag
-    // cycle (handle_history_mode_key). The marches' branch above runs first
+    // cycle (handle_history_mode_key), which also consumes both march chords
+    // as nothing, so neither the marches nor this arm run there (architect
+    // 2026-11-24). The marches' branch above runs first
     // and returns, so both ctrl forms are consumed before reaching here; the
     // explicit !ctrl guards below say so at the cycle path, and the !alt
     // guards make every Alt spelling of Tab an unbound no-op.
@@ -8437,11 +8513,16 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // is derived on its own thread after the load (GuiAudio::gain_curve),
         // and a press that early is effectively adversarial, so it refuses
         // on one Normal card and lights nothing. The predicate is the one the
-        // button's face greys on (waveform_magnification_toggle_actionable,
-        // warp_frame_map_view.h), so the greyed button's lift never reaches here; this
-        // guard is also what keeps the lamp from being lit before the curve
-        // exists, which is why waveform_magnified needs no term of its own.
-        if (!waveform_magnification_toggle_actionable(audio)) {
+        // button's face greys on (waveform_magnification_key_actionable,
+        // warp_frame_map_view.h), so the greyed button's lift never reaches
+        // here; it also refuses while the sticky lamp's seat is owed
+        // (AppState::magnification_seat_pending, architect 2026-11-24), so
+        // no press can come before the seat. This guard (with the deferred
+        // seat, which waits on the curve's readiness,
+        // settle_pending_magnification) is also what keeps the lamp from
+        // being lit before the curve exists, which is why waveform_magnified
+        // needs no term of its own.
+        if (!waveform_magnification_key_actionable(app, audio)) {
             notifications.notify(AppState::NotificationClass::Normal,
                                  "Magnification is not ready");
             break;

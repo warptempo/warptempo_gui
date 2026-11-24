@@ -25,8 +25,9 @@
 //
 // ONE WORKER, TWO JOB KINDS. The CHECK (check_github, history_diff.h) fetches
 // and compares at every project open, an `h` entry with no standing answer
-// (unchecked or `offline`, 2026-10-28) and the `h` view's Save key (the
-// publish chord) under `offline`; the CHECKPOINT runs
+// (unchecked or `offline`, 2026-10-28) and the publish chord in either view
+// (SAVE's long press on the main page, the `h` view's Save key) under
+// `offline`; the CHECKPOINT runs
 // the act. Both can write the remote-tracking ref (a fetch, a push), so they
 // share this ONE thread and its ONE job slot: two network jobs of one session
 // never race for that ref, by construction — and across sessions the

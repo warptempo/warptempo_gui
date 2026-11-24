@@ -56,7 +56,8 @@ struct GuiSaveOps {
     bool save();
 
     // THE KEYS' PLAIN SAVE (architect 2026-10-05, SAVE IS THE DIRTY MARK):
-    // every Ctrl+S road outside the `h` view — on_key's arm, the editors'
+    // every Ctrl+S road, in both views (Ctrl+S is the plain save in the `h`
+    // view too, its allowlist admitting it) — on_key's arm, the editors'
     // two modal arms (route_modal_editor_key) and the picker's router —
     // reaches the owner through this, which asks plain_save_actionable
     // (app_state.h, the ruling and its trade-off) first. WITH NOTHING TO

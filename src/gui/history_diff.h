@@ -28,9 +28,11 @@ class GuiHistoryPrefetch;
 // stderr with the store's reason appended; the WALK LAMP'S REFUSAL, which
 // raises that same composed line on a card when bare `g` asks for the remote
 // walk this visit could not bootstrap (GuiInputHandler::set_history_delta);
-// and the prefetch arrival that closes a standing view, which does both.
-// (The checkpoint act never meets the fact: its face greys without a clone,
-// run_publish_chord.) It lives beside the reason it prefixes rather than in one of the
+// the prefetch arrival that closes a standing view, which does both; and the
+// main page's publish chord, SAVE's long press, which cards it from the
+// transient session it binds (run_publish_chord; in the `h` view the
+// checkpoint act never meets the fact, its face greying without a clone).
+// It lives beside the reason it prefixes rather than in one of the
 // readers, so no reader can drift from the producer. A tooltip names the act
 // and states no reason, so the fact is the KEYS' cards', which append the
 // clone-specific clause a constant tooltip line could not carry.
@@ -1078,15 +1080,16 @@ private:
 
 // -- THE COMMIT ACT — the first of the three mutating git routes ------------
 //
-// What the mode reads, it can also WRITE: the publish chord, Ctrl+Shift+S,
-// the `h` view's Save key and the product's one commit road (architect
-// 2026-11-17), saves the piece and commits the live state — any change git
-// sees in the three sidecars — into its directory in the projects
-// repository. The GUI half — THE CHORD'S FORK that asks nothing
+// What the mode reads, it can also WRITE: the publish chord, Ctrl+Shift+S —
+// its TWO ACTS (architect 2026-11-24; GuiInputHandler::run_publish_chord's
+// head), Save and Commit, SAVE's long press on the main page, and Force Save
+// and Commit, the `h` view's Save key — saves the piece and commits the live
+// state — any change git sees in the three sidecars (architect 2026-11-17) —
+// into its directory in the projects repository. The GUI half — THE CHORD'S FORK that asks nothing
 // (run_publish_chord: the pull, the check or the commit by the GitHub
 // status), THE ORDINARY SAVE THAT RUNS FIRST (2026-08-04: the act is "Save
 // and commit", and a failed save refuses it before this module is reached at
-// all), the CLOSE that ends the view once THE SAVE has landed (2026-08-07),
+// all), the CLOSE that ends a standing view once THE SAVE has landed (2026-08-07),
 // the dispatch onto the background worker and the CRITICAL NOTIFICATION CARD
 // its failures raise (architect 2026-08-29) — lives at
 // GuiInputHandler::run_history_commit; what lives here is the act itself.
@@ -1173,7 +1176,7 @@ enum class GuiHistoryCommitOutcome {
 // THE GITHUB STATUS (architect 2026-09-27) — how this device's branch stands
 // against GitHub, as of the last fetch. The status bar's `h` walk line says it as
 // `GitHub: <word>` (github_status_word), and it selects what the publish
-// chord (Ctrl+Shift+S, the `h` view's Save key) does: UpToDate commits, Ahead
+// chord (Ctrl+Shift+S, in either view) does: UpToDate commits, Ahead
 // commits or retries the push, Behind pulls, Offline asks GitHub again, and
 // the rest refuse with a card (run_publish_chord).
 //   Unchecked — no reading: the project's first check has not been
@@ -1282,7 +1285,8 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 
 // -- THE PULL (architect 2026-09-27) -----------------------------------------
 //
-// BEHIND, the publish chord (Ctrl+Shift+S, the `h` view's Save key) is PULL: a FAST-FORWARD of the checked-out
+// BEHIND, the publish chord (Ctrl+Shift+S, in either view: SAVE's long press
+// on the main page, the `h` view's Save key) is PULL: a FAST-FORWARD of the checked-out
 // branch to the remote-tracking ref THE LAST CHECK FETCHED, synchronous on
 // the main thread and NETWORK-FREE (the ref is local; nothing is fetched
 // again). Fast-forward only: a branch that is not strictly behind refuses.

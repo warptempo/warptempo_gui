@@ -11,7 +11,10 @@
 // (both stop edges and every gesture stop), the modal-open stop that names it,
 // toggle play/stop, the audition launch, the bounded audition the A/B sequence
 // plays (its sequencing is GuiAbAudition's, ab_audition.h — this cluster owns
-// the one play) and the follow and restrict lamps' toggles.
+// the one play) and the follow and restrict lamps' toggles — two sticky
+// lamps, the device's (architect 2026-11-24: seated from the device key
+// `lit_lamps` at every open through these toggles and stored at every edge,
+// GuiInputHandler::seat_lit_lamps and main.cpp's refresh_lit_lamps).
 // AppState, Viewport and GuiAudio are captured directly.
 // GuiPlayback stays a pure mechanism class — these operations live one layer up.
 // (No GuiPlatform& member: every damage this cluster emits goes through
@@ -38,24 +41,24 @@ struct GuiRenderPlayer;
 // launch of the act's follows it.
 // BESIDE THOSE FOUR: the car's Play
 // (car_toggle_playback's play arm, its prologue), the score viewer's tick
-// (a dead device mid-soundtrack pauses, the render player's rule) and the
-// struck clip lamp's lift (GuiInputHandler::finish_clip_lamp_press_release,
-// architect 2026-11-05: a press that reopens and plays nothing, and
-// cards on a refused reopen). The noise bed asks no device question — it
-// sounds through whichever stream the music opens, noise.h's head.
+// (a dead device mid-soundtrack pauses, the render player's rule) and
+// NOISE's wake (GuiInputHandler::wake_device_for_level_case, architect
+// 2026-11-24: the level case's tap or drag lifted on an audible level over
+// a dead stream reopens and plays nothing, and cards on a refused reopen).
+// The bed itself asks no device question — it sounds through whichever
+// stream is running, noise.h's head.
 // It lives here rather than in notifications.h
 // because the fact is this cluster's: the question is GuiPlayback::
 // ensure_device_available_for_play's — THE REOPEN AT THE PRESS (architect
-// 2026-09-02): each PRESS site (the three launch sites, the car's Play, the
-// struck clip lamp's tap) reopens a dead AAudio stream before it asks, and
+// 2026-09-02): each PRESS site (the three launch sites, the car's Play,
+// NOISE's wake) reopens a dead AAudio stream before it asks, and
 // cards only when that reopen failed. The
-// reads: the FOUR TICKS keep device_unavailable — the render player's (a
+// reads: the THREE TICKS keep device_unavailable — the render player's (a
 // dead stream mid-play must pause), the A/B
 // audition's (a dead stream mid-act must end the act, the fourth site
-// above), the score viewer's (a dead stream under a playing soundtrack
-// pauses it and cards this sentence) and the title bar's (refresh_logo_lamps:
-// the clip lamp struck, its tap the reopen, carding this sentence on a
-// refusal) — and the
+// above) and the score viewer's (a dead stream under a playing soundtrack
+// pauses it and cards this sentence), and NOISE's lift reads it live to
+// choose its wake — and the
 // two PLAY-face predicates (space_launch_would_play,
 // ab_audition_preflight_ok) read device_absent, the never-came-up half alone
 // — a face is a read, never a reopen, and it must not grey what the press
@@ -548,8 +551,11 @@ struct GuiPlaybackLifecycle {
     bool launch_bounded_audition(int64_t start, int64_t span);
 
     // THE FOLLOW KEY'S ONE CHOKEPOINT (architect 2026-09-23), shared by bare
-    // `f` and the icon-row button that synthesizes that chord — the lamp
-    // AppState::follow's one writer. It flips the lamp. The LIT EDGE also
+    // `f`, the icon-row button that synthesizes that chord and the open's
+    // seat of the sticky lamp (GuiInputHandler::seat_lit_lamps, architect
+    // 2026-11-24: lit from the device key `lit_lamps` at rest, before the
+    // first tick) — the lamp AppState::follow's one writer. It flips the
+    // lamp. The LIT EDGE also
     // clears AppState::follow_suspended, and during a project play (the A/B
     // audition not standing) resyncs the predictor and takes the follow
     // scroll at once (Viewport::follow_scanner: a scanner right of the
@@ -564,7 +570,8 @@ struct GuiPlaybackLifecycle {
     // (AppState::restrict = false); the dark edge leaves it alone.
     void toggle_follow();
     // THE RESTRICT KEY'S ONE CHOKEPOINT (architect 2026-10-29), shared by bare
-    // `r` and the icon-row button that synthesizes that chord — the lamp
+    // `r`, the icon-row button that synthesizes that chord and the open's
+    // seat of the sticky lamp (GuiInputHandler::seat_lit_lamps, toggle_follow's) — the lamp
     // AppState::restrict's one writer beside toggle_follow's lit edge. It
     // flips the lamp; THE RADIO: the lit edge puts FOLLOW out
     // (AppState::follow = false), the dark edge writes nothing else. Lit

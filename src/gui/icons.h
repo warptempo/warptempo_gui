@@ -9,21 +9,24 @@
 // symbolic set and drawings of its 16-px actions, devices and panel trees,
 // written by tools/icons/import_papirus.py, the roster the importer's table
 // as the architect picked it (2026-11-17; re-picks 2026-11-22 and
-// 2026-11-23; additions 2026-11-24) — FIFTEEN enumerators OUR OWN, from
-// thirteen sources in tools/icons/own/ (the README's THE OWN DRAWINGS):
-// BboxPrev / BboxNext the
+// 2026-11-23; additions and re-picks 2026-11-24) — FOURTEEN enumerators OUR
+// OWN, from twelve sources in tools/icons/own/ (the README's THE OWN
+// DRAWINGS): BboxPrev / BboxNext the
 // arrow to a line from Papirus's go-first, one source, Next's mirrored by the
 // importer's transform; TransformMoveVertical the double arrow from the same
 // go-first; and, architect 2026-11-23, BlackSum a sigma (ours outright, no
 // Papirus source), GoPreviousViewPage / GoNextViewPage go-previous's head
-// without its stem (one source, Next's mirrored), ZoneIn / ZoneOut
-// view-readermode's book with a plus / a minus in its own moat,
+// without its stem (one source, Next's mirrored),
 // TimelineUseZoneOn go-first's dot and the marker pair's wall,
 // GoParentFolder folder-symbolic's folder with an up arrow cut out,
 // VcsCommit / VcsPull go-up's / go-down's arrow on a line, NetworkConnect
 // the two arrows side by side; and, architect 2026-11-24 ("L1"), the tab
 // pair's TabA / TabB, Liberation Sans Bold's own outlines of the two
-// capitals, 12 tall in the 16 box (the face's, under its OFL). The own
+// capitals, 12 tall in the 16 box (the face's, under its OFL); and,
+// architect 2026-11-24 ("V1"), ZoomPrevious, view-restore's four corners
+// with the left and right pairs 1 closer, both gaps 2. The score's
+// Start / End (ZoneIn / ZoneOut) are Papirus's bookmark-new /
+// bookmark-remove, untouched (architect 2026-11-24, "G"). The own
 // drawings' straight arrows wear
 // Papirus's head and stem (go-previous / go-up / go-down / go-first) rather
 // than a solid triangle head, the shape he keeps for the keys' straight
@@ -62,14 +65,15 @@
 //   form's rows (the launcher's art too, below); THE HEADPHONES TWO
 //   (architect 2026-11-22): the PLAYER key and the render player's
 //   wav rows; SOURCE's disc, ViewMediaTrack, is the key's alone.
-// THE ROSTER IS AS RULED (2026-11-17; 2026-11-22; 2026-11-23); a re-pick is
+// THE ROSTER IS AS RULED (2026-11-17; 2026-11-22; 2026-11-23; 2026-11-24);
+// a re-pick is
 // a row of the importer's table and a rerun. EVERY FILE IS A
 // DISTINCT DRAWING (by the written shapes and transforms; the icon
 // theme's names are often symlinks, so one drawing is one enumerator) — the
 // score viewer's page keys, GoPreviousViewPage / GoNextViewPage, wear our
 // own head without a stem, not GoPrevious's / GoNext's arrows; BboxPrev and
 // BboxNext share one source file, and so do the two page keys, two drawings
-// each by the transform. EVERY DRAWING IS PAPIRUS'S BUT THE FIFTEEN OF OUR
+// each by the transform. EVERY DRAWING IS PAPIRUS'S BUT THE FOURTEEN OF OUR
 // OWN above, the sigma ours outright, the two letters the text face's
 // outlines and the rest made from Papirus's (architect 2026-11-22;
 // 2026-11-23; 2026-11-24; the importer's own sources, tools/icons/own/).

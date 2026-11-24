@@ -102,8 +102,10 @@ struct GuiInputHandler;
 // keys with a value list — true_colors, waveform_grow, the noise's folder
 // noise and its crossfade noise_crossfade_s — commit through this editor's
 // own body from their lists. (The config's key last_project is the
-// program's own and has no editor; the level noise_level is the top icon
-// row's NOISE case's, the main-page rule at kSettingsEditorKeys.) It
+// program's own and has no editor; the level noise_level and the level its
+// tap restores, noise_restore_level, are the top icon row's NOISE case's,
+// and lit_lamps is the sticky lamps' own keys', the main-page rule at
+// kSettingsEditorKeys.) It
 // funnels each key into the SAME code its other door uses (no parallel
 // writers). commit() routes the open's key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
@@ -170,7 +172,8 @@ struct GuiInputHandler;
 // folder, architect 2026-10-26), then the DEVICE
 // CONFIG's eleven editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
-// no editor, nor has the level, below). THE TABLE IS THE SETTINGS PAGE'S
+// no editor, nor have the level, the level its tap restores and the sticky
+// lamps, below). THE TABLE IS THE SETTINGS PAGE'S
 // EDITABLE ROSTER, EXACTLY, AND THE ONLY KEYS THIS EDITOR WRITES (architect
 // 2026-10-28: the per-tab keys stay off, "I won't set it manually", and so
 // does every key with a GUI lever — follow, read-only, the view keys —
@@ -186,7 +189,11 @@ struct GuiInputHandler;
 // (RedesignButton::IconNoiseLevel, app_state.h), so it is not here — no
 // row, no arm, no recall — and stays REQUIRED in the config,
 // persisted by the case's lift and written by the config's writer with
-// every key.
+// every key; so are, by the same rule (architect 2026-11-24), the level the
+// case's tap restores, `noise_restore_level`, written by that tap alone,
+// and the sticky lamps, `lit_lamps`, seen and set on their own four keys
+// (MAGNIFY, FOLLOW, RESTR, TIPS) and written by the tick's comparator
+// (main.cpp's refresh_lit_lamps).
 // GuiInputHandler::build_settings_page_rows lists the device keys first in
 // this table's order, the split at kSettingsEditorPieceKeyCount, and then
 // the piece rows in kSettingsPagePieceKeys' order, no title row over either
@@ -400,11 +407,13 @@ struct GuiSettingsEditor {
     // THE DEVICE CONFIG'S WRITE, ADVISORY (the commit's persist): the whole
     // struct written (write_device_config, device_config.h); a failure prints
     // the diagnostic and cards the display, the live value standing either
-    // way. Returns whether the file was written. TWO READERS: every device
-    // key's commit (apply_device_setting's persist) and the level case's end
+    // way. Returns whether the file was written. THREE READERS: every device
+    // key's commit (apply_device_setting's persist), the level case's end
     // (GuiInputHandler::settle_level_case: one write at a drag's lift or its
-    // button-lost end, and at the tap's toggle — the level's one write, the
-    // level having no Settings row).
+    // button-lost end, and at the tap's toggle — the level's one write, and
+    // the restore level's with it, neither having a Settings row) and the
+    // sticky lamps' comparator (main.cpp's refresh_lit_lamps, 2026-11-24:
+    // one write on a tick whose lit set differs from the struct's).
     bool persist_device_config();
 
 private:

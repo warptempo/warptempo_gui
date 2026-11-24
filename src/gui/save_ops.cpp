@@ -84,7 +84,8 @@ bool GuiSaveOps::save() {
     // this arm. The close prompt's Save answer
     // inherits it as it inherits the write arms' cards: the refusal takes the
     // prompt's "Retry the failed save?" rung and the card is its reason. The
-    // commit act's prelude save never meets it (ordering, above).
+    // commit act's prelude save never meets it (ordering, above), and the
+    // publish chord cards the same sentence at run_publish_chord.
     // Input routing, judging no data.
     if (app.history_checkpoint_in_flight) {
         notifications.notify(AppState::NotificationClass::Normal,

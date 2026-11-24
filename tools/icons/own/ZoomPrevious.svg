@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+ <!-- FIT'S RECALL DRAWING, OURS (architect 2026-11-24, his pick off the
+      mock, "V1": Papirus's drawing is "asymmetrical. The spacing is greater
+      in the vertical lane"): Papirus's actions/view-restore.svg
+      (papirus-icon-theme 20260801), its four corners turned in, the left
+      pair moved 1 right and the right pair 1 left, nothing else changed,
+      so the gap between the left and right halves is 2 of 16, as the gap
+      between the top and bottom halves already was, and the ink is Fit's
+      own 12 box (x 2 to 14, y 2 to 14). The move is baked into the path
+      data. Fit's recall face (ZoomPrevious) wears it as drawn
+      (tools/icons/import_papirus.py). A modified copy of a
+      papirus-icon-theme drawing, GPL-3.0 (assets/icons/LICENSE-GPL-3.txt). -->
+ <path style="fill:currentColor" d="M 5,2 V 5 H 2 V 7 H 6 C 7,7 7,6 7,6 V 2 Z M 9,2 V 6 C 9,6 9,7 10,7 H 14 V 5 H 11 V 2 Z M 2,9 V 11 H 5 V 14 H 7 V 10 C 7,10 7,9 6,9 Z M 10,9 C 9,9 9,10 9,10 V 14 H 11 V 11 H 14 V 9 Z"/>
+</svg>

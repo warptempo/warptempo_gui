@@ -345,8 +345,8 @@ void Selection::cycle_selection(bool forward) {
     // Its contract, the domain rule and the disabled-skip are at the owner.
     const int land_marker = marker_walk_landing(app, audio, forward);
     // Nothing ahead — the face is grey here, and the sole caller asks this
-    // same owner BEFORE calling at all (cycle_marker_focus's gate, which
-    // cards the refusal), so this return is a belt rather than the walk's
+    // same owner BEFORE calling at all (cycle_marker_focus's gate, its
+    // refusal silent), so this return is a belt rather than the walk's
     // wall.
     if (land_marker < 0) return;
 

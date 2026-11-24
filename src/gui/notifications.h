@@ -124,15 +124,21 @@
 //     kHistoryViewMovesNoMarkersCard; the off-edge pair below; bare `m`'s
 //     NINE-arm BPM gate, one card per press carrying the first failure (the
 //     tenth arm, enter_bpm_mode's own bail, is unreachable and silent).
-//   * THE MODES: kCheckpointPublishing (below — bare `h`, the save owner,
-//     the picker, Revert); "History
+//   * THE MODES: kCheckpointPublishing (below — bare `h`, the publish
+//     chord, the save owner, the picker, Revert); "History
 //     is unavailable[: <reason>]" (the press that asks for git where the
-//     remote walk could not bootstrap — bare `g` at set_history_delta — plus
-//     the failed-scan arrival; the entry opens on the local walk and raises
-//     none); playback's kPlaybackDeviceUnavailableCard
+//     remote walk could not bootstrap — bare `g` at set_history_delta and
+//     the main page's publish chord, SAVE's long press, at
+//     run_publish_chord — plus the failed-scan arrival; the entry opens on
+//     the local walk and raises none); playback's kPlaybackDeviceUnavailableCard
 //     (playback_lifecycle.h — the one launch body, the two pre-launch gates
 //     and the A/B audition's own tick) and the audition's "One of the two
-//     tabs has nothing to play from here"; kNoRenderRunningCard (the painted
+//     tabs has nothing to play from here"; the marches' "Tab B has no next
+//     marker" / "Tab A has no previous marker" (GuiInputHandler::
+//     refuse_march, architect 2026-11-24: on the main page a march runs only
+//     where both tabs have a stop that way, and names the tab that has none;
+//     the `h` view runs no march and its holds raise nothing);
+//     kNoRenderRunningCard (the painted
 //     Cancel with no render running); the render player's (GuiRenderPlayer::
 //     status and its load act's `refuse`, render_player.cpp /
 //     input_key_dispatch.cpp: "Nothing to play: no renders under tmp/",
@@ -203,11 +209,13 @@
 //     clipboard_set_text), so no refusal cards. THE EDITORS' OWN Ctrl+C
 //     and Ctrl+V are silent: an editor is its own world with that world's
 //     conventions.
-//   * THE GITHUB CARDS (2026-09-27), the `h` view's Save key (the publish
-//     chord, Ctrl+Shift+S, the view's alone) forking on the
-//     status (run_publish_chord), each the KEY'S — the Save face greys on
-//     the same status, so these answer a status that moved inside the
-//     painted frame: "GitHub is still being checked", "GitHub
+//   * THE GITHUB CARDS (2026-09-27), the publish chord, Ctrl+Shift+S, in
+//     either view (SAVE's long press on the main page, Save and Commit; the
+//     `h` view's Save key, Force Save and Commit) forking on the status
+//     (run_publish_chord), each the KEY'S — in the `h` view the Save face
+//     greys on the same status, so there these answer a status that moved
+//     inside the painted frame, while on the main page the face is the
+//     dirty mark alone: "GitHub is still being checked", "GitHub
 //     refused this device", "This device and GitHub have both moved" (stderr
 //     names the fix), "GitHub has not been checked"; the pull's synchronous
 //     refusals "Pull refused: this device has moved", "Pull refused:
@@ -216,7 +224,9 @@
 //     commit" (architect 2026-11-17: the worker found the sidecars
 //     clean and nothing owed, on_history_checkpoint_complete). UNDER
 //     `offline` THE KEY ASKS GITHUB AGAIN (architect 2026-09-28) and cards
-//     nothing, the status bar's walk line carrying the answer.
+//     nothing in the view, the status bar's walk line carrying the answer,
+//     and "Asking GitHub again" on the main page, whose status bar carries
+//     no GitHub word.
 //     The GitHub CHECK itself raises nothing — its failing readings print one
 //     stderr line each and the status word is state.
 //
@@ -326,7 +336,9 @@
 //     open, the render player's folder-end skips, Backspace at the root and
 //     its idle family (no render loaded, seeking before playback), the
 //     position nudge at its wall in both columns, a clean session's plain Ctrl+S
-//     (architect 2026-10-05, GuiSaveOps::save_from_key), and a held
+//     (architect 2026-10-05, GuiSaveOps::save_from_key) and its Save and
+//     Commit on the main page (architect 2026-11-24, run_publish_chord),
+//     and a held
 //     Ctrl+Z / Ctrl+Shift+Z whose repeat runs out of history. THE COUNTER-CLASS IS THE TEST: a command whose effect
 //     would have spread across the screen keeps its card even where its
 //     button greys, "because they can be subtle and required me to check the
@@ -629,9 +641,10 @@ inline const char* authoring_lock_card(const AppState& a) {
 // on_key, the editors' modal contract, the picker's router, the render player's
 // fall-through — and the close prompt's Save answer; bare `h`'s entry refusal
 // (which also prints it on stderr); and the Open project picker's open act and
-// the Revert act (revert_project). All of them meet
-// AppState::history_checkpoint_in_flight. (The commit act asks no in-flight
-// question: no `h` view stands while one publishes, run_publish_chord.)
+// the Revert act (revert_project); and the commit acts' own fork
+// (run_publish_chord), the publish chord, reached from the main page's SAVE
+// hold (no `h` view stands while one publishes). All of them meet
+// AppState::history_checkpoint_in_flight.
 // ONE CLAUSE (architect 2026-09-01, the capitalization sweep's sentence
 // shape): the sentence is the instruction.
 inline constexpr const char* kCheckpointPublishing =
@@ -912,8 +925,8 @@ int notification_card_max_w_px(const AppState& a);
 // on 1098), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title
 // bar and the top icon row paint whole under a card, its .95 fill over
 // them; a press on a card is the card's (claim_notification_press ranks
-// above every claim and veil), so a key, the struck clip lamp's square or
-// any chrome under it answers nothing while it stands there, and no key
+// above every claim and veil), so a key or any chrome under it answers
+// nothing while it stands there, and no key
 // under it starts a tooltip (recompute_redesign_button_hover's under_card).
 // WORKED ON THE TABLET (2304 x 1440 at 200 %, the key 28 W tall; the advances
 // MEASURED off fonts/LiberationSans-Regular.ttf at 24 px the product's way —

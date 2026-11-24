@@ -157,10 +157,13 @@ constexpr ToolbarChord kToolbarChords[] = {
     // It admits SHIFT — Revert, the one translated twin (the lift's chord
     // build below) — and nothing else; a one-shot act, no repeat.
     {RedesignButton::OpenProject, GuiKeys::O,  true,  false, false},   // Ctrl+O (+Shift: Ctrl+Alt+O)
-    // SAVE admits nothing (architect 2026-11-17): in the `h` view
-    // its lift is Ctrl+Shift+S, the publish chord (save_button_publishes,
-    // run_publish_chord), and outside it the plain save.
-    {RedesignButton::Save,       GuiKeys::S,   true,  false, false},   // Ctrl+S (in `h`: Ctrl+Shift+S, save_button_publishes)
+    // SAVE ADMITS SHIFT on the main page (architect 2026-11-24): its long
+    // press is Ctrl+Shift+S, the publish chord — Save and Commit
+    // (run_publish_chord's head owns the two acts) — the row's own key under
+    // both modifiers, the shift carried rather than tabled, no translation. In
+    // the `h` view its plain lift is already that chord, Force Save and Commit
+    // (save_button_publishes), so there the hold runs the same act.
+    {RedesignButton::Save,       GuiKeys::S,   true,  false, false},   // Ctrl+S (+Shift, and in `h`: Ctrl+Shift+S, save_button_publishes)
     {RedesignButton::Undo,       GuiKeys::Z,   true,  false, false,  true},   // Ctrl+Z
     {RedesignButton::Redo,       GuiKeys::Z,   true,  true,  false,  true},   // Ctrl+Shift+Z
     {RedesignButton::Render,     GuiKeys::R,   true,  false, true},   // Ctrl+Alt+R (+Shift)
@@ -626,7 +629,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // IT IS LIVE INSIDE THE `h` VIEW and the derived partition says so with
     // nothing hand-listed — history_mode_owns_key claims bare Tab and
     // Shift+Tab as the diff-flag cycle forward and back (and Ctrl+Tab and
-    // Ctrl+Shift+Tab as the diff-flag marches).
+    // Ctrl+Shift+Tab, the holds, to consume them as nothing: no march runs
+    // in the view, architect 2026-11-24).
     //
     // ITS CAMERA IS THE LANDING OWNER'S (Viewport::land_subject), the same in
     // both audio views, so one row reaches the walk on glass.
@@ -762,23 +766,10 @@ bool chrome_band_modifiers_refused(GuiInputState mods) {
     return mods.ctrl;
 }
 
-// THE WAVEFORM'S HALF SPLIT, and the ONE expression of it — with exactly
-// ONE reader (architect 2026-08-13, THE TWO HALVES ARE ONE SURFACE): the
-// half selects no SURFACE, it selects which act a MOTIONLESS release
-// runs on the one navigation surface — upper = the playhead placement, lower =
-// the audition scrub. Everything else about the two halves is identical, so
-// the half is read once, at the press, and stashed on the pending
-// (ScrollDragState::scrub_release).
-//
-// THE HALVES ARE THE TWO WELLS (architect 2026-10-16, Cool Edit's stereo
-// divider): the upper well's rows are the upper half, the lower well's —
-// the odd spare row at the canvas's foot among them — the lower half, the
-// rows read off waveform_well_rows (render.h). The divider between them is
-// chrome and owns nothing: a press there never reaches this split
-// (point_on_nav_surface refuses it, point_on_waveform_divider).
-bool waveform_lower_half(const GuiRect& area, int y) {
-    return y >= waveform_well_rows(area)[1].y0;
-}
+// THE WAVEFORM'S HALF SPLIT is waveform_lower_half (render.h, beside the
+// wells' rows), its rule there: read once at the live press below and
+// stashed on the pending (ScrollDragState::scrub_release), and asked by the
+// hover line's triangle (GuiPaintHandler::hover_triangle_x).
 
 // THE PLACEMENT LANES block — THE TOP STRIP'S TWO PLACEMENT LANES, the RULER
 // and the MARKER lane, each claimed by the press router's own rect test (a
@@ -1056,8 +1047,9 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 //
 // THE MODE'S VOCABULARY COVERS ROSTER BUTTONS TOO: bare Home / End (the
 // bottom icon row's SKIPS), bare `c` (Center) and bare Tab / Shift+Tab with
-// their holds Ctrl+Tab / Ctrl+Shift+Tab (Next Marker, Previous Marker and
-// their marches, architect 2026-11-24).
+// their holds' chords Ctrl+Tab / Ctrl+Shift+Tab (Next Marker and Previous
+// Marker; the holds consumed as nothing there, no march running in the
+// view, architect 2026-11-24).
 // Every one of them is a chord the MODE OWNS, which is exactly what makes
 // this walk answer LIVE for its button with nothing hand-listed — the same
 // free derivation the walk's two steps, the walk lamp and the Cumulative
@@ -1093,8 +1085,8 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 //   ViewPhase (bare 1/2/3/4, the admitted view selectors), and the tab
 //   pair, ViewTabA/ViewTabB (bare 5/6, the admitted tab switch, architect
 //   2026-11-24); Save (its lift
-//   Ctrl+Shift+S in this mode — save_button_publishes — the save-and-commit
-//   checkpoint act, wearing the "Save and Commit" face, its own arm in
+//   Ctrl+Shift+S in this mode — save_button_publishes — Force Save and
+//   Commit, the checkpoint act, wearing the "Force Save and Commit" face, its own arm in
 //   redesign_button_enabled greying it on the GitHub status or a checkpoint
 //   in flight (history_checkpoint_actionable), greyed rather than
 //   relabelled); ZOOM IN AND ZOOM OUT (2026-10-27; `=` / `-` on the
@@ -1112,8 +1104,8 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 //   the same vocabulary); on the bottom icon row THE WALK (bare Tab and
 //   Shift+Tab, Next and Previous Marker, the mode's own vocabulary, stepping
 //   the DIFF-FLAG cycle forward and back; their holds, Ctrl+Tab and
-//   Ctrl+Shift+Tab, the mode's two marches over that same diff-flag cycle,
-//   a round trip through the other tab, architect 2026-11-24), THE SKIPS
+//   Ctrl+Shift+Tab, claimed by the mode and consumed as nothing, no march
+//   running in the view, architect 2026-11-24), THE SKIPS
 //   and CENTER (bare
 //   Home / End are the mode's absolute jumps, bare `c` its own centring) and
 //   the LEFT / RIGHT CHORDS (bare Left / Right, the mode's own playhead step,
@@ -1147,8 +1139,10 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 //
 // TWO THINGS IT DELIBERATELY DOES NOT SAY. (1) The base chord decides the
 // face, and nothing is left for it to arbitrate: Render is dead on both
-// shapes, and Save's lift in the view is the publish chord (the walk asks
-// Save's chord with the shift set, save_button_publishes below). (2) A
+// shapes, and Save's shifted press (admitted, architect 2026-11-24) is the
+// very publish chord its plain lift spells in the view, so its two shapes are
+// one answer here (the walk asks Save's chord with the shift set,
+// save_button_publishes below). (2) A
 // button the READ-ONLY tab bit refuses is not this function's business: that
 // refusal is the lock's, and it applies inside the view exactly as outside it.
 // THE LOCK GREYS ITS OWN SET (2026-08-15; redesign_button_enabled's
@@ -1187,13 +1181,14 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 // "in history view the hotkey for save then becomes ctrl s and save and
 // commit becomes ctrl shift s. however the icons in history remain the
 // same"): while the view stands its lift is Ctrl+Shift+S (is_publish_key,
-// gui_input.h) — the save-and-commit act, the pull or the check — and
+// gui_input.h) — Force Save and Commit, the pull or the check — and
 // Ctrl+S, its table chord, is the plain save there, with no button of its
-// own. Outside the view the button is that plain save, and the publish chord
-// has no producer there (architect 2026-11-17: the commit is the `h`
-// view's alone; Save admits no long press). Asked by the lift's chord build
-// (finish_chrome_press_release) and by the `h` chord walk below, so the face
-// and the press read one chord.
+// own. Outside the view the tap is that plain save and the LONG PRESS spells
+// the publish chord, Save and Commit (architect 2026-11-24: SAVE admits
+// shift, redesign_button_shift_admits; the two acts at run_publish_chord's
+// head), so in the view the tap and the hold run one act. Asked by the lift's
+// chord build (finish_chrome_press_release) and by the `h` chord walk below,
+// so the face and the press read one chord.
 static bool save_button_publishes(RedesignButton id, bool history_view) {
     return id == RedesignButton::Save && history_view;
 }
@@ -1240,8 +1235,10 @@ bool history_mode_disables_button(const AppState& app, RedesignButton b) {
 // by the allowlist in ANY session. A button the view refuses only BY STATE —
 // Revert with no diff flag selected, Load in Place over a memberless walk
 // (the allowlist's two conditional admissions), and every arm of
-// redesign_button_enabled's own (Older / Newer at the walk's walls, Save with
-// nothing to commit, a skip at the end) — is painted and greys. (Left / Right
+// redesign_button_enabled's own (Older / Newer at the walk's walls, Save —
+// the view's Force Save and Commit, or its pull or its check — where none of
+// the three can run (history_checkpoint_actionable and its two siblings,
+// app_state.h), a skip at the end) — is painted and greys. (Left / Right
 // are admitted by this predicate, their chords staying
 // live, but kTransportHistoryStandIns seats Older / Newer in the arrow
 // BUTTONS' places in the view, the painted, state-greyed pair there.)
@@ -1548,20 +1545,12 @@ static void seat_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
 // construction — the index comes from the scan itself.
 void auto_select_marker_at_playhead(AppState& app, const GuiAudio& audio,
                                     Selection& selection, Viewport& viewport) {
-    // Both columns through the one store selector pair (active_marker_count
-    // / active_marker_time_frame, app_state.h).
-    const auto scan = [&]() {
-        const int n = active_marker_count(app);
-        for (int i = 0; i < n; ++i) {
-            const int64_t sample = clamp_playhead_to_live_domain(
-                source_frame_to_active_domain(app, audio,
-                                              active_marker_time_frame(app, i)),
-                app, audio);
-            if (sample == app.playhead_cursor_sample) return i;
-        }
-        return -1;
-    };
-    const int hit = scan();
+    // THE SCAN IS ONE BODY, coincident_marker_at (app_state.h), both columns
+    // through the one store selector pair (active_marker_count /
+    // active_marker_time_frame): the marches' gate reads the focus this
+    // writer will seat on a tab's entry through the same body
+    // (marker_walk_landing_on_entry, architect 2026-11-24).
+    const int hit = coincident_marker_at(app, audio, app.playhead_cursor_sample);
     if (hit < 0) return;
     selection.set_single_selection(hit);
     // THROUGH THE RESEAT, NOT THE LAND (2026-08-19): the land ENDS AN A/B
@@ -4634,24 +4623,19 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // veils, which let nothing else through and let the top icon row's
     // press through to their opener (architect 2026-10-13
     // for the player, 2026-10-25 for the picker, 2026-10-26 for the score
-    // viewer), to the tooltip lamp (architect 2026-11-10, live under every
-    // overlay) and to the struck clip lamp (architect 2026-11-05 night).
-    // THE LEVEL CASE IS THE CLAIM'S SECOND HALF (architect 2026-11-05):
-    // where no chord row's face holds the press, the level case's face may —
-    // the slider, armed by its own kind (arm_level_case_press). THE
-    // STRUCK CLIP LAMP IS ITS THIRD (architect 2026-11-05 night:
-    // "the strike + the tap"; render.h's THE TWO LAMPS' STRIKE): where
-    // neither claimed it, a press on the clip lamp's square while the strike
-    // stands arms the Lamp kind (arm_clip_lamp_press) — the title bar lies
-    // inside the top icon row's rect. A ctrl press reaches none of
-    // the three arms: the modifier gate consumes every press carrying the
-    // barrel's ctrl on both icon rows (architect 2026-11-08, the barrel
-    // no chrome modifier).
+    // viewer) and to the tooltip lamp (architect 2026-11-10, live under every
+    // overlay). THE LEVEL CASE IS THE CLAIM'S SECOND HALF (architect
+    // 2026-11-05): where no chord row's face holds the press, the level
+    // case's face may — the slider, armed by its own kind
+    // (arm_level_case_press). The title bar, inside the top icon row's rect,
+    // claims nothing: its lamps are inert chrome (architect 2026-11-24). A
+    // ctrl press reaches neither arm: the modifier gate consumes every press
+    // carrying the barrel's ctrl on both icon rows (architect 2026-11-08,
+    // the barrel no chrome modifier).
     const auto claim_button_row_press = [&] {
         if (chrome_band_modifiers_refused(mods)) return;
         if (arm_redesign_press(at)) return;
-        if (arm_level_case_press(at)) return;
-        arm_clip_lamp_press(at);
+        arm_level_case_press(at);
     };
 
     // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
@@ -4660,9 +4644,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // overlay's rows (claimed above), the play-scrub (every press on it arms
     // the thumb drag, the seek at the lift), the modal row's buttons
     // (the arm every dialog button takes) and the top icon row (below:
-    // its own lit key, the tooltip lamp, architect 2026-11-10, and the
-    // struck clip lamp's square, architect
-    // 2026-11-05 night), and EVERY OTHER PRESS IS CONSUMED — the flags, the
+    // its own lit key and the tooltip lamp, architect 2026-11-10), and
+    // EVERY OTHER PRESS IS CONSUMED — the flags, the
     // waveform, the dead roster.
     // The whole rule is stated at render_player_active (input_handler.h).
     // THE PLAYER'S TWO SKIPS CARRY A SHIFTED TWIN (2026-08-28) — the item
@@ -4677,8 +4660,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
         // the face leaves live (redesign_button_enabled's overlay arm: this
         // key and the tooltip lamp), and the
         // lift is bare `l`, the player's own closer — the lamp's bare
-        // backslash, the player's router's other arm. The same claim reaches
-        // the struck clip lamp's arm, its lift the main page's reopen.
+        // backslash, the player's router's other arm.
         if (rect_contains(top_icon_row_area(app), x, y)) {
             claim_button_row_press();
             return;
@@ -4695,9 +4677,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // (claimed above) and the modal row's buttons — Cancel under the project
     // picker and the value list, Close under the settings page, the trim
     // presets list's and the BPM form's clusters (the arm every
-    // dialog button takes), beside the top icon row (below: the opener key, the
-    // tooltip lamp, architect 2026-11-10, and
-    // the struck clip lamp's square, architect 2026-11-05 night), and EVERY
+    // dialog button takes), beside the top icon row (below: the opener key
+    // and the tooltip lamp, architect 2026-11-10), and EVERY
     // OTHER PRESS IS CONSUMED. A ROW CLICK IS
     // THE OPEN ACT, which is why the row carries no OK beside that button. There is no field
     // and so no caret claim and no text drag — the picker has nothing to
@@ -4710,8 +4691,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // lift is that key's chord — Ctrl+O under the project picker, `;` under
     // the settings page and the value list — which the picker's router
     // answers with its close, the lamp's bare backslash with the lamp's
-    // toggle. The same claim reaches the struck clip lamp's
-    // arm, its lift the main page's reopen.
+    // toggle.
     if (app.picker.active) {
         if (rect_contains(top_icon_row_area(app), x, y)) {
             claim_button_row_press();
@@ -4725,8 +4705,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
 
     // THE SCORE VIEWER'S VEIL (2026-10-26), the player's: the top icon row's
     // press (its two live keys, the SCORE key and the tooltip lamp, architect
-    // 2026-11-10, and the struck clip lamp's square,
-    // architect 2026-11-05 night), the page scrub's, a press on a row
+    // 2026-11-10), the page scrub's, a press on a row
     // key (its skips' shifted twin the long press's at the lift, architect
     // 2026-10-27, score_button_shift_admits); every
     // other press — the page itself among them, which takes no gesture — is
@@ -4919,9 +4898,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // already covered by the keyboard gate — Save, Undo, Redo, Render and the
     // view pairs drop there exactly as their keys do, with no second membership to
     // keep in step — and letting them through here is what keeps that single
-    // coverage true. The rows' two arms that dispatch no chord, the NOISE
-    // level case and the struck clip lamp (claim_button_row_press), pass
-    // here unasked.
+    // coverage true. The rows' one arm that dispatches no chord, the NOISE
+    // level case (claim_button_row_press), passes here unasked.
     // The double tap's SNAPSHOT is handed in because the mode has a double
     // tap of its own (the trim bar's framing) and this function's own field
     // was cleared at the top of the press; nothing else about the call is
@@ -5956,38 +5934,30 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // (trim_presets_apply, 2026-11-19) — which is why the arm is cleared at the
     // head of that body and this arm returns immediately after it.
     if (finish_folder_overlay_release(at)) return;
-    // THE OVERLAYS' VEILS ADMIT TWO KINDS OF CHROME ARM, the one predicate
+    // THE OVERLAYS' VEILS ADMIT ONE KIND OF CHROME ARM, the one predicate
     // the three release blocks below read: A ROSTER ARM — THE OPENER'S (its
     // lift the overlay's close) OR THE TOOLTIP LAMP'S (architect 2026-11-10,
     // "tips should remain open in all situations": its lift bare backslash,
     // the overlay's router's own arm); the press-time painted-bit gate
-    // already consumed every other roster key, which the overlay greys —
-    // and THE STRUCK CLIP
-    // LAMP'S (architect 2026-11-05: "we should make it respond under
-    // the overlay" — the tap reopens the dead device there as on the main
-    // page, nothing playing; render.h's THE TWO LAMPS' STRIKE). They lift
-    // through the chrome act's own body, whose overlay term admits exactly
-    // these (finish_chrome_press_release's head: overlay_admits_button for a
-    // roster arm, the Lamp kind's exemption); any other chrome arm
-    // dies in the block undispatched, the veil's answer. THE MODALS still
-    // veil the lamp: a prompt and the progress modal return above, an editor
-    // dialog is that body's own refusal.
+    // already consumed every other roster key, which the overlay greys, and
+    // the NOISE case, greyed there too, arms nothing (architect 2026-11-24:
+    // no admission for it). It lifts through the chrome act's own body,
+    // whose overlay term admits exactly these (finish_chrome_press_release's
+    // head: overlay_admits_button); any other chrome arm dies in the block
+    // undispatched, the veil's answer.
     const bool overlay_admits_chrome =
-        chrome.kind == AppState::ChromePress::Kind::Roster ||
-        chrome.kind == AppState::ChromePress::Kind::Lamp;
+        chrome.kind == AppState::ChromePress::Kind::Roster;
     // THE RENDER PLAYER'S OTHER RELEASES (2026-08-28), the press block's
     // mirror: the scrub's marker drag (the seek commits here) and the modal
     // row's armed button through the one shared dispatch. Every other lift
     // is consumed — a chrome arm taken above dies here undispatched, the
     // veil's answer — but the chrome arms the veil admits
     // (overlay_admits_chrome): the Play Renders arm, the roster button
-    // the player leaves lit (architect 2026-10-13), the tooltip lamp's
-    // (architect 2026-11-10) and the struck clip
-    // lamp's (architect 2026-11-05), which are lifted below.
+    // the player leaves lit (architect 2026-10-13) and the tooltip lamp's
+    // (architect 2026-11-10), which are lifted below.
     if (app.render_player.active) {
-        // THE PLAY RENDERS BUTTON'S LIFT (architect 2026-10-13), THE
-        // TOOLTIP LAMP'S (architect 2026-11-10) AND THE
-        // STRUCK LAMP'S (architect 2026-11-05), the press block's
+        // THE PLAY RENDERS BUTTON'S LIFT (architect 2026-10-13) AND THE
+        // TOOLTIP LAMP'S (architect 2026-11-10), the press block's
         // mirror: the chrome arms the player's veil admits dispatch
         // through the chrome act's own body.
         if (overlay_admits_chrome) {
@@ -6009,10 +5979,9 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     // veil admits (overlay_admits_chrome): the opener's (Open Project,
     // Settings under the settings page and the value list, Presets
     // under its list, BPM under its form), the roster button the picker
-    // leaves live as its way out (2026-10-25), the tooltip lamp's
-    // (architect 2026-11-10) and the struck clip lamp's (architect
-    // 2026-11-05), lifted through the chrome act's own body as the
-    // player's are.
+    // leaves live as its way out (2026-10-25) and the tooltip lamp's
+    // (architect 2026-11-10), lifted through the chrome act's own body as
+    // the player's are.
     if (app.picker.active) {
         if (overlay_admits_chrome) {
             finish_chrome_press_release(chrome, at);
@@ -6023,8 +5992,7 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
     }
     // THE SCORE VIEWER'S RELEASE (2026-10-26), its press block's mirror: the
     // chrome arms the veil admits (overlay_admits_chrome) — the SCORE
-    // key's, the tooltip lamp's (architect 2026-11-10) and the struck clip
-    // lamp's (architect 2026-11-05) —
+    // key's and the tooltip lamp's (architect 2026-11-10) —
     // through the chrome act's body, the page scrub's end, the armed row key
     // through the one shared dispatch; every other lift consumed.
     if (app.score_viewer.active) {
@@ -7390,8 +7358,13 @@ void GuiInputHandler::settle_trim_bar_hover() {
 // audio and no load, no live drag), the zoom's seat does not stand (a zoom
 // running, a pinch, the pen's retained anchor: THE WHITE STEM IS THE MARK)
 // and then, BY THE BARREL:
-//   NOT HELD — a plain press there would place the playhead
-//     (plain_lane_press_at's Places, the routers' own tests): Tap;
+//   NOT HELD — a plain press there would place the playhead, or on the main
+//     page's waveform's lower half audition and place none
+//     (plain_lane_press_at's Places, the routers' own tests: the whole
+//     navigation surface, both halves): Tap. The line stands over both
+//     halves; ITS TRIANGLE IN THE RULER IS THE PLACEMENT'S ALONE, so none
+//     stands over the audition half (GuiPaintHandler::hover_triangle_x; in
+//     the `h` view both halves land the playhead and the triangle stands);
 //   HELD — "the hover with the barrel would only work in the place where the
 //     barrel works": over the waveform, the navigation surface
 //     (point_on_nav_surface, the pan zone's own surface — a barrel tip-down
@@ -7866,9 +7839,18 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
     // the noise's -inf release and the one config write where the level
     // moved (settle_level_case). The lift's own act, the tap's toggle,
     // follows in finish_level_press_release on a press that moved nothing,
-    // so the two writes are never both owed.
-    if (arm.kind == AppState::ChromePress::Kind::Level)
+    // so the two writes are never both owed. A MOVED PRESS ON A DEAD DEVICE
+    // STREAM (architect 2026-11-24; the rule at finish_level_press_release)
+    // WAKES IT after the settle where its end leaves an audible level —
+    // device_unavailable() read live here, nothing painted for it; an end on
+    // -inf asks nothing. A press that never moved is the tap's, which wakes
+    // in its own body, so the device question is never asked twice.
+    if (arm.kind == AppState::ChromePress::Kind::Level) {
         settle_level_case(arm.level_changed);
+        if (arm.moved && app.device_config->noise_level != kLevelDbOff &&
+            playback.device_unavailable())
+            wake_device_for_level_case();
+    }
     return arm;
 }
 
@@ -7972,88 +7954,79 @@ void GuiInputHandler::update_level_press_motion(double x, double y) {
 // RedesignButton::IconNoiseLevel) — WHATEVER THE PRESS'S DURATION: a slider
 // takes no long press ("awkward on something that slides"), so no hold is
 // measured here. ON THE CASE STANDING AT A FINITE
-// LEVEL the tap REMEMBERS that level (GuiLevelRecall, the app's, through
-// AppState::level_recall — the tap its one writer: a drag that ends at -inf
-// remembers nothing and no drag clears it) and sets -inf; ON THE CASE STANDING
-// AT -inf it sets the remembered level, 0 dB WITH NOTHING REMEMBERED (his
-// ruling; empty at the launch). THE LEVEL GOES THE DRAG'S OWN ROAD:
+// LEVEL the tap REMEMBERS that level in the device key
+// `noise_restore_level` (architect 2026-11-24: the restore constant across
+// a project's open and the program's; DeviceConfig::noise_restore_level,
+// the live struct, the tap its one writer: a drag that ends at -inf
+// remembers nothing and no drag clears it) and sets -inf; ON THE CASE
+// STANDING AT -inf it sets the key's level (0 dB as the defaults file
+// ships it, the restore with nothing remembered, architect 2026-11-10).
+// THE LEVEL GOES THE DRAG'S OWN ROAD:
 // apply_level_case (the live struct, the voice, the face's damage), then
-// settle_level_case with the level moved (one config write; the case's
+// settle_level_case with the level moved (ONE config write, the level and
+// the restore level in it together; the case's
 // -inf frees the bed's bank there, as a drag's lift on -inf does, and its
 // recall from -inf is GuiNoise::set_level_db's RISE — the loader started
 // afresh on its own thread, the freed bank's state Idle, the bed fading in
 // when the load lands; nothing on that road asks for a motion before it).
-// The two levels always differ (one finite, one -inf), so the tap always
-// writes. A moved press's level stands where the last motion put it,
-// settled by the take.
+// The two levels always differ (one finite, one -inf), so a toggling tap
+// always writes. A moved press's level stands where the last motion put it,
+// settled by the take (and woken there, below).
+// ON A DEAD DEVICE STREAM THE TAP WAKES IT (architect 2026-11-24: "just the
+// first tap should wake it, and then the second tap should take it to
+// -infinity if it's not there already. If it's already at -infinity, then
+// any tap should take it to restore"): THE DEAD STREAM is
+// GuiPlayback::device_unavailable() READ LIVE HERE — the error callback's
+// dead latch or no stream standing — never a painted bit: NOISE wears
+// nothing for it (architect 2026-11-24, "None of these"), so there is no
+// picture for the lift to answer to. ON AN AUDIBLE LEVEL the tap WAKES AND
+// TOGGLES NOTHING — the level, the restore level and the config unwritten, the
+// next tap on the live stream the toggle; AT -inf it RESTORES AND WAKES IN
+// ONE, the toggle's restore exactly as on a live stream and then the
+// device question (wake_device_for_level_case). THE ORDER, LEVEL FIRST:
+// the restore's rise (GuiNoise::set_level_db: the seed and `target`, the
+// loader started) writes control words alone; the reopen's close of the
+// dead stream then resets the voice's SEQUENCE alone (close_dead_stream,
+// noise.h's THE RESET'S TWO ROADS), `target` untouched, and the started
+// stream's first fill begins one fresh segment from silence with the
+// fade-in — no fill runs on the dead stream between the two, so the bed
+// itself enters on its fade-in with no step, and the stream takes one start
+// request, not two. That is the bed's claim alone: the stream start's own
+// output-path transient (the device's unmute) is the lifecycle's, recorded
+// at playback_aaudio.cpp's THE STREAM'S LIFECYCLE and
+// ensure_device_available_for_play, and this lift does not deny it.
 void GuiInputHandler::finish_level_press_release(
         const AppState::ChromePress& arm, const GuiPointerPlace& at) {
     if (arm.moved) return;
     const RedesignButton id = static_cast<RedesignButton>(arm.index);
     if (!redesign_button_hit(app, id, at)) return;
     const double standing = app.device_config->noise_level;
-    std::optional<double>& remembered = app.level_recall->noise;
+    const bool   dead     = playback.device_unavailable();
+    if (dead && standing != kLevelDbOff) {
+        wake_device_for_level_case();
+        return;
+    }
     double db = kLevelDbOff;
     if (standing != kLevelDbOff)
-        remembered = standing;
+        app.device_config->noise_restore_level = standing;
     else
-        db = remembered.value_or(0.0);
+        db = app.device_config->noise_restore_level;
     apply_level_case(id, db);
     settle_level_case(/*level_changed=*/true);
+    if (dead) wake_device_for_level_case();
 }
 
-// -- THE STRUCK CLIP LAMP'S ARM (architect 2026-11-05; the
-//    contract at AppState::ChromePress's Lamp kind, the rule at render.h's
-//    THE TWO LAMPS' STRIKE) ----------------------------------------------------
-
-// THE PRESS: the button row claim's third half (claim_button_row_press, after
-// arm_redesign_press and arm_level_case_press found nothing). WHILE THE
-// STRIKE STANDS, AND ONLY THEN (AppState::clip_lamp_struck, the tick's
-// bit, so the press acts on the picture last painted), a press on the clip
-// lamp's square — logo_lamp_rects(...).clip, the very rect the tick
-// damages, so the hit and the picture agree — arms the Lamp kind with the
-// clock; unstruck the lane stays inert and the press claims nothing. No
-// face damage: a lamp is not a key and wears no press look. UNDER AN
-// OVERLAY THE TAP ANSWERS AS ON THE MAIN PAGE (architect 2026-11-05:
-// "we should make it respond under the overlay"): the render player's, the
-// picker's and the score viewer's veils let the button rows' claim through
-// to this lamp, and their release blocks lift the Lamp arm beside the
-// opener's and the tooltip lamp's (overlay_admits_chrome, on_button_release; the overlay term's
-// exemption at finish_chrome_press_release's head). THE MODALS ALONE VEIL
-// IT: a prompt's or the progress modal's press gate returns above this
-// claim, and an editor standing at the lift refuses it there.
-bool GuiInputHandler::arm_clip_lamp_press(const GuiPointerPlace& at) {
-    if (!app.clip_lamp_struck) return false;
-    // The square's hull: the pixels it touches (the pointer names a pixel).
-    const GuiRectF r = logo_lamp_rects(app, app.logo_legend).clip;
-    if (!rect_contains(r, at.rx, at.ry)) return false;
-    app.chrome_press = AppState::ChromePress{
-        .kind     = AppState::ChromePress::Kind::Lamp,
-        .press_ms = monotonic_ms()};
-    return true;
-}
-
-// THE LIFT (finish_chrome_press_release's Lamp arm, under the veil's say):
-// ON THE SQUARE STILL (re-hit at the release's own coordinates, the derive
-// doctrine: a lift slid off the square does nothing, the keys' feint) AND
-// THE STRIKE STILL STANDING (a tick may have cleared it under the hold: no
-// second touch can reopen, the touch window having one owner, but the car's
-// media Play can, GuiCarTransport::on_media_command), the launch gates'
-// device question,
-// GuiPlayback::ensure_device_available_for_play: the dead stream closed
-// (the noise voice's sequence reset first, close_dead_stream), reopened at
-// the new route's rate and STARTED, so the bed resumes through the running
-// callback and NOTHING PLAYS — no launch, no engine play, the tablet's
-// silence between plays. A FALSE answer (the reopen refused, or a device
-// that never came up, which no press opens) cards
-// kPlaybackDeviceUnavailableCard as the gates do — a device asked for and
-// none given; a true answer raises nothing, the next tick's refresh
-// clearing the strike and damaging the square (refresh_logo_lamps).
-void GuiInputHandler::finish_clip_lamp_press_release(
-        const GuiPointerPlace& at) {
-    if (!app.clip_lamp_struck) return;
-    const GuiRectF r = logo_lamp_rects(app, app.logo_legend).clip;
-    if (!rect_contains(r, at.rx, at.ry)) return;
+// THE WAKE, ONE BODY FOR THE TAP AND THE DRAG (architect 2026-11-24; the
+// rule at finish_level_press_release above): the launch gates' device
+// question, GuiPlayback::ensure_device_available_for_play — the dead stream
+// closed (the noise voice's sequence reset first, close_dead_stream),
+// reopened at the new route's rate and STARTED, so the bed resumes through
+// the running callback and NOTHING PLAYS — and
+// kPlaybackDeviceUnavailableCard on a false answer (the reopen refused, or
+// a device that never came up, which no press opens), as every launch gate
+// cards: a device asked for and none given. A true answer raises nothing.
+// The callers ask it only on a dead stream read live at their lift.
+void GuiInputHandler::wake_device_for_level_case() {
     if (!playback.ensure_device_available_for_play())
         notifications.notify(AppState::NotificationClass::Normal,
                              kPlaybackDeviceUnavailableCard);
@@ -8087,7 +8060,9 @@ void GuiInputHandler::apply_level_case(RedesignButton id, double db) {
 // the fence (GuiNoise::release_if_silent, a no-op above -inf or with
 // nothing loaded; never per motion, noise.h's head) — and ONE CONFIG WRITE
 // where the level moved (persist_device_config, the device keys' one
-// persist: a failure cards, the live value standing).
+// persist: a failure cards, the live value standing) — the whole struct
+// written, so the tap's restore level, stored in it ahead of this call,
+// rides the same write (2026-11-24).
 void GuiInputHandler::settle_level_case(bool level_changed) {
     if (app.noise != nullptr) app.noise->release_if_silent();
     if (level_changed) (void)settings_editor.persist_device_config();
@@ -8138,8 +8113,7 @@ void GuiInputHandler::finish_chrome_press_release(
     // render's drain, which can rise under a held button — and every overlay
     // and editor takes the same refusal through them, though no key can open
     // one under a hold.
-    // EACH OVERLAY ADMITS THREE ARMS, ITS OPENER'S, THE TOOLTIP LAMP'S AND
-    // THE STRUCK LAMP'S, the
+    // EACH OVERLAY ADMITS TWO ARMS, ITS OPENER'S AND THE TOOLTIP LAMP'S, the
     // release blocks' overlay_admits_chrome read again here. THE OPENER'S
     // (architect 2026-10-13 for Play Renders under the player, 2026-10-25 for
     // Open Project under the project picker, 2026-10-28 for Settings under
@@ -8154,18 +8128,12 @@ void GuiInputHandler::finish_chrome_press_release(
     // every overlay admits, its lift bare backslash, answered by the
     // standing overlay's router with the lamp's one setter — the two roster
     // members one predicate, overlay_admits_button (app_state.h), the face's
-    // own. THE STRUCK CLIP LAMP'S (architect 2026-11-05:
-    // "we should make it respond under the overlay"): the Lamp kind is
-    // exempt from THE OVERLAY TERM ALONE — the editor and progress terms
-    // still refuse it, the modals veiling the lamp as every arm — and the
-    // kind is tested FIRST because a Lamp arm's index is -1, no button for
-    // overlay_admits_button to read. Any other arm under an overlay — a
-    // Level arm among them, a case being dead there — is the
-    // mid-hold case above and stays refused.
+    // own. Any other arm under an overlay — a Level arm among them, a case
+    // being dead there (architect 2026-11-24: no admission for NOISE) — is
+    // the mid-hold case above and stays refused.
     const bool overlay_refuses =
         (app.render_player.active || app.picker.active ||
          score_viewer_stands(app)) &&
-        arm.kind != AppState::ChromePress::Kind::Lamp &&
         !overlay_admits_button(app, static_cast<RedesignButton>(arm.index));
     if (keyboard_modal_editor_active() || overlay_refuses ||
         app.batch_progress.active) return;
@@ -8181,16 +8149,11 @@ void GuiInputHandler::finish_chrome_press_release(
         return;
     case AppState::ChromePress::Kind::Level:
         // THE LEVEL CASE'S LIFT (2026-11-05): no chord to build — its one
-        // act is the tap's toggle (2026-11-10), its own body; the veil
-        // above has had its say (a modal raised mid-hold swallows the act,
-        // the drag's level standing and already settled by the take).
+        // act is the tap's toggle (2026-11-10) or, on a dead device stream,
+        // its wake (2026-11-24), its own body; the veil above has had its
+        // say (a modal raised mid-hold swallows the act, the drag's level
+        // standing and already settled, and woken, by the take).
         finish_level_press_release(arm, at);
-        return;
-    case AppState::ChromePress::Kind::Lamp:
-        // THE STRUCK CLIP LAMP'S LIFT (2026-11-05): no chord — its one
-        // act the device question, its own body; the veil above has had its
-        // say (a modal raised mid-hold swallows it).
-        finish_clip_lamp_press_release(at);
         return;
     }
     // A HOLD THAT ALREADY FIRED CONSUMES ITS OWN LIFT (architect 2026-08-16):
@@ -8337,7 +8300,11 @@ void GuiInputHandler::finish_chrome_press_release(
         // CTRL+SHIFT+TAB, the backward march (is_march_key, gui_input.h). A
         // plain OR of the hold's shift would spell Next's hold as Shift+Tab,
         // Previous Marker's own press, and Previous's row already carries
-        // the shift, so the hold could not reach its march either way.
+        // the shift, so the hold could not reach its march either way. The
+        // translation is stateless, the admission's structural fact: in the
+        // `h` view the chord it spells is consumed as nothing
+        // (handle_history_mode_key, architect 2026-11-24: no march runs in
+        // the view).
         if (held_to_shift && (tc.id == RedesignButton::TransportWalk ||
                               tc.id == RedesignButton::TransportWalkPrevious)) {
             chord.ctrl  = true;

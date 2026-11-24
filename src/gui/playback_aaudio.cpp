@@ -42,8 +42,8 @@
 // call. `start_stream` is idempotent on `started`, so the
 // three sites that call it — init's own, the launch gate's
 // (ensure_device_available_for_play, where a reopened stream's start is what
-// the gate's answer rests on — the launch gates', the car's Play, the noise
-// lamp's lit press, the callers at its declaration) and play()'s retry for
+// the gate's answer rests on — the launch gates', the car's Play, NOISE's
+// wake, the callers at its declaration) and play()'s retry for
 // the roads that reach it ungated — are
 // one road and an ordinary play makes no device call at all.
 //
@@ -85,8 +85,8 @@
 //     AAudio stream function, which is Google's own rule and the reason the
 //     spike used a detached thread to do its closing; this backend needs no
 //     detached thread because it does not close there at all — the next
-//     launch press (ensure_device_available_for_play) or play() closes the
-//     dead stream on the main thread and reopens.
+//     launch press or NOISE's wake (ensure_device_available_for_play) or
+//     play() closes the dead stream on the main thread and reopens.
 
 namespace {
 
@@ -287,16 +287,18 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
     // the new device's own granted rate — the main window's three launch
     // gates through ensure_device_available_for_play, the render player's
     // road through play()'s own head (reopen_stream_if_dead, one body for
-    // both). The user presses play again — the same answer the product gives
+    // both) — or NOISE's wake, the level case's lift over the dead stream
+    // (ensure_device_available_for_play, architect 2026-11-24). The user
+    // presses play or taps NOISE again — the same answer the product gives
     // every other rare, loud fault. THE NOISE BED FOLLOWS THIS RULE TOO
     // (architect 2026-10-28; the sequence alone, 2026-11-05): the
     // voice's sequence resets, audible or not, at the first main-thread act
     // that reads this latch — gui_main's poll on GuiPlayback::stream_dead at
     // the next tick, or, a press reaching the device first, the reopen's own
     // close of the dead stream (close_dead_stream) — its level and switch
-    // untouched, so the bed is silent until that next launch press reopens
-    // and resumes on the new stream with a fresh segment (noise.h's head,
-    // the two roads).
+    // untouched, so the bed is silent until that next press reopens and
+    // resumes on the new stream with a fresh segment (noise.h's head, the
+    // two roads).
     impl->stream_error.store(static_cast<int32_t>(error), std::memory_order_relaxed);
     impl->state.output_rate.store(0, std::memory_order_relaxed);
     impl->stream_dead.store(true, std::memory_order_release);
@@ -551,9 +553,9 @@ void close_dead_stream(GuiPlayback::Impl& impl) {
 // whether a stream stands after it. Called at the head of the one launch road
 // (launch_window, which play() and play_loop() both forward to) — the
 // render player's road, which reaches play() with no gate ahead of it — and
-// by ensure_device_available_for_play, the main window's three launch gates'
-// question (architect 2026-09-02) and its other caller — the car's Play (the
-// list at its declaration, playback.h): before
+// by ensure_device_available_for_play, the reopen at the press (architect
+// 2026-09-02), whose callers are inventoried once at its declaration
+// (playback.h: the launch gates, the car's Play and NOISE's wake): before
 // it the gates READ the latch ahead of play() and so never let play() reopen,
 // leaving the tablet mute behind the card after every route drop. A failed
 // reopen leaves playback disabled until the next press — no retry, no timer —
@@ -563,10 +565,9 @@ void close_dead_stream(GuiPlayback::Impl& impl) {
 // no-auto-recover rule's second road, noise.h's head; the sequence alone,
 // 2026-11-05): close_dead_stream below, ahead of the close that clears
 // the latch, so a press that reaches here before gui_main's poll has read
-// the drop — a Play press, an audition start, the car's Play at a Bluetooth
-// connect — ends the old sequence instead of resuming it mid-segment on the
-// new stream; an audible bed starts a fresh segment there, the reopen its
-// resume.
+// the drop — a press on either road — ends the old sequence instead of
+// resuming it mid-segment on the new stream; an audible bed starts a fresh
+// segment there, the reopen its resume.
 bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
     if (impl.stream_dead.load(std::memory_order_acquire)) {
         close_dead_stream(impl);

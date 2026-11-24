@@ -48,14 +48,12 @@ struct GuiTargetRender;
 GuiRect logo_legend_extent(const AppState& app, const GuiLogoLegend& legend);
 // THE TWO LAMPS' SQUARES for `legend` at this geometry (render.h's THE TWO
 // LAMPS; the same layout as the extent's, so the two cannot disagree): the
-// tick damages one when one of its bits flips (main.cpp's
-// refresh_logo_lamps: the lit bits under the hold, the clip lamp's strike),
-// and the clip square is the struck lamp's hit box too
-// (GuiInputHandler::arm_clip_lamp_press and its lift), so the hit and the
-// picture are one rect. THE SQUARES ARE EXACT RECTS (architect 2026-11-15,
-// the no-grid rule: off the percent run's real ink edge, their top on the
-// title bar's cap band); a reader that names PIXELS takes the hull (render.h) — the
-// tick's damage, and the press, whose pointer is a whole pixel.
+// tick damages one when one of its lit bits flips (main.cpp's
+// refresh_logo_lamps, under the hold); no press reads them (the title bar is
+// inert whole, architect 2026-11-24). THE SQUARES ARE EXACT RECTS (architect
+// 2026-11-15, the no-grid rule: off the percent run's real ink edge, their
+// top on the title bar's cap band); a reader that names PIXELS takes the
+// hull (render.h) — the tick's damage.
 struct LogoLampRects {
     GuiRectF limiter;
     GuiRectF clip;
@@ -712,9 +710,16 @@ struct GuiPaintHandler {
     //     plate it waits for is the target picture; the target RENDER the
     //     load dispatches feeds playback and the status bar's "Updating...", no
     //     pixel of the plate.
-    //   * THE GAIN: the magnification lamp is dark at every open (AppState::
-    //     show_waveform_magnification), so the field is 0 and the gain
-    //     derivation's thread delays nothing. THE PEAKS PYRAMID is built
+    //   * THE GAIN: the magnification bit starts dark at every open
+    //     (AppState::show_waveform_magnification) and stays dark while the
+    //     curve is pending, so the field is 0 then and the gain derivation's
+    //     thread delays nothing — the release never waits on the curve. With
+    //     MAGNIFY stored lit the sticky lamp's deferred seat lights it as soon
+    //     as the curve is ready (2026-11-24,
+    //     GuiInputHandler::settle_pending_magnification), which may be before
+    //     the release: a seat landing then asks only for the magnified plate,
+    //     which the release's own owed-rebuild flush builds, so the first
+    //     released plate is the magnified one. THE PEAKS PYRAMID is built
     //     inside the load (GuiAudio::load), before this can be asked.
     //   * THE SCORE PAGE: the viewer is closed at every open (its opener is
     //     the one writer of its standing bit); its pages decode when it opens.
@@ -967,11 +972,17 @@ struct GuiPaintHandler {
     std::optional<double> hover_line_x() const;
     // THE HOVER LINE'S TRIANGLE'S PLACE, DERIVED (architect 2026-11-21; the
     // rule at render.h's render_hover_line): hover_line_x's place
-    // where the stored gate answer is Tap, none otherwise — THE TRIANGLE
-    // STANDS IFF THE LINE IS A TAP'S (with the barrel held, Anchor, the line
-    // previews the zoom anchor's stem, which has no head: no triangle). ONE
-    // PLACE for the line and its triangle. What paint_ruler_row paints and
-    // the setter compares (AppState::HoverLine's `triangle_declared_x`).
+    // where the stored gate answer is Tap and the tap would PLACE THE
+    // PLAYHEAD, none otherwise — THE TRIANGLE STANDS IFF THE LINE IS A TAP'S
+    // THAT PLACES IT: with the barrel held (Anchor) the line previews the
+    // zoom anchor's stem, which has no head; over the main page's waveform's
+    // lower half the tap auditions from the place and places no playhead
+    // (architect 2026-11-24: "hover should lose the playhead triangle below
+    // the midline"), asked by the press's own half test (waveform_lower_half,
+    // render.h) — the line itself stays there. The `h` view has no halves,
+    // so its triangle stands over the whole waveform. ONE PLACE for the line
+    // and its triangle. What paint_ruler_row paints and the setter compares
+    // (AppState::HoverLine's `triangle_declared_x`).
     std::optional<double> hover_triangle_x() const;
     // THE RULER HEAD'S PAINTED BOX at the waveform's column `col` (offset
     // from waveform_area's left edge) — ONE FUNCTION FOR THE PLAYHEAD'S HEAD

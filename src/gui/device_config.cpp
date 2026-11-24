@@ -23,7 +23,7 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them: THIRTEEN keys (architect 2026-11-22: a
+// REQUIRED SET, every one of them: FIFTEEN keys (architect 2026-11-22: a
 // tuning number he has settled is a constexpr of the program,
 // device_config.h's head naming each one's seat). THE ORDER IS THE
 // ARCHITECT'S OWN (2026-08-30): gui_scale, projects_repo, projects_path,
@@ -46,8 +46,13 @@ namespace {
 //
 // THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05):
 // `noise`, `noise_level`, `noise_attenuation_level` and `noise_crossfade_s`
-// FOLLOW `waveform_grow`, the permanent keys' end, the folder before its
-// loudness, the loudness's fixed attenuation under it, and its crossfade.
+// FOLLOW `waveform_grow`, the folder before its loudness, the loudness's
+// fixed attenuation under it, and its crossfade. THE LEVEL NOISE'S TAP
+// RESTORES (architect 2026-11-24), `noise_restore_level`, stands beside the
+// level it restores, between `noise_level` and the attenuation.
+//
+// THE STICKY LAMPS (architect 2026-11-24): `lit_lamps` FOLLOWS the noise's
+// keys, the permanent keys' end, a permanent key ahead of the tuning keys.
 //
 // THE TUNING KEYS stand after the permanent keys, each leaving when he
 // settles its value: the on-screen keyboard's key box, `osk_key_w` and
@@ -61,8 +66,10 @@ constexpr const char* kDeviceConfigKeys[] = {
     "waveform_grow",
     "noise",
     "noise_level",
+    "noise_restore_level",
     "noise_attenuation_level",
     "noise_crossfade_s",
+    "lit_lamps",
     "osk_key_w",
     "osk_key_h",
     "osk_font_px",
@@ -125,6 +132,23 @@ std::string format_noise_crossfade_s(int s) {
     char buf[32];
     std::snprintf(buf, sizeof(buf), "%d", s);
     return std::string(buf);
+}
+
+// The sticky lamps' canonical spelling (2026-11-24; the grammar's words at
+// parse_lit_lamps, device_config.h): the lit lamps' words in kLitLampWords'
+// order, joined by `,`, the empty string with every lamp dark — exactly
+// what parse_lit_lamps admits back.
+std::string format_lit_lamps(const DeviceLitLamps& lamps) {
+    const bool bits[] = {lamps.magnify, lamps.follow, lamps.restrict,
+                         lamps.tips};
+    static_assert(std::size(bits) == std::size(kLitLampWords));
+    std::string s;
+    for (size_t i = 0; i < std::size(bits); ++i) {
+        if (!bits[i]) continue;
+        if (!s.empty()) s += ',';
+        s += kLitLampWords[i];
+    }
+    return s;
 }
 
 // The keyboard's key box's canonical spelling (2026-10-29), one for its two
@@ -208,6 +232,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "noise_level") {
             // The level's canonical decimal or -inf (format_level_db).
             s += format_level_db(cfg.noise_level);
+        } else if (k == "noise_restore_level") {
+            // The restore's canonical decimal, never -inf
+            // (format_level_db).
+            s += format_level_db(cfg.noise_restore_level);
         } else if (k == "noise_attenuation_level") {
             // The attenuation's canonical decimal, never -inf
             // (format_level_db).
@@ -215,6 +243,10 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
         } else if (k == "noise_crossfade_s") {
             // The crossfade's canonical integer (format_noise_crossfade_s).
             s += format_noise_crossfade_s(cfg.noise_crossfade_s);
+        } else if (k == "lit_lamps") {
+            // The lit lamps' words in the canonical order, empty with every
+            // lamp dark (format_lit_lamps).
+            s += format_lit_lamps(cfg.lit_lamps);
         } else if (k == "osk_key_w") {
             // The keyboard's tuning keys' canonical integer
             // (format_osk_key_size).
@@ -310,9 +342,10 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.true_colors = *on;
             return {};
         }
-        // THE NOISE'S FOUR KEYS (2026-10-28; the attenuation 2026-11-05):
-        // each under its one grammar owner (is_noise_folder_name,
-        // parse_level_db, parse_noise_attenuation_db,
+        // THE NOISE'S FIVE KEYS (2026-10-28; the attenuation 2026-11-05;
+        // the restore level 2026-11-24): each under its one grammar owner
+        // (is_noise_folder_name, parse_level_db,
+        // parse_noise_restore_level_db, parse_noise_attenuation_db,
         // parse_noise_crossfade_s, device_config.h), required like every key;
         // any other spelling the launch's hard fail. The folder's name is
         // judged by its shape alone: a name whose folder is absent loads, and
@@ -350,6 +383,19 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
             out.noise_level = *db;
             return {};
         }
+        // THE LEVEL NOISE'S TAP RESTORES (2026-11-24, a permanent key): the
+        // level grammar less -inf (parse_noise_restore_level_db,
+        // device_config.h), required like every key.
+        if (key == "noise_restore_level") {
+            const std::optional<double> db =
+                parse_noise_restore_level_db(value);
+            if (!db) {
+                return bad_value(ln, key, value,
+                                 kNoiseRestoreLevelGrammarReason);
+            }
+            out.noise_restore_level = *db;
+            return {};
+        }
         if (key == "noise_attenuation_level") {
             const std::optional<double> db = parse_noise_attenuation_db(value);
             if (!db) {
@@ -366,6 +412,17 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                                  kNoiseCrossfadeGrammarReason);
             }
             out.noise_crossfade_s = *s;
+            return {};
+        }
+        // THE STICKY LAMPS (2026-11-24, a permanent key): under their one
+        // grammar owner (parse_lit_lamps, device_config.h), required like
+        // every key; any other spelling the launch's hard fail.
+        if (key == "lit_lamps") {
+            const std::optional<DeviceLitLamps> lamps = parse_lit_lamps(value);
+            if (!lamps) {
+                return bad_value(ln, key, value, kLitLampsGrammarReason);
+            }
+            out.lit_lamps = *lamps;
             return {};
         }
         // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): each under
@@ -399,12 +456,21 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
 } // namespace
 
 std::expected<DeviceConfig, std::string> read_device_config(
-        const std::filesystem::path& path) {
+        const std::filesystem::path& path, std::string& bytes) {
+    // ONE READ (2026-11-24): the file's bytes land in `bytes` and the very
+    // bytes the startup's canonical compare judges are the ones judged here
+    // (load_device_config). A read that fails partway is the scanner's own
+    // refusal word, kept.
     std::ifstream f(path);
     if (!f) {
         return std::unexpected("could not open '" + path.string() + "'");
     }
-    return read_device_config_stream(f);
+    bytes.assign(std::istreambuf_iterator<char>(f),
+                 std::istreambuf_iterator<char>());
+    if (f.bad()) {
+        return std::unexpected(std::string("i/o read error"));
+    }
+    return parse_device_config_text(bytes);
 }
 
 std::expected<DeviceConfig, std::string> parse_device_config_text(
@@ -490,10 +556,28 @@ std::expected<DeviceConfig, std::string> load_device_config(
             path.string().c_str());
     }
 
-    auto cfg = read_device_config(path);
+    std::string bytes;
+    auto cfg = read_device_config(path, bytes);
     if (!cfg) {
         return std::unexpected("invalid device config in '" + path.string() +
                                "': " + cfg.error());
+    }
+
+    // THE CANONICAL REWRITE (architect 2026-11-24; the rule at the
+    // declaration, device_config.h's STARTUP): the file as read, unless it is
+    // byte for byte the writer's text for the config just read, is written
+    // once through the config's own writer. Advisory: a failure is one
+    // stderr line and the launch goes on with the config as read.
+    if (bytes != format_device_config_text(*cfg)) {
+        if (auto failure = write_device_config(*cfg)) {
+            std::fprintf(stderr, "warptempo_gui: %s\n",
+                         failure->diagnostic.c_str());
+        } else {
+            std::fprintf(stderr,
+                "warptempo_gui: Device config rewritten in the writer's "
+                "order: %s\n",
+                path.string().c_str());
+        }
     }
     return *cfg;
 }

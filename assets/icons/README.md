@@ -9,7 +9,7 @@ Files of other names here (this README, the licence text) are never looked up.
 
 ## Papirus, recolored
 
-EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT FIFTEEN, OURS, FROM THIRTEEN SOURCES OF OUR OWN (THE OWN DRAWINGS,
+EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT FOURTEEN, OURS, FROM TWELVE SOURCES OF OUR OWN (THE OWN DRAWINGS,
 below): papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the
 drawings first imported at commit 33d971eb are byte-identical in it), its 16-px symbolic set (`Papirus/16x16/symbolic/`,
 whose names are mostly links into the 16-px `actions/`, `apps/` and `panel/` trees) and drawings of the 16-px
@@ -25,20 +25,23 @@ send NN, THE OWN DRAWINGS below); Follow (`GoJump`) `go-first-rtl`, an arrow rig
 (re-picked once more 2026-11-23, send OO); Jump to Defining (`GoJumpDeclaration`) `go-jump-declaration`; Grid
 Iterations (`Mathmode`) `insert-math-expression`; Target (`ViewMediaVisualization`) `kdenlive-show-audiothumb`;
 Magnification (`ZoomInY`) `audio-volume-high`; Warp (`Speedometer`) `slow_off`, a gauge; FIT's recall
-(`ZoomPrevious`) `view-restore`; Older / Newer (`KeyframePrevious` / `KeyframeNext`) `keyframe-previous` /
+(`ZoomPrevious`) `view-restore` (re-picked once more 2026-11-24, below); Older / Newer (`KeyframePrevious` / `KeyframeNext`) `keyframe-previous` /
 `keyframe-next`; Session History (`DeepHistory`) `network-unavailable`, a faded network port and a cross (send MM);
-the score's Start / End (`ZoneIn` / `ZoneOut`) OUR OWN, `view-readermode`'s open book with a plus or a minus in its
-own moat (re-picked once more 2026-11-23, send OO); Save (`DocumentSave`) `media-floppy`; Cumulative (`BlackSum`)
+the score's Start / End (`ZoneIn` / `ZoneOut`) (re-picked once more 2026-11-23, send OO, and again 2026-11-24,
+below); Save (`DocumentSave`) `media-floppy`; Cumulative (`BlackSum`)
 OUR OWN serifed sigma (re-picked once more 2026-11-23, send OO, its serifs send PP); Flatten (`Merge`) `tool-brush`,
 a brush (send MM); and
 2026-11-23 (send OO, his picks off the mocks; with Restrict, Start / End and Cumulative above, ten rows, every one
-OUR OWN, THE OWN DRAWINGS below), SIX MORE ROWS — the picker's Up (`GoParentFolder`) `folder-symbolic`'s folder with
+then OUR OWN, Start / End since re-picked again), SIX MORE ROWS — the picker's Up (`GoParentFolder`) `folder-symbolic`'s folder with
 an up arrow cut out of it; the score's Previous / Next Page (`GoPreviousViewPage` / `GoNextViewPage`)
 `go-previous`'s head without its stem, Next's mirrored to point right; and SAVE's three history-view faces, Commit
 (`VcsCommit`) `go-up`'s arrow standing on a line, Pull (`VcsPull`) `go-down`'s arrow landing on it, and Check
 (`NetworkConnect`) the two arrows side by side, one up and one down; and 2026-11-24 (send QQ, his pick "L1"), TWO ROWS
 ADDED, the tab pair's Tab A / Tab B (`TabA` / `TabB`) OUR OWN, Liberation Sans Bold's own outlines of the two capitals
-(THE OWN DRAWINGS below). Papirus names few of the enumerators' acts, so
+(THE OWN DRAWINGS below); and 2026-11-24, THREE ROWS RE-PICKED, FIT's recall (`ZoomPrevious`) OUR OWN, his pick
+"V1", `view-restore`'s four corners with the left and right pairs 1 closer (THE OWN DRAWINGS below), and the score's
+Start / End (`ZoneIn` / `ZoneOut`), his pick "G", Papirus's `bookmark-new` / `bookmark-remove`, a bookmark ribbon with
+a plus / a minus cut out of it, untouched. Papirus names few of the enumerators' acts, so
 many rows are the nearest drawing by another name (the Note column).
 
 WHICH SEAT WEARS WHICH DRAWING is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
@@ -67,8 +70,8 @@ arrows). ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM, twice: `BboxPrev` an
 pair's own drawing, and `GoPreviousViewPage` and `GoNextViewPage` both the score's own page head, Previous's as
 drawn and Next's mirrored (the importer notes the shared source).
 
-THE OWN DRAWINGS, the thirteen sources that are no Papirus file, in `tools/icons/own/`, all in a 16 x 16 box (the
-numbers below in its units), ten made from Papirus drawings at Papirus's weight whose path data they keep verbatim
+THE OWN DRAWINGS, the twelve sources that are no Papirus file, in `tools/icons/own/`, all in a 16 x 16 box (the
+numbers below in its units), nine made from Papirus drawings at Papirus's weight whose path data they keep verbatim
 wherever a part is Papirus's, one, the sigma, drawn outright at Papirus's weight, and two, the tab pair's letters, made
 from the text face's own outlines (architect 2026-11-24, send QQ). THE OWN DRAWINGS' STRAIGHT ARROWS WEAR PAPIRUS'S HEAD AND
 STEM (`go-previous` / `go-up` / `go-down` / `go-first`) rather than a solid triangle head, the shape he keeps for the
@@ -91,11 +94,6 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
   removed — its vertices 2,8 8,2 9.5,3.5 and 9.5,12.5 8,14 kept, the stem's two inner corners replaced by the arms'
   own meeting point 5,8 — the ink re-centered (shifted 2.25 right, ink x 4.25 to 11.75, y 2 to 14). Previous Page
   wears it as drawn, Next Page mirrored (THE TRANSFORM, below).
-- THE SCORE'S START AND END (send OO, "K5"), `ZoneIn.svg` and `ZoneOut.svg`: `actions/view-readermode.svg`'s open book,
-  its path verbatim, with a mark in the bottom-right corner standing in its own moat 1 wide cut out of the book — Start
-  a PLUS 6 x 6 at a stroke of 2 (ink x 10 to 16, y 10 to 16; the size of Papirus's own plus in `actions/folder-new.svg`),
-  End a MINUS, the plus's bar (ink x 10 to 16, y 12 to 14). The moat is a `<clipPath>` on the book (the box less the mark
-  grown by 1, even-odd), so the drawing keeps one color and no literal one.
 - RESTRICT'S (send OO, "C2"), `TimelineUseZoneOn.svg`: the playhead stopped at the window's edge, a dot and a wall
   with nothing between and no arrow — go-first's dot (r 2) at cx 6, cy 8, the marker pair's wall, 2 wide, rows 2 to
   14, at x 10 to 12, the clear gap 2, the ink x 4 to 12, centered. Follow keeps Papirus's `go-first-rtl`, an arrow
@@ -110,6 +108,11 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
   to 15.
 - CHECK (send OO, "N2"), `NetworkConnect.svg`: Commit's arrow and Pull's side by side, one up and one down, no line,
   each 8 wide and 14 tall at a stroke of 2 (ink x 0 to 16, y 1 to 15).
+- FIT'S RECALL (architect 2026-11-24, "V1": Papirus's drawing is "asymmetrical. The spacing is greater in the
+  vertical lane"), `ZoomPrevious.svg`: `actions/view-restore.svg`'s four corners, the left pair moved 1 right and the
+  right pair 1 left, nothing else changed, so the gap between the left and right halves is 2, as the gap between the
+  top and bottom halves already was, and the ink is Fit's own 12 box (x 2 to 14, y 2 to 14); the move baked into the
+  path data.
 - THE TAB PAIR'S LETTERS (architect 2026-11-24, send QQ, "L1": "Apply the A and the B as glyphs in the dimensions
   discussed"), `TabA.svg` and `TabB.svg`: Liberation Sans Bold's own outline of the capital A and of the capital B
   (`fonts/LiberationSans-Bold.ttf`, version 2.1.5, 2048 units to the em, cap height 1409), scaled by 12 / 1409 so the
@@ -118,8 +121,7 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
   against the outer contour, as the face draws them, so the nonzero fill leaves them hollow. The two outlines are the
   face's, under its licence, the SIL Open Font License 1.1 (`fonts/LICENSE-Liberation-OFL.txt`).
 
-Every shape of every own source already paints `currentColor` (the moats' clip paths included, which paint nothing),
-and the importer reads each through the same recolor rule and check as a Papirus file; each one's XML comment, which
+Every shape of every own source already paints `currentColor`, and the importer reads each through the same recolor rule and check as a Papirus file; each one's XML comment, which
 names its derivation, rides into its written files.
 
 THE TRANSFORM (architect 2026-11-22, send II). A row of the importer's table may name one, `mirror` (left-right, the
@@ -172,7 +174,7 @@ changed, two of them wrapped in their transform.
 | `ZoomIn` | `symbolic/actions/zoom-in-symbolic.svg (-> actions/zoom-in.svg)` | `0909faf491ca9ddfd327d220affa2cd9c7cfa345ff77df4418a2145f79ec27fa` |  |
 | `ZoomOut` | `symbolic/actions/zoom-out-symbolic.svg (-> actions/zoom-out.svg)` | `bcf189637391d0aff15fb67f7e7b8a41888184e32ea60d49a260c5c8ef5cef10` |  |
 | `ZoomFitBest` | `symbolic/actions/zoom-fit-best-symbolic.svg (-> actions/zoom-fit-best.svg)` | `8c01fbdcfa24a3e94b19a909b7db021b11634d5bb7eb9a1ef6cbe1e700189b94` |  |
-| `ZoomPrevious` | `actions/view-restore.svg` | `e7dccd470d9e616c2e577fe4a0b6b8f0117495ba9e378883fe887c7aa8cd0867` | no zoom-previous; view-restore, four corners turned in (re-picked 2026-11-22) |
+| `ZoomPrevious` | `tools/icons/own/ZoomPrevious.svg` | `8f9a7df6eecef5b8c1135cb10d8976073ed74ea02ea39c5b6017d61f9952c7d5` | no zoom-previous; ours, view-restore's four corners turned in, the left pair 1 right and the right pair 1 left, both gaps 2 (re-picked 2026-11-24, "V1") |
 | `ZoomInY` | `actions/audio-volume-high.svg` | `f3b25582adcb2b020cb83bb6576d1013d3ee64785af312bee6d7cf88c054b2c9` | no zoom-in-y; audio-volume-high, a speaker and its waves (re-picked 2026-11-22) |
 | `GoJump` | `symbolic/actions/go-first-rtl-symbolic.svg (-> actions/go-last.svg)` | `824fa2be70b7d33e089e7ee7817e8ddb3bdbddc7375cef7692a86030c7514b33` | go-first-rtl, an arrow right to a dot, his pick over go-jump (re-picked 2026-11-22, send MM) |
 | `TimelineUseZoneOn` | `tools/icons/own/TimelineUseZoneOn.svg` | `ce0fd3977a4ae6c07cbb6a141e5e4a0389ec434cbf7b6e4ba6a60b2ab80fb0b2` | no timeline-use-zone-on; ours, go-first's dot and the marker pair's wall with nothing between, no arrow (re-picked 2026-11-23, send OO) |
@@ -228,8 +230,8 @@ changed, two of them wrapped in their transform.
 | `GoPreviousViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `2ace6a993255466adb18f55cea123a41c7e84321dcd25e5e4090b503718e9aa5` | no go-previous-view-page; ours, go-previous's head without its stem, as drawn, pointing left (re-picked 2026-11-23, send OO) |
 | `GoNextViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `2ace6a993255466adb18f55cea123a41c7e84321dcd25e5e4090b503718e9aa5` | no go-next-view-page; ours, go-previous's head without its stem, mirrored left-right to point right (re-picked 2026-11-23, send OO); one source with GoPreviousViewPage, another drawing by the transform |
 | `EditReset` | `symbolic/actions/object-rotate-left-symbolic.svg (-> actions/object-rotate-left.svg)` | `d99b6f9e536672447d619a3d789b7b459a0bb2f0accd9e4c5c0a4570775a005b` | no edit-reset; the counter-clockwise arrow |
-| `ZoneIn` | `tools/icons/own/ZoneIn.svg` | `de0b3ba35d9c2105856de8755e179baa888934c42b2ac315d5342a57e66b4db0` | ours, view-readermode's open book with a plus in its own moat, his pick over zone-in (re-picked 2026-11-23, send OO) |
-| `ZoneOut` | `tools/icons/own/ZoneOut.svg` | `42c9aeae9564c29081fae2fbce03c9fe8d5eee86b5ab9987fe5bbba67710790f` | ours, view-readermode's open book with a minus in its own moat, his pick over zone-out (re-picked 2026-11-23, send OO) |
+| `ZoneIn` | `actions/bookmark-new.svg` | `429836f934162dde2a393530e4059488b7bff1ee362a1c0536c0072a9d33d6c2` | no zone-in; bookmark-new, a bookmark ribbon with a plus cut out of it, his pick (re-picked 2026-11-24, "G") |
+| `ZoneOut` | `actions/bookmark-remove.svg` | `eb0f48f2370eb6f36062e0e5e3ef6e959c81e5ae51cb553ff8ec29573ed49e53` | no zone-out; bookmark-remove, a bookmark ribbon with a minus cut out of it, his pick (re-picked 2026-11-24, "G") |
 | `EditClear` | `symbolic/actions/edit-clear-symbolic.svg (-> actions/edit-clear.svg)` | `c51332adb04993f9984a1e2c49aa6fd1ba8657f3e298c340a90b97a9b5256e69` |  |
 | `Folder` | `symbolic/places/folder-symbolic.svg` | `7820cddb76eb60b759d9c82dd35036898363588e7b3de8f0f8643d9e7de4dff3` |  |
 | `DialogInformation` | `symbolic/status/dialog-information-symbolic.svg (-> panel/state-information.svg)` | `2b8d444c6d5b27562d3b9042bd6c0e0e404eb941fa18dd58d7a18a885f35c9a1` |  |
@@ -251,8 +253,8 @@ look's tones, `kArcDarkTones` in `src/gui/gui_theme.h` (its `.text` and `.ground
 ## Licence
 
 Papirus's icons are licensed under the GNU General Public License, version 3 — GPL-3.0; copyright the papirus-icon-theme
-authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above); fifteen are of
-our own drawings (`tools/icons/own/`, THE OWN DRAWINGS above): ten of those sources are themselves modified copies of
+authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above); fourteen are of
+our own drawings (`tools/icons/own/`, THE OWN DRAWINGS above): nine of those sources are themselves modified copies of
 Papirus drawings under the same licence, Cumulative's sigma (`tools/icons/own/BlackSum.svg`) is ours outright,
 under the repository's own licence, and the tab pair's two letters (`tools/icons/own/TabA.svg`, `TabB.svg`) are
 Liberation Sans Bold's own outlines, under the face's SIL Open Font License 1.1 (`fonts/LICENSE-Liberation-OFL.txt`). The licence text is

@@ -28,8 +28,8 @@
 // before the first project opens; the engine is per project, so before a
 // project's stream runs nothing sounds, and the bed begins when the first
 // stream does (the fade-in once the load has landed). THE BED SOUNDS ONLY
-// THROUGH THE RUNNING STREAM'S CALLBACK, and nothing asks the device question
-// for it: the music's reopen is the bed's (below). Only the level at -inf, a
+// THROUGH THE RUNNING STREAM'S CALLBACK, and the bed asks no device
+// question by itself: every press's reopen is the bed's (below). Only the level at -inf, a
 // change of the `noise` key to a folder that is absent or refused (below) or
 // closing the app silences it for good; A ROUTE DROP PAUSES IT (next).
 //
@@ -56,8 +56,13 @@
 // THE NO-AUTO-RECOVER RULE HOLDS: nothing reopens by itself, the error
 // callback's "nothing recovers by itself" whole for the bed as for the music
 // — the bed is silent from the drop until the next press that reopens the
-// stream (Play, an audition, the car's Play at a connect), and that reopen
-// is the bed's resume.
+// stream (Play, an audition, the car's Play at a connect, or NOISE's own
+// wake: its tap, or a drag lifted on an audible level, over the dead
+// stream, architect 2026-11-24, GuiInputHandler::finish_level_press_release),
+// and that reopen is the bed's resume. AT -inf THE BED IS SHUT OFF WHOLE
+// (the voice dark, its bank freed at the lift); THE DEVICE STREAM'S
+// LIFECYCLE IS NOT THE LEVEL'S (playback_aaudio.cpp's THE STREAM'S
+// LIFECYCLE: opened once, started once, never stopped between plays).
 //
 // THE SOUND IS A FOLDER UNDER `noise/` BESIDE THE DEVICE CONFIG, named by the
 // `noise` device key (device_config_path()'s parent / "noise" / the key's
@@ -257,7 +262,7 @@ void noise_mix_block(GuiNoiseVoice& voice, float* const* channel_buffers,
 // audio-thread-private fields to the no-sequence state noise_mix_block's
 // idle arm reads (noise.cpp's reset_voice_sequence) — `target` and the level
 // UNTOUCHED, so an audible voice starts a fresh random segment with the
-// fade-in from silence on the next stream the music opens, and a switched-
+// fade-in from silence on the next stream a press opens, and a switched-
 // off voice's fade tail never plays after the reopen; the bed resumes at
 // the next reopen by his ruling. PRECONDITION:
 // THE STREAM IS DEAD, READ THROUGH THE LATCH ON THIS THREAD JUST BEFORE THE

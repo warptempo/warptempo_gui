@@ -198,7 +198,8 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
 // only whether a plate applies it, one term (architect 2026-09-24):
 //
 //   the Waveform Magnification lamp (AppState::show_waveform_magnification,
-//   the bare backtick, DARK AT EVERY PROJECT OPEN) — lit, magnified; dark,
+//   the bare backtick, a sticky lamp seated once its curve is ready,
+//   architect 2026-11-24) — lit, magnified; dark,
 //   the raw (flat) picture — in BOTH audio views, on every column and at
 //   every zoom.
 //
@@ -225,19 +226,38 @@ const WarpRedFlagCache& warp_red_flag_set_cached(
 // THE LAMP ALONE SUFFICES because it cannot be lit before the curve exists:
 // the curve is derived on its own thread after the load (GuiAudio::gain_curve),
 // and the lamp's one setter is reached only through the backtick's arm, which
-// refuses until waveform_magnification_toggle_actionable (below) passes.
+// refuses until waveform_magnification_key_actionable (below, the curve's
+// readiness its first term) passes, and through the open's deferred seat of
+// the sticky lamp (GuiInputHandler::settle_pending_magnification, 2026-11-24),
+// which waits on the readiness itself.
 bool waveform_magnified(const AppState& app);
 
-// CAN THE MAGNIFICATION LAMP BE TOGGLED — whether the gain curve is ready
+// IS THE GAIN CURVE READY — the lamp's one readiness question
 // (GuiAudio::gain_curve_ready; the derivation runs on its own thread after the
-// load, architect 2026-09-24). ONE OWNER, TWO READERS: the bare backtick's arm
-// (input_key_dispatch.cpp), which refuses on a Normal card while it is false,
-// and the Toggle Waveform Magnification button's face
-// (redesign_button_enabled), which greys on the same answer — the per-tick
-// roster comparator (main.cpp) repaints the face on the frame the verdict
-// flips. Once true it stays true for the life of the audio object, so a lit
-// lamp can always be put out.
+// load, architect 2026-09-24). TWO READERS: the key's predicate below, its
+// first term, and the sticky lamp's deferred seat
+// (GuiInputHandler::settle_pending_magnification, 2026-11-24), which lights
+// the lamp on the first tick it is true and asks this alone. Once true it
+// stays true for the life of the audio object.
 bool waveform_magnification_toggle_actionable(const GuiAudio& audio);
+
+// CAN THE MAGNIFY KEY BE PRESSED — ONE PREDICATE, TWO READERS: the
+// Toggle Waveform Magnification button's face (redesign_button_enabled), which
+// greys while it is false — the per-tick roster comparator (main.cpp) repaints
+// the face on the frame the verdict flips — and the bare backtick's arm
+// (input_key_dispatch.cpp), which refuses on a Normal card while it is false.
+// TWO TERMS: the curve is ready (waveform_magnification_toggle_actionable
+// above), AND NO SEAT IS OWED (AppState::magnification_seat_pending false;
+// architect 2026-11-24). The second closes the window between the tick's
+// head, where the deferred seat asks the readiness, and a paint, where the
+// gain worker may have published the readiness meanwhile: without it the
+// face would read live over the still-dark bit for one frame. With it the
+// key stays greyed until the next tick's head seats the lamp, so its first
+// enabled face is the seated, lit one (GuiInputHandler::seat_lit_lamps'
+// promise). Once true it stays true for the life of the audio object (the
+// seat is owed only from the open), so a lit lamp can always be put out.
+bool waveform_magnification_key_actionable(const AppState& app,
+                                           const GuiAudio& audio);
 
 // THE PLATE FINGERPRINT'S GAIN FIELD: the derivation's identity
 // (kWaveformGainVersion) while the picture is magnified, 0 while it is flat —

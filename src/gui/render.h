@@ -351,9 +351,7 @@ struct TrimRange {
 // under an overlay too); a CUE'S inert label is the dim print `text_dim`
 // (render.cpp's cue_label_ink; the marker-lane paragraph); the settings
 // page's inert GROUP ROWS wear the dim print (`text_dim`,
-// paint_folder_overlay, 2026-10-28); the STRUCK CLIP LAMP is its whole
-// square in `key_dim_ink` (the title bar block's THE STRIKE, 2026-11-05).
-// Nothing else dims.
+// paint_folder_overlay, 2026-10-28). Nothing else dims.
 
 // -- THE CHOKEPOINTS ----------------------------------------------------------
 //
@@ -418,7 +416,7 @@ struct GuiPalette {
     GuiColor sidebar_text;    // the marker labels' ink, the tooltip's and the cards'
     GuiColor text_dim;        // the inert rows, the tooltip's hint line, a disabled marker's label
     GuiColor inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen
-    GuiColor key_dim_ink;     // a disabled key's glyph, the struck clip lamp's whole square (THE TWO LAMPS' STRIKE)
+    GuiColor key_dim_ink;     // a disabled key's glyph
     GuiColor key_dim_face;    // a disabled key's face (the key face at 55 % over the body tone; paint_linked_group, paint_word_button)
     GuiColor key_dim_border;  // a disabled key's border on its stretch of the ring (well_border at 55 % over the body tone)
     GuiColor key_face;        // a key's face at rest; the two lamps at rest; the scrub's knob (paint_scale)
@@ -443,7 +441,7 @@ struct GuiPalette {
     GuiColor card_fill;       // a normal (timed) card's box (paint_notifications)
     GuiColor card_standing_fill; // a standing (critical) card's box
     GuiColor limiter_lamp;    // the title bar's limiter lamp, lit (its own tone)
-    GuiColor clip_lamp;       // the title bar's clip lamp, lit and not struck (THE TWO LAMPS, the title bar block)
+    GuiColor clip_lamp;       // the title bar's clip lamp, lit (THE TWO LAMPS, the title bar block)
     // THE PROGRAM'S OWN ELEMENTS — THE PALETTE (palette_file.h's rule). The
     // plate's ink and core are no field: the plate takes the row's two words
     // (waveform_plate_inks below).
@@ -1270,8 +1268,8 @@ constexpr int kMinWindowHeightPx = 480;
 // (a tone change only). IT ALONE WEARS THE TITLE TONE `ground` (2F343F,
 // its line of kArcDarkTones): "the darkest color
 // would only apply to the top line, the title bar" — everything under it is
-// the body tone `body_face`. INERT CHROME: no hit, no tooltip, no gesture —
-// THE ONE EXCEPTION the struck clip lamp's tap (THE TWO LAMPS below).
+// the body tone `body_face`. INERT CHROME WHOLE: no hit, no tooltip, no
+// gesture, the lamps included (THE TWO LAMPS below; architect 2026-11-24).
 // EVERY TEXT ON IT IS THE BOLD 12 W (GuiFace::Bold, gui_font.h) IN
 // `title_text` (xfwm's title text; arc_dark AFB8C5), ON ONE BASELINE,
 // kTitleBaselineW = 18 W under the bar's top (36 device rows on the tablet;
@@ -1368,49 +1366,12 @@ constexpr int kMinWindowHeightPx = 480;
 //     search; a span that runs backward (a wrap, a scrub, a restart) tests
 //     nothing, the first tick of a play seeds and tests nothing, not playing
 //     tests nothing (a lamp lit at the stop keeps its hold out).
-//     THE STRIKE (architect 2026-11-05: "YES — the strike + the tap"; its
-//     paint: "the whole dot should turn that color. The whole square"):
-//     WHILE THE DEVICE CANNOT SOUND, THE CLIP LAMP'S WHOLE SQUARE IN
-//     `key_dim_ink` (the disabled key's glyph tone — "a lighter gray like a
-//     disabled tone", no tone of its own). THE STATE: a third bit, AppState::clip_lamp_struck,
-//     written by refresh_logo_lamps alone on every tick once a piece is open
-//     — GuiPlayback::device_unavailable(), the error callback's dead latch
-//     (a headphone pulled, a Bluetooth route dropped) or no stream standing
-//     (a device that never came up, a refused reopen): "nothing will
-//     sound"; a pure read, no timer and no retry (the no-auto-recover rule);
-//     its edges damage the clip lamp's square like the lit bits'. Before a
-//     piece is open no engine exists and nothing is struck (the open's held
-//     frame wears no strike; refresh_logo_lamps). The bit is INDEPENDENT of
-//     the clip bit, but THE PAINT WINS OVER IT (architect 2026-11-05,
-//     "agree": the lamp cannot sound): THE FACE IS THE STRIKE —
-//     the square's one fill picked three ways, struck `key_dim_ink`, else
-//     lit `clip_lamp`, else rest `key_face`, nothing painted over it, whole
-//     device-px cells, no antialiasing (paint_title_bar's lamps block,
-//     paint_handler.cpp); a lit red under the hold coinciding with a drop
-//     shows the struck square. THE TAP — THE LANE'S ONE PRESS
-//     TARGET, a recorded exception to "clip indicator is not a button" on
-//     his word ("not a departure": Live's CPU indicator resets on a click):
-//     WHILE STRUCK, AND ONLY THEN, a press on the clip lamp's square (the
-//     very rect the tick damages, logo_lamp_rects(...).clip, so the hit and
-//     the picture agree) arms AppState::ChromePress's Lamp kind
-//     (arm_clip_lamp_press, input_pointer.cpp);
-//     no press look; a lift on the square with the strike still standing
-//     asks the launch gates' device question,
-//     GuiPlayback::ensure_device_available_for_play — the dead stream closed
-//     (the noise voice's sequence reset first), reopened at the new route's
-//     rate and STARTED, so the bed resumes through the running callback and
-//     NOTHING PLAYS — and cards kPlaybackDeviceUnavailableCard on a false
-//     answer, as the gates do; a true answer raises nothing, the next tick
-//     clearing the strike. A lift off the square does nothing (the keys'
-//     slide-off feint). A device that never came up is opened by no press
-//     (ensure answers false at once, init's failure logged), so its tap
-//     cards the sentence: the one road, the truthful report. UNDER AN
-//     OVERLAY THE TAP ANSWERS TOO (architect 2026-11-05: "we should
-//     make it respond under the overlay"): the render player's, the
-//     picker family's and the score viewer's veils admit the lamp's arm
-//     beside their opener's, the same act as on the main page; THE MODALS
-//     (a question, an editor, the progress page) veil it as they veil
-//     every arm (arm_clip_lamp_press). Unstruck, the square claims nothing.
+//     NO STRIKE AND NO TAP (architect 2026-11-24: the clip lamp "should
+//     lose the gray fill and the tap"): the square is lit or at rest and
+//     is no press target in any state, so the title bar is inert whole. A
+//     dead device stream is woken by NOISE's tap or lift instead
+//     (finish_level_press_release, input_pointer.cpp; the level case's
+//     entry, app_state.h), or by any launch press through its gate.
 //   THE BATTERY, ONE CELL WHATEVER IT HOLDS — the clock never moves (his:
 //     "the glyph always there taking up space so that the clock doesn't
 //     move"): Battery000Charging (any power source
@@ -3260,6 +3221,31 @@ inline bool point_on_waveform_divider(const GuiRect& area, int y) {
     return y >= w[0].y1 && y < w[1].y0;
 }
 
+// THE WAVEFORM'S HALF SPLIT, and the ONE expression of it (architect
+// 2026-08-13, THE TWO HALVES ARE ONE SURFACE): the half selects no SURFACE,
+// it selects which act a MOTIONLESS release runs on the one navigation
+// surface of the main page — upper = the playhead placement, lower = the
+// audition scrub, which places no playhead. Everything else about the two
+// halves is identical. TWO READERS: the live press (on_button_press,
+// input_pointer.cpp), which reads it once and stashes it on the pending
+// (ScrollDragState::scrub_release); and the hover line's triangle
+// (GuiPaintHandler::hover_triangle_x, architect 2026-11-24), which stands
+// nowhere over the lower half, the tap there placing no playhead. The `h`
+// view has no halves (its press, handle_history_mode_press, takes the
+// placement on the whole waveform), so neither reader asks this there.
+//
+// THE HALVES ARE THE TWO WELLS (architect 2026-10-16, Cool Edit's stereo
+// divider): the upper well's rows are the upper half, the lower well's —
+// the odd spare row at the canvas's foot among them — the lower half, the
+// rows read off waveform_well_rows above. The divider between them is
+// chrome and owns nothing: a press there never reaches this split
+// (point_on_nav_surface refuses it, point_on_waveform_divider). Window row
+// `y`; a row above the lower well (the upper well, the divider, the lanes
+// over the canvas) answers false.
+inline bool waveform_lower_half(const GuiRect& area, int y) {
+    return y >= waveform_well_rows(area)[1].y0;
+}
+
 // THE COLUMN MAPPING BASIS — a lattice: its start, its ORIGIN, its step and
 // its column count, the arithmetic render_waveform_columns cuts its columns
 // by.
@@ -4278,11 +4264,13 @@ void render_playhead(GuiCanvasSink& sink,
 // when I don't need it."; AND ITS TRIANGLE, architect 2026-11-21:
 // "also i think we should give the hover stem a triangle, same color as the
 // hover stem. for symmetry" — "i agree on no triangle hover while barrel is
-// held"; every other site points here).
+// held"; and architect 2026-11-24: "hover should lose the playhead triangle
+// below the midline"; every other site points here).
 //   WHAT IT IS: where a tap at the hovering pen's place would put the
 //     playhead, shown WHEREVER SUCH A TAP WOULD MOVE IT — the pen over the
 //     waveform (both halves: the lower half's tap auditions from the place,
-//     it moves where play starts), over the ruler — THE PLAYHEAD'S TRIANGLE
+//     it moves where play starts — THE LINE ALONE there, NO TRIANGLE, the
+//     tap placing no playhead), over the ruler — THE PLAYHEAD'S TRIANGLE
 //     INCLUDED: a motionless tap on it places the playhead as any ruler tap
 //     does (the head drag only adds the drag), and the triangle has no hover
 //     of its own (architect 2026-11-21) — over the marker lane
@@ -4303,7 +4291,14 @@ void render_playhead(GuiCanvasSink& sink,
 //     an editor or the on-screen keyboard. During play it shows as at rest,
 //     the scanner over it. The `h` view's lanes answer as the live ones
 //     (plain_lane_press_at serves both), so the line and its triangle show
-//     there too.
+//     there too — and its waveform has no halves (every tap there places
+//     the playhead), so its triangle stands over the whole waveform.
+//   WHERE THE TRIANGLE STANDS: wherever the line is a tap's THAT PLACES THE
+//     PLAYHEAD — the ruler (the playhead's triangle included), the empty
+//     marker lane and, on the main page, the waveform's upper half; not over
+//     the main page's waveform's lower half (the press's own half test,
+//     waveform_lower_half above, architect 2026-11-24), not with the barrel
+//     held.
 //   ITS TONE, THE BRIGHTNESS ORDER ON THE WAVEFORM (his words above): the
 //     scanner and the zoom anchor's stem FFFFFF ("The scanner should be this
 //     brightest one. And I guess the zoom stem should also be quite bright.
@@ -4322,7 +4317,8 @@ void render_playhead(GuiCanvasSink& sink,
 //     cue_chip_h_px rows, its apex on the line's center on the ruler's foot,
 //     AT THE LINE'S EXACT PLACE — ONE PLACE for both
 //     (GuiPaintHandler::hover_triangle_x: the line's place where the line
-//     is a tap's) — in `hover_line`, flat, cut to the waveform's columns
+//     is a tap's that places the playhead) — in `hover_line`, flat, cut to
+//     the waveform's columns
 //     and painted where any part of its reach overlaps them (the head's
 //     half-head rule; paint_ruler_row). NO FADE: the line and its triangle
 //     appear, move and leave at once, as the scanner does; no gate, latch,
@@ -4392,8 +4388,10 @@ void render_playhead(GuiCanvasSink& sink,
 //     alone (paint_ruler_row) — each only where its own place changed
 //     (GuiInputHandler::set_hover_line, two compares against the places
 //     last declared: the line's, and the triangle's, which carries whether
-//     it stands, so the barrel's Tap <-> Anchor edge at one x damages the
-//     triangle alone) — so a pen resting or out of range costs
+//     it stands, so the barrel's Tap <-> Anchor edge at one x, and the pen
+//     crossing the midline at one x, damage the triangle alone — both
+//     compares run at every walk, a vertical move included) — so a pen
+//     resting or out of range costs
 //     nothing and the app presents nothing; while the pen moves in hover
 //     range nearly every report that moves its real x moves the line (the
 //     Tap place where the x crosses a frame's edge, a frame being 1/20 px

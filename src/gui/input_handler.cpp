@@ -1223,28 +1223,27 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // switch in front of it, or over a multi-selection one reset at
         // each selected marker's place (2026-11-10) (in the P column it
         // refuses whole as already crossed; the act's head) — and
-        // CTRL+SHIFT+S PUBLISHES in the `h` view (below). Every
+        // CTRL+SHIFT+S PUBLISHES (below). Every
         // other modifier combination on `s` is unbound and FALLS OUT OF THIS
         // BLOCK (2026-08-30) to the strict-modifier tail: this block claims
         // the four spellings it binds and nothing else, so an unbound one is
         // answered by the tail that answers every other unbound chord, with
         // its silence.
         //
-        // CTRL+SHIFT+S IS THE PUBLISH CHORD, THE `h` VIEW'S ALONE (architect
-        // 2026-11-17: the commit is any change git sees, from that
-        // view alone): the pull, the check or save-and-commit under the
-        // default title by the GitHub status (run_publish_chord owns the
-        // fork). Its one producer is the view's Save button, which spells
-        // this chord at its lift (finish_chrome_press_release); outside the
-        // view the chord is unbound (chord_is_bound) and falls out of this
-        // block with the other unbound spellings. CTRL+S IS THE PLAIN SAVE IN
-        // BOTH VIEWS (architect 2026-10-10). Both chords are admitted by the
-        // read-only gate — a save and a checkpoint of the state the tab
-        // already holds author nothing — and by the `h` view's allowlist;
-        // inside a standing PICKER or player the router answers Ctrl+S as the
-        // plain save and Ctrl+Shift+S as a consumed nothing, and under an
-        // editor the keyboard-modal gate swallows Ctrl+Shift+S on its card.
-        if (app.history_mode.active && is_publish_key(key, mods)) {
+        // CTRL+SHIFT+S IS THE PUBLISH CHORD, IN BOTH VIEWS (architect
+        // 2026-11-24), carrying THE TWO ACTS (run_publish_chord's head owns
+        // them): on the main page SAVE AND COMMIT, SAVE's long press, and in
+        // the `h` view FORCE SAVE AND COMMIT, the view's Save button, whose
+        // lift spells this chord there (finish_chrome_press_release) — the
+        // pull, the check or the save and commit under the default title by
+        // the GitHub status. CTRL+S IS THE PLAIN SAVE IN BOTH VIEWS (architect
+        // 2026-10-10). Both chords are admitted by the read-only gate — a save
+        // and a checkpoint of the state the tab already holds author nothing —
+        // and by the `h` view's allowlist; inside a standing PICKER or player
+        // the router answers Ctrl+S as the plain save and Ctrl+Shift+S as a
+        // consumed nothing, and under an editor the keyboard-modal gate
+        // swallows Ctrl+Shift+S.
+        if (is_publish_key(key, mods)) {
             run_publish_chord();
             return;
         }
@@ -2095,16 +2094,17 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // nothing ahead writes NOTHING: no select, no playhead land, no
     // recentre. THE WALK STEPS MARKERS ONLY, in grid iterations as outside it
     // (architect 2026-11-02, the declaration's rule): a tap addresses a
-    // bound cell, never the walk. THE TWO MARCHES take this answer
-    // at each of their two cycles (their tab switches and their two `c`s are
-    // their own acts and still run); neither reads anything back.
+    // bound cell, never the walk. THE TWO MARCHES ask this gate at each of
+    // their two cycles, after their own gate has proved both landings;
+    // neither reads anything back.
     //
     // THE REFUSAL IS SILENT (architect 2026-08-31): a benign
     // one-dimensional refusal already at its state says nothing — one glance
-    // at the marker lane shows the focus is at its end. The Walk button stays
-    // lit there (its ctrl form, the tab switch, always acts — the twin rule
-    // at redesign_button_enabled), so its plain or shifted lift at the wall
-    // reaches this same silence.
+    // at the marker lane shows the focus is at its end, and the walk key's
+    // face greys there (redesign_button_enabled, architect 2026-11-24), so
+    // no press of it reaches this wall. THE MARCHES' GATE
+    // (march_refusing_tab) proves both their steps before either runs, so
+    // neither reaches it either.
     if (marker_walk_landing(app, audio, forward) < 0) return;
 
     // The marker step. Selection::cycle_selection asks marker_walk_landing
@@ -2233,7 +2233,7 @@ void GuiInputHandler::run_center_command(bool user_zoom) {
     // history mode's own `c` arm in handle_history_mode_key — which must
     // claim the key to keep it off the mode's allowlist — and the writer of
     // the hold posture a centring key arms; also run by both steps of each
-    // paired march, live and `h`, and by the A/B audition's
+    // paired march (the main page's alone), and by the A/B audition's
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
     // frame, and arms the hold as the key does — the rule and the ordering it
@@ -3463,10 +3463,10 @@ void GuiInputHandler::set_tab_read_only(char tab_view, bool value) {
 }
 
 void GuiInputHandler::set_show_waveform_magnification(bool desired) {
-    // The contract — sole writer, per-project, history-less, the gain kick —
-    // is at the declaration (input_handler.h). The ONE caller is the
-    // bare-backtick arm, which the icon row's button reaches by synthesizing
-    // that press.
+    // The contract — sole writer, sticky, history-less, the gain kick — is
+    // at the declaration (input_handler.h). TWO CALLERS: the bare-backtick
+    // arm, which the icon row's button reaches by synthesizing that press,
+    // and the open's deferred seat (settle_pending_magnification).
     const uint64_t prior_gain_hash = viewport.waveform_gain_hash();
     app.show_waveform_magnification = desired;
     viewport.kick_waveform_sync_if_gain_changed(prior_gain_hash);
@@ -3522,12 +3522,31 @@ void GuiInputHandler::darken_zoom_lamps_if_level_moved(double level_before) {
     if (app.zoom_level != level_before) darken_zoom_lamps();
 }
 
+void GuiInputHandler::seat_lit_lamps(const DeviceLitLamps& lamps) {
+    // The rule — each bit through its own owner, MAGNIFY's deferred until
+    // its curve is ready — is at the declaration (input_handler.h; architect
+    // 2026-11-24).
+    if (lamps.follow)   playback_lifecycle.toggle_follow();
+    if (lamps.restrict) playback_lifecycle.toggle_restrict();
+    if (lamps.tips)     set_show_tooltips(true);
+    app.magnification_seat_pending = lamps.magnify;
+}
+
+void GuiInputHandler::settle_pending_magnification() {
+    // The rule and the interleaving are at the declaration (input_handler.h).
+    if (!app.magnification_seat_pending) return;
+    if (!waveform_magnification_toggle_actionable(audio)) return;
+    app.magnification_seat_pending = false;
+    set_show_waveform_magnification(true);
+}
+
 void GuiInputHandler::set_show_tooltips(bool desired) {
-    // The contract — sole writer, per-project, history-less, the dark edge
-    // ending the model whole — is at the declaration (input_handler.h), and
-    // so are its callers: the main window's bare-backslash arm (which the
-    // icon row's button reaches by synthesizing that press) and the three
-    // overlays' routers' own backslash arms.
+    // The contract — sole writer, sticky (the device key `lit_lamps`),
+    // history-less, the dark edge ending the model whole — is at the
+    // declaration (input_handler.h), and so are its callers: the main
+    // window's bare-backslash arm (which the icon row's button reaches by
+    // synthesizing that press), the three overlays' routers' own backslash
+    // arms and the open's seat (GuiInputHandler::seat_lit_lamps).
     app.show_tooltips = desired;
     if (desired) return;
     hide_shift_tooltip();

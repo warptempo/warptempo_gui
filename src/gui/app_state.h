@@ -1886,8 +1886,10 @@ enum class RedesignButton {
     // from the source (GuiAudio::gain_curve, gated by waveform_magnified) in
     // BOTH audio views; dark (the default), it is the raw picture. The
     // render, undo and every sidecar are untouched. The bit is
-    // AppState::show_waveform_magnification, DARK AT EVERY PROJECT OPEN like
-    // Follow, the group's other lamp. LIVE in both audio views, on a locked
+    // AppState::show_waveform_magnification, A STICKY LAMP like Follow, the
+    // group's other: stored in the device key `lit_lamps` at every edge and
+    // seated as soon as its gain curve is ready (architect 2026-11-24;
+    // AppState::magnification_seat_pending). LIVE in both audio views, on a locked
     // tab, under the read-only lock and in the `h` view (architect
     // 2026-10-12: he wants to magnify while walking history), whose
     // allowlist admits the backtick (history_mode_key_blocked), so the derived
@@ -1896,8 +1898,10 @@ enum class RedesignButton {
     IconWaveformMagnification,
     // FOLLOW (bare `f`) — a VIEWPORT-CLASS act like everything else in this
     // group: the lamp that keeps the playing scanner in view is about where
-    // the camera is. A plain per-project session lamp (AppState::follow;
-    // architect 2026-09-23): lit, every project play
+    // the camera is. A plain lamp and A STICKY ONE, the device's
+    // (AppState::follow; architect 2026-09-23; sticky 2026-11-24: seated
+    // from the device key `lit_lamps` at every open and stored at every
+    // edge, GuiInputHandler::seat_lit_lamps and main.cpp's refresh_lit_lamps): lit, every project play
     // is followed by the follow scroll (Viewport::follow_scanner); it stays lit across plays and
     // stops until `f`, RESTR's lit edge, a user zoom or the `h` view's entry
     // puts it out (AppState::follow). It wears a lamp, reading the live bit its
@@ -1908,7 +1912,8 @@ enum class RedesignButton {
     // RESTRICT (bare `r`, architect 2026-10-29), directly after Follow and
     // ahead of the TRIM arm lamp — the same VIEWPORT CLASS, Follow's other
     // half: a
-    // plain per-project session lamp (AppState::restrict) under which the
+    // plain lamp, sticky as Follow is (AppState::restrict; the device key
+    // `lit_lamps`, 2026-11-24) under which the
     // user's own play stays inside the window — it stops when the scanner
     // reaches the window's right edge and does not start from a playhead off
     // the window. A RADIO WITH FOLLOW: lighting either puts the other out.
@@ -2161,9 +2166,12 @@ enum class RedesignButton {
     // ENABLE TOOLTIPS (architect 2026-09-29), directly after Settings
     // (architect 2026-10-01: help comes after settings), the level
     // case behind it: THE TOOLTIP
-    // LAMP on bare backslash, wearing Tooltips. A per-project session lamp in the magnification lamp's
-    // family — AppState::show_tooltips, DARK AT EVERY OPEN, outside undo, in no
-    // settings vocabulary and not carried by `'` — and while it is DARK NO
+    // LAMP on bare backslash, wearing Tooltips. A STICKY LAMP, the device's
+    // — AppState::show_tooltips, seated from the device key `lit_lamps` at
+    // every open and stored at every edge (architect 2026-11-24;
+    // GuiInputHandler::seat_lit_lamps and main.cpp's refresh_lit_lamps),
+    // outside undo, in no sidecar
+    // and not carried by `'` — and while it is DARK NO
     // TOOLTIP SHOWS ANYWHERE: the tooltip model's one wait writer
     // (note_tooltip_hover) keeps its state clear and starts no wait, so the
     // roster, the modal row and the render player's row never raise a hint
@@ -2224,9 +2232,18 @@ enum class RedesignButton {
     // something that slides"): a press that never left the hover
     // slop, lifted on the face, WHATEVER ITS DURATION, on a case standing at
     // a finite level remembers that level and sets -inf; on a case standing
-    // at -inf it sets the remembered level, 0 dB with nothing remembered
-    // (GuiLevelRecall below, the session's memory, in no file;
-    // GuiInputHandler::finish_level_press_release). THE CASE GREYS
+    // at -inf it sets the remembered level — THE DEVICE KEY
+    // `noise_restore_level` (architect 2026-11-24: the restore "constant when
+    // opening a project or opening the program"; device_config.h's head),
+    // 0 dB as the defaults file ships it, the tap its one writer
+    // (GuiInputHandler::finish_level_press_release). THE LIFT WAKES A DEAD
+    // DEVICE STREAM (architect 2026-11-24: "tap to reconnect noise should
+    // work on noise slider, not the clip indicator"): over a dead stream
+    // the tap on an audible level wakes it and toggles nothing, the next
+    // tap the toggle; the tap at -inf restores and wakes in one; a drag
+    // lifted on an audible level wakes too. NOISE WEARS NOTHING FOR THE
+    // DEAD STREAM ("None of these"): the lift reads it live, the rule and
+    // its order at finish_level_press_release. THE CASE GREYS
     // with no folder the `noise` key names or a failed load
     // (GuiNoise::available), and with the roster's blanket greys (no audio to
     // dispatch on, a standing overlay), which it takes like every key: its
@@ -2719,22 +2736,26 @@ enum class RedesignButton {
     // forward march, and Previous's Shift+Tab CTRL+SHIFT+TAB, the backward
     // march (the roster's second ruled translation, at the lift's chord
     // build, finish_chrome_press_release; redesign_button_shift_admits).
-    // THE FACE, THE TWIN RULE: the march is `c`'s act on both tabs, which
-    // always frames, so outside the grid iterations lamp each key is live
-    // wherever the roster is; under the lamp, which refuses both marches on
-    // its card, the face is the plain step's (redesign_button_enabled).
+    // THE FACE IS THE PLAIN STEP'S, IN EVERY STATE (architect 2026-11-24):
+    // each key greys where the tab on screen has no stop its way, its hold
+    // dead with its tap; on the main page a march runs only where both tabs
+    // have a stop that way, and otherwise does nothing and says so on one
+    // card naming the tab that has none (march_refusing_tab;
+    // redesign_button_enabled). IN THE `h` VIEW NO MARCH RUNS (architect
+    // 2026-11-24): there the hold is a silent consumed no-op
+    // (handle_history_mode_key) and the tooltip carries one line.
     //
     // PREVIOUS MARKER (2026-09-29): its
     // own base chord is SHIFT+TAB, Redo's shape — the table row carries the
     // shift, the walk's direction bit — and ITS HOLD IS THE BACKWARD MARCH,
-    // Ctrl+Shift+Tab (architect 2026-11-24). Under the lamp it greys where
-    // the reverse step would land nothing (marker_walk_landing backwards, the
-    // `h` view's diff-flag cycle backwards in there).
+    // Ctrl+Shift+Tab (architect 2026-11-24). It greys where the reverse step
+    // would land nothing (marker_walk_landing backwards, the `h` view's
+    // diff-flag cycle backwards in there).
     TransportWalkPrevious,
     // NEXT MARKER — THE WALK (architect 2026-09-22; the dedicated Previous
     // Marker beside it, 2026-09-29): its press is bare Tab, the next marker,
     // and ITS HOLD IS THE FORWARD MARCH, Ctrl+Tab (architect 2026-11-24).
-    // Under the lamp it greys
+    // It greys
     // where the forward step would land nothing (marker_walk_landing, the
     // `h` view's diff-flag cycle in there — redesign_button_enabled). Its
     // landing's camera is the landing owner's walk (Viewport::land_subject,
@@ -2744,8 +2765,9 @@ enum class RedesignButton {
     //
     // The `h` view's DERIVED partition needs no hand entry for it: its bare
     // chord is the mode's own vocabulary in there (history_mode_owns_key), so
-    // it stays live and steps the diff-flag cycle; both marches are the
-    // mode's own too.
+    // the partition leaves it to its own arm, which greys it at the
+    // diff-flag cycle's walls. Both march chords are claimed there too and
+    // consumed as nothing (architect 2026-11-24: no march in the view).
     TransportWalk,
     // CENTER (bare `c`, working-zoom center) — in the bottom icon row
     // (architect 2026-09-29), the nudge-and-play group's first
@@ -2888,25 +2910,6 @@ inline double level_db_from_travel(double t) {
     if (db > kLevelDbMax) db = kLevelDbMax;
     return db + 0.0;   // -0.0 to 0.0
 }
-
-// THE LEVEL CASE'S RECALL — THE TAP'S MEMORY (architect 2026-11-10: a tap on
-// the level case toggles it off and back, "like the fit recall", the recall
-// "session only"; the tap's rule at RedesignButton::IconNoiseLevel): the
-// finite level the last tap turned off, EMPTY AT THE LAUNCH and
-// until the case's first tap from a finite level. ONE LEVEL, NOISE's
-// (2026-11-11). ONLY THE TAP WRITES IT: a
-// drag that ends at -inf remembers nothing and no drag clears it. EMPTY, THE
-// TAP FROM -inf RECALLS 0 dB (his ruling). IN NO FILE AND NO DEVICE KEY: it
-// dies with the process. IT IS THE APP'S, NOT A PROJECT'S: the level is
-// device state the loop's one config struct carries from project to
-// project (main.cpp's run_project seats it), so the level a tap turned
-// off in one project is the level a tap restores in the next — one object
-// owned by gui_main beside the config and the noise, reached through
-// AppState::level_recall. Its one reader and writer:
-// GuiInputHandler::finish_level_press_release (input_pointer.cpp).
-struct GuiLevelRecall {
-    std::optional<double> noise;
-};
 
 // THE TOP ICON ROW'S GROUPS — true for the button that OPENS each group of
 // the roster's order. A GROUP PAINTS NOTHING (2026-10-22): the row's picture
@@ -3280,7 +3283,8 @@ enum class DialogTrigger {
     // THE PULL'S CONFIRMATION (architect 2026-10-19): "Pull GitHub's newer
     // checkpoint and reload this piece?", OK / Cancel (its OK discards the
     // session). Raised by the publish chord,
-    // Ctrl+Shift+S, the `h` view's Save key, only when the pull
+    // Ctrl+Shift+S, in either view (SAVE's long press on the main page, the
+    // `h` view's Save key), only when the pull
     // changes the open piece; the plan waits at
     // AppState::pending_history_pull.
     PULL_CONFIRM,
@@ -4221,11 +4225,15 @@ struct AppState {
     int64_t viewport_lattice_origin = 0;
     // THE HOLD POSTURE AND THE FOLLOW LAMP (architect 2026-09-23). The hold
     // is camera behaviour that follows from what the user already did rather
-    // than from a key he has to hold. Follow is a lamp he lights (bare `f`). Both are SESSION
-    // state in the add_to_selection family (the family's record is at that
-    // declaration below): per project, DARK AT EVERY PROJECT OPEN
-    // (run_project constructs this AppState fresh), outside undo, not carried
-    // by `'`, in no sidecar and no settings vocabulary. THE HOLD HAS NO LAMP
+    // than from a key he has to hold. Follow is a lamp he lights (bare `f`).
+    // THE HOLD is SESSION state in the add_to_selection family (the family's
+    // record is at that declaration below): per project, DARK AT EVERY
+    // PROJECT OPEN (run_project constructs this AppState fresh), outside
+    // undo, not carried by `'`, in no sidecar and no settings vocabulary.
+    // FOLLOW is the same but for the open: A STICKY LAMP, the device's,
+    // seated from the device key `lit_lamps` at every open and stored there
+    // at every edge (architect 2026-11-24; GuiInputHandler::seat_lit_lamps and
+    // refresh_lit_lamps). THE HOLD HAS NO LAMP
     // (architect 2026-10-05): the playhead head's glyph (the ruler's
     // triangle, render.h) paints one face whether or not the bit stands, and
     // nothing else shows it — no icon, no card when it is armed or cleared;
@@ -4298,9 +4306,9 @@ struct AppState {
     //   * SET by the EXPLICIT CENTRING ACTS and, among acts, nothing else (the
     //     tab switch's arrival derivation, below, is the one other arm): bare `c` (live
     //     and in the `h` view; run_center_key_command), the two paired
-    //     marches Ctrl+Tab and Ctrl+Shift+Tab (live and `h`; each of their
-    //     two steps runs run_center_key_command, 2026-09-26; both directions
-    //     2026-11-24), Ctrl+J (its closing
+    //     marches Ctrl+Tab and Ctrl+Shift+Tab (the main page's alone; each of
+    //     their two steps runs run_center_key_command, 2026-09-26; both
+    //     directions 2026-11-24), Ctrl+J (its closing
     //     `c`), THE A/B AUDITION'S THREE CENTRINGS (each runs
     //     run_center_key_command, architect 2026-09-29: the act ends armed
     //     on the tab it centred last), and THE WALK'S CENTRING BY THE LANDING OWNER
@@ -4445,9 +4453,14 @@ struct AppState {
     // car_toggle_playback) and the lamp's lit edge (toggle_follow). The A/B
     // audition and the render player ignore it — the scroll asks the
     // audition's phase and returns under the player.
+    //   * STICKY (architect 2026-11-24: the lamps "constant when opening a
+    //     project or opening the program"): the open seats it from the device
+    //     key `lit_lamps` through toggle_follow's lit edge, at rest
+    //     (GuiInputHandler::seat_lit_lamps), and the tick's one comparator stores
+    //     every edge, the program's own included (refresh_lit_lamps).
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_follow, the chokepoint bare
-    //     `f` and its icon-row button share — and RESTRICT's lit edge
-    //     (toggle_restrict), which puts it out. A USER ZOOM AND THE `h` VIEW'S
+    //     `f`, its icon-row button and the open's seat share — and RESTRICT's
+    //     lit edge (toggle_restrict), which puts it out. A USER ZOOM AND THE `h` VIEW'S
     //     ENTRY PUT IT OUT TOO (architect 2026-11-17: "Trim, add
     //     selection, follow and restrict should be turned off when a zoom
     //     action takes place"; he lights it again after zooming), through
@@ -4467,9 +4480,11 @@ struct AppState {
     // RESTRICT — THE `r` LAMP (architect 2026-10-29: "I can scrub on the lower
     // left hand and then the playhead would stop once it reaches the right
     // side of the window"). A PLAIN LAMP like FOLLOW above and in its family:
-    // per project, DARK AT EVERY PROJECT OPEN by the same construction
-    // (run_project builds this AppState fresh), outside undo, not carried by
-    // `'`, in no sidecar and no settings vocabulary. Lit, the user's own play
+    // STICKY, the device's — seated from the device key `lit_lamps` at every
+    // open through toggle_restrict's lit edge and stored at every edge
+    // (architect 2026-11-24; GuiInputHandler::seat_lit_lamps and
+    // refresh_lit_lamps) — outside undo, not carried by `'`, in no sidecar.
+    // Lit, the user's own play
     // stays inside the window AS PAINTED:
     //   * THE STOP: the pre-paint hook (main.cpp's pre_paint_advance) stops a
     //     RESTRICTABLE play (GuiPlaybackLifecycle::restrictable_play — Space's
@@ -4485,7 +4500,7 @@ struct AppState {
     // viewer are never restricted (the exemptions at restrictable_play). At
     // rest the lamp does nothing.
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_restrict, the chokepoint
-    //     bare `r` and its icon-row button share — and FOLLOW's lit edge
+    //     bare `r`, its icon-row button and the open's seat share — and FOLLOW's lit edge
     //     (toggle_follow), which puts it out: THE RADIO, stated at follow
     //     above. A user zoom and the `h` view's entry put it out through its
     //     dark edge, FOLLOW's rule (architect 2026-11-17;
@@ -4494,10 +4509,10 @@ struct AppState {
     bool    restrict               = false;
 
     // THE TRIM ARM — THE `w` LAMP (architect 2026-11-07, the TRIM key). A
-    // PLAIN LAMP in FOLLOW's family: per project,
-    // DARK AT EVERY PROJECT OPEN by the same construction (run_project builds
-    // this AppState fresh), outside undo, not carried by `'`, in no sidecar
-    // and no settings vocabulary, and it STAYS LIT ACROSS A TAB SWITCH (the
+    // PLAIN LAMP: per project,
+    // DARK AT EVERY PROJECT OPEN (run_project builds this AppState fresh; no
+    // sticky lamp, architect 2026-11-24), outside undo, not carried by `'`,
+    // in no sidecar and no settings vocabulary, and it STAYS LIT ACROSS A TAB SWITCH (the
     // sweep trims the active tab). Lit, it ARMS THE NEXT WAVEFORM DRAG: a
     // single contact on the pan zone that crosses the pan's slop with no ctrl
     // standing is THE TRIM SWEEP from its down point instead of the pan
@@ -4645,10 +4660,13 @@ struct AppState {
     ZoomStepPivot zoom_step_pivot;
 
     // WAVEFORM MAGNIFICATION — the lamp on the bare backtick (architect
-    // 2026-09-24), the only exceptions road to the derived gain. A session
-    // posture in this family: per-project, DARK AT EVERY PROJECT OPEN
-    // (run_project builds this AppState fresh, so the default IS the reset),
-    // in no settings vocabulary, never serialized, never in the undo domain,
+    // 2026-09-24), the only exceptions road to the derived gain. A STICKY
+    // LAMP, the device's (architect 2026-11-24): stored at every edge in the
+    // device key `lit_lamps` by the tick's comparator (main.cpp's
+    // refresh_lit_lamps) and SEATED AS SOON AS ITS CURVE IS READY — dark at
+    // the open (run_project builds this AppState fresh), lit by the deferred
+    // seat once the gain curve exists (magnification_seat_pending below) —
+    // in no sidecar, never in the undo domain,
     // not carried by `'`, and touched by no restore, view switch or lock.
     // LIT, the magnified picture — the continuous gain derived from the
     // source (GuiAudio::gain_curve: the leveler, the expander and the
@@ -4666,12 +4684,38 @@ struct AppState {
     // writer is GuiInputHandler::set_show_waveform_magnification.
     bool    show_waveform_magnification = false;
 
+    // MAGNIFY'S DEFERRED SEAT (architect 2026-11-24, the sticky lamps): the
+    // stored `lit_lamps` names `magnify`, and the lamp above is not lit yet
+    // because its gain curve does not exist yet. THE LAMP MAY NOT STAND LIT
+    // BEFORE THE CURVE (waveform_magnified's declaration,
+    // warp_frame_map_view.h: the plate job reads GuiAudio::gain_curve under
+    // the bit alone), and the curve is derived on its own thread after the
+    // load, so the open cannot light it: it sets this bit instead
+    // (GuiInputHandler::seat_lit_lamps — lit iff the stored word is, dark
+    // otherwise), and the first tick on which the curve is ready
+    // (waveform_magnification_toggle_actionable) lights the lamp through its
+    // one setter and drops this bit (GuiInputHandler::
+    // settle_pending_magnification, called at the tick's head beside the
+    // comparator). WHILE IT STANDS THE COMPARATOR CARRIES MAGNIFY'S STORED
+    // WORD rather than reading the dark bit (refresh_lit_lamps), so the open's
+    // dark is never stored over it; a curve that never becomes ready leaves
+    // the word as stored. WHILE IT STANDS THE MAGNIFY KEY IS GREYED AND ITS
+    // ACT REFUSES (architect 2026-11-24; waveform_magnification_key_actionable,
+    // warp_frame_map_view.h, the face's and the backtick's one predicate): the
+    // gain worker may publish the readiness between the tick's head, where
+    // the seat asks it, and a paint, and the key must not read live over the
+    // still-dark bit in that frame — its first enabled face is the seated,
+    // lit one. Per project, session state: the fresh AppState of every open
+    // starts it dark until the seat runs.
+    bool    magnification_seat_pending = false;
+
     // THE TOOLTIP LAMP — Enable Tooltips on bare backslash (architect
-    // 2026-09-29), the icon row's IconTooltips. A session posture in the
-    // magnification lamp's family: per-project, DARK AT EVERY PROJECT OPEN
-    // (the fresh AppState is the reset), in no settings vocabulary, never
-    // serialized, never in the undo domain, not carried by `'`, and touched by
-    // no restore, view switch or lock. DARK, NO TOOLTIP SHOWS ANYWHERE — the
+    // 2026-09-29), the icon row's IconTooltips. A STICKY LAMP, the device's
+    // (architect 2026-11-24): seated from the device key `lit_lamps` at every
+    // open through its one writer below (GuiInputHandler::seat_lit_lamps) and
+    // stored there at every edge by the tick's comparator
+    // (refresh_lit_lamps); in no sidecar, never in the undo domain, not
+    // carried by `'`, and touched by no restore, view switch or lock. DARK, NO TOOLTIP SHOWS ANYWHERE — the
     // roster, the modal row, the render player's row: the wait's one writer
     // (GuiInputHandler::note_tooltip_hover) reads this bit first and keeps the
     // model's state clear, so no wait starts and the clock (tick_tooltip) has
@@ -4815,16 +4859,6 @@ struct AppState {
     // editor's three noise arms (change_folder, set_level_db +
     // release_if_silent, set_crossfade_s).
     GuiNoise* noise = nullptr;
-
-    // THE LEVEL CASE'S RECALL (architect 2026-11-10; GuiLevelRecall's head):
-    // the app's ONE, owned by gui_main and reached by pointer like the
-    // device config and the noise above — the level it remembers is device
-    // state that outlives every project, so it cannot live in this
-    // per-project struct. Seated at each AppState's construction by
-    // run_project and never null while the GUI runs. Its one reader and
-    // writer: the level case's tap (GuiInputHandler::
-    // finish_level_press_release).
-    GuiLevelRecall* level_recall = nullptr;
 
     // THE OPEN PROJECT'S NAME — the name of the folder DIRECTLY UNDER the
     // projects path that holds this source, which is what the project model
@@ -4987,10 +5021,13 @@ struct AppState {
     // row's face as bare `k` does). A pan leaves it lit, and inside the `h`
     // view bare `k`
     // may light it again for the diff flags.
-    // That is bare `f`'s posture exactly
+    // That is bare `f`'s posture but for the open
     // (AppState::follow): the session lamps are one family, in no settings
     // vocabulary, never serialized, and per-project state for as long as the
-    // project stays open. `follow` and `restrict` are written by their two
+    // project stays open — FOLLOW and RESTRICT, sticky since 2026-11-24, the
+    // device's instead (seated from the device key `lit_lamps` at every open,
+    // stored at every edge; GuiInputHandler::seat_lit_lamps), and this lamp not.
+    // `follow` and `restrict` are written by their two
     // toggles alone, each lit edge putting the other out (the radio,
     // 2026-10-29); this bit has COMPANION WRITES besides: the act class
     // below (selection_consumed), a USE CASE ending, the radio partner's
@@ -5000,7 +5037,9 @@ struct AppState {
     // too, 2026-10-11, its off edge the drag it armed — value_drag_lamp,
     // below.)
     //
-    // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN. The bit
+    // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN (this one,
+    // TRIM and VALUE DRAG; not the sticky lamps, MAGNIFY, FOLLOW, RESTRICT
+    // and TIPS, 2026-11-24, device_config.h's `lit_lamps`). The bit
     // lives on this AppState, which run_project constructs fresh for each
     // project and which gui_main's loop constructs again at a REOPEN (the Open
     // Project button, Ctrl+O, the picker), so opening another piece starts every
@@ -6300,10 +6339,10 @@ struct AppState {
     // tick's early returns, as the legend's refresh is) — each lamp LIT FROM ITS LAST EVENT FOR AT LEAST THE HOLD
     // (kLampHoldMs, 85 ms, main.cpp; architect 2026-11-05 night: the
     // one-tick limiter lamp was missed on his glass), an event
-    // re-arming it, dark on the first tick at or past its stamp; the clip
-    // lamp STRUCK while the device cannot sound; each edge of a bit damages
-    // its own square (logo_lamp_rects, paint_handler.h), nothing is damaged
-    // while a bit holds. paint_title_bar reads the three bits.
+    // re-arming it, dark on the first tick at or past its stamp; each edge
+    // of a bit damages its own square (logo_lamp_rects, paint_handler.h),
+    // nothing is damaged while a bit holds. paint_title_bar reads the two
+    // bits.
     //   clip_lamp_lit          THE CLIP LAMP: the device clamped a sample
     //                          on this tick's span or within the hold
     //                          before it — any view, anything the engine
@@ -6347,28 +6386,12 @@ struct AppState {
     //                          architect 2026-11-20, a jump with no stop),
     //                          so a jump is never a span (architect
     //                          2026-11-06).
-    //   clip_lamp_struck       THE DEAD-STREAM STRIKE (architect 2026-11-05
-    //                          night; render.h's THE TWO LAMPS'
-    //                          STRIKE): GuiPlayback::device_unavailable() as
-    //                          the tick last read it — the dead latch or no
-    //                          stream standing, "nothing will sound" —
-    //                          false until a piece is open (no engine
-    //                          stands before the load, refresh_logo_lamps),
-    //                          independent of clip_lamp_lit as a bit, the
-    //                          paint winning over it (the struck square is
-    //                          key_dim_ink whole, lit or not; architect
-    //                          2026-11-05 night),
-    //                          and THE ONE GATE OF THE CLIP LAMP'S PRESS
-    //                          (GuiInputHandler::arm_clip_lamp_press and its
-    //                          lift): while it stands the square is a press
-    //                          target, the tap reopening the device.
     bool     clip_lamp_lit             = false;
     int64_t  clip_lamp_lit_until_ms    = 0;
     uint64_t clip_lamp_seen_blocks     = 0;
     bool     limiter_lamp_lit          = false;
     int64_t  limiter_lamp_lit_until_ms = 0;
     int64_t  limiter_lamp_prev_frame   = -1;
-    bool     clip_lamp_struck          = false;
     // THE BIND'S OWN COPY OF THE LIMITER'S ENGAGED FRAMES (2026-11-05, the
     // limiter lamp's read road): target_limiter_frames below is the RENDER
     // WORKER'S while a target render is in flight (do_render move-assigns
@@ -6440,7 +6463,7 @@ struct AppState {
     // translation: a finger or the pen on a chrome button is the pointer on
     // contact, pressing at the down point and releasing at the lift.
     //
-    // `kind` names the TARGET CLASS, and FOUR classes arm:
+    // `kind` names the TARGET CLASS, and THREE classes arm:
     //   Roster — a chord-table button; `index` is the roster index.
     //   Card   — a NOTIFICATION CARD (architect 2026-10-01; the rule is the
     //            hit section of notifications.h); `card_id` is the card's id
@@ -6477,10 +6500,14 @@ struct AppState {
     //            duration (architect 2026-11-10; `press_ms` unread by this
     //            kind) — a
     //            finite level remembered and the case set to -inf, or from
-    //            -inf the remembered level set, 0 dB with none
-    //            (GuiLevelRecall), applied and settled as a drag's level
-    //            is; a moved press's level
-    //            stands where the last motion put it. THE END, every road
+    //            -inf the remembered level set (the device key
+    //            noise_restore_level, 2026-11-24), applied and settled as a drag's level
+    //            is; over a dead device stream the tap on an audible level
+    //            wakes the stream instead and toggles nothing, the tap at
+    //            -inf restores and wakes (architect 2026-11-24;
+    //            finish_level_press_release); a moved press's level
+    //            stands where the last motion put it, its end waking a dead
+    //            stream where the level is audible (take_chrome_press). THE END, every road
     //            (settle_level_case: the lift, take_chrome_press's clears —
     //            the button-lost and pointer-leave ends, a drag that loses
     //            the pointer being a lift; the tap's own call after its
@@ -6491,22 +6518,6 @@ struct AppState {
     //            case: the band's modifier gate refuses a ctrl press there,
     //            no chord row admitting it), no burst, no inside bit (no
     //            press face: the fill is the slider's feedback).
-    //   Lamp   — A PRESS ON THE STRUCK CLIP LAMP (architect 2026-11-05
-    //            night: "the strike + the tap", "not a departure"; render.h's
-    //            THE TWO LAMPS' STRIKE): armed by arm_clip_lamp_press
-    //            (input_pointer.cpp), the band claim's third half, ONLY
-    //            WHILE AppState::clip_lamp_struck STANDS, on the square the
-    //            tick damages (logo_lamp_rects(...).clip); `index` stays -1.
-    //            THE LIFT (finish_clip_lamp_press_release): on the square
-    //            still (the keys' slide-off feint: a lift off it does
-    //            nothing) and the strike still standing, the device question
-    //            of the launch gates — GuiPlayback::
-    //            ensure_device_available_for_play, which closes the dead
-    //            stream, reopens and starts it, nothing played — and
-    //            kPlaybackDeviceUnavailableCard where it answers false. No
-    //            press face (a lamp is not a key), no motion arm, no ctrl
-    //            (the band's modifier gate refuses a barrel press there),
-    //            no burst, no long-press meaning.
     // The enum stays a Kind rather than collapsing into a bool because `None`
     // IS the unarmed state, which is what every reader tests.
     //
@@ -6634,7 +6645,7 @@ struct AppState {
     //   subject.
     // The firing body is tick_chrome_press_repeat (input_pointer.cpp).
     struct ChromePress {
-        enum class Kind { None, Roster, Card, Level, Lamp };
+        enum class Kind { None, Roster, Card, Level };
         Kind     kind          = Kind::None;
         int      index         = -1;
         bool     inside        = true;
@@ -7394,7 +7405,10 @@ struct AppState {
     // playhead head's drawing in the line's tone at the line's place
     // (architect 2026-11-21: "give the hover stem a triangle, same
     // color as the hover stem. for symmetry"), standing iff the line is a
-    // Tap's ("no triangle hover while barrel is held"). The look, its tone,
+    // Tap's that places the playhead ("no triangle hover while barrel is
+    // held"; architect 2026-11-24, "hover should lose the playhead triangle
+    // below the midline": none over the main page's waveform's lower half,
+    // whose tap auditions and places nothing). The look, its tone,
     // its order in the canvas list and in the ruler and its place rule at
     // render_hover_line (render.h), the one owner of the line and its
     // triangle; this record is their state alone. NOT ONE OF
@@ -7484,15 +7498,19 @@ struct AppState {
     //     place, GuiPaintHandler::ruler_head_box).
     //   `triangle_declared_x` THE PLACE THE RULER IS OWED: the triangle's
     //     derived place (GuiPaintHandler::hover_triangle_x — the line's place
-    //     where `place` is Tap, else none: THE DECLARED THING CARRIES WHETHER
+    //     where `place` is Tap and the pen is not over the main page's
+    //     waveform's lower half, else none: THE DECLARED THING CARRIES WHETHER
     //     THE TRIANGLE STANDS, so the barrel pressed or released over the
-    //     waveform under a still pen, Tap <-> Anchor at one x, is an edge
-    //     here though not the line's), written by BOTH writers as the line's
+    //     waveform under a still pen, Tap <-> Anchor at one x, and the pen
+    //     crossing between the halves at one x, are edges here though not
+    //     the line's), written by BOTH writers as the line's
     //     pair is — the setter, where the place it derives differs, damaging
     //     the box as last painted and the box at the new place
     //     (Viewport::invalidate_hover_triangle), and paint_ruler_row
     //     wherever it records (the place it derived). WHY NO GHOST: every
-    //     change of the derived place is either the setter's (a pen report, a
+    //     change of the derived place is either the setter's (a pen report,
+    //     a vertical one with no x change included — the setter runs the
+    //     triangle's compare at every walk, whatever the line's did — a
     //     gate edge — the walk runs at every pointer event, every tick and
     //     ahead of every frame), which damages both boxes, or the picture's
     //     (a camera move, a plate's publication, FOLLOW's scroll), whose
@@ -7914,7 +7932,7 @@ struct AppState {
     // spelling (member_label below: a short SHA on the Remote tab, a member
     // NUMBER on the Local one), and the act behind its OK is a different
     // function per walk (the fork at confirm_load_in_place) — and
-    // SAVE-AND-COMMIT, whose reach
+    // FORCE SAVE AND COMMIT, whose reach
     // and grey stay the commit walk's because the act publishes into the
     // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
     // reads the painted flags' frames and then-side lines and knows nothing
@@ -7959,9 +7977,10 @@ struct AppState {
     // the top icon row's Load in place button there.
     //
     // THE OTHER ADMITTED MUTATOR IS CTRL+SHIFT+S, AND IT WRITES OUTSIDE THIS
-    // SESSION (architect 2026-08-04; THE PUBLISH CHORD 2026-10-10, bound in
-    // this view alone, architect 2026-11-17): THE SAVE-AND-COMMIT ACT
-    // (GuiInputHandler::run_publish_chord), the product's one commit road.
+    // SESSION (architect 2026-08-04; THE PUBLISH CHORD 2026-10-10): FORCE
+    // SAVE AND COMMIT (architect 2026-11-24), the view's own of the publish
+    // chord's TWO ACTS (GuiInputHandler::run_publish_chord's head; the main
+    // page's is SAVE's long press, Save and Commit).
     // Ctrl+S is the plain disk save in here. The Save button stays the act's surface in the
     // view, spelling the publish chord at its lift, because the act runs the
     // ordinary save as its first step; Render kept its own chord and greys in
@@ -7988,7 +8007,7 @@ struct AppState {
     // refusal and the coincident-path reasoning. NEITHER RENDER CHORD is
     // admitted, so both stay consumed nothings here and the Render button wears
     // its ordinary face over the mode's disabled one; the SAVE button wears the
-    // commit icon and the tooltip "Save and Commit" while the mode stands, and
+    // commit icon and the tooltip "Force Save and Commit" while the mode stands, and
     // reaches the act through its own chord. THE ADMISSION IS UNCONDITIONAL
     // (architect 2026-09-01: a gate's membership is the chord's alone): the
     // face greys on the GitHub status and on a checkpoint already publishing
@@ -8500,9 +8519,12 @@ struct AppState {
     // active_markers_view, active_tab_view, trim,
     // read_only, projects_repo) — do NOT participate: they are persisted
     // only by a save of an authored change (Save greys without one,
-    // plain_save_actionable) or by the `h` view's Save and Commit, whose
-    // save runs whatever the flag says and whose commit takes any change git
-    // sees (architect 2026-11-17), and not tracked as dirty, so
+    // plain_save_actionable, and SAVE AND COMMIT, the main page's long
+    // press, exists only where SAVE is lit) or by the `h` view's FORCE SAVE
+    // AND COMMIT, the one act allowed to write a view-only change, whose save
+    // runs whatever the flag says and whose commit takes any change git sees
+    // (architect 2026-11-17, its name 2026-11-24; the two acts at
+    // GuiInputHandler::run_publish_chord's head), and not tracked as dirty, so
     // quitting without saving simply drops them. The score's five keys are outside this
     // question too: no sidecar carries them, and every change writes the
     // score viewer's own file through (score_viewer_file.h). The DEVICE key
@@ -8732,9 +8754,11 @@ struct AppState {
     // different objects.
     //
     // THREE REFUSALS READ IT, single-in-flight and the write race being the two
-    // rules: the `h` view's Save-and-Commit button, which greys through
-    // history_checkpoint_actionable (the commit act itself, run_publish_chord,
-    // never meets the bit: no view stands while it is up); bare `h`
+    // rules: THE COMMIT ACTS (run_publish_chord, which cards the publishing
+    // sentence in either view — reached from the main page's SAVE hold, the
+    // `h` view standing never while the bit is up — and the `h` view's Force
+    // Save and Commit button, which greys through
+    // history_checkpoint_actionable); bare `h`
     // itself, which will not open a view whose walk would be measured against a
     // repository the worker is mid-mutation on; and EVERY SAVE (2026-08-08),
     // globally, at the one save owner (GuiSaveOps::save). That third one
@@ -8754,8 +8778,9 @@ struct AppState {
     // this AppState, written on the MAIN THREAD alone: Checking when a check
     // is dispatched (GuiInputHandler::dispatch_github_check — every project
     // open, an `h` entry while Unchecked or Offline (2026-10-28: a standing
-    // answer is reused, open_history_mode_fresh's head), and the `h` view's
-    // Save key while Offline), the
+    // answer is reused, open_history_mode_fresh's head), and the publish
+    // chord in either view while Offline — SAVE's long press on the main
+    // page, the `h` view's Save key), the
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
     // the status bar's `h` walk line (its `GitHub: <word>` segment), by the Save
@@ -8763,7 +8788,7 @@ struct AppState {
     // the Check glyph where the chord asks again —
     // history_checkpoint_actionable, history_pull_actionable,
     // history_github_recheck_actionable, redesign_button_glyph) and by
-    // the publish chord's act (run_publish_chord, the view's Save key), which
+    // the publish chord's act in either view (run_publish_chord), which
     // forks on it.
     GuiGitHubStatus github_status = GuiGitHubStatus::Unchecked;
 
@@ -10011,8 +10036,9 @@ inline const char* overlay_leave_word(const AppState& a) {
 // head), finish_chrome_press_release's overlay term (the lift,
 // input_pointer.cpp) and GuiInputHandler::tooltip_dwell_suppressed (the
 // tooltip's gate, input_pointer.cpp — the keys that answer there keep
-// their hints, architect 2026-11-11). The struck clip lamp answers under an
-// overlay too, a lamp and no roster key (ChromePress's Lamp kind). (Under a
+// their hints, architect 2026-11-11). NOTHING ELSE answers under an overlay:
+// the title bar is inert whole and the NOISE case is veiled like every other
+// key (architect 2026-11-24). (Under a
 // line editor, no overlay standing, no key answers: the editor's veil
 // holds every road here, and the face greys the whole roster,
 // redesign_button_enabled's first arm.)
@@ -10030,9 +10056,7 @@ inline bool overlay_admits_button(const AppState& a, RedesignButton b) {
 // head) and lights no key (redesign_button_selected's head); the bottom icon
 // row's clock, blank there (clock_time_text and
 // paint_bottom_row_buttons_and_clock, paint_handler.cpp); bare `0`'s
-// fork, the no-op (overview_command_target); and the clip lamp's strike,
-// never read there (refresh_logo_lamps, main.cpp, 2026-11-05 night: no
-// engine stands before the load). It takes the frame
+// fork, the no-op (overview_command_target). It takes the frame
 // count rather than the GuiAudio because this header only forward-declares
 // the class.
 inline bool no_audio_to_dispatch_on(const AppState& a, int64_t total_frames) {
@@ -13393,10 +13417,10 @@ inline bool iteration_lock_greys(const AppState& a, RedesignButton b) {
         // at iteration_lock_key_blocked's header. Their pointer roads are the
         // walk pair's holds (architect 2026-11-24), and Next and Previous
         // Marker are no members: their plain Tab and Shift+Tab walk the
-        // markers, live under the lock, so under the twin rule each stays lit
-        // where its step lands something, its arm in redesign_button_enabled
-        // greying it under the lamp where the step lands nothing, and a
-        // march's lift reaches the key's own refusal and its card.)
+        // markers, live under the lock, so each stays lit where its step
+        // lands something, its arm in redesign_button_enabled greying it
+        // where the step lands nothing, and a march's lift under the lamp
+        // reaches the lamp's own refusal and its card.)
         // EVERY MEMBER ABOVE GREYS OUTRIGHT, whatever cell is addressed: the
         // gate refuses their chords ahead of its bound-axis admission
         // (iteration_lock_key_blocked), so a Lower or Upper cell buys them
@@ -13691,28 +13715,69 @@ inline int64_t active_marker_time_frame(const AppState& a, int idx) {
 // landing whole, never a cell of the seat, and it comes to rest on the
 // marker's PAYLOAD — the axis every focus write seats
 // (Selection::seat_focus). READERS: Selection::cycle_selection, whose whole
-// landing decision this IS; the walk buttons' faces under the grid
-// iterations lamp (NEXT forward, PREV backward — redesign_button_enabled;
-// outside the lamp their holds, the two marches, keep them live, architect
-// 2026-11-24); and
-// the ACT's own leading gate (GuiInputHandler::cycle_marker_focus), so under
-// the lamp the face, the refusal and the landing are one answer and an
+// landing decision this IS; the walk buttons' faces on the main page, in
+// every state (NEXT forward, PREV backward — redesign_button_enabled,
+// architect 2026-11-24: a key greys where the tab on screen has no stop
+// that way, its hold dead with its tap); and
+// the ACT's own leading gate (GuiInputHandler::cycle_marker_focus), so the
+// face, the refusal and the landing are one answer and an
 // all-disabled store or "nothing ahead in this direction" greys exactly where
-// the step refuses.
+// the step refuses. THE LIVE TAB'S SPELLING of marker_walk_landing_from
+// below: the seat is the live focus and the live playhead.
 // IT IS AN O(n) SCAN PER TICK PER BUTTON in the face's hands, accepted under
 // the truthful-buttons rule, the stores being tens of markers.
 int marker_walk_landing(const AppState& a, const GuiAudio& audio,
                         bool forward);
 
-// THE WALK'S SEAT, factored out of the landing owner so the two bodies that
-// need it spell it once: the index of the FOCUSED marker when it sits on the
-// playhead's frame in the ACTIVE domain, or -1 when it does not (a playhead
-// moved elsewhere breaks the equality, which is what disables the in-group
-// step naturally). It asks no disabled bit — the focus is the focus whatever
-// its state, and the disabled skip belongs to the scan past this seat.
-// ONE READER: marker_walk_landing, whose in-group step it gates. Defined in
+// THE LANDING'S ONE BODY (architect 2026-11-24): the landing a walk step in
+// `forward`'s direction takes from the seat (`focus`, `playhead`) — the
+// playhead a frame of the ACTIVE domain, the focus an index of the active
+// store or -1. marker_walk_landing above spells it for the live tab, and
+// marker_walk_landing_on_entry below for a tab about to be entered; ONE
+// BODY, so the two cannot come to answer differently. Defined in
 // app_state.cpp.
-int marker_walk_current_stop(const AppState& a, const GuiAudio& audio);
+int marker_walk_landing_from(const AppState& a, const GuiAudio& audio,
+                             bool forward, int focus, int64_t playhead);
+
+// THE WALK'S SEAT, factored out of the landing body so the bodies that need
+// it spell it once: `focus` when that marker sits on `playhead` in the ACTIVE
+// domain, or -1 when it does not (a playhead moved elsewhere breaks the
+// equality, which is what disables the in-group step naturally). It asks no
+// disabled bit — the focus is the focus whatever its state, and the
+// disabled skip belongs to the scan past this seat. ONE READER:
+// marker_walk_landing_from, whose in-group step it gates. Defined in
+// app_state.cpp.
+int marker_walk_current_stop(const AppState& a, const GuiAudio& audio,
+                             int focus, int64_t playhead);
+
+// THE COINCIDENCE SCAN, ONE BODY: the first marker of the active store whose
+// landed image — clamp_playhead_to_live_domain(source_frame_to_active_domain
+// (its frame)) — IS `playhead`, or -1. The rule (first in store, no
+// disabled term, an exact compare) is at auto_select_marker_at_playhead
+// (input_pointer.cpp), its one writer; this is its scan, hoisted so the
+// marches' gate (marker_walk_landing_on_entry below) reads the very focus
+// the entry's auto-select will seat. Defined in app_state.cpp.
+int coincident_marker_at(const AppState& a, const GuiAudio& audio,
+                         int64_t playhead);
+
+// WHERE A WALK STEP WOULD LAND RIGHT AFTER A TAB IS ENTERED (architect
+// 2026-11-24: a march runs only where both tabs can step) — the landing a
+// step in `forward`'s direction takes on the tab whose parked playhead is
+// `parked_playhead`, asked BEFORE ANYTHING MOVES, or -1. WHY IT IS THE STEP'S
+// OWN ANSWER: the entry (switch_active_tab_view_to) clears the selection,
+// seats the playhead at clamp_playhead_to_live_domain of the parked value and
+// runs the coincidence auto-select, whose focus is coincident_marker_at
+// that playhead; the step then runs marker_walk_landing over exactly that
+// focus and that playhead. This body computes the same two from the same
+// shared inputs — the stores and the active domain are both tabs' (the
+// tabs share both marker stores; the audio view and the target map are no
+// band's), the band's playhead the one per-tab term — and hands them to the
+// landing's one body. READERS: the live march's gate, for BOTH tabs
+// (march_refusing_tab below): the other tab's parked playhead, and the home
+// tab's live one, which the switch away parks verbatim and the switch home
+// restores before the home step runs. Defined in app_state.cpp.
+int marker_walk_landing_on_entry(const AppState& a, const GuiAudio& audio,
+                                 int64_t parked_playhead, bool forward);
 
 // WHERE A HISTORY ITEM LANDS THE PLAYHEAD, IN THE DISPLAYED DOMAIN —
 // the Tab walk's, the focus click's, the Center press's and the walk's seed
@@ -13728,11 +13793,11 @@ inline int64_t history_diff_flag_landing_domain_frame(
 
 // THE `h` VIEW'S DIFF-FLAG CYCLE, ITS STOP — the index in history_mode.flags a
 // bare Tab (forward) or Shift+Tab (back) would focus, or -1 where the press is
-// a silent consumed no-op. ONE OWNER, ONE READER: the act
+// a silent consumed no-op. ONE OWNER, TWO READERS: the act
 // (GuiInputHandler::cycle_history_diff_flag_focus, input_key_dispatch.cpp),
-// which lands on the answer. The NEXT / PREV keys' faces do not ask it: in
-// the view their holds, the two marches, always act (architect 2026-11-24,
-// the twin rule at the walk pair's arm in redesign_button_enabled).
+// which lands on the answer, and the NEXT / PREV keys' faces in the view
+// (architect 2026-11-24: a key greys where no stop stands that way —
+// redesign_button_enabled's walk arm).
 //
 // THE STOPS ARE THE ITEMS, ONE CUE EACH ("it's accurate that every marker
 // gets a tab — next marker, previous marker tab", 2026-10-26; one item, one
@@ -13794,12 +13859,49 @@ inline int history_diff_cycle_target(const AppState& a, const GuiAudio& audio,
     return -1;
 }
 
+// THE MARCHES' GATE (architect 2026-11-24: "The walk is useless unless both
+// tabs have a marker in front of, ahead or behind the current position"): the
+// letter of the tab that has NO STOP in the march's direction, or '\0' where
+// both have one and the march runs. Where both have none the tab on screen is
+// the one named. A PURE PREDICATE, asked by the march's arm BEFORE ANYTHING
+// MOVES (handle_tab_switch_keys): a refused march does nothing at all and
+// says so on one card naming this tab. With it in front, no step inside a
+// running march refuses. The marches run on the main page alone: the `h`
+// view consumes both chords as a silent no-op (handle_history_mode_key), so
+// it never asks this gate.
+//
+// EACH TAB'S ANSWER IS ITS OWN STEP'S, BY CONSTRUCTION: both steps run right
+// after a tab switch (the other tab's after the switch away, the home tab's
+// after the switch home), so both are marker_walk_landing_on_entry's — the
+// other tab over its parked playhead, the home tab over the live one, which
+// the switch away parks verbatim (refresh_active_tab_view_from_app) and
+// nothing in the march writes before the switch home restores it. The
+// entered seat (the auto-select's focus) is the step's seat, which is why
+// the home tab is not asked through the face's marker_walk_landing: the two
+// differ only where markers share the playhead's frame and the live focus is
+// not the first of them in the store.
+// NO GRID TERM: under the grid iterations lamp both marches are refused
+// ahead of this, on the lamp's own card (iteration_lock_key_blocked).
+inline char march_refusing_tab(const AppState& a, const GuiAudio& audio,
+                               bool forward) {
+    const char home  = a.active_tab_view;
+    const char other = (home == 'A') ? 'B' : 'A';
+    const ViewState& parked = (home == 'A') ? a.tab_b : a.tab_a;
+    if (marker_walk_landing_on_entry(a, audio, a.playhead_cursor_sample,
+                                     forward) < 0)
+        return home;
+    if (marker_walk_landing_on_entry(a, audio, parked.playhead_cursor_sample,
+                                     forward) < 0)
+        return other;
+    return '\0';
+}
+
 // How a marker landing treats the camera, stated by the caller that asks for
 // the landing (architect 2026-09-04). TWO KINDS:
 //   * `Center` recenters the viewport on the landing AT THE STANDING ZOOM
 //     (Viewport::center_viewport_on_playhead) — bare `c`'s own jump, which
 //     then writes the working zoom and centres again behind it, and each
-//     step of each paired march, live and in the `h` view, which runs `c`'s
+//     step of each paired march (the main page's alone), which runs `c`'s
 //     own act behind it (2026-09-26);
 //   * `Land` hands the landing to THE LANDING OWNER'S WALK
 //     (Viewport::land_subject, LandingKind::Walk, architect 2026-09-24): at
@@ -14342,7 +14444,8 @@ inline bool history_revert_actionable(const AppState& a) {
 // remote walk and cards the reason) and its FACE (redesign_button_enabled's
 // SessionHistory arm); SAVE'S FACE in the view through the three
 // predicates below, which grey the checkpoint act without a clone (so the
-// act, run_publish_chord, never meets one); the status bar's walk line's GitHub SEGMENT (history_walk_line), which stands
+// act, run_publish_chord, never meets one in the view; a main-page press
+// asks its own transient session's verdict there and cards it); the status bar's walk line's GitHub SEGMENT (history_walk_line), which stands
 // only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
 // (on_history_prefetch_ready), which is the odd one out — it does not refuse
 // an act but CARVES A FALLBACK VISIT OUT of the closer that ends a visit whose
@@ -14372,7 +14475,7 @@ inline bool history_pull_actionable(const AppState& a) {
     return history_save_is_pull(a) && !a.history_checkpoint_in_flight;
 }
 
-// WOULD THE SAVE-AND-COMMIT ACT ACT? — the checkpoint act's own session terms
+// WOULD FORCE SAVE AND COMMIT ACT? — the `h` view's checkpoint act's own session terms
 // in one word (architect 2026-09-01; the GitHub term 2026-09-27): the mode
 // standing on a visit with a clone to commit into (history_remote_walk_-
 // available — a visit on the local fallback has none), no checkpoint already
@@ -14390,8 +14493,9 @@ inline bool history_pull_actionable(const AppState& a) {
 // Behind is the PULL's face instead (history_pull_actionable above) and
 // Offline the CHECK's (history_github_recheck_actionable below). So an
 // offline device takes no checkpoint (architect 2026-09-27). (Outside the
-// view this face is not asked: the Save button is the plain save there, and
-// the commit is the view's alone.)
+// view this face is not asked: the Save button is the plain save there, its
+// long press Save and Commit, which exists only where SAVE is lit —
+// plain_save_actionable; the two acts at run_publish_chord's head.)
 //
 // IT EXISTS BECAUSE THE ALLOWLIST CARRIES NO STATE TERM (architect
 // 2026-09-01): a membership test carrying state would make the gate's
@@ -14444,10 +14548,20 @@ inline bool history_github_recheck_actionable(const AppState& a) {
 // views, the TRIM window and the READ-ONLY lock — never light it, so a
 // trim-only or lock-only change is not saved on its own; it reaches disk
 // only with the next save of an authored change, and a clean quit drops it.
-// TWO READERS: redesign_button_enabled's Save arm (the face) and
-// GuiSaveOps::save_from_key (the keys, which answer a clean session with
-// silence). The close prompt asks the flag itself (GuiPrompt), and the `h`
-// view's Save is the checkpoint act, with predicates of its own above.
+// IT GATES THE TWO ACTS SAVE CARRIES ON THE MAIN PAGE (architect 2026-11-24):
+// the tap, the plain save, and the long press, SAVE AND COMMIT, a convenience
+// over the plain save that exists only while this is true ("the long press is
+// a convenience if the dirty dot rule means the save is gray, then the
+// convenience is not available"). The `h` view's Save is the other commit
+// act, FORCE SAVE AND COMMIT, the one act allowed to write a view-only change
+// — it saves whatever this says and commits any change git sees — with
+// predicates of its own above (the two acts at
+// GuiInputHandler::run_publish_chord's head).
+// THREE READERS: redesign_button_enabled's Save arm (the face, the tap's and
+// the hold's alike), GuiSaveOps::save_from_key (the keys, which answer a
+// clean session with silence) and run_publish_chord outside the view (the
+// hold, silent on a clean session the same way, ahead of its git). The close
+// prompt asks the flag itself (GuiPrompt).
 inline bool plain_save_actionable(const AppState& a) {
     return a.dirty;
 }
@@ -15730,28 +15844,33 @@ inline bool redesign_button_enabled(const AppState& a,
         // Ctrl+Alt+O (route_picker_key).
         case RedesignButton::OpenProject:
             return true;
-        // NEXT AND PREVIOUS MARKER, THE TWIN RULE (architect 2026-11-24: each
-        // key's hold is a march, Ctrl+Tab forward and Ctrl+Shift+Tab back).
-        // OUTSIDE THE GRID ITERATIONS LAMP EACH IS LIVE WHEREVER THE ROSTER
-        // IS: the march's act is `c`'s on both tabs (handle_tab_switch_keys,
-        // and the `h` view's mode-local march), and `c` always frames —
-        // Center never greys for that reason — so the hold always acts and
-        // the key stays lit where its plain step would land nothing, the
-        // plain lift's silent wall the step's own. UNDER THE LAMP, which
-        // refuses both marches on its card (iteration_lock_key_blocked's
-        // delta (a)), the face is THE PLAIN STEP'S: bare Tab forward,
-        // Shift+Tab backward, each asked of the act's own gate in its own
-        // direction — marker_walk_landing (cycle_marker_focus's one gate: an
-        // empty or all-disabled store, nothing ahead that way), markers only
-        // (2026-11-02). The `h` view is no term: it never stands under the
-        // lamp (its entry refuses there, iteration_lock_greys, and its
-        // allowlist names no `i`), so in the view the keys are live by the
-        // first line. Both plain chords and both marches are navigation,
-        // admitted by the read-only lock, so no lock term.
+        // NEXT AND PREVIOUS MARKER GREY AT THE WALL (architect 2026-11-24:
+        // "if I'm already at the last marker on both, then the walk is not
+        // needed. I can just do the long press on play. Same for the first
+        // marker"). THE FACE IS THE PLAIN STEP'S, IN EVERY STATE, the grid
+        // iterations lamp lit or not: bare Tab forward, Shift+Tab backward,
+        // each asked of the act's own gate in its own direction for THE TAB
+        // ON SCREEN — on the main page marker_walk_landing
+        // (cycle_marker_focus's one gate: an empty or all-disabled store,
+        // nothing ahead that way), markers only (2026-11-02); in the `h` view
+        // the diff-flag cycle's stop (history_diff_cycle_target, the act
+        // cycle_history_diff_flag_focus's one gate). A GREYED KEY PRESSES
+        // NOTHING, SO ITS HOLD IS DEAD WITH ITS TAP: the march (Ctrl+Tab
+        // forward, Ctrl+Shift+Tab back) needs a stop on the tab on screen
+        // too. A LIT KEY'S HOLD MAY STILL REFUSE: on the main page where the
+        // other tab has no stop that way, the march's own gate
+        // (march_refusing_tab) carding it, the other tab being out of sight;
+        // under the lamp the lamp's card refuses both marches first
+        // (iteration_lock_key_blocked's delta (a)); in the `h` view, which
+        // runs no march (architect 2026-11-24), the hold is a silent consumed
+        // no-op (handle_history_mode_key). Both plain chords and both
+        // marches are navigation, admitted by the read-only lock, so no lock
+        // term.
         case RedesignButton::TransportWalk:
         case RedesignButton::TransportWalkPrevious: {
-            if (!a.iteration_mode_enabled) return true;
             const bool forward = b == RedesignButton::TransportWalk;
+            if (a.history_mode.active)
+                return history_diff_cycle_target(a, audio, forward) >= 0;
             return marker_walk_landing(a, audio, forward) >= 0;
         }
         // THE TAB PAIR (architect 2026-11-24): bare 5 / 6, the tab switch,
@@ -15808,12 +15927,16 @@ inline bool redesign_button_enabled(const AppState& a,
         // READINESS (architect 2026-09-24): the gain curve is derived on its
         // own thread after the load, the backtick refuses on a card until it
         // stands, and this face greys on the same predicate
-        // (waveform_magnification_toggle_actionable, warp_frame_map_view.h —
-        // one owner for the key and the face). No site repaints it when the
-        // derivation finishes: the per-tick roster comparator (main.cpp)
-        // sees the verdict flip and invalidates the strip.
+        // (waveform_magnification_key_actionable, warp_frame_map_view.h —
+        // one owner for the key and the face). AND WHILE THE STICKY LAMP'S
+        // SEAT IS OWED (AppState::magnification_seat_pending, architect
+        // 2026-11-24), the predicate's second term, so the key's first
+        // enabled face is the seated, lit one. No site repaints it when the
+        // derivation finishes or the seat lands: the per-tick roster
+        // comparator (main.cpp) sees the verdict flip and invalidates the
+        // strip.
         case RedesignButton::IconWaveformMagnification:
-            return waveform_magnification_toggle_actionable(audio);
+            return waveform_magnification_key_actionable(a, audio);
         // FOLLOW MIRRORS NOTHING (architect 2026-09-23): bare `f` flips the
         // lamp on any loaded piece, at rest and during a play alike, and both
         // locks admit it (navigation, not authored content). Its one refusal
@@ -16320,10 +16443,9 @@ inline bool redesign_button_enabled(const AppState& a,
         // PREVIOUS / NEXT MARKER (the step-and-walk group) and CENTER (the
         // nudge-and-play group; architect 2026-10-18) stay
         // live, being the mode's own diff-flag cycle both ways and its `c`
-        // (the walk pair live at the cycle's walls too, its holds the two
-        // marches that compose that cycle with a round trip through the
-        // other tab — the mode's own vocabulary, architect 2026-11-24 — its
-        // arm above); HOME AND END,
+        // (the walk pair greyed at the cycle's walls, its arm above; its
+        // holds run no march in the view, architect 2026-11-24, a silent
+        // consumed no-op); HOME AND END,
         // the mode's own absolute jumps, stay allowed, and their two SKIP
         // buttons with them (greying only where the jump would change nothing
         // — their arm above); the architect confirmed the split explicitly —
@@ -16333,8 +16455,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // stated at their arms — and THE SELECTION'S STATE on Delete, Disable
         // and Toggle inherit (that same arm; Open Text Editor's focus and
         // addressed cell at its own arm, 2026-10-09), on UP / DOWN, LEFT /
-        // RIGHT, THE WALK (under the grid iterations lamp alone, its holds'
-        // marches keeping it live outside it, 2026-11-24) and JUMP TO
+        // RIGHT, THE WALK (in every state, the tab on screen's own walls,
+        // architect 2026-11-24) and JUMP TO
         // DEFINING MARKER (this block), and THE
         // TWO ARROW PAIRS' OWN WALLS beside it — the tempo bracket's two ends
         // and the group step's whole refusal under UP / DOWN, the nudged
@@ -16762,8 +16884,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // call at either.
         //
         // AND IN THE VIEW SAVE'S THIRD TERM IS THE GITHUB STATUS (architect
-        // 2026-09-27): inside the `h` view this button IS the Save-and-Commit
-        // act (architect 2026-10-10: "the icons in history remain the same";
+        // 2026-09-27): inside the `h` view this button IS FORCE SAVE AND
+        // COMMIT (architect 2026-10-10: "the icons in history remain the same";
         // its lift spells Ctrl+Shift+S there, finish_chrome_press_release), so
         // the face is live where the press would COMMIT — up to date or
         // ahead, whatever the session's change, the commit being any change
@@ -16777,7 +16899,18 @@ inline bool redesign_button_enabled(const AppState& a,
         // AND OUTSIDE THE VIEW SAVE GREYS WITH NOTHING TO SAVE (architect
         // 2026-10-05, SAVE IS THE DIRTY MARK): plain_save_actionable, the
         // one predicate the keys read too (the ruling and its trade-off are
-        // there). It admits no long press (redesign_button_shift_admits).
+        // there).
+        //
+        // THE LONG PRESS ADDS NO TERM — A RECORDED DEPARTURE FROM THE TWIN
+        // RULE (architect 2026-11-24): outside the view the hold is SAVE AND
+        // COMMIT (redesign_button_shift_admits; the two acts at
+        // run_publish_chord's head), a convenience over the plain save that
+        // exists only where SAVE is lit — "the long press is a convenience if
+        // the dirty dot rule means the save is gray, then the convenience is
+        // not available" — so a clean piece's grey refuses the hold with the
+        // tap, and the act asks this same predicate first (run_publish_chord),
+        // one decision for the face and the act. In the view the hold is the
+        // plain lift's own act and needs no term either.
         case RedesignButton::Save:
             return !a.warpmarkers_path.empty() &&
                    !a.history_checkpoint_in_flight &&
@@ -16939,8 +17072,8 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // THE TAB PAIR READS THE ACTIVE TAB (architect 2026-11-24): EXACTLY
         // ONE MEMBER IS EVER LIT, the tab every road that changes it writes
         // (AppState::active_tab_view) — the pair's own keys, the undo's tab
-        // restore, the A/B audition's switches, Ctrl+J's jump, the marches'
-        // round trips and the project open.
+        // restore, the A/B audition's switches, Ctrl+J's jump, the main
+        // page's marches' round trips and the project open.
         case RedesignButton::ViewTabA: return a.active_tab_view == 'A';
         case RedesignButton::ViewTabB: return a.active_tab_view == 'B';
         // FOLLOW'S LAMP (architect 2026-09-23): the same toggle pattern,
@@ -17299,8 +17432,9 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 //     inherit toggle's own letter and its own link glyph;
 //   * NEXT MARKER AND PREVIOUS MARKER (architect 2026-11-24: "walk both
 //     tabs" is Next Marker's hold, and a backward march Previous Marker's):
-//     CTRL+TAB and CTRL+SHIFT+TAB, THE TWO MARCHES, forward and back. THE
-//     SECOND TWIN THAT TRANSLATES: the hold ADDS THE CTRL to the row's own
+//     CTRL+TAB and CTRL+SHIFT+TAB, THE TWO MARCHES, forward and back, on
+//     the main page alone (the `h` view runs none). THE SECOND TWIN THAT
+//     TRANSLATES: the hold ADDS THE CTRL to the row's own
 //     chord and the shift stays the row's direction bit, because a plain OR
 //     of the hold's shift would spell Next's hold as Shift+Tab — Previous
 //     Marker's own press — and Previous's row already carries the shift. The
@@ -17313,6 +17447,14 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 //     Ctrl+Shift+O, which binds nothing — Revert's chord keeps its unshifted
 //     spelling (is_revert_project_key). The exception is stated at the
 //     lift's chord build (finish_chrome_press_release, input_pointer.cpp);
+//   * SAVE (architect 2026-11-24: "save should retain both save and save plus
+//     commit ... the long press should stay on save"): Ctrl+Shift+S, the
+//     publish chord — on the main page SAVE AND COMMIT, the row's Ctrl+S
+//     under both modifiers, the shift carried rather than tabled, no
+//     translation; in the `h` view the plain lift already spells that chord,
+//     FORCE SAVE AND COMMIT (save_button_publishes, input_pointer.cpp), so
+//     there the hold runs the same act and the tooltip carries one line (the
+//     two acts at GuiInputHandler::run_publish_chord's head);
 //   * JUMP TO DEFINING MARKER (2026-10-14): Ctrl+Shift+J, THE COPY of the
 //     focused marker's resolved value (architect: "we give that cmd to
 //     Ctrl+Shift+J so we piggyback the Jump to Defining Marker
@@ -17348,7 +17490,11 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // a label definition to …" for the two verbs), the tooltip's modifier line
 // dropping there; Toggle Inherit's FORKS rather than ORing — under a lit lamp
 // Ctrl+N is refused at the lock gate and the tie is the live half, outside it
-// the tie refuses and the plain act is.
+// the tie refuses and the plain act is. SAVE'S IS A RECORDED DEPARTURE
+// (architect 2026-11-24): its face stays the dirty mark and the hold adds no
+// term — Save and Commit is a convenience over the plain save that exists only
+// where SAVE is lit, so a clean piece's grey refuses the hold with the tap
+// (redesign_button_enabled's Save arm records it).
 //
 // A LAMP CARRIES NO SECOND OR THIRD ACTION; A DOOR MAY (architect
 // 2026-11-08). A lamp — a toggle, its lit face its state — admits
@@ -17359,10 +17505,10 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // PRESETS' Reset Trim (the TRIM lamp's hold was NOT taken for it). An ACT
 // key is no lamp either — EDIT's editor session is a modal, not a lit
 // state — so its twin is lawful too, and so are NEXT and PREVIOUS MARKER's,
-// the marches (2026-11-24). (No compile-time walk holds it: the
-// roster has no constexpr lamp class to walk — a lamp is lit by the stateful
-// redesign_button_selected — so the rule is this paragraph's and the
-// membership below admits no lamp.)
+// the marches, and SAVE's, Save and Commit (2026-11-24). (No compile-time
+// walk holds it: the roster has no constexpr lamp class to walk — a lamp is
+// lit by the stateful redesign_button_selected — so the rule is this
+// paragraph's and the membership below admits no lamp.)
 //
 // THE PEN'S BARREL IS NOT A CHROME MODIFIER (architect 2026-11-08: "barrel
 // taps are not supposed to be supported because they're
@@ -17386,8 +17532,11 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // — and is therefore stateless. Render's twin does NOTHING in iteration mode
 // (Ctrl+Alt+Shift+R is a consumed no-op there, refused inside the render route),
 // but the shift press still routes to it and is still swallowed by the one
-// refusal rather than by a second gate here. What follows the mode is the
-// advertised FACE: the tooltip's shift line, at the override below.
+// refusal rather than by a second gate here. So too the walk pair's holds in
+// the `h` view (architect 2026-11-24): the marches run on the main page
+// alone, and the view's own dispatch consumes both chords as nothing
+// (handle_history_mode_key). What follows the state is the advertised FACE:
+// the tooltip's shift line, at the override below.
 //
 // It lives here rather than as a column in the press claim's chord table
 // because it has THREE readers that must not drift: that table's shift rule,
@@ -17409,9 +17558,6 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 //     carry no ladder on any column (placement is graphical, the tempo
 //     numeric);
 //   * ZOOM IN AND ZOOM OUT (architect 2026-11-08): one level a press;
-//   * SAVE (architect 2026-11-17): the commit is the `h` view's alone, where
-//     the plain lift already spells the publish chord (save_button_publishes,
-//     input_pointer.cpp); SAVE stays the dirty mark;
 //   * COPY (2026-11-08): the duo's other key, PASTE, carries the state paste;
 //   * THE LEVEL CASE (architect 2026-11-10: a hold is "awkward on something
 //     that slides"): the tap toggles the case off and back, and a motionless
@@ -17425,6 +17571,7 @@ inline bool redesign_button_pressed_face(const AppState& a, RedesignButton b) {
 // may also own a button.
 inline constexpr bool redesign_button_shift_admits(RedesignButton b) {
     return b == RedesignButton::OpenProject ||
+           b == RedesignButton::Save ||
            b == RedesignButton::Render ||
            b == RedesignButton::IconZoomFitBest ||
            b == RedesignButton::IconTrimPresets ||
@@ -17538,7 +17685,7 @@ static_assert(redesign_button_shift_admits(RedesignButton::TransportSkipBack) &&
 // which is the road with a press to answer.
 //
 // WHAT SURVIVES IN THE OVERLOAD IS TWO THINGS AND NO THIRD: (1) a fork that
-// NAMES WHAT THE PRESS DOES NOW — Save's "Save and Commit", "Pull" and
+// NAMES WHAT THE PRESS DOES NOW — Save's "Force Save and Commit", "Pull" and
 // "Check GitHub",
 // Render's "Cancel" and "Render Grid Iterations", Play's "Stop", Zoom to
 // Fit's and Center's landing names, the bound-step and hop names and Toggle
@@ -17576,11 +17723,14 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // act's own word, Revert.
         case RedesignButton::OpenProject:
             return {"Open Project", "Hold to revert"};
-        // SAVE: one line, its long press no twin (architect 2026-11-17: the
-        // commit is the `h` view's alone, where the stateful overload
-        // names it).
+        // SAVE (architect 2026-11-24): its second line names the long press's
+        // twin, SAVE AND COMMIT (the two acts at
+        // GuiInputHandler::run_publish_chord's head), in the roster's own
+        // form, as Open's "Hold to revert"; the stateful overload drops the
+        // line in the `h` view, where the plain press is already the publish
+        // chord, Force Save and Commit.
         case RedesignButton::Save:
-            return {"Save", nullptr};
+            return {"Save", "Hold to save and commit"};
         case RedesignButton::Undo:       return {"Undo", nullptr};
         case RedesignButton::Redo:       return {"Redo", nullptr};
         // THE MODIFIER LINE NAMES THE OTHER FUNCTION (architect 2026-07-31),
@@ -17944,8 +18094,9 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // EACH (architect 2026-11-24): the second names the hold's march in
         // the march's own words, "walk both tabs", the backward one "back".
         // The overload drops the line under a lit grid iterations, which
-        // refuses both marches. In the `h` view they walk the diff flags and
-        // the words hold there.
+        // refuses both marches, and in the `h` view, which runs none
+        // (architect 2026-11-24): there the plain press walks the diff flags
+        // and the hold does nothing.
         case RedesignButton::TransportWalk:
             return {"Next Marker", "Hold to walk both tabs"};
         case RedesignButton::TransportWalkPrevious:
@@ -18112,8 +18263,8 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
 //   publishing), CHECK (NetworkConnect) where its press asks GitHub again
 //   (the arm's fourth index, 2026-10-28 — history_github_recheck_actionable,
 //   Offline) and COMMIT (VcsCommit) elsewhere in the `h` view, where its
-//   press is the save-and-commit (the tooltip's own fork on
-//   history_mode.active, "Save and Commit") (architect 2026-10-25,
+//   press is Force Save and Commit (the tooltip's own fork on
+//   history_mode.active, "Force Save and Commit") (architect 2026-10-25,
 //   "agree"); SAVE outside the view, a checkpoint publishing there included
 //   (the press is the plain save).
 // THE REPAINT: the drawing rides the face's stash (RedesignButtonFace::icon,
@@ -18172,7 +18323,11 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // the button's hint says whichever command it currently is:
 //
 //   SAVE, WITH THE HISTORY MODE STANDING → the vcs-commit icon and the
-//   "Save and Commit" hint: its lift there, the publish chord, SAVES the
+//   "Force Save and Commit" hint (architect 2026-11-24: "'force save and
+//   commit' (not saved)" — the one act allowed to write a view-only change,
+//   apart from the main page's Save and Commit, SAVE's long press; the two
+//   acts at GuiInputHandler::run_publish_chord's head): its lift there, the
+//   publish chord, SAVES the
 //   piece beside its source through this very button's ordinary act and
 //   then commits the live state into the projects repository as a
 //   checkpoint (run_history_commit, input_key_dispatch.cpp, owns the order
@@ -18183,9 +18338,10 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 //   carded where a key meets them — bare `g` cards the bootstrap's reason at
 //   the walk's one switch owner, with the clone-specific clause a constant
 //   line could never carry, and while a checkpoint publishes the ordinary
-//   save cards kCheckpointPublishing at GuiSaveOps::save's own arm; the
-//   publish chord meets neither, its face greying on both for the whole
-//   visit, run_publish_chord.
+//   save cards kCheckpointPublishing at GuiSaveOps::save's own arm; in the
+//   view the publish chord meets neither, its face greying on both for the
+//   whole visit, while from the main page's SAVE hold it cards both
+//   (run_publish_chord).
 //
 //   RENDER, WITH AN EXPLICIT RENDER ACT LIVE (the single render, the sweep,
 //   the queue — never the automatic preview) → the dialog-cancel glyph, the
@@ -18213,7 +18369,7 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // things, and every fork below is one of them:
 //
 //   (1) FORK THE NAME where the press means something else NOW. Save reads
-//   "Save and Commit" in the `h` view ("Pull" and "Check
+//   "Force Save and Commit" in the `h` view ("Pull" and "Check
 //   GitHub" where the chord pulls or asks again), Render reads "Cancel" while a
 //   render runs and "Render Grid Iterations" with the mode on,
 //   Play reads "Stop" while the transport is live, Zoom to Fit reads "Back to
@@ -18234,7 +18390,7 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // ones. No line names more than one form (the hold is the one chrome
 // modifier, 2026-11-08); the rule stands for the next one. The walk pair's
 // march lines are rule (2)'s plain case and drop under a lit grid iterations
-// (architect 2026-11-24).
+// and in the `h` view (architect 2026-11-24).
 //
 // NO FORK NAMES A REASON OR A STATE (architect 2026-09-12): no "Turn off …
 // first", no refusal, no state line. THE GREY IS THE MESSAGE AND THE REASON
@@ -18246,7 +18402,7 @@ inline icons::Icon redesign_button_icon(const AppState& a,
 // THE NAMES ARE TITLE CASE — the product's two-class rule, whose owner is
 // the capitalization block (paint_handler.cpp): this overload carries the
 // NAME half alone, and the only sentence-case text on a tooltip is a second
-// line, which is a description by construction. "Save and Commit" is a
+// line, which is a description by construction. "Force Save and Commit" is a
 // control's name like every other (2026-09-03).
 //
 // RENDER'S SHIFT LINE GOES WITH ITS ITERATION FACE, and that is the same fact
@@ -18277,10 +18433,14 @@ inline RedesignTooltipText redesign_button_tooltip_forks(
         const AppState& a, const GuiAudio& audio, int64_t total_frames,
         RedesignButton b) {
     // THE SAVE BUTTON'S OVERRIDES: inside the `h` view the button IS the
-    // checkpoint act, so it takes that act's name, one line like the
-    // constant table's "Save" outside it (Save admits no long press,
-    // 2026-11-17). A greyed button states no reason; the key's cards
-    // are where the fact is said.
+    // checkpoint act, FORCE SAVE AND COMMIT (architect 2026-11-24), so it
+    // takes that act's name. It is a one-line form there — Save's one
+    // admission, shift, spells the same Ctrl+Shift+S the plain lift spells in
+    // the view, so the modified press does nothing different and the line
+    // drops (rule (2) below). OUTSIDE THE VIEW ITS SECOND LINE NAMES THE TWIN,
+    // Save and Commit, in the roster's own form: the constant table's "Hold
+    // to save and commit", forwarded. A greyed button states no reason; the
+    // key's cards are where the fact is said.
     // THE PULL (architect 2026-09-27) AND THE CHECK (2026-10-28): while the
     // button is PAINTED as Pull or as Check (its stashed glyph, the Render
     // hint's as-painted rule) the hint names that act — the check being the
@@ -18293,7 +18453,7 @@ inline RedesignTooltipText redesign_button_tooltip_forks(
         if (glyph == 3) return {"Check GitHub", nullptr};
     }
     if (b == RedesignButton::Save && a.history_mode.active) {
-        return {"Save and Commit", nullptr};
+        return {"Force Save and Commit", nullptr};
     }
     // RENDER HAS NO HISTORY-VIEW HINT (2026-08-08): in the view Render is an
     // ordinary dead button and shows its ordinary hint, which is what every
@@ -18533,14 +18693,18 @@ inline RedesignTooltipText redesign_button_tooltip_forks(
             break;
         }
         // THE MARCH ROADS (architect 2026-11-24): the walk pair's holds are
-        // the two marches, which the grid-iterations lock refuses on its card
-        // (iteration_lock_key_blocked's delta (a), asked on the lamp exactly
-        // as authoring_lock_drops_chord asks it), so under a lit lamp the
-        // held press does nothing the plain one does and the line drops.
-        // The first line never forks.
+        // the two marches, which run in neither of two states, so there the
+        // held press does nothing the plain one does and the line drops —
+        // under a lit lamp, the grid-iterations lock refusing both on its
+        // card (iteration_lock_key_blocked's delta (a), asked on the lamp
+        // exactly as authoring_lock_drops_chord asks it), and in the `h`
+        // view, which consumes both chords as nothing (handle_history_mode_-
+        // key: the tabs share one diff-flag focus there, so a march could
+        // only land both on one flag, and he does not walk there). The first
+        // line never forks.
         case RedesignButton::TransportWalk:
         case RedesignButton::TransportWalkPrevious:
-            if (a.iteration_mode_enabled)
+            if (a.iteration_mode_enabled || a.history_mode.active)
                 return {redesign_button_tooltip(b).line1, nullptr};
             break;
         // OPEN TEXT EDITOR'S PASTE LINE (architect 2026-11-10), the march

@@ -174,7 +174,7 @@ namespace {
 //     each surface is free to spell its own class.
 //   * TITLE CASE SPELLING: principal words capitalized; articles,
 //     conjunctions and prepositions of three letters or fewer lowercase unless
-//     they lead ("Copy to Clipboard", "Load in Place", "Save and Commit", "Up
+//     they lead ("Copy to Clipboard", "Load in Place", "Force Save and Commit", "Up
 //     a Folder", "Toggle Add to Selection"); a hyphenated compound capitalizes
 //     both halves ("Toggle Read-Only"); a single word is the same string
 //     in either class and settles nothing.
@@ -794,7 +794,8 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconSettings},
     // ENABLE TOOLTIPS (architect 2026-09-29), behind Settings (architect
     // 2026-10-01: help comes after settings), the level case behind it: the
-    // bare backslash's LAMP. Dark at every open, and while dark no tooltip
+    // bare backslash's LAMP. Sticky, the device's (the key `lit_lamps`,
+    // 2026-11-24), and while dark no tooltip
     // shows anywhere; lit, the Qt model as ruled.
     {RedesignButton::IconTooltips},
     // THE LEVEL CASE (architect 2026-11-05), the third run's last: NOISE,
@@ -1492,17 +1493,13 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     // arc): exact rects off the percent's real ink edge, filled at exact
     // coverage over the bar's fill — each lamp its face at rest (`key_face`)
     // or lit (the limiter `limiter_lamp`, Arc's warning orange, its own
-    // tone; the clip `clip_lamp`); the clip lamp, while
-    // struck, THE WHOLE SQUARE in `key_dim_ink`, WINNING OVER ITS LIT BIT
-    // (architect 2026-11-05) — one three-way pick, struck,
-    // else lit, else rest — from the three bits the tick writes
-    // (refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS).
+    // tone; the clip `clip_lamp`), from the two bits the tick writes
+    // (refresh_logo_lamps, main.cpp; render.h's THE TWO LAMPS: no third
+    // face, architect 2026-11-24).
     paint_ink_rect(cr, l.limiter_lamp,
                    app.limiter_lamp_lit ? p.limiter_lamp : p.key_face);
     paint_ink_rect(cr, l.clip_lamp,
-                   app.clip_lamp_struck ? p.key_dim_ink
-                   : app.clip_lamp_lit  ? p.clip_lamp
-                                        : p.key_face);
+                   app.clip_lamp_lit ? p.clip_lamp : p.key_face);
 
     // THE BATTERY, the set's drawing by the plug state (GuiLogoGlyph's
     // rule), its ink box centered in the cell exactly, at the cell's real
@@ -1823,9 +1820,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   Toggle Value Drag are the row's resting greys on a locked tab; the jump
 //   and Add to selection are not, both being navigation;
 //   THE STEP AND THE WALK (kTransportStepWalkGroup, architect 2026-10-18) —
-//   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab, its hold the
-//   backward march) and NEXT MARKER (Tab, its hold the forward march;
-//   architect 2026-11-24);
+//   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab) and NEXT MARKER
+//   (Tab), on the main page each one's hold a march, the backward and the
+//   forward (architect 2026-11-24) — in the history view the pair's hold
+//   does nothing (the view's exception below, THE WALK PAIR AND CENTER);
 //   THE NUDGE AND PLAY (kTransportNudgePlayGroup, architect 2026-10-18) —
 //   CENTER (bare
 //   `c`), LEFT and RIGHT (bare Left/Right). THE FOUR ARROWS, two pairs, are
@@ -1878,10 +1876,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // in the view, the painted, state-greyed pair there); ADD TO SELECTION STAYS
 // LIVE, bare `k` being on that mode's allowlist and the lamp producing the
 // view's own multi-selection; THE WALK PAIR AND CENTER stay
-// live, Tab/Shift+Tab being the mode's diff-flag cycle and their holds its
-// marches (architect 2026-11-24), `c` its centring. NEXT and PREVIOUS MARKER
-// grey under the grid iterations lamp alone, where their step would land
-// nothing (the marches refused there). Outside the view the four VERBS and
+// live, Tab/Shift+Tab being the mode's diff-flag cycle, `c` its centring;
+// the walk pair's holds run no march in the view, a silent consumed no-op
+// (architect 2026-11-24). NEXT and PREVIOUS MARKER
+// grey in every state where the tab on screen's step would land nothing
+// (architect 2026-11-24), their holds dead with their taps. Outside the
+// view the four VERBS and
 // OPEN TEXT EDITOR
 // grey on a locked tab, their own gate — JUMP TO DEFINING MARKER, seated
 // among them, does NOT, its chord being navigation the lock admits — and
@@ -1984,8 +1984,10 @@ constexpr TransportRowDef kTransportSkipGroup[] = {
 // order: DOWN and UP (bare Down / Up, the value step, one unit — its
 // hold-repeat at their chord rows, input_pointer.cpp), PREVIOUS MARKER
 // (Shift+Tab) and NEXT MARKER (the walk: Tab; its camera the audio view's),
-// each hold a march — Next's forward, Previous's back (architect
-// 2026-11-24).
+// on the main page each hold a march — Next's forward, Previous's back
+// (architect 2026-11-24); in the history view the pair's hold does nothing
+// (the bottom icon row overview's history exception, THE WALK PAIR AND
+// CENTER, above).
 // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON
 // (architect 2026-09-29: "an artificial constraint; the tablet is the only
 // real development surface now") — Previous Marker is Next Marker's Shift
@@ -4058,8 +4060,10 @@ void GuiPaintHandler::paint_ruler_row(cairo_t* cr, bool content) {
     // ruler's foot, the same clip to the waveform's columns and the same
     // half-head rule (the head block below) — in the palette's `hover_line`,
     // FLAT (no fade), AT THE LINE'S EXACT PLACE (hover_triangle_x: the
-    // line's place where it is a tap's; none with the barrel held, the
-    // anchor's stem having no head). Painted HERE, after the digits and the
+    // line's place where it is a tap's that places the playhead; none with
+    // the barrel held, the anchor's stem having no head, and none over the
+    // main page's waveform's lower half, architect 2026-11-24). Painted
+    // HERE, after the digits and the
     // ticks and IMMEDIATELY BEFORE THE PLAYHEAD'S HEAD, so where the two
     // overlap the playhead's head shows. Painted whether or not the line
     // itself yields to a coincident line on the canvas (paint_hover_line):
@@ -4300,9 +4304,17 @@ std::optional<double> GuiPaintHandler::hover_line_x() const {
 }
 
 // THE HOVER LINE'S TRIANGLE'S PLACE (the declaration): the line's own place
-// where it is a tap's, none with the barrel held or no line.
+// where it is a tap's that would place the playhead, none with the barrel
+// held, no line, or the pen over the main page's waveform's lower half
+// (architect 2026-11-24), by the press's own half test (waveform_lower_half,
+// render.h) on the pen's containing pixel, the row the press reads
+// (GuiPointerPlace's invariant). A Tap place below the waveform does not
+// exist, so the test needs no foot.
 std::optional<double> GuiPaintHandler::hover_triangle_x() const {
     if (app.hover_line.place != AppState::HoverLine::Place::Tap)
+        return std::nullopt;
+    if (!app.history_mode.active &&
+        waveform_lower_half(waveform_area(app), app.last_mouse_y))
         return std::nullopt;
     return hover_line_x();
 }

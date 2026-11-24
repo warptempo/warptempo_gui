@@ -190,7 +190,7 @@ shopt -s nocaseglob
 #      file at every run) -- A LINE ALREADY THERE IS KEPT, so an
 #      existing tablet keeps every value as it tuned it, the levels
 #      whatever their spelling (the app reads 0.0 and -9.0 as well as 0 and
-#      -9, and rewrites them canonical at its next commit) -- and every line of a retired key the app refuses to start with is removed --
+#      -9, and rewrites the whole file canonical, in its writer's order, at its next launch) -- and every line of a retired key the app refuses to start with is removed --
 #      sync_path, the thirteen colour keys that left 2026-10-04 when every
 #      colour became a role of a theme file (theme_level and the twelve
 #      program colour keys), caption, which left 2026-10-21 with the built-in

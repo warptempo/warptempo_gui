@@ -35,9 +35,8 @@
 // sixth modal owner (AppState::ModalDialogOwner::Score), ranked with the
 // player and the picker, and NO TAB SWITCH HAPPENS UNDER IT ("just like with
 // other modals"): its veil admits two keys of the roster, the SCORE key and
-// the tooltip lamp (architect 2026-11-10, overlay_admits_button; the
-// struck clip lamp's tap beside them, architect 2026-11-05, reopens the
-// device and switches nothing) and its router those two keys' chords alone,
+// the tooltip lamp (architect 2026-11-10, overlay_admits_button) and its
+// router those two keys' chords alone,
 // so the active tab is the viewer's for its whole life. Its state is AppState::ScoreViewer and the
 // piece's range keys (app_state.h); this struct owns the acts.
 //
@@ -446,10 +445,11 @@ inline bool score_viewer_button_enabled(const AppState& a,
 // tooltip's (score_viewer_button_hint below): PREV / NEXT
 // GoPreviousViewPage / GoNextViewPage (the page road, our own head
 // without a stem, Next's mirrored: architect 2026-11-23), BACK / FWD
-// MediaSeekBackward / MediaSeekForward, RESET EditReset, START ZoneIn, the
-// open book with a plus in its own moat, END ZoneOut, the open book with a
-// minus (architect 2026-11-23: his re-picks, our own drawings in the
-// importer's table).
+// MediaSeekBackward / MediaSeekForward, RESET EditReset, START ZoneIn,
+// Papirus's bookmark-new, a bookmark ribbon with a plus cut out of it, END
+// ZoneOut, Papirus's bookmark-remove, the same ribbon with a minus cut out
+// (architect 2026-11-24, "G, the bookmarks": his re-picks, Papirus's
+// drawings untouched, in the importer's table).
 // PLAY / PAUSE's is the render player's Play key's, by its
 // face (render_player_button_icon, paint_handler.cpp, which the painter
 // asks); this table's PlayPause the resting MediaPlaybackStart. The skips

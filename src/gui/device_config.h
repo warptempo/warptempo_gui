@@ -13,7 +13,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Thirteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Fifteen keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -107,6 +107,23 @@
 //                            level as snapshotted, so a fresh install
 //                            sounds the bed at it (THE FIRST-RUN VALUES
 //                            below)
+//   noise_restore_level=<dB> THE LEVEL NOISE'S TAP RESTORES (architect
+//                            2026-11-24: the tap's memory constant across a
+//                            project's open and the program's): the finite
+//                            level the case's last toggling tap turned off,
+//                            THE LEVEL GRAMMAR LESS `-inf` (a restore to off
+//                            is no restore; parse_noise_restore_level_db
+//                            below); written by the NOISE case's tap alone
+//                            — the tap from a finite level stores that
+//                            level here and sets noise_level to -inf, the
+//                            tap from -inf sets noise_level to this, no
+//                            drag reading or writing it
+//                            (GuiInputHandler::finish_level_press_release)
+//                            — the two levels travelling in the tap's one
+//                            write; no Settings row (the main-page rule);
+//                            PERMANENT and REQUIRED; the first-run value the
+//                            defaults file's, `0` (0 dB, the restore with
+//                            nothing remembered, architect 2026-11-10)
 //   noise_attenuation_level=<dB> THE BACKGROUND SOUND'S FIXED ATTENUATION
 //                            (architect 2026-11-05 night: "then
 //                            the slider maintains its current behavior and
@@ -131,7 +148,34 @@
 //                            crossfade is a recording's relationship to
 //                            itself, so a later sound may want another
 //                            value; the first-run value the defaults file's
-//   osk_key_w=<px>          THE ON-SCREEN KEYBOARD'S KEY BOX (architect
+//   lit_lamps=<words>        THE STICKY LAMPS STANDING LIT (architect
+//                            2026-11-24: the lamps "constant when opening a
+//                            project or opening the program", "the modals
+//                            and overlays would be session only"): the words
+//                            of the top icon row's sticky lamps standing
+//                            lit — `magnify`, `follow`, `restrict`, `tips`,
+//                            the vocabulary in the row's own left-to-right
+//                            order and the ONE CANONICAL ORDER of the value
+//                            — comma-separated, no spaces, the EMPTY value
+//                            every lamp dark (parse_lit_lamps below); a
+//                            word outside the vocabulary, a repeated word, a
+//                            word out of order, an empty item and `follow`
+//                            beside `restrict` (a radio pair, never lit
+//                            together) are the launch's hard fail. SEATED
+//                            AT EVERY PROJECT'S OPEN through each lamp's own
+//                            owner and WRITTEN AT EVERY EDGE by the tick's
+//                            one comparator (GuiInputHandler::seat_lit_lamps
+//                            and main.cpp's refresh_lit_lamps hold the
+//                            rule; MAGNIFY is seated as soon as its gain
+//                            curve is ready, AppState::
+//                            magnification_seat_pending); no Settings row (the main-page
+//                            rule: the four lamps are their keys);
+//                            PERMANENT and REQUIRED; the first-run value the
+//                            defaults file's (empty there). TRIM, ADD SEL,
+//                            VALUE DRAG, GRID ITERATIONS and every other
+//                            lamp, overlay and modal are no word of it:
+//                            they stand dark or closed at every open
+//   osk_key_w=<px>         THE ON-SCREEN KEYBOARD'S KEY BOX (architect
 //   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
 //                            centered, like a phone … chiclets, taller than
 //                            wide", the FLAGS sheet's 48 x 60 device px):
@@ -167,9 +211,11 @@
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30):
 // the scale and the three of the projects first (gui_scale, projects_repo,
 // projects_path, last_project), then the display keys (`true_colors`,
-// `waveform_grow`), then the noise's four — folder, level, attenuation,
-// crossfade — and the tuning keys at the end (`osk_key_w`, `osk_key_h`,
-// `osk_font_px`). The list above is this file's telling of it and
+// `waveform_grow`), then the noise's five — folder, level, the level its
+// tap restores, attenuation, crossfade — then the sticky lamps
+// (`lit_lamps`, 2026-11-24), the permanent keys' end, and the tuning keys
+// at the end (`osk_key_w`, `osk_key_h`, `osk_font_px`). The list above is
+// this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
 // WHY IT EXISTS. The scale is the panel's business, not the piece's: in the
@@ -200,7 +246,7 @@
 // (architect 2026-11-08: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all thirteen lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all fifteen lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -213,14 +259,19 @@
 // seats' initializers (render.cpp) are CONSTRUCTION STATE, overwritten by
 // the startup read before any use. The sync script's setup adds the same
 // file's lines where a tablet's config lacks a key (its ADDED_LINES,
-// derived from the file at run time). A TUNING KEY STAYS A KEY: a snapshot
-// is not a retirement.
+// derived from the file at run time), appending them at the file's end;
+// the next launch writes the file back in the writer's order (THE
+// CANONICAL REWRITE, load_device_config below, 2026-11-24), so the snapshot
+// taken after it reads the keys in this file's order. A TUNING KEY STAYS A
+// KEY: a snapshot is not a retirement.
 //
 // THE STRICTNESS POSTURE IS THE SIDECAR'S, DELIBERATELY. The file is
-// program-written — the first run stamps it from the defaults file and
-// every later commit rewrites it — so any violation is a hand edit, which the
+// program-written — the first run stamps it from the defaults file, every
+// launch rewrites it in the writer's form when it stands otherwise (THE
+// CANONICAL REWRITE, load_device_config below, 2026-11-24) and every later
+// commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the
-// thirteen keys and each at most once, EVERY KEY REQUIRED (architect
+// fifteen keys and each at most once, EVERY KEY REQUIRED (architect
 // 2026-10-12, deferred, his "yes" 2026-10-14: "if one of these lines is not
 // in place, it means something's wrong with the config or the setup" — the
 // writer emits every line and the defaults file spells every key, so an absent
@@ -239,10 +290,12 @@
 // The key list in device_config.cpp is the EMITTED order (the head's list)
 // and it is what every file this program writes carries; the shared scanner checks
 // MEMBERSHIP, duplicates and presence and never position, so a hand-reordered
-// file still loads. That costs nothing and buys the sidecar's symmetry: there,
-// kSettingsOrder owns the write order and the reader has always been
-// order-insensitive. A position rule would be a second guard for a state the
-// writer cannot produce.
+// file still loads — and the same launch writes it back in the writer's
+// order (THE CANONICAL REWRITE, load_device_config below, 2026-11-24), as it
+// does a file the sync script's setup appended a line to. That costs nothing
+// and buys the sidecar's symmetry: there, kSettingsOrder owns the write order
+// and the reader has always been order-insensitive. A position rule would be
+// a second guard for a state the writer cannot produce.
 //
 // NO UNDO, NO DIRTY, NO Ctrl+S. Every key is history-less, committed through
 // its own chokepoint, and each chokepoint writes this file immediately, so the
@@ -257,17 +310,33 @@
 // and the tuning keys `osk_key_w`, `osk_key_h` and `osk_font_px`
 // (kSettingsEditorKeys) — Tab recalling a key's current value and
 // completing the path key's folders, each committed through this file's
-// writer under the key's own grammar below. THE LEVEL,
-// `noise_level`, is edited on the main page alone, the top icon row's NOISE
-// case, whose lift writes through the same writer
-// (architect 2026-11-05 night: a key shown and edited on the main page gets
-// no Settings row, kSettingsEditorKeys). A HAND EDIT UNDER A RUNNING APP IS
+// writer under the key's own grammar below. THREE KEYS ARE EDITED ON THE
+// MAIN PAGE ALONE (architect 2026-11-05 night: a key shown and edited on
+// the main page gets no Settings row, kSettingsEditorKeys): THE LEVEL,
+// `noise_level`, the top icon row's NOISE case, whose lift writes through
+// the same writer; THE LEVEL ITS TAP RESTORES, `noise_restore_level`, the
+// same case's tap (2026-11-24); and THE STICKY LAMPS, `lit_lamps`, their
+// own four keys, written by the tick's comparator (2026-11-24, main.cpp's
+// refresh_lit_lamps). A HAND EDIT UNDER A RUNNING APP IS
 // CLOBBERED BY THE NEXT IN-APP COMMIT: the live struct is the truth and
 // every commit rewrites the whole file from it, ordinary behaviour for a
 // program-written config; the in-app road is the sanctioned one and the
 // hand edit is the quit-first
 // alternative. `last_project` is the one key with no editor that the program
 // writes — it is the program's own.
+
+// THE STICKY LAMPS' VALUE (architect 2026-11-24; the `lit_lamps` key, the
+// head's list): one bit per lamp of the vocabulary, true while that lamp
+// stands lit, `follow` and `restrict` never both (the radio). The
+// comparison the tick's one writer makes is this struct's whole equality
+// (main.cpp's refresh_lit_lamps).
+struct DeviceLitLamps {
+    bool magnify  = false;
+    bool follow   = false;
+    bool restrict = false;
+    bool tips     = false;
+    bool operator==(const DeviceLitLamps&) const = default;
+};
 
 // The whole file, typed. The member defaults are CONSTRUCTION STATE, not load
 // fallbacks, for every key: each is required, so a successful read always
@@ -279,8 +348,9 @@
 // whole file and its read-back loads. (No key names the face: Liberation
 // Sans is the one, gui_font.h.)
 //
-// ONE OF THEM MEANS SOMETHING BY BEING EMPTY, saying so in its own grammar
-// below: `last_project` empty is "nothing opened yet". (`projects_repo` also
+// TWO OF THEM MEAN SOMETHING BY BEING EMPTY, each saying so in its own
+// grammar below: `last_project` empty is "nothing opened yet", `lit_lamps`
+// empty "every sticky lamp dark". (`projects_repo` also
 // ADMITS empty, being free text, but empty is just a value there — one that
 // never matches a remote.)
 // The key is still REQUIRED in every case: the file admits no absent state,
@@ -302,14 +372,19 @@ struct DeviceConfig {
     // 1 px (kWaveformGrowDefaultQuarters below).
     int         waveform_grow_quarters = 4;
     // THE NOISE'S FOLDER NAME, its level in dB (a double, -inf off, THE
-    // LEVEL GRAMMAR, 2026-11-05), its fixed attenuation in dB under that
+    // LEVEL GRAMMAR, 2026-11-05), the level its tap restores (a double,
+    // never -inf, 2026-11-24), its fixed attenuation in dB under that
     // level (a double, never -inf, 2026-11-05 night) and its crossfade in
     // seconds (2026-10-28, the head's list): required; the construction
-    // state is `rain`, -inf, -9 and 4.
+    // state is `rain`, -inf, 0, -9 and 4.
     std::string noise                   = "rain";
     double      noise_level             = -std::numeric_limits<double>::infinity();
+    double      noise_restore_level     = 0.0;
     double      noise_attenuation_level = -9.0;
     int         noise_crossfade_s       = 4;
+    // THE STICKY LAMPS STANDING LIT (2026-11-24, the head's list): required;
+    // the construction state is every lamp dark.
+    DeviceLitLamps lit_lamps;
     // THE ON-SCREEN KEYBOARD'S KEY BOX in W (2026-10-29, the head's list;
     // two tuning keys): required; the construction state is 24 x 30
     // (kOskKeyWDefaultW, kOskKeyHDefaultW below).
@@ -510,9 +585,9 @@ inline std::optional<int> parse_canonical_config_int(std::string_view v) {
 // ROUND-TRIPS, in fixed notation — "0", "-9", "-15.6",
 // "-0.0108695652173913", "-60" — and `-inf` (format_level_db); THE READER
 // ADMITS ANY FRACTIONAL LENGTH (parse_level_db), so "0.0" and "-9.0" load
-// as they are and the next commit
-// rewrites them canonical; the value is std::from_chars' on the checked
-// text, the range checked on the value; "-0", "-0.0", "-0.00…" are refused
+// as they are and the same launch rewrites them canonical (THE CANONICAL
+// REWRITE, load_device_config, 2026-11-24); the value is std::from_chars'
+// on the checked text, the range checked on the value; "-0", "-0.0", "-0.00…" are refused
 // (zero is unsigned), as every other spelling is. THE FACE PRINTS ONE
 // DECIMAL UNDER 10 dB OF MAGNITUDE AND NONE FROM 10 ON (format_level_db_face,
 // architect 2026-11-19: "0.0", "-9.5", "-22", "-60", "-inf"), the top icon
@@ -587,6 +662,18 @@ inline std::optional<double> parse_noise_attenuation_db(std::string_view v) {
     if (v == "-inf") return std::nullopt;
     return parse_level_db(v);
 }
+// THE LEVEL NOISE'S TAP RESTORES (architect 2026-11-24, the head's list):
+// THE LEVEL GRAMMAR LESS `-inf`, the attenuation's arm exactly — a decimal
+// dB in [-60.0, 0.0], the same spellings, the same writer
+// (format_level_db, which never meets -inf here): the tap remembers a
+// finite level alone, and a restore to off would be no restore. Its
+// first-run value the defaults file's, `0`.
+inline constexpr const char* kNoiseRestoreLevelGrammarReason =
+    "must be a decimal in [-60.0, 0.0]";
+inline std::optional<double> parse_noise_restore_level_db(std::string_view v) {
+    if (v == "-inf") return std::nullopt;
+    return parse_level_db(v);
+}
 
 // THE noise_crossfade_s GRAMMAR (architect 2026-10-28) — an integer in
 // [1, 30] SECONDS in canonical spelling, the one owner the same five read
@@ -605,6 +692,49 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
     if (!n || *n < kNoiseCrossfadeMinS || *n > kNoiseCrossfadeMaxS)
         return std::nullopt;
     return n;
+}
+
+// THE lit_lamps GRAMMAR (architect 2026-11-24, the head's list) — the one
+// owner the reader and the writer read (format_lit_lamps,
+// parse_lit_lamps): THE VOCABULARY IS kLitLampWords, in the top icon row's
+// own left-to-right order (MAGNIFY, FOLLOW, RESTR, TIPS), which is the ONE
+// CANONICAL ORDER of the value; the value is the lit lamps' words in that
+// order joined by `,` with no space, the empty value every lamp dark. ONE
+// SPELLING PER STATE, the file being program-written: the reader admits
+// exactly what the writer spells — a word outside the vocabulary, a word
+// repeated or out of order (each word's place must stand after the one
+// before it), an empty item (a leading, trailing or doubled `,`) and
+// `follow` beside `restrict` (the radio: the two are never lit together,
+// GuiPlaybackLifecycle::toggle_follow / toggle_restrict) each refuse, the
+// launch's hard fail like any key's bad value.
+inline constexpr const char* kLitLampWords[] = {
+    "magnify", "follow", "restrict", "tips",
+};
+inline constexpr const char* kLitLampsGrammarReason =
+    "must be empty or the lit lamps' words, magnify, follow, restrict, tips, "
+    "in that order, comma-separated, each at most once, follow and restrict "
+    "never together";
+std::string format_lit_lamps(const DeviceLitLamps& lamps);
+inline std::optional<DeviceLitLamps> parse_lit_lamps(std::string_view v) {
+    DeviceLitLamps out;
+    if (v.empty()) return out;
+    bool* const bits[] = {&out.magnify, &out.follow, &out.restrict, &out.tips};
+    constexpr int kWords = static_cast<int>(std::size(kLitLampWords));
+    int last = -1;
+    for (;;) {
+        const size_t comma = v.find(',');
+        const std::string_view item = v.substr(0, comma);
+        int at = -1;
+        for (int i = last + 1; i < kWords; ++i)
+            if (item == kLitLampWords[i]) { at = i; break; }
+        if (at < 0) return std::nullopt;   // unknown, repeated, out of order, empty
+        *bits[at] = true;
+        last = at;
+        if (comma == std::string_view::npos) break;
+        v.remove_prefix(comma + 1);
+    }
+    if (out.follow && out.restrict) return std::nullopt;
+    return out;
 }
 
 // THE osk_key_w AND osk_key_h GRAMMAR (architect 2026-10-29), ONE FOR THE
@@ -814,9 +944,12 @@ std::string format_device_config_text(const DeviceConfig& cfg);
 
 // Parse and validate the whole config file at `path` under the schema at the
 // head of this file. Errors carry a "line N: " prefix where a line is at fault;
-// the caller adds the path context.
+// the caller adds the path context. ONE READ: the file's bytes as read land in
+// `bytes` and are what the schema judges (parse_device_config_text below), so
+// the startup's canonical compare (load_device_config) reads the very bytes
+// that loaded (2026-11-24).
 std::expected<DeviceConfig, std::string> read_device_config(
-    const std::filesystem::path& path);
+    const std::filesystem::path& path, std::string& bytes);
 
 // THE SAME READER OVER BYTES IN HAND: the shipped defaults
 // file's text (assets/device_config_defaults, THE FIRST-RUN VALUES above),
@@ -864,14 +997,20 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // GuiNoise::set_attenuation_db), `noise_crossfade_s=`, and the tuning keys
 // `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
 // and `osk_font_px=` (its GuiInputHandler::apply_osk_font_px)
-// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp) — and the
+// (GuiSettingsEditor::commit_device_setting, settings_editor.cpp) — the
 // top icon row's level case's end (GuiInputHandler::settle_level_case:
-// `noise_level=`, its live act GuiNoise::set_level_db); and
+// `noise_level=`, its live act GuiNoise::set_level_db, and at the tap
+// `noise_restore_level=` with it in the one write) and the sticky lamps'
+// comparator (main.cpp's refresh_lit_lamps: `lit_lamps=`, the tick's one
+// writer of the lamps' edges, 2026-11-24); and
 // gui_main's `last_project` write on the success path
 // of every open (main.cpp). A same-value commit never reaches any of them —
-// each gates the no-op ahead of the write — so a file rewrite means a value
-// actually moved. `last_project` is the one key with no editor: it is the
-// program's own.
+// each gates the no-op ahead of the write (the lamps' comparator writes on
+// a difference alone) — so a commit's rewrite means a value actually moved.
+// ONE MORE CALLER COMMITS NO VALUE: the startup's canonical rewrite
+// (load_device_config below, 2026-11-24), which writes the config just read
+// back in the writer's form when the file as read is not already that.
+// `last_project` is the one key with no editor: it is the program's own.
 std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 
 // STARTUP: the config, created from `first_run_template` if the file does not
@@ -882,9 +1021,35 @@ std::optional<GuiFailure> write_device_config(const DeviceConfig& cfg);
 // a file that is already right for it and the user edits from there rather
 // than from a wrong guess. A missing parent directory is created.
 //
+// THE CANONICAL REWRITE (architect 2026-11-24): once the file has loaded,
+// WHEN ITS BYTES AS READ ARE NOT BYTE FOR BYTE WHAT THE WRITER WOULD WRITE
+// FOR THE CONFIG JUST READ (format_device_config_text), THE FILE IS WRITTEN
+// ONCE, by the config's own atomic writer (write_device_config) — so after
+// any launch the file on the tablet stands in the writer's order and
+// spelling, whoever added a line: the sync script's setup, which appends a
+// missing key's line at the file's end, or a hand edit through `run-as`
+// (the reader takes the lines in any order, ORDER IS THE WRITER'S above).
+// tools/snapshot_device_defaults.sh compares the ordered key lists, and this
+// is what lets a launch after setup satisfy it. THE VALUES ARE UNTOUCHED BY
+// CONSTRUCTION: the bytes written are the writer's for the very values the
+// reader just loaded, and every grammar's writer spells back the value it
+// was read as. Every key's reader admits its canonical spelling alone (a
+// non-canonical value refuses the load, THE STRICTNESS POSTURE above) but
+// the three levels', whose grammar admits any fractional length ("0.0",
+// "-9.50"; THE LEVEL GRAMMAR, parse_level_db): those are respelled in the
+// writer's shortest round-trip decimal, the same double. So the rewrite
+// moves lines (their order, a missing final newline) and respells a long
+// level, and nothing else. A first run's stamp is already the writer's text
+// and rewrites nothing; a file in the writer's form costs one string
+// compare. A FAILED REWRITE IS ADVISORY
+// (the validation doctrine's class 5): one stderr line, no card (there is
+// no window yet), no retry, and the launch goes on with the config as read;
+// the next in-app commit rewrites the file whole anyway.
+//
 // The error is the whole failure vocabulary of this file: an unresolvable
 // config home, a create that failed, an unopenable file, or the reader's first
 // schema refusal. Every one of them is FATAL at the caller (gui_main) — the
-// blunt terminal line and no window.
+// blunt terminal line and no window. (The canonical rewrite's failure is not
+// in it: advisory, above.)
 std::expected<DeviceConfig, std::string> load_device_config(
     const DeviceConfig& first_run_template);

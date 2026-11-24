@@ -123,8 +123,9 @@ struct GuiPrompt {
     // phase reset paste's confirmation, the load confirmation, the revert
     // confirmation and the pull's, the render player's delete, the score
     // viewer's reset and the trim presets' save and delete (DialogTrigger,
-    // app_state.h, the one list). The Save-and-Commit act asks nothing
-    // (GuiInputHandler::run_publish_chord, the default title).
+    // app_state.h, the one list). The two commit acts, Save and Commit and
+    // Force Save and Commit, ask nothing (GuiInputHandler::run_publish_chord,
+    // the default title).
     //
     // TWO ASYNCHRONOUS MODAL OPENERS, each CLEARING THE WAY IN ITS OWN BODY
     // first — the rule is that nothing asynchronous raises a modal without

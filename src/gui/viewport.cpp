@@ -1711,8 +1711,8 @@ void Viewport::follow_scanner() {
 //     and the phase-reset pastes' landing
 //     (PhaseResetPropagate::land_paste_in_phase_reset_view) over the resets
 //     the paste changed, one member included (architect 2026-11-17).
-// NOT READERS, by ruling: bare `c`, the paired marches (live and `h`, each step
-// running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition (its three
+// NOT READERS, by ruling: bare `c`, the paired marches (each step running
+// `c`'s act, 2026-09-26), Ctrl+J and the A/B audition (its three
 // centrings `c`'s act too, 2026-09-29), which
 // centre unconditionally (center_viewport_on_playhead after the working
 // zoom); follow's camera during playback (follow_scanner and its page-in,
