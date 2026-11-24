@@ -26,14 +26,14 @@ struct GuiInputHandler;
 // the REST before the next play) and the FIRE (fire_if_due — the run loop's
 // deadline tick, which ends that rest and launches). The ONE PLAY
 // each phase makes is GuiPlaybackLifecycle::launch_bounded_audition, the tab
-// switch between plays is Ctrl+Tab's whole road —
+// switch between plays is the tab switch's whole road (the tab pair's) —
 // GuiActiveViews::switch_active_tab_view_to (selection clear and synchronous
 // rebuild included) and then GuiTargetRender::trigger() — and the preview
 // readiness gate is GuiTargetRender::preview_ready — nothing here plays,
 // switches or renders on its own. NO NEW AUDIO: each play is an ordinary
-// session over the preview the tab plays after a Ctrl+Tab, at the level it
+// session over the preview the tab plays after a tab switch, at the level it
 // already plays it; no new audio path. The one render the act causes is the
-// switch's own re-dispatch (2026-10-18), Ctrl+Tab's, which in the common case
+// switch's own re-dispatch (2026-10-18), the tab switch's, which in the common case
 // is a render-cache hit (each tab's preview cached the first time it played)
 // and otherwise a synthesis the next play waits for.
 //
@@ -132,10 +132,10 @@ struct GuiInputHandler;
 // button's long press agrees with the STOP face it already
 // wears.
 //
-// THE SWITCH IS CTRL+TAB'S WHOLE ROAD (architect 2026-10-18, on his saved
+// THE SWITCH IS THE TAB SWITCH'S WHOLE ROAD (architect 2026-10-18, on his saved
 // state: each tab played alone, the act carded): switch_active_tab_view_to
 // and then GuiTargetRender::trigger(), at both of the act's switches, so THE
-// PREVIEW FOLLOWS THE TAB as it does after a Ctrl+Tab and each tab plays its
+// PREVIEW FOLLOWS THE TAB as it does after a tab switch and each tab plays its
 // OWN trim's render. The two tabs share both marker stores, so the target
 // audio is one and only the trim differs per tab — but the preview EMBODIES
 // the trim (its domain is the trim's crop), so one bound preview cannot play
@@ -144,11 +144,11 @@ struct GuiInputHandler;
 // above). Where the dispatch goes asynchronous the next play WAITS for it:
 // a due rest stands while the preview updates (fire_if_due), so the first
 // play after each switch launches against the entering tab's own buffer.
-// The trigger is called unconditionally, as Ctrl+Tab calls it, and carries
-// Ctrl+Tab's costs with it: in source view it returns after the dirty bit,
-// and in target view it cancels a running archival render, as a Ctrl+Tab
-// would. An act INTERRUPTED on the other tab therefore leaves that tab's own
-// preview bound, exactly as a Ctrl+Tab would have.
+// The trigger is called unconditionally, as the tab switch calls it, and
+// carries the tab switch's costs with it: in source view it returns after the
+// dirty bit, and in target view it cancels a running archival render, as a
+// tab switch would. An act INTERRUPTED on the other tab therefore leaves that
+// tab's own preview bound, exactly as a tab switch would have.
 //
 // THE ACT IS HANDS-OFF (architect 2026-10-28): any press on the window ends
 // it ahead of the press's own dispatch — a bound chord, a pointer or touch
@@ -259,7 +259,7 @@ struct GuiAbAudition {
           notifications(notifications_) {}
 
     // THE PRESS-TIME ACT (the refusals at the head comment): gate both tabs,
-    // run `c` on this tab, switch to the other one (Ctrl+Tab's whole road,
+    // run `c` on this tab, switch to the other one (the tab switch's whole road,
     // trigger() included), run `c` there, ARM the first play behind a rest of
     // zero (2026-10-18; fire_if_due launches it once the entering tab's
     // preview is in hand) — OR, where the press finds the act already standing,
@@ -273,7 +273,7 @@ struct GuiAbAudition {
     // read BEFORE taking the one stop body (which clears it). Idle means the
     // play that ended was not the act's — nothing to do. Otherwise ARM THE
     // REST before the next phase (it launches nothing itself), switching back
-    // to the starting tab ahead of the switch rest — Ctrl+Tab's whole road,
+    // to the starting tab ahead of the switch rest — the tab switch's whole road,
     // trigger() included (2026-10-18); HomeSecond ending is the act's own
     // end. THE SWITCH RUNS FIRST AND THE ARM AFTER IT, because the switch
     // takes the one stop body and that body clears the sequence, as does the

@@ -150,11 +150,13 @@ RenderOutcome do_render(const RenderRequest& req,
     // renders the full pair verbatim; the parser knows nothing of trim.
     // Built here at the probe, beside the phase-reset assembly above: the
     // two authored-position validations are this pipeline's parallel
-    // pair. Building ahead of the fingerprint reuse return below is safe:
-    // a fingerprint match implies this exact marker set builds clean, so
-    // validating before the reuse rungs can never refuse a reusable
-    // render, and the reuse hit's extra map build is negligible against
-    // the pipeline.
+    // pair. The request's own full map is built and validated here, ahead
+    // of the reuse rungs, on every dispatch: a recipe whose map fails to
+    // build is refused before any lookup, so a reuse hit is only ever
+    // served to a request whose own markers built clean. The fingerprint
+    // match attests the engine's inputs (under a surviving plan, the
+    // plan's; render_fingerprint, render_cache.h), not the marker set; the
+    // reuse hit's extra map build is negligible against the pipeline.
     auto resolved_warp_markers =
         resolve_warp_markers_for_render(slice_to_warp_markers(req.warp_markers),
                                         sample_rate, total_frames);
@@ -548,9 +550,9 @@ RenderOutcome do_render(const RenderRequest& req,
     // artifacts — accepted conservatism (architect 2026-07-17): reuse serves
     // common recipes only, and over-inclusion can only cost a redundant
     // re-render, never reuse wrong bytes. (The FULL window is the one case that
-    // is NOT conservative and must not be: it hashes as the old unset encoding —
-    // see render_fingerprint — so the default window keeps reusing pre-arc
-    // untrimmed renders.)
+    // is NOT conservative and must not be: it is no fallback but the untrimmed
+    // recipe itself, and hashes as it — the unset trim bytes, see
+    // render_fingerprint.)
     std::optional<TrimPlan> trim_plan;
     const bool trim_is_sub_window = !trim_window_is_full(
         req.trim_begin_frame, req.trim_end_frame,
@@ -618,36 +620,29 @@ RenderOutcome do_render(const RenderRequest& req,
     // load-time-captured identity (req.source_load_size/mtime): the loaded
     // source is immutable for the process lifetime, so no on-disk re-stat is
     // needed. Every render is wav, so the fingerprint is always computed.
-    // The marker components are the resolved products THIS render already
-    // built above (resolve_warp_markers_for_render's survivors and the
-    // collapsed phase-reset positions), threaded through rather than
-    // re-resolved — the resolver's one-line-per-normalization-per-resolve
-    // stderr signal stays exactly once per dispatch here.
-    //
-    // THE PHASE-RESET COMPONENT IS THE SET THAT REACHES THE ENGINE, not the
-    // full authored derivation: under a surviving trim plan the engine
-    // receives plan_trim's translated, RANGE-FILTERED reset list (the column
-    // asymmetry at trimmer.h — point events outside the window filter away
-    // with nothing to coalesce into), so an out-of-window reset provably
-    // cannot move a byte and must not move the key. Feeding the plan's own
-    // list makes that true by construction. The ARM IS THE PLAN ITSELF —
-    // `trim_plan` has a value exactly when this dispatch renders trimmed, so
-    // the key can never disagree with what was rendered; a full window and a
-    // plan_trim REFUSAL (which renders untrimmed by ruling) both keep the full
-    // set, mirroring the untrimmed engine input. Never a re-derived predicate:
-    // trim_is_sub_window alone would mis-key a fallback render.
-    const std::vector<double>& key_phase_reset_frames =
-        trim_plan ? trim_plan->pre.phase_reset_frame_map
-                  : phase_reset_source_frames;
+    // THE MARKER PART IS THE ENGINE'S INPUT FOR THIS RENDER, ITS ARM THE PLAN
+    // ITSELF (architect 2026-11-24; the rule, both arms and what moves each at
+    // render_fingerprint, render_cache.h): this dispatch hands the serializer
+    // the trim_plan it renders with — null exactly when it renders untrimmed,
+    // a plan_trim refusal included — so the key can never disagree with what
+    // was rendered. Never a re-derived predicate: trim_is_sub_window alone
+    // would mis-key a fallback render. The untrimmed arm's two inputs are the
+    // resolved products THIS render already built above
+    // (resolve_warp_markers_for_render's survivors and the collapsed
+    // phase-reset positions), threaded through rather than re-resolved — the
+    // resolver's one-line-per-normalization-per-resolve stderr signal stays
+    // exactly once per dispatch here. The plan's vectors are moved into
+    // EngineParams only below, after this key is built from them.
     RenderFileIdentity source_identity;
     source_identity.size = req.source_load_size;
     source_identity.mtime = req.source_load_mtime;
     const std::vector<uint8_t> fingerprint = render_fingerprint(
         req.source_audio_path, source_identity,
         static_cast<int>(sample_rate), resolved_warp_markers,
-        key_phase_reset_frames,
+        phase_reset_source_frames,
         req.engine_settings,
-        trim_is_sub_window, req.trim_begin_frame, req.trim_end_frame);
+        trim_is_sub_window, req.trim_begin_frame, req.trim_end_frame,
+        trim_plan ? &*trim_plan : nullptr);
     if (cancel_requested()) return cancelled_outcome();
     if (!req.output_buffer &&
         fingerprint_sidecar_matches(final_output_path, fingerprint)) {

@@ -60,7 +60,7 @@ struct GuiInputHandler;
 // keys with no editable row — a tab's read-only bit, the view keys, the
 // per-tab viewport, zoom, playhead and trim, the score's range and
 // positions, `scale` and `bpm` — have no road through this editor: each is
-// written by its own lever (the padlock key, the view keys and Ctrl+Tab, the
+// written by its own lever (the padlock key, the view keys and the tab pair, the
 // gestures, Reset Trim, the score viewer's START / END and its pages, the
 // BPM form and the loads), the per-tab keys his "I won't set it manually"
 // (2026-10-28). Esc closes it uncommitted, and EITHER WAY THE PAGE COMES BACK,

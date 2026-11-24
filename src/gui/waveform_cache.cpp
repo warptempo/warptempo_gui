@@ -819,7 +819,7 @@ bool GuiPaintHandler::live_plate_published() const {
 //
 // Every frame of every user-driven viewport change routes through here: pans
 // and scrolls, the strip drag's zoom frames, the one-shot jumps (Tab /
-// Shift+Tab / Ctrl+Shift+Tab, Home / End, center-on-playhead), the A/B and
+// Shift+Tab / the two marches, Home / End, center-on-playhead), the A/B and
 // source/target switches, undo / redo, and the map edits. Leaving any of them
 // to the async worker rebuilds the waveform one frame late, so the same-tick
 // flag rebuild keys off the lagging wf_cache.fp_* and the overlays — the

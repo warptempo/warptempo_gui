@@ -7,13 +7,13 @@
 #include "viewport.h"
 
 // Active-views management cluster, extracted from main.cpp's inline
-// lambdas and the inline Ctrl+Tab block in the keyboard handler. Owns the
+// lambdas and the inline tab-switch block in the keyboard handler. Owns the
 // two view-axis swap operations (W/P markers and A/B tab) plus their
 // shared snapshot machinery: active-tab snapshot push
 // (refresh_active_tab_view_from_app), the W/P markers-view writer
 // (switch_active_markers_view_to), the absolute column entry that
 // bare 1/2/3/4 and the typed `active_markers_view=` take
-// (select_active_markers_view), and the Ctrl+Tab tab-view
+// (select_active_markers_view), and the tab-view
 // flip (switch_active_tab_view_to). The S/T audio-view axis is handled
 // elsewhere (input_handler) — it's a domain translation, not a snapshot
 // swap, and lives outside this cluster's scope by design.

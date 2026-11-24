@@ -10,7 +10,7 @@ either papirus-icon-theme's, a path under the checkout's `Papirus/16x16/`
 architect's pick lives there, the 16-px `actions/`, `devices/` and `panel/`
 trees), or, on a path that starts with OWN, OURS: a hand-made drawing in
 this repository's tools/icons/own/, its derivation named in its own XML
-comment (eleven such files: the marker pair's arrow to a line, from
+comment (thirteen such files: the marker pair's arrow to a line, from
 Papirus's go-first, architect 2026-11-22, send MM; Value Drag's double
 arrow, go-first's arrow upright with a head each way, architect
 2026-11-23, send NN; and, architect 2026-11-23, send OO, his picks off the
@@ -20,7 +20,9 @@ and End, view-readermode's book with a plus or a minus in its own moat;
 Restrict's dot and wall, go-first's dot and the marker pair's line; the
 picker's Up, folder-symbolic's folder with an up arrow cut out of it;
 Commit and Pull, go-up's and go-down's arrows on a line; and Check, the two
-arrows side by side). Both kinds take the same road: for each row
+arrows side by side; and, architect 2026-11-24, send QQ, his pick "L1", the
+tab pair's A and B, Liberation Sans Bold's own outlines of the two
+capitals). Both kinds take the same road: for each row
 it writes assets/icons/<Enumerator>.svg by THE RECOLOR RULE
 (assets/icons/README.md):
 
@@ -94,9 +96,9 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # ENUMERATOR -> (source under Papirus/16x16/ or OWN + a file of
 # tools/icons/own/, note[, transform]), in icons.h's enum order. THE TABLE OF
 # SESSION 123 (the parked importer's picks, the architect's sheets of session
-# 140) WITH TWO ROWS RE-PICKED BY HIM 2026-11-17, session 140 ("the first
-# alternative for each one"): TabDetach and GoParentFolder (the 16-px actions
-# tree, no symbolic twin; GoParentFolder re-picked once more, below); AND
+# 140) WITH ONE ROW KEPT OF TWO RE-PICKED BY HIM 2026-11-17, session 140
+# ("the first alternative for each one"): GoParentFolder (the 16-px actions
+# tree, no symbolic twin; re-picked once more, below); AND
 # TWENTY-ONE ROWS RE-PICKED BY HIM 2026-11-22, send II, off the alternates
 # sheet: BboxPrev / BboxNext, ViewMediaLyrics,
 # ViewMediaTrack, TransformMoveVertical, GoJump, TimelineUseZoneOn,
@@ -116,8 +118,11 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # him 2026-11-23, send PP, "S2", the serifed sigma),
 # GoPreviousViewPage / GoNextViewPage ("P1", one source, Next's mirrored),
 # ZoneIn / ZoneOut ("K5"), TimelineUseZoneOn ("C2"), GoParentFolder ("U1"),
-# VcsCommit / VcsPull ("V1") and NetworkConnect ("N2"). A note names a
-# pick that is not the enumerator's own name and the date of a re-pick.
+# VcsCommit / VcsPull ("V1") and NetworkConnect ("N2"); AND TWO ROWS ADDED BY
+# HIM 2026-11-24, send QQ, his pick "L1", the tab pair's TabA / TabB, our own
+# drawings, Liberation Sans Bold's own outlines of the capitals (OWN +
+# '<Enumerator>.svg'). A note names a pick that is not the enumerator's own
+# name and the date of a re-pick.
 SYM = 'symbolic/'
 ROSTER = [
     ('DocumentOpen', SYM + 'actions/document-open-symbolic.svg', ''),
@@ -231,8 +236,12 @@ ROSTER = [
     ('BboxNext', OWN + 'BboxPrev.svg',
      'no bboxnext; ours, go-first\'s arrow to a line 2 wide, mirrored '
      'left-right to point right (re-picked 2026-11-22, send MM)', 'mirror'),
-    ('TabDetach', SYM + 'actions/focus-windows-symbolic.svg',
-     'no tab-detach; focus-windows, two windows (re-picked 2026-11-17)'),
+    ('TabA', OWN + 'TabA.svg',
+     'ours, Liberation Sans Bold\'s own outline of the capital A, 12 tall '
+     'in the 16 box (2026-11-24, send QQ)'),
+    ('TabB', OWN + 'TabB.svg',
+     'ours, Liberation Sans Bold\'s own outline of the capital B, 12 tall '
+     'in the 16 box (2026-11-24, send QQ)'),
     ('ZoomOriginal', SYM + 'actions/zoom-original-symbolic.svg', ''),
     ('GoPrevious', SYM + 'actions/go-previous-symbolic.svg', ''),
     ('GoNext', SYM + 'actions/go-next-symbolic.svg', ''),

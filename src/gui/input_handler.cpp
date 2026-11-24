@@ -396,9 +396,11 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // 1 / 2 / 3 / 4, which run the S/T and column chokepoint BODIES and so
     // carry the column with them (the selectors are the axis's only road);
     // the mode is lit for the column you are in —
-    // MINUS THE Ctrl+Shift+Tab PAIRED MARCH (architect 2026-09-10; the
-    // ruling's reason at iteration_lock_key_blocked's header; Ctrl+Tab stays
-    // admitted in every state, the two tabs sharing both stores) — MINUS BARE `o` ON A WRITABLE TAB, the
+    // MINUS THE TWO PAIRED MARCHES, Ctrl+Tab and Ctrl+Shift+Tab (architect
+    // 2026-09-10; both directions 2026-11-24; the
+    // ruling's reason at iteration_lock_key_blocked's header; the tab pair's
+    // bare 5 / 6 stay admitted in every state, the two tabs sharing both
+    // stores) — MINUS BARE `o` ON A WRITABLE TAB, the
     // read-only toggle's lock direction (architect 2026-09-10; narrowed
     // 2026-10-13: the padlock cannot lock the tab the lamp stands lit on, and
     // its unlock is admitted) —
@@ -455,11 +457,14 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     //                              S/T chokepoint switch_active_audio_view_to,
     //                              3 / 4 the column entry
     //                              GuiActiveViews::select_active_markers_view
+    //   - 5/6 (no mods)          → switch A/B tab (the other escape), the
+    //                              tab pair, the key for the tab standing
+    //                              selecting the other (2026-11-24)
     //   - Tab/Shift+Tab          → cycle marker focus, the landing's camera
     //                              the landing owner's (Viewport::land_subject)
-    //   - Ctrl+Tab               → switch A/B tab (the other escape)
-    //   - Ctrl+Shift+Tab         → march paired tabs in lockstep, a round
-    //                              trip ending on the starting tab
+    //   - Ctrl+Tab /             → march paired tabs in lockstep, forward /
+    //     Ctrl+Shift+Tab           back, a round trip ending on the starting
+    //                              tab (the walk keys' holds, 2026-11-24)
     //   - Ctrl+O                 → the Open project picker (2026-08-28). It
     //                              authors nothing: it lists the projects, and
     //                              choosing one reopens the program around
@@ -606,7 +611,8 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         // tab, which build Ctrl+Z / Ctrl+Shift+Z in run_undo_redo_without_key and take
         // the read-only card naming Undo or Redo, and the ITERATION sentence's
         // lit buttons whose long-press twin the iteration list refuses: the
-        // Ctrl+Shift+Tab march, which it subtracts (Switch Tab), and the label
+        // two marches, Ctrl+Tab and Ctrl+Shift+Tab, which it subtracts (Next
+        // and Previous Marker, architect 2026-11-24), and the label
         // paste (2026-11-10), Shift+Return, off the Open Text Editor
         // key lit on a bound axis (the list admits the plain Return there
         // alone). The bare literal kTabReadOnlyCard stays the
@@ -663,7 +669,9 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // W+target with the cent step's re-land contract in its own tail.
 
     // THE TWO AXES ARE REACHED THROUGH THE FOUR SELECTORS BELOW ALONE — the
-    // keys and the top icon row's two view pairs.
+    // keys and the top icon row's two view pairs. (Bare 5 / 6, the tab pair
+    // behind them, are the tab family's, handle_tab_switch_keys; architect
+    // 2026-11-24.)
 
     // BARE 1 / 2 / 3 / 4 ARE THE SELECTORS, ONE AXIS EACH (architect
     // 2026-10-14, the top icon row's two radio pairs): `1` is Source and `2`
@@ -1569,9 +1577,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
-    // Tab family: Ctrl+Tab switches tabs; Ctrl+Shift+Tab marches both tabs
-    // (a round trip, each step centred by bare `c`'s act, the working zoom
-    // written); Tab / Shift+Tab cycle marker focus, landing
+    // Tab family: bare 5 / 6 switch tabs (the tab pair); Ctrl+Tab and
+    // Ctrl+Shift+Tab march both tabs forward and back (a round trip, each
+    // step centred by bare `c`'s act, the working zoom written); Tab /
+    // Shift+Tab cycle marker focus, landing
     // through the landing owner's walk (Viewport::land_subject,
     // LandingKind::Walk), which reads the zoom and never writes it.
     if (handle_tab_switch_keys(key, mods)) return;
@@ -2086,9 +2095,9 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // nothing ahead writes NOTHING: no select, no playhead land, no
     // recentre. THE WALK STEPS MARKERS ONLY, in grid iterations as outside it
     // (architect 2026-11-02, the declaration's rule): a tap addresses a
-    // bound cell, never the walk. THE Ctrl+Shift+Tab MARCH takes this answer
-    // at each of its two cycles (its tab switches and its two `c`s are their
-    // own acts and still run); it reads nothing back.
+    // bound cell, never the walk. THE TWO MARCHES take this answer
+    // at each of their two cycles (their tab switches and their two `c`s are
+    // their own acts and still run); neither reads anything back.
     //
     // THE REFUSAL IS SILENT (architect 2026-08-31): a benign
     // one-dimensional refusal already at its state says nothing — one glance
@@ -2113,9 +2122,9 @@ void GuiInputHandler::cycle_marker_focus(bool forward,
     // camera is its caller's statement, forwarded untouched: the two Tab
     // arms state MarkerLandingFrame::Land, the landing owner's walk
     // (Viewport::land_subject, LandingKind::Walk, architect 2026-09-24),
-    // which reads the zoom and never writes it; both steps of the
-    // Ctrl+Shift+Tab paired march state Center and run bare `c`'s act behind
-    // it (2026-09-26).
+    // which reads the zoom and never writes it; both steps of each
+    // paired march (Ctrl+Tab and Ctrl+Shift+Tab) state Center and run bare
+    // `c`'s act behind it (2026-09-26).
     // A policy read in here would let a caller inherit one, which is the
     // shape the required parameter exists to prevent: framing cannot be
     // acquired by saying nothing. `c` is the direct route to the working
@@ -2170,7 +2179,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     // IS THE CALLER'S, and the two callers answer differently: `c` snaps to the
     // working zoom right after this returns, the Tab walk sets nothing
     // (architect 2026-08-05, "no zoom on Tab", at every level), and the
-    // paired march's steps run `c`'s act behind this — so this tail frames the stop at whatever level it was
+    // paired marches' steps run `c`'s act behind this — so this tail frames the stop at whatever level it was
     // called at, and only `c`'s zoom write re-centres after it. Follow does
     // not gate it either (architect 2026-07-19).
     // center_viewport_on_playhead is the SOLE viewport write in this arm: it
@@ -2197,8 +2206,8 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     //
     // WHO PASSES WHAT: `c` (run_center_command) states
     // Center; cycle_marker_focus forwards Land from the two live Tab arms
-    // (Tab and Shift+Tab) and Center from the two steps of the Ctrl+Shift+Tab
-    // paired march, each followed by `c`'s own act. Ctrl+J reaches the camera
+    // (Tab and Shift+Tab) and Center from the two steps of each paired march
+    // (Ctrl+Tab and Ctrl+Shift+Tab), each followed by `c`'s own act. Ctrl+J reaches the camera
     // through run_center_command by name and the A/B audition through the
     // centre key's act (run_center_key_command), and so both take its
     // Center with it.
@@ -2223,8 +2232,8 @@ void GuiInputHandler::run_center_command(bool user_zoom) {
     // (the one road of the live `c` key arm in handle_plain_bare_keys, the
     // history mode's own `c` arm in handle_history_mode_key — which must
     // claim the key to keep it off the mode's allowlist — and the writer of
-    // the hold posture a centring key arms; also run by both steps of the
-    // Ctrl+Shift+Tab paired march, live and `h`, and by the A/B audition's
+    // the hold posture a centring key arms; also run by both steps of each
+    // paired march, live and `h`, and by the A/B audition's
     // GuiAbAudition::apply_working_zoom, which opens each half of the act with
     // this command on the tab that half plays, inside the tab switch's own
     // frame, and arms the hold as the key does — the rule and the ordering it
@@ -2305,7 +2314,7 @@ void GuiInputHandler::run_center_command(bool user_zoom) {
     // it shares), and the jump returns false exactly when it touched nothing,
     // stop included, so the no-focus arm spells its stop on that return,
     // ahead of the zoom and the centre. Every caller inherits it here — bare
-    // `c`, the Center button, both steps of the paired march, Ctrl+J's two
+    // `c`, the Center button, both steps of each paired march, Ctrl+J's two
     // calls and the A/B audition's three, each of which runs with the act's
     // sequence Idle and none of the act's plays sounding — the first ahead of
     // the switch that would stop a play the press found anyway, the other two
@@ -2938,7 +2947,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
     // would have to be re-derived in the new domain. Closing it is simpler
     // than re-landing it, and it is what the flip already does to everything
     // else around the caret. Guarded internally on an active editor, so this
-    // is a no-op when none is open. Ctrl+Tab never changes
+    // is a no-op when none is open. The tab switch never changes
     // active_audio_view, so this is the one place either edge is handled.
     // THE CLOSE IS KIND-AGNOSTIC: every top-strip editor kind tears down on
     // either edge (architect 2026-08-25: "we want symmetry as much as
@@ -3060,7 +3069,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
 
     // The S/T toggle translates the active tab's live playhead across the
     // domain flip; the inactive tab's stored playhead must translate too, or
-    // a later Ctrl+Tab loads a stale-domain position that gets read in the
+    // a later tab switch loads a stale-domain position that gets read in the
     // new domain. Same warp_frame_map, same direction as the active
     // translation.
     // To keep the inactive tab's playhead at the same on-screen column after
@@ -3132,7 +3141,7 @@ void GuiInputHandler::switch_active_audio_view_to(char target_view) {
         // the delta's sign, then max(0, .) floors it. No band-aware upper/domain
         // clamp is applied — stored bands are load-shaped only (a slowing map
         // legitimately persists positions past the source total), and the
-        // Ctrl+Tab restore's runtime clamp owns the domain fit exactly as it
+        // tab switch's runtime clamp at its restore owns the domain fit exactly as it
         // does for values read from disk. Non-negative + overflow-safe is the
         // writable-implies-loadable bar.
         const int64_t delta = other_new_ph - other_old_ph;

@@ -1488,7 +1488,7 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // THE TOP ICON ROW AND ITS CASE — the top strip's lane 0, under the title
 // bar (program_spec.h's head, where every length below is authored and its
 // source named). The roster's view/mode/action buttons stand in it — the
-// kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs and history
+// kIconRowButtons, kIconRowHistoryOpener, kIconRowViewPairs, kIconRowTabPair and history
 // stand-in tables are the count's one authority (paint_handler.cpp); THE
 // CASE IS ALSO THE BOTTOM ICON ROW'S AND THE RENDER PLAYER'S: every reader
 // takes the accessors below, so the three rows cannot drift apart.
@@ -1610,7 +1610,7 @@ inline int icon_row_h_px() {
 // left-run member whose box would end past the limit published empty, no
 // key cut, NOISE first, then the third run's keys from its tail, the right
 // run whole; the bottom
-// icon row's block grows leftward over the tab's name, and the player's and
+// icon row's block grows leftward over the timestamp, and the player's and
 // the score viewer's rows take the gap from the scrub's trough, which
 // their floor of two knobs drops whole when too little is left.
 inline int program_run_gap_px() {
@@ -2138,12 +2138,12 @@ struct WellColumns {
 WellColumns well_columns(const AppState& a);
 
 // Authored pixel geometry of THE BOTTOM ICON ROW (architect 2026-08-12):
-// one plain-text run at the left — the timestamp, a text pipe and the active
-// tab's name (architect 2026-11-19; paint_handler.cpp's
+// one plain-text run at the left — the timestamp alone (architect
+// 2026-11-19; alone, 2026-11-24; paint_handler.cpp's
 // bottom_left_run) — and the COPY / PASTE duo, the skips (Go to Start, Go
 // to End), the MARKER-VERB GROUP, the step and
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
-// (Switch Tab, Center, Left, Right and Play / Stop, the last case; architect
+// (Center, Left, Right and Play / Stop, the last case; architect
 // 2026-10-18) packed right, each one linked group, the run gap
 // (program_run_gap_px, kRunGapW) of bare ground
 // between two (kMarkerVerbGroup in paint_handler.cpp owns that group's
@@ -2159,7 +2159,7 @@ WellColumns well_columns(const AppState& a);
 // score viewer — stands its controls on these rows, THE MODAL FAMILY'S
 // CONTROLS ROW (modal_box.h); UNDER A QUESTION'S PAGE OR THE PROGRESS PAGE
 // THE ROWS HOLD THE PAGE'S ANSWERS, Arc's word buttons flush right, and
-// nothing else — no timestamp, no tab name, no key, none of an overlay's
+// nothing else — no timestamp, no key, none of an overlay's
 // controls (architect 2026-11-20; paint_handler.cpp's
 // modal_owns_bottom_row); UNDER EVERY EDITOR THE ON-SCREEN KEYBOARD STANDS
 // OVER THE ROWS and the row yields (onscreen_keyboard.h's placement block,
@@ -2202,8 +2202,8 @@ inline int bottom_row_h_px() {
 inline constexpr double kStatusBarPadW = 4.0;
 inline constexpr double kStatusBarPenW = 14.0;
 // THE BOTTOM ICON ROW'S LEFT RUN'S PEN (architect 2026-11-19: "And then
-// we put the timestamp line at 14W"): the timestamp, its text pipe and the
-// tab's name, plain text pressing nothing (architect
+// we put the timestamp line at 14W"): the timestamp alone (architect
+// 2026-11-24), plain text pressing nothing (architect
 // 2026-11-20), from 14 W inside the
 // panel's left edge (28 device px on the tablet), the status bar's column
 // (paint_handler.cpp's bottom_left_run).

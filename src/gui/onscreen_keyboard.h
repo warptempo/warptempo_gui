@@ -920,11 +920,10 @@ inline bool stands(const AppState& a) {
 //     KEYBOARD (every editor's open stops play, architect 2026-11-20;
 //     stop_playback_for_modal_open), so no scanner or FOLLOW frame
 //     damages the canvas's rows under it;
-//   * THE BOTTOM ICON ROW (paint_bottom_strip): its keys, the timestamp and
-//     the tab name stand down and publish zero rects and a zero clock cell,
+//   * THE BOTTOM ICON ROW (paint_bottom_strip): its keys and the timestamp
+//     stand down and publish zero rects and a zero clock cell,
 //     the clock's damage owner answering an empty rect
-//     (clock_invalidate_rect, main.cpp; GuiClockFingerprint::yields), the
-//     tab name's damage silent (Viewport::invalidate_tab_name_area) and the
+//     (clock_invalidate_rect, main.cpp; GuiClockFingerprint::yields) and the
 //     tick's face comparator skipping its keys (main.cpp's walk); under
 //     a line editor's value sub-page no controls row is painted either
 //     (paint_handler.cpp's THE VALUE SUB-PAGE);

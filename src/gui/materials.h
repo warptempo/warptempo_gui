@@ -214,7 +214,7 @@
 // THE TEXT TONES (architect 2026-11-02, 2026-11-19; every number at its
 // line of kArcDarkTones, gui_theme.h): `text`, Arc's
 // font color D3DAE3, on every word, digit and drawing the chrome prints —
-// the clocks, the tab name, the status bar, the lists and their drawings,
+// the clocks, the status bar, the lists and their drawings,
 // the pages' words, the keyboard's caps, the keys' glyphs —
 // and `text_dim`, 7E838F, for the settings page's disabled rows, the
 // tooltip's hint line and an inert marker label. ON THE ARC PAGE (architect

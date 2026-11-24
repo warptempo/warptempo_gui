@@ -271,14 +271,18 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
         ((key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
           key == GuiKeys::Digit3 || key == GuiKeys::Digit4) &&
          !ctrl && !shift && !alt);
+    // BARE 5 / 6, THE TAB PAIR (architect 2026-11-24): the A/B tab switch,
+    // navigation — the tab's value-shaped band alone, no store — so a locked
+    // tab admits it, the switch out of a locked tab among it.
+    const bool is_tab_selector = is_tab_selector_key(key, mods);
     // THE WALK: bare Tab / Shift+Tab — pure navigation, its camera the
-    // landing owner's (Viewport::land_subject). No ctrl: Ctrl+Tab and the
-    // march are their own entries below. No alt: no Alt spelling of Tab binds.
+    // landing owner's (Viewport::land_subject). No ctrl: the two marches are
+    // their own entry below. No alt: no Alt spelling of Tab binds.
     const bool is_tab_cycle = (!ctrl && !alt && key == GuiKeys::Tab);
-    const bool is_ctrl_tab =
-        (ctrl && !shift && !alt && key == GuiKeys::Tab);
-    const bool is_ctrl_shift_tab =
-        (ctrl && shift && !alt && key == GuiKeys::Tab);
+    // THE TWO MARCHES, Ctrl+Tab forward and Ctrl+Shift+Tab back (architect
+    // 2026-11-24, the walk keys' holds): two tab switches, two marker steps
+    // and two `c`s, all navigation, one answer for both directions.
+    const bool is_march = is_march_key(key, mods);
     // (Esc needs no admission: it never reaches this gate, the on-screen
     // keyboard's Esc arriving only under an editor, whose route takes it
     // above — architect 2026-10-30, the roster and the on-screen keyboard the
@@ -447,7 +451,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // nothing on it — are NOT on the allowlist: both drop at this gate, so
     // that authoring mutations stop uniformly there, though an undo entry
     // may target the OTHER (writable) tab: undoing from a read-only tab
-    // first requires switching to the writable tab (Ctrl+Tab), accepted for
+    // first requires switching to the writable tab (the tab pair), accepted for
     // gate legibility. The target-tab peek in undo.cpp (do_undo / do_redo)
     // stands as a backstop for entries that outlive a mid-history lock.
     // Delete, `i`'s ON edge, `[` (the value drag lamp, 2026-10-11: on a locked
@@ -466,8 +470,8 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_zoom_step || is_zero ||
              is_waveform_magnification ||
              is_center || is_follow || is_restrict ||
-             is_view_selector ||
-             is_tab_cycle || is_ctrl_tab || is_ctrl_shift_tab ||
+             is_view_selector || is_tab_selector ||
+             is_tab_cycle || is_march ||
              is_save || is_publish || is_render || is_render_misc ||
              is_trim_maximize || is_trim_presets || is_trim_arm ||
              is_add_to_selection ||
@@ -506,13 +510,13 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // ABSOLUTE VIEW SELECTORS, bare 1 / 2 / 3 / 4, which run the `t` and `p` handler
 // BODIES and so carry the column
 // with them (architect 2026-09-10: the mode is lit for the column you are
-// IN) — THE
-// Ctrl+Shift+Tab PAIRED MARCH (architect 2026-11-02:
+// IN) — THE TWO PAIRED MARCHES, Ctrl+Tab forward and Ctrl+Shift+Tab back
+// (architect 2026-11-02:
 // "walk both not useful under grid b/c grid is for localize troubleshooting
 // of phase or setting or warp" — grid iterations is for localized
 // troubleshooting of one phase reset, setting or warp, so walking both tabs
-// has no use there) — and BARE `o`, THE READ-ONLY TOGGLE, IN ITS LOCK
-// DIRECTION ALONE (architect 2026-10-13).
+// has no use there, in either direction, 2026-11-24) — and BARE `o`, THE
+// READ-ONLY TOGGLE, IN ITS LOCK DIRECTION ALONE (architect 2026-10-13).
 // The padlock is the odd one out in what it protects: a lock writes no store
 // and pushes nothing, so the undo domain has no interest in it. What it keeps
 // is the ACTIVE tab's exclusion — the mode lights only on a writable tab
@@ -554,9 +558,12 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
 // 2026-10-13: "allow iterations mode … on a tab if it does not have readonly
 // set, even if the other does").
 //
-// Ctrl+Tab IS NOT ONE of them, and that is by construction rather than by
-// exception — the two tabs SHARE the warp and phase-reset stores, so a bracket
-// is common to both tabs and a plain switch can strand nothing.
+// THE TAB PAIR'S BARE 5 / 6 ARE NOT ONE of them (architect 2026-11-24), and
+// that is by construction rather than by exception — the two tabs SHARE the
+// warp and phase-reset stores, so a bracket is common to both tabs and a
+// plain switch can strand nothing: the base admits both (is_tab_selector,
+// read_only_key_blocked) and this gate inherits it in every state, where the
+// view selectors' 1..4 are dead.
 //
 // EVERY OTHER AUTHORING CHORD this mode has to hold back is already off the
 // list above — the vertical arrows on any modifier, bare Return, bare `/`,
@@ -663,15 +670,18 @@ bool iteration_lock_key_blocked(const AppState& app, GuiKey key,
     // value selecting the other; the column switch's only road), BARE `o` ON A
     // WRITABLE TAB (the lock direction alone, the
     // header; on a locked tab it falls through to the base, which admits the
-    // unlock) and the paired march. Bare-exact on all four and
-    // ctrl-and-shift exact on the march, exactly as their dispatch arms spell
-    // them. (Bare `k` is no member; the header says why.)
+    // unlock) and the two marches. Bare-exact on the selectors and `o`, and
+    // the marches through their shared predicate (is_march_key: ctrl-exact,
+    // either shift), exactly as their dispatch arms spell
+    // them. (Bare `k` is no member; the header says why. The tab pair's
+    // bare 5 / 6 are none either: they fall through to the base, which
+    // admits them.)
     if (!alt && !ctrl && !shift &&
         ((key == GuiKeys::O && !active_view_state(app).read_only) ||
          key == GuiKeys::Digit1 || key == GuiKeys::Digit2 ||
          key == GuiKeys::Digit3 || key == GuiKeys::Digit4))
         return true;
-    if (!alt && ctrl && shift && key == GuiKeys::Tab) return true;
+    if (is_march_key(key, mods)) return true;
     // Bare `i` — the off edge, bare-exact as its dispatch arm is.
     if (key == GuiKeys::I && !ctrl && !shift && !alt) return false;
     // The undo pair, admitted for its own card (the whole family, alt binding
@@ -1143,7 +1153,7 @@ void GuiInputHandler::republish_history_lane_now() {
 // must still open). LOCAL HISTORY IS THE
 // FALLBACK — the session's own undo/redo timeline as states — and everything
 // that walk supports works exactly as it does when bare `g` chooses it:
-// `,`/`.`, the diff lane, `'`, bare `v`, the paired march, Ctrl+Tab.
+// `,`/`.`, the diff lane, `'`, bare `v`, the paired marches, the tab switch.
 // WHAT NEEDS GIT IS REFUSED TRUTHFULLY AND ELSEWHERE, at the press that asks
 // for it: the walk lamp's own chord and the checkpoint act each card the
 // bootstrap's reason, and both faces grey off the one predicate
@@ -1548,17 +1558,20 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //   * bare `,` / `.`       — the walk;
 //   * bare Tab / Shift+Tab — the diff-flag cycle, its landing's camera the
 //     landing owner's exactly as the live walk's is (Viewport::land_subject);
-//   * Ctrl+Shift+Tab       — the PAIRED MARCH (2026-08-18), the diff-flag cycle
-//     composed with a round trip through the other tab (2026-09-26): the tab
-//     switch, the mode's Tab act and its `c`, the switch home and its `c`;
+//   * Ctrl+Tab / Ctrl+Shift+Tab — the TWO PAIRED MARCHES, forward and back
+//     (2026-08-18; both directions, architect 2026-11-24), the diff-flag
+//     cycle composed with a round trip through the other tab (2026-09-26):
+//     the tab switch, the mode's Tab act and its `c`, the switch home and
+//     its `c`;
 //   * bare Home / End and Shift+Home / Shift+End — the ABSOLUTE ends of the
 //     song, both forms (the shifted pair's whole-piece jump is what a jump
 //     already means in here, architect 2026-09-26);
 //   * bare `c`             — working zoom, centered on the mode's own focus;
 //   * bare Left / Right    — the playhead step (2026-09-26).
-// NO ALT SHAPE and ONE CTRL SHAPE, the march (2026-08-18). Ctrl+Tab is not
-// the mode's: the allowlist admits it as an ordinary A/B switch. Returns
-// true when the press was consumed.
+// NO ALT SHAPE and ONE CTRL FAMILY, the marches (2026-08-18; both
+// directions, 2026-11-24). The tab switch, bare 5 / 6, is not the mode's:
+// the allowlist admits it as an ordinary A/B switch. Returns true when the
+// press was consumed.
 //
 // THE ENTRY GATES ARE POSITIONAL, NOT RE-TESTED, and that is the point: this is
 // reached from on_key's main body, BELOW every gate that must refuse an entry,
@@ -1574,12 +1587,12 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //
 // ONLY `h` IS BOUND OUTSIDE THE MODE — the toggle arm sits ABOVE the `!active`
 // check and every other arm below it, so with the mode down `u`, `g`, `,`, `.`,
-// Tab, Ctrl+Shift+Tab, Home/End and `c` fall through to the ordinary
+// Tab, the two marches, Home/End and `c` fall through to the ordinary
 // dispatch and behave exactly as the ordinary dispatch binds them. Bare `u`
 // and bare `g` are
 // bound NOWHERE there, so falling through is the unbound key's own consumed
-// nothing, and Ctrl+Shift+Tab out there is the LIVE march — the same
-// composition over live markers, reached through its own arm in
+// nothing, and Ctrl+Tab / Ctrl+Shift+Tab out there are the LIVE marches —
+// the same composition over live markers, reached through their own arm in
 // handle_tab_switch_keys. A claim costs a shape outside the mode nothing: it is
 // a membership test, and the arm below it is not reached with the mode down.
 //
@@ -1606,15 +1619,14 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 //   * BARE Home / BARE End and SHIFT+HOME / SHIFT+END — the bottom icon row's
 //     START and END buttons (2026-10-24; their plain
 //     presses bare, their shift presses the whole-piece pair), claimed above
-//     beside the march, so both stand in the view;
+//     beside the marches, so both stand in the view;
 //   * BARE `c` — the bottom icon row's Center button, likewise;
 //   * BARE Tab and SHIFT+TAB — the bottom icon row's NEXT and PREVIOUS
 //     MARKER buttons (TransportWalk / TransportWalkPrevious), answered LIVE in
 //     the view by this predicate: they step the mode's own diff-flag cycle,
-//     so they do not grey in the view. CTRL+SHIFT+TAB, the march over
-//     that same cycle (2026-08-18), is Switch Tab's hold (architect
-//     2026-11-08), not greying (Ctrl+Tab, its plain press, acting in
-//     every state);
+//     so they do not grey in the view. CTRL+TAB and CTRL+SHIFT+TAB, the
+//     marches over that same cycle (2026-08-18), are their holds (architect
+//     2026-11-24), claimed here too;
 //   * BARE Left / BARE Right — the bottom icon row's LEFT and RIGHT arrows, the
 //     playhead step (2026-09-26), answered LIVE by this predicate and greyed
 //     by their own arm (horizontal_arrow_step_actionable's `h` arm: a diff
@@ -1624,23 +1636,23 @@ void GuiInputHandler::set_history_delta(GuiHistoryWalkSource source,
 bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // EVERY ALT SHAPE IS REFUSED: the mode claims no alt chord.
     if (mods.alt) return false;
-    // THE FIRST CTRL SHAPE (architect 2026-08-18): CTRL+SHIFT+TAB, THE PAIRED
-    // MARCH, read here over the mode's own vocabulary. "Both tab and ctrl+tab
-    // are available [in the view], and ctrl+shift+tab is just short for
-    // 'tab, ctrl+tab, tab'" (a round trip through the other tab,
-    // 2026-09-26, each step centred by `c`, live and here alike) — so the
-    // chord means one thing everywhere and only
+    // THE ONE CTRL FAMILY (architect 2026-08-18; both directions 2026-11-24):
+    // CTRL+TAB AND CTRL+SHIFT+TAB, THE TWO PAIRED MARCHES, forward and
+    // back, read here over the mode's own vocabulary. A march is short for
+    // a tab switch, a step and a switch home (architect 2026-08-18: a round
+    // trip through the other tab, 2026-09-26, each step centred by `c`, live
+    // and here alike) — so each chord means one thing everywhere and only
     // what "Tab" DENOTES changes with the context: live markers outside, the
     // viewed checkpoint's diff flags in here. Claimed rather than left to the
     // allowlist because that is how the walk's two chords, bare Tab and
-    // Shift+Tab (Next and Previous Marker, the step-and-walk group's pair),
-    // already answer, both for the key and for the
-    // roster face derived from this predicate.
+    // Shift+Tab (Next and Previous Marker, the step-and-walk group's pair,
+    // whose holds the marches are), already answer, both for the key and for
+    // the roster face derived from this predicate.
     //
-    // THE SPELLING IS THE LIVE MARCH'S EXACTLY — plain Tab with ctrl+shift —
-    // because the live arm binds that one shape too; the mode mirrors what it
-    // composes rather than widening it.
-    if (mods.ctrl && mods.shift && key == GuiKeys::Tab) return true;
+    // THE SPELLING IS THE LIVE MARCHES' EXACTLY (is_march_key) because the
+    // live arm binds those two shapes; the mode mirrors what it composes
+    // rather than widening it.
+    if (is_march_key(key, mods)) return true;
     // EVERY OTHER CTRL SHAPE IS REFUSED, and the branch stands as a REFUSAL
     // because every shape below it is BARE (or
     // shift-carrying, on Tab, the walk and Home / End), so a ctrl press falling past this
@@ -1650,8 +1662,9 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
     // come out as the mode's own `h` toggle and close the view. One line, and
     // strict modifier validation holds.
     //
-    // (CTRL+TAB falls through to the allowlist, which ADMITS it — an A/B tab
-    // switch works normally in the view, the architect's own ruling.)
+    // (The tab switch, bare 5 / 6, falls through to the allowlist, which
+    // ADMITS it — an A/B tab switch works normally in the view, the
+    // architect's own ruling.)
     if (mods.ctrl) return false;
     // THE CYCLE IS ONE OF THREE SHIFT-CARRYING SHAPES, and it is admitted in the
     // live cycle's own two spellings: bare Tab forward, Shift+Tab back.
@@ -1695,7 +1708,8 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 }
 
 // THE DIFF-FLAG CYCLE'S ONE ACT — the mode's Tab, factored out because the
-// mode's Ctrl+Shift+Tab march composes it too (2026-08-18). Two callers, both
+// mode's two marches compose it too (2026-08-18; both directions,
+// 2026-11-24). Two callers, both
 // in handle_history_mode_key below: its Tab arm and its march arm. Every rule
 // the cycle carries — the no-wrap walls, the empty-list nothing, the
 // focus-replaces-selection rest, the landing and its damage — is stated at the
@@ -1708,8 +1722,9 @@ bool history_mode_owns_key(GuiKey key, GuiInputState mods) {
 void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
                                                     MarkerLandingFrame frame) {
     // THE STOP IS ONE OWNER'S (history_diff_cycle_target, app_state.h), and
-    // this body is its one reader: the Walk button's face does not ask it,
-    // its ctrl form (the tab switch) keeping it lit wherever the roster is.
+    // this body is its one reader: the walk keys' faces do not ask it, their
+    // holds (the two marches, architect 2026-11-24) keeping them lit in the
+    // view.
     // The seed, the walls and the empty arm are stated there; each is a
     // silent consumed no-op here.
     const int there = history_diff_cycle_target(app, audio, forward);
@@ -1745,7 +1760,7 @@ void GuiInputHandler::cycle_history_diff_flag_focus(bool forward,
     // on-screen flag moves nothing and an off-screen one is paged in; the
     // zoom is never written. A single
     // flag always fits, so the owner's cannot-fit verdict is dropped. The
-    // Center arm is the march's step (2026-09-26), the live march's own
+    // Center arm is the marches' step (2026-09-26), the live marches' own
     // statement, and centres at the standing zoom, as the live jump's does;
     // the march runs the mode's `c` (run_center_command's mode arm) behind
     // it, which writes the working zoom and centres again.
@@ -2034,8 +2049,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // would inherit the right shape instead of a missing call. The revert act's
     // own stop carries the same note at its site.
 
-    // THE TAB FAMILY IN THE VIEW — the diff-flag cycle, and above it the march
-    // that composes the cycle with the A/B switch.
+    // THE TAB FAMILY IN THE VIEW — the diff-flag cycle, and above it the two
+    // marches that compose the cycle with the A/B switch.
     //
     // BARE TAB / SHIFT+TAB — THE DIFF-FLAG CYCLE, mode-local. Tab
     // steps to the next flag, Shift+Tab to the previous, in the
@@ -2058,14 +2073,16 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // (drop_lane_stash_across_history_edge owns the whole argument).
     //
     // THE ACT IS ITS OWN MEMBER (cycle_history_diff_flag_focus) because the
-    // march below composes it twice; this arm is its spelling, not its body.
+    // marches below compose it; this arm is its spelling, not its body.
     //
-    // CTRL+SHIFT+TAB RANKS ABOVE IT and must: the test below reads the KEY
-    // alone, so the march's own Tab would fall into a backward step here.
-    if (mods.ctrl && mods.shift && key == GuiKeys::Tab) {
-        // THE PAIRED MARCH, MODE-LOCAL — THE LIVE MARCH'S ROUND TRIP over the
-        // view's own vocabulary (architect 2026-09-26): switch to the other
-        // tab, step, centre with the
+    // THE MARCHES RANK ABOVE IT and must: the test below reads the KEY
+    // alone, so a march's own Tab would fall into a step here.
+    if (is_march_key(key, mods)) {
+        // THE PAIRED MARCHES, MODE-LOCAL — THE LIVE MARCHES' ROUND TRIP over
+        // the view's own vocabulary (architect 2026-09-26), Ctrl+Tab forward
+        // and Ctrl+Shift+Tab back (architect 2026-11-24, the backward one the
+        // forward one mirrored and nothing else): switch to the other
+        // tab, step in the march's direction, centre with the
         // mode's `c`; switch home, centre with the mode's `c`. The user ends
         // on the tab he started from and never sees the other one — the whole
         // act is one key dispatch and nothing in it commits a frame (the rule
@@ -2079,7 +2096,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // inside it.
         //
         // ONE STEP, NOT TWO, and that is the honest re-expression of "advance
-        // one marker next in both tabs": the mode's focus is ONE index over
+        // one marker next in both tabs" (or back): the mode's focus is ONE
+        // index over
         // one diff-flag list, shared by both tabs (the tabs share both marker
         // stores, so the list is the same on either side, and the tab switch
         // leaves the index standing). The other tab's step moves that shared
@@ -2087,15 +2105,16 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
         // and put the visible tab two flags on, past the one the other tab
         // stands on. So the home half is the mode's `c` alone, which lands
         // the home tab's playhead on the same focused flag — both tabs end on
-        // one flag, which is lockstep. A step that refuses at the last flag
-        // (the cycle's silent wall) leaves the focus where it stood, and both
-        // `c`s centre on it, as a bare `c` would.
+        // one flag, which is lockstep. A step that refuses at the end flag
+        // in its direction (the cycle's silent wall) leaves the focus where
+        // it stood, and both `c`s centre on it, as a bare `c` would.
         //
         // No preview trigger, the live march's reason (the round trip ends on
         // the tab it started from); the view has no playback in any case.
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
-        cycle_history_diff_flag_focus(true, MarkerLandingFrame::Center);
+        cycle_history_diff_flag_focus(march_key_forward(mods),
+                                      MarkerLandingFrame::Center);
         run_center_key_command(/*user_zoom=*/true);
         active_views.switch_active_tab_view_to(home);
         run_center_key_command(/*user_zoom=*/true);
@@ -2107,7 +2126,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // landing owner's walk (Viewport::land_subject, LandingKind::Walk), so the
     // walks frame alike at every level in both worlds. No alt term here:
     // history_mode_owns_key refuses every alt shape ahead of this body; the
-    // march above ranks first.
+    // marches above rank first.
     if (key == GuiKeys::Tab) {
         cycle_history_diff_flag_focus(!mods.shift, MarkerLandingFrame::Land);
         return true;
@@ -2177,7 +2196,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // press is the live waveform lane's step, the SAME BODY
     // (run_waveform_lane_playhead_step): one step in the active column's unit
     // (a painted column on W, a hop on P), the camera the hold posture's
-    // (nudge_camera — `c`, the diff-flag walk's centring and the march arm it
+    // (nudge_camera — `c`, the diff-flag walk's centring and the marches arm it
     // in here), the hold kept across the step, the key repeating as live.
     // That body's live-selection clear is skipped in the view: the live
     // selection is the live world's and the view writes none of it, and the
@@ -2483,8 +2502,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // hand entry anywhere.
 //
 // VIEWS AND A/B TAB SWITCHES ARE BOTH ADMITTED (the views architect
-// 2026-08-04; the tabs architect 2026-08-18: "ctrl+tab should work as normal
-// in history view"). A view switch
+// 2026-08-04; the tabs architect 2026-08-18: the tab switch "should work as
+// normal in history view"; the tab pair's bare 5 / 6, 2026-11-24). A view switch
 // re-reads THE SAME piece — the same three sidecar texts the now side was
 // frozen from, the same delta, another column of it — and SO DOES A TAB SWITCH,
 // which is what makes the admission cheap rather than a re-entry: the tabs hold
@@ -2505,9 +2524,9 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 // history_mode_disables_button, input_pointer.cpp, which carries the whole
 // inventory. THE DERIVATION ASKS THE BASE CHORD, so a lit button's modifier
 // twins are this list's members too, and every one is: Open Project's
-// Ctrl+Alt+O, Zoom to Fit's Shift+0 and the tab buttons' Ctrl+Tab are
+// Ctrl+Alt+O, Zoom to Fit's Shift+0 and the tab pair's bare 5 / 6 are
 // admitted below, Save's lift is the publish chord in here, and the walk's,
-// the march's, the skips' and the history steps' forms are the mode's own
+// the marches', the skips' and the history steps' forms are the mode's own
 // vocabulary (history_mode_owns_key) — so no press a lit button makes is
 // one this list refuses.
 //
@@ -2649,10 +2668,11 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // the lamp turns a plain diff-flag press into the mode's ctrl body, which
     // is the only road to a two-flag selection a finger has.
     const bool is_add_to_selection = (key == GuiKeys::K && bare);
-    // THE A/B TAB SWITCH (architect 2026-08-18): "ctrl+tab should work as
-    // normal in history view — it becomes essentially another view but in
+    // THE A/B TAB SWITCH (architect 2026-08-18): the tab switch "should work
+    // as normal in history view — it becomes essentially another view but in
     // mostly readonly mode, with no playback since trim is not mutable". So
-    // Ctrl+Tab is an ORDINARY tab switch in here — not a special case and not a
+    // the tab pair's bare 5 / 6 (architect 2026-11-24, is_tab_selector_key)
+    // are an ORDINARY tab switch in here — not a special case and not a
     // closer: the view stays up, the newly active tab's band goes live, and the
     // switch's own tail (kick_waveform_sync) republishes the lane over it.
     //
@@ -2667,13 +2687,13 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // same reason. What the switch does move is the WINDOW, which the view
     // does not own: its entry frames nothing and its exit restores nothing.
     //
-    // ITS SHIFTED TWIN NEVER REACHES THIS LIST — Ctrl+Shift+Tab is the mode's
-    // OWN (2026-08-18; history_mode_owns_key claims it and
-    // handle_history_mode_key consumes it one line above this gate), where it
-    // is the paired march built over the diff-flag cycle: the same chord, the
-    // same composition, and only what "Tab" denotes changes with the context.
-    const bool is_ctrl_tab =
-        (ctrl && !shift && !alt && key == GuiKeys::Tab);
+    // THE TWO MARCHES NEVER REACH THIS LIST — Ctrl+Tab and Ctrl+Shift+Tab
+    // are the mode's OWN (2026-08-18; both directions 2026-11-24;
+    // history_mode_owns_key claims them and handle_history_mode_key consumes
+    // them one line above this gate), where each is the paired march built
+    // over the diff-flag cycle: the same chord, the same composition, and
+    // only what "Tab" denotes changes with the context.
+    const bool is_tab_selector = is_tab_selector_key(key, mods);
     // THE TOOLTIP LAMP (architect 2026-09-29), bare backslash through the
     // shared predicate: it is chrome — whether a resting pointer raises hints
     // — and touches nothing the view froze, so the view admits it and the
@@ -2703,7 +2723,7 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // chord, input_pointer.cpp — device state the view has no reason to
     // refuse.)
     return !(is_zoom_step || is_zero || is_play_renders ||
-             is_view_selector || is_add_to_selection || is_ctrl_tab ||
+             is_view_selector || is_add_to_selection || is_tab_selector ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_open_project ||
              is_revert_project ||
@@ -3830,7 +3850,8 @@ namespace {
 // route_modal_editor_key), so the spelling cannot drift apart. BARE TAB
 // EXACTLY (architect 2026-10-30: the on-screen keyboard's Tab key, its one
 // producer, carries no shift — the latched Shift rides LEFT and RIGHT alone,
-// 2026-11-08; Ctrl+Tab is the tab-cycle family's, never an editor's).
+// 2026-11-08; Ctrl+Tab and Ctrl+Shift+Tab are the marches, the tab family's,
+// never an editor's).
 bool modal_editor_tab(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Tab && !mods.ctrl && !mods.shift && !mods.alt;
 }
@@ -4996,7 +5017,7 @@ void GuiInputHandler::apply_recipe_in_place(
     // reads an in-domain cursor; kick_waveform_sync's own
     // clamp_display_state_to_live_domain then re-asks and finds nothing to do.
     // THE PARKED BAND IS NOT CLAMPED HERE and must not be: it is not a live
-    // field, and the Ctrl+Tab restore clamps it on the way in (active_views.cpp)
+    // field, and the tab switch's restore clamps it on the way in (active_views.cpp)
     // — the inventory at clamp_playhead_to_live_domain's declaration is what
     // this follows. The viewport's clamp is a re-validation of a camera the
     // user left, so it keeps the camera's lattice (ViewportLattice::Keep,
@@ -7704,7 +7725,7 @@ void GuiInputHandler::copy_focused_marker_value() {
 
 // THE JUMP — Ctrl+J: stand the OTHER A/B tab on the marker this one's
 // focused value came from, so a reference and its definition can be read side
-// by side one Ctrl+Tab apart. FIVE ACTS IN THIS ORDER, each through its own
+// by side one tab switch apart. FIVE ACTS IN THIS ORDER, each through its own
 // chokepoint and none of them spelled twice — and the ORDER is the whole of
 // what makes the act land where it says it does:
 //   * run_center_command ON THE CURRENT TAB FIRST (architect 2026-08-29, "with
@@ -7718,7 +7739,7 @@ void GuiInputHandler::copy_focused_marker_value() {
 //     origin tab's playhead comes to rest on the reference — the audition's
 //     behaviour too, and wanted here for the same reason: the tab you leave is
 //     left standing on the thing you were reading;
-//   * the TAB SWITCH through switch_active_tab_view_to, the Ctrl+Tab road,
+//   * the TAB SWITCH through switch_active_tab_view_to, the tab pair's road,
 //     which clears the selection as every tab switch does, re-lands the
 //     window's own state and runs the COINCIDENCE AUTO-SELECT at the entering
 //     tab's own parked cursor — which may seat a marker that has nothing to do
@@ -8047,10 +8068,15 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     const bool shift = mods.shift;
     const bool alt   = mods.alt;
 
-    // Ctrl+Tab toggles A/B navigational tabs. Stops playback, saves
-    // current viewport/zoom/playhead to the leaving tab, restores the
-    // target tab. Does not mark the document dirty. Alt-strict: an Alt
-    // held alongside makes the chord an unbound no-op, never this binding.
+    // BARE 5 / 6, THE TAB PAIR (architect 2026-11-24: the top icon row's
+    // third radio pair, Tab A / Tab B): each names a tab, and THE KEY FOR THE
+    // TAB ALREADY STANDING SELECTS THE OTHER (the view selectors' pop,
+    // architect 2026-10-23, on_key's digit arm), so every press switches.
+    // The act is the A/B switch: stops playback, saves the current
+    // viewport / zoom / playhead to the leaving tab, restores the target
+    // tab, and re-dispatches the preview for the entering tab's trim. Does
+    // not mark the document dirty. Bare-exact through the shared predicate
+    // (is_tab_selector_key): a modified 5 or 6 binds nothing.
     //
     // THE ITERATION LOCK ADMITS IT IN EVERY STATE, and by construction rather
     // than by exception: the two tabs SHARE both marker stores, so a
@@ -8060,29 +8086,37 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // switch is refused): there the read-only lock refuses the tab's
     // authoring, its sentence first, and bare `i` still puts the lamp out
     // (authoring_locked, app_state.h).
-    if (ctrl && !shift && !alt && key == GuiKeys::Tab) {
-        active_views.switch_active_tab_view_to(app.active_tab_view == 'A' ? 'B' : 'A');
+    if (is_tab_selector_key(key, mods)) {
+        const char named = (key == GuiKeys::Digit5) ? 'A' : 'B';
+        const char other = (named == 'A') ? 'B' : 'A';
+        active_views.switch_active_tab_view_to(
+            app.active_tab_view == named ? other : named);
         target_render.trigger();
         return true;
     }
 
-    // Ctrl+Shift+Tab — THE PAIRED MARCH, A ROUND TRIP (architect 2026-09-26):
-    // advance both tabs' marker focus one step in lockstep and END ON THE TAB
-    // IT STARTED FROM. "If I'm in tab B and I hit Ctrl+Shift+Tab, I should
+    // THE TWO MARCHES, A ROUND TRIP (architect 2026-09-26; both directions,
+    // 2026-11-24): Ctrl+Tab, THE PAIRED MARCH FORWARD, advances both tabs'
+    // marker focus one step in lockstep and ENDS ON THE TAB IT STARTED FROM,
+    // and Ctrl+Shift+Tab, THE PAIRED MARCH BACKWARD, is the forward one
+    // mirrored and nothing else — each tab's focus one marker BACK. "If I'm
+    // in tab B and I [march], I should
     // advance one marker next in both tabs and then end up in tab B. So
     // basically I should not see tab A at all." Showing the other tab is the
     // A/B audition's business (Shift+Space, GuiAbAudition), which switches to
-    // it to play a portion and back; the march walks the pair in lockstep,
-    // and alternating the tab in view was only ever a consequence of the
-    // audition not existing yet.
+    // it to play a portion and back; the march walks the pair in lockstep.
+    // Their pointer roads are the walk keys' holds (Next Marker's the
+    // forward march, Previous Marker's the backward one; the lift's ruled
+    // translation, finish_chrome_press_release).
     //
-    // THE ORDER: switch to the OTHER tab, step its focus one marker forward
-    // and centre it as bare `c` does; switch HOME, step its focus and centre
-    // it the same way. The visible tab's own step is the last camera write.
+    // THE ORDER: switch to the OTHER tab, step its focus one marker in the
+    // march's direction and centre it as bare `c` does; switch HOME, step its
+    // focus and centre it the same way. The visible tab's own step is the
+    // last camera write.
     // Each tab steps from its OWN focus: the switch clears the selection and
     // the coincidence auto-select re-seats whatever marker stands under that
     // tab's parked cursor, so two tabs resting on one marker both advance to
-    // the next.
+    // the same neighbor.
     //
     // EACH STEP CENTRES THROUGH `c`'s OWN ACT (run_center_key_command): the
     // working zoom, centred on the focused marker, the playhead on it, the
@@ -8093,7 +8127,8 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // step itself frames nothing `c` does not immediately re-frame. A step
     // that refuses at a wall (cycle_marker_focus's silent refusal) leaves that
     // tab's focus where it stood, and its `c` still centres on it, as a bare
-    // `c` would.
+    // `c` would — which is why a march always acts (the walk keys' faces, the
+    // twin rule at redesign_button_enabled).
     //
     // THE USER NEVER SEES THE OTHER TAB: the whole act runs inside this one
     // key dispatch, and nothing in it commits a frame — each switch's and
@@ -8104,31 +8139,32 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // viewport / zoom / playhead into the LEAVING tab's band
     // (refresh_active_tab_view_from_app) before pulling the entering one's, so
     // the switch home saves the other tab's landing, and that tab restores it
-    // at the next Ctrl+Tab. Do not collapse the two steps into one.
+    // at the next tab switch. Do not collapse the two steps into one.
     //
-    // NO PREVIEW TRIGGER: Ctrl+Tab's target_render.trigger() re-dispatches the
-    // preview for the ENTERING tab's trim, and the round trip ENDS on the tab
-    // whose trim the preview is already bound to, and plays nothing on the
-    // other one in between, so there is nothing for a re-dispatch to serve.
+    // NO PREVIEW TRIGGER: the tab switch's target_render.trigger() (above)
+    // re-dispatches the preview for the ENTERING tab's trim, and the round
+    // trip ENDS on the tab whose trim the preview is already bound to, and
+    // plays nothing on the other one in between, so there is nothing for a
+    // re-dispatch to serve.
     // (The A/B audition, which PLAYS on the other tab, takes the trigger at
     // both of its switches, ab_audition.h.) The playback
     // stop is the switch's own (switch_active_tab_view_to).
     //
-    // IT NEVER RUNS WHILE GRID ITERATIONS IS LIT (architect 2026-09-10): the
-    // march is one of delta (a)'s members at the authoring lock's keyboard
+    // NEITHER RUNS WHILE GRID ITERATIONS IS LIT (architect 2026-09-10): the
+    // marches are delta (a)'s members at the authoring lock's keyboard
     // gate, refused on kIterationLockCard (iteration_lock_key_blocked, above,
-    // whose header carries the ruling's reason) — the march's two pointer
-    // roads, the other tab's shifted press and the walk button's ctrl-shift
-    // press, dispatching this chord and meeting the same card. Both steps
+    // whose header carries the ruling's reason) — the walk keys' holds
+    // dispatching these chords and meeting the same card. Both steps
     // here are ordinary MARKER steps, as every walk step is (2026-11-02,
     // cycle_marker_focus).
-    if (ctrl && shift && !alt && key == GuiKeys::Tab) {
+    if (is_march_key(key, mods)) {
+        const bool forward = march_key_forward(mods);
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
-        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        cycle_marker_focus(forward, MarkerLandingFrame::Center);
         run_center_key_command(/*user_zoom=*/true);
         active_views.switch_active_tab_view_to(home);
-        cycle_marker_focus(true, MarkerLandingFrame::Center);
+        cycle_marker_focus(forward, MarkerLandingFrame::Center);
         run_center_key_command(/*user_zoom=*/true);
         return true;
     }
@@ -8145,11 +8181,10 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
     // marker_walk_landing).
     //
     // The `h` view's own Tab arm states the same Land over its diff-flag
-    // cycle (handle_history_mode_key). The Ctrl+Tab branch above
-    // runs first and returns, so Ctrl+Tab is consumed before reaching here;
-    // the explicit !ctrl guards below keep Ctrl+Shift+Tab out of the cycle
-    // path, and the !alt guards make every Alt spelling of Tab an unbound
-    // no-op.
+    // cycle (handle_history_mode_key). The marches' branch above runs first
+    // and returns, so both ctrl forms are consumed before reaching here; the
+    // explicit !ctrl guards below say so at the cycle path, and the !alt
+    // guards make every Alt spelling of Tab an unbound no-op.
     constexpr MarkerLandingFrame walk_frame = MarkerLandingFrame::Land;
     if (!ctrl && !alt && key == GuiKeys::Tab && !shift) {
         cycle_marker_focus(true,  walk_frame); return true;

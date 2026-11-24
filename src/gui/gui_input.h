@@ -432,7 +432,7 @@ inline constexpr size_t kClipboardMaxBytes = 1024u * 1024u;
 // buttons synthesize, with their admitted modifiers), and every chord it can
 // spell is on this list.
 //
-// WHAT IS DELIBERATELY ABSENT: the digits 5..9;
+// WHAT IS DELIBERATELY ABSENT: the digits 7..9;
 // Backspace, and every letter the ladder never tests (A, E, Q, X, Y — Quit
 // is Back's); PageUp / PageDown, the keypad's Enter and the shifted Tab's
 // own keysym (2026-10-30: no producer spells them — the pans are the
@@ -575,11 +575,14 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         case GuiKeys::Digit0: return bare || sh;
         // The four selectors, one axis each: bare 1 is Source, bare 2
         // Target, bare 3 Warp, bare 4 Phase Reset (architect 2026-10-14, the
-        // top icon row's two radio pairs; the key for the value standing
-        // selects its axis's other, 2026-10-23, on_key's arm), and 5..9
-        // bind nothing.
+        // top icon row's two view pairs; the key for the value standing
+        // selects its axis's other, 2026-10-23, on_key's arm); bare 5 is Tab
+        // A and bare 6 Tab B (architect 2026-11-24, the tab pair,
+        // is_tab_selector_key; the key for the tab standing selects the
+        // other, handle_tab_switch_keys); 7..9 bind nothing.
         case GuiKeys::Digit1: case GuiKeys::Digit2:
         case GuiKeys::Digit3: case GuiKeys::Digit4:
+        case GuiKeys::Digit5: case GuiKeys::Digit6:
             return bare;
 
         // THE SETTINGS PAGE (architect 2026-10-28: "plain press only"; its
@@ -641,9 +644,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // ctrl and alt forms bind nothing.
         case GuiKeys::Delete: return bare || sh;
         // The marker walk (bare forward — NEXT — and shift back — PREV; its
-        // landing camera is the landing owner's, Viewport::land_subject), the
-        // A/B tab switch and the paired march (SWITCH and its hold). No Alt
-        // spelling of Tab binds.
+        // landing camera is the landing owner's, Viewport::land_subject) and,
+        // under the ctrl, the two marches with the walk's own direction bit,
+        // Ctrl+Tab forward and Ctrl+Shift+Tab back (architect 2026-11-24, the
+        // walk keys' holds; is_march_key). No Alt spelling of Tab binds.
         case GuiKeys::Tab: return bare || sh || cl || cs;
         // The value step on the addressed cell (the tempo or a bound), ONE
         // UNIT, BARE ONLY (architect 2026-11-08; the head of THE ARROW STEP
@@ -678,6 +682,10 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
 static_assert(chord_is_bound(GuiKeys::Digit1, GuiInputState{}, false) &&
                   chord_is_bound(GuiKeys::Digit4, GuiInputState{}, false),
               "bare 1 is the Source selector and bare 4 the Phase Reset one");
+static_assert(chord_is_bound(GuiKeys::Digit5, GuiInputState{}, false) &&
+                  chord_is_bound(GuiKeys::Digit6, GuiInputState{}, true),
+              "bare 5 is Tab A and bare 6 Tab B, in both modes (architect "
+              "2026-11-24)");
 static_assert(chord_is_bound(GuiKeys::Escape, GuiInputState{}, false),
               "bare Esc is bound: the on-screen keyboard's Esc, the editors' "
               "cancel, is a bound key wherever a reader asks");
@@ -1223,6 +1231,36 @@ inline constexpr double kZoomStepLevels = 1.0;
 inline constexpr double zoom_step_levels(GuiKey key) {
     return key == GuiKeys::Equal ? -kZoomStepLevels : kZoomStepLevels;
 }
+
+// THE TAB PAIR'S TWO KEYS (architect 2026-11-24, the top icon row's third
+// radio pair, Tab A / Tab B): BARE 5 IS TAB A AND BARE 6 TAB B, the view
+// selectors' digits continued, BARE EXACTLY; the key for the tab standing
+// selects the other (the selectors' pop, handle_tab_switch_keys, the act's
+// one owner). THE TAB SWITCH'S GATES, NOT THE SELECTORS': navigation, so the
+// read-only allowlist admits both (read_only_key_blocked) and the grid
+// iterations lock inherits the admission IN EVERY STATE — the two tabs share
+// both marker stores, so a bracket is common to both and a switch strands
+// nothing — and the `h` view's allowlist admits both (an ordinary tab switch
+// in there). FOUR READERS: the act and the three gates' lists.
+inline bool is_tab_selector_key(GuiKey key, GuiInputState mods) {
+    return (key == GuiKeys::Digit5 || key == GuiKeys::Digit6) && !mods.ctrl &&
+           !mods.shift && !mods.alt;
+}
+
+// THE TWO MARCHES (architect 2026-11-24): CTRL+TAB IS THE PAIRED MARCH
+// FORWARD and CTRL+SHIFT+TAB the PAIRED MARCH BACKWARD — the walk's own
+// direction bit under the ctrl (bare Tab Next Marker, Shift+Tab Previous
+// Marker), each the walk key's hold (the lift's ruled translation,
+// finish_chrome_press_release). Ctrl-exact on the key with either shift, no
+// alt. ONE ANSWER FOR BOTH DIRECTIONS at every gate that names the march:
+// the iteration lock's delta (a), the read-only allowlist and the `h` view's
+// own vocabulary (history_mode_owns_key); the direction is
+// march_key_forward's alone. Readers: those three, the live march
+// (handle_tab_switch_keys) and the mode's march (handle_history_mode_key).
+inline bool is_march_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Tab && mods.ctrl && !mods.alt;
+}
+inline bool march_key_forward(GuiInputState mods) { return !mods.shift; }
 
 // THE VALUE PAIR (architect 2026-08-29), ONE LETTER (2026-10-14): CTRL+J
 // JUMPS to the marker the focused value came from — the pass's owner or the

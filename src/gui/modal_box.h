@@ -46,7 +46,7 @@
 //      the overlay's own controls while an overlay stands, A
 //      QUESTION'S ANSWERS AND THE PROGRESS PAGE'S CANCEL, Arc's word buttons
 //      flush right, while one of those pages stands, in place of whatever
-//      row stood there (no timestamp, no tab name, no key, none of an
+//      row stood there (no timestamp, no key, none of an
 //      overlay's controls), and the main page's keys and timestamp otherwise
 //      (paint_handler.cpp's modal_owns_bottom_row); UNDER EVERY EDITOR — THE
 //      VALUE SUB-PAGE'S AMONG THEM — THE ROW IS NOBODY'S: the on-screen

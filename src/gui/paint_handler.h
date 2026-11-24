@@ -1250,8 +1250,8 @@ private:
     void paint_status_bar(cairo_t* cr);
     // THE BOTTOM ICON ROW'S KEYS AND ITS LEFT RUN (the layout architect
     // 2026-09-29): at the left one
-    // plain-text run — the timestamp, a text pipe and the active tab's name
-    // (architect 2026-11-19; the .cpp's bottom_left_run) — then the
+    // plain-text run — the timestamp alone (architect 2026-11-19; alone,
+    // 2026-11-24; the .cpp's bottom_left_run) — then the
     // right block packed against the panel's right inset (bottom_row_seats)
     // — the COPY / PASTE duo, the two skips, Go to Start and Go to End, the
     // MARKER-VERB GROUP (its membership is kMarkerVerbGroup's, in the .cpp),

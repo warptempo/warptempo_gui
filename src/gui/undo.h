@@ -352,7 +352,7 @@ struct Undo {
     // ENTRY IS FILED UNDER THREE VIEW TAGS — the A/B
     // tab, the W/P column and the S/T audio view, all three of which the restore
     // writes back — so a tap that follows a marker click, a Tab, a range
-    // extension, a Ctrl+Tab or a `t` finds a CHANGED subject and opens its own
+    // extension, a tab switch or a `t` finds a CHANGED subject and opens its own
     // entry instead of merging into an entry filed elsewhere. THE W/P COLUMN
     // IS NOT ONE OF THEM: switch_active_markers_view_to CLEARS the selection
     // (the scope rule) and every eligible family refuses without one, and each

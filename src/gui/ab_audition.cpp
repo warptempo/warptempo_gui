@@ -54,8 +54,8 @@ int64_t other_tab_playhead(const AppState& app, const GuiAudio& audio) {
 // THE OTHER TAB'S TERM (2026-10-18). A DELIBERATE ASYMMETRY with the active
 // tab's term above: the other tab HAS NO BUFFER YET. The two tabs share both
 // marker stores, so the target audio is one and only the trim differs per tab
-// (ViewState::trim), and the act's switch into this tab takes Ctrl+Tab's
-// trigger() tail, which dispatches the preview for THIS tab's trim. So the
+// (ViewState::trim), and the act's switch into this tab takes the tab
+// switch's trigger() tail, which dispatches the preview for THIS tab's trim. So the
 // frame is judged against the domain that preview will have, derived here
 // from the other tab's trim pair through GuiTargetRender::preview_domain_for
 // — the very verdict owner (compute_buffer_start_frame_for) whose anchor the
@@ -231,15 +231,15 @@ void GuiAbAudition::start() {
     // its camera writes leave behind is cleared by the next launch
     // (AppState::follow_suspended).
     apply_working_zoom();
-    // Step 1: Ctrl+Tab's WHOLE ROAD (2026-10-18) — the ordinary tab switch
+    // Step 1: THE TAB SWITCH'S WHOLE ROAD (2026-10-18) — the ordinary tab switch
     // (the stop of any live audition, the selection clear, the view-state
     // swap, the
     // coincidence auto-select and the synchronous rebuild are all its own),
     // then target_render.trigger(), so the preview follows the tab and the
-    // other tab plays ITS OWN trim's render, exactly as after a Ctrl+Tab. The
-    // trigger is called unconditionally, as Ctrl+Tab calls it: in source view
-    // it returns after the dirty bit and the generation, the same cost
-    // Ctrl+Tab pays. Its target-view path clears the sequence
+    // other tab plays ITS OWN trim's render, exactly as after a tab switch.
+    // The trigger is called unconditionally, as the tab switch calls it: in
+    // source view it returns after the dirty bit and the generation, the same
+    // cost the tab switch pays. Its target-view path clears the sequence
     // unconditionally (the target_render clears, GuiAuditionSequence's third
     // owner) — a no-op here, the sequence being Idle by construction until
     // the arm below. In the common case the dispatch resolves SYNCHRONOUSLY
@@ -288,7 +288,7 @@ void GuiAbAudition::advance_after_natural_end(
             // of it would be wiped.
             // The `c` behind the switch arms the hold posture on the home tab
             // over the switch's own derivation, the act's rule at start().
-            // CTRL+TAB'S WHOLE ROAD, as at start() (2026-10-18): the switch,
+            // THE TAB SWITCH'S WHOLE ROAD, as at start() (2026-10-18): the switch,
             // then trigger(), so the home tab plays its own trim's preview
             // again. The trigger's unconditional clear of the sequence is a
             // no-op here — the tick's stop body cleared it before this call —
@@ -379,7 +379,7 @@ void GuiAbAudition::fire_if_due() {
     if (!seq.waiting) return;
     if (monotonic_ms() < seq.launch_due_ms) return;
     // A DUE REST STANDS WHILE THE PREVIEW UPDATES (2026-10-18): the act's two
-    // switches take Ctrl+Tab's trigger() tail, and where that dispatch went
+    // switches take the tab switch's trigger() tail, and where that dispatch went
     // asynchronous (a synthesis miss — the first audition after a marker
     // edit, a trim never rendered) the preview the play needs is still on its
     // way. The rest simply goes on standing, transport-live as every rest

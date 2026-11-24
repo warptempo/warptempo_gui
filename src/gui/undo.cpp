@@ -329,7 +329,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     the first;
             //   * THE SUBJECT STILL STANDS. Almost nothing disarms anything
             //     between two taps: a marker click, a Tab jump, a shift-range
-            //     extension or a Ctrl+Tab can all run in the gap and push
+            //     extension or a tab switch can all run in the gap and push
             //     NOTHING, leaving the stamp and the stack top untouched (the
             //     one gap act that DOES disarm is the SAVE, which clears the
             //     stamp at note_saved because it moves the saved reference —
@@ -343,7 +343,7 @@ bool Undo::coalesce_gesture(GestureKind kind, bool synthesized_repeat) {
             //     on its members) and THE TAB AND THE AUDIO VIEW ARE TWO OF THE
             //     THREE TAGS THE ENTRY IS FILED UNDER — the restore writes the
             //     A/B tab, the W/P column and the S/T audio view back, so a `t`
-            //     between two taps must open a new entry exactly as a Ctrl+Tab
+            //     between two taps must open a new entry exactly as a tab switch
             //     does, or Ctrl+Z would land the view the burst OPENED in while
             //     the last press was authored in the other. THE COLUMN NEEDS NO
             //     TERM OF ITS OWN: switching it clears the selection, and each of
@@ -799,7 +799,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     // ACCEPTED COST: the tab switch renders a plate of the pre-restore state
     // that the data swap then re-renders, and the column and audio-view
     // switches kick once more each — one keystroke's worth of synchronous plate
-    // work, the bill `t` and Ctrl+Tab already pay. What is NOT acceptable is a
+    // work, the bill `t` and the tab switch already pay. What is NOT acceptable is a
     // PREVIEW dispatched against a state this same restore replaces, and that
     // is what the data-first order closes: the audio view's target readiness
     // ask (GuiTargetRender::ensure_ready, at the tail of
@@ -1016,7 +1016,7 @@ void Undo::restore_history_entry(std::vector<UndoEntry>& from,
     //     so the chokepoint alone would not put it out. Its camera is the
     //     landing owner's Restore and the framer.
     // THE RESTORE NEVER ARMS THE POSTURE FROM DARK (architect 2026-09-24):
-    // only the walk's centring, bare `c`, the paired march, the A/B
+    // only the walk's centring, bare `c`, the paired marches, the A/B
     // audition's centrings and Ctrl+J arm it as acts, and the singleton's
     // re-arm keeps a bit that already stood. THE TAB SWITCH A RESTORE RUNS MAY
     // (architect 2026-09-29): a restore that crosses the tab arrives with the

@@ -19,8 +19,8 @@ class GuiPlayback;
 //     marker drop's landing (architect 2026-10-29): centered at
 //     the working zoom, as painted, whether on screen or not; at every other
 //     zoom, finer or coarser, nothing on screen and paged in off screen (the
-//     paired march does not come
-//     here: each of its steps centres through bare `c`'s own act, 2026-09-26);
+//     paired marches do not come
+//     here: each of their steps centres through bare `c`'s own act, 2026-09-26);
 //   * `Restore` — the undo / redo restore: nothing wholly on screen, and an
 //     off-screen subject that fits centred at every zoom.
 // The full answers, the hold rule and the ruled-out cameras are at the
@@ -130,8 +130,8 @@ struct Viewport {
     //    apply_strip_drag_zoom and the follow scroll through it, follow_scanner),
     //    ALL THREE VIEW SWITCHES, one class: the S/T audio-view
     //    switch (GuiInputHandler::switch_active_audio_view_to) and the A/B tab
-    //    switch (GuiActiveViews::switch_active_tab_view_to — Ctrl+Tab and the
-    //    audition's legs) (both domain flips) and the W/P marker-column switch
+    //    switch (GuiActiveViews::switch_active_tab_view_to — the tab pair and
+    //    the audition's legs) (both domain flips) and the W/P marker-column switch
     //    (GuiActiveViews::select_active_markers_view) — the column switch moves
     //    neither viewport nor domain, so its plate render is redundant, but
     //    active_markers_view is a flag-cache FINGERPRINT field and this is the
@@ -636,14 +636,6 @@ struct Viewport {
     // edges, which invalidate the whole window. Routes that damage the whole
     // window (the loads, the resize path) cover this lane as a superset.
     void invalidate_status_bar_area();
-    // THE ACTIVE TAB'S NAME beside the clock on the bottom icon row (2026-10-22;
-    // paint_bottom_row_buttons_and_clock): its one route of change is the tab
-    // switch (GuiActiveViews' switch), its one caller. THE RECT IS THE BOTTOM
-    // ROW'S LANE WHOLE, deliberately: the name's extent is measured only at
-    // paint and published nowhere, so "Tab A" and "Tab B" erase each other
-    // only inside the lane; it covers the clock cell as a superset. NONE
-    // while the on-screen keyboard stands over the row (the definition).
-    void invalidate_tab_name_area();
     // THE MODAL'S SURFACE — THE BOTTOM ICON ROW'S LANE (the row yields to
     // a modal whole), WITH THE
     // MODAL FAMILY'S WHOLE AREA while a question's page, the progress page
@@ -784,9 +776,11 @@ struct Viewport {
     //     reseat_playhead_on_marker). (No trim writer moves the playhead:
     //     architect 2026-11-07.)
     //
-    // ONE ROUTE SPELLS A SECOND SURFACE BESIDE THIS CELL: the A/B tab switch,
-    // whose tab name beside the clock takes invalidate_tab_name_area (above),
-    // the bottom icon row's lane whole, a superset of this cell. Routes that damage the
+    //   * THE A/B TAB SWITCH (GuiActiveViews::switch_active_tab_view_to):
+    //     the entering tab's restored playhead, beside the switch's own
+    //     window-top damage (kick_waveform_sync), which reaches no part of
+    //     this row.
+    // Routes that damage the
     // WHOLE window (the S/T audio-view toggle's full-window invalidate, the
     // loads, the resize path) cover this cell as a superset and are
     // deliberately unlisted; routes that funnel

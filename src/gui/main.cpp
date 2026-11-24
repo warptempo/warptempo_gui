@@ -159,8 +159,8 @@ namespace {
 // at the element (render.h's line rule). The BOTTOM strip is THREE LANES,
 // from the window's foot inward: THE STATUS BAR (status_bar_lane_h_px(), its
 // line and 22 W, Thunar's; render.h's status bar block), THE BOTTOM ICON ROW
-// (bottom_row_h_px(), 7 W, the key, 7 W) — the timestamp in plain text, a
-// text pipe and the active tab's name, and, packed against the right
+// (bottom_row_h_px(), 7 W, the key, 7 W) — the timestamp alone in plain
+// text (architect 2026-11-24), and, packed against the right
 // edge, the COPY / PASTE duo, the two skips, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the step and
 // walk, the nudge and play with Play / Stop last, each a plain run of cases
@@ -695,12 +695,12 @@ GuiRect well_foot_area(const AppState& a) {
 
 // THE BOTTOM ICON ROW (render.h's THE STRIP) — Arc's pad 7 W, the key, the pad 7 W on the body tone
 // (architect 2026-11-19; 7 W above and below, architect 2026-11-20), at the
-// left one plain-text run — the timestamp, a text pipe and the active
-// tab's name (paint_handler.cpp's bottom_left_run) — and, packed against
+// left one plain-text run — the timestamp alone (architect 2026-11-24;
+// paint_handler.cpp's bottom_left_run) — and, packed against
 // the right edge, the COPY / PASTE duo, the skips (Go to Start, Go to End;
 // 2026-10-24), the MARKER-VERB GROUP (kMarkerVerbGroup, paint_handler.cpp,
 // owns its membership), the step and walk (Down, Up, Previous Marker, Next
-// Marker) and the nudge and play (Switch Tab, Center, Left, Right and Play /
+// Marker) and the nudge and play (Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each one linked group,
 // the run gap of bare ground between two (render.h's program_run_gap_px,
 // kRunGapW). It is BOTTOM LANE 1, over the status bar (lane 0)
@@ -1210,12 +1210,12 @@ void settle_zoom_level(AppState& a, const GuiAudio& audio) {
     // function immediately after assigning zoom_level — the same single-funnel
     // argument that placed the viewport grid snap below — so a per-file ceiling
     // assigned above (0/c full-out, the settings editor's active zoom commit,
-    // the Ctrl+Tab band restore, a fresh short project's second tab) can never
+    // the tab switch's band restore, a fresh short project's second tab) can never
     // rest above the effective ceiling. The tick and on_resize only trigger
     // and delegate here. Clamped BEFORE the rest is asked so its `visible` reflects
     // the final level. clamp_zoom_level no-ops while loading. Parked (inactive-
     // tab) ViewState bands deliberately store zoom requests verbatim and are
-    // governed here only once they go live -- at Ctrl+Tab restore or tab-in.
+    // governed here only once they go live -- at the tab switch's restore or tab-in.
     //
     // AND 'THE WHOLE SONG IS VISIBLE' IS A STATE THE LEVEL FOLLOWS (architect
     // 2026-09-02; the field is ViewState::whole_song_visible, whose
@@ -1471,8 +1471,7 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
                          span.x1 - span.x0, static_cast<double>(area.h)});
 }
 
-// (THE BOTTOM ROW HAS THREE RECT OWNERS: the clock cell below, the tab
-// name's lane (Viewport::invalidate_tab_name_area) and
+// (THE BOTTOM ROW HAS TWO RECT OWNERS: the clock cell below and
 // Viewport::invalidate_modal_dialog_area's lane. The process line stands in
 // the status bar under the row, status_bar_area above.)
 
@@ -1481,8 +1480,8 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // (AppState::clock_cell_rect, whose stash contract is at the field; the
 // specimen's advance by the line box, architect 2026-11-19,
 // bottom_left_clock_cell). Narrow by construction: on_redraw
-// clips to the damage region, so paint_bottom_strip runs but its buttons and
-// the text pipe and tab name right of the timestamp fall outside the clip
+// clips to the damage region, so paint_bottom_strip runs but its buttons
+// fall outside the clip
 // and cost nothing (the ground round the digits is repainted identically
 // under it), which is what makes this
 // affordable at the pre-paint hook's per-frame cadence. At a window narrow
@@ -1492,13 +1491,10 @@ GuiRect scanner_invalidate_rect(const GuiRect& area, double x) {
 // so this damage never puts the clock back on top. The
 // cell's width is the shaped widest specimen (one width at
 // every time) and only the painter knows its origin,
-// so a move of the cell moves nothing here. What stands beside the clock is THE
-// ACTIVE TAB'S NAME, whose own owner is Viewport::invalidate_tab_name_area and
-// whose rect is the lane WHOLE.
+// so a move of the cell moves nothing here.
 //
-// THE CELL IS THE TIMESTAMP ALONE (architect 2026-10-18; the text pipe and
-// the active tab's name after it, architect 2026-11-19, outside the cell,
-// their pen the specimen's advance so they never move with the digits).
+// THE CELL IS THE TIMESTAMP ALONE (architect 2026-10-18), the bottom left's
+// one text (architect 2026-11-24).
 //
 // BEFORE THE ROW'S FIRST PAINT the stash is zero and the answer is the WHOLE
 // lane — the honest widening, and unreachable in practice: the first frame
@@ -1820,7 +1816,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     //
     // The viewport-mutation and invalidation helpers are methods on the
     // Viewport struct (viewport.{cpp,h}), including the bottom row's own
-    // three — invalidate_tab_name_area, invalidate_clock_area and
+    // two — invalidate_clock_area and
     // invalidate_modal_dialog_area — and the status bar's
     // invalidate_status_bar_area. Every other
     // cross-cutting operation is a method on its owning struct constructed
@@ -2698,9 +2694,8 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //     their lines — with no pill, digit, tick, head or cue (the
             //     flag blit is the plate branch's), and nothing published
             //     to grab.
-            //   * THE BOTTOM ICON ROW: the timestamp empty and no tab
-            //     name (clock_time_text and paint_bottom_row_buttons_and_clock's
-            //     no-piece arms); THE STATUS BAR empty (no progress text, no
+            //   * THE BOTTOM ICON ROW: the timestamp empty
+            //     (clock_time_text's no-piece arm); THE STATUS BAR empty (no progress text, no
             //     selection, no `h` view).
             //   * THE KEYS grey and dark: redesign_button_enabled's and
             //     redesign_button_selected's no-piece terms; the glyphs as
@@ -3715,7 +3710,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // one stop body every interrupt path also takes) and handed to the
         // advance after. The advance does NOT launch: it switches tabs where
         // the phase asks — synchronously, inside this same tick, so the flip
-        // is seen at once, through Ctrl+Tab's whole road, its preview
+        // is seen at once, through the tab switch's whole road, its preview
         // trigger() included (2026-10-18) — and then ARMS THE REST that
         // precedes the next play (kAuditionPairGapMs inside a pair,
         // kAuditionSwitchGapMs across the switch; the pacing is the

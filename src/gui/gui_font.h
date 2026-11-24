@@ -29,7 +29,7 @@
 // page's sentence, the value sub-page's entry, the word buttons,
 // the NOISE number, the status bar), PROGRAM 12 (the
 // clocks — the bottom icon row's timestamp and the render player's two
-// time labels — the tab's name and the tooltip's name line), LABEL 12 (the cues'
+// time labels — and the tooltip's name line), LABEL 12 (the cues'
 // labels and the lane's editors, the history lane's labels with them),
 // HINT 12 (the tooltip's hint line), BOLD 12 (THE TITLE BAR: the brand and
 // its right group, render.h's title bar block), SMALL 10 (the ruler's
@@ -93,7 +93,7 @@
 #include <string_view>
 
 // THE USES (the head's table): the body (`Body`), the title bar (`Bold`), the
-// ruler's digits (`Small`), the clocks, the tab's name and the
+// ruler's digits (`Small`), the clocks and the
 // tooltip's name line (`Program`), the on-screen keyboard's caps (`Keys`),
 // the tooltip's hint line (`Hint`), the cues' labels with the lane's
 // editors (`Label`) and the progress page's count (`Caption`).
@@ -129,7 +129,7 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 12.0},   // Body: the lists, the cards, the pages, the status bar
     {1, 12.0},   // Bold: the title bar (the brand and its right group)
     {1, 10.0},   // Small: the ruler's digits
-    {0, 12.0},   // Program: the clocks, the tab's name, the tooltip's name
+    {0, 12.0},   // Program: the clocks, the tooltip's name
     {0, 12.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
     {0, 12.0},   // Hint: the tooltip's hint line

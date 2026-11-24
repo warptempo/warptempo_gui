@@ -9,14 +9,13 @@ Files of other names here (this README, the licence text) are never looked up.
 
 ## Papirus, recolored
 
-EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT THIRTEEN, OURS, FROM ELEVEN SOURCES OF OUR OWN (THE OWN DRAWINGS,
+EVERY ENUMERATOR'S DRAWING HERE IS PAPIRUS'S BUT FIFTEEN, OURS, FROM THIRTEEN SOURCES OF OUR OWN (THE OWN DRAWINGS,
 below): papirus-icon-theme (https://github.com/PapirusDevelopmentTeam/papirus-icon-theme, release 20260801; the
 drawings first imported at commit 33d971eb are byte-identical in it), its 16-px symbolic set (`Papirus/16x16/symbolic/`,
 whose names are mostly links into the 16-px `actions/`, `apps/` and `panel/` trees) and drawings of the 16-px
 `actions/`, `devices/` and `panel/` trees where his pick lives there. THE ROSTER is the parked picks of session 123
-(his sheets of session 140) WITH ROWS RE-PICKED BY HIM: 2026-11-17 ("the first alternative for each one"), TAB
-(`TabDetach`) `focus-windows`, two windows, and the picker's Up (`GoParentFolder`), re-picked once more 2026-11-23
-(send OO, below); 2026-11-22 (send II, off the alternates sheet; eight of them re-picked again the same day, send MM, and some again
+(his sheets of session 140) WITH ROWS RE-PICKED BY HIM: 2026-11-17 ("the first alternative for each one"), the
+picker's Up (`GoParentFolder`), re-picked once more 2026-11-23 (send OO, below); 2026-11-22 (send II, off the alternates sheet; eight of them re-picked again the same day, send MM, and some again
 2026-11-23, sends NN and OO, each marked so), TWENTY-ONE ROWS — Previous / Next Marker (`BboxPrev` / `BboxNext`) OUR
 OWN arrow to a line (send MM, THE OWN DRAWINGS below), Next's mirrored to point right; Score (`ViewMediaLyrics`)
 `folder-music`, two beamed notes; Source (`ViewMediaTrack`) `media-optical`, a disc; Value Drag
@@ -37,7 +36,9 @@ OUR OWN, THE OWN DRAWINGS below), SIX MORE ROWS — the picker's Up (`GoParentFo
 an up arrow cut out of it; the score's Previous / Next Page (`GoPreviousViewPage` / `GoNextViewPage`)
 `go-previous`'s head without its stem, Next's mirrored to point right; and SAVE's three history-view faces, Commit
 (`VcsCommit`) `go-up`'s arrow standing on a line, Pull (`VcsPull`) `go-down`'s arrow landing on it, and Check
-(`NetworkConnect`) the two arrows side by side, one up and one down. Papirus names few of the enumerators' acts, so
+(`NetworkConnect`) the two arrows side by side, one up and one down; and 2026-11-24 (send QQ, his pick "L1"), TWO ROWS
+ADDED, the tab pair's Tab A / Tab B (`TabA` / `TabB`) OUR OWN, Liberation Sans Bold's own outlines of the two capitals
+(THE OWN DRAWINGS below). Papirus names few of the enumerators' acts, so
 many rows are the nearest drawing by another name (the Note column).
 
 WHICH SEAT WEARS WHICH DRAWING is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
@@ -66,9 +67,10 @@ arrows). ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM, twice: `BboxPrev` an
 pair's own drawing, and `GoPreviousViewPage` and `GoNextViewPage` both the score's own page head, Previous's as
 drawn and Next's mirrored (the importer notes the shared source).
 
-THE OWN DRAWINGS, the eleven sources that are no Papirus file, in `tools/icons/own/`, all at Papirus's weight in a 16
-x 16 box (the numbers below in its units), ten made from Papirus drawings whose path data they keep verbatim wherever
-a part is Papirus's, and one, the sigma, drawn outright. THE OWN DRAWINGS' STRAIGHT ARROWS WEAR PAPIRUS'S HEAD AND
+THE OWN DRAWINGS, the thirteen sources that are no Papirus file, in `tools/icons/own/`, all in a 16 x 16 box (the
+numbers below in its units), ten made from Papirus drawings at Papirus's weight whose path data they keep verbatim
+wherever a part is Papirus's, one, the sigma, drawn outright at Papirus's weight, and two, the tab pair's letters, made
+from the text face's own outlines (architect 2026-11-24, send QQ). THE OWN DRAWINGS' STRAIGHT ARROWS WEAR PAPIRUS'S HEAD AND
 STEM (`go-previous` / `go-up` / `go-down` / `go-first`) rather than a solid triangle head, the shape he keeps for the
 keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings keep the heads Papirus drew.
 - THE MARKER PAIR'S (architect 2026-11-22, send MM, his pick off the mock, "gap 0"), `BboxPrev.svg`: `actions/go-first.svg`
@@ -108,6 +110,13 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
   to 15.
 - CHECK (send OO, "N2"), `NetworkConnect.svg`: Commit's arrow and Pull's side by side, one up and one down, no line,
   each 8 wide and 14 tall at a stroke of 2 (ink x 0 to 16, y 1 to 15).
+- THE TAB PAIR'S LETTERS (architect 2026-11-24, send QQ, "L1": "Apply the A and the B as glyphs in the dimensions
+  discussed"), `TabA.svg` and `TabB.svg`: Liberation Sans Bold's own outline of the capital A and of the capital B
+  (`fonts/LiberationSans-Bold.ttf`, version 2.1.5, 2048 units to the em, cap height 1409), scaled by 12 / 1409 so the
+  capital stands on rows 2 to 14, the ink centered across the box (A x 2.149 to 13.851, B x 2.681 to 13.319), the
+  face's quadratic curves kept as it draws them, coordinates to three decimals; nothing redrawn. The counters wind
+  against the outer contour, as the face draws them, so the nonzero fill leaves them hollow. The two outlines are the
+  face's, under its licence, the SIL Open Font License 1.1 (`fonts/LICENSE-Liberation-OFL.txt`).
 
 Every shape of every own source already paints `currentColor` (the moats' clip paths included, which paint nothing),
 and the importer reads each through the same recolor rule and check as a Papirus file; each one's XML comment, which
@@ -210,7 +219,8 @@ changed, two of them wrapped in their transform.
 | `GoUp` | `symbolic/actions/go-up-symbolic.svg (-> actions/go-up.svg)` | `86b31dec3b65c47c5f0c8965da8463c35365cf0f1046c6a391a9a8083ff2d938` |  |
 | `BboxPrev` | `tools/icons/own/BboxPrev.svg` | `07195df200437a8a9a6380560b434b493a1c694983fd30cab23ec691df419b42` | no bboxprev; ours, go-first's arrow to a line 2 wide, as drawn, pointing left (re-picked 2026-11-22, send MM) |
 | `BboxNext` | `tools/icons/own/BboxPrev.svg` | `07195df200437a8a9a6380560b434b493a1c694983fd30cab23ec691df419b42` | no bboxnext; ours, go-first's arrow to a line 2 wide, mirrored left-right to point right (re-picked 2026-11-22, send MM); one source with BboxPrev, another drawing by the transform |
-| `TabDetach` | `symbolic/actions/focus-windows-symbolic.svg (-> actions/focus-windows.svg)` | `174c461a8b625026aa2537fcbc6bebefd17fc31e58a09e388f55b9dee91f3065` | no tab-detach; focus-windows, two windows (re-picked 2026-11-17) |
+| `TabA` | `tools/icons/own/TabA.svg` | `21c87551ce1a60172c62207361d61f3c01a6a035c221f77fdc4b194f5abb1524` | ours, Liberation Sans Bold's own outline of the capital A, 12 tall in the 16 box (2026-11-24, send QQ) |
+| `TabB` | `tools/icons/own/TabB.svg` | `b8619eb000cd2c23f1c5407954916d6f764a0f9e47dccd8326adce9df14d7a9e` | ours, Liberation Sans Bold's own outline of the capital B, 12 tall in the 16 box (2026-11-24, send QQ) |
 | `ZoomOriginal` | `symbolic/actions/zoom-original-symbolic.svg (-> actions/zoom-original.svg)` | `4ccc559527aecd140fd0e8b5de9881ce6bfff978b4cd28be366f0b5d509a489f` |  |
 | `GoPrevious` | `symbolic/actions/go-previous-symbolic.svg (-> actions/go-previous.svg)` | `5bc42db4e2cbf4bdc12a91f3430cf01447ba558645cffd499b318861df771d92` |  |
 | `GoNext` | `symbolic/actions/go-next-symbolic.svg (-> actions/go-next.svg)` | `9a99f8bd24357cf56535e3c50d97874056c5928f12bca038025316309597ba07` |  |
@@ -241,10 +251,11 @@ look's tones, `kArcDarkTones` in `src/gui/gui_theme.h` (its `.text` and `.ground
 ## Licence
 
 Papirus's icons are licensed under the GNU General Public License, version 3 — GPL-3.0; copyright the papirus-icon-theme
-authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above); thirteen are of
+authors (its `AUTHORS`). The enumerators' files here are modified copies (the recolor rule above); fifteen are of
 our own drawings (`tools/icons/own/`, THE OWN DRAWINGS above): ten of those sources are themselves modified copies of
-Papirus drawings under the same licence, and Cumulative's sigma (`tools/icons/own/BlackSum.svg`) is ours outright,
-under the repository's own licence. The licence text is
+Papirus drawings under the same licence, Cumulative's sigma (`tools/icons/own/BlackSum.svg`) is ours outright,
+under the repository's own licence, and the tab pair's two letters (`tools/icons/own/TabA.svg`, `TabB.svg`) are
+Liberation Sans Bold's own outlines, under the face's SIL Open Font License 1.1 (`fonts/LICENSE-Liberation-OFL.txt`). The licence text is
 `LICENSE-GPL-3.txt` (the checkout's `LICENSE`, verbatim), the same licence as the repository's own `LICENSE`.
 
 The drawings are data, read at run time (the launcher's at build time) and never linked or compiled into the

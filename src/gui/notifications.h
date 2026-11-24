@@ -87,8 +87,9 @@
 //     having one owner, architect 2026-10-30), read_only_act_card below
 //     (the read-only lock, its one producer the car's undo / redo road
 //     on a locked tab — the roster's refused chords wear the grey) and
-//     kIterationLockCard (the iteration lock, reached by the lit tab buttons'
-//     Ctrl+Shift+Tab twin and the car); the lock's own composer
+//     kIterationLockCard (the iteration lock, reached by the lit walk keys'
+//     holds, the two marches Ctrl+Tab and Ctrl+Shift+Tab, architect
+//     2026-11-24, and the car); the lock's own composer
 //     authoring_lock_card; kIterationLockUndoCard / kIterationLockRedoCard
 //     (app_state.h). A BOUND CHORD UNDER ANY MODAL IS
 //     SILENT (architect 2026-10-25: "chords are used with the laptop, and

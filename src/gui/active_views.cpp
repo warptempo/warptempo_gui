@@ -11,7 +11,7 @@
 // Boundary sync points for the live/slot view-state cache. The live
 // AppState view fields (viewport / zoom / playhead) are the
 // working copy; the per-view slots are synced only here. The live fields
-// are pushed into the active slot on Ctrl+Tab (pre-flip) and Ctrl+S
+// are pushed into the active slot on a tab switch (pre-flip) and Ctrl+S
 // (pre-write) via refresh_active_tab_view_from_app, and the destination
 // slot is restored into the live fields on switch. During normal editing
 // only the live fields move and the backing slot is intentionally stale
@@ -23,7 +23,7 @@
 // (hold_derived_on_arrival, architect 2026-09-29).
 
 // Overwrite the active tab's snapshot with the live AppState viewport /
-// zoom / playhead. Shared by Ctrl+Tab (pre-flip) and Ctrl+S (pre-write)
+// zoom / playhead. Shared by the tab switch (pre-flip) and Ctrl+S (pre-write)
 // so "remembered spot" semantics stay consistent between the two paths.
 void GuiActiveViews::refresh_active_tab_view_from_app() {
     ViewState& t = (app.active_tab_view == 'B') ? app.tab_b : app.tab_a;
@@ -97,7 +97,9 @@ void GuiActiveViews::switch_active_markers_view_to(char target_mode) {
     app.active_markers_view = target_mode;
 }
 
-// Ctrl+Tab toggles A/B navigational tabs. Stops playback (deactivating the
+// THE A/B TAB SWITCH (the tab pair's bare 5 / 6, architect 2026-11-24, and
+// every other road that changes the tab) switches navigational tabs. Stops
+// playback (deactivating the
 // scanner; the cursor is untouched either way), saves current
 // viewport/zoom/playhead to the leaving tab, restores the target tab. Does
 // not mark the document dirty.
@@ -110,7 +112,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // stop_playback_if_playing, and its guard is the RIGHT one: a
     // narrower `playback.is_playing()` test misses the sub-tick window in which
     // audio has reached its natural end but the scanner is still ACTIVE (the
-    // tick deactivates it, and a Ctrl+Tab dispatched before that tick would
+    // tick deactivates it, and a tab switch dispatched before that tick would
     // carry the stopped scanner into the entering tab — the synchronous kick at
     // the tail can paint it there for one frame). The helper handles
     // !is_playing() && scanner_active and early-returns when there is nothing to
@@ -162,7 +164,7 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // the stored value is already in [0, total - 1] and the clamp is a no-op.
     // THE STORED CURSOR IS HONORED VERBATIM: the tabs' "remembered spot"
     // contract holds with no exception (no selection is parked to land on).
-    // The one land Ctrl+Tab performs is the coincidence auto-select's, and
+    // The one land the tab switch performs is the coincidence auto-select's, and
     // that one writes back the value already here.
     app.playhead_cursor_sample       = clamp_playhead_to_live_domain(
         target.playhead_cursor_sample, app, audio);
@@ -203,18 +205,22 @@ void GuiActiveViews::switch_active_tab_view_to(char target_tab) {
     // roads that then move the playhead or the camera put it out through the
     // usual owners, and `c`'s roads re-arm it behind the switch.
     app.camera_hold = hold_derived_on_arrival(app, audio);
-    // One-shot discrete jump (Ctrl+Tab A/B switch): the entering tab restores a
+    // One-shot discrete jump (the A/B switch, every road: the tab pair's
+    // bare 5 / 6, the marches, Ctrl+J's jump, the A/B audition, the undo's
+    // tab restore): the entering tab restores a
     // different viewport / zoom / playhead, so render the plate synchronously
     // and publish the displayed fingerprint now instead of leaving it to the
-    // tick. TWO OWNERS then cover what the sync rebuild does not, named for
-    // the pixels they erase: the CLOCK CELL, for the restored playhead, and
-    // THE TAB NAME beside the clock on the bottom icon row, the tab this
-    // switch changed (paint_bottom_row_buttons_and_clock; its owner the
-    // bottom row's lane whole). The status bar's selection count rides the
-    // tick's comparator like every selection write (refresh_status_bar).
+    // tick. ONE OWNER then covers what the sync rebuild does not, named for
+    // the pixels it erases: the CLOCK CELL, for the restored playhead. THE
+    // TAB PAIR'S LIT MEMBER (architect 2026-11-24) needs no call of its own:
+    // the sync rebuild's window-top damage (damage_window_top_rows) owes the
+    // upper rows their fingerprint check, whose members carry every top-row
+    // key's selected bit (GuiPaintHandler::upper_rows_fingerprint), and the
+    // tick's face comparator (main.cpp) catches the drift besides. The
+    // status bar's selection count rides the tick's comparator like every
+    // selection write (refresh_status_bar).
     viewport.kick_waveform_sync();
     viewport.invalidate_clock_area();
-    viewport.invalidate_tab_name_area();
 }
 
 // THE COLUMN ENTRY — an absolute entry that names its destination column
@@ -278,7 +284,7 @@ void GuiActiveViews::select_active_markers_view(char target_mode) {
     // for one frame. This route is the siblings' shape rather than a flag-only
     // reach because GuiActiveViews holds no GuiPaintHandler and the flag
     // rebuild is reachable only through it; the redundant plate render is one
-    // discrete press's cost, exactly what `t` and Ctrl+Tab already pay. No
+    // discrete press's cost, exactly what `t` and the tab switch already pay. No
     // invalidate_waveform_area beside it — the rebuild damages the identical
     // rect on the same road (damage_window_top_rows, viewport.h). THE SYNC
     // ALONE below, with no second

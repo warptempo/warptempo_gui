@@ -15,9 +15,11 @@
 #include <vector>
 
 // The live state's would-be render fingerprint: the same render_fingerprint
-// computation, over the same inputs (env quartet, source path + load-time
-// identity, sample rate, the RESOLVED marker state of both stores, engine
-// fields, trim), that a dispatch of the current state performs. The identity
+// computation, over the same inputs (source path + load-time identity, sample
+// rate, engine fields, trim, and the marker part — the engine's input for
+// that render: the RESOLVED state of both stores untrimmed, the trim plan's
+// engine inputs under a surviving plan, architect 2026-11-24), that a
+// dispatch of the current state performs. The identity
 // bytes are the load-time pair (GuiAudio's recorded size/mtime), taken
 // directly with no on-disk re-verification: the loaded source is immutable
 // for the process lifetime, so the captured identity is authoritative —
@@ -446,7 +448,7 @@ private:
     // not changed" is true of every producer in that list EXCEPT the tab
     // switch, and undo/redo can land on a different pair too. THE A/B TABS
     // RESTORE INDEPENDENT TRIM PAIRS (restore_active_view_state,
-    // active_views.cpp) and Ctrl+Tab triggers a preview at once
+    // active_views.cpp) and the tab switch triggers a preview at once
     // (input_key_dispatch.cpp), so under a bare bit tab A's fallback followed
     // by tab B's DIFFERENT falling-back window was true -> true and B's
     // misleading preview got no card at all — and a T->S->switch->T round trip

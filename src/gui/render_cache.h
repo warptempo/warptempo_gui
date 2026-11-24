@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <vector>
 
+struct TrimPlan;  // trimmer.h (src/prepost): the plan whose engine inputs key a trimmed render
+
 struct RenderFileIdentity {
     uint64_t size = 0;
     int64_t mtime = 0;
@@ -49,26 +51,42 @@ bool stat_artifact_identity(const std::string& path, ArtifactStatIdentity& out);
 // identity; sample rate; every EngineSettings field (full-recipe key — the
 // exhaustive decision switch in the serializer is the single drift guard); the
 // trim bounds (a NOT-trimmed render — the full window — writing the untrimmed
-// encoding, so it hashes like every untrimmed render); and the
-// RESOLVED marker state — the exact engine inputs, not the raw stores:
-// resolve_warp_markers_for_render's survivors (per marker: frame, resolved
-// tempo cents, typed scale, label def/ref — precisely the MarkerForRender
-// fields build_warp_frame_map reads) and the phase-reset positions the engine
-// actually receives, as whole int64 frames. THAT PHASE-RESET LIST IS
-// TRIM-AWARE (2026-08-01): the caller passes build_phase_reset_source_frames'
-// collapsed enabled positions for an untrimmed render, but plan_trim's own
-// translated, RANGE-FILTERED list whenever a trim plan survives — the trimmer
-// filters out-of-window resets out of the engine input entirely (the column
-// asymmetry recorded at trimmer.h), so under a sub-window an out-of-window
-// reset provably cannot move a byte and does not move the key either. Raw
-// disabled markers, dropped fields, collapsed duplicates, and out-of-window
-// resets therefore do not move the key: two states normalization or the
-// trim window proves render-identical share a fingerprint.
-// CALLERS OWN THE RESOLVE AND THE TRIM ARM: this function is pure
-// serialization; each call site either threads an already-resolved product
-// through (do_render, whose own trim_plan selects the arm) or runs its own
-// resolve and its own plan_trim and accepts the resolver's per-resolve stderr
-// lines (compute_live_render_fingerprint). GUI-only marker session scratch
+// encoding, so it hashes like every untrimmed render); and THE MARKER PART,
+// WHICH IS THE ENGINE'S INPUT FOR THIS RENDER IN BOTH COLUMNS, never the raw
+// stores (architect 2026-11-24). ONE RULE PICKS ITS ARM, THE PLAN ITSELF:
+// `trim_plan` is non-null exactly when the render runs trimmed, so the key
+// can never disagree with what was rendered.
+//  - NO PLAN (the full window, or a plan_trim refusal, which renders
+//    untrimmed by ruling): resolve_warp_markers_for_render's survivors (per
+//    marker: frame, resolved tempo cents, typed scale, label def/ref —
+//    precisely the MarkerForRender fields build_warp_frame_map reads) and
+//    build_phase_reset_source_frames' collapsed enabled positions, as whole
+//    int64 frames.
+//  - A SURVIVING PLAN: what plan_trim hands the engine and finish_render, and
+//    nothing of the marker list — the source view (pre.begin_frame,
+//    pre.frames), the one value the engine reads from the translated map
+//    (llrint of its last anchor's target, the emit cap), the whole source
+//    frame schedule, the post crop (post.begin_sample, post.samples), and the
+//    plan's translated, RANGE-FILTERED reset list. Under a supplied schedule
+//    the engine reads the map for that one number and places the resets
+//    against the schedule; nothing else of the markers reaches a byte. So an
+//    edit that moves none of those values cannot move the key — tab B's
+//    edits to a later passage leave tab A's trimmed render reusable, the case
+//    the ruling names — while everything that can move a byte
+//    moves one of them by construction, with no rule about markers written
+//    anywhere: an edit before the window (the target times shift, so the hop
+//    grid and the schedule move), a definition an in-window label reference
+//    uses wherever it stands, a coincidence, an edit in the tail's margin, the
+//    scale, the source.
+// Raw disabled markers, dropped fields, collapsed duplicates, and whatever the
+// plan does not hand the engine therefore do not move the key: two states
+// normalization or the trim window proves render-identical share a
+// fingerprint. The byte layout and its injectivity are at the serializer.
+// CALLERS OWN THE RESOLVE AND THE PLAN: this function is pure serialization;
+// each call site either threads an already-resolved product and its own plan
+// through (do_render) or runs its own resolve and its own plan_trim and
+// accepts the resolver's per-resolve stderr lines
+// (compute_live_render_fingerprint). GUI-only marker session scratch
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
 // by construction. Same inputs always produce byte-identical output WITHIN ONE
 // LIBRARY EPOCH — the key carries no library-environment term (2026-08-09,
@@ -80,22 +98,26 @@ std::vector<uint8_t> render_fingerprint(
     const std::string& source_audio_path,
     const RenderFileIdentity& source_identity,
     int sample_rate,
+    // THE NO-PLAN ARM'S TWO INPUTS, read only when `trim_plan` is null: the
+    // resolver's survivors and build_phase_reset_source_frames' collapsed
+    // enabled positions (whole doubles, which is what the serializer's int64
+    // encoding rests on). Under a plan the key reads the plan alone.
     const std::vector<MarkerForRender>& resolved_warp_markers,
-    // The phase-reset positions the engine receives for THIS render: the
-    // authored collapsed source frames untrimmed, plan_trim's translated and
-    // range-filtered list under a surviving trim plan (the trim-aware ruling
-    // above). Both spellings are whole doubles, which is what the serializer's
-    // int64 encoding rests on.
-    const std::vector<double>& phase_reset_engine_frames,
+    const std::vector<double>& phase_reset_source_frames,
     const EngineSettings& settings,
     // Trim: `trimmed` is false for the FULL window [0, total-1], which renders
-    // untrimmed and therefore hashes IDENTICALLY to the pre-2026-07-30 unset
-    // state (has-byte 0 + f64 0.0 on both sides), keeping the default window's
-    // renders reuse-identical with pre-arc untrimmed ones. It is true for a
-    // proper sub-window, whose two frames serialize exactly as a set pair always
-    // did. The caller owns the recognition (trim_window_is_full, settings_file.h
+    // untrimmed and therefore writes the unset trim bytes (has-byte 0 + f64
+    // 0.0 on both sides): every spelling of "render the whole piece" hashes
+    // alike (architect 2026-07-30). It is true for a proper sub-window, which
+    // writes its two frames. The caller owns the recognition (trim_window_is_full, settings_file.h
     // — one owner, GUI and CLI alike); this function is pure serialization.
-    bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame);
+    bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame,
+    // THE ARM (architect 2026-11-24): the plan the render runs under, null
+    // when it runs untrimmed (the full window, or a plan_trim refusal). The
+    // caller hands the plan it renders with (do_render) or the one it would
+    // (compute_live_render_fingerprint), never a re-derived predicate: the
+    // `trimmed` flag cannot tell a refusal from a plan.
+    const TrimPlan* trim_plan);
 
 // THE FINGERPRINT SIDECAR'S EXTENSION — the one spelling of it, and the
 // reason it is in the header rather than beside its writer: the deliverable

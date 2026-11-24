@@ -1,11 +1,13 @@
 #include "render_cache.h"
 
 #include "directory_walk.h"   // the one non-throwing listing walk
+#include "trimmer.h"          // TrimPlan: the plan arm's engine inputs
 #include "wav_io.h"
 
 #include <algorithm>
 #include <charconv>
 #include <cerrno>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -35,6 +37,17 @@ inline void put_i32(std::vector<uint8_t>& v, int32_t  x) { put_bytes(v, &x, size
 inline void put_i64(std::vector<uint8_t>& v, int64_t  x) { put_bytes(v, &x, sizeof x); }
 inline void put_f64(std::vector<uint8_t>& v, double   x) { put_bytes(v, &x, sizeof x); }
 inline void put_u8 (std::vector<uint8_t>& v, uint8_t  x) { v.push_back(x); }
+// Unsigned LEB128: seven bits a byte, low group first, the high bit set on
+// every byte but the last. Self-delimiting and one spelling per value, so a
+// run of them stays injective with nothing between (the plan arm's schedule
+// deltas, architect 2026-11-24).
+inline void put_uleb128(std::vector<uint8_t>& v, uint64_t x) {
+    while (x >= 0x80u) {
+        v.push_back(static_cast<uint8_t>((x & 0x7fu) | 0x80u));
+        x >>= 7;
+    }
+    v.push_back(static_cast<uint8_t>(x));
+}
 inline void put_str(std::vector<uint8_t>& v, const std::string& s) {
     // Full uint64_t length prefix, no narrowing: the encoding stays injective
     // over the whole accepted in-memory string domain, so no oversized
@@ -138,25 +151,28 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // by ruling (architect 2026-07-17: they change about once per movement, so a
 // provenance edit forcing a fresh render is accepted; the payoff is that no
 // inert-field classification exists anywhere, and a re-render refreshes the
-// artifact's attested .settings provenance); the trim bounds; and the
-// RESOLVED marker state — resolve_warp_markers_for_render's survivors and the
-// phase-reset positions the engine actually receives (the collapsed enabled
-// positions untrimmed, plan_trim's translated and range-filtered list under a
-// surviving plan), the exact engine inputs, so two states normalization or
-// the trim window proves render-identical share a key (under unconditional
-// triggers this is what turns an inert marker edit's forced re-derive into a
-// cache hit). The key is a conservative over-approximation of byte identity,
+// artifact's attested .settings provenance); the trim bounds; and the marker
+// part, THE ENGINE'S INPUT FOR THIS RENDER (architect 2026-11-24; the rule and
+// its two arms at render_cache.h): untrimmed, resolve_warp_markers_for_render's
+// survivors and the collapsed enabled reset positions; under a surviving plan,
+// what plan_trim hands the engine and finish_render — the source view, the
+// emit cap, the schedule, the crop and the translated, range-filtered resets —
+// so two states normalization or the trim window proves render-identical share
+// a key (under unconditional triggers this is what turns an inert marker
+// edit's forced re-derive, or an edit outside what a trimmed render reads,
+// into a cache hit). The key is a conservative over-approximation of byte identity,
 // and that direction is the point: a match guarantees byte-identical output;
 // a mismatch at worst re-renders redundantly. THE KEY NAMES AUTHORED STATE AND
 // RECIPE ONLY — no library-environment term (2026-08-09, the reason at the
 // version block below), so the guarantee holds WITHIN ONE LIBRARY EPOCH and a reuse
 // that crosses a glibc or FFTW upgrade may differ at the accepted inaudible
 // class rather than byte-exactly.
-// CALLERS OWN THE RESOLVE AND THE TRIM ARM: render_fingerprint is pure
-// serialization; each call site either threads an already-resolved product
-// through (do_render, arm selected by its own trim_plan) or runs its own
-// resolve and its own plan_trim and accepts the resolver's per-resolve stderr
-// lines (compute_live_render_fingerprint). GUI-only marker session scratch
+// CALLERS OWN THE RESOLVE AND THE PLAN: render_fingerprint is pure
+// serialization and picks its arm from the plan pointer it is handed; each
+// call site either threads an already-resolved product and its own trim_plan
+// through (do_render) or runs its own resolve and its own plan_trim and
+// accepts the resolver's per-resolve stderr lines
+// (compute_live_render_fingerprint). GUI-only marker session scratch
 // (iteration / BPM authoring) never reaches the resolver, so it is excluded
 // by construction. The result is hashed to name a cache file and stored
 // verbatim for an exact-compare confirm on lookup.
@@ -205,11 +221,14 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // identity"). The rule above is about the key's byte SHAPE; this one is about
 // the DSP behind it. ANY REFERENCE-BYTE CHANGE BELOW THE KEY — a change that
 // alters what a given recipe renders, in src/engine/ or src/prepost/, and
-// equally in the parser's authored -> engine compilation, which the key does
-// not name either (the key carries SOURCE-domain reset frames; the S - N/2
-// emission is the parser's) — RIDES A kFingerprintVersion BUMP. The key is the
-// RECIPE and nothing about the code that turned it into samples, so a post-fix
-// key byte-equals the pre-fix key of the same recipe.
+// equally in the parser's authored -> engine compilation, which the untrimmed
+// arm does not name (it carries the resolved markers and SOURCE-domain reset
+// frames; the map and the S - N/2 emission are the parser's) — RIDES A
+// kFingerprintVersion BUMP. The key is the RECIPE and nothing about the code
+// that turned it into samples, so a post-fix key byte-equals the pre-fix key
+// of the same recipe. (The plan arm carries compiled values — the schedule,
+// the emit cap — so a compilation change may move it on its own; the bump is
+// owed all the same, for the untrimmed arm and for the engine below both.)
 // In-process reuse is harmless there: RenderCache lives in a per-PID directory
 // created at init and removed at shutdown (orphans swept at launch), so no
 // cache entry outlives the binary that wrote it. THE .fingerprint SIDECAR ON
@@ -230,7 +249,7 @@ bool parse_prefixed_i64(const std::string& line, const char* prefix,
 // claim in perf_campaign_2026_07.md §15 is per toolchain and per host (that
 // section's own gap: an artifact migrated from another machine poses as a
 // current recipe; re-render rather than migrate).
-constexpr uint32_t kFingerprintVersion = 20;
+constexpr uint32_t kFingerprintVersion = 21;
 constexpr char     kSidecarMagic[]     = "WARPTEMPO_RENDER_FINGERPRINT";
 // The sidecar_layout line versions the on-disk TEXT CONTAINER of the sidecar
 // file itself — its line count and their grammar — never the recipe: the
@@ -358,11 +377,14 @@ std::vector<uint8_t> render_fingerprint(
         const RenderFileIdentity& source_identity,
         int sample_rate,
         const std::vector<MarkerForRender>& resolved_warp_markers,
-        const std::vector<double>& phase_reset_engine_frames,
+        const std::vector<double>& phase_reset_source_frames,
         const EngineSettings& s,
-        bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame) {
+        bool trimmed, int64_t trim_begin_frame, int64_t trim_end_frame,
+        const TrimPlan* trim_plan) {
     std::vector<uint8_t> fp;
-    fp.reserve(256 + resolved_warp_markers.size() * 64);
+    fp.reserve(trim_plan
+        ? 256 + trim_plan->pre.source_frame_schedule.size() * 2
+        : 256 + resolved_warp_markers.size() * 64);
 
     put_u32(fp, kFingerprintVersion);
 
@@ -408,15 +430,12 @@ std::vector<uint8_t> render_fingerprint(
         }
     }
 
-    // Trim. THE ENCODING IS UNCHANGED FROM THE PRE-ALWAYS-SET FORM ON PURPOSE
-    // (architect 2026-07-30): a NOT-trimmed render — which since the trim window
-    // became always-set means the FULL window [0, total-1], the caller's
-    // trim_window_is_full verdict arriving here as `trimmed == false` — writes
-    // the OLD UNSET BYTES (has-byte 0 + f64 0.0 on both sides), so a default
-    // window still hashes exactly like a pre-arc untrimmed render and keeps
-    // reusing its cache entries and artifacts. It also makes every spelling of
-    // "render the whole thing" hash the same. A proper SUB-WINDOW writes the two
-    // authored frames exactly as a set pair always did: two has-bytes of 1 and
+    // Trim (architect 2026-07-30): a NOT-trimmed render — the FULL window
+    // [0, total-1], the caller's trim_window_is_full verdict arriving here as
+    // `trimmed == false` — renders untrimmed and writes the UNSET TRIM BYTES
+    // (has-byte 0 + f64 0.0 on both sides), so every spelling of "render the
+    // whole thing" hashes the same. A proper SUB-WINDOW writes the two
+    // authored frames: two has-bytes of 1 and
     // the int64 bounds widened to the f64 encoding (exact — whole frames sit far
     // below 2^53). The sub-window bounds serialize verbatim even when plan_trim
     // will refuse them and the render falls back to untrimmed — accepted
@@ -426,53 +445,107 @@ std::vector<uint8_t> render_fingerprint(
     put_u8 (fp, trimmed ? 1 : 0);
     put_f64(fp, trimmed ? static_cast<double>(trim_end_frame) : 0.0);
 
-    // Warp markers: the RESOLVED render list — exactly the MarkerForRender
-    // fields build_warp_frame_map reads (frame, resolved owning tempo cents,
-    // typed scale, label def/ref), after resolve_warp_markers_for_render's
-    // filter/coincidence/seed/materialize/normalize pipeline. Raw disabled
-    // markers, a coincident member's authored tempo and labels (its plain
-    // 1.00 owner reaches the list instead, those on one exact frame as one;
-    // architect 2026-11-17 — so a change to the coincidence rule moves the
-    // key through this list alone, no version bump), and fields
-    // materialization discards never reach this list, so edits that cannot
-    // change engine input cannot move the key. All survivors are enabled by
-    // the resolver's output invariants — no disabled flag exists here.
-    // THE LABEL STRINGS ARE ENGINE INPUT, AND A CONSISTENT RENAME BUYS
-    // NOTHING (recorded 2026-09-02, item Q, accepted): a `label_ref` takes its
-    // `label_def`'s segment duration in build_warp_frame_map, so the names do
-    // select the map and belong in the key — but renaming BOTH sides of a pair
-    // yields the identical map and identical output bytes while moving this
-    // key, so the next render redoes the whole synthesis to land exactly where
-    // it already was. A cost, not a defect, on the same reasoning as the
-    // provenance fields above.
-    put_u32(fp, static_cast<uint32_t>(resolved_warp_markers.size()));
-    for (const auto& m : resolved_warp_markers) {
-        put_i64(fp, m.time_frame);
-        put_i64(fp, m.tempo_cents);
-        // Optional typed scale: presence flag then the value (0.0 filler
-        // when absent, so an absent scale and a hypothetical 0.0 cannot
-        // collide — 0.0 is unparseable as a typed scale anyway).
-        put_u8 (fp, m.tempo_scale.has_value() ? 1 : 0);
-        put_f64(fp, m.tempo_scale.value_or(0.0));
-        put_str(fp, m.label_def);
-        put_str(fp, m.label_ref);
+    // THE ARM BYTE (architect 2026-11-24): 0 = the untrimmed arm (the
+    // resolved list), 1 = the plan's engine inputs, ahead of the warp part in
+    // both. Everything before it is fixed-width or length-prefixed, so it
+    // stands at the same offset in any two keys whose prefixes agree, and two
+    // keys of different arms differ there. The trimmed flag above cannot do
+    // this job: a refused sub-window is trimmed = 1 under the untrimmed arm.
+    put_u8(fp, trim_plan ? 1 : 0);
+    if (!trim_plan) {
+        // Warp markers, THE UNTRIMMED ARM: the RESOLVED render list — exactly
+        // the MarkerForRender fields build_warp_frame_map reads (frame,
+        // resolved owning tempo cents, typed scale, label def/ref), after
+        // resolve_warp_markers_for_render's
+        // filter/coincidence/seed/materialize/normalize pipeline. Raw disabled
+        // markers, a coincident member's authored tempo and labels (its plain
+        // 1.00 owner reaches the list instead, those on one exact frame as
+        // one; architect 2026-11-17 — so a change to the coincidence rule
+        // moves this arm through this list alone, no version bump), and fields
+        // materialization discards never reach this list, so edits that
+        // cannot change engine input cannot move the key. All survivors are
+        // enabled by the resolver's output invariants — no disabled flag
+        // exists here.
+        // THE LABEL STRINGS ARE ENGINE INPUT IN THIS ARM, AND A CONSISTENT
+        // RENAME BUYS NOTHING (recorded 2026-09-02, item Q, accepted): a
+        // `label_ref` takes its `label_def`'s segment duration in
+        // build_warp_frame_map, so the names do select the map and belong in
+        // the key — but renaming BOTH sides of a pair yields the identical map
+        // and identical output bytes while moving this key, so the next render
+        // redoes the whole synthesis to land exactly where it already was. A
+        // cost, not a defect, on the same reasoning as the provenance fields
+        // above. (The plan arm below carries no names: there a consistent
+        // rename moves nothing the engine reads and reuses.)
+        put_u32(fp, static_cast<uint32_t>(resolved_warp_markers.size()));
+        for (const auto& m : resolved_warp_markers) {
+            put_i64(fp, m.time_frame);
+            put_i64(fp, m.tempo_cents);
+            // Optional typed scale: presence flag then the value (0.0 filler
+            // when absent, so an absent scale and a hypothetical 0.0 cannot
+            // collide — 0.0 is unparseable as a typed scale anyway).
+            put_u8 (fp, m.tempo_scale.has_value() ? 1 : 0);
+            put_f64(fp, m.tempo_scale.value_or(0.0));
+            put_str(fp, m.label_def);
+            put_str(fp, m.label_ref);
+        }
+    } else {
+        // THE PLAN ARM (architect 2026-11-24): what the trimmed render reads
+        // in place of the marker list, in this order — the source view
+        // [pre.begin_frame, pre.begin_frame + pre.frames); the emit cap,
+        // llrint of the translated map's last anchor target, the ONE value
+        // the engine reads from the map under a supplied schedule (its
+        // target_total_frames and emit_sample_cap, engine.cpp), keyed as the
+        // rounded number the engine reads rather than the double, since a
+        // marker just past the cut's end can move the double by an ulp
+        // without moving a byte; the source frame schedule; and the post crop
+        // finish_render applies (post.begin_sample, post.samples). The map's
+        // other anchors feed only the engine's strict-ascent validator, which
+        // refuses and never shapes a byte.
+        // THE SCHEDULE GOES IN WHOLE, LOSSLESSLY — the key is stored verbatim
+        // and exact-compared (the cache's confirm, the sidecar's hex line), so
+        // no digest stands in for it: the entry count as u64, the first entry
+        // as i64, then each later entry as the unsigned LEB128 of its step
+        // from the one before. The schedule is nondecreasing (the engine's own
+        // shape check), so a step is about R_s (1024) source frames, two bytes
+        // — some 90 bytes a second of trimmed audio. The step is taken in
+        // uint64_t, wrapping, so the encoding stays injective (the first entry
+        // and the wrapped steps recover every entry exactly) even for a step
+        // the schedule never makes, and no signed overflow is possible.
+        const PreTrim& pre = trim_plan->pre;
+        put_i64(fp, pre.begin_frame);
+        put_i64(fp, pre.frames);
+        put_i64(fp, static_cast<int64_t>(
+            std::llrint(pre.warp_frame_map.back().tgt_frame)));
+        const std::vector<int64_t>& schedule = pre.source_frame_schedule;
+        put_u64(fp, static_cast<uint64_t>(schedule.size()));
+        if (!schedule.empty()) {
+            put_i64(fp, schedule.front());
+            for (size_t m = 1; m < schedule.size(); ++m) {
+                put_uleb128(fp, static_cast<uint64_t>(schedule[m]) -
+                                    static_cast<uint64_t>(schedule[m - 1]));
+            }
+        }
+        put_i64(fp, trim_plan->post.begin_sample);
+        put_i64(fp, trim_plan->post.samples);
     }
 
-    // Phase resets: the positions THE ENGINE RECEIVES for this render (the
-    // caller owns the arm — see the header). Untrimmed that is the resolved
-    // authored intermediate build_phase_reset_source_frames emits, with
-    // disabled resets and collapsed equal-frame duplicates already gone; under
-    // a surviving trim plan it is plan_trim's translated, range-filtered list,
-    // so out-of-window resets — which the trimmer keeps out of the engine
-    // entirely — cannot move the key.
+    // Phase resets: the positions THE ENGINE RECEIVES for this render, by the
+    // same arm. Untrimmed that is the resolved authored intermediate
+    // build_phase_reset_source_frames emits, with disabled resets and
+    // collapsed equal-frame duplicates already gone; under a surviving trim
+    // plan it is plan_trim's translated, range-filtered list, so out-of-window
+    // resets — which the trimmer keeps out of the engine entirely — cannot
+    // move the key.
     // THE INT64 ENCODING STAYS EXACT ACROSS BOTH SPELLINGS: the authored form
     // is whole source frames (int64 positions widened exactly), and the
     // trimmed form is S - N/2 - cut_begin — a whole source frame minus the
     // integer 2048 (kN is even) minus the trimmer's integer source cut — so
     // it is whole too, negative near the head and still exact. No rounding
-    // occurs in either arm. The two arms serialize different domains, but they
-    // can never be confused: the trim bytes above already separate a
-    // sub-window key from a full-window one.
+    // occurs in either arm. The two arms serialize different domains, and the
+    // arm byte above keeps them apart.
+    const std::vector<double>& phase_reset_engine_frames =
+        trim_plan ? trim_plan->pre.phase_reset_frame_map
+                  : phase_reset_source_frames;
     put_u32(fp, static_cast<uint32_t>(phase_reset_engine_frames.size()));
     for (const double p : phase_reset_engine_frames) {
         put_i64(fp, static_cast<int64_t>(p));

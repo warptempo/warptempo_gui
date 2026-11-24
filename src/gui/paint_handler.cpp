@@ -49,7 +49,7 @@
 
 // -- The bottom icon row's text tier ------------------------------------------
 //
-// ONE FACE (gui_font.h): the bottom icon row's clock and its tab name are
+// ONE FACE (gui_font.h): the bottom icon row's clock is
 // THE PROGRAM FACE (Regular 12 W, 24 device px on the tablet, every text
 // 12 W, gui_font.h), and the render player's two time labels with them
 // (architect 2026-10-26, "yes" to symmetry with the clock); every modal
@@ -581,7 +581,7 @@ static bool clip_meets(cairo_t* cr, const GuiRect& rect) {
 // it, and refreshing is what keeps the comparator from thrashing under a
 // standing modal. THE PRODUCERS of an empty rect: THE MODAL YIELD (the
 // contract is at paint_bottom_strip's yield branch), the top icon row's
-// OVERFLOW RULE at a window too narrow for the row, a member the view pairs
+// OVERFLOW RULE at a window too narrow for the row, a member the three pairs
 // cover whole (kIconRowViewPairs), the top icon row's HISTORY STAND-INS, a
 // member that does not stand in the current state (kIconRowHistoryStandIns),
 // and THE HISTORY VIEW'S HIDE on both icon rows, a member whose chord the
@@ -678,7 +678,8 @@ AppState::RedesignButtonFace& publish_button_face(
 // the run gap of ground between two (render.h's program_run_gap_px,
 // kRunGapW, 6 W, 12 device px on the tablet;
 // redesign_button_opens_icon_run, app_state.h, the runs' leaders); the
-// right five — the history opener and the two view pairs — ONE GROUP
+// right seven — the history opener, the two view pairs and the tab pair
+// (architect 2026-11-24) — ONE GROUP
 // ending 6 W inside the panel's right edge, the left walk starting 6 W
 // inside its left edge (icon_row_seats; render.h's kEdgeInsetW). No pane,
 // groove, recess or line.
@@ -713,9 +714,10 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::Undo},
     {RedesignButton::Redo},
     {RedesignButton::Render},
-    // (The view axes' faces are the two radio pairs at this row's right end,
-    // architect 2026-10-14 — kIconRowViewPairs below; no view button stands
-    // in this group.)
+    // (The view axes' faces are the two view pairs at this row's right end,
+    // architect 2026-10-14, the tab pair behind them, 2026-11-24 —
+    // kIconRowViewPairs and kIconRowTabPair below; no view or tab button
+    // stands in this group.)
     // THE ZOOM GROUP, the VIEWPORT CLASS — Zoom In, Zoom Out, Zoom to Fit,
     // the magnification lamp, Follow, Restrict, the trim arm lamp and the
     // presets key — at the head of the top icon row's second run; ZOOM IN
@@ -841,8 +843,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // magnify while walking history) and the render-entry group on three (Play
 // Renders, Enable Tooltips and the level case), their others hidden
 // (history_mode_hides_button, paint_icon_row's walk).
-// The history opener and the view pairs are right-anchored and do not move
-// (kIconRowHistoryOpener).
+// The history opener and the three pairs are right-anchored and do not
+// move (kIconRowHistoryOpener).
 //
 // THE REPAINT: the mode's two edges, open_history_mode_fresh and
 // close_history_mode (input_key_dispatch.cpp), each end in full-window
@@ -884,22 +886,23 @@ constexpr IconRowStandIn kIconRowHistoryStandIns[] = {
 // further left inside the view than outside, so the button that toggles the
 // view would move out from under the pen at its own press; anchored to the
 // lane's right edge, which no state moves, it stands at one x in both. It
-// paints whole beside the view pairs under the same overflow
-// rule (kIconRowViewPairs), the left groups yielding to both. Its seat is
+// paints whole beside the three pairs under the same overflow
+// rule (kIconRowViewPairs), the left groups yielding to them. Its seat is
 // the same in both states, and the mode's two edges damage the whole window
 // anyway (THE REPAINT, above).
 constexpr IconRowDef kIconRowHistoryOpener =
     {RedesignButton::IconHistory};
 
-// THE VIEW PAIRS — THE TOP ICON ROW'S LAST, FLUSH AT ITS RIGHT EDGE
+// THE VIEW PAIRS — WITH THE TAB PAIR BEHIND THEM THE TOP ICON ROW'S LAST,
+// FLUSH AT ITS RIGHT EDGE
 // (architect 2026-10-01; two radio pairs 2026-10-14): the Source / Target
 // pair on bare 1 / 2 (the audio view) and the Warp / Phase-reset pair on
 // bare 3 / 4 (the markers view), the view the product of the two lit
 // members, in their keys' order.
 // THE ROW'S OWN METRICS, NONE NEW: the program's case (render.h's program
 // block), the four linked behind the history opener in the row's one right
-// group, Phase Reset's box ending 6 W inside the panel's right edge
-// (icon_row_seats). THE ROW'S FACES, and EACH PAIR A RADIO THAT POPS: its
+// group, the tab pair after them (kIconRowTabPair). THE ROW'S FACES, and
+// EACH PAIR A RADIO THAT POPS: its
 // lit member is its axis's current value (redesign_button_selected reads
 // one axis per button) and a press on it SELECTS THE PAIR'S OTHER MEMBER at
 // its lift (architect 2026-10-23, "building a suction on the other one is
@@ -908,7 +911,8 @@ constexpr IconRowDef kIconRowHistoryOpener =
 // accent (Arc's lit look, pressed or not; materials.h's key_state).
 //
 // THE OVERFLOW RULE (architect 2026-10-01): AT ANY WINDOW WIDTH WHERE THE ROW
-// CANNOT HOLD EVERY GROUP, THE VIEW PAIRS WIN — and the history opener
+// CANNOT HOLD EVERY GROUP, THE PAIRS WIN — the view pairs and the tab pair
+// behind them (2026-11-24) — and the history opener
 // seated against their left with them (kIconRowHistoryOpener, 2026-10-06).
 // All paint LAST, whole, at their right-anchored places; the runs to
 // their left yield one run gap short of the opener: A MEMBER WHOSE BOX
@@ -926,13 +930,30 @@ constexpr IconRowDef kIconRowViewPairs[2][2] = {
      {RedesignButton::ViewPhase}},
 };
 
-// THE TOP ICON ROW'S RIGHT RUN (architect 2026-10-22): the
-// history opener and the two view pairs, five keys a key pitch apart in painted
-// order, right-anchored (icon_row_seats), never hidden.
+// THE TAB PAIR — THE THIRD RADIO PAIR, ON THE END OF THE RIGHT RUN
+// (architect 2026-11-24: "My hands are at the bottom, but the eyes are at
+// the top"; his pick P1 off mock sheet 9): Tab A on bare 5 and Tab B on bare
+// 6, no view axis but the TAB, the lit member the active tab
+// (redesign_button_selected reads AppState::active_tab_view), A RADIO THAT
+// POPS by the view pairs' rule exactly (the key's own resolution,
+// GuiInputHandler::handle_tab_switch_keys), never greyed. Tab B's box ends
+// 6 W inside the panel's right edge (icon_row_seats), the row's last; each
+// key wears its letter on the icon road (Icon::TabA / Icon::TabB).
+constexpr IconRowDef kIconRowTabPair[2] = {
+    {RedesignButton::ViewTabA},
+    {RedesignButton::ViewTabB},
+};
+
+// THE TOP ICON ROW'S RIGHT RUN (architect 2026-10-22; the tab pair,
+// 2026-11-24): the history opener, the two view pairs and the tab pair,
+// seven keys a key pitch apart in painted order — History, Source, Target,
+// Warp, Phase, A, B — ONE LINKED GROUP, right-anchored (icon_row_seats),
+// never hidden.
 constexpr IconRowDef kIconRowRightRun[] = {
     kIconRowHistoryOpener,
     kIconRowViewPairs[0][0], kIconRowViewPairs[0][1],
-    kIconRowViewPairs[1][0], kIconRowViewPairs[1][1]};
+    kIconRowViewPairs[1][0], kIconRowViewPairs[1][1],
+    kIconRowTabPair[0], kIconRowTabPair[1]};
 
 // -- THE FLOATING SURFACES: the hover tooltip and the notification cards --
 //
@@ -1193,7 +1214,7 @@ std::string status_bar_text(AppState& app) {
 // stands is no run at all. The membership forks are keyed on the GROUPS
 // (redesign_button_opens_icon_group, app_state.h — the swap's and the hide's
 // unit): the history stand-ins (2026-10-05) and the history view's hide
-// (2026-10-07). The right run is not in this walk: none of its five is ever
+// (2026-10-07). The right run is not in this walk: none of its seven is ever
 // hidden. `history` is the view's bit — the live one
 // (app.history_mode.active) for the painter and the fingerprint.
 static void icon_row_walk(bool history,
@@ -1507,8 +1528,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE TOP ICON ROW (the lane at the window's top, the window's width):
     // the title bar, Arc's pad, the cases, the pad on the body tone
     // (architect 2026-11-19; 7 W each side, architect 2026-11-20), the left
-    // members in THREE RUNS and the right five in ONE — TWENTY-SEVEN members
-    // outside the history view and EIGHTEEN inside it, COUNTED off the roster
+    // members in THREE RUNS and the right seven in ONE — TWENTY-NINE members
+    // outside the history view and TWENTY inside it, COUNTED off the roster
     // enum, the painter's tables and the run leaders: OPEN PROJECT at the
     // row's head (architect 2026-10-07, its Revert twin with it) with SAVE,
     // UNDO, REDO and RENDER behind it in the first run; ZOOM IN, ZOOM OUT,
@@ -1518,8 +1539,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the RENDER-ENTRY group (Listen, the READ-ONLY toggle, the SCORE key —
     // between the padlock and Settings, architect 2026-11-10 — SETTINGS,
     // ENABLE TOOLTIPS and the level case, NOISE) the third — then,
-    // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS
-    // (kIconRowRightRun). IN THE HISTORY VIEW the history group's four
+    // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS and THE
+    // TAB PAIR (kIconRowRightRun). IN THE HISTORY VIEW the history group's four
     // icon-row companions stand in two groups' slots — Revert and Load in
     // Place in the toolbar group behind Save, Cumulative and the walk lamp in
     // the iteration group's (kIconRowHistoryStandIns, the swap's one owner).
@@ -1540,7 +1561,7 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // member does. What the view refuses only BY STATE (Save with nothing to
     // commit, Revert with no subject, Load in Place over an empty walk) and
     // what any other mode refuses wears the DEAD FACE, and a window too
-    // narrow for the row drops members whole otherwise, under the view
+    // narrow for the row drops members whole otherwise, under the
     // pairs' overflow rule — a width, never a state.
     //
     // THE WIDTH MATH — the box 36 W (kKeyWidthW), a group's keys sharing one
@@ -1549,13 +1570,14 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // render.h's kEdgeInsetW): in the tablet's
     // device px at 200 % (one W = 2), each group of n keys 72 + 70 (n − 1)
     // (linked_group_w_px), 12 of ground (the run gap) between two groups;
-    // the right group 352, its last box ending 12 px inside the panel's
-    // right edge (columns 1940..2291). Outside the history view the LEFT WALK
+    // the right group 492 (seven keys, architect 2026-11-24), its last box
+    // ending 12 px inside the panel's right edge (columns 1800..2291).
+    // Outside the history view the LEFT WALK
     // is three groups of 5, 11 and 5 and NOISE's entry (39 W, 78 px:
     // noise_entry_w_px),
     //   352 + 12 + 772 + 12 + 352 + 12 + 78 = 1590,
     // from column 12: OPEN .. RENDER 12..363, IN .. FLATTEN 376..1147,
-    // PLAYER .. TIPS 1160..1511, NOISE 1524..1601 — 338 px of ground before
+    // PLAYER .. TIPS 1160..1511, NOISE 1524..1601 — 198 px of ground before
     // the history opener; inside the view three groups of 4, 6 and 2 (Open,
     // Save, Revert, Load in Place | Zoom In, Zoom Out, Zoom to Fit, the lamp,
     // Cumulative, Session | Play Renders, Enable Tooltips) and NOISE,
@@ -1564,8 +1586,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE FIT, the one statement every other site points to: outside the
     // view the left walk must end a run gap short of the right group — the
     // left runs' limit, the right group's first box less the run gap, 2304
-    // − 12 − linked_group_w_px(5) − 12 = 1928 on the tablet at 200 % — and
-    // there it ends at column 1601, so every member stands (inside the view
+    // − 12 − linked_group_w_px(7) − 12 = 1788 on the tablet at 200 % (the
+    // tab pair's seven, architect 2026-11-24) — and
+    // there it ends at column 1601, so every member stands and NOISE stays
+    // (inside the view
     // the shorter walk the more so). On a window too narrow the overflow rule
     // (kIconRowViewPairs) answers: every member whose box would end past the
     // limit publishes the empty rect and paints nothing — no key is cut, so
@@ -1757,11 +1781,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     cairo_restore(cr);
 
     // THE RIGHT RUN, PAINTED LAST AND WHOLE, ONE LINKED GROUP: the history
-    // opener at one x in both states, Source / Target and Warp / Phase Reset
-    // linked behind it (kIconRowRightRun). NONE IS EVER HIDDEN
-    // (history_mode_hides_button): bare `h` is the view's own chord and
-    // bare 1 / 2 / 3 / 4 its admitted selectors, so the hide does not reach
-    // this run.
+    // opener at one x in both states, Source / Target, Warp / Phase Reset
+    // and Tab A / Tab B linked behind it (kIconRowRightRun). NONE IS EVER
+    // HIDDEN (history_mode_hides_button): bare `h` is the view's own chord,
+    // bare 1 / 2 / 3 / 4 its admitted selectors and bare 5 / 6 its admitted
+    // tab switch, so the hide does not reach this run.
     {
         std::vector<RedesignButton> ids;
         for (const IconRowDef& def : kIconRowRightRun) ids.push_back(def.id);
@@ -1775,9 +1799,10 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // mode, no flag, no detection. LEFT TO RIGHT (architect 2026-09-29, for the
 // right-handed tablet: the most-used buttons at the bottom right):
 //
-//   THE TIMESTAMP, PLAIN TEXT, "  |  " AND THE ACTIVE TAB'S NAME, one run
-//   from 14 W (architect 2026-11-19; bottom_left_run below; the face and
-//   the fixed width at THE TIME FIELDS' block);
+//   THE TIMESTAMP ALONE, PLAIN TEXT from 14 W (architect 2026-11-19; alone,
+//   2026-11-24, the active tab said by the top icon row's tab pair;
+//   bottom_left_run below; the face and the fixed width at THE TIME FIELDS'
+//   block);
 //
 //   and, PACKED AGAINST THE RIGHT INSET, five groups, each one linked group,
 //   the run gap between two (architect 2026-11-08: "least used left, most
@@ -1798,10 +1823,11 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 //   Toggle Value Drag are the row's resting greys on a locked tab; the jump
 //   and Add to selection are not, both being navigation;
 //   THE STEP AND THE WALK (kTransportStepWalkGroup, architect 2026-10-18) —
-//   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab) and NEXT MARKER
-//   (Tab), none admitting a modifier;
+//   DOWN and UP (bare Down/Up), PREVIOUS MARKER (Shift+Tab, its hold the
+//   backward march) and NEXT MARKER (Tab, its hold the forward march;
+//   architect 2026-11-24);
 //   THE NUDGE AND PLAY (kTransportNudgePlayGroup, architect 2026-10-18) —
-//   SWITCH TAB (Ctrl+Tab, its shifted press the paired march), CENTER (bare
+//   CENTER (bare
 //   `c`), LEFT and RIGHT (bare Left/Right). THE FOUR ARROWS, two pairs, are
 //   THE ROW'S HOLD GESTURE: held past the hold beat they repeat their own
 //   chords at the platform's key-repeat rate (key_repeat_period_ms) (the
@@ -1821,8 +1847,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // Drag, and COPY and PASTE (the duo hidden whole, its run gap with it) — and
 // publishes an empty rect, the block closing up from the right margin; the
 // row in there is GO TO START and GO TO END (the mode's own absolute jumps),
-// ADD TO SELECTION alone, the walk pair, and SWITCH TAB, CENTER, OLDER and
-// NEWER: nine cases in four groups. THE STAND-IN (architect 2026-10-11,
+// ADD TO SELECTION alone, the walk pair, and CENTER, OLDER and
+// NEWER: eight cases in four groups. THE STAND-IN (architect 2026-10-11,
 // kTransportHistoryStandIns): in the view Older / Newer take the seats Left
 // and Right hold outside it, the nudge pair publishing empty rects (Up and
 // Down hidden), and outside it the two publish empty rects. THE STAND-INS DO
@@ -1851,10 +1877,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
 // kTransportHistoryStandIns seating Older / Newer in their buttons' places
 // in the view, the painted, state-greyed pair there); ADD TO SELECTION STAYS
 // LIVE, bare `k` being on that mode's allowlist and the lamp producing the
-// view's own multi-selection; THE WALK PAIR, SWITCH TAB AND CENTER stay
-// live, Tab/Shift+Tab being the mode's diff-flag cycle, `c` its centring and
-// Ctrl+Tab on its allowlist. NEXT and PREVIOUS MARKER grey where their step
-// would land nothing. Outside the view the four VERBS and OPEN TEXT EDITOR
+// view's own multi-selection; THE WALK PAIR AND CENTER stay
+// live, Tab/Shift+Tab being the mode's diff-flag cycle and their holds its
+// marches (architect 2026-11-24), `c` its centring. NEXT and PREVIOUS MARKER
+// grey under the grid iterations lamp alone, where their step would land
+// nothing (the marches refused there). Outside the view the four VERBS and
+// OPEN TEXT EDITOR
 // grey on a locked tab, their own gate — JUMP TO DEFINING MARKER, seated
 // among them, does NOT, its chord being navigation the lock admits — and
 // EVERY MEMBER BUT PLAY / STOP (its own launch and A/B predicates) AND ADD
@@ -1956,11 +1984,12 @@ constexpr TransportRowDef kTransportSkipGroup[] = {
 // order: DOWN and UP (bare Down / Up, the value step, one unit — its
 // hold-repeat at their chord rows, input_pointer.cpp), PREVIOUS MARKER
 // (Shift+Tab) and NEXT MARKER (the walk: Tab; its camera the audio view's),
-// neither admitting a modifier.
+// each hold a march — Next's forward, Previous's back (architect
+// 2026-11-24).
 // A SHIFT- OR CTRL-MODIFIED CHORD MAY HAVE ITS OWN DEDICATED BUTTON
 // (architect 2026-09-29: "an artificial constraint; the tablet is the only
 // real development surface now") — Previous Marker is Next Marker's Shift
-// form and Switch Tab its Ctrl form, each its own key. Down / Up are the
+// form, its own key. Down / Up are the
 // verticals here, Left / Right the horizontals in the last group; the
 // vertical pair keeps the architect's order, down before up (2026-08-14).
 // IN THE HISTORY VIEW Down and Up are hidden (history_mode_hides_button),
@@ -1972,9 +2001,9 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
     {RedesignButton::TransportWalk},
 };
 // THE NUDGE-AND-PLAY GROUP (architect 2026-10-18: "play button, right
-// nudge, left nudge. Center, switch tabs, separator", read right to left),
-// THE ROW'S LAST: SWITCH TAB (Ctrl+Tab; its shifted press is the paired
-// march, both chords' one pointer road), CENTER (bare `c`), LEFT and RIGHT
+// nudge, left nudge. Center, ... separator", read right to left; the tab
+// is the top icon row's tab pair, 2026-11-24),
+// THE ROW'S LAST: CENTER (bare `c`), LEFT and RIGHT
 // (bare Left / Right, the nudge — the playhead step) and PLAY / STOP.
 //
 // PLAY / STOP IS THE GROUP'S LAST MEMBER, beside the right nudge with no
@@ -1986,13 +2015,12 @@ constexpr TransportRowDef kTransportStepWalkGroup[] = {
 // is acceptable, because at working zoom his hand moves faster than the
 // scanner. Play and stop are ONE stateful button (2026-08-15): its glyph is
 // STOP's while an audition runs (redesign_button_icon's stateful overload —
-// Save's and Render's own shape). IN THE HISTORY VIEW the group is Switch
-// Tab, Center, Older and
+// Save's and Render's own shape). IN THE HISTORY VIEW the group is Center,
+// Older and
 // Newer: the nudge pair's seats are the history steps'
 // (kTransportHistoryStandIns, below) and Play is hidden
 // (history_mode_hides_button), so it does not stand there.
 constexpr TransportRowDef kTransportNudgePlayGroup[] = {
-    {RedesignButton::TransportSwitchTab},
     {RedesignButton::IconZoomOriginal},
     {RedesignButton::TransportLeft},
     {RedesignButton::TransportRight},
@@ -2058,8 +2086,8 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // and the point stand still as the time runs.
 //
 // EVERY TIME LABEL PRESSES NOTHING (architect 2026-11-20: "it no longer
-// carries button look"): the bottom left's timestamp is ground like
-// the pipe and the name (RedesignButtonFace::contains, PLAY's box its one
+// carries button look"): the bottom left's timestamp is ground
+// (RedesignButtonFace::contains, PLAY's box its one
 // hit), and the overlays' times stand outside the scrub's item and every
 // key's box, publishing only their damage rect (ModalDialogGeometry::clock).
 //
@@ -2329,27 +2357,24 @@ static void row8_block_walk(bool history, const Row8Block& b,
     }
 }
 
-// THE BOTTOM ICON ROW'S LEFT RUN (architect 2026-11-19: "tabs next to the
-// bottom left timestamp, but we separate them with a pipe. So non-bold for
-// the timestamp, pipe, and then tab A or tab B"): ONE REGULAR 12 W RUN
-// (GuiFace::Program) in the text tone — THE TIMESTAMP (kerning off, THE
-// TIME FIELDS' block), then "  |  " (the status bar's own field separator,
-// kStatusFieldSeparator) and THE ACTIVE TAB'S NAME — NO ENTRY: "probably
-// doesn't need to be ... in its own input box". ITS PEN kBottomLeftPenW
+// THE BOTTOM ICON ROW'S LEFT RUN — THE TIMESTAMP ALONE (architect
+// 2026-11-24: "the timestamp at the bottom left-hand corner would be alone
+// after this"; the active tab is the top icon row's tab pair): ONE REGULAR
+// 12 W RUN (GuiFace::Program) in the text tone, kerning off (THE TIME
+// FIELDS' block) — NO ENTRY (architect 2026-11-19: "probably doesn't need to
+// be ... in its own input box"). ITS PEN kBottomLeftPenW
 // (14 W, render.h; "And then we put the timestamp line at 14W") from the
 // panel's left edge — the status bar's column under it (kStatusBarPenW,
 // the same 14 W by its own ruling) — ON THE KEYS' BASELINE: the 14 W line
 // box centered on the keys' 28 W rows (line_box_baseline,
 // +18 W of the case), so with the row's 7 W above its keys and 7 W below,
-// 14 W of the row above the line box and 14 W under it. THE PIPE'S PEN
-// STANDS AT THE TIMESTAMP SPECIMEN'S ADVANCE ("00:00.000", time_w), so the
-// pipe and the name never move as the digits run. THE TIMESTAMP'S OWN BOX
-// (`time_box`): the specimen's advance from the pen by the line box's rows,
-// real edges — the damage cell's ground (a box of no press: the run presses
-// nothing, architect 2026-11-20). The row's painter's one layout.
+// 14 W of the row above the line box and 14 W under it. THE TIMESTAMP'S OWN
+// BOX (`time_box`): the specimen's advance ("00:00.000", time_w) from the
+// pen by the line box's rows, real edges — the damage cell's ground (a box
+// of no press: the run presses nothing, architect 2026-11-20). The row's
+// painter's one layout.
 struct BottomLeftRun {
     double   pen      = 0.0;   // the timestamp's pen
-    double   pipe_pen = 0.0;   // the "  |  <name>" run's pen
     double   baseline = 0.0;
     GuiRectF time_box{};       // the specimen's advance by the line box
 };
@@ -2363,7 +2388,6 @@ static BottomLeftRun bottom_left_run(const AppState& app, const GuiRect& lane) {
                                 scaled_px(kBottomLeftPenW));
     r.baseline = line_box_baseline(font, static_cast<double>(seats.case_y),
                                    kKeyHeightW);
-    r.pipe_pen = r.pen + m.time_w;
     const double top = r.baseline - static_cast<double>(scaled_px(lb.ascent));
     r.time_box = GuiRectF{r.pen, top, m.time_w,
                           static_cast<double>(scaled_px(lb.ascent) +
@@ -2391,7 +2415,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     cairo_save(cr);
     // THE BODY TONE (paint_bottom_strip's ground) under the block and
-    // between its groups; the left run as plain text (bottom_left_run); the
+    // between its groups; the timestamp as plain text (bottom_left_run); the
     // keys ARC'S LINKED BUTTONS, each group one ring (paint_roster_group,
     // materials.h's paint_linked_group) with their drawings on them
     // (paint_key_glyph).
@@ -2430,16 +2454,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     // THE ROW, LEFT TO RIGHT (architect 2026-09-29, the right-handed tablet's
     // layout: the most-used buttons at the bottom right): THE LEFT RUN — the
-    // timestamp, a text pipe and THE
-    // ACTIVE TAB'S NAME, plain text from kBottomLeftPenW (bottom_left_run)
-    // — then THE
+    // timestamp alone (architect 2026-11-24), plain text from kBottomLeftPenW
+    // (bottom_left_run) — then THE
     // RIGHT BLOCK, packed against the row's right seat (bottom_row_seats, 6 W
     // inside the panel's right edge), FIVE GROUPS (kRow8Groups): the COPY /
     // PASTE DUO (kPhaseResetPropagateGroup), the SKIP
     // GROUP (START | END, kTransportSkipGroup), the MARKER-VERB GROUP (its
     // eight counted off kMarkerVerbGroup), the STEP-AND-WALK GROUP (↓ ↑,
     // Previous Marker and Next Marker, kTransportStepWalkGroup) and the
-    // NUDGE-AND-PLAY GROUP with Play / Stop last (Switch Tab, Center, ← →
+    // NUDGE-AND-PLAY GROUP with Play / Stop last (Center, ← →
     // Play, kTransportNudgePlayGroup; architect 2026-10-18), each ONE LINKED
     // GROUP, the run gap between two. The whole block is measured first and laid left
     // to right from there, so one expression owns the anchor and no group
@@ -2458,33 +2481,34 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // device px at 200 %, one W = 2) — the 36-W box (kKeyWidthW), a group's
     // keys sharing one seam column each (72 + 70 (n − 1) a group of n,
     // linked_group_w_px), the 6-W run gap (kRunGapW): the
-    // block is 21 keys in five groups (the duo two, the skips two, the verbs
-    // eight, the step-and-walk four, the nudge-and-play five), 142 + 142 +
-    // 562 + 282 + 352 + 4 · 12 = 1528 px, its last box ending at the row's
+    // block is 20 keys in five groups (the duo two, the skips two, the verbs
+    // eight, the step-and-walk four, the nudge-and-play four; architect
+    // 2026-11-24), 142 + 142 +
+    // 562 + 282 + 282 + 4 · 12 = 1458 px, its last box ending at the row's
     // right seat (bottom_row_seats' cases_right, 2292, 6 W inside the
-    // panel's right edge) — the groups on x 764..905, 918..1059, 1072..1633,
-    // 1646..1927 and 1940..2291 (Play 2220..2291); the left run from x 28
+    // panel's right edge) — the groups on x 834..975, 988..1129, 1142..1703,
+    // 1716..1997 and 2010..2291 (Play 2220..2291); the timestamp from x 28
     // (kBottomLeftPenW):
-    // the timestamp's advance 106.77 px (the 53.4-W advance of
-    // "00:00.000" in the Regular 12 W, kerning off), its cell x 27..135, the
-    // text pipe's run "  |  Tab B" from x 134.77, about 97 px. IN THE HISTORY
+    // its advance 106.77 px (the 53.4-W advance of
+    // "00:00.000" in the Regular 12 W, kerning off), its cell x 27..135. IN
+    // THE HISTORY
     // VIEW (the hide; Play, Open Text Editor, Toggle Value Drag,
     // COPY and PASTE hidden there with the verbs — the duo whole, its run
     // gap with it — Down and Up with them) the block is the two skips, one
-    // verb, the walk pair and Switch Tab, Center and Older / Newer in the
-    // nudge pair's seats, 142 + 72 + 142 + 282 + 3 · 12 = 674 px, from x
-    // 1618. THE ROW CARRIES NO COLLISION RULE — no row does — and the
+    // verb, the walk pair and Center and Older / Newer in the
+    // nudge pair's seats, 142 + 72 + 142 + 212 + 3 · 12 = 604 px, from x
+    // 1688. THE ROW CARRIES NO COLLISION RULE — no row does — and the
     // crop-at-the-floor allowance recorded at kMinWindowWidthPx covers a
     // narrow window.
     //
     // THE BLOCK WINS IN Z (architect 2026-10-14: "icons row should win in
     // z-index … msg goes under it. It should be fully opaque"): the block is
     // MEASURED here, ahead of the clock, but it is PAINTED LAST — after the
-    // clock and the name, on its own span of the ground laid fresh — so where
+    // clock, on its own span of the ground laid fresh — so where
     // the block is wide enough to walk over the clock, the block is what
     // shows, whole and opaque, and nothing of the left run comes through.
-    // The press agrees by construction: the whole left run — the timestamp, the pipe and the
-    // name — is pointer-inert ground (the timestamp by architect
+    // The press agrees by construction: the left run, the timestamp, is
+    // pointer-inert ground (architect
     // 2026-11-20: "it no longer carries button look"), and the
     // press resolves against the keys' published rects alone
     // (claim_button_row_press, input_pointer.cpp). Every repaint of the clock
@@ -2492,8 +2516,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // clock_invalidate_rect, main.cpp — there is no field-only path), so the
     // per-frame clock damage repaints the block over the clock inside the
     // clip too and cannot put the clock back on top mid-play. At a width
-    // where nothing overlaps the order changes no byte: the clock and the
-    // name lie wholly left of the block, and the block's fresh
+    // where nothing overlaps the order changes no byte: the clock lies
+    // wholly left of the block, and the block's fresh
     // ground is paint_bottom_strip's own flat ground over the same span.
     // THE FIVE GROUPS IN PAINTED ORDER, each read off its own table, so a
     // box joining or leaving moves the block with no second edit.
@@ -2511,8 +2535,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
                                   history ? s.seat : s.stand_in.id,
                                   GuiRect{});
 
-    // THE BOTTOM LEFT: THE TIMESTAMP, A TEXT PIPE AND THE TAB'S NAME AS ONE
-    // RUN, NO ENTRY (architect 2026-11-19; the seats and their
+    // THE BOTTOM LEFT: THE TIMESTAMP ALONE, NO ENTRY (architect 2026-11-19;
+    // alone, 2026-11-24; the seats and their
     // rules at bottom_left_run above), in THE PROGRAM FACE (Regular 12 W),
     // the text tone, inside the save/restore this body already opened. The
     // render player's two fields share its face and its metrics
@@ -2523,11 +2547,9 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const BottomLeftRun run = bottom_left_run(app, lane);
         // THE LEFT RUN PRESSES NOTHING (architect 2026-11-20: "it no longer
         // carries button look"): the timestamp is plain text (architect
-        // 2026-11-19), a time label, so it is ground like the pipe and the
-        // name — no press, no hover, no tooltip; PLAY is pressed from its
-        // own box alone (RedesignButtonFace::contains). The pipe and the
-        // name are pointer-inert ground too (no press target: the TAB key
-        // keeps its walk, LOCK the lock's one road). The digits
+        // 2026-11-19), a time label, so it is ground — no press, no hover,
+        // no tooltip; PLAY is pressed from its
+        // own box alone (RedesignButtonFace::contains). The digits
         // are never greyed. The render player's and the score viewer's time
         // labels share the face and press nothing either.
 
@@ -2539,10 +2561,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // specimen's ink, a "4", THE TIME FIELDS' block), by the line box's
         // rows, which hold every digit's ink on its baseline. THE RECT
         // FOLLOWS THE RUN BECAUSE IT IS BUILT FROM THE SAME PEN AND METRICS,
-        // so the damage can never miss the painted digits; the pipe and the
-        // name, which never move as the digits run (their pen the
-        // specimen's advance), stand outside it — a tab switch or a load
-        // damages the lane whole (Viewport::invalidate_tab_name_area).
+        // so the damage can never miss the painted digits.
         const GuiRect cell = bottom_left_clock_cell(run);
         app.clock_cell_rect = cell;
         const bool clock_drawn = clip_meets(cr, cell);
@@ -2576,29 +2595,15 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // on-screen keyboard, which every editor raises over the row
         // (architect 2026-11-20, paint_bottom_strip's yield); the status bar
         // under the row stands but under the keyboard (paint_status_bar).
-        // WITH NO PIECE THERE IS NO TIMESTAMP AND NO NAME (architect
-        // 2026-10-27, the open's hold's one frame, platform.h's head: no tab
-        // of no piece is named; no_audio_to_dispatch_on), so no pipe.
+        // WITH NO PIECE THERE IS NO TIMESTAMP (architect
+        // 2026-10-27, the open's hold's one frame, platform.h's head;
+        // clock_time_text's empty text).
         const std::string time_text = clock_time_text(app, audio);
-        const bool no_piece =
-            no_audio_to_dispatch_on(app, audio.total_frames());
-        const std::string name_text = no_piece                    ? ""
-                                      : app.active_tab_view == 'B' ? "Tab B"
-                                                                   : "Tab A";
         set_palette_source(cr, palette().text);
         if (clock_drawn && !time_text.empty()) {
             const text_shape::ShapedRun t = text_shape::shape_text_run(
                 font, time_text, text_shape::Kerning::Off);
             text_shape::show_shaped_run(cr, t, run.pen, run.baseline);
-        }
-        if (!name_text.empty()) {
-            const std::string tail =
-                time_text.empty()
-                    ? name_text
-                    : std::string(kStatusFieldSeparator) + name_text;
-            const text_shape::ShapedRun t =
-                text_shape::shape_text_run(font, tail);
-            text_shape::show_shaped_run(cr, t, run.pipe_pen, run.baseline);
         }
     }
 
@@ -5535,10 +5540,10 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 // (closed_questions.md carries that do-not-re-propose). WHILE AN OVERLAY OR
 // A PAGE STANDS, OR THE ON-SCREEN KEYBOARD STANDS OVER THE ROW (every
 // editor; architect 2026-11-20, onscreen_keyboard.h's placement block),
-// THE ROW YIELDS WHOLE: all TWENTY-ONE buttons — the COPY /
+// THE ROW YIELDS WHOLE: all TWENTY buttons — the COPY /
 // PASTE duo's two, the skips' two, the VERB GROUP'S EIGHT, the
-// step-and-walk group's four and the nudge-and-play group's five — and the
-// left run (the timestamp, the pipe and the tab's name) stand down, nothing
+// step-and-walk group's four and the nudge-and-play group's four — and the
+// left run (the timestamp alone, architect 2026-11-24) stand down, nothing
 // negotiates for space, and the overlay's controls or the page's answers
 // take the row they left (paint_modal_dialog; the box is
 // paint_modal_box's, laid by paint_folder_overlay under the render player
@@ -5560,7 +5565,7 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 //     app_state.h), over the main page, the `h` view or an overlay alike:
 //     the row is the page's ANSWERS — Arc's word buttons flush right, the
 //     question's in its table's order, the progress page's one Cancel — and
-//     nothing else, no timestamp, no tab name, no roster key and none of an
+//     nothing else, no timestamp, no roster key and none of an
 //     overlay's own controls (paint_modal_dialog's plan);
 //   * AN OVERLAY STANDS — the RENDER PLAYER (its transport row), the PICKER
 //     in its five contents (the project picker's and the value list's
@@ -5596,8 +5601,8 @@ static bool modal_owns_bottom_row(AppState& app) {
 void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // THE BOTTOM ICON ROW (architect 2026-08-12: ONE lane; bottom lane 1,
     // over the status bar): one plain-text run
-    // at the left — the timestamp, a text pipe and the active tab's name
-    // (bottom_left_run) — and, packed against the right edge, the COPY /
+    // at the left — the timestamp alone (architect 2026-11-24;
+    // bottom_left_run) — and, packed against the right edge, the COPY /
     // PASTE duo, the skips, the MARKER-VERB GROUP, the step and walk and the
     // nudge and play with Play last, each one linked group (the tables
     // above own those memberships). That is the whole roster. This painter
@@ -5619,15 +5624,15 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // and a "(read-only)" token. The icon row's view pairs show the view as
     // two lit buttons and its read-only toggle shows the lock, so letters would
     // restate what that row says in its own vocabulary — and the A / B tab
-    // is the active tab's name beside the clock (2026-10-22). The row
+    // is its tab pair's lit member (architect 2026-11-24). The row
     // carries no dirty mark:
     // Save's grey is the mark
     // (architect 2026-10-05, plain_save_actionable).
     //
     // The row paints on EVERY frame class (blank, loaded) like the
     // rows above it: with no piece — the open's hold's one frame,
-    // platform.h's head — the timestamp stands empty and no tab is named
-    // (clock_time_text, the name's block), and the buttons must be visible
+    // platform.h's head — the timestamp stands empty (clock_time_text), and
+    // the buttons must be visible
     // on every frame class their press claim is live on.
     const GuiRect lane = bottom_row_area(app);
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -5723,8 +5728,8 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // reads (clock_invalidate_rect, main.cpp). Runs whole on every exposure
     // like the top icon row (it shapes no text beyond the clock's one
     // memoised-cell run, so a narrow clip pays almost nothing for it) and is
-    // the LAST thing this painter does: the row's other tenant is the active
-    // tab's name beside the clock, painted by the same function; the process
+    // the LAST thing this painter does: the clock is the row's one text, the
+    // timestamp alone (architect 2026-11-24); the process
     // line stands in the status bar under the row (paint_status_bar).
     paint_bottom_row_buttons_and_clock(cr);
 }
@@ -6782,7 +6787,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //        modal_controls_seats: max(85 W, the widest word + 34 W) each,
     //        4 W apart, flush right 6 W inside the panel — on the tablet OK
     //        x 1944..2113 and Cancel x 2122..2291 on rows 1324..1379), on
-    //        the row's ground in the body tone with NO timestamp, NO tab name,
+    //        the row's ground in the body tone with NO timestamp,
     //        NO roster key and none of an overlay's own controls
     //        (modal_owns_bottom_row). EVERY ANSWER IS LIVE while its page
     //        stands (`enabled` true), painted and published by the walk
@@ -9294,7 +9299,7 @@ void GuiPaintHandler::on_redraw(cairo_t* cr, int x, int y, int w, int h) {
         //      then THE STEREO DIVIDER'S ROWS (render_waveform_divider,
         //      2026-10-16).
         //   3. the top icon row and the bottom icon row (its
-        //      chrome, buttons, clock and the tab's name in one painter),
+        //      chrome, buttons and clock in one painter),
         //      and the status bar under it (paint_status_bar),
         //      each on its own
         //      exposure (above, outside this branch; they own lanes nothing

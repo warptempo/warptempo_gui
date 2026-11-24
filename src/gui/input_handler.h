@@ -347,8 +347,9 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 //     crossing and the phase-reset
 //     propagate paste, which reach this helper direct, and
 //     Undo's column restore).
-//   * GuiActiveViews::switch_active_tab_view_to — the A/B writer (Ctrl+Tab
-//     and every other tab switch, Undo's cross-tab restore).
+//   * GuiActiveViews::switch_active_tab_view_to — the A/B writer (the tab
+//     pair's bare 5 / 6 and every other tab switch, Undo's cross-tab
+//     restore).
 //   * apply_settings_engine_and_prefs (file_loader.cpp) — all three fields at
 //     once, the source load's alone (a load in place writes no
 //     view state). It takes a
@@ -359,12 +360,12 @@ validate_target_view_entry(const std::vector<GuiWarpMarker>& markers,
 // of a failed target-view restore) need no call of their own: it runs the
 // routine above in the same body, and it is invoked once from the startup tick,
 // before any input exists.
-// THE COMMAND WRAPPERS DO NOT SPELL IT — Ctrl+Tab keeps its call because it IS
+// THE COMMAND WRAPPERS DO NOT SPELL IT — the tab switch keeps its call because it IS
 // the writer, while select_active_markers_view has no call of its own
 // to the writer it delegates to, so there is ONE spelling of the rule per
 // write.
-// The four view selectors and the top icon row's view pairs compose those
-// writers and inherit it.
+// The four view selectors, the top icon row's view pairs and its tab pair
+// (bare 5 / 6, architect 2026-11-24) compose those writers and inherit it.
 //
 // WHICH HALF IS CORRECTNESS AND WHICH IS THE FRESH-GRIP RULE, said plainly
 // because the two read alike at the call site: an S/T write CHANGES WHAT THE
@@ -451,7 +452,7 @@ void land_playhead_on_domain_frame(AppState& app, const GuiAudio& audio,
 // first-in-store tie-break. FOUR CALL SITES,
 // each stating only its own class and pointing there: the source load's tail
 // (file_loader.cpp), the column entry (select_active_markers_view) and the
-// Ctrl+Tab tab entry (switch_active_tab_view_to), both in active_views.cpp, and
+// tab switch's entry (switch_active_tab_view_to), both in active_views.cpp, and
 // THE LOAD-IN-PLACE FAMILY'S ONE SHARED TAIL (apply_recipe_in_place,
 // input_key_dispatch.cpp), which all three acts reach — the `'` render-entry
 // load (load_render_entry_in_place), the `h` view's commit
@@ -523,8 +524,9 @@ void land_and_frame_active_markers(AppState& app, const GuiAudio& audio,
 //     `u` (the CUMULATIVE reading's toggle, 2026-08-08), bare `,` / `.` (the
 //     walk), bare Tab / Shift+Tab (the diff-flag cycle, its
 //     camera the landing owner's, Viewport::land_subject),
-//     Ctrl+Shift+Tab (the PAIRED MARCH over that cycle, 2026-08-18 — the
-//     one ctrl-carrying claim), bare `g` (the WALK toggle over the two
+//     Ctrl+Tab / Ctrl+Shift+Tab (the PAIRED MARCHES over that cycle,
+//     2026-08-18, both directions 2026-11-24 — the one ctrl-carrying
+//     family), bare `g` (the WALK toggle over the two
 //     sources, the WALK LAMP's chord, 2026-08-18), bare and shifted
 //     Home / End (the shifted pair, 2026-10-24), bare `c` and bare
 //     Left / Right (the playhead step,
@@ -648,7 +650,7 @@ bool authoring_lock_drops_chord(const AppState& app, GuiKey key,
 // exemption). Everything else
 // that touches a trim bound is not a command in this sense: auto_clear_crossed_trim
 // is a shared commit tail every setter already runs inside its own body, and the
-// ENTRY / RESTORE routes (file load, the Ctrl+Tab band pull, the settings-file
+// ENTRY / RESTORE routes (file load, the tab switch's band pull, the settings-file
 // tab-band pull) install a trim wholesale. A load in place installs no trim at
 // all, trim having no undo and the act writing only what its undo entry
 // restores.
@@ -1311,10 +1313,10 @@ struct GuiInputHandler {
 
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the top
-    // icon row's thirty-one and the bottom icon row's twenty-three
+    // icon row's thirty-three and the bottom icon row's twenty-two
     // (the painter's tables in paint_handler.cpp own each membership; the
     // counts are theirs):
-    //   THE TOP ICON ROW, 22 + 4 + 1 + 4 = 31 — the left walk's twenty-two
+    //   THE TOP ICON ROW, 22 + 4 + 1 + 6 = 33 — the left walk's twenty-two
     //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
     //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow,
     //   Restrict, the TRIM arm lamp and Presets;
@@ -1324,16 +1326,17 @@ struct GuiInputHandler {
     //   the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
     //   group's — kIconRowHistoryStandIns), the history opener
-    //   right-anchored (kIconRowHistoryOpener) and the VIEW PAIRS' four
+    //   right-anchored (kIconRowHistoryOpener) and the THREE PAIRS' six
     //   flush right behind it in one run (kIconRowViewPairs, Source /
-    //   Target and Warp / Phase Reset) — 27
+    //   Target and Warp / Phase Reset; kIconRowTabPair, Tab A / Tab B,
+    //   architect 2026-11-24) — 29
     //   standing outside the `h` view (the four stand-ins publishing empty
-    //   rects) and 18 inside it (the stand-ins in, Undo's group and the
+    //   rects) and 20 inside it (the stand-ins in, Undo's group and the
     //   iteration group out, and the view's hide leaving Open Project and
     //   Save's group whole, Zoom In, Zoom Out, Zoom to Fit and Waveform
     //   Magnification, Play Renders, Enable Tooltips and the level case
     //   alone of theirs);
-    //   THE BOTTOM ICON ROW, 2 + 2 + 8 + 4 + 5 + 2 = 23 — the COPY / PASTE DUO (Copy
+    //   THE BOTTOM ICON ROW, 2 + 2 + 8 + 4 + 4 + 2 = 22 — the COPY / PASTE DUO (Copy
     //   Phase Resets and Paste Phase Resets, kPhaseResetPropagateGroup,
     //   2026-11-08), the skips (Go to Start, Go to End,
     //   kTransportSkipGroup, 2026-10-24), the MARKER-VERB GROUP's eight
@@ -1342,12 +1345,12 @@ struct GuiInputHandler {
     //   Value Drag),
     //   the step-and-walk group's four (Down,
     //   Up, Previous Marker, Next Marker — kTransportStepWalkGroup), the
-    //   nudge-and-play group's five with Play / Stop last (Switch Tab,
-    //   Center, Left, Right, Play — kTransportNudgePlayGroup; the two groups
-    //   the architect's, 2026-10-18) and the `h` view's Older /
-    //   Newer (kTransportHistoryStandIns, architect 2026-10-11): 21 standing
+    //   nudge-and-play group's four with Play / Stop last (Center, Left,
+    //   Right, Play — kTransportNudgePlayGroup; the two groups
+    //   the architect's, 2026-10-18; four, 2026-11-24) and the `h` view's Older /
+    //   Newer (kTransportHistoryStandIns, architect 2026-10-11): 20 standing
     //   outside the view (the two publishing empty rects), and inside it
-    //   2 + 1 + 2 + 4 = 9 — the hide's survivors, Older / Newer in the Left /
+    //   2 + 1 + 2 + 3 = 8 — the hide's survivors, Older / Newer in the Left /
     //   Right seats, the pair's rects empty and Down, Up, Play and the duo
     //   hidden.
     // EVERY MEMBER PUBLISHES WHAT IT PAINTED on every frame the roster
@@ -1364,7 +1367,7 @@ struct GuiInputHandler {
     // refuses in every session; the bottom icon row whole while an
     // overlay's controls row holds it (modal_owns_bottom_row,
     // paint_bottom_strip); and a window
-    // too narrow for the top icon row, where a member the view pairs' overflow
+    // too narrow for the top icon row, where a member the pairs' overflow
     // covers whole publishes the empty rect and one it covers in part only
     // its painted columns (paint_icon_row). (Definitions beside on_motion
     // in input_pointer.cpp.)
@@ -2281,7 +2284,7 @@ struct GuiInputHandler {
     // mode's re-expression walks its own diff-flag list and its own focus — so
     // the call sites (run_center_key_command — the
     // centre key's act, which the live `c` arm, the mode's `c` claim, the
-    // paired march and the A/B audition's GuiAbAudition::apply_working_zoom
+    // paired marches and the A/B audition's GuiAbAudition::apply_working_zoom
     // reach — and Ctrl+J's jump, which
     // calls it TWICE — once on the tab it leaves and once on the tab it
     // lands) share one decision instead of
@@ -2296,7 +2299,7 @@ struct GuiInputHandler {
     void run_center_command(bool user_zoom);
     // THE CENTRE KEY'S ACT (architect 2026-09-23): bare `c` (the live arm and
     // the `h` view's claim), the Center button's synthesized chord, both
-    // steps of the paired march and the A/B audition's
+    // steps of each paired march and the A/B audition's
     // three centrings (GuiAbAudition::apply_working_zoom, which arms the hold
     // like `c`) — run_center_command, which stops any play
     // first (architect 2026-09-29), then the HOLD posture armed whether or
@@ -2580,20 +2583,20 @@ private:
     // FRAMING IS THE CALLER'S AND `frame` IS REQUIRED (architect 2026-09-04).
     // This body moves the focus and lands the playhead; it decides nothing
     // about the camera beyond what `frame` states and reads no preference of
-    // its own — follow never gated it. The three Tab arms pass
+    // its own — follow never gated it. The two Tab arms pass
     // MarkerLandingFrame::Land, the landing owner's walk
     // (Viewport::land_subject, LandingKind::Walk): centred at the working
     // zoom, as painted, on screen or not; at every other zoom, finer or
     // coarser, nothing on screen and paged in off screen; the zoom never
-    // written. The two steps of the
-    // Ctrl+Shift+Tab paired march pass MarkerLandingFrame::Center, `c`'s own
+    // written. The two steps of each
+    // paired march (Ctrl+Tab, Ctrl+Shift+Tab) pass MarkerLandingFrame::Center, `c`'s own
     // statement, each running bare `c`'s act behind it (2026-09-26: the
     // march writes the working zoom).
     // The parameter carries no default precisely so a future caller
     // cannot inherit any answer by saying nothing.
-    // The WHOLE Tab family comes through here: the three bare chords and the
-    // Ctrl+Shift+Tab lockstep march, which calls this once per tab (the
-    // other tab first, then home).
+    // The WHOLE Tab walk comes through here: bare Tab and Shift+Tab, and the
+    // two lockstep marches, Ctrl+Tab and Ctrl+Shift+Tab, each calling this
+    // once per tab (the other tab first, then home).
     // Mode-aware: reads from phaseresetmarkers in 'P' mode, warpmarkers
     // otherwise. The history mode's diff-flag cycle is the mode-local mirror of
     // this rule, over its own list (handle_history_mode_key).
@@ -2615,7 +2618,7 @@ private:
     // The zoom belongs to the caller too, and the callers differ in it: `c`
     // sets the working zoom right after this returns, the Tab walk sets
     // nothing (2026-09-22, at every level), and each step of
-    // the paired march runs `c`'s act right after its walk step (2026-09-26).
+    // each paired march runs `c`'s act right after its walk step (2026-09-26).
     // Returns true when a marker was
     // focused and the jump happened, false (leaving the playhead alone) when
     // there is none. This is the shared jump tail of cycle_marker_focus (the
@@ -2630,7 +2633,7 @@ private:
     // states what ITS caller handed it.
     // Its land is the movement owner; its
     // callers are `c` (and, through `c`, Ctrl+J and the A/B audition) and
-    // cycle_marker_focus, which the three Tab arms and the march's two walk
+    // cycle_marker_focus, which the two Tab arms and each march's two walk
     // steps reach.
     bool jump_playhead_to_focused_marker(MarkerLandingFrame frame);
 
@@ -2696,9 +2699,11 @@ private:
     // refused); the decision is phase_reset_paste_refusal.
     bool card_phase_reset_paste_refusal();
 
-    // Tab-key family: Ctrl+Tab switches A/B tabs; Ctrl+Shift+Tab is the
-    // paired march, a round trip through the other tab that steps and
-    // centres both (bare `c`'s act) and ends on the tab it started; Tab /
+    // The tab family (architect 2026-11-24): bare 5 / 6, the tab pair,
+    // switch A/B tabs (the key for the tab standing selecting the other);
+    // Ctrl+Tab and Ctrl+Shift+Tab are the two paired marches, forward and
+    // back, each a round trip through the other tab that steps and centres
+    // both (bare `c`'s act) and ends on the tab it started; Tab /
     // Shift+Tab cycle marker focus with the landing owner's
     // camera (Viewport::land_subject). No Alt spelling of Tab binds. Returns true
     // if key+mods matched one (on_key then returns), false otherwise.
@@ -4425,7 +4430,7 @@ private:
     // marker's resolved value to the system clipboard (2026-10-14), Ctrl+J
     // JUMPS to the marker
     // that value came from — the pass's owner or the ref's definition — ON THE
-    // OTHER A/B TAB, so a reference and its definition stand one Ctrl+Tab
+    // OTHER A/B TAB, so a reference and its definition stand one tab switch
     // apart. One composer answers both (resolved_marker_payload, the value and
     // its source index), one gate refuses both — carding, in
     // each chord's own words (payload_eligible_marker) — and the jump's five
@@ -4594,12 +4599,12 @@ private:
     // AppState::HistoryMode (app_state.h); each body states only its own
     // membership.
     //   * handle_history_mode_key owns the mode's whole keyboard vocabulary —
-    //     the toggle, the walk, the diff-flag cycle, the march that composes
+    //     the toggle, the walk, the diff-flag cycle, the two marches that compose
     //     that cycle with a round trip through the other tab, the absolute
     //     Home/End, `c` and the Left / Right playhead step — and returns true when it consumed the press. The membership is
     //     re-derived at history_mode_owns_key; its position in on_key IS its
     //     entry-gate list. Its cycle is a member of its own
-    //     (cycle_history_diff_flag_focus) because the march composes it too.
+    //     (cycle_history_diff_flag_focus) because the marches compose it too.
     //   * history_mode_key_blocked is the allowlist, read_only_key_blocked's
     //     shape: true when the chord is not admitted while the mode stands.
     //     It DECIDES THE ROSTER'S FACES in the view (history_mode_disables_
@@ -4715,7 +4720,7 @@ private:
     // callers, both in handle_history_mode_key: its Tab arm, stating
     // MarkerLandingFrame::Land, the landing owner's walk
     // (Viewport::land_subject, LandingKind::Walk), exactly as the live walk
-    // does; and its Ctrl+Shift+Tab march, stating MarkerLandingFrame::Center
+    // does; and its two marches, Ctrl+Tab and Ctrl+Shift+Tab, stating MarkerLandingFrame::Center
     // with the mode's `c` behind it, exactly as the live march does. Every
     // walk rule it obeys is stated at those arms.
     void cycle_history_diff_flag_focus(bool forward, MarkerLandingFrame frame);

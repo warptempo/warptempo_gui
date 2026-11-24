@@ -172,18 +172,6 @@ void Viewport::invalidate_status_bar_area() {
     if (t.w > 0 && t.h > 0) gui.invalidate_region(t.x, t.y, t.w, t.h);
 }
 
-// THE TAB NAME'S DAMAGE — the bottom icon row's lane whole (the reason at
-// the declaration, viewport.h). NONE WHILE THE ON-SCREEN KEYBOARD STANDS: it
-// covers the row, whose painter yields under it (the name painted nowhere),
-// and its hide damages its whole surface, the row among it, so the name
-// comes back current (onscreen_keyboard.h's placement block; architect
-// 2026-11-20) — the status bar's rule above.
-void Viewport::invalidate_tab_name_area() {
-    if (onscreen_keyboard::stands(app)) return;
-    const GuiRect t = bottom_row_area(app);
-    gui.invalidate_region(t.x, t.y, t.w, t.h);
-}
-
 // THE MODAL'S DAMAGE — every rect the modal can paint and every rect its
 // close must give back, the bottom icon row's lane among them (the modal
 // stands in the row, and the row's own tenants come back on a close). No
@@ -1075,7 +1063,7 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 // any other camera writer between presses moves the compared fields and
 // ends the run; the next press seats afresh. The test is posture identity, so
 // a detour that returns the five fields to exactly the step's own copy — a
-// Ctrl+Tab to the other tab and back, which restores that tab's saved start
+// tab switch to the other tab and back, which restores that tab's saved start
 // and level, or FIT followed by its recall — is indistinguishable from the
 // run and continues it: the held frame still sits within a frame of
 // the centre column, the rest the detour returned to, so the reuse costs
@@ -1650,7 +1638,7 @@ void Viewport::follow_scanner() {
 // walked marker centred at the working zoom is expected to hold its column,
 // and it arms even where a wall keeps it off the centre. Since the walk
 // centres only at the working zoom, every other act that arms (bare `c`, the
-// paired march, the A/B audition's centrings, Ctrl+J) writes that zoom, and
+// paired marches, the A/B audition's centrings, Ctrl+J) writes that zoom, and
 // the tab switch's arrival derivation (hold_derived_on_arrival above,
 // architect 2026-09-29) arms only at the working zoom as painted, while every zoom
 // write that moves the level changes the camera at the chokepoint and puts
@@ -1723,7 +1711,7 @@ void Viewport::follow_scanner() {
 //     and the phase-reset pastes' landing
 //     (PhaseResetPropagate::land_paste_in_phase_reset_view) over the resets
 //     the paste changed, one member included (architect 2026-11-17).
-// NOT READERS, by ruling: bare `c`, the paired march (live and `h`, each step
+// NOT READERS, by ruling: bare `c`, the paired marches (live and `h`, each step
 // running `c`'s act, 2026-09-26), Ctrl+J and the A/B audition (its three
 // centrings `c`'s act too, 2026-09-29), which
 // centre unconditionally (center_viewport_on_playhead after the working

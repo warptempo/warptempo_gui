@@ -219,7 +219,7 @@ struct GuiPlaybackLifecycle {
     //     write). The S/T switch `t` stops on its own standing ruling, the audio
     //     domain flipping under the running session.
     //   * THE CENTRE COMMAND STOPS, ALWAYS (architect 2026-09-29): `c` and every
-    //     road that runs its body (the Center button, the paired march's steps,
+    //     road that runs its body (the Center button, the paired marches' steps,
     //     Ctrl+J, the A/B audition's opening of each half) stop before they
     //     centre, a focus standing or not, at the command's one owner
     //     (run_center_command), so the centring is on the resting playhead and

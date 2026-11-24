@@ -62,10 +62,12 @@ namespace {
 // The `ctrl` column likewise is each button's OWN chord (Save's Ctrl+S,
 // PASTE's Ctrl+P and the rest): the pointer carries no ctrl into a chord
 // (architect 2026-11-08: the barrel is no chrome modifier;
-// redesign_button_shift_admits' head). The `shift` column is each button's
+// redesign_button_shift_admits' head), save the walk pair's hold, whose
+// ruled translation adds the ctrl at the lift (architect 2026-11-24;
+// finish_chrome_press_release). The `shift` column is each button's
 // OWN chord — TWO rows set it: Redo's Ctrl+Shift+Z and PREVIOUS MARKER's
-// Shift+Tab (2026-09-29; the walk's own shift stays an ADMISSION beside
-// it), the march Ctrl+Shift+Tab being Switch Tab's admitted shift. It is not
+// Shift+Tab (2026-09-29), the walk's direction bit, which the backward
+// march, Ctrl+Shift+Tab, keeps under the hold's ctrl. It is not
 // the whole shift story: the SHIFT-ADMITTING buttons OR the long press's shift
 // into this field to reach their twins, and which buttons those are lives at
 // redesign_button_shift_admits (app_state.h), which the tooltip's own table is
@@ -259,8 +261,7 @@ constexpr ToolbarChord kToolbarChords[] = {
     // which COLLAPSES those
     // terms into their one sum instead of removing them — so a LONG PRESS at
     // chrome_shift_hold_ms() reaches the second act. The row's own `shift`
-    // bit stays FALSE, the admission and the
-    // table bit being mutually exclusive by the shift term's construction
+    // bit stays FALSE: the shift is the hold's, ORed in at the lift
     // (finish_chrome_press_release); the membership is
     // redesign_button_shift_admits (app_state.h) and the tooltip's second
     // line is bound to it by that predicate's static_assert.
@@ -415,7 +416,17 @@ constexpr ToolbarChord kToolbarChords[] = {
     {RedesignButton::ViewTarget, GuiKeys::Digit2, false, false, false}, // bare 2
     {RedesignButton::ViewWarp,   GuiKeys::Digit3, false, false, false}, // bare 3
     {RedesignButton::ViewPhase,  GuiKeys::Digit4, false, false, false}, // bare 4
-    // THE BOTTOM ICON ROW (architect 2026-08-11). TWENTY-ONE
+    // THE TAB PAIR (architect 2026-11-24), behind the view pairs, the row's
+    // last: Tab A and Tab B on bare 5 / 6, the selectors' digits continued,
+    // the A/B tab switch through on_key's tab family
+    // (handle_tab_switch_keys) — THE POP, the key for the tab standing
+    // selecting the other, the key's own resolution. ITS GATES ARE THE TAB
+    // SWITCH'S (is_tab_selector_key, gui_input.h): admitted on a locked tab,
+    // in the `h` view and under the grid iterations lamp in every state. No
+    // modifier, no repeat, the row's click face.
+    {RedesignButton::ViewTabA,   GuiKeys::Digit5, false, false, false}, // bare 5
+    {RedesignButton::ViewTabB,   GuiKeys::Digit6, false, false, false}, // bare 6
+    // THE BOTTOM ICON ROW (architect 2026-08-11). TWENTY
     // ordinary rows (Older / Newer, the history stand-ins, stand apart),
     // every chord already bound elsewhere: the row adds no semantics
     // anywhere — each button is its key, through this one table like the rest
@@ -576,7 +587,8 @@ constexpr ToolbarChord kToolbarChords[] = {
     // of this table partitions by lane). COPY (architect 2026-10-24): BARE P,
     // the propagate's copy (handle_mode_keys), ADMITTING NOTHING (Ctrl+P
     // and Ctrl+Shift+P are PASTE's chords). PASTE: CTRL+P,
-    // PASTE PHASE RESETS, its row carrying the ctrl (Switch Tab's shape), and
+    // PASTE PHASE RESETS, its row carrying the ctrl (Jump to Defining Marker's
+    // shape), and
     // IT ADMITS SHIFT (redesign_button_shift_admits): the long press ORs the
     // shift into the row's ctrl and dispatches CTRL+SHIFT+P, PASTE PHASE
     // RESET STATE, through the propagate's own arms with their gates and
@@ -589,37 +601,37 @@ constexpr ToolbarChord kToolbarChords[] = {
      GuiKeys::P,      false, false, false},                             // bare P
     {RedesignButton::IconPastePhaseResets,
      GuiKeys::P,      true,  false, false},                             // Ctrl+P (+Shift: Ctrl+Shift+P)
-    // THE MARKER WALK'S FOUR (architect 2026-08-15): PREVIOUS MARKER, NEXT
-    // MARKER (the walk), CENTER and SWITCH TAB, kept together here for the
+    // THE MARKER WALK'S THREE (architect 2026-08-15): PREVIOUS MARKER, NEXT
+    // MARKER (the walk) and CENTER, kept together here for the
     // reader though the bottom icon row paints them in two
-    // groups (the walk pair behind Down / Up, Switch Tab and
-    // Center ahead of Left / Right — kTransportStepWalkGroup /
-    // kTransportNudgePlayGroup, paint_handler.cpp; the lookup is by id).
+    // groups (the walk pair behind Down / Up, Center ahead of Left / Right —
+    // kTransportStepWalkGroup / kTransportNudgePlayGroup, paint_handler.cpp;
+    // the lookup is by id).
     //
     // PREVIOUS MARKER'S ROW CARRIES SHIFT+TAB AS ITS OWN BASE CHORD, Redo's
     // shape: a Shift- or Ctrl-modified chord may have its own dedicated
     // button (architect 2026-09-29, "an artificial constraint; the
     // tablet is the only real development surface now" — this button is
-    // Next Marker's Shift form, Switch Tab below its Ctrl form). IT ADMITS
-    // NOTHING (architect 2026-11-08: the march,
-    // Ctrl+Shift+Tab, is Switch Tab's hold alone). It
-    // does not repeat, as the walk does not.
+    // Next Marker's Shift form). ITS HOLD IS THE BACKWARD MARCH, Ctrl+Shift+Tab
+    // (architect 2026-11-24; redesign_button_shift_admits): the lift's ruled
+    // translation adds the ctrl and keeps the row's shift. It
+    // does not repeat, as the walk does not: its long press is its march.
     {RedesignButton::TransportWalkPrevious,
-     GuiKeys::Tab,    false, true,  false},                             // Shift+Tab
+     GuiKeys::Tab,    false, true,  false},                             // Shift+Tab (hold: Ctrl+Shift+Tab)
     // THE WALK IS ONE ROW (architect 2026-09-22; Previous Marker its own row
-    // above): bare Tab, ADMITTING NOTHING (architect 2026-11-08:
-    // Shift+Tab is PREV's row, Ctrl+Tab and Ctrl+Shift+Tab SWITCH's row and
-    // hold). It does NOT repeat.
+    // above): bare Tab, ITS HOLD THE FORWARD MARCH, Ctrl+Tab (architect
+    // 2026-11-24; the lift's ruled translation adds the ctrl). It does NOT
+    // repeat: its long press is its march.
     //
     // IT IS LIVE INSIDE THE `h` VIEW and the derived partition says so with
     // nothing hand-listed — history_mode_owns_key claims bare Tab and
-    // Shift+Tab as the diff-flag cycle forward and back (and Ctrl+Shift+Tab as
-    // the diff-flag march; Ctrl+Tab switches the tab there as everywhere).
+    // Shift+Tab as the diff-flag cycle forward and back (and Ctrl+Tab and
+    // Ctrl+Shift+Tab as the diff-flag marches).
     //
     // ITS CAMERA IS THE LANDING OWNER'S (Viewport::land_subject), the same in
     // both audio views, so one row reaches the walk on glass.
     {RedesignButton::TransportWalk,
-     GuiKeys::Tab,    false, false, false},                             // bare Tab
+     GuiKeys::Tab,    false, false, false},                             // bare Tab (hold: Ctrl+Tab)
     // CENTER (bare `c`; the bottom icon row's, architect 2026-09-29): a
     // momentary navigation
     // chord, no repeat. LIVE in the `h` view, `c` being that mode's
@@ -628,16 +640,6 @@ constexpr ToolbarChord kToolbarChords[] = {
     // modifier gate and the long press reaches nothing.
     {RedesignButton::IconZoomOriginal,
      GuiKeys::C,      false, false, false},                             // bare c
-    // SWITCH TAB (architect 2026-09-29): Ctrl+Tab, the one-shot other-tab
-    // act, its row carrying the ctrl — but NOT A RADIO:
-    // the chord toggles, so every press switches. It ADMITS SHIFT
-    // (redesign_button_shift_admits) and nothing else: the long press ORs
-    // the shift into the row's ctrl and dispatches
-    // Ctrl+Shift+Tab, the paired march — both chords' one pointer road
-    // (2026-11-08). A barrel press on it is the modifier gate's consumed
-    // no-op, as on every key. It does not repeat: its long press is its shift.
-    {RedesignButton::TransportSwitchTab,
-     GuiKeys::Tab,    true,  false, false},                             // Ctrl+Tab
     // The arrows, in the architect's order (2026-08-14: down, up, left,
     // right), painted in two pairs — Down / Up at the step-and-walk group's
     // head, Left / Right in the nudge-and-play group (paint_handler.cpp). The
@@ -721,7 +723,7 @@ static_assert(std::size(kToolbarChords) + kLevelCaseCount ==
 // Is (x, y) inside the PUBLISHED INTERACTION RECT of a redesigned button? The
 // rect is the painter's stash and nothing here re-shapes or re-measures, so the
 // pointer reads exactly what the painter published, which is the box it drew
-// — and where the icon row's overflow rule clips a member under the two view
+// — and where the icon row's overflow rule clips a member under the three
 // pairs (and the history opener seated with them), only the columns it
 // painted (paint_icon_row). A zero rect (before
 // that row's first paint, or a member the overflow hides whole) contains no
@@ -1053,8 +1055,9 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 // re-derived at its own definition.
 //
 // THE MODE'S VOCABULARY COVERS ROSTER BUTTONS TOO: bare Home / End (the
-// bottom icon row's SKIPS), bare `c` (Center) and bare Tab / Shift+Tab /
-// Ctrl+Shift+Tab (Next Marker, Previous Marker and Switch Tab's march).
+// bottom icon row's SKIPS), bare `c` (Center) and bare Tab / Shift+Tab with
+// their holds Ctrl+Tab / Ctrl+Shift+Tab (Next Marker, Previous Marker and
+// their marches, architect 2026-11-24).
 // Every one of them is a chord the MODE OWNS, which is exactly what makes
 // this walk answer LIVE for its button with nothing hand-listed — the same
 // free derivation the walk's two steps, the walk lamp and the Cumulative
@@ -1087,7 +1090,9 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 // THE PARTITION THIS PRODUCES (the walk is the authority; re-derive it
 // against the roster both ways — no button is hand-answered):
 //   LIVE — the top icon row's view pairs, ViewSource/ViewTarget/ViewWarp/
-//   ViewPhase (bare 1/2/3/4, the admitted view selectors); Save (its lift
+//   ViewPhase (bare 1/2/3/4, the admitted view selectors), and the tab
+//   pair, ViewTabA/ViewTabB (bare 5/6, the admitted tab switch, architect
+//   2026-11-24); Save (its lift
 //   Ctrl+Shift+S in this mode — save_button_publishes — the save-and-commit
 //   checkpoint act, wearing the "Save and Commit" face, its own arm in
 //   redesign_button_enabled greying it on the GitHub status or a checkpoint
@@ -1106,10 +1111,10 @@ std::optional<int64_t> playhead_landing_at_click_x(const AppState& app,
 //   `.`), the mode's own vocabulary again; THE CUMULATIVE TOGGLE (bare `u`,
 //   the same vocabulary); on the bottom icon row THE WALK (bare Tab and
 //   Shift+Tab, Next and Previous Marker, the mode's own vocabulary, stepping
-//   the DIFF-FLAG cycle forward and back), SWITCH TAB (Ctrl+Tab, on the
-//   allowlist; its shifted press Ctrl+Shift+Tab is the mode's march over
-//   that same diff-flag cycle, "tab, ctrl+tab, tab" read against the lane in
-//   here, a round trip through the other tab), THE SKIPS and CENTER (bare
+//   the DIFF-FLAG cycle forward and back; their holds, Ctrl+Tab and
+//   Ctrl+Shift+Tab, the mode's two marches over that same diff-flag cycle,
+//   a round trip through the other tab, architect 2026-11-24), THE SKIPS
+//   and CENTER (bare
 //   Home / End are the mode's absolute jumps, bare `c` its own centring) and
 //   the LEFT / RIGHT CHORDS (bare Left / Right, the mode's own playhead step,
 //   admitted; the hide predicate leaves them be, but
@@ -1339,8 +1344,9 @@ bool history_view_hides_button(RedesignButton b) {
 // NOT CALLERS: THE S<->T FLIP and THE COINCIDENCE AUTO-SELECT take the
 // RESEAT (reseat_playhead_on_marker, below: a translation and a provable
 // no-op, neither a movement); the `p` swap, the `h` history view's exit and
-// Ctrl+Tab land nothing (the swap empties the selection; the exit restores
-// no navigation state; Ctrl+Tab restores its tab's stored cursor VERBATIM,
+// the tab switch land nothing (the swap empties the selection; the exit
+// restores no navigation state; the tab switch restores its tab's stored
+// cursor VERBATIM,
 // its only land the auto-select's); the MAP CHANGERS (the settings
 // engine-commit, the settings-only 'S' undo/redo arm) CLEAR THE SELECTION at
 // their own tails, and the map-change re-land lives entirely off this entry
@@ -4870,9 +4876,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // prompt, any editor or the progress modal swallows the press), above
     // the loading/empty guard, ctrl a strict no-op, and every press in the
     // row that is not on a button a consumed nothing — which includes the
-    // bare ground between the groups and the bottom left's run: the active
-    // tab's name, a text with no rect of its own to test, and THE TIMESTAMP,
-    // that same inert ground (architect 2026-11-20: plain text with no
+    // bare ground between the groups and the bottom left's run, THE
+    // TIMESTAMP, inert ground (architect 2026-11-20: plain text with no
     // button look; RedesignButtonFace::contains). ABOVE it stands the well's
     // foot (well_foot_area, the inert line over the row; gap 2, zero on the
     // tablet, beside it) — outside both rows here and falling through to the
@@ -8312,18 +8317,36 @@ void GuiInputHandler::finish_chrome_press_release(
             !tc.repeats && redesign_button_shift_admits(tc.id) &&
             monotonic_ms() - arm.press_ms >= chrome_shift_hold_ms();
         // The shift term ORs the table's own (Redo's Ctrl+Shift+Z, PREV's
-        // Shift+Tab) with the hold — well-defined because no row sets both
-        // the table bit and the admission (see shift_admits), so this one
-        // expression spells both members of each shifted pair. THE CTRL IS
-        // THE ROW'S OWN ALONE (Save's Ctrl+S, PASTE's Ctrl+P, whose hold is
-        // then Ctrl+Shift+P): the pointer carries none into a chord.
+        // Shift+Tab) with the hold, so this one expression spells both
+        // members of each shifted pair — for every row but PREVIOUS MARKER,
+        // the one row that sets both the table bit and the admission, whose
+        // hold the walk pair's translation below spells. THE CTRL IS
+        // THE ROW'S OWN (Save's Ctrl+S, PASTE's Ctrl+P, whose hold is
+        // then Ctrl+Shift+P), save that translation: the pointer carries none
+        // into a chord.
         GuiInputState chord{};
         chord.ctrl  = tc.ctrl;
         chord.shift = tc.shift || held_to_shift;
         chord.alt   = tc.alt;
+        // THE WALK PAIR'S HOLD IS CTRL (architect 2026-11-24: "walk both
+        // tabs" is Next Marker's hold and a backward march Previous
+        // Marker's), THE ROSTER'S SECOND RULED TRANSLATION beside Open
+        // Project's below: the hold ADDS THE CTRL to the row's own chord and
+        // the shift stays the row's direction bit — Next's bare Tab becomes
+        // CTRL+TAB, the forward march, and Previous's Shift+Tab
+        // CTRL+SHIFT+TAB, the backward march (is_march_key, gui_input.h). A
+        // plain OR of the hold's shift would spell Next's hold as Shift+Tab,
+        // Previous Marker's own press, and Previous's row already carries
+        // the shift, so the hold could not reach its march either way.
+        if (held_to_shift && (tc.id == RedesignButton::TransportWalk ||
+                              tc.id == RedesignButton::TransportWalkPrevious)) {
+            chord.ctrl  = true;
+            chord.shift = tc.shift;
+        }
         // OPEN PROJECT'S TWIN TRANSLATES (architect 2026-10-07), the roster's
-        // one exception to "a modified press spells its button's own key
-        // under those modifiers": its shifted press — the long press, exactly
+        // first exception to "a modified press spells its button's own key
+        // under those modifiers" (the walk pair's, above, the second): its
+        // shifted press — the long press, exactly
         // as on every shift-admitting button — runs
         // REVERT, whose chord is Ctrl+Alt+O with no shift (is_revert_project_key,
         // gui_input.h, unchanged; Ctrl+Shift+O binds nothing). So the shift
