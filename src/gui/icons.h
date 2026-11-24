@@ -22,7 +22,9 @@
 // VcsCommit / VcsPull go-up's / go-down's arrow on a line, NetworkConnect
 // the two arrows side by side; and, architect 2026-11-24 ("L1"), the tab
 // pair's TabA / TabB, Liberation Sans Bold's own outlines of the two
-// capitals, 12 tall in the 16 box (the face's, under its OFL); and,
+// capitals, 9.5 tall in the 16 box, centered (resized the same day,
+// "TL3_4": the height varied, not the weight; the face's, under its
+// OFL); and,
 // architect 2026-11-24 ("V1"), ZoomPrevious, view-restore's four corners
 // with the left and right pairs 1 closer, both gaps 2. The score's
 // Start / End (ZoneIn / ZoneOut) are Papirus's bookmark-new /

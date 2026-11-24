@@ -1,16 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
  <!-- TAB B'S DRAWING, OURS (architect 2026-11-24, send QQ, his pick off
       the mock, "L1": "Apply the A and the B as glyphs in the dimensions
-      discussed"): Liberation Sans Bold's own outline of the capital B
-      (fonts/LiberationSans-Bold.ttf, version 2.1.5, 2048 units to the em,
-      cap height 1409), scaled by 12 / 1409 so the capital stands on rows 2
-      to 14 of the 16 box, the ink centered across it (x 2.681 to 13.319),
-      the face's quadratic curves kept as it draws them, coordinates to
-      three decimals; nothing redrawn. The two counters wind against the
-      outer contour, as the face draws them, so the nonzero fill leaves
-      them hollow. The tab pair's Tab B (TabB) wears it as drawn; Tab A
-      (TabA) is the face's A the same way (tools/icons/own/TabA.svg;
+      discussed"; resized the same day, his pick "TL3_4" off the height
+      mocks, "vary the height, not the weight"): Liberation Sans Bold's own
+      outline of the capital B (fonts/LiberationSans-Bold.ttf, version
+      2.1.5, 2048 units to the em, cap height 1409), scaled by 9.5 / 1409 so
+      the capital stands on rows 3.25 to 12.75 of the 16 box, centered, the
+      ink centered across it (x 3.789 to 12.211), the face's quadratic
+      curves kept as it draws them, coordinates to three decimals; nothing
+      redrawn. The key's ink-box fit (icons.cpp's fit_for) shows it 9.31 W
+      tall on the tablet. The two counters wind against the outer contour,
+      as the face draws them, so the nonzero fill leaves them hollow. The
+      tab pair's Tab B (TabB) wears it as drawn; Tab A (TabA) is the face's
+      A the same way (tools/icons/own/TabA.svg;
       tools/icons/import_papirus.py). The face's own outline, under the
       SIL Open Font License 1.1 (fonts/LICENSE-Liberation-OFL.txt). -->
- <path style="fill:currentColor" d="M 13.319,10.576 Q 13.319,12.211 12.092,13.106 Q 10.866,14 8.686,14 L 2.681,14 L 2.681,2 L 8.175,2 Q 10.372,2 11.5,2.762 Q 12.629,3.524 12.629,5.015 Q 12.629,6.037 12.062,6.74 Q 11.496,7.442 10.338,7.689 Q 11.794,7.859 12.556,8.605 Q 13.319,9.35 13.319,10.576 Z M 10.099,5.356 Q 10.099,4.546 9.584,4.206 Q 9.069,3.865 8.055,3.865 L 5.194,3.865 L 5.194,6.837 L 8.072,6.837 Q 9.137,6.837 9.618,6.467 Q 10.099,6.097 10.099,5.356 Z M 10.798,10.38 Q 10.798,8.694 8.379,8.694 L 5.194,8.694 L 5.194,12.135 L 8.473,12.135 Q 9.682,12.135 10.24,11.696 Q 10.798,11.258 10.798,10.38 Z"/>
+ <path style="fill:currentColor" d="M 12.211,10.04 Q 12.211,11.334 11.24,12.042 Q 10.269,12.75 8.543,12.75 L 3.789,12.75 L 3.789,3.25 L 8.138,3.25 Q 9.878,3.25 10.771,3.853 Q 11.664,4.457 11.664,5.637 Q 11.664,6.446 11.216,7.002 Q 10.768,7.558 9.851,7.754 Q 11.004,7.889 11.607,8.479 Q 12.211,9.069 12.211,10.04 Z M 9.662,5.906 Q 9.662,5.266 9.254,4.996 Q 8.846,4.727 8.044,4.727 L 5.778,4.727 L 5.778,7.08 L 8.057,7.08 Q 8.9,7.08 9.281,6.786 Q 9.662,6.493 9.662,5.906 Z M 10.215,9.884 Q 10.215,8.55 8.3,8.55 L 5.778,8.55 L 5.778,11.273 L 8.374,11.273 Q 9.332,11.273 9.773,10.926 Q 10.215,10.579 10.215,9.884 Z"/>
 </svg>

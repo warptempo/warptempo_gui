@@ -1,16 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
  <!-- TAB A'S DRAWING, OURS (architect 2026-11-24, send QQ, his pick off
       the mock, "L1": "Apply the A and the B as glyphs in the dimensions
-      discussed"): Liberation Sans Bold's own outline of the capital A
-      (fonts/LiberationSans-Bold.ttf, version 2.1.5, 2048 units to the em,
-      cap height 1409), scaled by 12 / 1409 so the capital stands on rows 2
-      to 14 of the 16 box, the ink centered across it (x 2.149 to 13.851),
-      the face's quadratic curves kept as it draws them, coordinates to
-      three decimals; nothing redrawn. The counter winds against the outer
-      contour, as the face draws it, so the nonzero fill leaves it hollow.
-      The tab pair's Tab A (TabA) wears it as drawn; Tab B (TabB) is the
-      face's B the same way (tools/icons/own/TabB.svg;
+      discussed"; resized the same day, his pick "TL3_4" off the height
+      mocks, "vary the height, not the weight"): Liberation Sans Bold's own
+      outline of the capital A (fonts/LiberationSans-Bold.ttf, version
+      2.1.5, 2048 units to the em, cap height 1409), scaled by 9.5 / 1409 so
+      the capital stands on rows 3.25 to 12.75 of the 16 box, centered, the
+      ink centered across it (x 3.368 to 12.632), the face's quadratic
+      curves kept as it draws them, coordinates to three decimals; nothing
+      redrawn. The key's ink-box fit (icons.cpp's fit_for) shows it 9.31 W
+      tall on the tablet. The counter winds against the outer contour, as
+      the face draws it, so the nonzero fill leaves it hollow. The tab
+      pair's Tab A (TabA) wears it as drawn; Tab B (TabB) is the face's B
+      the same way (tools/icons/own/TabB.svg;
       tools/icons/import_papirus.py). The face's own outline, under the
       SIL Open Font License 1.1 (fonts/LICENSE-Liberation-OFL.txt). -->
- <path style="fill:currentColor" d="M 11.364,14 L 10.3,10.934 L 5.726,10.934 L 4.661,14 L 2.149,14 L 6.527,2 L 9.49,2 L 13.851,14 Z M 8.009,3.848 L 7.957,4.035 Q 7.872,4.342 7.753,4.734 Q 7.634,5.126 6.288,9.043 L 9.737,9.043 L 8.554,5.594 L 8.187,4.436 Z"/>
+ <path style="fill:currentColor" d="M 10.663,12.75 L 9.82,10.323 L 6.2,10.323 L 5.357,12.75 L 3.368,12.75 L 6.834,3.25 L 9.18,3.25 L 12.632,12.75 Z M 8.007,4.713 L 7.966,4.861 Q 7.899,5.104 7.804,5.414 Q 7.71,5.724 6.645,8.826 L 9.375,8.826 L 8.438,6.095 L 8.148,5.178 Z"/>
 </svg>

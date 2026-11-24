@@ -114,10 +114,12 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
   top and bottom halves already was, and the ink is Fit's own 12 box (x 2 to 14, y 2 to 14); the move baked into the
   path data.
 - THE TAB PAIR'S LETTERS (architect 2026-11-24, send QQ, "L1": "Apply the A and the B as glyphs in the dimensions
-  discussed"), `TabA.svg` and `TabB.svg`: Liberation Sans Bold's own outline of the capital A and of the capital B
-  (`fonts/LiberationSans-Bold.ttf`, version 2.1.5, 2048 units to the em, cap height 1409), scaled by 12 / 1409 so the
-  capital stands on rows 2 to 14, the ink centered across the box (A x 2.149 to 13.851, B x 2.681 to 13.319), the
-  face's quadratic curves kept as it draws them, coordinates to three decimals; nothing redrawn. The counters wind
+  discussed"; resized the same day, his pick "TL3_4" off the height mocks, "vary the height, not the weight"),
+  `TabA.svg` and `TabB.svg`: Liberation Sans Bold's own outline of the capital A and of the capital B
+  (`fonts/LiberationSans-Bold.ttf`, version 2.1.5, 2048 units to the em, cap height 1409), scaled by 9.5 / 1409 so the
+  capital stands on rows 3.25 to 12.75, centered in the box, the ink centered across it (A x 3.368 to 12.632, B x 3.789
+  to 12.211), the face's quadratic curves kept as it draws them, coordinates to three decimals; nothing redrawn. The
+  key's ink-box fit (`fit_for`, `src/gui/icons.cpp`) shows them 9.31 W tall on the tablet. The counters wind
   against the outer contour, as the face draws them, so the nonzero fill leaves them hollow. The two outlines are the
   face's, under its licence, the SIL Open Font License 1.1 (`fonts/LICENSE-Liberation-OFL.txt`).
 
@@ -221,8 +223,8 @@ changed, two of them wrapped in their transform.
 | `GoUp` | `symbolic/actions/go-up-symbolic.svg (-> actions/go-up.svg)` | `86b31dec3b65c47c5f0c8965da8463c35365cf0f1046c6a391a9a8083ff2d938` |  |
 | `BboxPrev` | `tools/icons/own/BboxPrev.svg` | `07195df200437a8a9a6380560b434b493a1c694983fd30cab23ec691df419b42` | no bboxprev; ours, go-first's arrow to a line 2 wide, as drawn, pointing left (re-picked 2026-11-22, send MM) |
 | `BboxNext` | `tools/icons/own/BboxPrev.svg` | `07195df200437a8a9a6380560b434b493a1c694983fd30cab23ec691df419b42` | no bboxnext; ours, go-first's arrow to a line 2 wide, mirrored left-right to point right (re-picked 2026-11-22, send MM); one source with BboxPrev, another drawing by the transform |
-| `TabA` | `tools/icons/own/TabA.svg` | `21c87551ce1a60172c62207361d61f3c01a6a035c221f77fdc4b194f5abb1524` | ours, Liberation Sans Bold's own outline of the capital A, 12 tall in the 16 box (2026-11-24, send QQ) |
-| `TabB` | `tools/icons/own/TabB.svg` | `b8619eb000cd2c23f1c5407954916d6f764a0f9e47dccd8326adce9df14d7a9e` | ours, Liberation Sans Bold's own outline of the capital B, 12 tall in the 16 box (2026-11-24, send QQ) |
+| `TabA` | `tools/icons/own/TabA.svg` | `83d68a967a10a1cb69380766f6f2295cf05f0ca265cde0aa5f8400e8c31b6c8b` | ours, Liberation Sans Bold's own outline of the capital A, 9.5 tall in the 16 box (2026-11-24, send QQ; resized, "TL3_4") |
+| `TabB` | `tools/icons/own/TabB.svg` | `a029d2e465cfb20f20c105a4d624eaea7ad8fda84049a3bc1da1a302e42880df` | ours, Liberation Sans Bold's own outline of the capital B, 9.5 tall in the 16 box (2026-11-24, send QQ; resized, "TL3_4") |
 | `ZoomOriginal` | `symbolic/actions/zoom-original-symbolic.svg (-> actions/zoom-original.svg)` | `4ccc559527aecd140fd0e8b5de9881ce6bfff978b4cd28be366f0b5d509a489f` |  |
 | `GoPrevious` | `symbolic/actions/go-previous-symbolic.svg (-> actions/go-previous.svg)` | `5bc42db4e2cbf4bdc12a91f3430cf01447ba558645cffd499b318861df771d92` |  |
 | `GoNext` | `symbolic/actions/go-next-symbolic.svg (-> actions/go-next.svg)` | `9a99f8bd24357cf56535e3c50d97874056c5928f12bca038025316309597ba07` |  |
