@@ -75,18 +75,27 @@ struct GuiLogoLegend {
 //     the runs, so a character composed here and missing there would ink
 //     off the seat. The pipe before it is the layout's (the struct above).
 // WI-FI IS NOT PART OF THIS (architect 2026-10-01: "maybe later").
-inline GuiLogoLegend compose_logo_legend(const GuiBattery& battery,
-                                         std::time_t now) {
-    std::tm local{};
-    localtime_r(&now, &local);
+//
+// THE CLOCK'S SPELLING IS ITS OWN FUNCTION, clock_spelling below, the one
+// owner of how the product spells a local time of day: the history view's
+// walk line spells a commit's time through it too (architect 2026-11-25;
+// history_walk_line, paint_handler.cpp), so the two cannot drift.
+inline std::string clock_spelling(const std::tm& local) {
     int hour = local.tm_hour % 12;
     if (hour == 0) hour = 12;
     char clock[24];
     std::snprintf(clock, sizeof(clock), "%d:%02d %s", hour, local.tm_min,
                   local.tm_hour < 12 ? "AM" : "PM");
+    return clock;
+}
+
+inline GuiLogoLegend compose_logo_legend(const GuiBattery& battery,
+                                         std::time_t now) {
+    std::tm local{};
+    localtime_r(&now, &local);
 
     GuiLogoLegend legend;
-    legend.clock = clock;
+    legend.clock = clock_spelling(local);
     if (battery.has_battery && battery.percent >= 0)
         legend.percent = std::to_string(battery.percent) + "%";
     legend.glyph = (!battery.has_battery ||

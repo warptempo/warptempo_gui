@@ -24,8 +24,8 @@
 // its pair to the active tab's trim, framing it and closing the list
 // (architect 2026-11-19),
 // its controls row the render player's shape — the highlight pair, Save,
-// Save As, Delete and Close, one cluster flush right (his word: "we would be
-// breaking symmetry if we did it differently"); and THE BPM FORM (architect
+// Save As, Rename, Delete, Render and Close (architect 2026-11-25), one cluster flush right (his word: "we
+// would be breaking symmetry if we did it differently"); and THE BPM FORM (architect
 // 2026-10-29: "since settings has a multiline page, we should make bpm a
 // form like settings"), the settings page's shape — the
 // sweep's three `key=value` lines, `beats=`, `low=` and `high=`, a row's tap

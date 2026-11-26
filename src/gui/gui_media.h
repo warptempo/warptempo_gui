@@ -25,8 +25,9 @@
 // THE CAR'S AND NOT THE TABLET'S KEYS: the wheel and the console carry rewind,
 // play/pause and fast-forward, the outer two arriving as Previous and Next, so
 // the one button is a TOGGLE between the item and silence and the outer two
-// are the PLAYLIST WALK — a row of the listing at a rest, a file of the
-// playing folder while live — with the up-a-folder exit on Previous alone.
+// are a SEEK of the same three seconds while an item sounds (architect
+// 2026-11-25) and at a rest the PLAYLIST WALK, a row of the listing, with the
+// up-a-folder exit on Previous alone.
 // The table at on_media_command owns each arm's reason.
 
 struct GuiMediaCommand {

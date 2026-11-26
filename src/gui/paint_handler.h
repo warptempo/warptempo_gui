@@ -74,14 +74,12 @@ std::string status_bar_text(AppState& app);
 // lower-layer include graph. The strips' ends and the modal controls row's
 // are the well's first and last columns (render.h's well_columns).
 
-// A LINE EDITOR'S ONE LABEL IS ITS VALUE'S NAME, over its entry on the
-// value sub-page (architect 2026-11-20; paint_handler.cpp's THE
-// VALUE SUB-PAGE): the settings key, the BPM field's key, "Save As". No
-// generic label stands beside it (architect 2026-10-14: the Settings
-// editor's "Setting:", "pointless that far away. just remove it", and the
-// BPM editor's "BPM:", "drop"). The project picker has no text field and
-// wears no label: it is the field-less picker over the folder overlay
-// (architect 2026-08-28).
+// A LINE EDITOR WEARS NO LABEL: its value sub-page is the one focused entry
+// and nothing else, no title and no value's name (architect 2026-11-22:
+// "the user is expected to have expert knowledge"; paint_handler.cpp's THE
+// VALUE SUB-PAGE, paint_value_page). The project picker has no text field
+// and wears no label either: it is the field-less picker over the folder
+// overlay (architect 2026-08-28).
 
 // THE `h` HISTORY LANE'S ONE LABEL SPELLING — THE LINE'S OWN TEXT AS THE
 // LIVE LANE SHOWS IT, NO SIGN (architect 2026-10-26: "we could also

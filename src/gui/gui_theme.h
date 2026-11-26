@@ -22,6 +22,7 @@ struct GuiThemeTones {
     uint32_t body_face;
     uint32_t text;
     uint32_t title_text;
+    uint32_t timestamp_text;
     uint32_t sidebar_text;
     uint32_t text_dim;
     uint32_t inactive_cue_label_hover;
@@ -132,6 +133,13 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // titlebar (architect 2026-11-19; paint_title_bar, its
     // palette member and its glyphs' word).
     .title_text = 0xAFB8C5,
+    // THE BOTTOM ICON ROW'S TIMESTAMP, its one text (paint_bottom_row_buttons_and_clock,
+    // the palette's `timestamp_text`; architect 2026-11-25: "h4 at 14w",
+    // "the timestamp is large and clearly a one-off in the whole app - it
+    // is its own thing"): Arc's `.h4, .category-label { color: #a5abb5;
+    // font-weight: 600; }` — the number `playhead_head` and `playhead_line`
+    // hold too, each its own word.
+    .timestamp_text = 0xA5ABB5,
     // THE SIDEBAR TEXT: Arc's $dark_sidebar_fg. The live marker labels' ink,
     // the tooltip's words and a normal card's words and glyph (architect
     // 2026-11-19).

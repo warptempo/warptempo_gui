@@ -1136,7 +1136,7 @@ struct GuiInputHandler {
     // lit, outside the `h` view, and false inside it — the view cannot edit
     // the trim, and its own diff-flag selection is the lamp's click role
     // there, its drag staying the pan (the view's entry puts both out,
-    // darken_zoom_lamps; ADD SEL may be lit again in there, TRIM not). The two
+    // darken_sweep_lamps; ADD SEL may be lit again in there, TRIM not). The two
     // lamps are a radio pair, so the begin picks the one lit former. A state
     // answer, not geometry; the refusals stay begin_touch_region's. Wired at
     // main.cpp's set_touch_nav_hooks call.
@@ -1147,7 +1147,7 @@ struct GuiInputHandler {
     // (bare `k`'s arm puts it out — THE RADIO, architect 2026-11-10), every
     // other trim write (commit_trim_mutation and the reset's
     // write, handle_trim_clear_both, put it out — architect 2026-11-17) and
-    // darken_zoom_lamps (a user zoom, the `h` view's entry) are its
+    // darken_sweep_lamps (the `h` view's entry) are its
     // callers; the dark seat at every project open is the fresh
     // AppState's. ITS LIT EDGE PUTS ADD SEL OUT (the radio's other half,
     // toggle_follow's shape), damaging that lamp's bottom icon row face as
@@ -1156,39 +1156,26 @@ struct GuiInputHandler {
     // 2026-11-10), so each caller's lamp moves in the frame it
     // was asked for, not at the next timer tick's comparator.
     void set_trim_armed(bool desired);
-    // THE FOUR LAMPS A ZOOM PUTS OUT (architect 2026-11-17: "Trim,
-    // add selection, follow and restrict should be turned off when a zoom
-    // action takes place"): TRIM, ADD SEL, FOLLOW and RESTR, each lit one
-    // darkened through its own off road — TRIM through set_trim_armed, FOLLOW
-    // and RESTR through their toggles' dark edges (toggle_follow /
-    // toggle_restrict, which write nothing else there, so a play in flight
-    // simply stops being followed or restricted), ADD SEL by its bit as bare
-    // `k`'s dark edge writes it — and EACH FACE THAT WENT DARK DAMAGED HERE
-    // in the frame asked (TRIM's by its setter, FOLLOW's and RESTR's by
-    // invalidate_roster_press_face, ADD SEL's bottom icon row strip as bare `k`
-    // damages it); a dark lamp is left alone and damages nothing. A sweep in
-    // flight runs on to its lift, as under bare `w` or `k`'s dark edge (the
-    // sweep reads its lamp at the begin alone). CALLERS: the user zoom roads,
-    // each through darken_zoom_lamps_if_level_moved below, and the `h` view's
-    // entry (open_history_mode_fresh, which darkens all four whatever the
-    // zoom). A pan, a tab switch, a load in place, an overlay and Play / Stop
-    // darken nothing; the programmatic landings (undo / redo's framing, a
-    // paste's framing, a tab's restore, the loads, a resize, FOLLOW's own
-    // scroll, the A/B audition's centring) reach none of these roads.
-    void darken_zoom_lamps();
-    // THE USER ZOOM ROADS' ONE TEST: the four lamps go dark only when the
-    // act really moved the level — the live AppState::zoom_level after the
-    // act differs from `level_before`, the value the road read before it —
-    // so a zoom at its wall, an idempotent framing or a `c` already at the
-    // working zoom darkens nothing. THE ROADS (architect 2026-11-17):
-    // the zoom keys (the `=` / `-` arm, input_handler.cpp), the pinch and the
-    // pen barrel's one-finger zoom (apply_touch_nav_update's zoom frames, on
-    // every frame that moved the level — idempotent past the first), Zoom to
-    // Fit and its recall (run_overview_command), the span framings
-    // (run_span_framing_command: Shift+0, the trim bar's double tap, a trim
-    // preset's apply) and the centre command (run_center_command, its
-    // `user_zoom` true: `c`, the Center key, both marches, Ctrl+J).
-    void darken_zoom_lamps_if_level_moved(double level_before);
+    // THE `h` VIEW'S ENTRY PUTS OUT THE TWO SWEEP LAMPS (architect
+    // 2026-11-25: "history should not toggle off follow/restrict"): TRIM and
+    // ADD SEL, each lit one darkened through its own off road — TRIM through
+    // set_trim_armed, ADD SEL by its bit as bare `k`'s dark edge writes it —
+    // and EACH FACE THAT WENT DARK DAMAGED HERE in the frame asked (TRIM's by
+    // its setter, ADD SEL's bottom icon row strip as bare `k` damages it); a
+    // dark lamp is left alone and damages nothing. The view arrives with no
+    // sweep armed: it cannot edit the trim, and its ADD SEL is the diff
+    // flags' click role, lit again there by bare `k` alone. ONE CALLER, the
+    // entry (open_history_mode_fresh). FOLLOW AND RESTRICT ARE NOT TOUCHED:
+    // a lit one stays lit through the view and does nothing there (their
+    // chords off the view's allowlist, their keys hidden,
+    // history_mode_hides_button; the view has no playback), and acts again
+    // on leaving, its bit never moved. A ZOOM PUTS
+    // OUT NO LAMP (architect 2026-11-25: "keep all of the lit during zoom,
+    // incl trim and add sel"): TRIM and ADD SEL put themselves out by their
+    // own roads (the sweep's commit, the radio, the trim writes, the acts that
+    // spend the selection), FOLLOW and RESTRICT each other by the radio's lit
+    // edge.
+    void darken_sweep_lamps();
     // THE STICKY LAMPS' SEAT AT EVERY OPEN (architect 2026-11-24: the lamps
     // "constant when opening a project or opening the program"; the device
     // key `lit_lamps`, device_config.h's head): run_project (main.cpp) hands
@@ -1255,10 +1242,8 @@ struct GuiInputHandler {
     // of input_trim.cpp). A tap
     // under the lit lamp is the ordinary tap (run_nav_click_act), a pinch
     // the ordinary pinch, the barrel-held drag the ordinary one-finger zoom:
-    // the tap keeps the lamp lit, and a pinch or a barrel zoom keeps it only
-    // while the level does not change — a frame that moves the level puts it
-    // out (architect 2026-11-17; darken_zoom_lamps_if_level_moved,
-    // above).
+    // the lamp stays lit through all three (a zoom puts out no lamp,
+    // architect 2026-11-25; darken_sweep_lamps, above).
     //
     // begin_touch_region(x, y) runs THE REGION FORMER'S PRESS HALF at the
     // contact's DOWN point — deselect-all, then the drag arm
@@ -1840,9 +1825,7 @@ struct GuiInputHandler {
     // THE PRESS FACE'S DAMAGE for one roster button — the key's own painted
     // extent, its face (architect 2026-11-16, the beats; the
     // press arc, 2026-11-05; the body's comment, input_pointer.cpp): the
-    // arm's, the lift's and the walk's crossing's, TRIM's lamp edges, and
-    // FOLLOW's and RESTR's put out by darken_zoom_lamps (architect
-    // 2026-11-17).
+    // arm's, the lift's and the walk's crossing's, and TRIM's lamp edges.
     void invalidate_roster_press_face(int index);
     // THE SAME FOR ONE DIALOG BUTTON of the published stash (architect
     // 2026-11-16, the beats): its face as painted, in place of the modal's
@@ -1954,12 +1937,13 @@ struct GuiInputHandler {
     // and history_load_in_place.
     void confirm_load_in_place();
     void cancel_load_in_place();
-    // THE RENDER PLAYER DELETE'S TWO ANSWERS (architect 2026-09-29), called by
-    // GuiPrompt when DELETE_FOLDER_CONFIRM answers. Delete hands the parked
-    // folders to GuiRenderPlayer::delete_batch_folders (which stops and
-    // unloads a transport item living inside one, removes each folder whole
-    // and rebuilds the root listing); Cancel drops them. The raise is
-    // render_player_delete.
+    // THE RENDER PLAYER DELETE'S TWO ANSWERS (architect 2026-09-29; one
+    // render's delete 2026-11-25), called by GuiPrompt when
+    // RENDER_PLAYER_DELETE_CONFIRM answers. Delete hands the parked subject
+    // to its act — a parked render to GuiRenderPlayer::delete_render, parked
+    // folders to GuiRenderPlayer::delete_batch_folders (each unloads a bound
+    // item whose file goes, removes what it names and rebuilds the listing);
+    // Cancel drops both subjects. The raise is render_player_delete.
     void confirm_render_player_delete();
     void cancel_render_player_delete();
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS' ANSWERS (architect
@@ -2330,13 +2314,9 @@ struct GuiInputHandler {
     // lands) share one decision instead of
     // spelling it each. Rationale at the definition.
     // THE ZOOM IS ALWAYS kWorkingZoomLevel (`0`'s second press restores its
-    // stamped view itself, run_overview_command).
-    // `user_zoom` SAYS WHO ASKED (architect 2026-11-17): true, a level
-    // the command moved puts out the four lamps a zoom darkens
-    // (darken_zoom_lamps_if_level_moved) — every caller but one; false for
-    // the A/B audition's centrings alone (GuiAbAudition::apply_working_zoom),
-    // the act's internal `c` and no zoom of the user's.
-    void run_center_command(bool user_zoom);
+    // stamped view itself, run_overview_command). It puts out no lamp (a zoom
+    // puts out none, architect 2026-11-25; darken_sweep_lamps).
+    void run_center_command();
     // THE CENTRE KEY'S ACT (architect 2026-09-23): bare `c` (the live arm and
     // the `h` view's claim), the Center button's synthesized chord, both
     // steps of each paired march and the A/B audition's
@@ -2350,9 +2330,7 @@ struct GuiInputHandler {
     // caller is another cluster: the audition opens each of its halves with
     // this act on the tab that half plays, run inside the switch's own frame
     // (ab_audition.h carries the rule and the ordering it owes the sequence).
-    // `user_zoom` is handed to run_center_command as it stands: false from
-    // the audition alone.
-    void run_center_key_command(bool user_zoom);
+    void run_center_key_command();
 
 private:
     // ActiveBatch holds the batch render state machine (start_render_batch
@@ -2416,11 +2394,11 @@ private:
     std::atomic<bool> synthesis_started_{false};
     bool              status_promoted_ = false;
 
-    // (RendersBatchScan / max_renders_batch_index STOOD HERE — moved to
-    // renders_dir.h 2026-09-15, its scan being pure filesystem over the batch
-    // root that file already composes, so THE RENDER PLAYER'S OPEN could read
-    // the same "highest index" it names without a back-pointer into this
-    // class. The three dispatchers below call it unqualified, renders_dir.h
+    // (RendersBatchScan / max_renders_batch_index live in renders_dir.h, the
+    // scan being pure filesystem over the batch root that file composes, so
+    // THE RENDER PLAYER'S OPEN reads the same "highest index" without a
+    // back-pointer into this class; the function's own comment lists its
+    // call sites. This class's members call it unqualified, renders_dir.h
     // reaching them through this header's own include.)
 
     // Start a multi-entry batch. Snapshots reqs + label, sets queue_running,
@@ -2541,8 +2519,8 @@ private:
     // GuiAsyncRenderer::is_busy() is false, which spans the whole
     // CompletionPending interval, so the prior worker has finished do_render
     // and ALL publication into tmp/ before the scan runs; every OTHER
-    // tmp/ mutation (sweep batch-folder creation, the load-in-place
-    // wipe) runs on
+    // tmp/ mutation (the sweeps' and the trim presets' batch-folder
+    // creation, the load-in-place wipe) runs on
     // this same GUI event thread, so none can interleave with the scan
     // either; the only other writer thread, the master-floats cache writer,
     // writes solely under the cache tree, never tmp/ — so an
@@ -2553,6 +2531,23 @@ private:
     bool allocate_miscellaneous_cell(std::string& out_folder,
                                      std::string& out_basename);
 
+    // Allocate a TRIM PRESET'S render folder (architect 2026-11-25), the
+    // presets list's Render and Render All (trim_presets_render): with
+    // `always_new` false (Render) JOIN the newest batch folder when it is a
+    // presets folder (is_trim_presets_batch_folder, renders_dir.h), else, and
+    // always with `always_new` (Render All: "a new render all always creates
+    // a new folder, even if the last folder create was a presets folder"),
+    // `<max+1>_presets`; create it and write its path into `out_folder`.
+    // The cell's name is the preset's place and name, composed at the press
+    // (trim_presets_render), so nothing in the folder is scanned.
+    // A creation failure prints the stderr line and cards through the one
+    // composer (render_folder_creation_failure), answering false. Render
+    // calls it with the worker idle, for allocate_miscellaneous_cell's
+    // reason above (the killed render may still publish into `tmp/` while
+    // it drains), so its busy road late-binds it at the pump
+    // (PendingArchivalCommand::trim_preset).
+    bool allocate_trim_preset_folder(bool always_new, std::string& out_folder);
+
     // Attach the process-wide render resources to an assembled request:
     // the single RenderCache (constructed in main, reached through
     // target_render's reference), the GUI's shared source buffer, and the
@@ -2562,14 +2557,15 @@ private:
     void attach_shared_render_resources(RenderRequest& req);
 
     // THE TRIM FALLBACK'S CARD ON THE ARCHIVAL ROAD (architect 2026-09-02):
-    // raise kTrimFallbackCard when the live trim pair is a
-    // proper sub-window plan_trim will refuse, so the render this press
-    // produces is the FULL, untrimmed piece under a hairline trim bar. Called
-    // by the two archival CHORDS, whose requests carry the live stores and the
-    // live trim verbatim — the full rationale, and the recorded asymmetry that
-    // keeps the two SWEEPS out of it, are at the definition
-    // (input_key_dispatch.cpp).
-    void card_trim_fallback_if_any();
+    // raise kTrimFallbackCard when the trim pair [begin, end] the request
+    // carries is a proper sub-window plan_trim will refuse, so the render this
+    // press produces is the FULL, untrimmed piece. Called by the two archival
+    // CHORDS, with the live trim their requests carry verbatim, and by the
+    // trim presets list's Render with THE PRESET'S PAIR (architect
+    // 2026-11-25), each over the live stores — the full rationale, and the
+    // recorded asymmetry that keeps the two SWEEPS and Render All out of it,
+    // are at the definition (input_key_dispatch.cpp).
+    void card_trim_fallback_if_any(int64_t begin_frame, int64_t end_frame);
 
     // Sweep every BPM in the BPM owner's [bpm_lo, bpm_hi] range,
     // computing (base_tempo, scale) per cell and rendering one .wav per
@@ -3044,9 +3040,11 @@ private:
     //   pair walks without applying, and THE PLAYER'S SHAPE holds for the
     //   controls row (his word: "we would be breaking symmetry if we did it
     //   differently"), which is
-    //   ONE CLUSTER FLUSH RIGHT, the pair, then Save, Save As, Delete and
-    //   Close (AppState::TrimPresetsButtonAct; the faces
-    //   trim_presets_button_enabled).
+    //   ONE CLUSTER FLUSH RIGHT, the pair, then Save, Save As, Rename,
+    //   Delete, Render and Close (architect 2026-11-25;
+    //   AppState::TrimPresetsButtonAct; the faces
+    //   trim_presets_button_enabled; Render's hold, Render All, the row's one
+    //   long press, trim_presets_button_shift_admits).
     //     open_trim_presets: the opener, open_project_picker's own guards
     //       (a prompt, a standing picker, a load) and its modal stop; the
     //       file read into the overlay (AppState::FolderOverlay::
@@ -3080,18 +3078,32 @@ private:
     //       (text_editor::Kind::TrimPresetName, the settings editor's
     //       shape), the list as it stood and its highlighted name kept for
     //       the commit and the return.
+    //     trim_presets_rename: RENAME (architect 2026-11-25: "need way to
+    //       rename preset"), live with a highlight: Save As's road, the name
+    //       editor HOLDING THE HIGHLIGHTED PRESET'S NAME, the caret at its
+    //       end, no question (Enter is the answer).
+    //     open_trim_preset_name_editor: the two openers' one body — the
+    //       session memory written (trim_name_presets_, trim_name_seat_,
+    //       trim_name_rename_), the list closed, the editor entered empty
+    //       or, for Rename, holding the name.
     //     commit_trim_preset_name: the name editor's Enter: the name
     //       judged by its one grammar (trim_preset_name_refusal — non-empty,
-    //       no edge space, the incoming filter's alphabet, unique), a refusal
+    //       no edge space, the incoming filter's alphabet, unique) and then
+    //       as a file name (trim_preset_file_name_refusal — no slash, not
+    //       "." or "..", architect 2026-11-25), a refusal
     //       the editors' own shape (the whole text selected, the editor
-    //       standing, the card "Preset name rejected: <reason>"); a name that
-    //       commits adds the active tab's trim under it, writes the file
-    //       whole in the list's order and closes the editor, the return
-    //       seating the new row by name wherever the order put it.
+    //       standing, the card "Preset name rejected: <reason>"); under Save
+    //       As a name that commits adds the active tab's trim under it, under
+    //       Rename it names the preset anew, its pair kept, uniqueness asked
+    //       against the other presets — the same name back is no change,
+    //       nothing written; either change writes the file whole in the
+    //       list's order and closes the editor, the return seating the row by
+    //       name wherever the order put it.
     //       THE RETURN is handle_settings_editor_key's one hook, the line
     //       editor's own: Enter and Esc alike reopen the list
-    //       (open_trim_presets), seated on the new row or, after Esc, the
-    //       row the editor was opened over; the quit road never passes it.
+    //       (open_trim_presets), seated on the new or renamed row or, after
+    //       Esc, an unchanged name or a failed write, the row the editor was
+    //       opened over; the quit road never passes it.
     //     trim_presets_save / trim_presets_delete: SAVE and DELETE (the
     //       buttons): each
     //       raises its CONFIRMATION over the list on the highlighted preset
@@ -3108,6 +3120,34 @@ private:
     //       gone dead inside that frame — no highlight, an empty list — cards
     //       "There is no preset to delete", the render player's own refusal
     //       one surface over.
+    //     trim_presets_render: RENDER (architect 2026-11-25: "Add 'render'
+    //       button to presets page with long press as render all. New render
+    //       folder category ... A new render all always creates a new
+    //       folder"). The plain press (`all` false) renders THE HIGHLIGHTED
+    //       PRESET: the miscellaneous render's request exactly — the live
+    //       stores, the authoring snapshot, the shared resources — but for
+    //       THE TRIM, THE PRESET'S PAIR in the request and in the snapshot
+    //       (so the cell's `.settings` records it), NEVER IN THE STORE: the
+    //       current trim, the tabs' trims, the undo history, the trim bar and
+    //       TRIM are untouched. Its cell is `<NN>_<name>.wav`, the
+    //       preset's place in the list and its name (the cell naming at the
+    //       definition), in the newest folder
+    //       when that is a presets folder, else a new `<N>_presets/`
+    //       (allocate_trim_preset_folder), late-bound at the pump on the busy
+    //       road; an existing cell of that name is overwritten. THE HOLD
+    //       (`all` true) is RENDER ALL: every preset, one cell each in the
+    //       list's order, into a NEW presets folder through the batch runner
+    //       (start_render_batch: the progress page, its Cancel, the player at
+    //       the end). The face's terms (trim_presets_button_enabled) are
+    //       asked again; a preset whose name is no file name
+    //       (trim_preset_file_name_refusal) is refused on a card that says
+    //       to rename it, the list standing, and Render All skips it with
+    //       the same card (or one counting several), running the rest — with
+    //       none to run nothing is dispatched and the list stands. A folder
+    //       the press cannot create cards and leaves the list standing.
+    //       Otherwise THE LIST CLOSES AT THE DISPATCH (close_picker), before
+    //       a batch's progress page; a running render is killed and the
+    //       command parked, newest wins (kill_running_render_and_park).
     //
     //   THE BPM FORM (architect 2026-10-29: "since
     //   settings has a multiline page, we should make bpm a form like
@@ -3163,8 +3203,9 @@ private:
     //       beside the player's close, on the exit road alone), the page's
     //       row open ahead of its editor, the trim presets list's Close,
     //       `t` (the PRESETS key's lift), a row's apply after its framing
-    //       (trim_presets_apply, architect 2026-11-19) and Save As
-    //       ahead of its name editor,
+    //       (trim_presets_apply, architect 2026-11-19), Save As and
+    //       Rename ahead of their name editor and Render ahead of its
+    //       dispatch,
     //       the BPM form's close_bpm_form, its row open ahead of its line
     //       editor and its RENDER ahead of the sweep, and the
     //       same-project no-op all pass through it (a reopen ends the
@@ -3220,8 +3261,11 @@ private:
     void open_trim_presets(std::string_view seat_name);
     void build_trim_presets_rows(int highlight);
     void trim_presets_apply(int index);
+    void trim_presets_render(bool all);
     void trim_presets_save();
     void trim_presets_save_as();
+    void trim_presets_rename();
+    void open_trim_preset_name_editor(bool rename);
     void trim_presets_delete();
     void commit_trim_preset_name();
     void open_bpm_form(GuiBpmField seat);
@@ -3230,7 +3274,8 @@ private:
     void bpm_form_render();
     void close_bpm_form();
     // THE LIST'S FILE WRITE, one body for the three changes (the name
-    // editor's commit, the two confirmations' answers): `presets` SORTED IN
+    // editor's commit, Save As's or Rename's, and the two confirmations'
+    // answers): `presets` SORTED IN
     // PLACE into the list's order (trim_preset_before, the one sort's second
     // caller; a no-op after Delete), then the whole of it through
     // write_trim_presets_file, so the screen and the file never disagree; a
@@ -3239,12 +3284,16 @@ private:
     bool persist_trim_presets(std::vector<GuiTrimPreset>& presets);
     // THE NAME EDITOR'S SESSION MEMORY (architect 2026-10-28): the list
     // as it stood when the name editor opened, which the commit judges the
-    // name against and appends to, and the name the return seats the list on
-    // — the highlighted preset's at the open (Cancel's return), the new
-    // one's after a commit. Written by trim_presets_save_as and the commit
-    // alone; the editor is modal, so nothing changes them between.
+    // name against and appends to (Save As) or renames in (Rename), and the
+    // name the return seats the list on — the highlighted preset's at the
+    // open (Cancel's return; under Rename the preset being renamed), the new
+    // one's after a commit; and WHICH ACT OPENED THE EDITOR, Rename or Save
+    // As (architect 2026-11-25), the one bit the commit forks on. Written by
+    // open_trim_preset_name_editor and the commit alone; the editor is modal,
+    // so nothing changes them between.
     std::vector<GuiTrimPreset> trim_name_presets_;
     std::string                trim_name_seat_;
+    bool                       trim_name_rename_ = false;
     // REVERT, Ctrl+Alt+O (architect 2026-09-13): reopen the CURRENT
     // project to its last saved state, discarding unsaved changes and the undo
     // history. It never meets open_project_commit's
@@ -4542,18 +4591,20 @@ private:
     // (confirm_load_in_place / cancel_load_in_place — the prompt's
     // two answers — are public, beside the hard-end clearers above: GuiPrompt
     // reaches them through its back-pointer.)
-    // THE RENDER PLAYER'S DELETE (architect 2026-09-29) — the root listing's
-    // Delete button (its plain lift and its long press). It
-    // parks the highlighted batch folder (`all` false) or every batch folder
-    // the root listing shows (`all` true) at
-    // AppState::RenderPlayer::pending_delete and raises the
-    // DELETE_FOLDER_CONFIRM prompt — "Delete '<folder name>'?" / "Delete all
-    // N folders?", Delete / Cancel — pausing a live transport
-    // first, the load's own opening step. Inside a batch folder it does
-    // nothing (the slot is Load in Place there); at the root with nothing to
+    // THE RENDER PLAYER'S DELETE (architect 2026-09-29; in both lists
+    // 2026-11-25) — the Delete button (its plain lift, `all` false, and its
+    // long press, `all` true), the act forking on the list the player stands
+    // in. In THE FOLDER LIST it parks the highlighted batch folder or every
+    // batch folder listed at AppState::RenderPlayer::pending_delete — "Delete
+    // '<folder name>'?" / "Delete all N folders?". In A FOLDER'S RENDER LIST
+    // it parks the highlighted render at pending_delete_render — "Delete
+    // '<entry id>'?" (render_entry_id) — or, held, the listed folder at
+    // pending_delete — "Delete '<folder name>'?". Either way it pauses a live
+    // transport first, the load's own opening step, and raises the
+    // RENDER_PLAYER_DELETE_CONFIRM prompt, Delete / Cancel. With nothing to
     // delete — a face painted live whose act went dead inside the frame — it
-    // cards "There is no
-    // folder to delete" (the face greys on the same question,
+    // cards "There is no folder to delete" / "There is no render to delete"
+    // (the face greys on the same question,
     // render_player_delete_actionable). The prompt's two answers are
     // confirm_render_player_delete / cancel_render_player_delete (public,
     // beside the load's).
@@ -4637,9 +4688,9 @@ private:
     bool arm_modal_dialog_press(int x, int y);
     int  take_modal_dialog_release(int x, int y);
     bool modal_dialog_press_shifted() const;
-    // `shifted` reaches only the buttons player_button_shift_admits and
-    // score_button_shift_admits name (app_state.h); every other act ignores
-    // it, so a held Play is a plain
+    // `shifted` reaches only the buttons player_button_shift_admits,
+    // score_button_shift_admits and trim_presets_button_shift_admits name
+    // (app_state.h); every other act ignores it, so a held Play is a plain
     // Play exactly as a held roster button with no twin is its plain act.
     bool dispatch_modal_dialog_button(int index, bool shifted = false);
 

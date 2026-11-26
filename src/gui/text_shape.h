@@ -96,10 +96,10 @@ struct ShapedRun {
 
 // THE ONE SHAPING OPTION — KERNING ON OR OFF (architect 2026-11-05). On is
 // the face's own GPOS `kern`, every text surface's default. OFF IS THE TIME
-// FIELDS' ALONE (paint_handler.cpp's kTimeShape block: time_field_metrics'
-// eleven specimen shapings and every time field's painted run — the bottom
-// left's timestamp, the render player's two, the score viewer's media
-// pair): Liberation
+// FIELDS' ALONE (paint_handler.cpp's THE TIME FIELDS block:
+// measure_time_field's specimen shapings and every time field's painted run
+// — the bottom left's timestamp, the render player's time label, the score
+// viewer's media label): Liberation
 // Sans Bold kerns the pair "11" by about 1.2 px at 22 px, so under the
 // face's kerning a time holding "11" ran narrower than the specimen and its
 // later digits walked as the time ran (11:11.111 measured 3.7 px narrower
@@ -206,11 +206,11 @@ void show_shaped_run_within(cairo_t* cr, const ShapedRun& run, double x,
 // ITS CONSUMERS: THE TITLE BAR (render.h's title bar block): the right group's
 // runs and its battery cell spaced off each other's ink, the percent's first
 // ink the lamps' seat; and THE TIMESTAMP'S DAMAGE CELL (paint_handler.cpp's
-// bottom_left_clock_cell, off time_field_metrics): the widest-digit
+// bottom_left_clock_cell, off timestamp_metrics): the widest-digit
 // specimen's advance united with its ink's real edges, so an ink that
 // overhangs the pen still lies inside the damage. The time fields themselves
-// stand at their pens, each slot the specimen's advance (paint_handler.cpp's
-// kTimeShape block). Every other
+// stand at their pens, each slot its specimen's advance (paint_handler.cpp's
+// THE TIME FIELDS block). Every other
 // layout wants a reserved CELL, which is `width_px`'s job.
 double ink_left_px(const ShapedRun& run);
 // A RUN'S LAST INK, in pixels from the run's pen origin to the real right

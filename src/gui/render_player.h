@@ -22,7 +22,7 @@
 // A BENIGN REFUSAL ALREADY AT ITS STATE SAYS NOTHING (architect 2026-08-31,
 // the one-dimensional rule). THE IDLE ONES — Play with no item, the two
 // folder-end jumps (which walk the TRANSPORT ITEM's folder and so have
-// nothing to walk without one), and every seek road (the two seek keys, the
+// nothing to walk without one), and every seek road (the car's seek, the
 // car's absolute seek, the scrub's own press, bare Home's reseek to the
 // item's own start past the previous-track window): the modal row IS the
 // state — an idle transport, which is an empty one (IDLE is no item bound,
@@ -37,23 +37,21 @@
 // GuiRenderPlayer::status.
 
 // THE PREVIOUS-TRACK WINDOW (architect 2026-08-31: "agree on
-// <3s"): bare Home, its skip button and the car's own Previous all reach it,
+// <3s"): bare Home and its skip button reach it,
 // and inside the item's first three seconds the act is THE PREVIOUS ENTRY
 // rather than this track's start. It is the iPod / car-head-unit convention,
-// and it is POSITION-BASED RATHER THAN PRESS-TIMED on purpose: the wheel's
-// buttons are slower than any double-press window (kHoldBeatMs included), and
-// a position window makes a SECOND press "previous" at any press speed at all,
-// since the first one landed the cursor at 0.
+// and it is POSITION-BASED RATHER THAN PRESS-TIMED on purpose: a position
+// window makes a SECOND press "previous" at any press speed at all, since the
+// first one landed the cursor at 0, where a double-press window (kHoldBeatMs
+// included) would be outrun by a slow press.
 //
 // IT IS ASKED IN EVERY TRANSPORT STATE by home() — at IDLE there is no item
 // and so no file before it (the invariant at AppState::RenderPlayer::
 // transport), and the seek arm under it is seek_to's silent no-item
-// refusal. THE CAR'S
-// PREVIOUS ASKS IT ONCE MORE, under a LIVE transport alone, to decide its own
-// up-a-folder exit (car_previous()), which is why the question is a predicate
-// of its own: render_player_inside_previous_window (app_state.h), which
-// render_player_home_takes_previous composes for the file step and that exit
-// arm asks direct.
+// refusal. Its one owner is render_player_inside_previous_window
+// (app_state.h), which render_player_home_takes_previous composes for the
+// file step. THE CAR'S PREVIOUS DOES NOT REACH IT: while an item sounds that
+// press is the car's seek (architect 2026-11-25, car_previous()).
 //
 // IT IS AN AUTHORED DURATION AND NEVER SCALES — gui_scale is a LENGTH axis
 // (the scaled_px family) and no duration in the product reads it. It is
@@ -77,7 +75,8 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // next_track(), the pair's contract at their declarations)) FLUSH RIGHT
 // (architect 2026-11-10: the transport keys
 // to the right, everything else to the left) — the Repeat one lamp, the
-// highlight pair, the UP button and Load in place at the row's left (no
+// highlight pair, the UP button, Load in place and Delete at the row's left
+// (both in both lists, architect 2026-11-25; no
 // Close: architect 2026-11-11, the lit PLAYER key is the
 // way out), then the play-scrub and the
 // clock — the row's order and faces are the painter's, ruled 2026-08-28).
@@ -130,8 +129,10 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // glyph on its row, and AUTO-ADVANCE, THE NEXT-TRACK SKIP, HOME'S
 // PREVIOUS-TRACK WINDOW and the two Shift+Home / Shift+End ENDS walk ITS
 // FOLDER'S wav list as it was listed when the item was played — never another
-// folder and never a wrap. Every listing is built when its folder is entered
-// and never kept fresh.
+// folder and never a wrap — less any render the player's own Delete has
+// removed since (delete_render strikes it, so nothing walks into a file that
+// is gone). Every listing is built when its folder is entered or a delete
+// changes it, and never kept fresh otherwise.
 //
 // THE HIGHLIGHT FOLLOWS THE TRANSPORT'S ITEM (architect 2026-08-28): at
 // every item change THE TRANSPORT MAKES ON ITS OWN — Home's previous-track
@@ -276,8 +277,9 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // buttons on the wheel and the console — rewind, play/pause, fast-forward —
 // where the wheel's outer two arrive as Previous and Next, so THE ONE BUTTON
 // IS A TOGGLE between the item and silence (car_toggle) and THE OUTER TWO ARE
-// THE PLAYLIST WALK with the up-a-folder exit (car_previous / car_next). The
-// table at on_media_command owns each arm.
+// A SEEK while an item sounds and THE PLAYLIST WALK with the up-a-folder exit
+// at rest (car_previous / car_next; architect 2026-11-25). The table at
+// on_media_command owns each arm.
 //
 // AND THE DISPLAY IS A DUMMY: the session says PLAYING with a running clock
 // whenever the player stands, because a console that hears the silent
@@ -333,8 +335,9 @@ struct GuiRenderPlayer {
     // bare `l` in the mode's key router (route_render_player_key), which the
     // top icon row's Play renders lift spells (the player's one chord, architect
     // 2026-10-30, its one way out on glass); the load road's success;
-    // the root's delete leaving no folder
-    // (delete_batch_folders, architect 2026-10-01); and THE CLOSE ROAD — GuiPrompt::request_close, which
+    // a folder delete leaving no folder
+    // (delete_batch_folders, architect 2026-10-01, which a render's delete
+    // reaches for a folder's last render); and THE CLOSE ROAD — GuiPrompt::request_close, which
     // takes the mode down at its head, so the platform's close
     // (Back; main.cpp's set_on_close)
     // leaves the ordinary window standing before the unsaved-work
@@ -354,11 +357,10 @@ struct GuiRenderPlayer {
     // tap found it (play_wav's band seat).
     void open_row(int index, bool tapped);
     // One folder up — THE MODAL ROW'S UP BUTTON (2026-09-01), and THE CAR'S
-    // OWN PREVIOUS in both of its arms:
-    // car_previous() composes this body at the band's first row AT REST and
-    // at the folder's first FILE inside the previous-track window WHILE
-    // LIVE, so the act has THREE roads on ONE body
-    // (the button and car_previous()'s two arms). The highlight pair is the
+    // OWN PREVIOUS AT REST: car_previous() composes this body at the band's
+    // first row, so the act has TWO roads on ONE body (the button and
+    // car_previous()'s rest arm; its live arm is a seek, architect
+    // 2026-11-25). The highlight pair is the
     // plain band walk and the Home button the previous-track act, so leaving
     // a folder is the Up button's act and the car's (the architect's reasons
     // are at car_previous()).
@@ -370,23 +372,54 @@ struct GuiRenderPlayer {
     // the folder it just left (rebuild_rows' seat rule, architect
     // 2026-09-11). The reasoning is at the body and nowhere else.
     void up();
-    // THE ROOT'S DELETE, ANSWERED (architect 2026-09-29) — the one body the
-    // DELETE_FOLDER_CONFIRM prompt's Delete runs, through
-    // GuiInputHandler::confirm_render_player_delete. `folders` are the paths
-    // the raise parked off the root listing's own Folder rows. At the root no
-    // item is bound (up() unloads it on the way there, open() binds none), so
-    // no transport reads a folder about to go. Each folder is removed
+    // A FOLDER DELETE, ANSWERED (architect 2026-09-29; from inside a folder
+    // 2026-11-25) — the body the RENDER_PLAYER_DELETE_CONFIRM prompt's Delete
+    // runs over parked folders, through
+    // GuiInputHandler::confirm_render_player_delete, and the body a render's
+    // delete hands a folder's last render to (delete_render). `folders` are
+    // the paths the raise parked off the listing's own rows: the root's
+    // Folder rows, or the listed folder itself from inside it. A BOUND ITEM
+    // LIVING IN A FOLDER ABOUT TO GO IS UNLOADED FIRST (unload_item's Up
+    // tail, up()'s own road), so no transport, scrub, repeat or car act
+    // reads a file that is gone — from inside a folder the item, when one is
+    // bound, always lives there (play_wav binds from the listed folder alone,
+    // and up() unloads on the way out); at the root none is bound. Each
+    // folder is removed
     // whole, BUT ONLY A DIRECTORY STANDING DIRECTLY UNDER THIS PROJECT'S
     // `tmp/` (project_batch_root) — anything else is refused on stderr and
     // left alone, so nothing outside `tmp/` and never `tmp/` itself can go;
     // a filesystem failure cards CRITICAL naming the folder by its name, with
     // the full path and the system's words on stderr (failure.h's two
-    // clauses), and the walk goes on to the next folder. The root listing is
-    // rebuilt from disk after, whatever failed. A success is silent: the rows
+    // clauses), and the walk goes on to the next folder. The ROOT listing is
+    // entered and rebuilt from disk after, whatever failed, the band on its
+    // top row. A success is silent: the rows
     // leaving the listing are its answer — and when the rebuilt root lists
     // no folder at all, the player closes itself through close(), its own
     // close act (architect 2026-10-01; the rule is at the body).
     void delete_batch_folders(const std::vector<std::filesystem::path>& folders);
+    // ONE RENDER'S DELETE, ANSWERED (architect 2026-11-25: "need way to delete
+    // single render in the player") — the body the
+    // RENDER_PLAYER_DELETE_CONFIRM prompt's Delete runs over a parked render,
+    // through GuiInputHandler::confirm_render_player_delete. `entry` is the
+    // highlighted row's own entry in the listed folder's render list.
+    // THE FOLDER'S LAST RENDER IS THE FOLDER'S DELETE: with one render listed
+    // (render_player_batch_render_count) the body is delete_batch_folders on
+    // the entry's folder, the emptied folder going with it and the player
+    // going up to the folder list (or closing with no folder left).
+    // OTHERWISE: A BOUND ITEM THAT IS THIS RENDER IS UNLOADED FIRST
+    // (unload_item's Up tail, up()'s road), so nothing reads the file that
+    // goes; a bound item that is ANOTHER render stays bound, paused as the
+    // question's rise left it, and the removed render is struck from its
+    // item folder (`item_folder` / `item_index`), so no next track, folder
+    // end or auto-advance walks into it. The render's whole file set goes
+    // (batch_cell_file_set, renders_dir.h, the cell's one enumeration): a
+    // file already missing is silent, a removal that fails cards CRITICAL
+    // naming the render by its entry id with the system's words, the full
+    // path on stderr (failure.h's two clauses), once for the render. The
+    // folder's listing is rebuilt from disk after, whatever failed, and THE
+    // BAND STANDS ON THE ROW THAT TOOK THE DELETED ONE'S PLACE — the next
+    // render, or the new last row when the last went.
+    void delete_render(const AppState::RenderEntry& entry);
     // The widget's two mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
     // overlay's other five contents drive the same mechanics through their own
@@ -544,13 +577,14 @@ struct GuiRenderPlayer {
     void home();
     void next_track();
 
-    // -- THE CAR'S OWN THREE ACTS (architect 2026-09-12, from the car) -------
+    // -- THE CAR'S OWN ACTS (architect 2026-09-12, from the car) -------------
     //
     // THE CAR IS A SEPARATE INTERFACE, so these are the head unit's vocabulary
     // and not a replay of the keys above: the wheel and the console carry
     // REWIND, PLAY/PAUSE and FAST-FORWARD, the outer two arriving as Previous
-    // and Next, and these three bodies are what those buttons mean. Their one
-    // caller each is on_media_command's arm, which owns the table.
+    // and Next, and the first three bodies are what those buttons mean, the
+    // fourth the seek they share. Their callers are on_media_command's arms,
+    // which own the table.
     //
     // car_toggle() — THE CONSOLE'S ONE PLAY/PAUSE BUTTON, undivided:
     //   Pause and PlayPause both reach this one body, because the session
@@ -565,38 +599,46 @@ struct GuiRenderPlayer {
     //   takes play_button_act WHOLE, the tablet's Play button: a highlighted
     //   folder opens, a highlighted other wav plays, and the item's own row
     //   resumes.
-    // car_previous() — REWIND: at REST (paused and idle alike) it walks the
+    // car_previous() — REWIND: WHILE LIVE it is car_seek() back (architect
+    //   2026-11-25: "render player in car should also do ... skip back/forth
+    //   when audio is playing"). At REST (paused and idle alike) it walks the
     //   band UP one row, and AT THE BAND'S FIRST ROW it goes UP A FOLDER (up()
     //   whole: the item unloaded, the sound stopped, the band seated on the
     //   folder just left); at the ROOT's first row it is a silent walled no-op.
-    //   WHILE LIVE it is home() with the exit ahead of it — inside the
-    //   previous-track window WITH a file before this one, that file; inside
-    //   the window at the folder's FIRST file, one folder up; otherwise this
-    //   track's start.
-    // car_next() — FAST-FORWARD: at REST it walks the band DOWN one row, a
-    //   silent walled no-op at the listing's last row; WHILE LIVE it is
-    //   next_track().
+    // car_next() — FAST-FORWARD: WHILE LIVE it is car_seek() forward; at REST
+    //   it walks the band DOWN one row, a silent walled no-op at the
+    //   listing's last row.
+    //   Changing track from the car is therefore pause, step, play (architect
+    //   2026-11-25, accepted).
+    // car_seek() — THE CAR'S ONE SEEK (architect 2026-11-25), the live arm of
+    //   the two above and the whole of the FastForward / Rewind arms:
+    //   seek_by GuiCarTransport::kCarSeekSeconds (the project transport's car
+    //   seek, one number for both car roads) of the item as it sounds, back or
+    //   forward. ITS WALLS ARE seek_by's: back inside the item's first
+    //   kCarSeekSeconds it lands on the item's start; forward inside its last
+    //   kCarSeekSeconds a live item lands on its last frames (seek_to's live
+    //   clamp), so it plays out at once and THE NATURAL END answers — Repeat One's replay
+    //   of this item, else the next wav of its folder, else the rest paused at
+    //   the item's end — the same answer the item reaching its end by itself
+    //   gives, never a wrap of the folder. A paused item's resume point moves;
+    //   an idle player has no item and the seek is seek_to's silence.
     //
     // THE ASYMMETRY IS DELIBERATE — only the car's PREVIOUS ever leaves a
-    // folder: the listener always knows which file is a folder's FIRST and
-    // never how many it holds, so walking off the TOP is a known, intended act
-    // while walking off the END must never be an accidental exit. TIMING
-    // GESTURES ARE REJECTED ("Previous twice quickly"): these are position- and
-    // band-based, never press-timed, which is the previous-track window's own
-    // precedent.
+    // folder, and only at rest: the listener always knows which file is a
+    // folder's FIRST and never how many it holds, so walking off the TOP is a
+    // known, intended act while walking off the END must never be an
+    // accidental exit. TIMING GESTURES ARE REJECTED ("Previous twice
+    // quickly"): these are transport- and band-based, never press-timed.
     //
     // NO WALL PREDICATE STANDS IN FRONT OF THEM: each refusal is the silent
     // return of the body composed here — folder_overlay::move_highlight's
-    // clamp, up()'s root return, advance_to_next_in_item_folder's folder end,
-    // seek_to's for the live seek — and with a constant PLAYING published
-    // there is no drifted display for a walled press to correct, so no wall
-    // is consulted ahead of them.
+    // clamp, up()'s root return, seek_to's for the seek — and with a constant
+    // PLAYING published there is no drifted display for a walled press to
+    // correct, so no wall is consulted ahead of them.
     void car_toggle();
     void car_previous();
     void car_next();
-
-    // Left / Right's step: 5 s at the project source's rate (2026-08-28).
-    int64_t seek_step_frames() const;
+    void car_seek(bool forward);
 
     // The item position the clock and the scrub read: the engine's cursor
     // while live, the resume point otherwise. 0 with no item.
@@ -612,8 +654,8 @@ struct GuiRenderPlayer {
     // mode stands): a live transport with NO DEVICE TO PLAY ON pauses (the
     // no-device arm below, asked first — gone away or never there, one
     // answer); one the audio thread has ended takes the natural-end branch; a
-    // still-live one damages the clock cell and the scrub track once per
-    // position change.
+    // still-live one damages the scrub track at every position change and the
+    // clock cell when its label's text changes.
     void tick();
 
     // -- The car ------------------------------------------------------------
@@ -678,8 +720,9 @@ struct GuiRenderPlayer {
     //     so a question over the player has nothing to protect from it and
     //     BOTH CAR ROADS ANSWER A CONNECT ALIKE. Only the mode belt stands in
     //     front of it.
-    //   Previous / Next -> car_previous() / car_next(), the playlist walk with
-    //     the up-a-folder exit (their contract is at the declarations).
+    //   Previous / Next -> car_previous() / car_next(): while an item sounds
+    //     the car's seek, at rest the playlist walk with the up-a-folder exit
+    //     (architect 2026-11-25; their contract is at the declarations).
     //   Stop -> PAUSE AND THEN HOME, two direct acts in order (architect
     //     2026-09-01; the player has no Stop act of its own): a LIVE transport
     //     takes transport_toggle_act — the transport's own tail, past the
@@ -689,11 +732,11 @@ struct GuiRenderPlayer {
     //     next Play; what differs is the state left behind, PAUSED rather than
     //     IDLE, so the scrub stays live under it. The Accord has no stop
     //     button; the arm stays for any console that has one.
-    //   FastForward / Rewind -> seek_by(±seek_step_frames()) DIRECT, 5 s a
-    //     press, in every folder (architect 2026-09-15: the Accord's wheel
-    //     sends Previous / Next, not FastForward / Rewind, so the console's
-    //     actual skips are car_previous() / car_next() above, and this pair
-    //     stays the plain seek everywhere a console has one).
+    //   FastForward / Rewind -> car_seek() DIRECT, in every transport state
+    //     and every folder: the car has ONE SEEK in the player (architect
+    //     2026-11-25), the Accord's wheel reaching it through Previous /
+    //     Next's live arms and a console that sends these kinds reaching it
+    //     here, a paused item's resume point moving as any paused seek's does.
     //   SeekTo -> seek_to DIRECT; its milliseconds are clamped to the item's
     //     own length BEFORE the conversion to frames, the arriving position
     //     being any int64 a head unit cares to send (the rule at the site).
@@ -765,7 +808,7 @@ struct GuiRenderPlayer {
     // SILENCE IS METADATA AND NEVER A FILE: a silent wav on disk would be
     // listed by the player and played by the auto-advance.
     //
-    // THE EDGE INVENTORY (EIGHT call sites across SEVEN functions; no car
+    // THE EDGE INVENTORY (NINE call sites across EIGHT functions; no car
     // arm re-publishes, a constant PLAYING leaving no drifted display to
     // correct):
     // play_wav's tail and play_live_from (the one launch of resume() —
@@ -775,9 +818,10 @@ struct GuiRenderPlayer {
     // back-pointer) — the one place every player stop passes, which
     // covers the pause, the natural end's last-wav rest, the dead
     // device, the rebind ahead of the next item and the Up act's own stop;
-    // THE BAND'S THREE WRITERS — move_highlight, set_highlight and
-    // rebuild_rows — EACH GATED ON `transport != Live`, since the highlight
-    // is the title only where the item is not: the two wrappers
+    // THE BAND'S FOUR WRITERS — move_highlight, set_highlight, rebuild_rows
+    // and one render's delete's reseat after its rebuild (delete_render,
+    // architect 2026-11-25) — EACH GATED ON `transport != Live`, since the
+    // highlight is the title only where the item is not: the two wrappers
     // carry the router's Up/Down walk and the pointer's row lift, and
     // rebuild_rows carries EVERY entry, which is why open() and up() have no
     // tail push of their own — open()'s listing publishes the
@@ -814,22 +858,27 @@ private:
     // asks it, and a mode taken down ahead of the fence would send the stop
     // down the project's arm and leave the engine unfenced.
     enum class UnloadTail { Up, Close };
-    // THE ONE OWNER OF THE UNLOAD ORDERING, shared by close() and up(): the
+    // THE ONE OWNER OF THE UNLOAD ORDERING, shared by close() and up() — and
+    // by the two deletes, delete_batch_folders and delete_render, which take
+    // up()'s tail ahead of their own listing rebuild (architect 2026-11-25): the
     // stop body's fence, then the mode bit
     // where the tail wants it, then THE VIEW'S buffer rebound, then the item's
     // fields cleared to their open() values and its buffer freed. The order
     // is load-bearing — the engine may hold the item's pointer until the
-    // rebind — and the two callers add only what is theirs (close() the panel
-    // teardown, up() the root entry whose rebuild publishes). It publishes
-    // nothing itself: the fork inside the stop body pushes a state still
-    // carrying the item, which both callers supersede.
+    // rebind — and the callers add only what is theirs (close() the panel
+    // teardown, up() and the deletes the listing entry whose rebuild
+    // publishes). It publishes nothing itself: the fork inside the stop body
+    // pushes a state still carrying the item, which every caller supersedes.
     void unload_item(UnloadTail tail);
     // Rebuild the listing for the live folder: rows, scroll 0, hover and
     // press cleared, and the highlight through THE SEAT RULE'S THREE ARMS —
     // the transport's item's row if it is here, else `seat_folder`'s row if
     // the caller named one and it is here, else row 0 — the seated row
     // centered in the band (folder_overlay::scroll_row_centered, 2026-10-26).
-    // Damages the band. `seat_folder` IS REQUIRED AND IS EMPTY EVERYWHERE BUT UP: entering a
+    // Damages the band. ONE CALLER RESEATS AFTER IT: one render's delete
+    // (delete_render), whose band stands on the deleted row's place, not on
+    // the item's row (architect 2026-11-25).
+    // `seat_folder` IS REQUIRED AND IS EMPTY EVERYWHERE BUT UP: entering a
     // folder is memory-less by ruling, so a caller must state that it names
     // none rather than inherit a default (the rule and the architect's words
     // are at the seat block, render_player.cpp).
@@ -906,7 +955,13 @@ private:
     // unloads the item, and with it the point, before it ever reseats) and
     // every other entry's (memory-less, and reached only with no item bound —
     // a bound item's own folder is the band's, by construction, so `Root`
-    // never carries one), and play_wav's own seat lands ON the item's row it
+    // never carries one) but ONE RENDER'S DELETE's (delete_render), whose
+    // rebuild may find ANOTHER render bound and whose reseat lands the band
+    // on the deleted row's place: the band stood on the deleted render at
+    // the press, off the item's row, so no band leaves the item's row there
+    // and the resume point stays as the question's rise left it (architect
+    // 2026-11-25: the item stays bound and paused); and play_wav's own seat
+    // lands ON the item's row it
     // just bound, fresh, never paused. COMING BACK CHANGES NOTHING: the
     // abandon is one-way, and a paused item the band never leaves resumes
     // where it paused.

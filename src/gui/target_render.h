@@ -182,11 +182,13 @@ struct GuiTargetRender {
         return !is_updating() && app.target_buffer_frames > 0;
     }
 
-    // WOULD THE LIVE TRIM PAIR FALL BACK? — the archival commands' read of the
-    // verdict below, and the reason it is public. Ctrl+Alt+R and
+    // WOULD THE TRIM PAIR [begin, end] FALL BACK? — the archival commands'
+    // read of the verdict below, and the reason it is public. Ctrl+Alt+R and
     // Ctrl+Alt+Shift+R build their request from the LIVE stores and the LIVE
-    // trim, so this answers exactly what the worker's own plan_trim will decide
-    // for that request; the two chords card kTrimFallbackCard on it at the
+    // trim, and the trim presets list's Render (architect 2026-11-25) from the
+    // live stores and THE PRESET'S PAIR, each asking with the pair its request
+    // carries, so this answers exactly what the worker's own plan_trim will
+    // decide for that request; they card kTrimFallbackCard on it at the
     // press (input_key_dispatch.cpp, where the whole rationale sits) rather
     // than leaving the outcome to do_render's worker-thread stderr line. It
     // asks compute_buffer_start_frame_for and nothing else — THE ONE VERDICT
@@ -204,7 +206,7 @@ struct GuiTargetRender {
     // is keyed on the warp store's generation, the scale and the audio
     // identity, never on active_audio_view, and snapshot_current_authoring_state
     // already reads it from source view for the same reason.
-    bool trim_would_fall_back() const;
+    bool trim_would_fall_back(int64_t begin_frame, int64_t end_frame) const;
 
     // THE PREVIEW DOMAIN A TRIM PAIR PRODUCES (2026-10-18), the A/B
     // audition's read of the verdict below and the second reason it is
@@ -370,7 +372,7 @@ private:
     // was computed from change into a fallback — last_dispatch_trim_fallback_
     // below — at the one outermost site every target-view dispatch passes
     // through) and the
-    // ARCHIVAL CHORDS' card through trim_would_fall_back above. Only the
+    // ARCHIVAL COMMANDS' card through trim_would_fall_back above. Only the
     // stderr readers consult fallback_reason: the card names the outcome, not
     // the producer.
     //

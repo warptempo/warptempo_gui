@@ -28,21 +28,28 @@
 // THE USES: BODY 12 (the lists, the cards, a question's and the progress
 // page's sentence, the value sub-page's entry, the word buttons,
 // the NOISE number, the status bar), PROGRAM 12 (the
-// clocks — the bottom icon row's timestamp and the render player's two
-// time labels — and the tooltip's name line), LABEL 12 (the cues'
+// overlays' time labels — the render player's and the score viewer's
+// "mm:ss / mm:ss" — and the tooltip's name line), LABEL 12 (the cues'
 // labels and the lane's editors, the history lane's labels with them),
 // HINT 12 (the tooltip's hint line), BOLD 12 (THE TITLE BAR: the brand and
 // its right group, render.h's title bar block), SMALL 10 (the ruler's
 // digits), KEYS 12 (the on-screen keyboard's caps — the default of the
-// one LIVE size, the `osk_font_px` tuning key's, GuiFont below) and
-// CAPTION 10 (the progress page's count, above). The rows
+// one LIVE size, the `osk_font_px` tuning key's, GuiFont below),
+// CAPTION 10 (the progress page's count, above) and TIMESTAMP 14 (the
+// bottom icon row's timestamp alone, the one text in the app at that size:
+// "the timestamp is large and clearly a one-off in the whole app - it is
+// its own thing", architect 2026-11-25 — Arc's `.h4` weight, GTK's "large"
+// scale, 12 x 1.2 = 14.4 W to the whole W, 14 W; 28 device px on the
+// tablet). The rows
 // coinciding in number stay rows of their own: the roster is the
 // distinction.
 // TWO WEIGHTS (architect 2026-11-19: "yes, regular is good"): THE
 // REGULAR FOR BODY TEXT — Body, Program, Label, Hint, Caption, and the
 // on-screen keyboard's caps (Keys, 2026-11-19) — and THE
-// BOLD FOR THE TITLE BAR (Bold) AND
-// THE RULER'S DIGITS (Small), as GTK Arc sets them (xfwm's title bold,
+// BOLD FOR THE TITLE BAR (Bold), THE RULER'S DIGITS (Small) AND THE
+// TIMESTAMP (Timestamp: Arc's `.h4, .category-label { color: #a5abb5;
+// font-weight: 600; }`, the 600 drawn by the face's one Bold; architect
+// 2026-11-25, "h4 at 14w"), as GTK Arc sets them (xfwm's title bold,
 // every other text regular).
 // Every length authored round the text follows these sizes (each length's
 // own comment records its class).
@@ -52,7 +59,8 @@
 // to a whole W (FreeType's FT_Request_Size: the ascender ceiled, the
 // descender floored), gui_font_line_box_w below. Liberation Sans Regular and
 // Bold carry one hhea (ascender 1854, descender -434 of 2048 units): 10.86 +
-// 2.54 at 12 W, so 11 + 3 = 14 W; 9.05 + 2.12 at 10 W, so 10 + 3 = 13 W.
+// 2.54 at 12 W, so 11 + 3 = 14 W; 9.05 + 2.12 at 10 W, so 10 + 3 = 13 W;
+// 12.67 + 2.97 at 14 W, so 13 + 3 = 16 W.
 // render.h's line_box_baseline seats a text by it in a box of whole W.
 //
 // THE VERTICAL METRICS ARE THE FACE'S OWN AT THAT PIXEL SIZE (architect
@@ -69,7 +77,7 @@
 // one shaping chokepoint unchanged (text_shape.h) — the face's own kerning
 // on every surface but the time fields, whose runs shape with `kern` off
 // (text_shape::Kerning, architect 2026-11-05: the pair "11" kerned the
-// digits into a walk; paint_handler.cpp's kTimeShape block).
+// digits into a walk; paint_handler.cpp's THE TIME FIELDS block).
 //
 // EVERY FACE DRAWS ITS ANTIALIASED OUTLINE AT EVERY SIZE, NEVER AN EMBEDDED
 // BITMAP STRIKE (architect 2026-10-06): the install hides any strike from
@@ -93,12 +101,15 @@
 #include <string_view>
 
 // THE USES (the head's table): the body (`Body`), the title bar (`Bold`), the
-// ruler's digits (`Small`), the clocks and the
+// ruler's digits (`Small`), the overlays' time labels and the
 // tooltip's name line (`Program`), the on-screen keyboard's caps (`Keys`),
 // the tooltip's hint line (`Hint`), the cues' labels with the lane's
-// editors (`Label`) and the progress page's count (`Caption`).
-enum class GuiFace { Body, Bold, Small, Program, Keys, Hint, Label, Caption };
-inline constexpr std::size_t kGuiFaceCount = 8;
+// editors (`Label`), the progress page's count (`Caption`) and the bottom
+// icon row's timestamp (`Timestamp`).
+enum class GuiFace {
+    Body, Bold, Small, Program, Keys, Hint, Label, Caption, Timestamp
+};
+inline constexpr std::size_t kGuiFaceCount = 9;
 
 // THE TWO FILES, THE INSTALL'S ONE ORDER (architect 2026-10-12, Liberation
 // Sans alone): THIS LIST IS THE ONE PLACE THE NAMES ARE SPELLED - the APK's
@@ -106,21 +117,23 @@ inline constexpr std::size_t kGuiFaceCount = 8;
 // initializer, so a file added here is packed with no second list; the
 // backend hands the bytes in in this order, and a use names its file by its
 // index here — the Regular read by the body text and the keyboard's caps,
-// the Bold by the title bar and the ruler's digits (the head). Both
+// the Bold by the title bar, the ruler's digits and the timestamp (the
+// head). Both
 // are TrueType
 // (FT_New_Memory_Face).
 inline constexpr std::size_t kGuiFontFileCount = 2;
 inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
     "LiberationSans-Regular.ttf", // 0: the body text
-    "LiberationSans-Bold.ttf",    // 1: the title bar, the ruler
+    "LiberationSans-Bold.ttf",    // 1: the title bar, the ruler, the timestamp
 };
 
 // THE PIXEL TABLE (the head): per use, in GuiFace's order, the file it is
 // drawn from and its em in W (one W = one px at 100 %, 2 device px on the
 // tablet at 200 %; render.h's scaled_px): 12 W everywhere but the ruler's
-// 10 and the progress page's count, the Regular for body text and the
-// keyboard's caps, the Bold for the title bar and the
-// ruler (architect 2026-11-18 / 2026-11-19).
+// 10, the progress page's count and the timestamp's 14, the Regular for
+// body text and the keyboard's caps, the Bold for the title bar, the
+// ruler and the timestamp (architect 2026-11-18 / 2026-11-19 /
+// 2026-11-25).
 struct GuiFaceSize {
     std::size_t file = 0;
     double      em_w = 0.0;
@@ -129,13 +142,16 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 12.0},   // Body: the lists, the cards, the pages, the status bar
     {1, 12.0},   // Bold: the title bar (the brand and its right group)
     {1, 10.0},   // Small: the ruler's digits
-    {0, 12.0},   // Program: the clocks, the tooltip's name
+    {0, 12.0},   // Program: the overlays' time labels, the tooltip's name
     {0, 12.0},   // Keys: the on-screen keyboard's caps (the default of
                  // the LIVE size, the `osk_font_px` key's: GuiFont below)
     {0, 12.0},   // Hint: the tooltip's hint line
     {0, 12.0},   // Label: the cues' labels and the lane's editors
     {0, 10.0},   // Caption: the progress page's count (GTK's "small",
                  // 12 / 1.2)
+    {1, 14.0},   // Timestamp: the bottom icon row's timestamp alone (Arc's
+                 // `.h4` weight; GTK's "large", 12 x 1.2 = 14.4, to the
+                 // whole W, 14)
 };
 
 // THE USE'S TABLE SIZE, its em in W — the one read of the table's sizes,
@@ -216,8 +232,8 @@ double gui_font_line_exact_px(const GuiFont& f);
 // THE LINE BOX IN W (the head's THE LINE BOX; architect 2026-11-19):
 // the face's ascent and descent at the use's em IN W — its size at 100 % —
 // each rounded up to a whole W, as FreeType's size request rounds them for
-// Pango; the line box their sum. 11 + 3 at 12 W, 10 + 3 at 10 W (Liberation
-// Sans, both files). Out of line: the file's metrics are the install's.
+// Pango; the line box their sum. 11 + 3 at 12 W, 10 + 3 at 10 W, 13 + 3 at
+// 14 W (Liberation Sans, both files). Out of line: the file's metrics are the install's.
 struct GuiLineBoxW {
     int ascent  = 0;
     int descent = 0;

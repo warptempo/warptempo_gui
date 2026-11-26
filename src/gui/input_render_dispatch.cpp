@@ -21,22 +21,22 @@
 #include <vector>
 
 // GuiInputHandler render-dispatch / batch-lifecycle methods
-// (snapshot_current_authoring_state, finalize_render_run,
-// start_render_batch, dispatch_next_batch_entry, on_batch_entry_complete,
-// render_bpm_sweep), grouped here to keep input_handler.cpp focused on the
-// event entry points.
+// (snapshot_current_authoring_state, the two cell allocators,
+// finalize_render_run, start_render_batch, dispatch_next_batch_entry,
+// on_batch_entry_complete, render_bpm_sweep), grouped here to keep
+// input_handler.cpp focused on the event entry points.
 
-// (max_renders_batch_index STOOD HERE — moved to renders_dir.h 2026-09-15;
-// the two call sites below reach it unqualified through this file's own
-// include of input_handler.h, which includes renders_dir.h.)
+// (max_renders_batch_index lives in renders_dir.h, whose comment lists its
+// call sites; this file's reach it unqualified through its own include of
+// input_handler.h, which includes renders_dir.h.)
 
 // THE FAILED RENDER'S OWN REMOVAL (architect 2026-09-02) — one body, two
 // subjects: the deliverable pair in `render/` and a batch cell's file set
 // under its `tmp/` folder. Every path is COMPOSED from its own owner
-// (compose_render_output_path, render_staging_path, fingerprint_sidecar_path,
-// and the entry sidecar triple's extensions, spelled as the load road spells
-// them) and never found by walking the folder: a failure removes what THIS
-// render was to write and nothing that happens to sit beside it.
+// (compose_render_output_path, render_staging_path, fingerprint_sidecar_path;
+// a cell's whole set through batch_cell_file_set, renders_dir.h) and never
+// found by walking the folder: a failure removes what THIS render was to
+// write and nothing that happens to sit beside it.
 //
 // A MISSING FILE IS THE ORDINARY CASE, not an error — most failures return
 // before anything is written, and do_render unwinds a good deal of the rest
@@ -57,27 +57,15 @@ static void remove_failed_render_files(
     }
 }
 
-// A failed CELL's whole file set: the wav, its staging sibling, the
-// fingerprint attestation, and the three load-in-place sidecars do_render
-// writes beside a batch wav (render_pipeline.cpp's
-// publish_load_in_place_critical_batch_sidecars is where they are authored;
-// the load road composes the same three, input_key_dispatch.cpp). Composed
-// from the cell's folder and basename, which the dispatch captures before the
-// request is moved onto the worker.
+// A failed CELL's whole file set, the cell's one enumeration
+// (batch_cell_file_set, renders_dir.h), composed from the cell's folder and
+// basename, which the dispatch captures before the request is moved onto the
+// worker.
 static void remove_failed_batch_cell(const std::string& batch_folder,
                                      const std::string& batch_basename) {
     if (batch_folder.empty() || batch_basename.empty()) return;
-    const std::filesystem::path folder(batch_folder);
-    const std::filesystem::path wav =
-        compose_render_output_path(folder, batch_basename);
-    remove_failed_render_files({
-        wav,
-        std::filesystem::path(render_staging_path(wav.string())),
-        std::filesystem::path(fingerprint_sidecar_path(wav.string())),
-        sidecar_path(folder, batch_basename, kSidecarWarp),
-        sidecar_path(folder, batch_basename, kSidecarPhaseReset),
-        sidecar_path(folder, batch_basename, kSidecarSettings),
-    });
+    remove_failed_render_files(batch_cell_file_set(
+        std::filesystem::path(batch_folder), batch_basename));
 }
 
 AuthoringSnapshot GuiInputHandler::snapshot_current_authoring_state() const {
@@ -180,8 +168,9 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
         // TWO roads allocate a cell — the Ctrl+Alt+Shift+R arm and the
         // worker-idle pump's late binding — and both refuse for exactly this
         // reason and add none of their own, so one card here is one card per
-        // press on either. Both clauses are the three dispatchers' one
-        // composer's (render_folder_creation_failure, renders_dir.h): the
+        // press on either. Both clauses are the batch folders' one composer's
+        // (render_folder_creation_failure, renders_dir.h, whose comment
+        // lists its callers): the
         // stderr line keeps the whole path under this road's tag, the card
         // names the folder.
         const GuiFailure f = render_folder_creation_failure(
@@ -214,6 +203,36 @@ bool GuiInputHandler::allocate_miscellaneous_cell(std::string& out_folder,
 
     out_folder   = target_folder.string();
     out_basename = std::to_string(max_cell + 1);
+    return true;
+}
+
+// THE TRIM PRESET'S FOLDER (architect 2026-11-25: "A new render all always
+// creates a new folder, even if the last folder create was a presets
+// folder"; the contract at the declaration): the plain Render joins the
+// newest folder when it is a presets folder, else makes `<max+1>_presets`;
+// Render All always makes the new one. The miscellaneous allocator's shape,
+// its card this body's for its reason (one card per press on either road).
+bool GuiInputHandler::allocate_trim_preset_folder(bool always_new,
+                                                  std::string& out_folder) {
+    const std::filesystem::path queue_root =
+        project_batch_root(app.source_audio_path);
+    const RendersBatchScan scan = max_renders_batch_index(queue_root);
+    const std::filesystem::path target_folder =
+        !always_new && !scan.max_index_folder_name.empty() &&
+                is_trim_presets_batch_folder(scan.max_index_folder_name)
+            ? queue_root / scan.max_index_folder_name
+            : queue_root / (std::to_string(scan.max_index + 1) + "_" +
+                            kTrimPresetsBatchTag);
+    std::error_code ec;
+    std::filesystem::create_directories(target_folder, ec);
+    if (ec) {
+        const GuiFailure f = render_folder_creation_failure(
+            "render-presets", target_folder, ec);
+        std::fprintf(stderr, "warptempo_gui: %s\n", f.diagnostic.c_str());
+        notifications.notify(AppState::NotificationClass::Normal, f.display);
+        return false;
+    }
+    out_folder = target_folder.string();
     return true;
 }
 
@@ -404,8 +423,12 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
     // batch_folder selects the deliverable naming convention inside do_render
     // (`render/<title>.wav`), a set one a batch cell under `tmp/`. It is the
     // whole of the prune's membership below — Ctrl+Alt+R's plain single render
-    // is the deliverable arm, and Ctrl+Alt+Shift+R's miscellaneous cell, which
-    // arrives here with its folder late-bound, is not.
+    // is the deliverable arm, and Ctrl+Alt+Shift+R's miscellaneous cell and
+    // the trim presets list's Render's cell (architect 2026-11-25), which
+    // arrive here with their folder late-bound, are not: a batch cell
+    // publishes its cell and nothing else, and its audio is never the live
+    // target view's (an archival render never touches target_buffer,
+    // maybe_reestablish_target_buffer) nor the title's deliverable.
     const bool publishes_deliverable = req.batch_folder.empty();
     // THE PAIR THIS REQUEST WOULD PUBLISH, composed from the REQUEST's own
     // settings and read before the move for the same reason the flag above is:
@@ -511,7 +534,8 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
             }
             if (o == RenderOutcome::Failed) {
                 // THE REMOVAL IS THE DELIVERABLE ARM'S ALONE. A FAILED
-                // MISCELLANEOUS CELL — this dispatcher's other subject —
+                // BATCH CELL — the miscellaneous cell or a trim preset's,
+                // this dispatcher's other subjects —
                 // removes nothing: its output lands in `tmp/`, which is
                 // transient by ruling and taken wholesale at the next
                 // load-in-place's wipe, and no mirror ships a cell as a
@@ -548,7 +572,7 @@ void GuiInputHandler::dispatch_single_archival_render(RenderRequest req) {
                 // system's words left as they arrive. A Failed return with no
                 // composed reason (no site produces one) says the bare
                 // sentence rather than a dangling colon. BOTH ARMS CARD: the
-                // deliverable's failure and the miscellaneous cell's alike,
+                // deliverable's failure and a batch cell's alike,
                 // each an explicit command of his that produced nothing.
                 notifications.notify(
                     AppState::NotificationClass::Normal,
@@ -596,6 +620,15 @@ bool GuiInputHandler::dispatch_pending_archival_command() {
             if (!allocate_miscellaneous_cell(folder, basename)) return false;
             cmd.reqs.front().batch_folder   = std::move(folder);
             cmd.reqs.front().batch_basename = std::move(basename);
+        } else if (cmd.trim_preset) {
+            // A TRIM PRESET'S RENDER late-binds its folder alone, for the
+            // same reason (PendingArchivalCommand::trim_preset); its cell's
+            // name, `<NN>_<name>`, rides in the request. A creation failure
+            // drops the command as the miscellaneous one's does.
+            std::string folder;
+            if (!allocate_trim_preset_folder(/*always_new=*/false, folder))
+                return false;
+            cmd.reqs.front().batch_folder = std::move(folder);
         }
         dispatch_single_archival_render(std::move(cmd.reqs.front()));
     } else {
@@ -830,11 +863,13 @@ void GuiInputHandler::dispatch_next_batch_entry() {
     // the label reading as the plural noun the two numerals count rather than
     // as a category in a trailing parenthetical ("Rendering 3 of 8 (BPM)...",
     // which said neither what the 8 were nor what the render was doing to
-    // them). BOTH LABELS ARE THE TWO COMMANDS' OWN WORDS (the architect's
-    // naming, 2026-08-31): the counted noun IS the command's name, so
-    // the progress line and the control the user pressed say the same thing.
-    // The vocabulary's owner is the two TOP ICON ROW TOOLTIPS
-    // (redesign_button_tooltip, app_state.h). THE
+    // them). BOTH SWEEPS' LABELS ARE THE TWO COMMANDS' OWN WORDS (the
+    // architect's naming, 2026-08-31): the counted noun IS the command's name,
+    // so the progress line and the control the user pressed say the same
+    // thing; the vocabulary's owner is the two TOP ICON ROW TOOLTIPS
+    // (redesign_button_tooltip, app_state.h). THE TRIM PRESETS' RENDER ALL
+    // (architect 2026-11-25) counts the list's own things, "Rendering 3 of 8
+    // trim presets..." (trim_presets_render). THE
     // WORDS ARE SHARED, THE CASE IS EACH SURFACE'S — the names are Title Case
     // ("Grid Iterations" / "BPM Iterations", a control's NAME) and this line, a
     // card and a stderr tag, stays

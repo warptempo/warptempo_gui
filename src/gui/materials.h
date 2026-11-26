@@ -221,12 +221,14 @@
 // THE TEXT TONES (architect 2026-11-02, 2026-11-19; every number at its
 // line of kArcDarkTones, gui_theme.h): `text`, Arc's
 // font color D3DAE3, on every word, digit and drawing the chrome prints —
-// the clocks, the status bar, the lists and their drawings,
+// the overlays' time labels, the status bar, the lists and their drawings,
 // the pages' words, the keyboard's caps, the keys' glyphs —
 // and `text_dim`, 7E838F, for the settings page's disabled rows, the
 // tooltip's hint line and an inert marker label. ON THE ARC PAGE (architect
 // 2026-11-19) the title bar wears `title_text`, the marker labels
-// `sidebar_text` and the ruler's digits `ruler_text`. ON A LIT KEY'S FACE
+// `sidebar_text` and the ruler's digits `ruler_text`; THE BOTTOM ICON ROW'S
+// TIMESTAMP wears `timestamp_text`, Arc's `.h4` A5ABB5, in its own Bold
+// 14 W (architect 2026-11-25; paint_handler.cpp's THE TIME FIELDS). ON A LIT KEY'S FACE
 // the print — its glyph, the on-screen keyboard's lit cap — is
 // `text_on_lit`, Arc's white (architect 2026-11-17), in place
 // of `text`; on a lit

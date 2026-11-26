@@ -550,10 +550,10 @@ bool GuiGitRepo::origin_push_urls(std::vector<std::string>& urls) const {
     return true;
 }
 
-bool GuiGitRepo::walk_head(const GuiGitPathFilter&   accept,
-                           std::vector<std::string>& shas,
-                           std::string&              diag) const {
-    shas.clear();
+bool GuiGitRepo::walk_head(const GuiGitPathFilter&        accept,
+                           std::vector<GuiGitWalkCommit>& commits,
+                           std::string&                   diag) const {
+    commits.clear();
     diag.clear();
     git_revwalk* w_raw = nullptr;
     if (git_revwalk_new(&w_raw, repo_) < 0) {
@@ -585,7 +585,11 @@ bool GuiGitRepo::walk_head(const GuiGitPathFilter&   accept,
         for (const std::vector<std::string>& paths : per_parent) {
             if (paths.empty()) differs_from_every_parent = false;
         }
-        if (differs_from_every_parent) shas.push_back(oid_hex(oid));
+        if (differs_from_every_parent) {
+            commits.push_back(GuiGitWalkCommit{
+                oid_hex(oid),
+                static_cast<std::int64_t>(git_commit_time(commit.get()))});
+        }
     }
     if (rc != GIT_ITEROVER) {
         diag = last_error("the revision walk did not finish");

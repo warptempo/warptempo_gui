@@ -1549,7 +1549,7 @@ void scan_history_walk(
         walk_failed(diag);
         return;
     }
-    std::vector<std::string> candidates;
+    std::vector<GuiGitWalkCommit> candidates;
     if (!repo->walk_head(
             [&base_name](std::string_view p) {
                 return is_piece_sidecar_path(p, base_name);
@@ -1584,16 +1584,21 @@ void scan_history_walk(
     // nothing: one candidate is one diff, one tree listing, three blob reads
     // and three strict loads of tiny files, so a supersede or a quit waits out
     // at most that.
+    //
+    // EACH MEMBER CARRIES ITS COMMIT'S TIME (architect 2026-11-25), the one
+    // the walk read off the commit it had open: the gate's read is by name and
+    // reads no time.
     int hidden = 0;
-    for (const std::string& sha : candidates) {
+    for (const GuiGitWalkCommit& candidate : candidates) {
         if (abandoned()) break;
         GuiHistoryCommitLoad load;
         GuiFailure           why;
-        if (!load_commit_sidecars_strict_in(*repo, repo_root, sha, base_name,
-                                            load, why)) {
+        if (!load_commit_sidecars_strict_in(*repo, repo_root, candidate.sha,
+                                            base_name, load, why)) {
             ++hidden;
             continue;
         }
+        load.sidecars.commit_time = candidate.time;
         on_member(std::move(load.sidecars));
     }
     GuiHistoryScanResult done;
@@ -1747,6 +1752,13 @@ const std::string& GuiHistoryDiff::sha_at(std::size_t index) const {
     const std::deque<GuiHistoryCommitSidecars>& m = members();
     if (index >= m.size()) return kNone;
     return m[index].sha;
+}
+
+std::optional<std::int64_t> GuiHistoryDiff::commit_time_at(
+    std::size_t index) const {
+    const std::deque<GuiHistoryCommitSidecars>& m = members();
+    if (index >= m.size()) return std::nullopt;
+    return m[index].commit_time;
 }
 
 // THE TYPED LINE DIFF OF ONE PAIR OF SIDES (the contract is at the

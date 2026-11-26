@@ -408,11 +408,12 @@ struct GuiPalette {
     GuiColor selected_text;   // the selection's text
     GuiColor field_text;      // an entry's and a list row's text
     GuiColor card_text;       // a standing card's words and glyph; a normal card's are sidebar_text
-    // THE FLAT LOOK'S TWENTY-NINE (materials.h's head owns each rule; their
+    // THE FLAT LOOK'S THIRTY (materials.h's head owns each rule; their
     // numbers the compiled row's, gui_theme.h).
     GuiColor body_face;      // THE BODY TONE, the ground under the title bar (`face` below is this tone)
     GuiColor text;            // every word, digit and drawing the chrome prints
     GuiColor title_text;      // the title bar's text
+    GuiColor timestamp_text;  // the bottom icon row's timestamp (Arc's `.h4`)
     GuiColor sidebar_text;    // the marker labels' ink, the tooltip's and the cards'
     GuiColor text_dim;        // the inert rows, the tooltip's hint line, a disabled marker's label
     GuiColor inactive_cue_label_hover; // a disabled marker's label ink under the hovering pen

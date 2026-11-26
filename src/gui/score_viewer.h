@@ -68,9 +68,10 @@
 //     PAUSED WHILE THE SCRUB IS HELD: a live soundtrack paused at the press
 //     and playing on from where the thumb dropped at the lift — architect
 //     2026-10-26, "it wouldn't start playing until I commit by
-//     dropping the thumb"), THE CLOCK (the render player's two time fields,
-//     verbatim: the elapsed time within the range and the range's length;
-//     UNDER A HELD SCRUB THE ELAPSED FIELD SHOWS THE TIME THE DROP WOULD
+//     dropping the thumb"), THE CLOCK (the render player's time label,
+//     verbatim: "<elapsed> / <length>", the elapsed time within the range
+//     and the range's length in whole seconds, floored, architect
+//     2026-11-25; UNDER A HELD SCRUB THE ELAPSED TIME IS THE TIME THE DROP WOULD
 //     LAND AT, architect 2026-11-10, score_scrub_drop_frame, the cursor
 //     itself untouched until the lift), and RESET, START and END at the
 //     row's left. The keys are the acts' one road (architect 2026-10-30: no
@@ -602,7 +603,7 @@ inline int64_t score_scrub_frame_at(const AppState& a, double x) {
 // NOTHING where the
 // lift seeks nothing — a motionless tap on the thumb. TWO READERS: THE LIFT
 // (finish_score_scrub_release, the carried center) and THE CLOCK'S PAINTER,
-// whose elapsed field shows this frame's time within the range while the
+// whose elapsed time shows this frame's time within the range while the
 // drag stands and the cursor's where this answers nothing. The seek's own
 // end clamp (play_from, score_viewer_seek_landing) stays the seek's. The
 // page road has no clock: its page cell reads the shown page, which the
@@ -715,7 +716,7 @@ struct GuiScoreViewer {
     // and damages the interior and the row, returning whether it changed,
     // nothing written, nothing seeked — the held scrub's on BOTH FACES, under
     // the soundtrack the page holding the frame under the thumb, the cursor
-    // untouched (the clock's elapsed field shows the drop's time off the
+    // untouched (the clock's elapsed time shows the drop's time off the
     // drag itself, score_scrub_drop_frame); write_page_position writes the shown page's
     // begin as the active tab's remembered position, through to the file —
     // the page road's lift alone.

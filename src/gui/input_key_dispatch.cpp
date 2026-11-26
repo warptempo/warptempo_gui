@@ -1245,13 +1245,14 @@ void GuiInputHandler::open_history_mode_fresh() {
     // product (the rule at stop_playback_if_playing) — below init()'s
     // UNAVAILABLE return, so a mode that does not open silences nothing.
     playback_lifecycle.stop_playback_if_playing();
-    // THE ENTRY PUTS OUT TRIM, ADD SEL, FOLLOW AND RESTR (architect
-    // 2026-11-17; GuiInputHandler::darken_zoom_lamps) — an edge of
-    // its own, the entry moving no camera: the view arrives with no sweep
-    // armed and no camera posture lit.
-    // In here TRIM, FOLLOW and RESTR stay dark (their keys off the view's
-    // allowlist); ADD SEL may be lit again for the diff flags (bare `k`).
-    darken_zoom_lamps();
+    // THE ENTRY PUTS OUT TRIM AND ADD SEL (architect 2026-11-25;
+    // GuiInputHandler::darken_sweep_lamps): the view arrives with no sweep
+    // armed. In here TRIM stays dark (its key off the view's allowlist); ADD
+    // SEL may be lit again for the diff flags (bare `k`). FOLLOW AND
+    // RESTRICT ARE LEFT AS THEY STAND: a lit one stays lit through the view
+    // and does nothing there (its chord off the allowlist, its key hidden,
+    // the view having no playback) and acts again on leaving.
+    darken_sweep_lamps();
     fresh.active = true;
     fresh.index  = 0;      // the most recent commit, at every entry
     fresh.focus  = -1;
@@ -2194,7 +2195,7 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
     // CLAIM alone — `c` is the mode's own vocabulary, so it must return true
     // here rather than fall to the allowlist, which does not admit it.
     if (key == GuiKeys::C) {
-        run_center_key_command(/*user_zoom=*/true);
+        run_center_key_command();
         return true;
     }
 
@@ -4473,10 +4474,10 @@ void GuiInputHandler::run_iteration_sweep_render() {
     // avoid leaving an empty folder behind.
     std::filesystem::create_directories(batch_folder, ec);
     if (ec) {
-        // ONE COMPOSER FOR BOTH CLAUSES, shared with the two other batch
-        // folders a render chord can fail to create
-        // (render_folder_creation_failure, renders_dir.h — the basename rule
-        // is its own). The stderr line keeps the WHOLE path under this road's
+        // ONE COMPOSER FOR BOTH CLAUSES, shared with every other batch
+        // folder a render can fail to create
+        // (render_folder_creation_failure, renders_dir.h, whose comment lists
+        // its callers — the basename rule is its own). The stderr line keeps the WHOLE path under this road's
         // tag, which is what a terminal is for; the card names the folder.
         const GuiFailure f = render_folder_creation_failure(
             "render-iterations", batch_folder, ec);
@@ -4734,7 +4735,8 @@ void GuiInputHandler::run_iteration_sweep_render() {
 }
 
 // Render-trigger chords. See the declaration for the chord list.
-void GuiInputHandler::card_trim_fallback_if_any() {
+void GuiInputHandler::card_trim_fallback_if_any(int64_t begin_frame,
+                                                int64_t end_frame) {
     // THE TRIM FALLBACK CARD'S ARCHIVAL HALF (architect 2026-09-02). do_render
     // prints the
     // "…; rendering untrimmed" line from the WORKER thread, which is the
@@ -4758,6 +4760,11 @@ void GuiInputHandler::card_trim_fallback_if_any() {
     // presses at all (last_dispatch_trim_fallback_, target_render.h — the edge
     // scoped to the tab and trim pair that produced the verdict).
     //
+    // THE PAIR JUDGED IS THE REQUEST'S: the two chords pass the live trim,
+    // the trim presets list's Render (architect 2026-11-25) THE PRESET'S
+    // PAIR, its request carrying the live stores and that pair, so the verdict
+    // is exactly the worker's for that cell.
+    //
     // THE TWO SWEEPS ARE NOT CARDED, and the asymmetry is deliberate rather
     // than an omission. A sweep cell rewrites the warp markers per cell, so the
     // map its plan_trim consults is NOT the live one this verdict reads: at
@@ -4769,7 +4776,12 @@ void GuiInputHandler::card_trim_fallback_if_any() {
     // do_render's per-cell stderr line; their output is disposable `tmp/` batch
     // material the architect auditions in the render player, where the length
     // of the cell is the answer.
-    if (target_render.trim_would_fall_back()) {
+    // THE PRESETS' RENDER ALL IS NOT CARDED EITHER (architect 2026-11-25),
+    // for the second half of that reason: its cells keep the live markers, so
+    // each verdict is exact, but one sentence for one of several cells cannot
+    // say which, and a card per cell is N cards for one act. Its cells, too,
+    // are auditioned in the render player, the cell's length the answer.
+    if (target_render.trim_would_fall_back(begin_frame, end_frame)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              kTrimFallbackCard);
     }
@@ -4835,7 +4847,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // The deliverable this press produces may be the WHOLE piece under a
         // hairline trim bar; say so once, here (definition above).
-        card_trim_fallback_if_any();
+        card_trim_fallback_if_any(app.trim.begin_frame, app.trim.end_frame);
 
         if (async_renderer.is_busy()) {
             // A render dispatch kills the running render. Park this command;
@@ -4931,7 +4943,7 @@ bool GuiInputHandler::handle_render_dispatch_keys(GuiKey key,
 
         // The cell this press produces may be the WHOLE piece under a hairline
         // trim bar — the same recipe, so the same answer (definition above).
-        card_trim_fallback_if_any();
+        card_trim_fallback_if_any(app.trim.begin_frame, app.trim.end_frame);
 
         // Same single-dispatch path as Ctrl+Alt+R: kill the running render and
         // park (newest-wins) when busy, else dispatch now.
@@ -6321,11 +6333,11 @@ void GuiInputHandler::build_trim_presets_rows(int highlight) {
 // double tap and Shift+0 (Zoom to Fit's long press) run, called as they
 // call it — run_span_framing_command, a camera act alone (no bound, the
 // playhead and the selection untouched; its applier's chokepoint clears the
-// hold; a level it moves puts out TRIM, ADD SEL, FOLLOW and RESTR, a user
-// zoom's rule, architect 2026-11-17), a proper sub-window framed
+// hold; it puts out no lamp, a zoom putting out none, architect
+// 2026-11-25), a proper sub-window framed
 // with the edge margin, the full window the whole song, idempotent where the
-// camera already rests there. A WRITTEN PAIR PUTS TRIM OUT in any case,
-// through the shared tail (commit_trim_mutation, the same ruling). The
+// camera already rests there. A WRITTEN PAIR PUTS TRIM OUT, through the
+// shared tail (commit_trim_mutation, architect 2026-11-17). The
 // framing and the close run on the no-op arm too: the act is "select this
 // preset", and framing and leaving the list are part of it.
 // THE ORDER: the write and its commit tail, the framing, THEN THE CLOSE. The
@@ -6356,21 +6368,213 @@ void GuiInputHandler::trim_presets_apply(int index) {
     close_picker();
 }
 
-// SAVE AS: the list closes and the name editor opens EMPTY (the
-// declaration's contract), the list and the highlighted name kept for the
-// commit and the return. The editor's modal stop is a no-op, playback stopped
-// at the list's open; it is spelled for the opener's shape
-// (GuiSettingsEditor::open's).
-void GuiInputHandler::trim_presets_save_as() {
-    if (!app.picker.active) return;
+// RENDER AND ITS HOLD, RENDER ALL (architect 2026-11-25: "Add 'render'
+// button to presets page with long press as render all. New render folder
+// category - "01_presets". A new render all always creates a new folder, even
+// if the last folder create was a presets folder"; the declaration's
+// contract). The greyed face's road is silent — the button's press never
+// arms — so this guard is the face's own predicate, stated for a face painted
+// live whose act went dead inside that frame (trim_presets_save's shape).
+//
+// THE REQUEST IS THE MISCELLANEOUS RENDER'S (handle_render_dispatch_keys'
+// Ctrl+Alt+Shift+R arm) BUT FOR THE TRIM: the live stores and engine
+// settings, the authoring snapshot and the shared resources, with THE
+// PRESET'S PAIR in the request and in the snapshot, so the cell's own
+// `.settings` records the trim it was rendered with. NOTHING IS WRITTEN TO
+// THE TRIM STORE — app.trim, the tabs' trims, the undo history, the trim bar
+// and the TRIM lamp stand as they were, and nothing is damaged for a trim.
+// The cell is a first-class batch cell (`<NN>_<name>.wav`, the cell naming
+// below; its sidecar set under the same stem, composed by appending: a name
+// holding a dot is no extension), which the player lists, plays, loads in
+// place and deletes as every cell; a render onto an existing cell of that
+// name overwrites it, do_render's reuse rungs deciding whether the engine
+// runs.
+void GuiInputHandler::trim_presets_render(bool all) {
+    if (!app.picker.active || app.prompt.active) return;
     const AppState::FolderOverlay& ov = app.folder_overlay;
     if (ov.owner != AppState::FolderOverlay::Owner::TrimPresets) return;
+    if (!trim_presets_button_enabled(app,
+                                     AppState::TrimPresetsButtonAct::Render))
+        return;
+    // THE SUBJECTS: the highlighted preset, or every preset in the list's
+    // order (the music's, trim_preset_before). A NAME THAT IS NO FILE NAME
+    // (trim_preset_file_name_refusal; a preset saved before the name editor
+    // refused one) is refused on a card that says to rename it — the plain
+    // press refused whole, the list standing; Render All skips it and runs
+    // the rest, one card naming it or counting several.
+    //
+    // THE CELL'S NAME IS `<NN>_<name>`, THE SWEEPS' INDEX STYLE (architect
+    // 2026-11-25: "other renders have an index precisely to avoid
+    // alphabetical listing ordering - preset render shuld use same index
+    // style"; render_bpm_sweep's and run_iteration_sweep_render's
+    // basenames): the preset's 1-based place in the list, in the list's
+    // order, zero-padded to the digit count of THE WHOLE LIST'S SIZE (capped
+    // at 9 as theirs is), an underscore, the preset's name verbatim. The
+    // number is the preset's place whichever press runs: Render All's cells
+    // stand in the player in the music's order, a preset it skips leaving
+    // its number unused, and the plain Render writes the very name its
+    // preset has in a Render All of the same list — so, joining the newest
+    // presets folder, it overwrites that preset's cell when the list is
+    // unchanged since, and otherwise lands as a cell of its own at its
+    // place. NO OTHER CELL IS RENAMED OR REMOVED: a cell an older list
+    // numbered stays as it was written (the smaller truthful rule; the
+    // listing's tie on a shared number is the basename's order,
+    // GuiRendersDir::enumerate_render_entries).
+    int pad_width = 1;
+    for (int n = static_cast<int>(ov.trim_presets.size()); n >= 10; n /= 10)
+        ++pad_width;
+    if (pad_width > 9) pad_width = 9;
+    struct Subject {
+        int           seq;   // the preset's 1-based place in the list
+        GuiTrimPreset preset;
+    };
+    std::vector<Subject> subjects;
+    if (all) {
+        for (std::size_t i = 0; i < ov.trim_presets.size(); ++i)
+            subjects.push_back({static_cast<int>(i) + 1, ov.trim_presets[i]});
+    } else {
+        subjects.push_back(
+            {ov.highlight_row + 1,
+             ov.trim_presets[static_cast<std::size_t>(ov.highlight_row)]});
+    }
+    std::vector<std::string> unrenderable;
+    std::erase_if(subjects, [&](const Subject& s) {
+        if (!trim_preset_file_name_refusal(s.preset.name)) return false;
+        unrenderable.push_back(s.preset.name);
+        return true;
+    });
+    if (!unrenderable.empty()) {
+        notifications.notify(
+            AppState::NotificationClass::Normal,
+            unrenderable.size() == 1
+                ? "Rename '" + unrenderable.front() + "' to render it"
+                : "Rename " + std::to_string(unrenderable.size()) +
+                      " presets to render them");
+    }
+    if (subjects.empty()) return;
+
+    const auto request_for = [&](const Subject& s, std::string folder) {
+        const GuiTrimPreset& p = s.preset;
+        char num_buf[16];
+        std::snprintf(num_buf, sizeof(num_buf), "%0*d", pad_width, s.seq);
+        std::string basename = num_buf;
+        basename += '_';
+        basename += p.name;
+        RenderRequest req = build_render_request(
+            app.source_audio_path, app.warpmarkers.markers(),
+            app.phaseresetmarkers.markers(), app.engine_settings,
+            p.begin, p.end, std::move(folder), std::move(basename));
+        req.authoring = snapshot_current_authoring_state();
+        req.authoring.trim_begin_frame = p.begin;
+        req.authoring.trim_end_frame   = p.end;
+        attach_shared_render_resources(req);
+        return req;
+    };
+
+    // RENDER ALL: ALWAYS A NEW FOLDER, `<max+1>_presets/`, made at the press
+    // as the sweeps make theirs (a killed render publishes only into a folder
+    // that already stands, so the index cannot be taken under the drain); one
+    // cell per preset through the batch runner, its counted noun "trim
+    // presets" — the label-bearing string is the status slot's ("Rendering 3
+    // of 8 trim presets...", blank while the progress page stands) and the
+    // stderr summary's tag, while the page itself shows
+    // AppState::BatchProgress::sentence() ("Rendering...") and its count
+    // ("3 of 8"); the sweeps' labels at dispatch_next_batch_entry.
+    // A folder the press cannot make cards (the allocator) and the list
+    // stands. Otherwise the list closes BEFORE the progress page opens: the
+    // batch's terminal opens the render player on the folder, and the list
+    // must not stand under it.
+    static constexpr const char* kRenderAllLabel = "trim presets";
+    if (all) {
+        std::string folder;
+        if (!allocate_trim_preset_folder(/*always_new=*/true, folder)) return;
+        std::vector<RenderRequest> reqs;
+        reqs.reserve(subjects.size());
+        for (const Subject& s : subjects)
+            reqs.push_back(request_for(s, folder));
+        close_picker();
+        if (async_renderer.is_busy()) {
+            // A render dispatch kills the running render. Park the fully
+            // built batch for the worker-idle pump.
+            AppState::PendingArchivalCommand cmd;
+            cmd.reqs        = std::move(reqs);
+            cmd.batch_label = kRenderAllLabel;
+            kill_running_render_and_park(std::move(cmd));
+        } else {
+            start_render_batch(std::move(reqs), kRenderAllLabel);
+        }
+        return;
+    }
+
+    // RENDER: ONE CELL, joining the newest folder when it is a presets folder,
+    // else a new one (allocate_trim_preset_folder). THE FOLDER IS LATE-BOUND ON
+    // THE BUSY ROAD, the miscellaneous cell's rule and reason (the killed
+    // render may still publish into `tmp/` while it drains): the parked
+    // command carries the request, its cell's name `<NN>_<name>`, and the pump
+    // chooses the folder once the worker is idle. On the idle road a folder
+    // the press cannot make cards and the list stands. THE TRIM FALLBACK'S
+    // CARD judges THE PRESET'S PAIR (card_trim_fallback_if_any, one per
+    // press). The list closes at the dispatch, the main page back with the
+    // render's process line in the status bar.
+    const Subject& s = subjects.front();
+    const GuiTrimPreset& p = s.preset;
+    if (async_renderer.is_busy()) {
+        RenderRequest req = request_for(s, std::string());
+        card_trim_fallback_if_any(p.begin, p.end);
+        close_picker();
+        AppState::PendingArchivalCommand cmd;
+        cmd.single      = true;
+        cmd.trim_preset = true;   // late-bind the folder at the pump
+        cmd.reqs.push_back(std::move(req));
+        kill_running_render_and_park(std::move(cmd));
+        return;
+    }
+    std::string folder;
+    if (!allocate_trim_preset_folder(/*always_new=*/false, folder)) return;
+    RenderRequest req = request_for(s, std::move(folder));
+    card_trim_fallback_if_any(p.begin, p.end);
+    close_picker();
+    dispatch_single_archival_render(std::move(req));
+}
+
+// SAVE AS: the list closes and the name editor opens EMPTY (the
+// declaration's contract), the list and the highlighted name kept for the
+// commit and the return.
+void GuiInputHandler::trim_presets_save_as() {
+    if (!app.picker.active) return;
+    if (app.folder_overlay.owner != AppState::FolderOverlay::Owner::TrimPresets)
+        return;
+    open_trim_preset_name_editor(/*rename=*/false);
+}
+
+// RENAME (architect 2026-11-25: "need way to rename preset"): Save As's name
+// editor HOLDING THE HIGHLIGHTED PRESET'S NAME (the declaration's contract).
+// The greyed face's road is silent — the button's press never arms — so this
+// guard is the face's own predicate, stated for a face painted live whose act
+// went dead inside that frame (trim_presets_save's shape).
+void GuiInputHandler::trim_presets_rename() {
+    if (!app.picker.active || app.prompt.active) return;
+    if (app.folder_overlay.owner != AppState::FolderOverlay::Owner::TrimPresets)
+        return;
+    if (!trim_presets_button_enabled(app,
+                                     AppState::TrimPresetsButtonAct::Rename))
+        return;
+    open_trim_preset_name_editor(/*rename=*/true);
+}
+
+// THE NAME EDITOR'S OPEN, Save As's and Rename's one body (the declaration's
+// contract). The editor's modal stop is a no-op, playback stopped at the
+// list's open; it is spelled for the opener's shape (GuiSettingsEditor::open's).
+void GuiInputHandler::open_trim_preset_name_editor(bool rename) {
+    const AppState::FolderOverlay& ov = app.folder_overlay;
     const int h = ov.highlight_row;
     trim_name_seat_ =
         h >= 0 && h < static_cast<int>(ov.trim_presets.size())
             ? ov.trim_presets[static_cast<std::size_t>(h)].name
             : std::string();
     trim_name_presets_ = ov.trim_presets;
+    trim_name_rename_  = rename;
+    const std::string held = rename ? trim_name_seat_ : std::string();
     // THE SUB-PAGE'S LIST'S OPENER (AppState::value_page): the trim presets
     // list.
     seat_value_page();
@@ -6380,6 +6584,12 @@ void GuiInputHandler::trim_presets_save_as() {
                        /*target=*/0,
                        /*initial_pending=*/"",
                        text_editor::Kind::TrimPresetName);
+    // RENAME'S PREFILL IS THE PRESET'S NAME and it lands as a settings
+    // value's does (GuiSettingsEditor::open): through the one incoming filter
+    // into the empty entry, the caret at its end, nothing selected. A name
+    // the list holds passed that filter at its read (trim_preset_name_refusal),
+    // so the land is whole.
+    if (rename) (void)text_editor::replace_selection(app.settings_editor, held);
     // A MODAL OPEN damages the whole window (the settings editor's open
     // carries the rule).
     viewport.invalidate_all();
@@ -6393,7 +6603,28 @@ void GuiInputHandler::commit_trim_preset_name() {
         app.settings_editor.kind != text_editor::Kind::TrimPresetName)
         return;
     const std::string name = app.settings_editor.pending;
-    if (const auto why = trim_preset_name_refusal(name, trim_name_presets_)) {
+    // RENAME (architect 2026-11-25): THE SAME NAME BACK IS NO CHANGE — nothing
+    // judged or written, the return seated on the preset's row. Otherwise the
+    // name is judged AGAINST THE OTHER PRESETS (the preset's own current name
+    // is no clash), and the preset keeps its pair.
+    if (trim_name_rename_ && name == trim_name_seat_) {
+        viewport.invalidate_modal_dialog_area();
+        text_editor::deactivate(app.settings_editor);
+        return;
+    }
+    std::vector<GuiTrimPreset> others = trim_name_presets_;
+    if (trim_name_rename_)
+        std::erase_if(others, [&](const GuiTrimPreset& p) {
+            return p.name == trim_name_seat_;
+        });
+    // THE NAME MUST ALSO BE A FILE NAME (architect 2026-11-25: "ok to
+    // restrict chars in preset name"), the preset's render being
+    // `<NN>_<name>.wav`
+    // (trim_preset_file_name_refusal, asked here and not inside the grammar
+    // the reader asks), refused in the grammar's own words and shape.
+    auto why = trim_preset_name_refusal(name, others);
+    if (!why) why = trim_preset_file_name_refusal(name);
+    if (why) {
         text_editor::refuse(app.settings_editor);
         viewport.invalidate_dialog_editor_box();
         const std::string refusal = "Preset name rejected: " + *why;
@@ -6401,13 +6632,21 @@ void GuiInputHandler::commit_trim_preset_name() {
         notifications.notify(AppState::NotificationClass::Normal, refusal);
         return;
     }
-    trim_name_presets_.push_back(
-        GuiTrimPreset{app.trim.begin_frame, app.trim.end_frame, name});
-    // The write road sorts the new preset into the list's order; the return
-    // reads the file and seats it BY NAME wherever it landed. A WRITE THAT
-    // FAILED cards its two clauses (persist_trim_presets) and
-    // the return reads the file as it stands, the new row absent and the
-    // seat the one the name editor was opened over (trim_presets_save_as).
+    if (trim_name_rename_) {
+        for (GuiTrimPreset& p : trim_name_presets_)
+            if (p.name == trim_name_seat_) p.name = name;
+    } else {
+        trim_name_presets_.push_back(
+            GuiTrimPreset{app.trim.begin_frame, app.trim.end_frame, name});
+    }
+    // The write road sorts the new or renamed preset into the list's order
+    // (a rename moves it only among the presets on its own pair, the name
+    // being the order's last key); the return reads the file and seats it
+    // BY NAME wherever it landed — THE HIGHLIGHT FOLLOWS THE PRESET (Save's
+    // rule, confirm_trim_preset_save). A WRITE THAT FAILED cards its two
+    // clauses (persist_trim_presets) and the return reads the file as it
+    // stands, the change absent and the seat the one the name editor was
+    // opened over (open_trim_preset_name_editor).
     if (persist_trim_presets(trim_name_presets_)) trim_name_seat_ = name;
     viewport.invalidate_modal_dialog_area();
     text_editor::deactivate(app.settings_editor);
@@ -6550,11 +6789,15 @@ bool trim_presets_button_enabled(const AppState& a,
         case Act::SaveAs:
         case Act::Close:
             return true;
+        case Act::Render:
+            return seated && !a.iteration_mode_enabled &&
+                   !a.source_audio_path.empty();
         case Act::Save: {
             if (!seated) return true;
             const GuiTrimPreset& p = ov.trim_presets[static_cast<std::size_t>(h)];
             return p.begin != a.trim.begin_frame || p.end != a.trim.end_frame;
         }
+        case Act::Rename:
         case Act::Delete:
             return seated;
         case Act::None:
@@ -6620,7 +6863,7 @@ void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
 // the product's own recall, within its field's cap by the reader's own
 // spelling); row `index` is field `index`. The editor's modal stop is a no-op, playback
 // stopped at the form's open; it is spelled for the opener's shape
-// (trim_presets_save_as's).
+// (open_trim_preset_name_editor's).
 void GuiInputHandler::bpm_form_commit(int index) {
     if (!app.picker.active) return;
     if (app.folder_overlay.owner !=
@@ -7501,8 +7744,8 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // ways by one key, with the bottom icon row's button dispatching this
     // same chord — and THE ONLY ROUTE THAT LIGHTS THE BIT: no selection
     // mutator clears it (architect 2026-09-10); its off roads (an act that
-    // spends the selection, its own sweep's lift, TRIM's lit edge, a user
-    // zoom and the `h` view's entry), the posture and the shift rule are at
+    // spends the selection, its own sweep's lift, TRIM's lit edge and the
+    // `h` view's entry), the posture and the shift rule are at
     // AppState::add_to_selection.
     //
     // IT HAS NO GATE AT ALL (architect 2026-09-19). GRID ITERATIONS IS
@@ -7548,7 +7791,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // in this frame too, through its setter's own damage (set_trim_armed
     // damages TRIM's own face on every edge). The off edge puts nothing
     // out. In the `h` view TRIM stands dark: the view's entry puts it out
-    // (darken_zoom_lamps, architect 2026-11-17) and bare `w` is off
+    // (darken_sweep_lamps, architect 2026-11-25) and bare `w` is off
     // the view's allowlist.
     if (key == GuiKeys::K && !ctrl && !shift && !alt) {
         app.add_to_selection = !app.add_to_selection;
@@ -7876,12 +8119,12 @@ void GuiInputHandler::jump_to_value_source() {
         }
     }
     // THE ONE TAIL, reached by both roads: the five acts in their ruled order.
-    run_center_command(/*user_zoom=*/true);
+    run_center_command();
     active_views.switch_active_tab_view_to(
         app.active_tab_view == 'A' ? 'B' : 'A');
     selection.set_single_selection(destination);
     land_playhead_on_marker(app, audio, viewport, destination);
-    run_center_command(/*user_zoom=*/true);
+    run_center_command();
     // Its closing `c` is an explicit centring, so the jump arms the HOLD
     // posture behind it (AppState::camera_hold).
     app.camera_hold = true;
@@ -7976,28 +8219,36 @@ void GuiInputHandler::render_player_load_in_place() {
     viewport.invalidate_all();
 }
 
-// THE RENDER PLAYER'S DELETE (architect 2026-09-29; the contract is at the
-// declaration). The raise: park the folders, ask the question.
+// THE RENDER PLAYER'S DELETE (architect 2026-09-29; in both lists
+// 2026-11-25; the contract is at the declaration). The raise: park the
+// subject, ask the question.
 void GuiInputHandler::render_player_delete(bool all) {
     if (!app.render_player.active) return;
     if (app.prompt.active) return;
-    // THE ROOT'S ACT ALONE: inside a batch folder the slot is Load in Place
-    // and the key's arm is not reached (route_render_player_key), so this
-    // line only answers a road that cannot come — silent.
-    if (app.render_player.folder != AppState::RenderPlayer::Folder::Root)
-        return;
+    const bool in_folder =
+        app.render_player.folder == AppState::RenderPlayer::Folder::Batch;
     // NOTHING TO DELETE CARDS (the face greys on the same question,
-    // render_player_delete_actionable): an empty `tmp/` — the band on no row —
-    // is the one state that reaches here, the Delete key being live at the
-    // root whatever the listing holds.
+    // render_player_delete_actionable): a face painted live whose act went
+    // dead inside the frame — at the root an empty `tmp/`, the band on no
+    // row.
     if (!render_player_delete_actionable(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             "There is no folder to delete");
+                             in_folder ? "There is no render to delete"
+                                       : "There is no folder to delete");
         return;
     }
-    std::vector<std::filesystem::path> folders;
     const AppState::FolderOverlay& ov = app.folder_overlay;
-    if (all) {
+    // THE SUBJECT, from the listing's own rows: in a folder's render list the
+    // highlighted render, its long press the listed folder itself (architect
+    // 2026-11-25: "Long press on delete in render list would delete the
+    // folder"); in the folder list the highlighted folder, its long press
+    // every folder listed (architect 2026-09-29).
+    std::optional<AppState::RenderEntry> render;
+    std::vector<std::filesystem::path>   folders;
+    if (in_folder) {
+        if (all) folders.push_back(app.render_player.batch_dir);
+        else     render = *render_player.highlighted_entry();
+    } else if (all) {
         for (const AppState::FolderOverlayRow& r : ov.rows)
             if (r.kind == AppState::FolderOverlayRow::Kind::Folder)
                 folders.push_back(r.path);
@@ -8005,45 +8256,62 @@ void GuiInputHandler::render_player_delete(bool all) {
         folders.push_back(
             ov.rows[static_cast<size_t>(ov.highlight_row)].path);
     }
-    // THE QUESTION RISES OVER THE ROOT'S IDLE TRANSPORT, so it pauses
-    // nothing (the load confirmation's opening pause has no twin here):
-    // nothing is loaded at the root — Up unloads the item before it enters
-    // the root (GuiRenderPlayer::up), the player's open binds nothing, and
-    // the root lists folders alone, so no play can start there.
-    app.render_player.pending_delete = folders;
-    // THE QUESTION (a prompt is a question, notifications.h): the one folder is
-    // NAMED — its own name, the path's last component, SINGLE-QUOTED and
-    // spelled raw like the load question's entry id — because the deletion is
-    // permanent, the question is its only safeguard, and the band returns to
-    // the top row after a delete, so "this" would read the same over any
-    // row; the count is the rows the press parked. Delete / Cancel, Cancel
-    // LAST: nothing takes a deletion back, so only the Delete answer's own
-    // press confirms. Through PromptState::present, the one raise
-    // route, so the painted gate holds. A shifted press over a one-folder
-    // root parks that one folder — the highlighted one — and asks the named
-    // question, the shift line being absent there for the same reason.
+    // A modal surface is opening over a possibly live transport: PAUSE it
+    // through the player's own pause (which takes the one stop body through
+    // the player's fork and keeps the resume point) — the load confirmation's
+    // own opening step, for its reason (the recorded exception at
+    // stop_playback_for_modal_open). Inside a folder an item may be bound and
+    // live; at the root nothing is bound (Up unloads on the way there, the
+    // open binds nothing), so the arm passes there.
+    if (app.render_player.transport == AppState::RenderPlayer::Transport::Live)
+        render_player.toggle_pause();
+    app.render_player.pending_delete        = folders;
+    app.render_player.pending_delete_render = render;
+    // THE QUESTION (a prompt is a question, notifications.h): the subject is
+    // NAMED, SINGLE-QUOTED and spelled raw — a render by its entry id in its
+    // one spelling (render_entry_id, as the load question names it), a folder
+    // by its own name, the path's last component — because the deletion is
+    // permanent and the question is its only safeguard; the count is the
+    // rows the press parked. Delete / Cancel, Cancel LAST: nothing takes a
+    // deletion back, so only the Delete answer's own press confirms. Through
+    // PromptState::present, the one raise route, so the painted gate holds. A
+    // shifted press over a one-folder root parks that one folder — the
+    // highlighted one — and asks the named question, the shift line being
+    // absent there for the same reason.
     const std::string question =
-        folders.size() > 1
+        render
+            ? "Delete '" + render_entry_id(*render) + "'?"
+        : folders.size() > 1
             ? "Delete all " + std::to_string(folders.size()) + " folders?"
             : "Delete '" + folders.front().filename().string() + "'?";
     app.prompt.present(question,
                        kPromptDeleteCancel,
-                       DialogTrigger::DELETE_FOLDER_CONFIRM);
+                       DialogTrigger::RENDER_PLAYER_DELETE_CONFIRM);
     viewport.invalidate_all();
 }
 
+// THE QUESTION'S DELETE: the parked subject decides the act — a render to
+// its own delete, folders to the folder delete.
 void GuiInputHandler::confirm_render_player_delete() {
     // Moved out before the act: the act's own listing rebuild and any close
-    // must find the slot empty.
+    // must find the slots empty.
     const std::vector<std::filesystem::path> folders =
         std::move(app.render_player.pending_delete);
     app.render_player.pending_delete.clear();
+    const std::optional<AppState::RenderEntry> render =
+        std::move(app.render_player.pending_delete_render);
+    app.render_player.pending_delete_render.reset();
     if (!app.render_player.active) return;
-    render_player.delete_batch_folders(folders);
+    if (render) render_player.delete_render(*render);
+    else        render_player.delete_batch_folders(folders);
 }
 
+// THE QUESTION'S CANCEL: both parked subjects dropped, whichever was parked;
+// a transport the rise paused stays paused, as under the load question's
+// Cancel.
 void GuiInputHandler::cancel_render_player_delete() {
     app.render_player.pending_delete.clear();
+    app.render_player.pending_delete_render.reset();
 }
 
 // THE LOAD CONFIRMATION'S OK — ONE PROMPT BODY, TWO SUBJECTS (architect
@@ -8236,10 +8504,10 @@ bool GuiInputHandler::handle_tab_switch_keys(GuiKey key, GuiInputState mods) {
         const char home = app.active_tab_view;
         active_views.switch_active_tab_view_to(home == 'A' ? 'B' : 'A');
         cycle_marker_focus(forward, MarkerLandingFrame::Center);
-        run_center_key_command(/*user_zoom=*/true);
+        run_center_key_command();
         active_views.switch_active_tab_view_to(home);
         cycle_marker_focus(forward, MarkerLandingFrame::Center);
-        run_center_key_command(/*user_zoom=*/true);
+        run_center_key_command();
         return true;
     }
 
@@ -8466,21 +8734,22 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
     case GuiKeys::F:
         // Toggle the follow lamp (architect 2026-09-23). The whole body lives
         // in GuiPlaybackLifecycle::toggle_follow, shared with the icon-row
-        // button's synthesized chord and, for its dark edge alone, the four
-        // lamps' darkening a user zoom or the `h` view's entry runs
-        // (darken_zoom_lamps, architect 2026-11-17). History-less,
-        // legal on a locked tab and under the grid-iterations lock; refused in
-        // the `h` view at that mode's allowlist.
+        // button's synthesized chord and, for its lit edge alone, the open's
+        // seat (seat_lit_lamps). History-less, legal on a locked tab and
+        // under the grid-iterations lock; refused in the `h` view at that
+        // mode's allowlist, where a lit lamp stays lit, doing nothing
+        // (architect 2026-11-25).
         playback_lifecycle.toggle_follow();
         break;
     case GuiKeys::R:
         // Toggle the restrict lamp (architect 2026-10-29), Follow's radio
         // partner. The whole body lives in GuiPlaybackLifecycle::
         // toggle_restrict, shared with the icon-row button's synthesized
-        // chord and, for its dark edge alone, darken_zoom_lamps (architect
-        // 2026-11-17). History-less, legal on a locked tab and
+        // chord and, for its lit edge alone, the open's seat
+        // (seat_lit_lamps). History-less, legal on a locked tab and
         // under the grid-iterations lock; refused in the `h` view at that
-        // mode's allowlist. Inside the render player bare `r` is Repeat One,
+        // mode's allowlist, where a lit lamp stays lit, doing nothing
+        // (architect 2026-11-25). Inside the render player bare `r` is Repeat One,
         // taken by the player's router before this dispatch is reached.
         playback_lifecycle.toggle_restrict();
         break;
@@ -8489,7 +8758,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // GuiInputHandler::set_trim_armed, shared with the top icon row's
         // TRIM key's synthesized chord and the off edges its
         // declaration lists (the sweep's commit, ADD SEL's lit edge, every
-        // other trim write, a user zoom and the `h` view's entry); its own
+        // other trim write and the `h` view's entry); its own
         // lit edge puts ADD SEL out (the radio, 2026-11-10).
         // History-less, legal on a locked tab and under the grid-iterations
         // lock (trim is band); refused in the `h` view at that mode's
@@ -8551,7 +8820,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // (run_center_key_command; AppState::camera_hold). This arm is
         // unreachable while the mode stands — handle_history_mode_key claims
         // `c` above this dispatch — so the owner's fork decides nothing for it.
-        run_center_key_command(/*user_zoom=*/true);
+        run_center_key_command();
         break;
     case GuiKeys::Home:
         // The trim-begin jump. The body is shared with End and with the two
@@ -8666,8 +8935,8 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // and the KIND, read before the route (a close resets it), forks the route
 // and the return: no completion (Tab greyed, tab_key_live), the name's
 // commit (commit_trim_preset_name), and on the close THE TRIM PRESETS LIST
-// REOPENS (open_trim_presets) seated on the name the commit or Save As
-// left (trim_name_seat_), the settings page's return one content over; a refused
+// REOPENS (open_trim_presets) seated on the name the commit or the name
+// editor's open left (trim_name_seat_), the settings page's return one content over; a refused
 // name leaves the editor standing and reopens nothing.
 // THE BPM FORM'S LINE EDITOR RIDES IT THE SAME WAY (architect 2026-10-29):
 // Kind::BpmField, read before the route like the name's, forks the route

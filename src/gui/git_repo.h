@@ -51,6 +51,7 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <functional>
 #include <string>
@@ -136,6 +137,15 @@ inline bool gui_git_is_ssh_url(std::string_view url) {
 // slashes, no leading slash). The history module's one sidecar predicate
 // (is_piece_sidecar_path) is the only one ever handed in.
 using GuiGitPathFilter = std::function<bool(std::string_view repo_path)>;
+
+// ONE COMMIT THE WALK KEPT (GuiGitRepo::walk_head): its full 40-hex name and
+// its COMMITTER TIME as git records it, seconds since the Unix epoch in UTC
+// (libgit2's git_commit_time; the offset the commit carries is not read — the
+// one reader shows the device's local time, architect 2026-11-25).
+struct GuiGitWalkCommit {
+    std::string  sha;
+    std::int64_t time = 0;
+};
 
 // WHAT THE WORKING TREE SAYS ABOUT A SET OF PATHS against the checked-out
 // commit and the index — the checkpoint act's pre-flight answer.
@@ -230,9 +240,13 @@ public:
     // walked (the history is linear by construction — nothing this product
     // does creates a merge — and this is the reader's defence should one
     // arrive). No rename detection. False with `diag` when the walk cannot be
-    // read; an empty list is an answer.
+    // read; an empty list is an answer. Each commit comes back with ITS
+    // COMMITTER TIME (GuiGitWalkCommit), read off the commit the walk already
+    // has open to diff (architect 2026-11-25: the history view's walk line
+    // shows it).
     bool walk_head(const GuiGitPathFilter& accept,
-                   std::vector<std::string>& shas, std::string& diag) const;
+                   std::vector<GuiGitWalkCommit>& commits,
+                   std::string& diag) const;
 
     // THE PATHS THIS ONE COMMIT CHANGED that `accept` takes — against its
     // parent, the empty tree for a root commit, and for a merge the paths that

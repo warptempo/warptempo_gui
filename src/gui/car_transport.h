@@ -189,9 +189,10 @@ struct GuiInputHandler;
 //     sound is the play button's, pressed when he is done stepping.
 // THE RENDER PLAYER'S OWN Previous / Next answer with the player standing
 // (GuiRenderPlayer::car_previous / car_next, main.cpp's hook forking ahead
-// of this cluster): a walk of its folder at rest, and a skip over a sounding
-// item changes what sounds — its own vocabulary, a playlist's, and no
-// seek or history of this cluster's reaches it.
+// of this cluster): while its item sounds a seek of kCarSeekSeconds in that
+// item (architect 2026-11-25: the one number, GuiRenderPlayer::car_seek),
+// and at rest a walk of its folder — a playlist's vocabulary, no history step
+// and no seek of this cluster's reaching it.
 
 // THE TITLE'S ONE COMPOSER: WHERE THE SESSION STANDS, SPELLED AS A BATCH
 // CELL'S BASENAME IS (architect 2026-09-17, replacing the three-number line of
@@ -334,6 +335,9 @@ struct GuiCarTransport {
     // (architect 2026-11-19: "go back 3 seconds and forward 3
     // seconds"): turned into frames at the source rate, the rate the render
     // body consumes the bound buffer at in either view (derive's ONE DIVISOR).
+    // THE RENDER PLAYER'S CAR SEEK READS IT TOO (architect 2026-11-25: 3 s
+    // for the main page's playback and the player's alike;
+    // GuiRenderPlayer::car_seek), so the car has one seek length.
     static constexpr int64_t kCarSeekSeconds = 3;
 
 private:

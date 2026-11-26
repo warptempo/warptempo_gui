@@ -11,5 +11,5 @@ noise_attenuation_level=-12
 noise_crossfade_s=4
 lit_lamps=
 osk_key_w=24
-osk_key_h=35
+osk_key_h=36
 osk_font_px=12

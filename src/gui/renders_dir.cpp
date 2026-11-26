@@ -84,6 +84,22 @@ BatchFolderRemoval remove_batch_folder(const std::filesystem::path& batch_root,
     return ec ? BatchFolderRemoval::Failed : BatchFolderRemoval::Removed;
 }
 
+// THE BATCH CELL'S FILE SET (the contract and its two readers are at the
+// declaration).
+std::vector<std::filesystem::path> batch_cell_file_set(
+        const std::filesystem::path& folder, const std::string& basename) {
+    const std::filesystem::path wav =
+        compose_render_output_path(folder, basename);
+    return {
+        wav,
+        std::filesystem::path(render_staging_path(wav.string())),
+        std::filesystem::path(fingerprint_sidecar_path(wav.string())),
+        sidecar_path(folder, basename, kSidecarWarp),
+        sidecar_path(folder, basename, kSidecarPhaseReset),
+        sidecar_path(folder, basename, kSidecarSettings),
+    };
+}
+
 // EVERY DIRECTORY DIRECTLY UNDER THE BATCH ROOT (the contract is at the
 // declaration).
 std::vector<std::filesystem::path> list_batch_folders(
@@ -176,9 +192,19 @@ GuiRendersDir::enumerate_render_entries() {
             if (end != stem.size() && stem[end] != '_') return;
             wavs.push_back({v, fe.path(), stem});
         });
+        // EVERY FOLDER'S CELLS IN THEIR LEADING NUMBER'S ORDER, the number
+        // read up to the first underscore and nothing of the descriptor
+        // after it (a trim preset's name may itself begin with digits,
+        // `03_2nd theme`). A TIE — a trim presets folder a later Render
+        // joined after the list changed, two cells sharing a place
+        // (trim_presets_render's cell naming; architect 2026-11-25) — is
+        // the basename's byte order, so the listing is the same at every
+        // walk; a folder whose numbers are distinct is in its numbers'
+        // order alone.
         std::sort(wavs.begin(), wavs.end(),
                   [](const WavSlot& a, const WavSlot& b) {
-                      return a.idx < b.idx;
+                      if (a.idx != b.idx) return a.idx < b.idx;
+                      return a.basename < b.basename;
                   });
         for (auto& w : wavs) {
             AppState::RenderEntry e;

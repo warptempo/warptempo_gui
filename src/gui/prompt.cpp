@@ -22,7 +22,7 @@ void GuiPrompt::proceed(DialogTrigger t) {
     case DialogTrigger::PASTE_CONFIRM:
     case DialogTrigger::LOAD_IN_PLACE_CONFIRM:
     case DialogTrigger::PULL_CONFIRM:
-    case DialogTrigger::DELETE_FOLDER_CONFIRM:
+    case DialogTrigger::RENDER_PLAYER_DELETE_CONFIRM:
     case DialogTrigger::SCORE_RESET_CONFIRM:
     case DialogTrigger::TRIM_PRESET_DELETE_CONFIRM:
     case DialogTrigger::TRIM_PRESET_SAVE_CONFIRM:
@@ -154,11 +154,13 @@ void GuiPrompt::activate_response(char k) {
         return;
     }
 
-    if (trigger == DialogTrigger::DELETE_FOLDER_CONFIRM) {
-        // THE RENDER PLAYER'S DELETE (architect 2026-09-29): `d` Delete runs
-        // the parked folders' removal through the input handler, Escape drops
-        // them. The prompt closes first either way, so the act runs with the
-        // player standing on the ordinary modal state.
+    if (trigger == DialogTrigger::RENDER_PLAYER_DELETE_CONFIRM) {
+        // THE RENDER PLAYER'S DELETE (architect 2026-09-29; one render's
+        // delete 2026-11-25): `d` Delete runs the parked subject's removal
+        // through the input handler — a render's or the folders', the parked
+        // subject deciding — and Escape drops both. The prompt closes first
+        // either way, so the act runs with the player standing on the
+        // ordinary modal state.
         if (k == 'd') {
             app.prompt.active = false;
             viewport.invalidate_all();

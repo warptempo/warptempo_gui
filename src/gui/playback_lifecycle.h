@@ -304,7 +304,8 @@ struct GuiPlaybackLifecycle {
     // the flag editor's one open chokepoint, and enter_iter_bound_edit, the
     // iteration bound editor's; architect 2026-11-20); in
     // input_key_dispatch.cpp THE TRIM PRESETS LIST (open_trim_presets), and
-    // its Save As name editor (trim_presets_save_as) and the BPM form's line
+    // its name editor under Save As and Rename
+    // (open_trim_preset_name_editor) and the BPM form's line
     // editor (bpm_form_commit), each of those two a dialog editor opened
     // over a closed picker; THE
     // PROGRESS MODAL's open (GuiInputHandler::open_batch_progress,
@@ -336,14 +337,13 @@ struct GuiPlaybackLifecycle {
     // stops through
     // stop_playback_if_playing directly, which is mechanically this same stop;
     // and the render player's two prompts — its LOAD_IN_PLACE_CONFIRM
-    // (GuiInputHandler::render_player_load_in_place) PAUSES the player's own
-    // transport through GuiRenderPlayer::toggle_pause, which takes that same
-    // body through the player's fork — a stop that must keep the resume point
-    // the ordinary modal stop would not — and its DELETE question
-    // (render_player_delete, input_key_dispatch.cpp) rises at the root, where
-    // no item is bound and nothing sounds — so the RULE holds for every modal
-    // surface even though this function's caller set is not literally every
-    // opener.
+    // (GuiInputHandler::render_player_load_in_place) and its DELETE question
+    // (render_player_delete, input_key_dispatch.cpp) — each PAUSE the
+    // player's own transport through GuiRenderPlayer::toggle_pause, which
+    // takes that same body through the player's fork — a stop that must keep
+    // the resume point the ordinary modal stop would not — so the RULE holds
+    // for every modal surface even though this function's caller set is not
+    // literally every opener.
     // Authoring or answering a dialog over a live audition is the wrong default,
     // and Space is inside each of those surfaces' blocked sets, so playback
     // cannot restart until the surface closes.
@@ -562,10 +562,10 @@ struct GuiPlaybackLifecycle {
     // center is placed on it, one off screen to the left paged in); the dark
     // edge writes nothing else, the camera staying where the scroll left it. The face repaints through the per-tick comparator,
     // so this mutator owes no damage. Refused in the `h` view by the
-    // dispatch (bare `f` is off that mode's allowlist), never here. ITS DARK
-    // EDGE IS ALSO GuiInputHandler::darken_zoom_lamps' road (architect
-    // 2026-11-17: a user zoom and the `h` view's entry put the lamp
-    // out), which calls it on a lit lamp alone and damages the face itself.
+    // dispatch (bare `f` is off that mode's allowlist), never here; the view
+    // neither puts the lamp out nor runs a play it governs (architect
+    // 2026-11-25; the view has no playback), so a lit lamp stands through it
+    // and acts again on leaving.
     // THE RADIO (architect 2026-10-29): the lit edge also puts RESTRICT out
     // (AppState::restrict = false); the dark edge leaves it alone.
     void toggle_follow();
@@ -580,9 +580,8 @@ struct GuiPlaybackLifecycle {
     // play stays in the window, and the stop is the tick's alone. The face
     // repaints through the per-tick comparator, so this mutator owes no
     // damage. Refused in the `h` view by the dispatch (bare `r` is off that
-    // mode's allowlist), never here. ITS DARK EDGE IS ALSO
-    // GuiInputHandler::darken_zoom_lamps' road (architect 2026-11-17),
-    // toggle_follow's shape.
+    // mode's allowlist), never here; a lit lamp stands through the view,
+    // toggle_follow's rule (architect 2026-11-25).
     void toggle_restrict();
 
 private:

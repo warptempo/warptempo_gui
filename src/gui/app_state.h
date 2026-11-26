@@ -1903,8 +1903,8 @@ enum class RedesignButton {
     // from the device key `lit_lamps` at every open and stored at every
     // edge, GuiInputHandler::seat_lit_lamps and main.cpp's refresh_lit_lamps): lit, every project play
     // is followed by the follow scroll (Viewport::follow_scanner); it stays lit across plays and
-    // stops until `f`, RESTR's lit edge, a user zoom or the `h` view's entry
-    // puts it out (AppState::follow). It wears a lamp, reading the live bit its
+    // stops until `f` or RESTR's lit edge puts it out (AppState::follow;
+    // no zoom and no `h` view's entry, architect 2026-11-25). It wears a lamp, reading the live bit its
     // own chord flips. It GREYS IN THE `h` VIEW, whose allowlist does not name
     // `f`, through the derived partition; it does NOT grey on a locked tab or
     // under the grid-iterations lock, bare `f` being navigation.
@@ -1932,8 +1932,9 @@ enum class RedesignButton {
     // the waveform crossing the pan's slop with no ctrl is THE TRIM SWEEP from
     // its down point instead of the pan; only a second press, a committed
     // sweep, ADD SEL's lit edge (the radio, 2026-11-10), any other trim
-    // write, a user zoom or the `h` view's entry (architect 2026-11-17)
-    // puts it out; dark at every project open, lit across a tab switch.
+    // write (architect 2026-11-17) or the `h` view's entry (architect
+    // 2026-11-25) puts it out; dark at every project open, lit across a tab
+    // switch and a zoom.
     // TRIM IS BAND (input_trim.cpp's head), so it stays LIVE on a locked tab
     // and under the grid-iterations lock (bare `w` on the read-only
     // allowlist, which the iteration gate inherits), greying with no piece
@@ -2616,10 +2617,10 @@ enum class RedesignButton {
     // membership, land the playhead on the focus the toggle leaves, keep the
     // rest of the selection — and the mode stands until bare `k` or this
     // button puts it out, an act SPENDS the selection it built, its own
-    // sweep commits, TRIM lights, a user zoom moves the level or the `h`
-    // view opens (architect 2026-09-10 for the posture, 2026-09-12 for the
-    // acts, 2026-11-10 for the sweep and the radio, 2026-11-17 for the zoom
-    // and the view's entry; the six off edges at
+    // sweep commits, TRIM lights or the `h` view opens (architect
+    // 2026-09-10 for the posture, 2026-09-12 for the acts, 2026-11-10 for
+    // the sweep and the radio, 2026-11-25 for the view's entry, a zoom
+    // putting it out no more than a pan; the five off edges at
     // AppState::add_to_selection; a selection MUTATOR, being no act, never
     // puts it out).
     // THE FOLD STOPS AT THAT BOX (architect 2026-09-19): a plain press on a
@@ -3317,13 +3318,17 @@ enum class DialogTrigger {
     // with no question). OK completes the close as a reopen of the project
     // already open; Cancel leaves the session standing.
     REVERT_CONFIRM,
-    // THE RENDER PLAYER'S DELETE (architect 2026-09-29): "Delete '<folder
-    // name>'?" or "Delete all N folders?", Delete / Cancel, raised by the
-    // root listing's Delete button (its long press for all), the folders
-    // parked at AppState::RenderPlayer::pending_delete. The act destroys
-    // files and nothing takes it back, so only the Delete answer's own press
-    // confirms.
-    DELETE_FOLDER_CONFIRM,
+    // THE RENDER PLAYER'S DELETE (architect 2026-09-29; one render's delete
+    // architect 2026-11-25): ONE PROMPT BODY, the parked subject deciding the
+    // act. In the folder list "Delete '<folder name>'?" or "Delete all N
+    // folders?", raised by the Delete key (its long press for all), the
+    // folders parked at AppState::RenderPlayer::pending_delete; in a folder's
+    // render list "Delete '<entry id>'?", raised by the Delete key on the
+    // highlighted render, parked at pending_delete_render, and "Delete
+    // '<folder name>'?" by its long press, the listed folder parked at
+    // pending_delete. Delete / Cancel. The act destroys files and nothing
+    // takes it back, so only the Delete answer's own press confirms.
+    RENDER_PLAYER_DELETE_CONFIRM,
     // THE SCORE VIEWER'S RESET (architect 2026-10-26: "a modal
     // confirmation because there's no undo"): "Reset the page range to every
     // page?", OK / Cancel, raised over the standing viewer by its RESET key
@@ -4468,16 +4473,15 @@ struct AppState {
     //     every edge, the program's own included (refresh_lit_lamps).
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_follow, the chokepoint bare
     //     `f`, its icon-row button and the open's seat share — and RESTRICT's
-    //     lit edge (toggle_restrict), which puts it out. A USER ZOOM AND THE `h` VIEW'S
-    //     ENTRY PUT IT OUT TOO (architect 2026-11-17: "Trim, add
-    //     selection, follow and restrict should be turned off when a zoom
-    //     action takes place"; he lights it again after zooming), through
-    //     toggle_follow's dark edge (GuiInputHandler::darken_zoom_lamps, its
-    //     roads and the "real level change" test at its declaration). Nothing
-    //     else lights or darkens it: no stop, no launch, no pan, no tab
-    //     switch, no placement click, no load in place, no overlay, no
-    //     programmatic landing. Refused in the `h` view (off that mode's
-    //     allowlist); admitted under both locks (navigation).
+    //     lit edge (toggle_restrict), which puts it out. Nothing else lights
+    //     or darkens it (architect 2026-11-25: "history should not toggle off
+    //     follow/restrict"; "keep all of the lit during zoom"): no zoom, no
+    //     stop, no launch, no pan, no tab switch, no placement click, no load
+    //     in place, no overlay, no programmatic landing, no entry to or exit
+    //     from the `h` view. Refused in the `h` view (off that mode's
+    //     allowlist, its key hidden there, history_mode_hides_button), where a
+    //     lit lamp stays lit and does nothing, the view having no playback,
+    //     and acts again on leaving; admitted under both locks (navigation).
     //   * A RADIO WITH RESTRICT (architect 2026-10-29): lighting either lamp
     //     puts the other out, so one camera posture stands at a time — with
     //     both lit the scroll would carry the window along before RESTRICT's
@@ -4510,10 +4514,11 @@ struct AppState {
     //   * ONE WRITER: GuiPlaybackLifecycle::toggle_restrict, the chokepoint
     //     bare `r`, its icon-row button and the open's seat share — and FOLLOW's lit edge
     //     (toggle_follow), which puts it out: THE RADIO, stated at follow
-    //     above. A user zoom and the `h` view's entry put it out through its
-    //     dark edge, FOLLOW's rule (architect 2026-11-17;
-    //     GuiInputHandler::darken_zoom_lamps). Refused in the `h` view (off
-    //     that mode's allowlist); admitted under both locks (navigation).
+    //     above. Nothing else darkens it, FOLLOW's rule (architect
+    //     2026-11-25: no zoom, no entry to the `h` view). Refused in the `h`
+    //     view (off that mode's allowlist, its key hidden there), a lit lamp
+    //     staying lit through it, FOLLOW's rule; admitted under both locks
+    //     (navigation).
     bool    restrict               = false;
 
     // THE TRIM ARM — THE `w` LAMP (architect 2026-11-07, the TRIM key). A
@@ -4527,20 +4532,17 @@ struct AppState {
     // (GuiInputHandler::touch_sweep_armed, the platform's sweep-armed query;
     // begin_touch_region). "IF I TURN IT ON, IT'S DELIBERATE AND FOR A SWEEP"
     // — ONLY A SECOND PRESS OF THE LAMP, A COMMITTED SWEEP (one that moved,
-    // commit_region_sweep), ADD SEL LIGHTING, ANY OTHER TRIM WRITE, A USER
-    // ZOOM OR THE `h` VIEW'S ENTRY PUTS IT OUT: a tap on the waveform (the
-    // ordinary tap), a pan, a tab switch, an overlay or a modal opening all
-    // leave it lit. A TRIM WRITE BY OTHER MEANS ENDS THE POSTURE as the
+    // commit_region_sweep), ADD SEL LIGHTING, ANY OTHER TRIM WRITE OR THE `h`
+    // VIEW'S ENTRY PUTS IT OUT: a tap on the waveform (the ordinary tap), a
+    // pan, a zoom (architect 2026-11-25: "keep all of the lit during zoom,
+    // incl trim and add sel"), a tab switch, an overlay or a modal opening
+    // all leave it lit. A TRIM WRITE BY OTHER MEANS ENDS THE POSTURE as the
     // sweep does (architect 2026-11-17: the endcap and bridge drag's
     // release, the bound-set click, a trim preset's apply — the shared
     // tail, commit_trim_mutation — and the
-    // reset's write, handle_trim_clear_both); A USER ZOOM THAT MOVES THE
-    // LEVEL (the zoom keys, the pinch, the barrel-held zoom, FIT and its
-    // recall, the span framings, `c` and the acts that run it) AND THE `h`
-    // VIEW'S ENTRY put out all four of TRIM, ADD SEL, FOLLOW and RESTR (the
-    // same ruling: "Trim, add selection, follow and restrict should be
-    // turned off when a zoom action takes place";
-    // GuiInputHandler::darken_zoom_lamps); AND ADD SEL'S LIT EDGE PUTS IT
+    // reset's write, handle_trim_clear_both); THE `h` VIEW'S ENTRY puts out
+    // TRIM and ADD SEL (architect 2026-11-25;
+    // GuiInputHandler::darken_sweep_lamps); AND ADD SEL'S LIT EDGE PUTS IT
     // OUT, THE RADIO (architect 2026-11-10, "1 radio": that lamp arms
     // the next waveform drag too, as THE ADD SEL SWEEP; its lit edge, bare
     // `k`'s arm, calls the writer below, and this lamp's lit edge puts ADD
@@ -4553,18 +4555,17 @@ struct AppState {
     //   * ONE WRITER: GuiInputHandler::set_trim_armed — bare `w`'s arm (the
     //     key's lift reaching it by synthesizing that press), the sweep's
     //     commit, ADD SEL's lit edge (the radio), the other trim writes and
-    //     darken_zoom_lamps (its callers listed at its declaration).
+    //     darken_sweep_lamps (the `h` view's entry).
     bool    trim_armed             = false;
 
     // FOLLOW SUSPENDED FOR THE PLAY IN FLIGHT — the pan rule (architect
     // 2026-07-30: "every pan suppresses"): a camera change during a play means the user has taken the
     // viewport away to look elsewhere, so the follow scroll stops snatching
-    // it back until that play ends. The lamp stays lit — but a USER ZOOM
-    // that moves the level puts the lamp itself out (architect 2026-11-17;
-    // GuiInputHandler::darken_zoom_lamps), so for those roads the
-    // suspension is moot and it is the pans, the tab and view switches, the
-    // programmatic landings and a moving resize it still serves. Meaningful
-    // only while a project play runs; its value at rest is never read.
+    // it back until that play ends. The lamp stays lit (a zoom puts out no
+    // lamp, architect 2026-11-25), so the suspension serves the pans, the
+    // zooms, the tab and view switches, the programmatic landings and a
+    // moving resize alike. Meaningful only while a project play runs; its
+    // value at rest is never read.
     //   * SET by every CHANGED CAMERA at the chokepoint above
     //     (clamp_viewport_start) — the touch pan, the pointer zooms, the zoom
     //     step,
@@ -5002,17 +5003,17 @@ struct AppState {
     // selection_consumed's inventory below).
     //
     // IT STAYS LIT UNTIL AN ACT SPENDS THE SELECTION, ITS OWN SWEEP IS DONE,
-    // TRIM LIGHTS, A USER ZOOM MOVES THE LEVEL, THE `h` VIEW OPENS, OR `k`
-    // PUTS IT OUT (architect 2026-09-10 for the posture, 2026-09-12 for the
-    // acts, 2026-11-10 for the sweep and the radio, 2026-11-17 for the zoom
-    // and the view's entry). It is
+    // TRIM LIGHTS, THE `h` VIEW OPENS, OR `k` PUTS IT OUT (architect
+    // 2026-09-10 for the posture, 2026-09-12 for the acts, 2026-11-10 for the
+    // sweep and the radio, 2026-11-25 for the view's entry). It is
     // a TOOL POSTURE, not a per-selection posture: it says what the POINTER
     // does to a flag and to the next waveform drag, so nothing about the
     // selection's own CONTENT can end it. A Tab walk, a tab switch, a
-    // waveform click, an undo restore and a LOAD IN PLACE all
-    // leave it lit, and the plain flag press keeps taking the ctrl branch
+    // waveform click, a zoom (architect 2026-11-25: "keep all of the lit
+    // during zoom, incl trim and add sel"), an undo restore and a LOAD IN
+    // PLACE all leave it lit, and the plain flag press keeps taking the ctrl branch
     // until an act consumes what was built (a marker drop among those acts,
-    // 2026-11-11, selection_consumed's inventory). ITS OFF EDGES ARE SIX: the
+    // 2026-11-11, selection_consumed's inventory). ITS OFF EDGES ARE FIVE: the
     // toggle; selection_consumed (the acts that spend a selection, below);
     // THE SWEEP'S COMMIT — a sweep that moved past the slop is the act the
     // lamp armed and spends it, TRIM's one-shot rule (commit_region_sweep;
@@ -5022,13 +5023,10 @@ struct AppState {
     // (architect 2026-11-10, "1 radio": GuiInputHandler::set_trim_armed puts
     // this out, and this bit's lit edge, bare `k`'s arm, puts TRIM out —
     // FOLLOW / RESTRICT's shape, each lamp arming the next waveform drag);
-    // and A USER ZOOM THAT MOVES THE LEVEL and THE `h` VIEW'S ENTRY
-    // (architect 2026-11-17: "Trim, add selection, follow and
-    // restrict should be turned off when a zoom action takes place";
-    // GuiInputHandler::darken_zoom_lamps, which damages the bottom icon
-    // row's face as bare `k` does). A pan leaves it lit, and inside the `h`
-    // view bare `k`
-    // may light it again for the diff flags.
+    // and THE `h` VIEW'S ENTRY (architect 2026-11-25;
+    // GuiInputHandler::darken_sweep_lamps, which damages the bottom icon
+    // row's face as bare `k` does). A pan or a zoom leaves it lit, and
+    // inside the `h` view bare `k` may light it again for the diff flags.
     // That is bare `f`'s posture but for the open
     // (AppState::follow): the session lamps are one family, in no settings
     // vocabulary, never serialized, and per-project state for as long as the
@@ -5039,9 +5037,8 @@ struct AppState {
     // toggles alone, each lit edge putting the other out (the radio,
     // 2026-10-29); this bit has COMPANION WRITES besides: the act class
     // below (selection_consumed), a USE CASE ending, the radio partner's
-    // lit edge (TRIM's), its own sweep's commit, a user zoom and the `h`
-    // view's entry (the last two FOLLOW's and RESTRICT's off edges too,
-    // through their toggles). (Bare `[`'s VALUE DRAG LAMP is of the family
+    // lit edge (TRIM's), its own sweep's commit and the `h` view's entry
+    // (TRIM's off edge too; FOLLOW and RESTRICT stand through it). (Bare `[`'s VALUE DRAG LAMP is of the family
     // too, 2026-10-11, its off edge the drag it armed — value_drag_lamp,
     // below.)
     //
@@ -5790,11 +5787,12 @@ struct AppState {
     // stash is already read.
     // THE THIRD OWNER IS THE RENDER PLAYER (2026-08-28): its transport row —
     // the Repeat one lamp, the highlight pair (Highlight Next / Previous,
-    // architect 2026-10-10), the Up a Folder button and Load in place at the
+    // architect 2026-10-10), the Up a Folder button, Load in place and Delete
+    // (architect 2026-11-25) at the
     // row's left, the play-scrub, the clock and, flush right, the two
     // skips around Play-Pause (Home / Play-Pause / End, the main page's own
     // triple, 2026-09-01) — the transport to the right and everything
-    // else to the left (architect 2026-11-10); eight buttons and no Close
+    // else to the left (architect 2026-11-10); nine buttons and no Close
     // (architect 2026-11-11: the lit PLAYER key is the way out) — is
     // the bottom icon row's modal while the player stands, with its own session id
     // from the one modal counter (AppState::RenderPlayer::session). A prompt
@@ -5835,13 +5833,18 @@ struct AppState {
     enum class ModalDialogOwner {
         None, Prompt, Editor, Player, Picker, Progress, Score
     };
-    // THE PLAYER'S EIGHT BUTTONS, a dispatch vocabulary of its own beside a
+    // THE PLAYER'S NINE BUTTONS (six keys in the left cluster, the
+    // transport's three), a dispatch vocabulary of its own beside a
     // prompt's response key (the overlays' rows have four, one a row): what a
     // player button DOES at its lift (dispatch_modal_dialog_button reads it
     // under the Player owner and every other vocabulary is zero / None
     // there). REPEAT ONE joined (architect 2026-08-28) — the row's one
     // LAMP, the only member here whose face carries a state. The order below
-    // is the ROW's.
+    // is NOT the row's: the painted row (the plan builder's player branch,
+    // paint_handler.cpp) is the six left-cluster keys Repeat One, Highlight
+    // Next, Highlight Previous, Up a Folder, Load in Place and Delete, then
+    // the scrub and the time label, then the transport's three, Home,
+    // Play / Pause and Next Track, flush right.
     //
     // NO STOP (architect 2026-09-01): the modal row is THE MAIN PAGE'S OWN
     // TRANSPORT TRIPLE — Home · Play/Pause · End, the same three keys as the
@@ -5891,12 +5894,18 @@ struct AppState {
     // (render_player_up_actionable, the wall's one owner, read by the act and
     // by the face alike).
     //
-    // DELETE TAKES LOAD IN PLACE'S SLOT AT THE ROOT (architect 2026-09-29):
-    // at `tmp/`'s own listing — batch folders, where a load has nothing to
-    // name — the row's fifth button is Delete (edit-delete, the key Delete),
-    // which deletes the highlighted batch folder behind a question, and its
-    // shift press every batch folder the listing shows; inside a batch folder
-    // the slot is Load in Place, unchanged. The acts are
+    // LOAD IN PLACE AND DELETE BOTH STAND IN BOTH LISTS (architect
+    // 2026-11-25: "delete and load in place could both exist in render list
+    // and folder list"), the left cluster's last two keys in that order,
+    // the destructive act last. LOAD IN PLACE loads the highlighted render
+    // and greys in the folder list, where a highlighted folder names no
+    // recipe (render_player_highlighted_entry). DELETE (edit-delete) asks
+    // first and acts on its list: in the folder list the highlighted batch
+    // folder, its long press every batch folder listed (architect
+    // 2026-09-29); in a folder's render list the highlighted render — its wav
+    // and its whole sidecar set, the last render taking the emptied folder
+    // with it — and its long press the whole folder ("Long press on delete in
+    // render list would delete the folder"). The acts are
     // GuiInputHandler::render_player_delete and its confirmation.
     //
     // THE ROW CARRIES NO CLOSE (architect 2026-11-11: "places
@@ -5942,22 +5951,34 @@ struct AppState {
     // HIGHLIGHT PAIR — the player's two keys, DOWN then UP, their glyphs and
     // words the player's (render_player_button_icon,
     // render_player_button_hint) and their act the highlight walk alone, no apply
-    // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE. THE WORDS
-    // ARE WINDOWS' DIALOG
+    // — then SIX WORD BUTTONS, SAVE, SAVE AS, RENAME, DELETE, RENDER and
+    // CLOSE. RENDER, THE WORD JUST BEFORE CLOSE (architect 2026-11-25: "Add
+    // 'render' button to presets page with long press as render all"; its
+    // seat his "just before close"), renders THE HIGHLIGHTED PRESET into a `tmp/<N>_presets/` cell named
+    // after it, and ITS HOLD (the long press, trim_presets_button_shift_admits,
+    // the row's one admitting member) renders EVERY PRESET into a new presets
+    // folder; neither touches the current trim, and the list closes at the
+    // dispatch (GuiInputHandler::trim_presets_render). THE OTHER WORDS ARE
+    // WINDOWS' DIALOG
     // VOCABULARY (the same glass): SAVE writes the active tab's trim into
     // THE HIGHLIGHTED preset, its name kept, after its question — and with no
     // preset to save into it is Save As ("with no presets yet, both create a
     // new preset") — SAVE AS names a new one, Save standing left of Save As;
+    // RENAME names the highlighted preset anew, its pair kept, through Save
+    // As's name editor holding its current name, no question (architect
+    // 2026-11-25: "need way to rename preset"), between Save As and Delete;
     // the Close word kModalCloseLabel's rule (the list asks nothing, a
     // button's act returns to it, the opener and Close leave it applying
     // nothing; the list has no scrub, so it keeps its leave button,
     // architect 2026-11-11). No Apply: a row's tap is the act,
     // and it closes the list (trim_presets_apply; architect 2026-11-19).
     // The acts are the input handler's
-    // (trim_presets_save, trim_presets_save_as, trim_presets_delete,
-    // close_picker); the faces trim_presets_button_enabled's.
+    // (trim_presets_render, trim_presets_save, trim_presets_save_as,
+    // trim_presets_rename, trim_presets_delete, close_picker); the faces
+    // trim_presets_button_enabled's.
     enum class TrimPresetsButtonAct {
-        None, HighlightDown, HighlightUp, Save, SaveAs, Delete, Close
+        None, HighlightDown, HighlightUp, Save, SaveAs, Rename, Delete, Render,
+        Close
     };
     // THE BPM FORM'S BUTTONS (architect 2026-10-29), its dispatch
     // vocabulary, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT as
@@ -6017,10 +6038,12 @@ struct AppState {
         // THE MODIFIER LINE, empty on every button that admits no modified
         // press — the roster tooltip's `line2` over this surface (2026-08-28).
         // Its producers are the player's shift-admitting buttons
-        // (render_player_button_shift_hint) and the score viewer's two skips
-        // (score_viewer_button_shift_hint), and it says what their long
-        // press does; the painter shows a second
-        // line exactly when this is non-empty.
+        // (render_player_button_shift_hint), the score viewer's two skips
+        // (score_viewer_button_shift_hint) and the trim presets list's Render
+        // (trim_presets_button_shift_hint, architect 2026-11-25), and it says
+        // what their long press does, standing wherever the hold does
+        // something the plain press does not (each producer's own test);
+        // the painter shows a second line exactly when this is non-empty.
         std::string tooltip2;
     };
     struct ModalDialogGeometry {
@@ -6040,9 +6063,11 @@ struct AppState {
         // / _usable_span, below); the press router arms the knob drag
         // against it — published geometry may only SELECT, the seek's frame
         // is decided against the live item length — and the
-        // CLOCK cell — one rect round its two time labels, the position and
-        // the length (2026-10-05) — the tick's per-position damage while the
-        // player's transport is live, beside the scrub's. Both follow the owner-tag
+        // CLOCK cell — its one time label's slot, "<position> / <length>"
+        // (architect 2026-11-25), one px of slack each side — the tick's
+        // damage while the player's transport is live, whenever the label's
+        // text moves (GuiRenderPlayer::tick, GuiScoreViewer::tick), beside
+        // the scrub's per-position damage. Both follow the owner-tag
         // doctrine above: read only through a stash that names the live
         // player session.
         GuiRect                        scrub{0, 0, 0, 0};
@@ -6309,7 +6334,7 @@ struct AppState {
     // It is a PAINTER
     // STASH in the roster's own model — the rect
     // that was drawn, never re-measured elsewhere — because the cell's width is
-    // a SHAPED specimen's advance and ink in the live face (time_field_metrics,
+    // a SHAPED specimen's advance and ink in the live face (timestamp_metrics,
     // paint_handler.cpp), which only the
     // painter measures.
     //
@@ -7802,7 +7827,8 @@ struct AppState {
     // the `#` where its line is disabled); a moved marker is a removed item
     // and an added one. The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
-    // marker stands exactly where it stood. The status bar carries the walk line: the member's position, then the
+    // marker stands exactly where it stood. The status bar carries the walk line: the member's position, then on the
+    // commit walk the commit's date and time, then the
     // `GitHub: <word>` segment, then the `Scale:` segment when the `scale=`
     // value changed, separated by ` | ` (history_walk_line,
     // paint_handler.cpp, owns its shape).
@@ -8652,7 +8678,7 @@ struct AppState {
 
     // THE LINE EDITOR — the value sub-page's entry (paint_handler.cpp's
     // paint_value_page), opened from a row of the settings page, the trim
-    // presets list's Save As or a row of the BPM form; separate from
+    // presets list's Save As or Rename or a row of the BPM form; separate from
     // top_flag_editor so the two paint regions stay independent (the
     // in-practice mutual exclusion comes from the flag editor swallowing all
     // keys while active).
@@ -8661,7 +8687,8 @@ struct AppState {
     // key, the value alone (architect 2026-11-19; the key the
     // open's, GuiSettingsEditor::open / page_key);
     // Kind::TrimPresetName, the trim preset's name (2026-10-28 night, the
-    // trim presets list's Save As, GuiInputHandler::trim_presets_save_as);
+    // trim presets list's Save As and Rename, architect 2026-11-25,
+    // GuiInputHandler::open_trim_preset_name_editor);
     // and Kind::BpmField, one field of the BPM form, its value alone
     // (architect 2026-10-29; the value alone 2026-11-19;
     // GuiInputHandler::bpm_form_commit, `target` the field) — the settings
@@ -8698,7 +8725,8 @@ struct AppState {
     // and bare `t`; the piece's named trim windows, a row's tap applying its
     // pair to the active tab's trim and closing the list (architect
     // 2026-11-19), the player's
-    // controls row — the highlight pair, Save, Save As, Delete, Close);
+    // controls row — the highlight pair, Save, Save As, Rename, Delete,
+    // Render, Close, architect 2026-11-25);
     // and THE BPM FORM (architect 2026-10-29: the BPM key and Ctrl+B past
     // the sweep's ladder; the three `key=value` lines `beats=`, `low=` and
     // `high=`, no title row, the open act the line editor
@@ -8721,7 +8749,7 @@ struct AppState {
     // what leaving does — Cancel under the project picker and the value
     // list, Close under the settings page (kModalCancelLabel's rule,
     // app_state.h, architect 2026-10-28 night); THE TRIM PRESETS LIST'S ROW
-    // IS THE PLAYER'S SHAPE instead, the highlight pair and four words, its
+    // IS THE PLAYER'S SHAPE instead, the highlight pair and six words, its
     // last Close (TrimPresetsButtonAct). The opener
     // refuses under a prompt, an editor,
     // a standing picker and a load — under the render player it is never
@@ -8732,7 +8760,7 @@ struct AppState {
     // chord —
     // Ctrl+O under the project picker, `;` under the settings page and the
     // value list, `t` under the trim presets list, Ctrl+B under the BPM form
-    // — the exit road, the same-project no-op, Save As's name editor ahead
+    // — the exit road, the same-project no-op, the name editor ahead
     // of its open and the page's and the form's row opens ahead of their
     // editor all pass through it — the editor's Enter and Esc reopening the
     // page, the trim list or the form, handle_settings_editor_key; every
@@ -9046,7 +9074,8 @@ struct AppState {
     std::string queue_progress_text;
 
     // One-slot pending archival render command. An archival dispatch
-    // (Ctrl+Alt+R / the iteration or bpm sweep) that finds the
+    // (Ctrl+Alt+R / the iteration or bpm sweep / the trim presets list's
+    // Render and Render All) that finds the
     // worker busy kills the running render (the cancel pair: request_cancel +
     // queue_cancel_requested) and parks its fully built request set here;
     // the worker-idle pump (GuiTargetRender::maybe_dispatch_pending, via
@@ -9076,6 +9105,14 @@ struct AppState {
         // everything else, a parked-then-abandoned misc command creates no
         // folder at all — the allocation never runs.
         bool                       miscellaneous = false;
+        // A parked TRIM PRESET'S RENDER (architect 2026-11-25; the presets
+        // list's Render, GuiInputHandler::trim_presets_render) late-binds its
+        // FOLDER at the pump for the miscellaneous cell's reason above — the
+        // newest folder joined when it is a presets folder, else a new one
+        // (allocate_trim_preset_folder) — its cell's name, `<NN>_<name>`,
+        // already in the request (`batch_basename`). Set only by that park
+        // site.
+        bool                       trim_preset = false;
     };
     PendingArchivalCommand pending_archival;
 
@@ -9450,7 +9487,8 @@ struct AppState {
     // architect 2026-11-22). THE THREE OPENERS OF A
     // LINE EDITOR — the settings page's row
     // (GuiInputHandler::settings_page_commit), the trim presets list's Save
-    // As (trim_presets_save_as) and the BPM form's row (bpm_form_commit) —
+    // As and Rename (open_trim_preset_name_editor, their one open) and the
+    // BPM form's row (bpm_form_commit) —
     // each close the list (the overlay and the keyboard
     // never both stand) and write here, first (seat_value_page), what the
     // editor's buffer does not hold:
@@ -9558,8 +9596,10 @@ struct AppState {
     //              IT IS THE POSITION, which is what lets the Home skip's
     //              FACE decide the previous-track window with no position
     //              term of its own (render_player_button_enabled);
-    //   `painted_cursor` the item position the last tick damaged for, the
-    //              change-detection anchor of the clock/scrub damage;
+    //   `painted_cursor` the item position the last tick compared, the
+    //              change-detection anchor of the scrub's damage (every
+    //              change) and the clock's (a change of its label's text;
+    //              GuiRenderPlayer::tick);
     //   `scrub`    the play-scrub THUMB DRAG's arm: armed by EVERY press on
     //              the scale's item (architect 2026-10-02) — on the knob's
     //              disc the knob is taken
@@ -9651,13 +9691,18 @@ struct AppState {
         };
         ScrubDrag                  scrub;
         std::optional<RenderEntry> pending_load;
-        // THE FOLDERS THE STANDING DELETE_FOLDER_CONFIRM PROMPT ASKS ABOUT
-        // (architect 2026-09-29): the highlighted batch folder, or every batch
-        // folder the root listing showed at the press — parked by the raise
-        // (render_player_delete), consumed by its Delete, dropped by its
-        // Cancel and reset at every open and close. Paths taken from the
-        // listing's own rows, never typed.
+        // THE SUBJECT THE STANDING RENDER_PLAYER_DELETE_CONFIRM PROMPT ASKS
+        // ABOUT, ONE OF THE TWO PARKED (architect 2026-09-29; the render
+        // architect 2026-11-25): `pending_delete` the folders — the
+        // highlighted batch folder or every batch folder the root listing
+        // showed at the press, or from inside a folder the listed folder
+        // itself — and `pending_delete_render` the highlighted render of a
+        // folder's render list. Parked by the raise (render_player_delete),
+        // consumed by its Delete, both dropped by its Cancel and reset at
+        // every open and close. Taken from the listing's own rows, never
+        // typed.
         std::vector<std::filesystem::path> pending_delete;
+        std::optional<RenderEntry>         pending_delete_render;
     };
     RenderPlayer render_player;
 
@@ -9755,8 +9800,10 @@ struct AppState {
     //              parks a LIVE transport at PAUSED; the resting cursor is the
     //              active tab's remembered position (ViewState::
     //              score_position), the one the file keeps;
-    //   `painted_cursor` the cursor the tick last damaged the clock and the
-    //              scrub for while LIVE, -1 at every launch;
+    //   `painted_cursor` the cursor the tick last compared while LIVE, -1 at
+    //              every launch: the scrub is damaged at every cursor change,
+    //              the clock only when its label's text changes
+    //              (GuiScoreViewer::tick);
     //   `position_owed` a page turn under playback whose position write
     //              waits for its paint (GuiScoreViewer::tick);
     //   `forward`  the decoder's bias: the last page step was forward (NEXT)
@@ -9894,14 +9941,14 @@ inline bool is_folder_overlay_opener(const AppState& a, RedesignButton b) {
 // editor's open), THE LIST THE SUB-PAGE WAS OPENED FROM (AppState::
 // value_page's `opener`, written by the editor's three openers just before
 // their close_picker, read only while the editor stands): the settings page
-// under a settings value, the trim presets list under Save As, the BPM form
+// under a settings value, the trim presets list under a preset's name, the BPM form
 // under its field (architect 2026-11-19; the sub-page 2026-11-20).
 // ONE READER, the roster's face: redesign_button_selected's
 // openers, so the list's opener stays lit under its sub-page — and, the
 // on-screen keyboard standing over every editor, the whole roster greyed
 // (redesign_button_enabled's first arm, architect 2026-11-20),
 // that opener wears the lit-and-inert look (SETUP under a settings value,
-// PRESETS under Save As, BPM under the BPM field). PAINT ALONE: every key
+// PRESETS under a preset's name, BPM under the BPM field). PAINT ALONE: every key
 // stays dead under the editor's veil (no press, hover, tooltip or chord
 // reaches one, keyboard_modal_editor_active), and the input predicates —
 // is_overlay_opener, overlay_admits_button, overlay_leave_word — read the
@@ -10017,7 +10064,7 @@ inline constexpr const char* kModalCloseLabel  = "Close";
 //   the TRIM PRESETS LIST (PRESETS)       Close, its row's last word
 //   the BPM FORM (BPM)                    Cancel, its controls row's word
 //   the SCORE VIEWER (SCORE)              Close
-// A line editor (a settings value, Save As, the BPM field) is a modal
+// A line editor (a settings value, a preset's name, the BPM field) is a modal
 // that closed its overlay: this answers nullptr there, the live tag being
 // None, though the opener stands lit and inert on the tag of the list its
 // sub-page was opened from
@@ -10121,18 +10168,28 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 //                   the very file the shifted press names, so the line drops
 //                   there exactly as Home's does on the second item. Both
 //                   compares are asked in every transport state.
-//   delete_all_differs
-//                   DOES DELETE'S SHIFTED PRESS REACH MORE THAN ITS PLAIN ONE
-//                   (architect 2026-09-29): true while the root listing shows
-//                   more than one batch folder — with one, "all" is the
-//                   highlighted folder and the line would name the same act
-//                   (render_player_root_folder_count, the act's own count).
+//   delete_names_render
+//                   WHICH LIST DELETE STANDS IN (architect 2026-11-25): true
+//                   in a folder's render list, where the plain press deletes
+//                   the highlighted render and the long press the folder;
+//                   false in the folder list, where they delete the
+//                   highlighted folder and every folder.
+//   delete_shift_differs
+//                   DOES DELETE'S SHIFTED PRESS REACH MORE THAN ITS PLAIN ONE:
+//                   in the folder list while it shows more than one batch
+//                   folder (architect 2026-09-29) — with one, "all" is the
+//                   highlighted folder (render_player_root_folder_count, the
+//                   act's own count); in a render list while the folder lists
+//                   more than one render (architect 2026-11-25) — the delete
+//                   of a folder's one render takes the folder with it
+//                   (render_player_batch_render_count, the act's own count).
 struct RenderPlayerHintState {
-    PlayerPlayFace play_face          = PlayerPlayFace::Play;
-    bool           home_previous      = false;
-    bool           home_shift_differs = false;
-    bool           end_shift_differs  = false;
-    bool           delete_all_differs = false;
+    PlayerPlayFace play_face            = PlayerPlayFace::Play;
+    bool           home_previous        = false;
+    bool           home_shift_differs   = false;
+    bool           end_shift_differs    = false;
+    bool           delete_names_render  = false;
+    bool           delete_shift_differs = false;
 };
 
 // THE RENDER PLAYER'S BUTTON HINTS (2026-08-28), the same roster form over
@@ -10166,8 +10223,9 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
         // press is the NEXT TRACK, whose one refusal is the folder's end, and
         // a wall greys the button rather than renaming it — the same shape a
         // greyed Play keeps ("the grey is the message"). NEITHER WORD FORKS ON
-        // THE TRANSPORT: a band walk at rest is the car's, the car an
-        // interface of its own (architect 2026-09-12).
+        // THE TRANSPORT: a band walk at rest and a seek while live are the
+        // car's, the car an interface of its own (architect 2026-09-12;
+        // the seek 2026-11-25).
         case AppState::PlayerButtonAct::Home:
             return s.home_previous ? "Previous File" : "Go to Start";
         // PLAY/PAUSE NAMES ITS FACE, and the face is render_player_play_face's
@@ -10198,8 +10256,11 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
             return "Highlight Previous";
         case AppState::PlayerButtonAct::Up:          return "Up a Folder";
         case AppState::PlayerButtonAct::LoadInPlace: return "Load in Place";
-        // DELETE (architect 2026-09-29), Load in Place's slot at the root.
-        case AppState::PlayerButtonAct::Delete:      return "Delete Folder";
+        // DELETE NAMES ITS LIST'S SUBJECT (architect 2026-11-25): the
+        // highlighted render in a folder's render list, the highlighted
+        // folder in the folder list (architect 2026-09-29).
+        case AppState::PlayerButtonAct::Delete:
+            return s.delete_names_render ? "Delete Render" : "Delete Folder";
         case AppState::PlayerButtonAct::None:        break;
     }
     return std::string();
@@ -10211,8 +10272,9 @@ inline std::string render_player_button_hint(AppState::PlayerButtonAct act,
 // (chrome_shift_hold_ms), its LONG PRESS, so the shifted half of
 // the pair is reachable on the glass. THE TWO SKIPS AND DELETE ARE THE
 // WHOLE SET — the skips' twins are the item folder's FIRST
-// and LAST wav (2026-08-31), and Delete's (architect 2026-09-29) is EVERY
-// batch folder at the root — and every other button on the row keeps its
+// and LAST wav (2026-08-31), and Delete's is EVERY batch folder in the
+// folder list (architect 2026-09-29) and THE WHOLE FOLDER in a folder's
+// render list (architect 2026-11-25) — and every other button on the row keeps its
 // plain act however long it is held, exactly as a roster button with no twin
 // does.
 //
@@ -10258,12 +10320,15 @@ inline std::string render_player_button_shift_hint(
             return s.end_shift_differs
                        ? "Hold for the last file of the playing folder"
                        : std::string();
-        // DELETE'S LINE (architect 2026-09-29) stands only where the long
-        // press reaches more than the plain one — a root listing of two or
-        // more batch folders.
+        // DELETE'S LINE stands only where the long press reaches more than
+        // the plain one: a folder list of two or more batch folders
+        // (architect 2026-09-29), a render list of two or more renders
+        // (architect 2026-11-25; a folder's one render takes the folder with
+        // it).
         case AppState::PlayerButtonAct::Delete:
-            return s.delete_all_differs ? "Hold to delete all folders"
-                                        : std::string();
+            if (!s.delete_shift_differs) return std::string();
+            return s.delete_names_render ? "Hold to delete the folder"
+                                         : "Hold to delete all folders";
         case AppState::PlayerButtonAct::PlayPause:
         case AppState::PlayerButtonAct::RepeatOne:
         case AppState::PlayerButtonAct::HighlightDown:
@@ -10319,6 +10384,53 @@ static_assert(
     !score_button_shift_admits(AppState::ScoreButtonAct::SetEnd),
     "the score viewer's shift-admitting set is the two skips, and the "
     "hint's second line exists on exactly them");
+
+// THE TRIM PRESETS LIST ROW'S SHIFT-ADMITTING BUTTON (architect 2026-11-25:
+// "Add 'render' button to presets page with long press as render all"),
+// player_button_shift_admits one owner over and for its reason: RENDER, whose
+// long press (the hold delay, chrome_shift_hold_ms) is RENDER ALL, every
+// preset into a new presets folder, for the plain press's highlighted preset.
+// Every other member keeps its plain act however long it is held. THE SAME
+// THREE READERS as the player's: the press claim (arm_modal_dialog_press arms
+// every live face alike and measures the hold for all of them), the lift's
+// dispatch (dispatch_modal_dialog_button's trim arm, which hands the verdict
+// on only where this admits) and the modifier line
+// (trim_presets_button_shift_hint below, whose one arm is this member, its
+// line standing wherever the list holds a preset).
+inline constexpr bool trim_presets_button_shift_admits(
+        AppState::TrimPresetsButtonAct act) {
+    return act == AppState::TrimPresetsButtonAct::Render;
+}
+static_assert(
+    trim_presets_button_shift_admits(AppState::TrimPresetsButtonAct::Render) &&
+    !trim_presets_button_shift_admits(
+        AppState::TrimPresetsButtonAct::HighlightDown) &&
+    !trim_presets_button_shift_admits(
+        AppState::TrimPresetsButtonAct::HighlightUp) &&
+    !trim_presets_button_shift_admits(AppState::TrimPresetsButtonAct::Save) &&
+    !trim_presets_button_shift_admits(AppState::TrimPresetsButtonAct::SaveAs) &&
+    !trim_presets_button_shift_admits(AppState::TrimPresetsButtonAct::Rename) &&
+    !trim_presets_button_shift_admits(AppState::TrimPresetsButtonAct::Delete) &&
+    !trim_presets_button_shift_admits(AppState::TrimPresetsButtonAct::Close),
+    "the trim presets list's shift-admitting set is Render alone, and the "
+    "hint's second line exists on it alone");
+
+// THE MODIFIER LINE, in the roster's own form ("Hold to ..."): non-empty on
+// RENDER alone, the member trim_presets_button_shift_admits names, and there
+// WHEREVER THE LIST HOLDS A PRESET, one or more (`list_holds_preset`,
+// composed at the plan builder; architect 2026-11-25). The line stands where
+// the hold does something the plain press does not, and with any preset it
+// does: Render All always makes a new presets folder, runs the progress page
+// and opens the render player on that folder, where the plain Render joins
+// the newest folder when it is a presets folder (a cell of that name
+// overwritten) and returns to the main page
+// (GuiInputHandler::trim_presets_render).
+inline std::string trim_presets_button_shift_hint(
+        AppState::TrimPresetsButtonAct act, bool list_holds_preset) {
+    if (act == AppState::TrimPresetsButtonAct::Render && list_holds_preset)
+        return "Hold to render all";
+    return std::string();
+}
 
 // THE HIGHLIGHTED ROW'S LOAD-CAPABLE ENTRY, or null — non-null exactly when
 // the highlight is a tmp/ batch cell carrying a recipe. THE ONE KIND TO
@@ -10403,7 +10515,8 @@ int render_player_highlight_act_row(const AppState& a);
 //   button's whole message.
 //   LOAD IN PLACE greys on a read-only tab (the lock refuses the load), on
 //   a highlight with no recipe (render_player_highlighted_entry, the act's
-//   own question) and WHILE A RENDER IS RUNNING —
+//   own question — every row of the folder list, a folder naming no recipe)
+//   and WHILE A RENDER IS RUNNING —
 //   load_in_place_render_blocked, the act's own third refusal (architect
 //   2026-09-01: a lit "Load in place" over a press that cards is a lie the
 //   face tells); the grey is the button's message and the key keeps its
@@ -10418,6 +10531,8 @@ int render_player_highlight_act_row(const AppState& a);
 //   no row is lit: the walk starts FROM row 0 there (walk_origin_row) and
 //   applies its delta, as the keys do — Down lands on row 1, Up on row 0. The
 //   keys stay silent at the walls and the grey is the buttons' whole message.
+//   DELETE greys where the band stands on nothing its list deletes
+//   (render_player_delete_actionable, the act's own question, in both lists).
 //   REPEAT ONE never greys (the lamp always toggles).
 // TWO READER CLASSES: the plan builder (paint_modal_dialog, publishing the
 // bit per frame beside the rects) and main.cpp's per-tick comparator, which
@@ -10457,15 +10572,26 @@ bool render_player_button_enabled(const AppState& a,
 // button's act run now — the truthful-buttons rule on the list's controls
 // row, one arm per act: the HIGHLIGHT PAIR where its walk would move the
 // highlight (folder_overlay::move_highlight_actionable, the player's own
-// answer); SAVE with no highlight (an empty list, where it creates, Save
+// answer); RENDER (architect 2026-11-25) with a highlight, a loaded source
+// and the Grid Iterations lamp dark — the terms of the roster's own one-file
+// archival render into a batch cell (the miscellaneous render's arm,
+// handle_render_dispatch_keys: no source is silent, and "archival is a
+// plain-mode act"), where Render All, its hold, refuses too; the twin rule
+// adds nothing, a highlight standing exactly where the list holds a preset
+// (folder_overlay::set_highlight's clamp). A RUNNING RENDER IS NO TERM (the
+// dispatch kills it and parks the new command, newest wins), nor is the
+// tab's lock (a render writes no authoring), and a name that is no file
+// name is a refusal that cards, not a grey (trim_presets_render); SAVE with
+// no highlight (an empty list, where it creates, Save
 // As's act) and with a highlight whose pair is not the active tab's trim,
 // GREYING only where the highlighted pair already is the tab's trim (the
 // no-op the open's seat stands on when a preset names the window on screen;
 // his glass, 2026-10-28 night); SAVE
-// AS always, while the list stands; DELETE with a highlight; CLOSE always.
-// Defined beside the list's acts (input_key_dispatch.cpp); Save's and
-// Delete's bodies ask it too, for their roads that are not the painted face
-// (the Delete key's card).
+// AS always, while the list stands; RENAME and DELETE with a highlight
+// (architect 2026-11-25), greyed on an empty list; CLOSE always.
+// Defined beside the list's acts (input_key_dispatch.cpp); Render's, Save's,
+// Rename's and Delete's bodies ask it too, for their roads that are not the
+// painted face (the Delete key's card).
 // ITS READERS are the player's: the plan builder
 // (paint_modal_dialog, publishing the bit as painted) and main.cpp's
 // per-tick comparator, the press and the dispatch reading the
@@ -10497,34 +10623,42 @@ bool bpm_form_button_enabled(const AppState& a,
 
 // IS THERE A FOLDER TO GO UP TO — THE UP WALL'S ONE OWNER (architect
 // 2026-09-01): false at the root, which
-// IS `tmp/`, and true inside a batch. THREE READERS as re-greped 2026-09-12,
+// IS `tmp/`, and true inside a batch. TWO READERS as re-grepped 2026-11-25,
 // and they must not drift: GuiRenderPlayer::up()'s own leading refusal
-// (silent, a one-dimensional refusal already at its state), the Up button's
-// face arm in render_player_button_enabled — the truthful-buttons rule's "a
-// face arm reads the predicate the act's own refusal reads" — and the CAR'S
-// Previous, whose LIVE arm forks on it between going up and restarting the
-// file (up() would be silent at the root, and a press inside the
-// previous-track window there is the restart). The car's REST arm reaches the
-// same wall through up() itself rather than asking. Defined in
+// (silent, a one-dimensional refusal already at its state) and the Up
+// button's face arm in render_player_button_enabled — the truthful-buttons
+// rule's "a face arm reads the predicate the act's own refusal reads". The
+// car's Previous reaches the same wall at rest through up() itself rather
+// than asking. Defined in
 // render_player.cpp beside the act. Backspace is the button's key twin and
 // takes the same wall through the same act.
 bool render_player_up_actionable(const AppState& a);
 
 // THE ROOT'S BATCH FOLDERS (architect 2026-09-29, the player's Delete): how
 // many Folder rows the listing shows while it stands at the root — `tmp/`'s
-// own batch folders, the enumeration's — and 0 inside a batch folder, where
-// Delete is not the slot's act. THE ACT'S OWN COUNT, READ BY THREE: the
-// Shift+Delete raise (render_player_delete, which parks exactly these rows'
-// paths), Delete's face below, and the shift line's destination compare
-// (RenderPlayerHintState::delete_all_differs: more than one). Defined in
-// render_player.cpp beside the listing it counts.
+// own batch folders, the enumeration's — and 0 inside a batch folder. THE
+// FOLDER LIST'S SHIFT LINE reads it (RenderPlayerHintState::
+// delete_shift_differs: more than one), the long press parking exactly these
+// rows' paths (render_player_delete). Defined in render_player.cpp beside
+// the listing it counts.
 int render_player_root_folder_count(const AppState& a);
-// WOULD DELETE ACT — its face's one arm under the TWIN RULE (the plain press
-// needs the highlighted row to be a batch folder, the shifted press any batch
-// folder at all; at the root the band stands on a row whenever the listing has
-// one, so the two collapse into this). False inside a batch folder. The act
-// asks the same two questions at its head and cards where the face would
-// grey (render_player_delete, input_key_dispatch.cpp).
+// THE LISTED FOLDER'S RENDERS (architect 2026-11-25, the one render's
+// delete): how many Wav rows the listing shows while it stands inside a batch
+// folder, and 0 at the root. THE ACT'S OWN COUNT, READ BY TWO: the render's
+// delete, where a count of one is the folder's delete (the last render takes
+// the emptied folder with it, GuiRenderPlayer::delete_render), and the render
+// list's shift line (RenderPlayerHintState::delete_shift_differs: more than
+// one — with one, the long press reaches what the plain press does). Defined
+// in render_player.cpp beside the listing it counts.
+int render_player_batch_render_count(const AppState& a);
+// WOULD DELETE ACT — its face's one arm under the TWIN RULE, in each list
+// the band on a row of the kind its plain press deletes: at the root a batch
+// folder (the shifted press needing any batch folder at all, and the band
+// standing on a row whenever the listing has one, the two collapse into
+// this), inside a batch folder a render (its long press, the folder's own
+// delete, standing exactly where the folder lists a render). The act asks
+// the same question at its head and cards where the face would grey
+// (render_player_delete, input_key_dispatch.cpp).
 bool render_player_delete_actionable(const AppState& a);
 
 // THE TWO SHIFTED TWINS' OWN WALLS (architect 2026-09-01: the act, the face
@@ -10554,10 +10688,11 @@ bool render_player_last_in_item_folder_actionable(const AppState& a);
 // WOULD THE NEXT TRACK PLAY — the right skip's own wall (2026-09-04), its own
 // leading refusals in its own order: an item must be bound, and it must not be
 // the last wav of its folder. Nothing loops, so the folder's end is a wall and
-// not a wrap. TWO READERS as re-greped 2026-09-12: the act itself
+// not a wrap. THREE READERS as re-grepped 2026-11-25: the act itself
 // (GuiRenderPlayer::advance_to_next_in_item_folder, whose silent return this
-// IS, shared by next_track, the car's live Next and the natural end's
-// auto-advance) and the right skip's face arm, where it is the whole arm.
+// IS, shared by next_track, resume()'s end rule and the natural end's
+// auto-advance), resume()'s end rule ahead of that step, and the right
+// skip's face arm, where it is the whole arm.
 // Defined in render_player.cpp beside the acts.
 bool render_player_next_track_actionable(const AppState& a);
 
@@ -10565,13 +10700,12 @@ bool render_player_next_track_actionable(const AppState& a);
 // OWNER (kPlayerPreviousThresholdMs, render_player.h): the position the clock
 // and the scrub show, against the window in frames at the DEVICE's rate, which
 // is why it takes the playback and the audio — the position is the engine's
-// while live. IT IS THE ONLY POSITION TERM EITHER PREVIOUS ACT READS, and it
-// is asked from TWO PLACES, which is what makes it a predicate of its own:
+// while live. ONE READER as re-grepped 2026-11-25:
 // render_player_home_takes_previous below, the file step's own fork (which
-// bare Home, its button and the Home hint share), and the CAR'S Previous,
-// whose LIVE arm asks the same window direct to decide whether to LEAVE THE
-// FOLDER instead. Neither reaches it at IDLE, which has no item (the
-// invariant at RenderPlayer::transport).
+// bare Home, its button and the Home hint share), which never reaches it at
+// IDLE, which has no item (the invariant at RenderPlayer::transport). The
+// car's Previous asks no window: while an item sounds it is the car's seek
+// (architect 2026-11-25, GuiRenderPlayer::car_previous).
 // Defined in render_player.cpp beside home().
 bool render_player_inside_previous_window(const AppState& a,
                                           const GuiPlayback& playback,
@@ -10580,10 +10714,9 @@ bool render_player_inside_previous_window(const AppState& a,
 // WOULD THE LEFT SKIP PLAY THE PREVIOUS ENTRY — home()'s own FIRST arm
 // (2026-09-01), so the act and its hint read one predicate: a
 // previous entry exists (the twin's wall above, plus a bound item with
-// frames) AND the window above. THREE READERS as re-greped 2026-09-12:
-// GuiRenderPlayer::home() (the fork's owner), the plan builder's hint state
-// (paint_modal_dialog) and the CAR'S Previous, whose live arm asks it to rule
-// the file step OUT before testing its own up-a-folder exit. It is also what
+// frames) AND the window above. TWO READERS as re-grepped 2026-11-25:
+// GuiRenderPlayer::home() (the fork's owner) and the plan builder's hint state
+// (paint_modal_dialog). It is also what
 // makes the Home hint's shift line a DESTINATION compare rather than
 // the twin's wall alone: inside the window the plain press plays the previous
 // entry, which on the folder's second item IS the file the shifted press names.
@@ -10652,6 +10785,40 @@ inline int64_t render_player_position(const AppState& a,
                             ? playback.cursor()
                             : rp.resume_frame;
     return pos < 0 ? 0 : (pos > rp.frames ? rp.frames : pos);
+}
+
+// THE OVERLAYS' TIME LABEL'S TEXT, ONE LABEL "<position> / <length>"
+// (architect 2026-11-25: "remove the milliseconds from the player and the
+// score ... and add the slash"; paint_handler.cpp's THE TIME FIELDS): the
+// render player's position and length, the score viewer's soundtrack
+// position within its range and the range's length, e.g. "02:45 / 07:12".
+// EACH SIDE mm:ss OF WHOLE SECONDS, FLOORED — frames / rate in integers —
+// so 02:45.795 reads 02:45 and a finished item reads length / length
+// ("as grids use floor not nearbyint in our app, and the time is a grid").
+// THE GUI'S OWN FORMATTER: time_format.h's format_timestamp keeps the
+// milliseconds for the bottom left and the cards. TWO MINUTE DIGITS, A
+// LONGER ITEM TRUNCATES at 59:59 — format_timestamp's cap, the ruling and
+// its cost recorded at that function. No item (a rate of 0, no frames)
+// reads 00:00. ONE COMPOSITION for the painter (paint_handler.cpp's
+// player and score branches) and the two ticks' clock comparators
+// (GuiRenderPlayer::tick, GuiScoreViewer::tick), so the comparator's text
+// is the painter's.
+inline std::string whole_seconds_mmss(int64_t frames, int64_t rate) {
+    int64_t s = (rate > 0 && frames > 0) ? frames / rate : 0;
+    if (s > 3599) s = 3599;
+    const int64_t m = s / 60;
+    const int64_t r = s - m * 60;
+    std::string t = "00:00";
+    t[0] = static_cast<char>('0' + m / 10);
+    t[1] = static_cast<char>('0' + m % 10);
+    t[3] = static_cast<char>('0' + r / 10);
+    t[4] = static_cast<char>('0' + r % 10);
+    return t;
+}
+inline std::string time_label_text(int64_t position, int64_t length,
+                                   int64_t rate) {
+    return whole_seconds_mmss(position, rate) + " / " +
+           whole_seconds_mmss(length, rate);
 }
 
 // THE SCRUB'S ONE MAPPING, over the painter's PUBLISHED ITEM
@@ -17207,7 +17374,7 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // (roster_face_page_owner; architect 2026-11-19): the
         // standing overlay's, or under a value sub-page the list it was
         // opened from, so SETTINGS stays lit under a settings value, PRESETS
-        // under Save As and BPM under the BPM field — lit and inert there, the
+        // under a preset's name and BPM under the BPM field — lit and inert there, the
         // whole roster greyed while the keyboard stands
         // (redesign_button_enabled's first arm, architect 2026-11-20).
         case RedesignButton::IconListen:

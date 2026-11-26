@@ -484,16 +484,30 @@ void GuiScoreViewer::tick() {
             on_natural_end();
         } else {
             // THE PAGE FOLLOWS THE CURSOR, the turn's position owed until the
-            // turn is on screen; THE CLOCK AND THE SCRUB track every position
-            // change (the render player's damage rule: the two cells the
-            // painter published, the row before its first paint).
+            // turn is on screen; THE SCRUB tracks every position change and
+            // THE CLOCK every change of its label's text (the render player's
+            // damage rule, GuiRenderPlayer::tick: the two cells the painter
+            // published, the row before its first paint; the label the
+            // painter's own, time_label_text over score_viewer_position's
+            // clamp into the range, at the soundtrack's rate).
             const int64_t cur = playback.cursor();
             if (follow_cursor(cur)) sv.position_owed = true;
             if (cur != sv.painted_cursor) {
+                const ScoreFrameRange fr = score_viewer_frame_range(app);
+                const int64_t rate = app.score_audio.rate();
+                const auto label_at = [&](int64_t c) {
+                    return time_label_text(
+                        std::clamp(c, fr.begin, fr.end) - fr.begin,
+                        fr.length(), rate);
+                };
+                const bool label_moved =
+                    sv.painted_cursor < 0 ||
+                    label_at(cur) != label_at(sv.painted_cursor);
                 sv.painted_cursor = cur;
                 const GuiRect clock = app.modal_dialog.clock;
                 const GuiRect scrub = app.modal_dialog.scrub;
-                if (clock.w > 0 && clock.h > 0) viewport.invalidate_rect(clock);
+                if (label_moved && clock.w > 0 && clock.h > 0)
+                    viewport.invalidate_rect(clock);
                 if (scrub.w > 0 && scrub.h > 0) viewport.invalidate_rect(scrub);
                 if ((clock.w <= 0 || clock.h <= 0) &&
                     (scrub.w <= 0 || scrub.h <= 0))

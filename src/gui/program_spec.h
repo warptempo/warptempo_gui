@@ -81,7 +81,7 @@ struct ProgramSpec {
     // pads, the panel's inset kEdgeInsetW — THE EDGE RULE
     // at well_columns, the strips' seats paint_handler.cpp's icon_row_seats
     // and bottom_row_seats. THE TIME FIELDS are plain text (architect
-    // 2026-11-19), the overlays' slots paint_handler.cpp's time_label_w_px
+    // 2026-11-19), the overlays' label's slot paint_handler.cpp's time_label_w_px
     // (the specimen's advance rounded up to a whole W), the bottom icon
     // row's left run's pen render.h's kBottomLeftPenW.)
 

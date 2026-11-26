@@ -2135,16 +2135,10 @@ void GuiInputHandler::apply_touch_nav_update(const GuiTouchNavFrame& f) {
     const ViewportLattice lattice = (new_level != app.zoom_level)
                                         ? ViewportLattice::Exact
                                         : ViewportLattice::Keep;
-    const double level_before = app.zoom_level;
+    // A zoom frame puts out no lamp, the pinch and the pen barrel's
+    // one-finger zoom alike (architect 2026-11-25; darken_sweep_lamps).
     viewport.apply_strip_drag_zoom(new_level, anchor_sample, anchor_col,
                                    /*final=*/false, lattice);
-    // A ZOOM FRAME THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom
-    // darkens (architect 2026-11-17; darken_zoom_lamps_if_level_moved):
-    // the pinch and the pen barrel's one-finger zoom alike, the gesture's
-    // first such frame doing it and every later one finding them dark. A pan
-    // frame never asks (its level is the standing one; a clamp it meets is no
-    // zoom of the user's), nor a zoom frame pinned at a level bound.
-    if (!pan) darken_zoom_lamps_if_level_moved(level_before);
 
     if (pan) {
         // THE WALLS' REFUSAL RE-SEATS (re-seat (3) at the arm above): the
@@ -2398,7 +2392,7 @@ bool GuiInputHandler::touch_sweep_armed() const {
     // allowlist naming no bare `w`) and the view cannot edit the trim; ADD
     // SEL's role in there is its diff-flag click alone (bare `k` on the
     // allowlist), so the drag stays the pan. The view's entry puts both out
-    // (darken_zoom_lamps, architect 2026-11-17).
+    // (darken_sweep_lamps, architect 2026-11-25).
     return (app.trim_armed || app.add_to_selection) &&
            !app.history_mode.active;
 }
@@ -2757,10 +2751,12 @@ bool GuiInputHandler::arm_modal_dialog_press(int x, int y) {
 // carries a shift bit).
 // It is measured at the LIFT against the arm's own stamp — no timer, no tick —
 // and it asks nothing about WHICH button: the dispatch reads it only where
-// player_button_shift_admits or score_button_shift_admits says so (the
-// player's admitted twins, and the score viewer row's two skips, whose
-// shifted form is the 10 s skip — dispatch_modal_dialog_button's score arm;
-// 2026-10-28), which is what lets a button with no twin be held
+// player_button_shift_admits, score_button_shift_admits or
+// trim_presets_button_shift_admits says so (the player's admitted twins, the
+// score viewer row's two skips, whose shifted form is the 10 s skip —
+// dispatch_modal_dialog_button's score arm; 2026-10-28 — and the trim presets
+// list's Render, whose shifted form is Render All, architect 2026-11-25),
+// which is what lets a button with no twin be held
 // for as long as you like and still get its plain act. THE HOLD IS THE
 // GLASS HALF of the pair and passes silently, the roster's ruling (tooltips do
 // not show on the panel the gesture exists for).
@@ -2932,10 +2928,12 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::PlayerButtonAct::LoadInPlace:
                 render_player_load_in_place();
                 return true;
-            // DELETE (architect 2026-09-29), the root's slot and the row's
-            // third shift-admitting button: the plain press asks for the
-            // highlighted batch folder, the shifted one (the long press) for
-            // every batch folder at the root.
+            // DELETE (architect 2026-09-29; in both lists 2026-11-25), the
+            // row's third shift-admitting button: in the folder list the
+            // plain press asks for the highlighted batch folder and the
+            // shifted one (the long press) for every batch folder; in a
+            // folder's render list the plain press asks for the highlighted
+            // render and the shifted one for the folder.
             case AppState::PlayerButtonAct::Delete:
                 render_player_delete(/*all=*/shifted);
                 return true;
@@ -2956,9 +2954,12 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
     // THE TRIM PRESETS LIST'S ROW IS THE PLAYER'S SHAPE (architect
     // 2026-10-28 night): its published face decides as the player's does — a
     // key painted dead is consumed — and each act is the list's own: the
-    // highlight pair the band walk alone (picker_move_highlight), Save,
-    // Save As and Delete their bodies, Close the one close body. No member
-    // admits a modifier.
+    // highlight pair the band walk alone (picker_move_highlight), Save, Save
+    // As, Rename, Delete and Render their bodies, Close the one close body.
+    // RENDER IS THE ROW'S ONE SHIFT-ADMITTING MEMBER (architect 2026-11-25,
+    // trim_presets_button_shift_admits): `shifted` — a press held past the
+    // hold delay — is RENDER ALL, handed on only where the admission says
+    // so; every other arm ignores it.
     if (app.picker.active &&
         app.folder_overlay.owner == AppState::FolderOverlay::Owner::TrimPresets) {
         if (!b.enabled) return true;
@@ -2975,8 +2976,16 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
             case AppState::TrimPresetsButtonAct::SaveAs:
                 trim_presets_save_as();
                 return true;
+            case AppState::TrimPresetsButtonAct::Rename:
+                trim_presets_rename();
+                return true;
             case AppState::TrimPresetsButtonAct::Delete:
                 trim_presets_delete();
+                return true;
+            case AppState::TrimPresetsButtonAct::Render:
+                trim_presets_render(
+                    /*all=*/shifted && trim_presets_button_shift_admits(
+                                           b.trim_act));
                 return true;
             case AppState::TrimPresetsButtonAct::Close:
                 close_picker();
@@ -4057,7 +4066,7 @@ void GuiInputHandler::clear_folder_overlay_press() {
 // stands, the lift's seek moving its resume point, and stays paused; a hard
 // end owes nothing, the item left PAUSED (clear_player_scrub_drag).
 // THE TIMESTAMP FOLLOWS THE THUMB (architect 2026-11-10, both scrubs): while
-// the drag stands the clock's position field shows THE TIME THE DROP WOULD
+// the drag stands the clock's position shows THE TIME THE DROP WOULD
 // LAND AT — the lift's own derivation (render_player_scrub_drop_frame,
 // app_state.h, which the lift below and the painter both ask; the score's
 // score_scrub_drop_frame), the item's position under a motionless grab of
@@ -4213,7 +4222,7 @@ bool GuiInputHandler::finish_player_scrub_release(double x) {
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
-    // The position field leaves the drop's time for the item's position
+    // The clock's position leaves the drop's time for the item's position
     // (the block head).
     invalidate_scrub_clock(viewport, app);
     // A MOTIONLESS TAP ON THE THUMB SEEKS NOTHING: the thumb was taken where
@@ -4223,7 +4232,7 @@ bool GuiInputHandler::finish_player_scrub_release(double x) {
     // the travel by the mapping, which is the column the motion last painted
     // the thumb at. BOTH ARE THE DROP'S ONE DERIVATION
     // (render_player_scrub_drop_frame, app_state.h), the answer the clock's
-    // position field showed under the drag.
+    // position showed under the drag.
     const std::optional<int64_t> drop =
         render_player_scrub_drop_frame(app, ended, x - ended.grab_dx);
     // THE SOUND PLAYS ON FROM THE DROP where the press paused a live item
@@ -4256,7 +4265,7 @@ void GuiInputHandler::clear_player_scrub_drag() {
     // A LOST LIFT IS NOT A COMMIT (architect 2026-10-26 ~23:15, the score
     // scrub's own choice, the two scrubs one rule): nothing seeked and
     // nothing resumed — a live item the press paused stays PAUSED where the
-    // press left it, the key reading PLAY, and the clock's position field
+    // press left it, the key reading PLAY, and the clock's position
     // returns from the drop's time to the item's position (its rect damaged).
     // The knob's held fade stops where it stands (hold_face).
     if (drag.on_thumb)
@@ -4283,7 +4292,7 @@ void GuiInputHandler::clear_player_scrub_drag() {
 //    display_page): at an off-thumb press and at every motion, nothing
 //    seeked, nothing written — a press on the thumb takes
 //    it at the shown page and shows nothing new. UNDER THE SOUNDTRACK THE
-//    CLOCK'S ELAPSED FIELD SHOWS THE TIME THE DROP WOULD LAND AT (architect
+//    CLOCK'S ELAPSED TIME IS THE TIME THE DROP WOULD LAND AT (architect
 //    2026-11-10; score_scrub_drop_frame, the lift's own derivation, the
 //    play-scrub's block head), the cursor untouched; the page road's cell
 //    reads the shown page. On the page road the pages
@@ -4433,7 +4442,7 @@ bool GuiInputHandler::finish_score_scrub_release() {
     // one short of the range's end moving it only inside the range's last
     // page — and a motionless tap showed nothing and seeks nothing. BOTH ARE
     // THE DROP'S ONE DERIVATION (score_scrub_drop_frame, score_viewer.h),
-    // the answer the clock's elapsed field showed under the drag.
+    // the answer the clock's elapsed time showed under the drag.
     const std::optional<int64_t> drop =
         score_scrub_drop_frame(app, ended, ended.marker_x);
     // THE SOUND PLAYS ON FROM THE DROP where the press paused a live
@@ -4474,7 +4483,7 @@ void GuiInputHandler::clear_score_scrub_drag() {
     if (score_viewer != nullptr) score_viewer->display_page(ended.press_page);
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
-    // The clock's elapsed field returns to the cursor's time.
+    // The clock's elapsed time returns to the cursor's time.
     invalidate_scrub_clock(viewport, app);
 }
 
@@ -4611,7 +4620,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
 
     // THE FOLDER OVERLAY'S BAND, claimed for EVERY content and ranked here —
     // under the prompt gate (a prompt outranks every surface; the
-    // player's load confirmation and the reopen's unsaved-tab question paint
+    // player's two questions and the reopen's unsaved-tab question paint
     // over their own rows) and above the TWO mode
     // veils below — the player's and the picker's, each of which
     // admits the band and its own modal row
@@ -4638,8 +4647,9 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
         arm_level_case_press(at);
     };
 
-    // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its load
-    // confirmation is a prompt and paints over it — and above everything
+    // THE RENDER PLAYER'S VEIL (2026-08-28), under the prompt gate — its two
+    // questions, Load in Place's confirmation and Delete's, are prompts and
+    // paint over it — and above everything
     // else: while the mode stands the pointer has FOUR targets, the folder
     // overlay's rows (claimed above), the play-scrub (every press on it arms
     // the thumb drag, the seek at the lift), the modal row's buttons
@@ -4648,10 +4658,10 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
     // EVERY OTHER PRESS IS CONSUMED — the flags, the
     // waveform, the dead roster.
     // The whole rule is stated at render_player_active (input_handler.h).
-    // THE PLAYER'S TWO SKIPS CARRY A SHIFTED TWIN (2026-08-28) — the item
-    // folder's ends — which the LONG PRESS reaches at the lift
-    // (modal_dialog_press_shifted); ctrl spells nothing on any modal row and
-    // stays consumed by the veil below.
+    // THE PLAYER'S SHIFT-ADMITTING KEYS (player_button_shift_admits, the one
+    // list, app_state.h: the two skips and Delete) CARRY A HELD TWIN, which
+    // the LONG PRESS reaches at the lift (modal_dialog_press_shifted); ctrl
+    // spells nothing on any modal row and stays consumed by the veil below.
     if (app.render_player.active) {
         // THE PLAY RENDERS BUTTON TOGGLES THE PLAYER OFF (architect
         // 2026-10-13: "so the user can quickly toggle it on/off by pressing
@@ -5987,7 +5997,12 @@ void GuiInputHandler::on_button_release(const GuiPointerPlace& at,
             finish_chrome_press_release(chrome, at);
             return;
         }
-        dispatch_modal_dialog_button(take_modal_dialog_release(x, y));
+        // The shifted-twin verdict before the take, as the player's: the
+        // trim presets list's Render admits it (Render All, architect
+        // 2026-11-25), every other picker button ignoring it.
+        const bool shifted = modal_dialog_press_shifted();
+        dispatch_modal_dialog_button(take_modal_dialog_release(x, y),
+                                     shifted);
         return;
     }
     // THE SCORE VIEWER'S RELEASE (2026-10-26), its press block's mirror: the
@@ -7883,9 +7898,7 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
 // hidden, yielded, overflowed) takes ITS HOME STRIP — a bottom icon row
 // face (redesign_button_in_transport_row) that row's area, every other face
 // the top strip — the damage the lit flip's comparator pays (main.cpp).
-// TRIM's lamp edges take this rect too (set_trim_armed), and so do FOLLOW's
-// and RESTR's dark edges a user zoom or the `h` view's entry runs
-// (darken_zoom_lamps, architect 2026-11-17): a lit flip moves the
+// TRIM's lamp edges take this rect too (set_trim_armed): a lit flip moves the
 // face and the glyph's ink.
 void GuiInputHandler::invalidate_roster_press_face(int index) {
     const GuiRect painted =

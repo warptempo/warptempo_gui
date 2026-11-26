@@ -1613,7 +1613,7 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 
 // THE STICKY LAMPS' ONE WRITER (architect 2026-11-24: the sticky lamps are
 // stored as they stand): ON EVERY TICK, ahead of the tick's early returns,
-// so every mode reaches it (an overlay's TIPS, the `h` view's entry), the
+// so every mode reaches it (an overlay's TIPS, the `h` view's MAGNIFY), the
 // live bits — AppState::show_waveform_magnification, ::follow, ::restrict
 // and ::show_tooltips — are held against the struct's
 // DeviceConfig::lit_lamps, and on a difference the struct takes the live
@@ -1622,10 +1622,11 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 // the struct keeping the live set, so a failed write is not retried every
 // tick). WHY HERE, ONE SITE: it reads the bits, not the acts, so EVERY
 // WRITER OF A LAMP, PRESENT AND FUTURE, IS CAUGHT — the user's press, the
-// radio's lit edge, darken_zoom_lamps (a user zoom, the `h` view's entry:
-// stored dark), the open's own seat (which leaves no difference) and
-// MAGNIFY's deferred seat — with no config write threaded through any of
-// them. A tick with no difference costs the struct's four compares.
+// FOLLOW / RESTRICT radio's lit edge (the program's one darkening of a
+// sticky lamp: a zoom and the `h` view's entry put none of the four out,
+// architect 2026-11-25), the open's own seat (which leaves no difference)
+// and MAGNIFY's deferred seat — with no config write threaded through any
+// of them. A tick with no difference costs the struct's four compares.
 // WHILE MAGNIFY'S SEAT IS PENDING its word is CARRIED, NOT COMPARED
 // (AppState::magnification_seat_pending: the stored word names a lamp
 // whose curve is not ready yet), so the open's dark bit is never stored
@@ -2301,8 +2302,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // THE FORK ON THE PLAYER'S MODE BIT IS THE ONE PARTITION OF THE HEAD UNIT
     // BETWEEN ITS TWO OWNERS (architect 2026-09-17): with the render player
     // standing every command is the PLAYER'S — its folder, its item, its
-    // Repeat One — and with it closed every command is the PROJECT
-    // TRANSPORT'S, the car's play looping the trim and its skips seeking a
+    // Repeat One, its skips seeking a sounding item or walking the folder at
+    // rest (architect 2026-11-25) — and with it closed every command is the
+    // PROJECT TRANSPORT'S, the car's play looping the trim and its skips seeking a
     // live play or undoing and redoing at rest
     // (GuiCarTransport::on_media_command). The player's own
     // `!rp.active` belt stays inside its body: this fork is the partition,

@@ -220,7 +220,7 @@ adb shell cmd media_session volume --stream 5 --set 0
 adb shell cmd media_session volume --stream 1 --set 0
 # 7. Settings > Display > Font size and style > Font style > Default (a custom style also
 #    replaces monospace). Software update: auto download OFF (an update can change audio and
-#    USB behaviour; update by hand when you can test). Screen timeout to taste. Pair Bluetooth.
+#    USB behaviour; update by hand when you can test). Screen timeout to taste. Pair Bluetooth (Bluetooth headphones, below).
 #    Settings > Display > Motion smoothness > Adaptive: the app runs the panel at 90 Hz, and
 #    under Standard the panel tops at 60 Hz whatever the app asks. The app's frames come two refreshes
 #    apart, 45 a second, so the panel must reach 90 Hz for every second refresh to be 45; on Standard
@@ -328,6 +328,42 @@ adb logcat -s warptempo:I
 ```
 
 An APK that adds a key to the device config (The config, above) needs `scripts/warptempo_sync setup` run on the tablet first, or the app refuses to start on the missing line.
+
+### Bluetooth headphones
+
+For the AirPods Pro: SBC, encoded in software (architect 2026-11-25). Two settings on the tablet, under Settings > Developer options:
+
+1. **Disable Bluetooth A2DP hardware offload: ON.** Set it once: it takes effect at once and survives reboots (`persist.bluetooth.a2dp_offload.disabled=1`).
+2. **Bluetooth Audio Codec: SBC, after every connect.** The tablet does not remember the choice: every reconnect comes back on AAC. Bluetooth Audio Sample Rate stays at 44.1 kHz, the only rate the AirPods accept.
+
+That codec row is the check before playing. The app cannot make it for you: an app cannot read the active codec (only system apps can), cannot see Samsung's bitrate cuts (they are in the system log alone), and cannot hear a silent right bud (the AirPods relay between the buds themselves).
+
+From the laptop:
+
+```bash
+adb -s "$WARPTEMPO_TABLET_ADDR" logcat -d | grep -E "SOFTWARE_ENCODING_DATAPATH|a2dp_sbc_send_frames"
+# expect A2DP_SOFTWARE_ENCODING_DATAPATH, then every 30 s a line with level 0, avoid false, bitpool 53
+# level 2 with bitpool 35: the link is weak (below)
+```
+
+SBC everywhere, and the buds stay in. A room away from the tablet a weak link can break the AirPods' left-to-right relay: it happened once on 2026-11-25, the stack cutting the bitpool to 35 for about a minute, while the tablet kept sending stereo throughout. To bring the right bud back, switch Bluetooth Audio Codec to AAC and back to SBC, which restarts the stream. The AirPods' noise cancelling works on with the link down, so staying in is the better trade than taking them out.
+
+Why SBC, and why in software:
+
+- The tablet offers SSC, LDAC, aptX, AAC and SBC; the AirPods accept AAC and SBC alone. Of those two the architect judged SBC the better on the glass. AAC is always encoded in software on this tablet, at a flat 256 kbps.
+- With the hardware offload on, the audio chip encodes SBC, and three things go wrong:
+  - The right AirPod drops out. After a restart of the stream (a Revert, Open Project, a codec switch, a reconnect) it can stay silent, the left alone playing.
+  - Samsung's adapter cuts the bitrate: the bitpool from 53 (328 kbps) to 35 (229 kbps) for 1 to 4 s, 19 times in about 50 minutes, mostly right after a restart.
+  - The audio is converted twice. The app is granted a 48 kHz stream (`hwRate=48000`) and converts the 44.1 kHz source to it, and the chip converts it back to 44.1 kHz for SBC.
+- With the offload off, the Bluetooth stack encodes in software and the path is 44.1 kHz end to end:
+  - The app's audio is not converted: Android grants the app 44.1 kHz, so the source passes through as it is.
+  - Stereo survives a Revert.
+  - The bitpool mostly holds at 53; it is cut to 35 only when the link really weakens, once in more than an hour of streaming.
+
+What it costs:
+
+- More delay in the app's stream. Android has no low-latency path on the software route, so the app's request falls back from low latency (2 ms blocks, a 4 ms buffer, `perf=LOW_LATENCY`) to normal (20 ms blocks, a 40 ms buffer, `perf=NONE`): about 36 ms more, small beside Bluetooth's own delay. The app needs no change for the rate: it opens its stream at an unspecified rate and adapts to whatever Android grants (`src/gui/playback_aaudio.cpp`'s THE RATE).
+- The setting applies to every Bluetooth sink, the car included.
 
 ## Daily use
 

@@ -23,8 +23,11 @@
 // VERBATIM. The pair is the active tab's trim as the store holds it — whole
 // source frames, inclusive [0, total-1], begin < end strictly (a resting trim
 // is never crossed or equal, input_trim.cpp's head). The name is THE NAME
-// GRAMMAR's (trim_preset_name_refusal below): a line the name editor could
-// have committed. The list's row shows the name alone
+// GRAMMAR's (trim_preset_name_refusal below). The name editor's commit asks
+// one predicate more, trim_preset_file_name_refusal, which the reader
+// deliberately does not (its comment below says why: a file holding a name
+// like `A/B` still loads), so the reader accepts more names than the editor
+// commits. The list's row shows the name alone
 // (build_trim_presets_rows, architect 2026-10-28 night); the list's open seat
 // on the preset whose pair is the active tab's trim is how a match shows.
 //
@@ -97,9 +100,28 @@ std::vector<GuiTrimPreset> read_trim_presets_file(
 // (text_editor::replace_selection — no LF, no control byte, well-formed, the
 // name editor's byte cap), NON-EMPTY, no leading or trailing space, and
 // UNIQUE among `presets`. Answers the refusal's reason (one clause, no line
-// number), or std::nullopt for a name that commits.
+// number), or std::nullopt for a name that passes the grammar. The editor's
+// commit also asks trim_preset_file_name_refusal below and the reader does
+// not, deliberately (that predicate's comment gives the reason), so a name
+// the reader accepts is not always one the editor would commit.
 std::optional<std::string> trim_preset_name_refusal(
     std::string_view name, std::span<const GuiTrimPreset> presets);
+
+// THE NAME AS A FILE NAME (architect 2026-11-25: "ok to restrict chars in
+// preset name"): a preset's render is the cell `<NN>_<name>.wav` with its
+// sidecar set under the same stem (GuiInputHandler::trim_presets_render), the
+// name the path component's tail, so a name holding a slash, or the name "."
+// or "..", is no file name. Answers the
+// refusal's reason (one clause), or std::nullopt for a name that is one.
+// ITS OWN PREDICATE, NOT AN ARM OF THE NAME GRAMMAR ABOVE, because the reader
+// asks the grammar: a file holding such a name would read MALFORMED and the
+// list EMPTY, and the next change would rewrite the file from that empty
+// list, losing the presets. So a preset already saved under such a name keeps
+// loading, applying, saving and deleting; THREE ASKERS refuse it: the name
+// editor's commit (Save As's and Rename's, commit_trim_preset_name), the
+// list's Render, which cards that the preset wants renaming, and its Render
+// All, which skips it with the same card.
+std::optional<std::string> trim_preset_file_name_refusal(std::string_view name);
 
 // THE WRITE (the head): `presets`, the whole file, IN THE LIST'S ORDER (the
 // caller sorted them, trim_preset_before; asserted), atomically (tmp + fsync +

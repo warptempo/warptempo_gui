@@ -97,15 +97,15 @@
 // complete_label_reference, flag_editor.cpp, where each act's rules
 // stand). UP, DOWN AND THE PASS KEY ARE GREYED WHERE THEY MEAN NOTHING
 // (his "Number four. Yes"): the keyboard's disabled key, no hover, a press
-// arming nothing — every line editor (a settings value, Save As, a BPM
-// field) and, for the pass key, the iteration bound editor, a bound having
-// no tempo source to toggle; UP and DOWN stay live on the bound editor of
+// arming nothing — every line editor (a settings value, a trim preset's
+// name under Save As or Rename, a BPM field) and, for the pass key, the
+// iteration bound editor, a bound having no tempo source to toggle; UP and DOWN stay live on the bound editor of
 // either column, the main page's Up / Down stepping an addressed bound cell
 // there (input_handler.cpp's Up / Down arm). TAB IS GREYED THE SAME WAY
 // where the standing editor's kind has no completer (architect 2026-11-21):
 // live under the flag editor and the settings value, greyed under the
-// iteration bound editor, Save As and a BPM field; where it is live, a Tab
-// that completes nothing is silent (route_modal_editor_key). ONE
+// iteration bound editor, a trim preset's name and a BPM field; where it
+// is live, a Tab that completes nothing is silent (route_modal_editor_key). ONE
 // PREDICATE, key_live below, read by the painter (paint_onscreen_keyboard),
 // the press (claim_onscreen_keyboard_press) and the hover (hover_face_live)
 // alike, and by the keyboard-modal gate's admission of the keys it lets

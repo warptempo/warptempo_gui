@@ -1038,10 +1038,8 @@ void Viewport::apply_strip_drag_zoom(double new_zoom_level, double anchor_sample
 // applier pays what every zoom pays (the synchronous rebuild, the damage, the
 // predictor resync while playing), the chokepoint's compare puts the HOLD
 // out and suspends a following play's scroll (AppState::camera_hold,
-// follow_suspended), its key arm puts out TRIM, ADD SEL, FOLLOW and RESTR
-// when the level moved (architect 2026-11-17; GuiInputHandler::
-// darken_zoom_lamps_if_level_moved — the lamps are the input layer's, so
-// the test is the arm's, not this body's), and a level move clears Zoom to Fit's whole-song state
+// follow_suspended), it puts out no lamp (a zoom puts out none, architect
+// 2026-11-25), and a level move clears Zoom to Fit's whole-song state
 // (ViewState::whole_song_visible), so a step taken while FIT stands drops
 // the recall exactly as a Ctrl+drag zoom there does — the next `0` zooms out
 // again, stamping the stepped view. A step never writes the recall stamp,

@@ -49,13 +49,13 @@
 
 // -- The bottom icon row's text tier ------------------------------------------
 //
-// ONE FACE (gui_font.h): the bottom icon row's clock is
-// THE PROGRAM FACE (Regular 12 W, 24 device px on the tablet, every text
-// 12 W, gui_font.h), and the render player's two time labels with them
-// (architect 2026-10-26, "yes" to symmetry with the clock); every modal
-// string and the status bar the body face, 12 W too, a row of its own
-// (gui_font.h's table). The no-wiggle guarantee is the timestamps' fixed
-// width, the specimen's advance.
+// THE FACES (gui_font.h): the bottom icon row's timestamp is ITS OWN FACE,
+// THE TIMESTAMP (Bold 14 W, 28 device px on the tablet; architect
+// 2026-11-25, "it is its own thing"), and the overlays' time label THE
+// PROGRAM FACE (Regular 12 W, 24 device px, every text 12 W but these);
+// every modal string and the status bar the body face, 12 W too, a row of
+// its own (gui_font.h's table). The no-wiggle guarantee is the time
+// fields' fixed width, each specimen's advance (THE TIME FIELDS' block).
 //
 // THE STANDING STATE — the queue/render status and the history walk line —
 // IS THE STATUS BAR'S PROCESS LINE (architect 2026-11-19;
@@ -1046,13 +1046,16 @@ static constexpr const char* kSegmentSeparator = " | ";
 // what that field is for.
 //
 // THE SHAPE (architect 2026-09-28; the GitHub segment ahead of the scale
-// 2026-09-29): SEGMENTS SEPARATED BY ` | `, every one alike — the
-// POSITION `x/y`, then the GITHUB segment `GitHub: <word>` when there is one,
-// then the SCALE segment `Scale: [-]<then token> [+]<now token>` when the
-// scale changed (both below) — so an absent segment leaves no separator
-// behind it and nothing leads or trails: `03/14 | GitHub: up to date |
-// Scale: [-]1.0 [+]1.1`, `03/14 | GitHub: behind`, `007/114`. The same shape
-// on BOTH walks. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
+// 2026-09-29; the date after the position 2026-11-25): SEGMENTS SEPARATED BY
+// ` | `, every one alike — the POSITION `x/y`, then on the commit walk the
+// DATE segment `YYYY-MM-DD h:mm AM` when the window holds a member, then the
+// GITHUB segment `GitHub: <word>` when there is one, then the SCALE segment
+// `Scale: [-]<then token> [+]<now token>` when the scale changed (all three
+// below) — so an absent segment leaves no separator behind it and nothing
+// leads or trails: `03/14 | 2026-11-24 3:38 PM | GitHub: up to date |
+// Scale: [-]1.0 [+]1.1`, `03/14 | 2026-11-24 3:38 PM | GitHub: behind`,
+// `007/114` on the local walk. The same shape on BOTH walks, the date the
+// commit walk's alone. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
 // token and `[+]` before the now one, spelled here: the lane's labels carry
 // the side by the strike (architect 2026-10-26; history_diff_label), and
 // this line, a plain run, has no strike to carry it. THE LINE STANDS AT
@@ -1060,7 +1063,8 @@ static constexpr const char* kSegmentSeparator = " | ";
 // of it), under the bottom icon row.
 //
 // THE LINE NAMES NO COMMIT (architect 2026-09-28): no short SHA, so the
-// position is the line's only reference to the member on either walk.
+// position (and on the commit walk the commit's date) is the line's only
+// reference to the member.
 // The member's NAME still has its one owner, HistoryMode::member_label
 // (app_state.h), which the `'` load confirmation reads — the line does not.
 //
@@ -1082,7 +1086,7 @@ static constexpr const char* kSegmentSeparator = " | ";
 // index into that number has ONE OWNER, HistoryMode::member_number
 // (app_state.h). THE NUMBER IS ZERO-PADDED to the count's digit count
 // (architect 2026-09-28): `03/14`, `007/114`, `1/1`, `0/0` — the position
-// keeps one width while `,` / `.` walk, so the segments after it hold still.
+// keeps one width while `,` / `.` walk, so it never moves what follows it.
 //
 // The reference is non-const because both walks COMPUTE THEIR DELTA LAZILY AND
 // CACHE IT (displayed_delta, app_state.h) — the composition itself writes
@@ -1106,7 +1110,35 @@ static std::string history_walk_line(AppState& app) {
         line.insert(0, total.size() - line.size(), '0');
     line += '/';
     line += total;
-    // THE GITHUB SEGMENT, SECOND, AHEAD OF THE SCALE (architect 2026-09-27;
+    // THE DATE SEGMENT, SECOND, RIGHT AFTER THE POSITION (architect
+    // 2026-11-25: "github history should show date of commit"): the viewed
+    // commit's committer time in the DEVICE'S LOCAL TIME, the date ISO and
+    // the time the title bar clock's own spelling (clock_spelling,
+    // gui_battery.h, the one owner) — `2026-11-24 3:38 PM` — read from the
+    // walk's member (GuiHistoryDiff::commit_time_at; the walk read it off the
+    // commit, so this runs no git). It stands second, ahead of the GitHub
+    // word, by his agreed example's order, the bar clipping at its right
+    // edge. THE COMMIT WALK ONLY: a local member is no commit and has no
+    // time, and the empty window (`0/0`) has no member, so neither shows the
+    // segment.
+    if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
+        if (const std::optional<std::int64_t> t =
+                app.history_mode.session.commit_time_at(
+                    app.history_mode.index)) {
+            const std::time_t when = static_cast<std::time_t>(*t);
+            std::tm local{};
+            localtime_r(&when, &local);
+            char date[16];
+            std::snprintf(date, sizeof(date), "%04d-%02d-%02d",
+                          local.tm_year + 1900, local.tm_mon + 1,
+                          local.tm_mday);
+            line += kSegmentSeparator;
+            line += date;
+            line += ' ';
+            line += clock_spelling(local);
+        }
+    }
+    // THE GITHUB SEGMENT, THIRD, AHEAD OF THE SCALE (architect 2026-09-27;
     // its seat 2026-09-29): how this device stands against
     // GitHub as of the last check — `GitHub: checking...` / `up to date` /
     // `ahead` / `behind` / `diverged` / `offline` / `refused`
@@ -2088,56 +2120,79 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
     return def;
 }
 
-// THE TIME FIELDS — THE BOTTOM ICON ROW'S TIMESTAMP, THE RENDER PLAYER'S
-// POSITION AND LENGTH AND THE SCORE VIEWER'S PAIR — PLAIN TEXT, NO ENTRY
-// (architect 2026-11-19: the timestamp "probably doesn't need to be ... in
-// its own input box. It looks a little awkward now"; the overlays' clocks
-// plain the same way): THE DIGITS IN THE PROGRAM FACE (Regular 12 W, 24
-// device px on the tablet; gui_font.h's table), THE TEXT TONE `text`
-// (2026-11-02), on the LINE-BOX BASELINE of the key's box (+18 W of the
-// keys' 28; line_box_baseline). THE BOTTOM ICON ROW'S stands at its own pen
-// (kBottomLeftPenW, render.h; paint_bottom_row_buttons_and_clock); THE
-// OVERLAYS' ARE GTK LABELS IN A BOX AT 6 W SPACING (architect 2026-11-19:
-// "it touches"): each
-// time's SLOT IS THE SPECIMEN'S ADVANCE ALONE, ROUNDED UP TO A WHOLE W
-// (time_label_w_px below: "00:00.000" 53.38 W at Regular 12 W, so 54 W,
-// 108 device px on the tablet), THE TEXT'S PEN THE SLOT'S LEFT EDGE, and
-// the row's neighbors one run gap apart (the controls rows' layouts). The
-// digits are
-// TABULAR — Liberation Sans's every digit 0.556 em — AND THE RUN IS SHAPED
-// WITH KERNING OFF (text_shape::Kerning::Off, architect 2026-11-05: the
-// face's GPOS kerns the pair "11" by about 1.2 px at 22 px, so under its
-// kerning a time holding "11" runs narrower than the specimen and its later
-// digits walk; 11:11.111 measured 3.7 px narrower than 04:49.027 on the
-// tablet) — so every digit slot is one advance and the colon
-// and the point stand still as the time runs.
+// THE TIME FIELDS — THE BOTTOM ICON ROW'S TIMESTAMP AND THE OVERLAYS' TIME
+// LABEL (the render player's position and length, the score viewer's
+// soundtrack pair) — PLAIN TEXT, NO ENTRY (architect 2026-11-19: the
+// timestamp "probably doesn't need to be ... in its own input box. It looks
+// a little awkward now"; the overlays' clocks plain the same way). TWO
+// KINDS, EACH ITS OWN FACE, SPECIMEN AND METRICS:
+//
+//   THE TIMESTAMP (the bottom icon row's left run, its one text; the seats
+//   at bottom_left_run): "MM:SS.mmm" (format_timestamp, time_format.h) IN
+//   ITS OWN FACE, LIBERATION SANS BOLD 14 W (GuiFace::Timestamp, 28 device
+//   px on the tablet), ITS OWN TONE `timestamp_text` A5ABB5 (architect
+//   2026-11-25: "h4 at 14w"; "the timestamp is large and clearly a one-off
+//   in the whole app - it is its own thing"): Arc's `.h4, .category-label {
+//   color: #a5abb5; font-weight: 600; }` at GTK's "large" scale, 12 x 1.2
+//   = 14.4 W, to the whole W, 14. Its specimen kTimestampShape, its
+//   metrics timestamp_metrics.
+//
+//   THE OVERLAYS' TIME LABEL (the render player's and the score viewer's
+//   media rows): ONE LABEL "<position> / <length>", mm:ss of whole
+//   seconds, floored (architect 2026-11-25; time_label_text, app_state.h,
+//   the one composition), in THE PROGRAM FACE (Regular 12 W, 24 device px
+//   on the tablet; gui_font.h's table), THE TEXT TONE `text` (2026-11-02),
+//   on the LINE-BOX BASELINE of the key's box (+18 W of the keys' 28;
+//   line_box_baseline). A GTK LABEL IN A BOX AT 6 W SPACING (architect
+//   2026-11-19: "it touches"): ITS SLOT IS THE SPECIMEN'S ADVANCE ALONE,
+//   ROUNDED UP TO A WHOLE W (time_label_w_px below: "00:00 / 00:00" 70.06 W
+//   at Regular 12 W, so 71 W, 142 device px on the tablet), THE TEXT'S PEN
+//   THE SLOT'S LEFT EDGE, and the row's neighbors one run gap apart (the
+//   controls rows' layouts; the scrub what the fixed terms leave,
+//   player_row_layout). Its specimen kTimeLabelShape, its metrics
+//   time_label_metrics.
+//
+// The digits are TABULAR — Liberation Sans's every digit 0.556 em, Regular
+// and Bold alike — AND EVERY RUN IS SHAPED WITH KERNING OFF
+// (text_shape::Kerning::Off, architect 2026-11-05: the face's GPOS kerns
+// the pair "11" by about 1.2 px at 22 px, so under its kerning a time
+// holding "11" runs narrower than the specimen and its later digits walk;
+// 11:11.111 measured 3.7 px narrower than 04:49.027 on the tablet) — so
+// every digit slot is one advance and the colons, the point and the slash
+// stand still as the time runs.
 //
 // EVERY TIME LABEL PRESSES NOTHING (architect 2026-11-20: "it no longer
 // carries button look"): the bottom left's timestamp is ground
 // (RedesignButtonFace::contains, PLAY's box its one
-// hit), and the overlays' times stand outside the scrub's item and every
-// key's box, publishing only their damage rect (ModalDialogGeometry::clock).
+// hit), and the overlays' label stands outside the scrub's item and every
+// key's box, publishing only its damage rect (ModalDialogGeometry::clock).
 //
-// EACH FIELD'S WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
+// EACH WIDTH IS FIXED — ITS WIDEST STRING (architect 2026-10-05:
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
-// the time runs): the widest digit in every digit slot of "DD:DD.DDD"
-// (kTimeShape), shaped through the one chokepoint at the live scale with
-// kerning off — the widest digit is picked by advance, all ten being 0.556
-// em, so the specimen is "00:00.000". THE
-// CELL — the specimen's ink's whole hull, ceil(ink_r − ink_l) whole px,
-// standing where the run at the pen puts it — is THE CLOCK'S DAMAGE BOX
-// (clock_invalidate_rect, main.cpp); a time whose digit inks reach past the
-// specimen's (a "4") puts a sliver beside it, inside the one px of slack the
-// damage carries. THE PLAYER'S ROW HOLDS TWO, one run gap apart: its
-// scrub is what the fixed terms leave (player_row_layout).
+// the time runs): the widest digit in every digit slot of the kind's
+// specimen, shaped through the one chokepoint at the live scale in the
+// kind's face with kerning off — the widest digit is picked by advance, all
+// ten being 0.556 em, so the specimens are "00:00.000" and "00:00 /
+// 00:00". THE TIMESTAMP'S CELL — its specimen's ink's whole hull united
+// with its advance, standing where the run at the pen puts it — is THE
+// CLOCK'S DAMAGE BOX (bottom_left_clock_cell; clock_invalidate_rect,
+// main.cpp); a time whose digit inks reach past the specimen's (a "4") puts
+// a sliver beside it, inside the one px of slack the damage carries. THE
+// OVERLAYS' LABEL'S DAMAGE BOX IS ITS SLOT, one px of slack each side, by
+// the controls row's rows (ModalDialogGeometry::clock); its text changes
+// once a second, and the ticks damage it only then (GuiRenderPlayer::tick,
+// GuiScoreViewer::tick: the label at the new cursor against the label at
+// the last).
 //
-// THE BOTTOM ICON ROW'S LEFT RUN IS THE TIMESTAMP, A TEXT PIPE AND THE TAB'S
-// NAME (architect 2026-11-19; paint_bottom_row_buttons_and_clock).
+// THE BOTTOM ICON ROW'S LEFT RUN IS THE TIMESTAMP ALONE (architect
+// 2026-11-24; paint_bottom_row_buttons_and_clock).
 //
-// TWO MINUTE DIGITS, and longer sources TRUNCATE (the ruling and what it costs
-// are at format_timestamp, time_format.h). The cell is that format's width and
-// no wider.
-constexpr const char* kTimeShape = "DD:DD.DDD";
+// TWO MINUTE DIGITS on both kinds, and longer sources TRUNCATE (the ruling
+// and what it costs are at format_timestamp, time_format.h; the label's
+// formatter states the same cap, whole_seconds_mmss, app_state.h). Each
+// width is that format's and no wider.
+constexpr const char* kTimestampShape = "DD:DD.DDD";
+constexpr const char* kTimeLabelShape = "DD:DD / DD:DD";
 
 // THE CLOCK'S RUN — the timestamp, the one string the cell shows — spelled
 // once for the painter and the cell's as-painted fingerprint
@@ -2169,23 +2224,20 @@ static std::string clock_time_text(const AppState& app,
     return format_timestamp(seconds);
 }
 
-// The time fields' metrics, MEMOISED ON THE SCALE — eleven tiny shaping
-// passes (ten digits and the specimen) of THE PROGRAM FACE, every time
-// field's (the bottom icon row's clock and the overlays' times), that
-// answer the same thing on every frame until the scale moves — the widths
-// are the face's own. The scale is the whole key: the Program face's size
-// is the table's (gui_font.h; the one live size is the Keys face's).
-// Single-threaded paint state; the waveform worker never reaches this file's
-// text tiers.
+// A TIME KIND'S METRICS, MEMOISED ON THE SCALE — eleven tiny shaping passes
+// (ten digits and the specimen) of the kind's face, that answer the same
+// thing on every frame until the scale moves — the widths are the face's
+// own. The scale is the whole key: both faces' sizes are the table's
+// (gui_font.h; the one live size is the Keys face's). Single-threaded paint
+// state; the waveform worker never reaches this file's text tiers.
 //
-// THE CELL IS THE SPECIMEN'S INK'S WHOLE HULL, THE SLOTS ITS ADVANCES
-// (architect 2026-11-05; kTimeShape's block): `time_w` is the specimen's
-// advance sum, shaped with kerning off, so every time is that wide and no
-// glyph ever walks; `ink_l` / `ink_r` are its ink's real edges from origin
-// 0 (text_shape::ink_left_px / ink_right_px, unrounded), and `cell_w` =
-// ceil(ink_r - ink_l) is the clock's cell and each player field's, in whole px
-// (layout); each cell is its field's damage box too. Every shaping here is
-// text_shape::Kerning::Off, the fields' own option.
+// THE CELL IS THE SPECIMEN'S INK'S WHOLE HULL, THE SLOT ITS ADVANCE
+// (architect 2026-11-05; THE TIME FIELDS' block): `time_w` is the
+// specimen's advance sum, shaped with kerning off, so every time is that
+// wide and no glyph ever walks; `ink_l` / `ink_r` are its ink's real edges
+// from origin 0 (text_shape::ink_left_px / ink_right_px, unrounded), and
+// `cell_w` = ceil(ink_r - ink_l) its ink's whole hull in px. Every shaping
+// here is text_shape::Kerning::Off, the fields' own option.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
@@ -2193,11 +2245,10 @@ struct TimeFieldMetrics {
     double ink_r    = 0.0;    // the specimen's last ink's real edge
     int    cell_w   = 0;      // ceil(ink_r - ink_l), the ink's whole hull
 };
-static TimeFieldMetrics g_time_field_metrics;
-
-static const TimeFieldMetrics& time_field_metrics() {
-    TimeFieldMetrics& m = g_time_field_metrics;
-    const GuiFont font = gui_font(GuiFace::Program);
+static const TimeFieldMetrics& measure_time_field(TimeFieldMetrics& m,
+                                                  GuiFace face,
+                                                  const char* shape) {
+    const GuiFont font = gui_font(face);
     if (m.percent == font.percent) return m;
     char widest = '0';
     double widest_w = -1.0;
@@ -2207,7 +2258,7 @@ static const TimeFieldMetrics& time_field_metrics() {
                              font, one, text_shape::Kerning::Off).width_px;
         if (w > widest_w) { widest_w = w; widest = d; }
     }
-    std::string specimen(kTimeShape);
+    std::string specimen(shape);
     for (char& c : specimen) if (c == 'D') c = widest;
     const text_shape::ShapedRun run =
         text_shape::shape_text_run(font, specimen, text_shape::Kerning::Off);
@@ -2218,21 +2269,33 @@ static const TimeFieldMetrics& time_field_metrics() {
     m.percent = font.percent;
     return m;
 }
+// THE TIMESTAMP'S: "00:00.000" in the Timestamp face (Bold 14 W).
+static TimeFieldMetrics g_timestamp_metrics;
+static const TimeFieldMetrics& timestamp_metrics() {
+    return measure_time_field(g_timestamp_metrics, GuiFace::Timestamp,
+                              kTimestampShape);
+}
+// THE OVERLAYS' LABEL'S: "00:00 / 00:00" in the Program face (Regular 12 W).
+static TimeFieldMetrics g_time_label_metrics;
+static const TimeFieldMetrics& time_label_metrics() {
+    return measure_time_field(g_time_label_metrics, GuiFace::Program,
+                              kTimeLabelShape);
+}
 
-// EVERY OVERLAY TIME LABEL'S SLOT (the one rule at THE TIME FIELDS' block):
+// THE OVERLAYS' TIME LABEL'S SLOT (the rule at THE TIME FIELDS' block):
 // its width the specimen's advance rounded up to a whole W (label_w_px's
 // rule over the measured advance, kerning off), and, from its left edge
 // `x` on the case's rows, its box.
 static int time_label_w_px() {
     const double factor = gui_scale_factor();
     const double adv_w =
-        factor > 0.0 ? time_field_metrics().time_w / factor : 0.0;
+        factor > 0.0 ? time_label_metrics().time_w / factor : 0.0;
     return scaled_px(std::ceil(adv_w), 1);
 }
 static GuiRect time_label_rect(int x, int case_y) {
     return GuiRect{x, case_y, time_label_w_px(), icon_case_h_px()};
 }
-// ONE OVERLAY TIME LABEL PAINTED: `text` alone (architect 2026-11-19),
+// THE OVERLAYS' TIME LABEL PAINTED: `text` alone (architect 2026-11-19),
 // kerning off, its pen the slot's left edge, on the line-box baseline,
 // clipped to the slot.
 static void paint_time_text(cairo_t* cr, const GuiRect& slot,
@@ -2386,20 +2449,22 @@ static void row8_block_walk(bool history, const Row8Block& b,
 
 // THE BOTTOM ICON ROW'S LEFT RUN — THE TIMESTAMP ALONE (architect
 // 2026-11-24: "the timestamp at the bottom left-hand corner would be alone
-// after this"; the active tab is the top icon row's tab pair): ONE REGULAR
-// 12 W RUN (GuiFace::Program) in the text tone, kerning off (THE TIME
+// after this"; the active tab is the top icon row's tab pair): ONE BOLD
+// 14 W RUN (GuiFace::Timestamp) in its own tone `timestamp_text`, Arc's
+// `.h4` A5ABB5 (architect 2026-11-25: "h4 at 14w"), kerning off (THE TIME
 // FIELDS' block) — NO ENTRY (architect 2026-11-19: "probably doesn't need to
 // be ... in its own input box"). ITS PEN kBottomLeftPenW
 // (14 W, render.h; "And then we put the timestamp line at 14W") from the
 // panel's left edge — the status bar's column under it (kStatusBarPenW,
-// the same 14 W by its own ruling) — ON THE KEYS' BASELINE: the 14 W line
-// box centered on the keys' 28 W rows (line_box_baseline,
-// +18 W of the case), so with the row's 7 W above its keys and 7 W below,
-// 14 W of the row above the line box and 14 W under it. THE TIMESTAMP'S OWN
-// BOX (`time_box`): the specimen's advance ("00:00.000", time_w) from the
-// pen by the line box's rows, real edges — the damage cell's ground (a box
-// of no press: the run presses nothing, architect 2026-11-20). The row's
-// painter's one layout.
+// the same 14 W by its own ruling) — ON THE LINE-BOX BASELINE: the face's
+// 16 W line box (13 + 3 W at 14 W, gui_font.h's THE LINE BOX) centered on
+// the keys' 28 W rows (line_box_baseline, its top 6 W down, the baseline
+// +19 W of the case), so with the row's 7 W above its keys and 7 W below,
+// 13 W of the row above the line box and 13 W under it. THE TIMESTAMP'S OWN
+// BOX (`time_box`): the specimen's advance ("00:00.000" in the Bold 14 W,
+// time_w: 63.05 W) from the pen by the line box's rows, real edges — the
+// damage cell's ground (a box of no press: the run presses nothing,
+// architect 2026-11-20). The row's painter's one layout.
 struct BottomLeftRun {
     double   pen      = 0.0;   // the timestamp's pen
     double   baseline = 0.0;
@@ -2407,9 +2472,9 @@ struct BottomLeftRun {
 };
 static BottomLeftRun bottom_left_run(const AppState& app, const GuiRect& lane) {
     const BottomRowSeats seats = bottom_row_seats(app, lane);
-    const GuiFont font = gui_font(GuiFace::Program);
+    const GuiFont font = gui_font(GuiFace::Timestamp);
     const GuiLineBoxW lb = gui_font_line_box_w(font);
-    const TimeFieldMetrics& m = time_field_metrics();
+    const TimeFieldMetrics& m = timestamp_metrics();
     BottomLeftRun r;
     r.pen = static_cast<double>(well_columns(app).x +
                                 scaled_px(kBottomLeftPenW));
@@ -2425,7 +2490,7 @@ static BottomLeftRun bottom_left_run(const AppState& app, const GuiRect& lane) {
 // the whole pixels of the specimen's advance united with its ink, one px of
 // slack each side, by the line box's whole rows.
 static GuiRect bottom_left_clock_cell(const BottomLeftRun& r) {
-    const TimeFieldMetrics& m = time_field_metrics();
+    const TimeFieldMetrics& m = timestamp_metrics();
     const int c0 = static_cast<int>(
                        std::floor(r.pen + std::min(0.0, m.ink_l))) - 1;
     const int c1 = static_cast<int>(
@@ -2516,8 +2581,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // panel's right edge) — the groups on x 834..975, 988..1129, 1142..1703,
     // 1716..1997 and 2010..2291 (Play 2220..2291); the timestamp from x 28
     // (kBottomLeftPenW):
-    // its advance 106.77 px (the 53.4-W advance of
-    // "00:00.000" in the Regular 12 W, kerning off), its cell x 27..135. IN
+    // its advance 126.11 px (the 63.05-W advance of
+    // "00:00.000" in the Bold 14 W, kerning off), its cell x 27..155. IN
     // THE HISTORY
     // VIEW (the hide; Play, Open Text Editor, Toggle Value Drag,
     // COPY and PASTE hidden there with the verbs — the duo whole, its run
@@ -2564,13 +2629,14 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
 
     // THE BOTTOM LEFT: THE TIMESTAMP ALONE, NO ENTRY (architect 2026-11-19;
     // alone, 2026-11-24; the seats and their
-    // rules at bottom_left_run above), in THE PROGRAM FACE (Regular 12 W),
-    // the text tone, inside the save/restore this body already opened. The
-    // render player's two fields share its face and its metrics
-    // (time_field_metrics); THE TWO NEVER PAINT IN THE SAME FRAME: the
-    // player owns the row whole while it stands.
+    // rules at bottom_left_run above), in ITS OWN FACE (GuiFace::Timestamp,
+    // Bold 14 W) and ITS OWN TONE `timestamp_text` (architect 2026-11-25),
+    // inside the save/restore this body already opened. The overlays' time
+    // label has its own face and metrics (THE TIME FIELDS' block) and THE
+    // TWO NEVER PAINT IN THE SAME FRAME: an overlay owns the row whole
+    // while it stands.
     {
-        const GuiFont font = gui_font(GuiFace::Program);
+        const GuiFont font = gui_font(GuiFace::Timestamp);
         const BottomLeftRun run = bottom_left_run(app, lane);
         // THE LEFT RUN PRESSES NOTHING (architect 2026-11-20: "it no longer
         // carries button look"): the timestamp is plain text (architect
@@ -2578,12 +2644,12 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // no tooltip; PLAY is pressed from its
         // own box alone (RedesignButtonFace::contains). The digits
         // are never greyed. The render player's and the score viewer's time
-        // labels share the face and press nothing either.
+        // label press nothing either.
 
         // PUBLISH THE CELL FOR THE DAMAGE OWNER (clock_invalidate_rect,
         // main.cpp — the stash contract is at the field): THE TIMESTAMP'S
         // OWN BOX'S WHOLE PIXELS — the specimen's advance united with its
-        // ink's real edges (time_field_metrics), one pixel of slack on each
+        // ink's real edges (timestamp_metrics), one pixel of slack on each
         // side (another time's glyph may put a sliver outside the
         // specimen's ink, a "4", THE TIME FIELDS' block), by the line box's
         // rows, which hold every digit's ink on its baseline. THE RECT
@@ -2626,7 +2692,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         // 2026-10-27, the open's hold's one frame, platform.h's head;
         // clock_time_text's empty text).
         const std::string time_text = clock_time_text(app, audio);
-        set_palette_source(cr, palette().text);
+        set_palette_source(cr, palette().timestamp_text);
         if (clock_drawn && !time_text.empty()) {
             const text_shape::ShapedRun t = text_shape::shape_text_run(
                 font, time_text, text_shape::Kerning::Off);
@@ -3012,7 +3078,8 @@ void GuiPaintHandler::paint_shift_tooltip(cairo_t* cr) {
         if (b.tooltip.empty()) return;
         line1 = b.tooltip.c_str();
         // THE MODIFIER LINE, on the buttons that have one (2026-08-28 —
-        // the player's two skips): the roster branch's own two-line form,
+        // the rows' shift-admitting buttons, ModalDialogButton::tooltip2):
+        // the roster branch's own two-line form,
         // reached here through the published pair instead of a table, since a
         // modal button's words are the painter's to compose.
         if (!b.tooltip2.empty()) line2 = b.tooltip2.c_str();
@@ -6108,8 +6175,8 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 // the keyboard (paint_bottom_strip's and paint_status_bar's yield).
 // NO LINE EDITOR OPENS WHILE A QUESTION OR THE PROGRESS PAGE STANDS, AND
 // NEITHER RISES OVER ONE: each of the three openers is a list's row or
-// button (GuiInputHandler::settings_page_commit, trim_presets_save_as,
-// bpm_form_commit), dead under a page — the page stands in place of the
+// button (GuiInputHandler::settings_page_commit, trim_presets_save_as and
+// trim_presets_rename, bpm_form_commit), dead under a page — the page stands in place of the
 // list's view and row and its gates consume every press and key — and the
 // reverse is modal_page_stands' proof (app_state.h). So this page ranks
 // last in paint_modal_dialog's fork and is never hidden by a higher rank
@@ -6232,15 +6299,14 @@ void paint_value_page(cairo_t* cr, AppState& app, text_editor::State* ed) {
 
 } // namespace
 
-// THE RENDER PLAYER'S ROW LAYOUT (2026-10-21): each of the eight cases' left
-// column in the plan's order, the clock's two fields and the scrub's span,
+// THE RENDER PLAYER'S ROW LAYOUT (2026-10-21): each of the nine cases' left
+// column in the plan's order, the clock's one label and the scrub's span,
 // on the controls row's seats (modal_controls_seats). The row's arrangement
 // and its rulings are at the painter's player branch. THE TRANSPORT STANDS
 // FLUSH RIGHT AND EVERYTHING ELSE AT THE LEFT (architect 2026-11-10), the
 // scrub and then the clock between the two clusters.
 struct PlayerRowLayout {
-    std::array<int, 8> x{};
-    int field_w = 0, field_gap = 0;
+    std::array<int, 9> x{};
     int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
 };
 static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
@@ -6258,43 +6324,39 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
     const int group    = program_run_gap_px();
     const int pitch    = key_link_pitch_px();
 
-    // THE CLOCK'S TWO LABELS ARE MEASURED BEFORE ANYTHING IS PLACED,
-    // their width being one of the fixed terms the scrub's own is what is
-    // left over. Each is a TIME LABEL, plain text in its slot (the face and
-    // the fixed-width rule at THE TIME FIELDS' block), the slot's width the
-    // widest-digit specimen's advance rounded up to a whole W
-    // (time_label_w_px), so neither label nor anything right of it moves as
-    // the position runs or an item of another length loads — the bottom
-    // icon row's timestamp's face, the program face (architect 2026-10-26,
-    // "yes" to symmetry). THE ROW IS A GTK BOX AT 6 W SPACING (architect
-    // 2026-11-18 / 19; his "it touches"): every pair of neighbors — the left
-    // group's ring, the
-    // scale's trough, the position, the length, the transport's ring — one
-    // run gap apart (kRunGapW, 6 W).
-    l.field_w   = time_label_w_px();
-    l.field_gap = group;
-    const int clock_w = l.field_w + l.field_gap + l.field_w;
+    // THE CLOCK'S LABEL IS MEASURED BEFORE ANYTHING IS PLACED, its width
+    // being one of the fixed terms the scrub's own is what is left over. It
+    // is ONE TIME LABEL, "<position> / <length>" (architect 2026-11-25),
+    // plain text in its slot (the face and the fixed-width rule at THE TIME
+    // FIELDS' block), the slot's width the widest-digit specimen's advance
+    // rounded up to a whole W (time_label_w_px: 71 W, 142 device px on the
+    // tablet), so neither the label nor anything right of it moves as the
+    // position runs or an item of another length loads. THE ROW IS A GTK
+    // BOX AT 6 W SPACING (architect 2026-11-18 / 19; his "it touches"):
+    // every pair of neighbors — the left group's ring, the scale's trough,
+    // the label, the transport's ring — one run gap apart (kRunGapW, 6 W).
+    const int clock_w = time_label_w_px();
 
     // -- The walk (architect 2026-11-10: the transport to the right,
     //    everything else to the left, the scrub and the clock where they
-    //    stand between the two): THE LEFT CLUSTER, the five keys that are not
-    //    the transport — the lamp, the highlight pair, Up a Folder and the
-    //    Load in Place / Delete slot (no Close, architect 2026-11-11: the
-    //    lit PLAYER key is the way out, the scrub taking the
-    //    seat's pitch) — one run from the row's
+    //    stand between the two): THE LEFT CLUSTER, the six keys that are not
+    //    the transport — the lamp, the highlight pair, Up a Folder, Load in
+    //    Place and Delete (both in both lists, architect 2026-11-25; no
+    //    Close, architect 2026-11-11: the lit PLAYER key is the way out, the
+    //    scrub taking the seat's pitch) — one run from the row's
     //    first face; THE TRANSPORT'S THREE right-flushed where THE CONTROLS
     //    ROW'S FACES END, the last face's right edge the row's right seat
     //    (modal_controls_seats' cases_right); the scrub and the
-    //    clock's two fields between them, the scrub taking what is left. --
+    //    clock's label between them, the scrub taking what is left. --
     const int cx0 = seats.cases_left;
-    for (int i = 0; i < 5; ++i)
-        l.x[i] = cx0 + i * pitch;          // Repeat one .. Load in Place
-    l.scrub_x0 = cx0 + linked_group_w_px(5) + group;
+    for (int i = 0; i < 6; ++i)
+        l.x[i] = cx0 + i * pitch;          // Repeat one .. Delete
+    l.scrub_x0 = cx0 + linked_group_w_px(6) + group;
 
     const int transport_x0 =
         std::max(cx0, seats.cases_right - linked_group_w_px(3));
     // What the row owes AFTER the scrub, ahead of the transport: the group
-    // space, the clock's two labels, the group space.
+    // space, the clock's label, the group space.
     const int after_scrub = group + clock_w + group;
     // THE FLOOR IS TWO KNOBS (2026-10-25) — a trough
     // shorter than two of the knobs that ride it is not a scale. `scrub_w`
@@ -6305,9 +6367,9 @@ static PlayerRowLayout player_row_layout(const BottomRowSeats& seats) {
 
     l.clock_x0  = l.scrub_x0 + (l.scrub_w > 0 ? l.scrub_w + group : 0);
     l.clock_end = l.clock_x0 + clock_w;
-    l.x[5] = transport_x0;                 // Home (skip back)
-    l.x[6] = transport_x0 + pitch;         // Play / Pause
-    l.x[7] = transport_x0 + 2 * pitch;     // End (skip forward)
+    l.x[6] = transport_x0;                 // Home (skip back)
+    l.x[7] = transport_x0 + pitch;         // Play / Pause
+    l.x[8] = transport_x0 + 2 * pitch;     // End (skip forward)
     return l;
 }
 
@@ -6369,22 +6431,19 @@ static ScoreRowLayout score_row_layout(const BottomRowSeats& seats,
 // architect 2026-11-10): RESET, START and END one linked group from
 // the row's first column (no CLOSE, 2026-11-11, the page road's
 // reason), the scrub after the group space, THE
-// CLOCK — the render player's two time
-// labels, measured and spaced as its are (player_row_layout) — and BACK,
+// CLOCK — the render player's time label, measured and spaced as its is
+// (player_row_layout) — and BACK,
 // PLAY / PAUSE and FWD one linked group flush right (the skips architect
 // 2026-10-27, the render player's three transport seats), the scrub taking
 // what is left, floored at two knobs as the player's is.
 struct ScoreMediaRowLayout {
     std::array<int, 6> x{};
-    int field_w = 0, field_gap = 0;
     int scrub_x0 = 0, scrub_w = 0, clock_x0 = 0, clock_end = 0;
 };
 static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
     ScoreMediaRowLayout l;
     const int group = program_run_gap_px();
-    l.field_w   = time_label_w_px();
-    l.field_gap = group;
-    const int clock_w = l.field_w + l.field_gap + l.field_w;
+    const int clock_w = time_label_w_px();
     const int pitch = key_link_pitch_px();
     const int cx0 = seats.cases_left;
     for (int i = 0; i < 3; ++i) l.x[i] = cx0 + i * pitch;   // RESET .. END
@@ -6406,8 +6465,8 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // the player, so they should be there for the trim presets also"): ONE
 // CLUSTER FLUSH RIGHT — THE HIGHLIGHT PAIR, the player's DOWN and UP keys,
 // ONE LINKED GROUP (materials.h's linked_group_w_px), a run gap
-// (program_run_gap_px), then the four WORD BUTTONS SAVE, SAVE AS, DELETE and
-// CLOSE (modal_word_buttons: Arc's text buttons, one width, 4 W apart) — the
+// (program_run_gap_px), then the six WORD BUTTONS SAVE, SAVE AS, RENAME,
+// DELETE, RENDER and CLOSE (architect 2026-11-25; modal_word_buttons: Arc's text buttons, one width, 4 W apart) — the
 // last box's right edge the row's (every word row's alignment rule; the
 // kit's presets row, 2026-11-19), nothing at the row's left. A
 // DELIBERATE ASYMMETRY WITH THE PLAYER (architect 2026-11-10: the
@@ -6731,14 +6790,16 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // (render_player_button_hint) — the transport
     // triple, the REPEAT ONE lamp, the HIGHLIGHT PAIR (architect 2026-10-10,
     // Highlight Next and Highlight Previous, the highlight's walk as two keys
-    // on glass), UP A FOLDER and LOAD IN PLACE (or DELETE at the root) —
+    // on glass), UP A FOLDER, LOAD IN PLACE and DELETE (both in both
+    // lists) —
     // while a word button is Arc's text button, its word alone on it and
     // its tooltip the word (2026-11-19). The word kind is the
     // other owners' alone: a
     // prompt's answers, the progress page's Cancel and the picker's one
     // word (Cancel or Close by content, kModalCancelLabel's rule) — or, under
-    // the trim presets list, its four words SAVE, SAVE AS, DELETE and
-    // CLOSE after its two keys, the player's highlight pair, or under the
+    // the trim presets list, its six words SAVE, SAVE AS, RENAME, DELETE,
+    // RENDER and CLOSE after its two keys, the player's highlight pair, or
+    // under the
     // BPM form its two, RENDER and CANCEL. `lit` is
     // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
@@ -6751,7 +6812,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // `glyph` keys too, their glyphs score_viewer_button_icon's.
         AppState::ScoreButtonAct  score_act  = AppState::ScoreButtonAct::None;
         // The trim presets list's (2026-10-28): its highlight pair are
-        // `glyph` keys wearing the player's glyphs, its other four word
+        // `glyph` keys wearing the player's glyphs, its other members word
         // buttons.
         AppState::TrimPresetsButtonAct trim_act =
             AppState::TrimPresetsButtonAct::None;
@@ -6765,9 +6826,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // The disabled face (architect 2026-08-30, the player's row) — the
         // live predicate's answer at plan time, published on the record
         // below. FOUR OWNERS WRITE IT: the
-        // player's eight through render_player_button_enabled, the score
+        // player's nine through render_player_button_enabled, the score
         // viewer's keys through score_viewer_button_enabled, the trim
-        // presets list's six through trim_presets_button_enabled and the
+        // presets list's through trim_presets_button_enabled and the
         // BPM form's two through bpm_form_button_enabled; true on every
         // other owner's buttons.
         bool        enabled      = true;
@@ -6777,9 +6838,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // WHERE IT PAINTS. The single cluster every other owner
         // lays out is written into this field by the walk below; THE PLAYER'S
         // ROW IS NOT ONE CLUSTER (the lamp, the highlight pair, the Up a
-        // Folder button and Load in Place at the left, then the scrub
+        // Folder button, Load in Place and Delete at the left, then the scrub
         // and the clock, then the transport FLUSH RIGHT; architect
-        // 2026-11-10), so its own branch writes all eight
+        // 2026-11-10), so its own branch writes all nine
         // and the walk simply paints where it is told.
         int         x            = 0;
     };
@@ -6883,7 +6944,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // keeping its own order): the REPEAT ONE
         // lamp, the HIGHLIGHT PAIR (Highlight Next, Highlight Previous: the
         // highlight's one-row walk on a button, architect 2026-10-10),
-        // the UP A FOLDER button and Load in place from the row's
+        // the UP A FOLDER button, Load in Place and Delete (both in both
+        // lists, architect 2026-11-25) from the row's
         // first face — then the scrub and the clock (both laid out in the
         // player's own branch below, no separator either side of them,
         // architect 2026-10-02), then, FLUSH RIGHT, THE TRANSPORT (THE MAIN
@@ -6911,7 +6973,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // which this painter already reads for the clock). Every bit
         // reaches a repaint through the row's one damage owner: the three
         // highlight movers and the transport writers damage the row already,
-        // for the Load in place face and the play key's glyph.
+        // for the Load in Place and Delete faces and the play key's glyph.
         RenderPlayerHintState hint;
         hint.play_face     = render_player_play_face(app);
         hint.home_previous = render_player_home_takes_previous(app, playback,
@@ -6988,19 +7050,25 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // ahead of the cluster's last key. It greys at the root through the
         // act's own wall.
         glyph_button(AppState::PlayerButtonAct::Up);
-        // THE CLUSTER'S LAST KEY: Load in Place (the icon row's history
-        // group runs the same act one surface over).
-        // AT THE ROOT THE SLOT IS DELETE (architect 2026-09-29): `tmp/`'s own
-        // listing is batch folders, where a load has nothing to name, so the
-        // fifth button deletes the highlighted folder, and its shift press
-        // every folder listed; its shift line stands only where "all" is more
-        // than the highlighted one. Inside a batch folder the slot is Load in
-        // Place, unchanged.
-        hint.delete_all_differs = render_player_root_folder_count(app) > 1;
-        if (app.render_player.folder == AppState::RenderPlayer::Folder::Root)
-            glyph_button(AppState::PlayerButtonAct::Delete);
-        else
-            glyph_button(AppState::PlayerButtonAct::LoadInPlace);
+        // THE CLUSTER'S LAST TWO KEYS, IN BOTH LISTS (architect 2026-11-25:
+        // "delete and load in place could both exist in render list and
+        // folder list"), the destructive act last: LOAD IN PLACE (the icon
+        // row's history group runs the same act one surface over), greyed in
+        // the folder list, a folder naming no recipe; then DELETE, its word
+        // and its shift line naming its list's subjects — in a folder's
+        // render list the highlighted render, held the folder, the line
+        // standing only where the folder lists more than one render (its one
+        // render's delete takes the folder with it); in the folder list the
+        // highlighted folder, held every folder, the line standing only where
+        // "all" is more than the highlighted one (architect 2026-09-29).
+        const bool in_folder =
+            app.render_player.folder == AppState::RenderPlayer::Folder::Batch;
+        hint.delete_names_render  = in_folder;
+        hint.delete_shift_differs =
+            in_folder ? render_player_batch_render_count(app) > 1
+                      : render_player_root_folder_count(app) > 1;
+        glyph_button(AppState::PlayerButtonAct::LoadInPlace);
+        glyph_button(AppState::PlayerButtonAct::Delete);
         // THE TRANSPORT, FLUSH RIGHT (architect 2026-11-10), the row's last
         // three seats: Home, Play / Pause, End.
         glyph_button(AppState::PlayerButtonAct::Home);
@@ -7054,12 +7122,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // PLAYER'S SHAPE), in painted order, one cluster flush right
         // (key_cluster_row_layout): THE HIGHLIGHT PAIR — the player's DOWN
         // and UP, its glyphs and words, the highlight's walk without applying
-        // — then FOUR WORD BUTTONS, SAVE, SAVE AS, DELETE and CLOSE (the
+        // — then SIX WORD BUTTONS, SAVE, SAVE AS, RENAME, DELETE, RENDER and
+        // CLOSE (RENDER and RENAME architect 2026-11-25, RENDER just before
+        // Close by his word that evening, "just before close"; the
         // Close word kModalCloseLabel's rule, app_state.h: the list has no
         // scrub, so it keeps its leave button, architect 2026-11-11),
         // CLOSE LAST. No Apply: the
         // row's tap is the act. Each face is the act's own truthful answer
-        // (trim_presets_button_enabled).
+        // (trim_presets_button_enabled). RENDER'S TOOLTIP is its word, as
+        // every word button's, AND ITS HOLD LINE, "Hold to render all"
+        // (trim_presets_button_shift_hint), wherever the list holds a
+        // preset: with one or more, the hold's Render All does what the
+        // plain press does not (architect 2026-11-25).
         using Act = AppState::TrimPresetsButtonAct;
         for (const Act act : {Act::HighlightDown, Act::HighlightUp}) {
             DialogButtonPlan b;
@@ -7079,7 +7153,12 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         };
         word(Act::Save, "Save");
         word(Act::SaveAs, "Save As");
+        word(Act::Rename, "Rename");
         word(Act::Delete, "Delete");
+        word(Act::Render, "Render");
+        plan.back().tooltip2 = trim_presets_button_shift_hint(
+            Act::Render,
+            /*list_holds_preset=*/!app.folder_overlay.trim_presets.empty());
         word(Act::Close, kModalCloseLabel);
     } else if (row_bpm) {
         // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the
@@ -7122,7 +7201,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     }
     // EVERY BUTTON'S BOX: a glyph button the PROGRAM'S CASE at the bottom icon
     // row's width
-    // (the player's eight and the score viewer's keys, placed by
+    // (the player's nine and the score viewer's keys, placed by
     // its own branch below); every other owner's row — a question's answers
     // and the progress page's Cancel among them — ONE CLUSTER OF WORD
     // BUTTONS, laid out whole — widths, the flush-right start and each x —
@@ -7161,7 +7240,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // THE ALIGNMENT RULE: the WORD BUTTONS SIT FLUSH RIGHT on every
     // row — a question's answers, the progress page's Cancel, the picker's
     // one word (Cancel or Close by content,
-    // kModalCancelLabel's rule) and the trim presets list's four (its
+    // kModalCancelLabel's rule) and the trim presets list's six (its
     // highlight pair, the player's, directly before them in the one cluster)
     // and the BPM form's two — the last one's right edge 6 W inside the
     // panel (modal_controls_seats), the button gap between them; the
@@ -7263,18 +7342,17 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     } else if (row_player) {
         // -- THE RENDER PLAYER'S ROW (THE TRANSPORT KEYS TO THE RIGHT,
         //    EVERYTHING ELSE TO THE LEFT, architect 2026-11-10, the scrub
-        //    and the timestamps between them in their order): REPEAT ONE ·
-        //    DOWN · UP · UP A FOLDER · LOAD IN PLACE · SCRUB · CLOCK ·
-        //    TRANSPORT, the transport flush right. NO SEPARATORS (architect
+        //    and the clock between them in their order): REPEAT ONE ·
+        //    DOWN · UP · UP A FOLDER · LOAD IN PLACE · DELETE · SCRUB ·
+        //    CLOCK · TRANSPORT, the transport flush right. NO SEPARATORS (architect
         //    2026-10-02; Sound Recorder and mplay32 have none): the groups
         //    stand the run gap of bare face apart (program_run_gap_px,
         //    kRunGapW, 6 W) — the left cluster → the trough, the trough →
-        //    the position, the position → the length, the length → the
-        //    transport, a GTK box at 6 W spacing (architect 2026-11-18 /
-        //    19). THE CLOCK IS TWO TIME LABELS
-        //    (architect 2026-10-05: Sound Recorder's Position and Length
-        //    panels, ACID's separate fields) — the position, then the
-        //    length.
+        //    the clock, the clock → the transport, a GTK box at 6 W spacing
+        //    (architect 2026-11-18 / 19). THE CLOCK IS ONE TIME LABEL,
+        //    "<position> / <length>" in whole seconds, floored (architect
+        //    2026-11-25: "remove the milliseconds from the player and the
+        //    score ... and add the slash").
         //
         //    THE SCRUB IS THE ONE FLEXIBLE ITEM and everything else is fixed,
         //    so the row's primacy rule reads plainly here: THE BUTTONS STAY
@@ -7283,9 +7361,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    (a zero rect contains no point and damages nothing) rather than a
         //    track too small to seat a handle.
         //
-        //    THE PLAN IS EIGHT ITEMS — the left cluster's five (the lamp, THE
-        //    HIGHLIGHT PAIR behind it, Up a Folder and Load in Place; no
-        //    Close, 2026-11-11) and the transport's three —
+        //    THE PLAN IS NINE ITEMS — the left cluster's six (the lamp, THE
+        //    HIGHLIGHT PAIR behind it, Up a Folder, Load in Place and Delete,
+        //    architect 2026-11-25; no Close, 2026-11-11) and the transport's
+        //    three —
         //    every one of them a box of the same width and the whole row is fixed
         //    except the scrub. THE BOXES ARE THE BOTTOM ICON ROW'S CASES
         //    (architect 2026-10-05, bottom_row_seats):
@@ -7293,9 +7372,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    on the program's key at the bottom icon row's seat, the
         //    act's drawing centered on its box, the row on the panel's face (the
         //    player is the program's tenant of the row, paint_bottom_strip).
-        //    The scrub is Arc's scale (render.h's scrub block); the two
-        //    time labels are plain text in their slots (THE TIME FIELDS'
-        //    block).
+        //    The scrub is Arc's scale (render.h's scrub block); the time
+        //    label is plain text in its slot (THE TIME FIELDS' block).
         //
         //    THE ROW IS THE MODAL FAMILY'S CONTROLS ROW (architect
         //    2026-10-14, modal_box.h): the buttons stand at the bottom icon
@@ -7312,17 +7390,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         dlg.owner  = AppState::ModalDialogOwner::Player;
 
         // THE ROW'S LAYOUT is player_row_layout's (the runs of keys, the
-        // group space, the clock's two fields measured first, the fixed left
+        // group space, the clock's label measured first, the fixed left
         // cluster, the right-flushed transport and the scrub taking what is
         // between them —
-        // the rules stated there). THE CLOCK'S FACE IS THE BOTTOM ICON ROW'S
-        // CLOCK'S, THE PROGRAM FACE (architect 2026-10-26, "yes" to
-        // symmetry), the face its fields were measured in.
+        // the rules stated there). THE LABEL'S FACE IS THE PROGRAM FACE (THE
+        // TIME FIELDS' block), the face its slot was measured in.
         const PlayerRowLayout pl = player_row_layout(seats);
         assert(plan.size() == pl.x.size());
         for (std::size_t i = 0; i < pl.x.size(); ++i) plan[i].x = pl.x[i];
-        const int field_w   = pl.field_w;
-        const int field_gap = pl.field_gap;
         const int scrub_x0  = pl.scrub_x0;
         const int scrub_w   = pl.scrub_w;
         const int clock_x0  = pl.clock_x0;
@@ -7355,25 +7430,21 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             });
         }
 
-        // -- THE CLOCK, after the scrub: TWO TIME FIELDS (2026-10-05), the
-        //    POSITION and then the LENGTH, each plain text (2026-11-19) on
-        //    the case's rows, its
-        //    run's pen its slot's left edge, in the text tone
-        //    (paint_time_text), the slots one run gap apart. ONE RECT ROUND
-        //    BOTH IS PUBLISHED (dlg.clock) for the
-        //    tick's per-position damage, beside the scrub's, and the two CLIP
-        //    at the lane's right pad on a narrow window. WHILE THE SCRUB IS
-        //    HELD THE POSITION FIELD SHOWS THE TIME THE DROP WOULD LAND AT
-        //    (architect 2026-11-10): the lift's own derivation over the
+        // -- THE CLOCK, after the scrub: ONE TIME LABEL, "<position> /
+        //    <length>" in whole seconds, floored (architect 2026-11-25;
+        //    time_label_text, app_state.h), plain text (2026-11-19) on the
+        //    case's rows, its run's pen its slot's left edge, in the text
+        //    tone (paint_time_text). ITS SLOT IS PUBLISHED (dlg.clock), one
+        //    px of slack each side, for the tick's damage when the label's
+        //    text moves (GuiRenderPlayer::tick), beside the scrub's, and the
+        //    label CLIPS at the lane's right pad on a narrow window. WHILE
+        //    THE SCRUB IS HELD THE POSITION SHOWS THE TIME THE DROP WOULD
+        //    LAND AT (architect 2026-11-10): the lift's own derivation over the
         //    thumb's carried center (render_player_scrub_drop_frame,
         //    app_state.h), the item's position where the lift would seek
         //    nothing; the held scrub's edges damage dlg.clock
         //    (input_pointer.cpp's play-scrub block). --
         const int sr = audio.sample_rate();
-        auto seconds_of = [sr](int64_t frames) {
-            return sr > 0 ? static_cast<double>(frames) / static_cast<double>(sr)
-                          : 0.0;
-        };
         const int clock_right = std::min(clock_end, cx1);
         if (clock_right > clock_x0) {
             cairo_save(cr);
@@ -7386,14 +7457,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                                      rp.scrub.marker_x)
                           .value_or(pos)
                     : pos;
-            const int64_t shown[2] = {at, rp.frames};
-            for (int i = 0; i < 2; ++i) {
-                const int field_x = clock_x0 + i * (field_w + field_gap);
-                // PLAIN TEXT (THE TIME FIELDS' block): the run at its slot's
-                // pen, kerning off, in the text tone (paint_time_text).
-                paint_time_text(cr, time_label_rect(field_x, seats.case_y),
-                                format_timestamp(seconds_of(shown[i])));
-            }
+            // PLAIN TEXT (THE TIME FIELDS' block): the run at its slot's
+            // pen, kerning off, in the text tone (paint_time_text).
+            paint_time_text(cr, time_label_rect(clock_x0, seats.case_y),
+                            time_label_text(at, rp.frames, sr));
             cairo_restore(cr);
             dlg.clock = GuiRect{clock_x0 - 1, content.y,
                                 clock_right - clock_x0 + 2, content.h};
@@ -7435,19 +7502,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                : score_scrub_x_of_frame(app, pos);
                 });
             }
-            // THE CLOCK, the render player's two time fields verbatim: the
+            // THE CLOCK, the render player's time label verbatim: the
             // elapsed time within the range, then the range's length, at
             // the soundtrack's own rate; WHILE THE SCRUB IS HELD the elapsed
-            // field shows the time the drop would land at (architect
+            // time is the time the drop would land at (architect
             // 2026-11-10; score_scrub_drop_frame, the lift's own derivation
             // over the carried center), the cursor's where the lift would
             // seek nothing.
             const int sr = app.score_audio.rate();
-            auto seconds_of = [sr](int64_t frames) {
-                return sr > 0 ? static_cast<double>(frames) /
-                                    static_cast<double>(sr)
-                              : 0.0;
-            };
             const int clock_right = std::min(ml.clock_end, cx1);
             if (clock_right > ml.clock_x0) {
                 cairo_save(cr);
@@ -7460,15 +7522,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                     sd.armed ? score_scrub_drop_frame(app, sd, sd.marker_x)
                                    .value_or(pos)
                              : pos;
-                const int64_t shown[2] = {at - fr.begin, fr.length()};
-                for (int i = 0; i < 2; ++i) {
-                    const int field_x =
-                        ml.clock_x0 + i * (ml.field_w + ml.field_gap);
-                    // The player's text verbatim (paint_time_text).
-                    paint_time_text(cr,
-                                    time_label_rect(field_x, seats.case_y),
-                                    format_timestamp(seconds_of(shown[i])));
-                }
+                // The player's label verbatim (paint_time_text; its text
+                // GuiScoreViewer::tick's comparator composes the same way).
+                paint_time_text(cr, time_label_rect(ml.clock_x0, seats.case_y),
+                                time_label_text(at - fr.begin, fr.length(),
+                                                sr));
                 cairo_restore(cr);
                 dlg.clock = GuiRect{ml.clock_x0 - 1, content.y,
                                     clock_right - ml.clock_x0 + 2, content.h};
@@ -7756,8 +7814,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                                               : plan[i].tooltip;
         // THE MODIFIER LINE (2026-08-28), published beside it and empty on
         // every button with no shifted twin — the roster hint's `line2` over
-        // this surface, its producers the player's plan and the score
-        // viewer's (its skips, 2026-10-27) above.
+        // this surface, its producers the player's plan, the score
+        // viewer's (its skips, 2026-10-27) and the trim presets list's (its
+        // Render, architect 2026-11-25) above.
         out.tooltip2 = plan[i].tooltip2;
         dlg.buttons.push_back(out);
     }
@@ -8732,8 +8791,8 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
 // enumerated from paint_bottom_strip and paint_bottom_row_buttons_and_clock:
 // the row's body tone under the timestamp (the palette and the geometry,
 // the globals), the cell as published (AppState::clock_cell_rect) and the
-// run (clock_time_text: the scanner or the cursor, the sample rate) in the
-// text tone; and whether the row yields, when the cell is not the clock's at
+// run (clock_time_text: the scanner or the cursor, the sample rate) in its
+// tone `timestamp_text`; and whether the row yields, when the cell is not the clock's at
 // all (modal_owns_bottom_row: an overlay's row, or a question's or the
 // progress page's answers; or the on-screen
 // keyboard standing over the row, architect 2026-11-20,

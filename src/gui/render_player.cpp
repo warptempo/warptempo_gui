@@ -1,5 +1,6 @@
 #include "render_player.h"
 
+#include "car_transport.h"          // GuiCarTransport::kCarSeekSeconds (the car's one seek)
 #include "failure.h"                // GuiFailure (the decode refusal's shape)
 #include "folder_overlay.h"
 #include "render_cache.h"           // read_fingerprint_sidecar (the item's limiter line)
@@ -9,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <string>
 #include <system_error>
@@ -177,8 +179,8 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     // THE BAND IS ONE RECT (2026-08-28): its height is the slot's ceiling
     // whatever this listing's length, so the rebuild's damage is the same band
     // every other damage takes. THE ROW REPAINTS WITH IT: the
-    // rebuild reseats the highlight, which the Load in place button's face
-    // reads (render_player_button_enabled).
+    // rebuild reseats the highlight, which the Load in place and Delete
+    // buttons' faces read (render_player_button_enabled).
     damage_band();
     damage_row();
     // THE HEAD UNIT WITH IT: a rebuild reseats the band, and with nothing
@@ -260,30 +262,55 @@ int render_player_root_folder_count(const AppState& a) {
     return n;
 }
 
-// WOULD DELETE ACT (the contract at the declaration): at the root, the band on
-// a batch folder — which, the band standing on a row whenever the listing has
-// one, is also exactly when the shifted press has any folder to take.
+// THE LISTED FOLDER'S RENDERS (the contract is at the declaration,
+// app_state.h): the listing's own Wav rows while it stands inside a batch.
+int render_player_batch_render_count(const AppState& a) {
+    if (a.render_player.folder != AppState::RenderPlayer::Folder::Batch)
+        return 0;
+    int n = 0;
+    for (const Row& r : a.folder_overlay.rows)
+        if (r.kind == Row::Kind::Wav) ++n;
+    return n;
+}
+
+// WOULD DELETE ACT (the contract at the declaration): the band on a row of the
+// kind the list's plain press deletes — a batch folder at the root, a render
+// inside a batch folder.
 bool render_player_delete_actionable(const AppState& a) {
-    if (a.render_player.folder != AppState::RenderPlayer::Folder::Root)
-        return false;
     const AppState::FolderOverlay& ov = a.folder_overlay;
     if (ov.highlight_row < 0 ||
         ov.highlight_row >= static_cast<int>(ov.rows.size()))
         return false;
-    return ov.rows[static_cast<size_t>(ov.highlight_row)].kind ==
-           Row::Kind::Folder;
+    const Row::Kind kind = ov.rows[static_cast<size_t>(ov.highlight_row)].kind;
+    switch (a.render_player.folder) {
+        case Folder::Root:  return kind == Row::Kind::Folder;
+        case Folder::Batch: return kind == Row::Kind::Wav;
+    }
+    return false;
 }
 
-// THE ROOT'S DELETE, ANSWERED (the contract is at the declaration).
+// A FOLDER DELETE, ANSWERED (the contract is at the declaration).
 void GuiRenderPlayer::delete_batch_folders(
         const std::vector<std::filesystem::path>& folders) {
     AppState::RenderPlayer& rp = app.render_player;
     if (!rp.active || folders.empty()) return;
-    // NO ITEM IS BOUND HERE: the question was raised at the root, where
-    // nothing is loaded (up() unloads the item before it enters the root,
-    // open() binds nothing, and the root lists folders alone), and the
-    // question's veil and the car's prompt guard keep the listing there until
-    // this answer — so no transport reads a folder about to go.
+    // A BOUND ITEM IN A FOLDER ABOUT TO GO IS UNLOADED FIRST (architect
+    // 2026-11-25): from inside a folder the item, when one is bound, lives
+    // there, and the question's rise has paused it; the Up tail is up()'s own
+    // unload (the engine fenced and rebound off the item's buffer, the item's
+    // fields cleared, the transport IDLE), so no transport, scrub, Repeat One
+    // replay or car act reads a file that is gone. At the root nothing is
+    // bound (up() unloads on the way there, open() binds none), and the
+    // question's veil and the car's prompt guard keep the listing as it stood
+    // until this answer.
+    if (!rp.item.empty()) {
+        for (const std::filesystem::path& f : folders) {
+            if (rp.item.parent_path() == f) {
+                unload_item(UnloadTail::Up);
+                break;
+            }
+        }
+    }
     // THE BOUNDS AND THE REMOVE are the one batch-folder deletion's
     // (remove_batch_folder, renders_dir.h, shared with the load in place's
     // tail): only a directory directly under this project's own `tmp/`,
@@ -330,6 +357,90 @@ void GuiRenderPlayer::delete_batch_folders(
     if (app.folder_overlay.rows.empty()) close();
 }
 
+// ONE RENDER'S DELETE, ANSWERED (the contract is at the declaration).
+void GuiRenderPlayer::delete_render(const AppState::RenderEntry& entry) {
+    AppState::RenderPlayer& rp = app.render_player;
+    if (!rp.active) return;
+    // THE FOLDER'S LAST RENDER IS THE FOLDER'S DELETE (architect 2026-11-25):
+    // the emptied folder goes with it and the player goes up, through the one
+    // folder delete, which unloads a bound item first.
+    if (render_player_batch_render_count(app) <= 1) {
+        delete_batch_folders({entry.batch_folder});
+        return;
+    }
+    // The deleted row's place in the listing, read before the rebuild: the
+    // band's seat after it (the question's veil kept the listing as it
+    // stood since the press).
+    const AppState::FolderOverlay& ov = app.folder_overlay;
+    int place = -1;
+    for (size_t i = 0; i < ov.rows.size(); ++i) {
+        if (ov.rows[i].path == entry.wav_path) {
+            place = static_cast<int>(i);
+            break;
+        }
+    }
+    // THE BOUND ITEM. This render: unloaded through up()'s own road (the Up
+    // tail; the player stands on with nothing loaded), so no transport,
+    // scrub, Repeat One replay or car act reads the file about to go. Another
+    // render of this folder: it stays bound and paused as the question's
+    // rise left it, and the removed render is struck from its item folder —
+    // the list the next track, the folder's ends and the natural end's
+    // advance walk — its index following, so nothing walks into the gone
+    // file.
+    if (rp.item == entry.wav_path) {
+        unload_item(UnloadTail::Up);
+    } else if (!rp.item.empty()) {
+        for (size_t i = 0; i < rp.item_folder.size(); ++i) {
+            if (rp.item_folder[i].path != entry.wav_path) continue;
+            rp.item_folder.erase(rp.item_folder.begin() +
+                                 static_cast<std::ptrdiff_t>(i));
+            if (static_cast<int>(i) < rp.item_index) --rp.item_index;
+            break;
+        }
+    }
+    // THE RENDER'S WHOLE FILE SET, the cell's one enumeration
+    // (batch_cell_file_set, renders_dir.h). A file already missing is the
+    // ordinary case (the staging sibling, a sidecar never written) and is
+    // silent; a removal that fails is one stderr line per file with its full
+    // path, and ONE CRITICAL card for the render, named by its entry id
+    // (render_entry_id, the question's own spelling) with the first failure's
+    // words (failure.h's two clauses).
+    bool carded = false;
+    for (const std::filesystem::path& p :
+         batch_cell_file_set(entry.batch_folder, entry.basename)) {
+        std::error_code ec;
+        std::filesystem::remove(p, ec);
+        if (!ec) continue;
+        const GuiFailure fail = path_failure(
+            "Could not delete ", p, render_entry_id(entry),
+            ": " + ec.message());
+        std::fprintf(stderr, "warptempo_gui: %s\n", fail.diagnostic.c_str());
+        if (!carded) {
+            notifications.notify(AppState::NotificationClass::Critical,
+                                 fail.display);
+            carded = true;
+        }
+    }
+    // THE LISTING FROM DISK AGAIN, whatever failed, and THE BAND ON THE ROW
+    // THAT TOOK THE DELETED ONE'S PLACE (architect 2026-11-25) — the next
+    // render, the new last row when the last went. The rebuild's own seat
+    // rule would take the bound item's row; this reseat after it is the
+    // delete's, the row centered as every rebuild's seat is, the band and the
+    // row already damaged by the rebuild and the head unit told the new
+    // title off a live transport (the question paused it).
+    enter(Folder::Batch, entry.batch_folder, {});
+    AppState::FolderOverlay& listed = app.folder_overlay;
+    const int n = static_cast<int>(listed.rows.size());
+    if (place >= 0 && n > 0) {
+        const int seat = std::min(place, n - 1);
+        if (seat != listed.highlight_row) {
+            listed.highlight_row = seat;
+            folder_overlay::scroll_row_centered(app, seat);
+            if (rp.transport != Transport::Live) publish_media_state();
+        }
+    }
+}
+
 void GuiRenderPlayer::open_row(int index, bool tapped) {
     const AppState::FolderOverlay& ov = app.folder_overlay;
     if (index < 0 || index >= static_cast<int>(ov.rows.size())) return;
@@ -366,8 +477,8 @@ void GuiRenderPlayer::open_row(int index, bool tapped) {
 // The three below are the WIDGET'S mechanics (folder_overlay.h owns where the
 // band may sit and how far the offset may run, for every content alike); what
 // this cluster adds is the player's own damage — THE ROW'S beside the band's
-// on the two highlight movers, because the Load in place
-// button's face reads the highlight (render_player_button_enabled) and a
+// on the two highlight movers, because the Load in place and Delete
+// buttons' faces read the highlight (render_player_button_enabled) and a
 // face edge must reach a repaint through the row's one damage owner.
 //
 // AND THE HEAD UNIT'S PUSH BESIDE IT (architect 2026-09-12, from the car):
@@ -590,12 +701,14 @@ bool render_player_button_enabled(const AppState& a,
             return !authoring_locked(a) &&
                    !load_in_place_render_blocked(a) &&
                    render_player_highlighted_entry(a) != nullptr;
-        // DELETE (architect 2026-09-29), the root's slot: the act's own
-        // question under the twin rule (render_player_delete_actionable — the
-        // band on a batch folder, which at the root is also every case the
-        // shifted press has a folder to take). A RUNNING RENDER IS NO TERM:
-        // no run can stand while the player does (open() refuses over one,
-        // and nothing under the player starts one).
+        // DELETE (architect 2026-09-29; in both lists 2026-11-25): the act's
+        // own question under the twin rule (render_player_delete_actionable —
+        // the band on a batch folder at the root, on a render inside a batch
+        // folder, which in each list is also every case the shifted press
+        // has something to take). A RUNNING RENDER IS NO TERM: no run can
+        // stand while the player does (open() refuses over one, and nothing
+        // under the player starts one). THE LOCKS ARE NO TERM: a delete
+        // writes no authoring.
         case AppState::PlayerButtonAct::Delete:
             return render_player_delete_actionable(a);
         case AppState::PlayerButtonAct::RepeatOne:
@@ -607,10 +720,6 @@ bool render_player_button_enabled(const AppState& a,
 }
 
 // -- The transport --------------------------------------------------------------
-
-int64_t GuiRenderPlayer::seek_step_frames() const {
-    return static_cast<int64_t>(5) * static_cast<int64_t>(audio.sample_rate());
-}
 
 int64_t GuiRenderPlayer::position() const {
     return render_player_position(app, playback);
@@ -986,10 +1095,9 @@ void GuiRenderPlayer::last_in_item_folder() {
 
 void GuiRenderPlayer::seek_by(int64_t delta_frames) {
     // EVERY REFUSAL IS seek_to's, THE ONE OWNER (2026-08-30, with the cards):
-    // this body only composes the target, and its own copy of that guard
-    // would have made Left / Right silent where bare Home already spoke.
-    // position() answers 0 with nothing bound, so the sum is well-formed on
-    // the road to the refusal.
+    // this body only composes the target for its one caller, the car's seek
+    // (car_seek), and asks no guard of its own. position() answers 0 with
+    // nothing bound, so the sum is well-formed on the road to the refusal.
     seek_to(position() + delta_frames);
 }
 
@@ -1001,8 +1109,8 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
     // TRANSPORT'S WHOLE ANSWER, IDLE being no item bound (the invariant at
     // AppState::RenderPlayer::transport) — the dead slider (Audacious's own
     // stopped slider) is this guard. THE ONE OWNER: every
-    // road that can move the point (Left / Right, Home, the car's absolute
-    // SeekTo) shares it, neither moving `resume_frame` nor damaging
+    // road that can move the point (the car's seek, Home, the car's absolute
+    // SeekTo, its Stop, the scrub's lift) shares it, neither moving `resume_frame` nor damaging
     // anything; the scrub's press refuses to arm at its own gate, silent one
     // road over on the same term.
     if (rp.item.empty() || rp.frames <= 0) return;
@@ -1054,20 +1162,18 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
 // every rest — so the act reads exactly what the user sees, and a second
 // press is "previous" at any press speed because the first one landed that
 // position at 0. NOTHING HERE IS PRESS-TIMED: the constant's own declaration
-// carries the reason (a head unit's buttons are slower than any double-press
-// window).
+// carries the reason (a slow press outruns any double-press window).
 //
-// NEITHER READER ASKS IT AT IDLE, which has no item (the invariant at
+// ITS READER NEVER ASKS IT AT IDLE, which has no item (the invariant at
 // AppState::RenderPlayer::transport): the file step's fork answers false on
-// its own no-item term ahead of this, and the car's reader is LIVE alone. The
-// folder's end rests PAUSED at the item's end (2026-10-26), outside the
-// window, so Home there seeks the item's start and a second press inside the
-// window steps back.
+// its own no-item term ahead of this. The folder's end rests PAUSED at the
+// item's end (2026-10-26), outside the window, so Home there seeks the item's
+// start and a second press inside the window steps back.
 //
-// TWO READERS ASK IT: render_player_home_takes_previous below, the file step's
-// own fork (which home() and the Home button's hint share), and the CAR'S
-// Previous, whose LIVE arm asks the same window direct to decide whether to
-// leave the folder instead. One owner, so the two cannot drift.
+// ONE READER ASKS IT: render_player_home_takes_previous below, the file step's
+// own fork (which home() and the Home button's hint share). The car's
+// Previous asks no window: while an item sounds it is the car's seek
+// (architect 2026-11-25, car_previous).
 bool render_player_inside_previous_window(const AppState& a,
                                           const GuiPlayback& playback,
                                           const GuiAudio& audio) {
@@ -1123,18 +1229,19 @@ void GuiRenderPlayer::home() {
 //
 // IT OUTRANKS REPEAT ONE, and that is this act's own sentence rather than an
 // omission: the lamp governs what happens when a file REACHES ITS END, and a
-// press is not a natural end. Under a lit lamp a seek to the item's end would
-// replay the same file and Next would do nothing at all in the car, so the
-// act reads the lamp nowhere.
+// press is not a natural end. On the glass Next Track walks to the next file
+// whatever the lamp says: honoring the lamp would turn the press into a
+// replay of the same file, so the act reads the lamp nowhere.
 void GuiRenderPlayer::next_track() {
     advance_to_next_in_item_folder();
 }
 
-// -- THE CAR'S OWN THREE ACTS (architect 2026-09-12, from the car) -----------
+// -- THE CAR'S OWN ACTS (architect 2026-09-12, from the car) -----------------
 //
 // THE CAR IS A SEPARATE INTERFACE: these bodies are the head unit's three
-// buttons and are reached from on_media_command alone, never from a key and
-// never from the modal row. Their contracts are at the declarations.
+// buttons and the seek two of them share, reached from on_media_command
+// alone, never from a key and never from the modal row. Their contracts are
+// at the declarations.
 
 // THE CONSOLE'S ONE PLAY/PAUSE BUTTON. The session publishes PLAYING whenever
 // the player stands (publish_media_state's dummy display), so the console
@@ -1159,49 +1266,51 @@ void GuiRenderPlayer::car_toggle() {
     play_button_act();
 }
 
-// THE WHEEL'S REWIND. AT REST THE BAND IS THE PLAYLIST: a row above steps to
-// it, and the FIRST row leaves the folder instead — the one direction of
-// travel that does, because a listener knows which file starts a folder and
-// never how many it holds, so this exit is always deliberate. WHILE LIVE it is
-// the left skip's act with that same exit ahead of it: inside the
-// previous-track window at the folder's FIRST FILE one more press back is out
-// of the folder, exactly as it is at the band's first row.
-//
-// THE UP WALL IS ASKED because the alternative is the restart: at the ROOT
-// there is nothing above, so up() would return in silence and the press would
-// do nothing at all, and a press inside the window there is the restart. Where the exit does not apply the body IS home(), so the file
-// step and the reseek have one owner and cannot drift from the tablet's.
+// THE WHEEL'S REWIND. WHILE LIVE IT IS THE CAR'S SEEK BACK (architect
+// 2026-11-25: "render player in car should also do ... skip back/forth when
+// audio is playing", the step the project transport's 3 s): car_seek below.
+// AT REST THE BAND IS THE PLAYLIST: a row above steps to it, and the FIRST row
+// leaves the folder instead — the one direction of travel that does, because
+// a listener knows which file starts a folder and never how many it holds,
+// so this exit is always deliberate. At the ROOT's first row up() is its own
+// silent wall. Changing track from the car is pause, step, play.
 void GuiRenderPlayer::car_previous() {
-    if (app.render_player.transport != Transport::Live) {
-        if (folder_overlay::walk_origin_row(app) > 0) move_highlight(-1);
-        else                                          up();
+    if (app.render_player.transport == Transport::Live) {
+        car_seek(/*forward=*/false);
         return;
     }
-    if (!render_player_home_takes_previous(app, playback, audio) &&
-        render_player_inside_previous_window(app, playback, audio) &&
-        render_player_up_actionable(app)) {
-        up();
-        return;
-    }
-    home();
+    if (folder_overlay::walk_origin_row(app) > 0) move_highlight(-1);
+    else                                          up();
 }
 
 // THE WHEEL'S FAST-FORWARD — Rewind's mirror image with ONE difference, and it
-// is the ruling's own: this act NEVER LEAVES A FOLDER. At rest, one row down
-// and no further, the listing's last row a silent wall (move_highlight's own
-// clamp), never an exit and never a wrap; while live it is the next track.
+// is the ruling's own: this act NEVER LEAVES A FOLDER. While live, the car's
+// seek forward; at rest, one row down and no further, the listing's last row
+// a silent wall (move_highlight's own clamp), never an exit and never a wrap.
 void GuiRenderPlayer::car_next() {
-    if (app.render_player.transport != Transport::Live) {
-        move_highlight(+1);
+    if (app.render_player.transport == Transport::Live) {
+        car_seek(/*forward=*/true);
         return;
     }
-    next_track();
+    move_highlight(+1);
+}
+
+// THE CAR'S ONE SEEK (architect 2026-11-25; the contract at the declaration):
+// GuiCarTransport::kCarSeekSeconds at the device's rate, the item's own by
+// the decode's equality, so the step is seconds of the item as it sounds, as
+// the project transport's car seek is of its bound buffer (car_skip). A rate
+// the engine cannot name seeks nothing, car_skip's own guard. The walls,
+// the clamp and every refusal are seek_by's and seek_to's.
+void GuiRenderPlayer::car_seek(bool forward) {
+    const int64_t rate = audio.sample_rate();
+    if (rate <= 0) return;
+    const int64_t step = GuiCarTransport::kCarSeekSeconds * rate;
+    seek_by(forward ? step : -step);
 }
 
 // THE FOLDER'S FORWARD STEP, ONE BODY FOR ITS THREE CALLERS (2026-09-04):
 // the natural end's auto-advance, next_track
-// (which the right skip's plain press runs and the car's own Next composes on
-// a live transport), and resume() — THE PLAY KEY AT THE END, its end rule
+// (which the right skip's plain press runs), and resume() — THE PLAY KEY AT THE END, its end rule
 // continuing to the next wav (architect 2026-10-26). Never across
 // folders and never a wrap — the wall is the act's own owner above, so the
 // button's face and every caller ask one question. Returns whether the
@@ -1341,13 +1450,27 @@ void GuiRenderPlayer::tick() {
     }
     const int64_t cur = playback.cursor();
     if (cur == rp.painted_cursor) return;
+    // THE CLOCK'S LABEL MOVES ONCE A SECOND (whole seconds, floored;
+    // architect 2026-11-25, paint_handler.cpp's THE TIME FIELDS): its slot is
+    // damaged only when the label at the new cursor differs from the label
+    // at the last one compared — the painter's own text (time_label_text
+    // over render_player_position's clamp, the item's length and rate) — and
+    // at every reset of the anchor (-1); the scrub at every cursor change.
+    const int64_t rate = audio.sample_rate();
+    const auto label_at = [&](int64_t c) {
+        return time_label_text(std::clamp<int64_t>(c, 0, rp.frames),
+                               rp.frames, rate);
+    };
+    const bool label_moved =
+        rp.painted_cursor < 0 || label_at(cur) != label_at(rp.painted_cursor);
     rp.painted_cursor = cur;
     // The clock cell and the scrub track, the two cells the painter published
     // for exactly this damage; before the row's first paint both are zero and
     // the whole row is the honest widening.
     const GuiRect clock = app.modal_dialog.clock;
     const GuiRect scrub = app.modal_dialog.scrub;
-    if (clock.w > 0 && clock.h > 0) viewport.invalidate_rect(clock);
+    if (label_moved && clock.w > 0 && clock.h > 0)
+        viewport.invalidate_rect(clock);
     if (scrub.w > 0 && scrub.h > 0) viewport.invalidate_rect(scrub);
     if ((clock.w <= 0 || clock.h <= 0) && (scrub.w <= 0 || scrub.h <= 0))
         damage_row();
@@ -1382,8 +1505,8 @@ bool GuiRenderPlayer::open() {
     // earlier, and the folder he wants is the one he last wrote into, not
     // tmp/'s own listing of every sweep this project has ever run.
     // "NEWEST" IS THE PRODUCT'S OWN DEFINITION of it — the highest leading
-    // index, max_renders_batch_index's scan (renders_dir.h, shared with the
-    // three dispatchers that use the same number to name their NEXT folder)
+    // index, max_renders_batch_index's scan (renders_dir.h, whose comment
+    // lists the allocators that read the same scan to name their NEXT folder)
     // — NEVER A FILESYSTEM TIMESTAMP, which a sync or a copy can disturb.
     // THE FALLBACK ASKS THAT FOLDER ALONE: a highest-index folder with no
     // PLAYABLE wav in it (every cell bracket-rejected, or the folder made
@@ -1435,6 +1558,7 @@ bool GuiRenderPlayer::open() {
     rp.scrub          = AppState::RenderPlayer::ScrubDrag{};
     rp.pending_load.reset();
     rp.pending_delete.clear();
+    rp.pending_delete_render.reset();
     // THE BAND OPENS WITH THE PLAYER AS ITS OWNER — the tag is the panel's
     // standing predicate (folder_overlay_stands), so it is what raises the
     // overlay, and every other field of the panel is reset with it.
@@ -1461,10 +1585,12 @@ bool GuiRenderPlayer::open() {
 }
 
 // THE UNLOAD, and THE ONE OWNER of the order the engine's pointer demands
-// (the contract at the declaration). Two callers, each naming its tail:
+// (the contract at the declaration). Its callers each name a tail:
 // close(), which adds the panel teardown, and up(), which adds the root entry
 // — so the player standing with nothing loaded and the player gone are the
-// same act with different tails, and the ordering cannot drift between them.
+// same act with different tails, and the ordering cannot drift between them;
+// the two deletes (delete_batch_folders, delete_render) take up()'s tail
+// ahead of their own listing rebuild.
 // The mode bit is the one thing the tail itself moves, since the two roads
 // need it in different places (the reasons are at UnloadTail).
 void GuiRenderPlayer::unload_item(UnloadTail tail) {
@@ -1483,8 +1609,11 @@ void GuiRenderPlayer::unload_item(UnloadTail tail) {
     rp.pending_load.reset();
     // (The parked delete is NOT dropped here: the Up tail runs inside the
     // delete's own answer, after the prompt has consumed it. The close drops
-    // it with the rest of the mode, below.)
-    if (tail == UnloadTail::Close) rp.pending_delete.clear();
+    // both parked subjects with the rest of the mode, below.)
+    if (tail == UnloadTail::Close) {
+        rp.pending_delete.clear();
+        rp.pending_delete_render.reset();
+    }
     // The mode bit goes where the tail puts it (the two roads' reasons are at
     // UnloadTail, render_player.h): the fence above was taken with the player
     // active on both roads, and the close's re-express below must run with the
@@ -1672,15 +1801,15 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
             if (rp.transport == Transport::Live) transport_toggle_act();
             return;
         case Kind::FastForward:
-            // THE PLAIN 5 s SEEK, IN EVERY FOLDER (architect 2026-09-15: the
-            // Accord's wheel sends Previous / Next, not FastForward / Rewind,
-            // so car_previous / car_next below are the console's actual skips
-            // and this pair stays seek_by's plain step wherever the console
-            // has one).
-            seek_by(+seek_step_frames());
+            // THE CAR'S ONE SEEK, IN EVERY FOLDER (architect 2026-11-25: one
+            // seek, one step): the Accord's wheel sends Previous / Next, whose
+            // live arms are this same seek, and this pair is it wherever a
+            // console sends these kinds — a paused item's resume point moving
+            // as any paused seek's does, an idle player seek_to's silence.
+            car_seek(/*forward=*/true);
             return;
         case Kind::Rewind:
-            seek_by(-seek_step_frames());
+            car_seek(/*forward=*/false);
             return;
         case Kind::SeekTo: {
             // Milliseconds to frames at the device's rate; seek_to clamps into
@@ -1734,10 +1863,11 @@ void GuiRenderPlayer::publish_media_state() {
     // THE MODE-DOWN ARM PUSHES NOTHING AND IS THE BELT (architect
     // 2026-09-17). The close pushes nothing at all and the car transport's
     // tick takes the wire back (the reasoning is at close()'s tail), so no
-    // road reaches this body with the mode down — the eight call sites are
-    // rebuild_rows, move_highlight, set_highlight, play_wav, play_live_from
-    // (the resume's road), seek_to (twice) and the stop body's player fork,
-    // and that fork is itself gated on the mode bit. The arm stays because the fault it
+    // road reaches this body with the mode down — the nine call sites are
+    // rebuild_rows, delete_render (its reseat after the rebuild),
+    // move_highlight, set_highlight, play_wav, play_live_from (the resume's
+    // road), seek_to (twice) and the stop body's player fork, and that fork
+    // is itself gated on the mode bit. The arm stays because the fault it
     // guards is SILENT AND PERMANENT: a push with `session_active` false
     // calls setActive(false) on the sliver's session, and nothing in this
     // product would ever put it back — the car transport's comparator would

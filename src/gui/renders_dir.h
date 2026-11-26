@@ -13,8 +13,9 @@
 // its name and the composition of its path. A project folder holds its source,
 // the source's sidecar set, `peaks/` and the architect's own local material;
 // everything the product WRITES lands in a folder beside them, and `tmp/` is
-// THE DISPOSABLE BATCH CELLS — the iteration and BPM sweeps and the
-// miscellaneous cell, `<N>_<tag>/<basename>.wav` with their per-cell sidecar
+// THE DISPOSABLE BATCH CELLS — the iteration and BPM sweeps, the
+// miscellaneous cell and the trim presets' renders,
+// `<N>_<tag>/<basename>.wav` with their per-cell sidecar
 // sets. Lowercase and named for what they are: scratch, which the `'` load in
 // place deletes wholesale (every batch folder, permanently). The batch cells are the GUI's alone, which is why
 // their folder is named here; THE DELIVERABLE'S FOLDER IS THE PARSER'S, both
@@ -48,25 +49,46 @@ struct RendersBatchScan {
                                            // folder; empty when none
 };
 
-// Scan `renders_dir` for the highest leading-index batch folder. FOUR READERS
-// share this one walk: the iteration and BPM sweeps
-// use `max_index + 1` alone for their next batch folder (a missing/empty dir
-// yields max_index 0, so the first folder is index 1 — the pre-factor
-// convention); the miscellaneous cell's allocator (Ctrl+Alt+Shift+R) also
-// reads `max_index_folder_name` to decide append-vs-new; and THE RENDER
-// PLAYER'S OPEN reads that same field to name the NEWEST batch folder to
-// enter (architect 2026-09-15) — "most recent" being this index, never a
-// filesystem timestamp a sync or a copy can disturb. A tie keeps the first
+// Scan `renders_dir` for the highest leading-index batch folder. FIVE CALL
+// SITES share this one walk (the one list of them; every other site points
+// here): the iteration sweep (run_iteration_sweep_render) and the BPM sweep
+// (render_bpm_sweep) use `max_index + 1` alone for their next batch folder (a
+// missing/empty dir yields max_index 0, so the first folder is index 1); the
+// miscellaneous cell's allocator (allocate_miscellaneous_cell,
+// Ctrl+Alt+Shift+R) also reads `max_index_folder_name` to decide
+// append-vs-new; the trim presets' allocator (allocate_trim_preset_folder)
+// reads it for the plain Render's append-vs-new and `max_index + 1` alone
+// for Render All's always-new folder; and THE RENDER PLAYER'S OPEN
+// (GuiRenderPlayer::open) reads `max_index_folder_name` to name the NEWEST
+// batch folder to enter (architect 2026-09-15) — "most recent" being this
+// index, never a filesystem timestamp a sync or a copy can disturb. A tie keeps the first
 // `<digits>_` folder at that index (strict `>` update), exact for the
 // always->=1 product folders.
 RendersBatchScan max_renders_batch_index(
     const std::filesystem::path& renders_dir);
 
+// THE TRIM PRESETS' BATCH FOLDER (architect 2026-11-25: "New render folder
+// category"), `<N>_presets/`: the presets list's Render joins the newest
+// folder when it is one, else makes a new one, and its Render All always makes
+// a new one (GuiInputHandler::trim_presets_render). The token is DATA,
+// lowercase (the BPM sweep's `bpm` token's rule, render_bpm_sweep). ITS CELLS
+// TAKE THE SWEEPS' INDEX STYLE, `<NN>_<name>.wav`, the preset's place in the
+// list and its name (trim_presets_render's cell naming), so the folder lists
+// by every folder's one numbered rule (GuiRendersDir::enumerate_render_entries).
+inline constexpr const char* kTrimPresetsBatchTag = "presets";
+inline bool is_trim_presets_batch_folder(const std::string& folder_name) {
+    return folder_name.ends_with(std::string("_") + kTrimPresetsBatchTag);
+}
+
 // THE FAILURE WHEN A BATCH FOLDER CANNOT BE MADE (architect 2026-08-30; the
-// two-clause shape 2026-09-02). THREE
-// dispatchers create one under the root above — the iteration sweep, the BPM
-// sweep and the miscellaneous cell's allocator. This composes BOTH halves of
-// their failure once, so the three cannot drift on either surface
+// two-clause shape 2026-09-02). FOUR CALL SITES create one under the root
+// above (the one list of them; every other site points here) — the
+// iteration sweep (run_iteration_sweep_render), the BPM sweep
+// (render_bpm_sweep), the miscellaneous cell's allocator
+// (allocate_miscellaneous_cell) and the trim presets' allocator
+// (allocate_trim_preset_folder, serving Render and Render All; architect
+// 2026-11-25). This composes BOTH halves of
+// their failure once, so they cannot drift on either surface
 // (GuiFailure, failure.h): the diagnostic is the tagged stderr line with the
 // WHOLE path (`render-bpm: Could not create '/…/tmp/3_bpm': Permission
 // denied`), and the display is the card's. A PATH IN A SENTENCE IS ITS BASENAME (failure.h), which on the
@@ -74,7 +96,7 @@ RendersBatchScan max_renders_batch_index(
 // `2_miscellaneous` — the only part of it the user authored. SINGLE-QUOTED,
 // the product's one quoting form on a card (notifications.h's card rules).
 // `tag` is the road's own stderr tag, the
-// one thing the three lines differ by. Advisory in class: the dispatch
+// one thing the lines differ by. Advisory in class: the dispatch
 // refuses and cards, and no partial batch is left.
 inline GuiFailure render_folder_creation_failure(
         const char*                  tag,
@@ -160,7 +182,8 @@ void prune_render_folder(const std::string& source_audio_path,
 // paths come from that root's own listing, so no producer reaches
 // OutOfBounds, which each answers on stderr alone; Failed is IO.
 // TWO CALLERS: the render player's Delete (GuiRenderPlayer::
-// delete_batch_folders, the folders the root listing parked) and the load in
+// delete_batch_folders, the folders a listing parked — the root's, the
+// listed folder from inside it, a folder's last render's) and the load in
 // place's tail (load_render_entry_in_place, every folder under `tmp/` through
 // list_batch_folders below). No trash: the tablet's trash cannot be
 // recovered, and by the time he loads a cell in place he has chosen his
@@ -169,6 +192,22 @@ enum class BatchFolderRemoval { Removed, OutOfBounds, Failed };
 BatchFolderRemoval remove_batch_folder(const std::filesystem::path& batch_root,
                                        const std::filesystem::path& folder,
                                        std::error_code& ec);
+
+// THE BATCH CELL'S FILE SET, the one enumeration of what a cell is on disk:
+// the wav, its staging sibling, the fingerprint attestation, and the three
+// load-in-place sidecars do_render writes beside a batch wav
+// (render_pipeline.cpp's publish_load_in_place_critical_batch_sidecars
+// authors them; the load road composes the same three,
+// input_key_dispatch.cpp). Every path is COMPOSED from its own owner
+// (compose_render_output_path, render_staging_path, fingerprint_sidecar_path,
+// sidecar_path) from the cell's folder and basename, never found by walking
+// the folder, so a removal takes what that cell is and nothing that happens
+// to sit beside it. TWO READERS, each removing the set with its own report:
+// a failed cell's removal (remove_failed_batch_cell,
+// input_render_dispatch.cpp) and the render player's one-render delete
+// (GuiRenderPlayer::delete_render, architect 2026-11-25).
+std::vector<std::filesystem::path> batch_cell_file_set(
+    const std::filesystem::path& folder, const std::string& basename);
 
 // EVERY DIRECTORY DIRECTLY UNDER `batch_root`, classified WHOLE before the
 // caller removes anything, so no iterator is live while the folder changes
@@ -200,11 +239,14 @@ struct GuiRendersDir {
 // THE RENDER ENTRY'S ID — its path relative to tmp/, `<batch_dir>/<basename>
 // .wav`, always folder-qualified. One path per file, so the id is unique by
 // filesystem construction, and the folder-qualified spelling is the entry's
-// real on-disk path under tmp/. TWO READERS, both the load in place's
-// (input_key_dispatch.cpp): the RENDER PLAYER's load confirmation, which
+// real on-disk path under tmp/. FOUR READERS, the load in place's two
+// (input_key_dispatch.cpp) — the RENDER PLAYER's load confirmation, which
 // spells the entry it asks about with it, single-quoted ("Load
 // '3_bpm/02.wav' in place?", render_player_load_in_place), and the load's
-// missing-wav refusal (load_render_entry_in_place). It lives here because
+// missing-wav refusal (load_render_entry_in_place) — and one render's
+// delete's two (architect 2026-11-25): its question ("Delete
+// '3_bpm/02.wav'?", render_player_delete) and its failure card
+// (GuiRenderPlayer::delete_render). It lives here because
 // the id is a property of the entry, which this header owns.
 inline std::string render_entry_id(const AppState::RenderEntry& e) {
     return e.batch_folder.filename().string() + "/" + e.basename + ".wav";

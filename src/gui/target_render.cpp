@@ -967,13 +967,13 @@ void GuiTargetRender::complete_successful_buffer(
     }
 }
 
-bool GuiTargetRender::trim_would_fall_back() const {
+bool GuiTargetRender::trim_would_fall_back(int64_t begin_frame,
+                                           int64_t end_frame) const {
     // The archival commands' one line of it — contract at the declaration.
     // Deliberately a thin read of the verdict owner below and not a second
     // test: the anchor, the reuse rungs' stderr lines, the preview's card and
     // this all consume ONE computation of the survival rule.
-    return compute_buffer_start_frame_for(app.trim.begin_frame,
-                                          app.trim.end_frame)
+    return compute_buffer_start_frame_for(begin_frame, end_frame)
         .trim_fell_back;
 }
 
@@ -1021,7 +1021,7 @@ GuiTargetRender::compute_buffer_start_frame_for(
     // rungs' stderr diagnostic, the dispatch's own card (dispatch_render_now,
     // on the FALLBACK-SUBJECT edge — the whole {fell_back, tab, trim pair}
     // record changing into a fallback, never the bare verdict's rising edge)
-    // and the archival chords' (trim_would_fall_back
+    // and the archival commands' (trim_would_fall_back
     // above) — and fallback_reason names which one so the printed line matches
     // the orchestrators' vocabulary. Callers pass the trim pair the produced
     // samples embody and stamp the result at production time, so no

@@ -40,6 +40,15 @@ std::optional<std::string> trim_preset_name_refusal(
     return std::nullopt;
 }
 
+std::optional<std::string> trim_preset_file_name_refusal(
+        std::string_view name) {
+    if (name.find('/') != std::string_view::npos)
+        return std::string("the name holds a slash");
+    if (name == "." || name == "..")
+        return "the name is '" + std::string(name) + "'";
+    return std::nullopt;
+}
+
 std::vector<GuiTrimPreset> read_trim_presets_file(
         const std::filesystem::path& project_folder, int64_t total_frames) {
     const std::filesystem::path path = trim_presets_file_path(project_folder);

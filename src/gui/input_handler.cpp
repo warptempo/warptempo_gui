@@ -1109,14 +1109,10 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
     // modifier binds, one spelling per act. Each is a SILENT consumed no-op at its wall — `=` at the floor,
     // `-` at the fit, the benign one-dimensional refusal — and its key greys
     // there (zoom_step_actionable, the act's own leading return). A pure
-    // viewport move: it stops nothing and writes no selection. One-shot.
-    // A STEP THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom
-    // darkens (architect 2026-11-17; darken_zoom_lamps_if_level_moved),
-    // a step at its wall none.
+    // viewport move: it stops nothing, writes no selection and puts out no
+    // lamp (architect 2026-11-25; darken_sweep_lamps). One-shot.
     if (is_zoom_step_key(key, mods)) {
-        const double level_before = app.zoom_level;
         viewport.zoom_step(zoom_step_levels(key));
-        darken_zoom_lamps_if_level_moved(level_before);
         return;
     }
 
@@ -2224,7 +2220,7 @@ bool GuiInputHandler::jump_playhead_to_focused_marker(MarkerLandingFrame frame) 
     return true;
 }
 
-void GuiInputHandler::run_center_command(bool user_zoom) {
+void GuiInputHandler::run_center_command() {
     // THE BARE `c` COMMAND, WHOLE — playback stopped, then the working zoom
     // centered on the playhead, with a focused stop re-landed under it first —
     // and THE ONE PLACE THE MODE
@@ -2254,12 +2250,6 @@ void GuiInputHandler::run_center_command(bool user_zoom) {
     // decision for all of them: the audition and Ctrl+J are refused inside
     // the mode, while the centre keys' act is reached from both, the live `c`
     // arm and the mode's own `c` claim. One owner, one answer.
-    // THE LEVEL BEFORE THE ACT, for the four lamps a user zoom puts out
-    // (architect 2026-11-17; the test's one owner,
-    // darken_zoom_lamps_if_level_moved): read ahead of both arms, whose only
-    // level write is the working zoom below. The A/B audition passes
-    // user_zoom false (the declaration).
-    const double level_before = app.zoom_level;
     if (app.history_mode.active) {
         // THE MODE'S RE-EXPRESSION: the live recipe read against the mode's own
         // data. With a focus standing the playhead re-lands on that diff flag
@@ -2291,7 +2281,6 @@ void GuiInputHandler::run_center_command(bool user_zoom) {
         }
         viewport.apply_zoom_change(kWorkingZoomLevel);
         viewport.center_viewport_on_playhead();
-        if (user_zoom) darken_zoom_lamps_if_level_moved(level_before);
         return;
     }
 
@@ -2336,7 +2325,6 @@ void GuiInputHandler::run_center_command(bool user_zoom) {
         playback_lifecycle.stop_playback_if_playing();
     viewport.apply_zoom_change(kWorkingZoomLevel);
     viewport.center_viewport_on_playhead();
-    if (user_zoom) darken_zoom_lamps_if_level_moved(level_before);
 }
 
 // THE CENTRE KEY'S ACT (contract at the declaration). FOLLOW'S SUSPENSION IS
@@ -2344,8 +2332,8 @@ void GuiInputHandler::run_center_command(bool user_zoom) {
 // the centring's camera write suspends nothing that is read — the suspension
 // means something only while a project play runs, and the next launch clears
 // it (AppState::follow_suspended).
-void GuiInputHandler::run_center_key_command(bool user_zoom) {
-    run_center_command(user_zoom);
+void GuiInputHandler::run_center_key_command() {
+    run_center_command();
     app.camera_hold = true;
 }
 
@@ -2464,11 +2452,8 @@ void GuiInputHandler::run_overview_command() {
     // and the whole-song state's one setter (both declarations, app_state.h).
     // The trim bar's DOUBLE TAP and Shift+0 DIVERGE from this
     // (run_span_framing_command): they frame the trim / whole-song SPAN.
-    //
-    // A PRESS THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom darkens
-    // (architect 2026-11-17; darken_zoom_lamps_if_level_moved), at
-    // each acting arm's tail; the no-op darkens nothing.
-    const double level_before = app.zoom_level;
+    // Neither arm puts out a lamp (a zoom puts out none, architect
+    // 2026-11-25; darken_sweep_lamps).
     const OverviewCommandTarget target = overview_command_target(app, audio);
     switch (target.arm) {
     case OverviewCommandTarget::Arm::ZoomOut: {
@@ -2488,7 +2473,6 @@ void GuiInputHandler::run_overview_command() {
         // re-derives the level from the live ceiling, so a resize or an S/T
         // flip carries the picture instead of stranding a number.
         active_view_state(app).whole_song_visible = true;
-        darken_zoom_lamps_if_level_moved(level_before);
         return;
     }
     case OverviewCommandTarget::Arm::RestoreView: {
@@ -2514,7 +2498,6 @@ void GuiInputHandler::run_overview_command() {
         active_view_state(app).whole_song_visible = false;
         viewport.apply_zoom_to_start(target.level, r.viewport_start_sample,
                                      r.viewport_lattice_origin);
-        darken_zoom_lamps_if_level_moved(level_before);
         return;
     }
     case OverviewCommandTarget::Arm::NoOp:
@@ -2767,20 +2750,13 @@ void GuiInputHandler::run_span_framing_command() {
     // whole-song at the effective ceiling, start 0). Centering + the wall
     // clamp make the whole-song arm degenerate to the effective ceiling at
     // start 0.
-    // A FRAMING THAT MOVED THE LEVEL PUTS OUT THE FOUR LAMPS a user zoom
-    // darkens (architect 2026-11-17; darken_zoom_lamps_if_level_moved).
-    // HERE AND NOT IN THE SHARED FRAMER: this command's callers are all user
-    // roads (the three above),
-    // while frame_span_into_view also serves the programmatic landings
-    // (land_and_frame_active_markers: undo / redo's group restore, the
-    // pastes), which darken nothing.
-    const double level_before = app.zoom_level;
+    // The framing puts out no lamp (a zoom puts out none, architect
+    // 2026-11-25; darken_sweep_lamps).
     if (const std::optional<TrimFramingSpan> span =
             trim_framing_span(app, audio)) {
         frame_span_into_view(app, audio, viewport, span->lo, span->hi,
                              span->margin);
     }
-    darken_zoom_lamps_if_level_moved(level_before);
 }
 
 bool GuiInputHandler::apply_editor_clipboard(
@@ -3493,33 +3469,15 @@ void GuiInputHandler::set_trim_armed(bool desired) {
     }
 }
 
-void GuiInputHandler::darken_zoom_lamps() {
-    // The contract — the four lamps, each through its own off road, the
-    // damage on an actual edge alone, the callers — is at the declaration
-    // (input_handler.h; architect 2026-11-17).
+void GuiInputHandler::darken_sweep_lamps() {
+    // The contract — the two sweep lamps, each through its own off road, the
+    // damage on an actual edge alone, the one caller — is at the declaration
+    // (input_handler.h; architect 2026-11-25).
     if (app.trim_armed) set_trim_armed(false);
     if (app.add_to_selection) {
         app.add_to_selection = false;
         viewport.invalidate_rect(bottom_row_area(app));
     }
-    // FOLLOW and RESTR are a radio, so at most one of these two runs; each
-    // toggle's dark edge writes its bit alone, and the face is damaged here
-    // (the toggles owe none: their key's own lift repaints its face).
-    if (app.follow) {
-        playback_lifecycle.toggle_follow();
-        invalidate_roster_press_face(
-            static_cast<int>(RedesignButton::IconFollow));
-    }
-    if (app.restrict) {
-        playback_lifecycle.toggle_restrict();
-        invalidate_roster_press_face(
-            static_cast<int>(RedesignButton::IconRestrict));
-    }
-}
-
-void GuiInputHandler::darken_zoom_lamps_if_level_moved(double level_before) {
-    // The test and its roads are at the declaration (input_handler.h).
-    if (app.zoom_level != level_before) darken_zoom_lamps();
 }
 
 void GuiInputHandler::seat_lit_lamps(const DeviceLitLamps& lamps) {

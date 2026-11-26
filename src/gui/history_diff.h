@@ -442,6 +442,12 @@ struct GuiHistorySidecarBlob {
 struct GuiHistoryCommitSidecars {
     // The commit's full 40-char SHA.
     std::string sha;
+    // THE COMMIT'S COMMITTER TIME, UTC seconds (GuiGitWalkCommit, git_repo.h)
+    // — THE WALK'S, set by scan_history_walk from walk_head's answer, so every
+    // member of the prefetch store carries it (architect 2026-11-25: the walk
+    // line's date segment, GuiHistoryDiff::commit_time_at). The `'` load's
+    // own read (read_commit_sidecars) leaves it 0: that road shows no time.
+    std::int64_t commit_time = 0;
     GuiHistorySidecarBlob warpmarkers;
     GuiHistorySidecarBlob phaseresetmarkers;
     GuiHistorySidecarBlob settings;
@@ -794,6 +800,12 @@ public:
 
     // Full 40-char SHA, newest first. Empty for an out-of-range index.
     const std::string& sha_at(std::size_t index) const;
+
+    // THE COMMIT'S COMMITTER TIME, UTC seconds, as the walk read it
+    // (GuiHistoryCommitSidecars::commit_time) — no git at the call. Empty for
+    // an out-of-range index, which is the empty window's `0/0` (architect
+    // 2026-11-25; its one reader the walk line, history_walk_line).
+    std::optional<std::int64_t> commit_time_at(std::size_t index) const;
 
     // The commit's delta IN ONE OF THE TWO READINGS (GuiHistoryCompare above),
     // computed on first call and cached per (index, compare) — the two answers

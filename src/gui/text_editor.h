@@ -275,10 +275,12 @@ constexpr int kMaxPendingCharsTrimPresetName = 128;
 // form. TrimPresetName (architect
 // 2026-10-28 night) is THE TRIM PRESET'S NAME EDITOR, the trim presets list's
 // Save As (GuiInputHandler::trim_presets_save_as, which Save's press on an
-// empty list runs too): it rides the settings
+// empty list runs too) and Rename (trim_presets_rename, architect
+// 2026-11-25), one open (open_trim_preset_name_editor): it rides the settings
 // editor's State (AppState::settings_editor, the line editor's one
 // buffer), the settings editor's shape — the value sub-page's entry, the
-// on-screen keyboard's Enter and Esc — opened empty, its commit the
+// on-screen keyboard's Enter and Esc — opened empty under Save As and
+// holding the preset's name under Rename, its commit the
 // name's (trim_preset_name_refusal, trim_presets_file.h). IterBound
 // (2026-09-05) is every bound cell's own editor, the cell a mini flag. The
 // `h` view's load and Open Project type nothing (architect 2026-08-28:

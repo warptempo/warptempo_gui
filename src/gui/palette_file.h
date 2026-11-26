@@ -71,6 +71,7 @@ inline constexpr GuiPaletteFill kGuiPaletteFill[] = {
     {&GuiPalette::body_face,       &GuiThemeTones::body_face},
     {&GuiPalette::text,            &GuiThemeTones::text},
     {&GuiPalette::title_text,      &GuiThemeTones::title_text},
+    {&GuiPalette::timestamp_text,  &GuiThemeTones::timestamp_text},
     {&GuiPalette::sidebar_text,    &GuiThemeTones::sidebar_text},
     {&GuiPalette::text_dim,        &GuiThemeTones::text_dim},
     {&GuiPalette::inactive_cue_label_hover, &GuiThemeTones::inactive_cue_label_hover},
