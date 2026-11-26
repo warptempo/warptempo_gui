@@ -13,9 +13,9 @@ struct GuiNoiseVoice;   // noise.h — the second voice the callback sums
 // THE SPLIT, stated once:
 //   * DEVICE (playback_aaudio.cpp): opening and closing the device,
 //     registering the callbacks, the callback's own entry/exit, and stop()'s
-//     QUIESCENCE FENCE — the one piece of the contract whose proof is
-//     device-shaped: it counts callback cycles, with a terminal-state escape
-//     (`fence_state_is_quiesced`), stated at its own site.
+//     QUIESCENCE FENCE — the callback's mark at its entry and exit and
+//     stop()'s wait while it stands, the proof stated once at
+//     GuiPlayback::stop().
 //   * PORTABLE (here): the engine state, the audio-thread RENDER BODY, and
 //     the main-thread predictor / domain / bind logic that the public
 //     methods are thin wrappers over.
@@ -244,7 +244,8 @@ struct GuiPlaybackState {
     // between the two threads: play()'s publish
     // stores the new word — generation + 1, playing — with release as the last
     // step of its publish block, and the backend's callback loads the word
-    // with acquire at its gate, so a callback that sees the bit up sees the
+    // at its gate with seq_cst — an acquire, seq_cst for stop()'s fence
+    // (GuiPlayback::stop()) — so a callback that sees the bit up sees the
     // command packet that preceded it (the packet's own comment below: what
     // the fill then CONSUMES is qualified by this same generation). stop()
     // lowers the bit in one fetch_and ahead of its quiescence fence; the
@@ -489,8 +490,8 @@ bool playback_clip_block(float* const* channel_buffers, int64_t stride,
 // beside it; on natural end, also lowers the session word's playing bit — the
 // generation-qualified terminal (the field's comment), abandoned
 // if a stop or a newer publish has written the word since the gate. Audio
-// thread only; the backend's callback loads the session word ONCE with
-// acquire, gates on its playing bit, and passes that same value as
+// thread only; the backend's callback loads the session word ONCE (seq_cst,
+// an acquire), gates on its playing bit, and passes that same value as
 // `session_word` — the terminal's expected value AND the generation whose
 // command packet alone this fill may consume; the body loads the word again
 // nowhere. See playback_write_silence for the stride. ONE CLOCK READ per fill

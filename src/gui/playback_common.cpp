@@ -555,9 +555,10 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
     // resync over its launch anchor, no damage, no console push. WHY NO
     // WRAP OF AN OLD SESSION CAN LAND AFTER THIS LEVEL: the playing bit is
     // down, and a looping session's bit comes down only by stop() — which
-    // returns after its quiescence fence has seen two callback cycles, whose
-    // release increment follows every fill's count store, so the count is
-    // final and visible here — or by the device's loss, where launch_window's
+    // returns only once its quiescence fence has read the callback's mark
+    // down, the clear that follows the last fill's count store, so the count
+    // is final and visible here (the fence's proof, GuiPlayback::stop()) —
+    // or by the device's loss, where launch_window's
     // head check has already closed the dead stream (AAudioStream_close
     // returns only once the callback thread has left); the natural end lowers
     // only a once-through session's bit, and that window never wraps. Each

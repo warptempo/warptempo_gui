@@ -1073,36 +1073,35 @@ writes interleaved stereo floats and has no other shape. The rate is asked for
 as `AAUDIO_UNSPECIFIED` deliberately: asking for 44100 on 48 k hardware only
 moves the resample into the framework.
 
-### 11.4 The stop fence, per backend
+### 11.4 The stop fence waits only on our own code (2026-11-26)
 
-`playback.h` says `stop()` "returns only once the callback has quiesced", with
-no deadline. The two devices prove that differently, and each states its choice
-at its own site:
+`playback.h` says `stop()` returns only once no audio callback is inside the
+bound buffer. THE PROOF IS THE CALLBACK'S OWN MARK, the noise voice's protocol
+(`GuiNoise::change_folder`'s step 4), stated once at `GuiPlayback::stop()` in
+`playback_aaudio.cpp`: the data callback stores `Impl::in_callback` true as its
+first act and clears it at every exit, and its gate's one load of the session
+word follows that store; `stop()` lowers the playing bit and then waits while
+the mark reads true. All four operations are `seq_cst`, so either the callback
+read the bit down (it writes silence and reads no sample) or `stop()` sees the
+mark and waits until that callback has left. The wait is made of our own
+callbacks' runtimes alone — ordinarily one, nothing when no callback is
+inside, and no future callback is needed to end it — and NO STATE OF
+THE DEVICE CAN EXTEND IT: a stream that stops calling, a dead stream or none
+leaves the mark down.
 
-- **JACK** counts `process_cycles`. That works because an active JACK client's
-  process callback keeps running (silent) forever.
-- **AAudio** counts too, since 2026-08-27, and for the JACK reason: THE STREAM
-  NOW STAYS STARTED between plays (§11.4a below), so its data callback
-  keeps running — silent, reading no sample — and `callback_cycles` keeps
-  advancing. Two increments after `playing` is lowered are the proof, exactly as
-  on JACK.
+THE REASON IS THE CAR'S STALL OF 2026-11-26 (architect: "stop() waits only
+while our own callback is inside, never for the device to call again"). He
+toggled the Bluetooth codec until the car dropped the link; Android's audio HAL
+retried the A2DP start for 10 s, and for those 10 s the keep-alive stream
+stayed STARTED, was never marked disconnected, and its data callback was simply
+not called. The fence of that day counted callback invocations (two after the
+lowering, with an escape on a dead or terminal stream), so RELEASE's `stop()`
+waited the whole run on the screen thread. A proof that needs the device to
+call again can be held by the device; the mark needs only our own code to
+leave.
 
-  **THE ESCAPE** is what is left of the old state test: a stream that is dead or
-  positively terminal (DISCONNECTED / CLOSING / CLOSED, or the error callback's
-  `stream_dead` latch) has no callback left to count — the framework retires the
-  callback thread before the error callback runs — so the wait ends there, that
-  state being a proof of quiescence in its own right. Otherwise there is no
-  deadline and no iteration cap. **So a stalled device hangs the main thread
-  here, and that is the contract's safe failure mode**: the alternative is a
-  rebind, a buffer replacement or a shutdown freeing samples out from under a
-  live audio thread, silently.
-
-  UNTIL THAT DAY the fence drove the STREAM STATE MACHINE instead — `requestStop`
-  then `waitForStateChange` until STOPPED or a terminal state, no result code
-  ever read as quiescence — because a stream stopped between plays calls no
-  callback and a counter would never have advanced. That `requestStop` at every
-  stop, with the matching `requestStart` at every play, is what §11.4a rules
-  out.
+(The fence that drove the STREAM STATE MACHINE — `requestStop` at every stop,
+`requestStart` at every play — is what §11.4a rules out.)
 
 ### 11.4a The stream never stops between plays: the car's stutter (2026-08-27; the reason as the architect gave it 2026-11-26)
 

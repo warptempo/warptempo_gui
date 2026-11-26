@@ -6,7 +6,6 @@
 #include <aaudio/AAudio.h>
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <thread>
@@ -14,8 +13,8 @@
 // THE AAUDIO DEVICE HALF of playback.h's contract — THE DEVICE HALF, the one
 // implementation (architect 2026-10-30, the tablet the one platform). The
 // ENGINE is playback_common.{h,cpp}, so what lives here is one AAudio output
-// stream: opening it, its two callbacks, stop()'s quiescence fence, and the
-// disconnect rule.
+// stream: opening it, its two callbacks, stop()'s quiescence fence (its proof
+// at GuiPlayback::stop()), and the disconnect rule.
 //
 // THE RATE. The stream is opened at AAUDIO_UNSPECIFIED and the GRANTED rate
 // becomes the engine's `output_rate`, so the render body's one increment
@@ -108,14 +107,15 @@
 // THREADING, above playback.h's own thread model. Three threads touch this
 // file:
 //   * MAIN owns the stream handle outright — every AAudio call in this file
-//     (open, requestStart, getState, requestStop, close) is made from
+//     (open, requestStart, getXRunCount, requestStop, close) is made from
 //     init/ensure_device_available_for_play/play/stop/shutdown and from
 //     release_device (requestStop and close) and end_device_release (open
 //     and start: the second press and the window's return) and from
 //     nowhere else. There is no mutex and none is needed: no other thread
 //     reads `stream`.
-//   * The DATA CALLBACK thread runs the engine's render body and touches
-//     nothing else — no allocation, no I/O, no locks, no AAudio call.
+//   * The DATA CALLBACK thread runs the engine's render body, the noise mix
+//     and the clip, and raises and lowers its own mark (Impl::in_callback,
+//     stop()'s fence) — no allocation, no I/O, no locks, no AAudio call.
 //   * The ERROR CALLBACK thread writes three atomics and logs. It calls NO
 //     AAudio stream function, which is Google's own rule and the reason the
 //     spike used a detached thread to do its closing; this backend needs no
@@ -207,12 +207,13 @@ struct GuiPlayback::Impl {
     std::atomic<bool>    stream_dead{false};
     std::atomic<int32_t> stream_error{0};
 
-    // Incremented once at the end of every data-callback invocation, playing
-    // or silent. stop()'s fence counts it (fence_quiesced) — a proof available
-    // only because the stream stays STARTED between plays and so keeps
-    // calling its callback. Written by the
-    // callback thread with release, read by the main thread with acquire.
-    std::atomic<uint64_t> callback_cycles{0};
+    // A DATA CALLBACK IS INSIDE (architect 2026-11-26): stored true, seq_cst,
+    // as the callback's first act past its null test, and cleared, seq_cst,
+    // at every exit (InCallbackGuard), the whole callback under it — both
+    // arms, the noise mix, the clip. Written by the callback thread alone,
+    // read by stop()'s wait alone: the quiescence fence, whose proof is
+    // stated once at GuiPlayback::stop().
+    std::atomic<bool> in_callback{false};
 
     // THE SESSION'S UNDERRUN FLOOR, main thread only. The stream's own counter
     // is cumulative and monotonic for the stream's life, so what a session is
@@ -234,12 +235,25 @@ struct GuiPlayback::Impl {
 
 namespace {
 
+// THE CALLBACK'S EXIT MARK (Impl::in_callback; the proof at
+// GuiPlayback::stop()): clears the mark, seq_cst, at every exit of
+// playback_data_callback past its first act — noise.cpp's InFillGuard's shape.
+struct InCallbackGuard {
+    std::atomic<bool>& flag;
+    ~InCallbackGuard() { flag.store(false, std::memory_order_seq_cst); }
+};
+
 aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
                                                      void* user,
                                                      void* audio_data,
                                                      int32_t num_frames) {
     auto* impl = static_cast<GuiPlayback::Impl*>(user);
     if (!impl) return AAUDIO_CALLBACK_RESULT_STOP;
+    // THE MARK, FIRST (stop()'s fence, its proof at GuiPlayback::stop()):
+    // stored true before the gate's load below, both seq_cst, and cleared at
+    // every exit by the guard.
+    impl->in_callback.store(true, std::memory_order_seq_cst);
+    const InCallbackGuard guard{impl->in_callback};
 
     // ONE INTERLEAVED BUFFER, so the two channels are the same base pointer one
     // float apart and the stride is the channel count
@@ -250,7 +264,9 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     const int     channel_count = impl->state.channels;
     const int64_t frames        = static_cast<int64_t>(num_frames);
 
-    // THE GATE is ONE acquire load of the session word (playback_common.h):
+    // THE GATE is ONE load of the session word (playback_common.h), seq_cst
+    // and after the mark's store above — the order stop()'s fence rests on
+    // (GuiPlayback::stop()) — and an acquire, as every seq_cst load is:
     // the callback gates on its playing bit and
     // hands that same word to the render body as its terminal's expected
     // value and as the one generation whose command packet the fill may
@@ -260,7 +276,7 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     // regardless, and the next callback acquires and seats the new
     // publication.
     const uint64_t session_word =
-        impl->state.session.load(std::memory_order_acquire);
+        impl->state.session.load(std::memory_order_seq_cst);
     if (!playback_session_playing(session_word)) {
         playback_write_silence(channel_buffers, channel_count,
                                kPlaybackOutputChannels, 0, frames);
@@ -270,9 +286,9 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
         // both leave the main thread's `started` flag lying about the device
         // and put a restart into the next play. NO SAMPLE OF
         // THE BOUND BUFFER IS READ HERE — the noise below reads its own bank —
-        // which is what lets stop()'s fence count callbacks and what makes an
-        // idle stream harmless to a buffer the main thread is about to
-        // replace.
+        // which is what a callback that reads the bit down owes stop()'s
+        // fence (GuiPlayback::stop()) and what makes an idle stream harmless
+        // to a buffer the main thread is about to replace.
     } else {
         playback_render_block(impl->state, session_word, channel_buffers,
                               kPlaybackOutputChannels, frames, channel_count);
@@ -292,7 +308,6 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
     if (playback_clip_block(channel_buffers, kPlaybackOutputChannels, frames,
                             channel_count))
         impl->state.clipped_blocks.fetch_add(1, std::memory_order_release);
-    impl->callback_cycles.fetch_add(1, std::memory_order_release);
     return AAUDIO_CALLBACK_RESULT_CONTINUE;
 }
 
@@ -361,68 +376,6 @@ void playback_error_callback(AAudioStream* /*stream*/, void* user,
         "warptempo_gui: AAudio stream error %d (%s); stream is dead, playback "
         "stopped. The next play press reopens the device.\n",
         static_cast<int>(error), AAudio_convertResultToText(error));
-}
-
-// THE STREAM HAS NO CALLBACK LEFT TO COUNT. The fence below waits on callback
-// invocations, so it needs one test for the states where none are coming: the
-// stream reporting STOPPED — which AAudio reaches only after its callback
-// thread has left the callback — and the stream being positively terminal,
-// meaning DISCONNECTED / CLOSING / CLOSED or the error callback's `stream_dead`
-// latch (the disconnect rule at the error callback: the framework retires the
-// callback thread BEFORE that callback runs, so a dead stream has nothing left
-// to wait for and waiting would hang forever on a quiesced device). Each of
-// these is ALSO a positive proof of quiescence, which is why the fence may
-// return on them. Anything else — STARTED, STARTING, a state this build has
-// never heard of — is NOT a proof and does not end the wait.
-bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
-                             aaudio_stream_state_t state) {
-    return state == AAUDIO_STREAM_STATE_STOPPED ||
-           state == AAUDIO_STREAM_STATE_DISCONNECTED ||
-           state == AAUDIO_STREAM_STATE_CLOSING ||
-           state == AAUDIO_STREAM_STATE_CLOSED ||
-           impl.stream_dead.load(std::memory_order_acquire);
-}
-
-// THE QUIESCENCE FENCE (playback.h's stop() contract: "returns only once the
-// callback has quiesced"). IT COUNTS CALLBACK INVOCATIONS, because a stream
-// that stays STARTED keeps calling its data callback whether or not
-// anything is playing (the lifecycle block at the head of this file), so the
-// counter keeps advancing and counting is a proof. (A fence that drove the
-// STREAM STATE MACHINE — requestStop, then wait for STOPPED — would restart
-// the stream at every play, which the lifecycle block rules out.)
-//
-// THE PROOF. stop() lowers the session word's playing bit (seq_cst) before
-// calling here. One increment after that write retires a callback that may
-// have loaded the word with the bit up before the write became visible; a
-// second proves a full callback ran start-to-finish afterwards, and its
-// release increment paired with the acquire loads here orders every sample
-// read it made before anything the caller mutates once stop() returns. The
-// bound is conservative: a callback that sees the bit down takes the silence
-// arm and reads no sample at all. Normally about two callback periods — a
-// few ms at the granted burst.
-//
-// THE ESCAPE, and why this cannot hang on a device that has gone away: a
-// stream that is dead or positively terminal has no callback left to count, so
-// `fence_state_is_quiesced` above ends the wait on those states (it is a proof
-// of quiescence in its own right, which is what makes returning on it safe),
-// and a stream that was never started has nothing in flight to begin with.
-//
-// OTHERWISE THE WAIT IS UNBOUNDED, AND HANGING IS THE CONTRACT'S SAFE FAILURE
-// MODE. A framework that has stopped running
-// callbacks on a live stream is a broken environment; freezing the main thread
-// here is visible and loud, while a weakened fence lets a rebind, a buffer
-// replacement or a shutdown free samples out from under a live audio thread,
-// silently and unreproducibly.
-void fence_quiesced(GuiPlayback::Impl& impl) {
-    if (!impl.stream || !impl.started) return;
-
-    const uint64_t c0 = impl.callback_cycles.load(std::memory_order_acquire);
-    while (impl.callback_cycles.load(std::memory_order_acquire) < c0 + 2) {
-        if (fence_state_is_quiesced(impl, AAudioStream_getState(impl.stream))) {
-            return;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
 }
 
 // START THE STREAM, once per open (the lifecycle block at the head). Idempotent
@@ -548,7 +501,6 @@ bool open_stream(GuiPlayback::Impl& impl) {
 
     impl.stream  = stream;
     impl.started = false;
-    impl.callback_cycles.store(0, std::memory_order_relaxed);
     impl.stream_dead.store(false, std::memory_order_relaxed);
     impl.stream_error.store(0, std::memory_order_relaxed);
     impl.state.output_rate.store(static_cast<uint32_t>(rate),
@@ -885,21 +837,72 @@ void GuiPlayback::resync_predictor() {
 
 void GuiPlayback::stop() {
     if (!impl_->device_ready) return;
-    // THE DEVICE IS NOT TOUCHED HERE. Lower the playing bit, keeping the
-    // generation (the session word's comment, playback_common.h: a fill in
-    // flight can commit no terminal once this has landed — its exchange
-    // expects exactly the word its gate acquired, playing bit up, and this
-    // fetch_and changed that word) — then fence on
-    // the callback counter (fence_quiesced):
-    // the stream keeps running and the project voice keeps writing silence (the
-    // noise bed, when audible, still plays), which is the whole of the
-    // lifecycle at the head of this file. Then,
-    // with the callback quiesced and its counter therefore still, the session's
-    // UNDERRUN COUNT is said if the session lost anything since play() stamped
-    // its floor (report_xrun_count, above — a logcat line and nothing else).
+    // THE DEVICE IS NOT TOUCHED HERE: the stream keeps running and the
+    // project voice keeps writing silence (the noise bed, when audible, still
+    // plays), which is the whole of the lifecycle at the head of this file.
+    // Lower the playing bit, keeping the generation (the session word's
+    // comment, playback_common.h: a fill in flight can commit no terminal
+    // once this has landed — its exchange expects exactly the word its gate
+    // acquired, playing bit up, and this fetch_and changed that word) — then
+    // THE QUIESCENCE FENCE below. Then, with no callback in the render arm,
+    // the session's UNDERRUN COUNT is said if the session lost anything since
+    // play() stamped its floor (report_xrun_count, above — a logcat line and
+    // nothing else).
+    //
+    // THE QUIESCENCE FENCE WAITS ONLY ON OUR OWN CODE (architect 2026-11-26:
+    // "stop() waits only while our own callback is inside, never for the
+    // device to call again"; the noise voice's protocol, GuiNoise::
+    // change_folder's step 4). The data callback marks itself inside
+    // (Impl::in_callback): stored true, seq_cst, as its first act, and
+    // cleared, seq_cst, at every exit (InCallbackGuard); its gate's one load
+    // of the session word is seq_cst and follows that store. Here the
+    // lowering is seq_cst and the mark is loaded, seq_cst, after it, the wait
+    // yielding while it reads true. THE PROOF, stated here once (every other
+    // site cites this one):
+    //  (a) NO CALLBACK IS IN THE RENDER ARM WHEN stop() RETURNS, AND NONE
+    //      ENTERS IT UNTIL THE NEXT PUBLISH. Four seq_cst operations stand
+    //      in one total order: the callback's mark store, then its word load;
+    //      this lowering, then the mark load below. Either the callback's
+    //      word load follows the lowering — it reads the bit down (the only
+    //      writes that raise the bit are this thread's own publishes, each
+    //      sequenced before this stop or after it), takes the silence arm and
+    //      reads no sample of the bound buffer — or it precedes the lowering,
+    //      so its mark store precedes the mark load, which reads that store
+    //      or a later write of the mark — that callback's own clear or a
+    //      later callback's write — so by the time the load reads false that
+    //      callback has left. A session the terminal ended is the second
+    //      case: its callback read the bit up, so its load precedes this
+    //      fetch_and, which writes the word whatever bit it finds.
+    //  (b) WHAT A FILL DID IS ORDERED BEFORE WHAT THE CALLER DOES NEXT. The
+    //      exit's clear is seq_cst, so the false the mark load reads is the
+    //      clear of the last callback whose mark store preceded that load
+    //      (or the mark's first false, no callback ever inside), and the load
+    //      synchronizes with it: every read and store that fill and every
+    //      fill before it made — the samples, the cursor, the cycle stamp,
+    //      the wrap count, a terminal, the audio-thread-private window —
+    //      happens before stop() returns, so before anything the caller
+    //      mutates after it. THIS IS WHAT rebind_buffer, THE BUFFER'S FREE AND
+    //      THE WRAP COUNT'S LEVEL REST ON (playback_rebind_buffer;
+    //      playback_publish_play's THE WRAP COUNT A SESSION STARTS FROM).
+    //  (c) THE WAIT IS BOUNDED BY OUR OWN CODE. The callback makes no
+    //      blocking call — no lock, no allocation, no I/O, no AAudio call
+    //      (the head's THREADING block) — so the mark is up for one
+    //      callback's own runtime, and NO STATE OF THE DEVICE CAN EXTEND IT:
+    //      a stream that stops calling leaves the mark down and stop()
+    //      returns at once, as it does over a dead stream or none. The
+    //      evidence: the car's stall of 2026-11-26, the stream STARTED and
+    //      its data callback uncalled for 10 s (architect 2026-11-26).
+    //  (d) THE MARK IS ONE BOOL BECAUSE AT MOST ONE STREAM'S DATA CALLBACK
+    //      THREAD EXISTS AT A TIME: every reopen closes before it opens
+    //      (init's shutdown; reopen_stream_if_dead opens only over no
+    //      stream, its dead arm closing first), and AAudioStream_close
+    //      returns only once the callback thread has left, its last clear
+    //      landed. The ERROR callback's thread touches no sample and is not
+    //      marked.
     impl_->state.session.fetch_and(~kSessionPlayingBit,
                                    std::memory_order_seq_cst);
-    fence_quiesced(*impl_);
+    while (impl_->in_callback.load(std::memory_order_seq_cst))
+        std::this_thread::yield();
     report_xrun_count(*impl_);
 }
 
@@ -967,11 +970,10 @@ bool GuiPlayback::ensure_device_available_for_play() {
 
 // RELEASE (contract at the declaration; the lifecycle block's RELEASE
 // paragraph at the head of this file). THE SEQUENCE, ALL ON MAIN:
-//   1. stop() — the playing bit lowered (seq_cst) and THE FENCE: two counted
-//      callback invocations after the lowering, or a state that is itself a
-//      proof (STOPPED, terminal, the latch; fence_state_is_quiesced), so no
-//      callback is inside the bound buffer when it returns; the session's
-//      underrun line said as at any stop;
+//   1. stop() — the playing bit lowered and THE FENCE (its proof at
+//      GuiPlayback::stop()), so no callback is inside the bound buffer when
+//      it returns, however the device stands; the session's underrun line
+//      said as at any stop;
 //   2. close_stream — the file's one requestStop and AAudioStream_close,
 //      which returns only once the callback thread has left (the same close
 //      shutdown() and the dead-stream reopen use): the handle is freed with

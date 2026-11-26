@@ -3732,10 +3732,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // natural end — but `GuiPlayback::stop()` is the QUIESCENCE FENCE, not a flag
         // write, and the helper takes it FIRST and only then clears
         // `playhead_scanner_active`. The callback that
-        // published false has NOT necessarily retired: the fence waits for
-        // `process_cycles` to advance by two, which is what proves a full callback
-        // ran start-to-finish afterward and orders all of its buffer reads before
-        // anything the main thread mutates next. `rebind_buffer` REQUIRES that fence
+        // published false has NOT necessarily retired: the fence waits while a
+        // data callback is inside — its own mark, read after the lowering —
+        // which is what proves that callback has left and orders all of its
+        // buffer reads before anything the main thread mutates next (the proof
+        // at GuiPlayback::stop()). `rebind_buffer` REQUIRES that fence
         // by contract (playback.h). Clearing `playhead_scanner_active` with the
         // fence still untaken would leave exactly one reachable bypass: a post-natural-end S/T switch, whose
         // `stop_playback_if_playing` early-returns once BOTH flags are false, after
@@ -3743,11 +3744,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // `is_playing()`-gated stop and rebind UNFENCED. Taking the fence here, at
         // the stop edge, closes it at the source — the Space-symmetric design, and
         // the reason the rebind sites keep their conditional stops rather than
-        // becoming unconditional. Cost: the fence blocks the tick for up
-        // to ~2 callback periods, once per playback session, which is precisely what
-        // Space's stop edge pays. stop() is idempotent on an
-        // already-flag-stopped session — it re-stores the same false and then
-        // just waits.
+        // becoming unconditional. Cost: the fence blocks the tick for at most
+        // one callback's own runtime, nothing when none is inside, once per
+        // playback session, which is precisely what Space's stop edge pays.
+        // stop() is idempotent on an already-flag-stopped session — it
+        // re-stores the same false and then waits the same way.
         //
         // NO OUTER `if (app.playhead_scanner_active)` IS NEEDED: reaching this line
         // means the early return above did not fire and `ma_playing` is false, so the

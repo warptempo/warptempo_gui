@@ -322,21 +322,20 @@ public:
     // reaches it — and its own window never wraps.
     bool consume_loop_wrap();
 
-    // Stop playback and block until any in-flight audio callback has exited,
-    // normally within about two of the device's callback periods. THE DEVICE
-    // COUNTS CALLBACK INVOCATIONS for that proof — the AAudio stream's data
-    // callback keeps running (silent) between plays, the device staying live
-    // from init to shutdown but while released (release_device below, whose
-    // stream is gone and so has nothing to fence), so two counted
-    // invocations after the session
-    // word's playing bit is
-    // lowered prove the callback is out of the sample buffer (and a fill that
-    // was in flight at the lowering can commit no terminal: its exchange
-    // expects the word its gate acquired, which the lowering changed). THE
-    // DEVICE IS NOT STOPPED HERE. The wait has no deadline: it returns
-    // only once the callback has quiesced, so a stalled or dead device hangs
-    // here rather than letting the caller mutate a buffer the audio thread may
-    // still read. Safe to call when not playing; it still fences. Main thread
+    // Stop playback and return only once no audio callback is inside the
+    // bound buffer: the session word's playing bit is lowered, and the wait
+    // runs only while our own data callback is inside — at most one
+    // callback's own runtime, none when no callback is inside — never for
+    // the device to call again, so a device that stops calling, a dead
+    // stream or none (released, release_device below) cannot hold it (the
+    // proof at playback_aaudio.cpp's GuiPlayback::stop(), architect
+    // 2026-11-26). Once it returns no callback is in the render arm until
+    // the next publish, and everything a fill did is ordered before what the
+    // caller does next (and a fill that was in flight at the lowering can
+    // commit no terminal: its exchange expects the word its gate acquired,
+    // which the lowering changed). THE DEVICE IS NOT STOPPED HERE: the
+    // stream keeps running, silent, between plays. Safe to call when not
+    // playing; it still fences. Main thread
     // only. The cursor retains its last value, which is what the predictor's
     // last observation rests on, so a main-thread read after the stop still
     // answers where playback stopped — through cursor(), never off the atomic
