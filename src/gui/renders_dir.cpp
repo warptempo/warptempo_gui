@@ -8,7 +8,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdio>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <vector>
@@ -127,6 +129,20 @@ std::vector<std::filesystem::path> list_batch_folders(
     return out;
 }
 
+// A BATCH CELL'S NUMBER (the contract and its two readers are at the
+// declaration).
+std::optional<int> render_cell_number(std::string_view stem) {
+    int v = 0;
+    std::size_t i = 0;
+    while (i < stem.size() && stem[i] >= '0' && stem[i] <= '9') {
+        v = v * 10 + (stem[i] - '0');
+        ++i;
+    }
+    if (i == 0) return std::nullopt;
+    if (i != stem.size() && stem[i] != '_') return std::nullopt;
+    return v;
+}
+
 // Enumerate the flat render-entry list under <source parent>/tmp/.
 // Returns an empty vector if no source path is set or if the batch root
 // contains no valid entries.
@@ -186,21 +202,20 @@ GuiRendersDir::enumerate_render_entries() {
             if (!fe.is_regular_file(entry_ec) || entry_ec) return;
             if (fe.path().extension() != ".wav") return;
             const std::string stem = fe.path().stem().string();
-            size_t end = 0;
-            const int v = leading_int(stem, end);
-            if (end == 0) return;
-            if (end != stem.size() && stem[end] != '_') return;
-            wavs.push_back({v, fe.path(), stem});
+            const std::optional<int> v = render_cell_number(stem);
+            if (!v) return;
+            wavs.push_back({*v, fe.path(), stem});
         });
         // EVERY FOLDER'S CELLS IN THEIR LEADING NUMBER'S ORDER, the number
         // read up to the first underscore and nothing of the descriptor
-        // after it (a trim preset's name may itself begin with digits,
-        // `03_2nd theme`). A TIE — a trim presets folder a later Render
-        // joined after the list changed, two cells sharing a place
-        // (trim_presets_render's cell naming; architect 2026-11-25) — is
-        // the basename's byte order, so the listing is the same at every
-        // walk; a folder whose numbers are distinct is in its numbers'
-        // order alone.
+        // after it (render_cell_number; a trim preset's name may itself
+        // begin with digits, `03_2nd theme`). The product's allocators give
+        // a folder's cells distinct numbers (a Render takes its folder's
+        // next one, trim_presets_render's cell naming; architect
+        // 2026-11-25), so a folder is in its numbers' order alone; A TIE —
+        // two cells sharing a number, `1_a` and `01_b`, which no press
+        // writes — is the basename's byte order, so the listing is the same
+        // at every walk.
         std::sort(wavs.begin(), wavs.end(),
                   [](const WavSlot& a, const WavSlot& b) {
                       if (a.idx != b.idx) return a.idx < b.idx;

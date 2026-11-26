@@ -108,7 +108,7 @@ std::optional<std::string> trim_preset_name_refusal(
     std::string_view name, std::span<const GuiTrimPreset> presets);
 
 // THE NAME AS A FILE NAME (architect 2026-11-25: "ok to restrict chars in
-// preset name"): a preset's render is the cell `<NN>_<name>.wav` with its
+// preset name"): a preset's render is the cell `<number>_<name>.wav` with its
 // sidecar set under the same stem (GuiInputHandler::trim_presets_render), the
 // name the path component's tail, so a name holding a slash, or the name "."
 // or "..", is no file name. Answers the

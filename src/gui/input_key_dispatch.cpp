@@ -6383,12 +6383,12 @@ void GuiInputHandler::trim_presets_apply(int index) {
 // `.settings` records the trim it was rendered with. NOTHING IS WRITTEN TO
 // THE TRIM STORE — app.trim, the tabs' trims, the undo history, the trim bar
 // and the TRIM lamp stand as they were, and nothing is damaged for a trim.
-// The cell is a first-class batch cell (`<NN>_<name>.wav`, the cell naming
-// below; its sidecar set under the same stem, composed by appending: a name
-// holding a dot is no extension), which the player lists, plays, loads in
-// place and deletes as every cell; a render onto an existing cell of that
-// name overwrites it, do_render's reuse rungs deciding whether the engine
-// runs.
+// The cell is a first-class batch cell (`<number>_<name>.wav`, the cell
+// naming below; its sidecar set under the same stem, composed by appending: a
+// name holding a dot is no extension), which the player lists, plays, loads
+// in place and deletes as every cell. No press overwrites a cell: each is one
+// more, the miscellaneous render's rule, identical bytes coming cheap from
+// do_render's reuse rungs.
 void GuiInputHandler::trim_presets_render(bool all) {
     if (!app.picker.active || app.prompt.active) return;
     const AppState::FolderOverlay& ov = app.folder_overlay;
@@ -6403,44 +6403,32 @@ void GuiInputHandler::trim_presets_render(bool all) {
     // press refused whole, the list standing; Render All skips it and runs
     // the rest, one card naming it or counting several.
     //
-    // THE CELL'S NAME IS `<NN>_<name>`, THE SWEEPS' INDEX STYLE (architect
-    // 2026-11-25: "other renders have an index precisely to avoid
+    // THE CELL'S NAME IS `<number>_<name>`, THE SWEEPS' INDEX STYLE
+    // (architect 2026-11-25: "other renders have an index precisely to avoid
     // alphabetical listing ordering - preset render shuld use same index
     // style"; render_bpm_sweep's and run_iteration_sweep_render's
-    // basenames): the preset's 1-based place in the list, in the list's
-    // order, zero-padded to the digit count of THE WHOLE LIST'S SIZE (capped
-    // at 9 as theirs is), an underscore, the preset's name verbatim. The
-    // number is the preset's place whichever press runs: Render All's cells
-    // stand in the player in the music's order, a preset it skips leaving
-    // its number unused, and the plain Render writes the very name its
-    // preset has in a Render All of the same list — so, joining the newest
-    // presets folder, it overwrites that preset's cell when the list is
-    // unchanged since, and otherwise lands as a cell of its own at its
-    // place. NO OTHER CELL IS RENAMED OR REMOVED: a cell an older list
-    // numbered stays as it was written (the smaller truthful rule; the
-    // listing's tie on a shared number is the basename's order,
-    // GuiRendersDir::enumerate_render_entries).
-    int pad_width = 1;
-    for (int n = static_cast<int>(ov.trim_presets.size()); n >= 10; n /= 10)
-        ++pad_width;
-    if (pad_width > 9) pad_width = 9;
-    struct Subject {
-        int           seq;   // the preset's 1-based place in the list
-        GuiTrimPreset preset;
-    };
-    std::vector<Subject> subjects;
+    // basenames): a number, an underscore, the preset's name verbatim. THE
+    // NUMBER FOLLOWS THE FOLDER (architect 2026-11-25: "single render always
+    // uses the n+1 index b/c it's appended a foder. bathc always uses 1 as
+    // starting point b/c its ina a new folder"): RENDER ALL, always a new
+    // folder, numbers its cells from 1 in sequence in the list's order,
+    // advancing per cell it renders (render_bpm_sweep's `seq`), so a preset
+    // it skips takes no number, zero-padded to the digit count of the cells
+    // it renders (capped at 9, the sweeps' rule); A RENDER, appended to its
+    // folder, takes the folder's next number, n + 1, bound with the folder
+    // when the worker is idle (allocate_trim_preset_cell), so it never
+    // overwrites a cell.
+    std::vector<GuiTrimPreset> subjects;
     if (all) {
-        for (std::size_t i = 0; i < ov.trim_presets.size(); ++i)
-            subjects.push_back({static_cast<int>(i) + 1, ov.trim_presets[i]});
+        subjects = ov.trim_presets;
     } else {
         subjects.push_back(
-            {ov.highlight_row + 1,
-             ov.trim_presets[static_cast<std::size_t>(ov.highlight_row)]});
+            ov.trim_presets[static_cast<std::size_t>(ov.highlight_row)]);
     }
     std::vector<std::string> unrenderable;
-    std::erase_if(subjects, [&](const Subject& s) {
-        if (!trim_preset_file_name_refusal(s.preset.name)) return false;
-        unrenderable.push_back(s.preset.name);
+    std::erase_if(subjects, [&](const GuiTrimPreset& p) {
+        if (!trim_preset_file_name_refusal(p.name)) return false;
+        unrenderable.push_back(p.name);
         return true;
     });
     if (!unrenderable.empty()) {
@@ -6453,13 +6441,8 @@ void GuiInputHandler::trim_presets_render(bool all) {
     }
     if (subjects.empty()) return;
 
-    const auto request_for = [&](const Subject& s, std::string folder) {
-        const GuiTrimPreset& p = s.preset;
-        char num_buf[16];
-        std::snprintf(num_buf, sizeof(num_buf), "%0*d", pad_width, s.seq);
-        std::string basename = num_buf;
-        basename += '_';
-        basename += p.name;
+    const auto request_for = [&](const GuiTrimPreset& p, std::string folder,
+                                 std::string basename) {
         RenderRequest req = build_render_request(
             app.source_audio_path, app.warpmarkers.markers(),
             app.phaseresetmarkers.markers(), app.engine_settings,
@@ -6488,10 +6471,20 @@ void GuiInputHandler::trim_presets_render(bool all) {
     if (all) {
         std::string folder;
         if (!allocate_trim_preset_folder(/*always_new=*/true, folder)) return;
+        int pad_width = 1;
+        for (int n = static_cast<int>(subjects.size()); n >= 10; n /= 10)
+            ++pad_width;
+        if (pad_width > 9) pad_width = 9;
         std::vector<RenderRequest> reqs;
         reqs.reserve(subjects.size());
-        for (const Subject& s : subjects)
-            reqs.push_back(request_for(s, folder));
+        int seq = 1;
+        for (const GuiTrimPreset& p : subjects) {
+            char num_buf[16];
+            std::snprintf(num_buf, sizeof(num_buf), "%0*d", pad_width, seq);
+            reqs.push_back(request_for(
+                p, folder, std::string(num_buf) + "_" + p.name));
+            ++seq;
+        }
         close_picker();
         if (async_renderer.is_busy()) {
             // A render dispatch kills the running render. Park the fully
@@ -6506,32 +6499,34 @@ void GuiInputHandler::trim_presets_render(bool all) {
         return;
     }
 
-    // RENDER: ONE CELL, joining the newest folder when it is a presets folder,
-    // else a new one (allocate_trim_preset_folder). THE FOLDER IS LATE-BOUND ON
-    // THE BUSY ROAD, the miscellaneous cell's rule and reason (the killed
-    // render may still publish into `tmp/` while it drains): the parked
-    // command carries the request, its cell's name `<NN>_<name>`, and the pump
-    // chooses the folder once the worker is idle. On the idle road a folder
-    // the press cannot make cards and the list stands. THE TRIM FALLBACK'S
-    // CARD judges THE PRESET'S PAIR (card_trim_fallback_if_any, one per
-    // press). The list closes at the dispatch, the main page back with the
-    // render's process line in the status bar.
-    const Subject& s = subjects.front();
-    const GuiTrimPreset& p = s.preset;
+    // RENDER: ONE CELL, `<n + 1>_<name>`, joining the newest folder when it
+    // is a presets folder, else a new one (allocate_trim_preset_cell). THE
+    // FOLDER AND THE NUMBER ARE BOUND WHEN THE WORKER IS IDLE, the
+    // miscellaneous cell's rule and reason (the killed render may still
+    // publish into `tmp/` while it drains, so a number scanned at the press
+    // could be stolen): on the busy road the parked command carries the
+    // request and the preset's name, and the pump binds both; on the idle
+    // road they are bound here, and a folder the press cannot make cards and
+    // the list stands. THE TRIM FALLBACK'S CARD judges THE PRESET'S PAIR
+    // (card_trim_fallback_if_any, one per press). The list closes at the
+    // dispatch, the main page back with the render's process line in the
+    // status bar.
+    const GuiTrimPreset& p = subjects.front();
     if (async_renderer.is_busy()) {
-        RenderRequest req = request_for(s, std::string());
+        RenderRequest req = request_for(p, std::string(), std::string());
         card_trim_fallback_if_any(p.begin, p.end);
         close_picker();
         AppState::PendingArchivalCommand cmd;
-        cmd.single      = true;
-        cmd.trim_preset = true;   // late-bind the folder at the pump
+        cmd.single           = true;
+        cmd.trim_preset      = true;   // late-bind the cell at the pump
+        cmd.trim_preset_name = p.name;
         cmd.reqs.push_back(std::move(req));
         kill_running_render_and_park(std::move(cmd));
         return;
     }
-    std::string folder;
-    if (!allocate_trim_preset_folder(/*always_new=*/false, folder)) return;
-    RenderRequest req = request_for(s, std::move(folder));
+    std::string folder, basename;
+    if (!allocate_trim_preset_cell(p.name, folder, basename)) return;
+    RenderRequest req = request_for(p, std::move(folder), std::move(basename));
     card_trim_fallback_if_any(p.begin, p.end);
     close_picker();
     dispatch_single_archival_render(std::move(req));
@@ -6619,7 +6614,7 @@ void GuiInputHandler::commit_trim_preset_name() {
         });
     // THE NAME MUST ALSO BE A FILE NAME (architect 2026-11-25: "ok to
     // restrict chars in preset name"), the preset's render being
-    // `<NN>_<name>.wav`
+    // `<number>_<name>.wav`
     // (trim_preset_file_name_refusal, asked here and not inside the grammar
     // the reader asks), refused in the grammar's own words and shape.
     auto why = trim_preset_name_refusal(name, others);

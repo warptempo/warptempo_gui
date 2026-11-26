@@ -5,7 +5,9 @@
 #include "failure.h"
 
 #include <filesystem>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -72,9 +74,10 @@ RendersBatchScan max_renders_batch_index(
 // folder when it is one, else makes a new one, and its Render All always makes
 // a new one (GuiInputHandler::trim_presets_render). The token is DATA,
 // lowercase (the BPM sweep's `bpm` token's rule, render_bpm_sweep). ITS CELLS
-// TAKE THE SWEEPS' INDEX STYLE, `<NN>_<name>.wav`, the preset's place in the
-// list and its name (trim_presets_render's cell naming), so the folder lists
-// by every folder's one numbered rule (GuiRendersDir::enumerate_render_entries).
+// TAKE THE SWEEPS' INDEX STYLE, `<number>_<name>.wav` (trim_presets_render's
+// cell naming: Render All numbers from 1, a Render takes the folder's next
+// number), so the folder lists by every folder's one numbered rule
+// (GuiRendersDir::enumerate_render_entries).
 inline constexpr const char* kTrimPresetsBatchTag = "presets";
 inline bool is_trim_presets_batch_folder(const std::string& folder_name) {
     return folder_name.ends_with(std::string("_") + kTrimPresetsBatchTag);
@@ -218,6 +221,17 @@ std::vector<std::filesystem::path> batch_cell_file_set(
 // there — are left out and left alone.
 std::vector<std::filesystem::path> list_batch_folders(
     const std::filesystem::path& batch_root, std::error_code& ec);
+
+// A BATCH CELL'S NUMBER, the one parse of it: a wav stem's leading run of
+// digits, followed by `_` or the stem's end (`3`, `03_2nd theme` -> 3; the
+// digits after the first underscore are the descriptor's, a trim preset's
+// name may begin with them), or std::nullopt for a stem that is no numbered
+// cell. TWO READERS: the listing's order (GuiRendersDir::
+// enumerate_render_entries) and the trim preset's cell allocator, whose next
+// number is the folder's highest plus one (GuiInputHandler::
+// allocate_trim_preset_cell; architect 2026-11-25), so the number a cell is
+// listed by is the number the allocator counts.
+std::optional<int> render_cell_number(std::string_view stem);
 
 // Batch-folder enumeration. The directory scan of
 // `<source parent>/tmp/<batch>/<basename>.wav` and the per-entry .settings

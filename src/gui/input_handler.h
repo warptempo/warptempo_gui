@@ -2538,15 +2538,30 @@ private:
     // always with `always_new` (Render All: "a new render all always creates
     // a new folder, even if the last folder create was a presets folder"),
     // `<max+1>_presets`; create it and write its path into `out_folder`.
-    // The cell's name is the preset's place and name, composed at the press
-    // (trim_presets_render), so nothing in the folder is scanned.
     // A creation failure prints the stderr line and cards through the one
-    // composer (render_folder_creation_failure), answering false. Render
-    // calls it with the worker idle, for allocate_miscellaneous_cell's
-    // reason above (the killed render may still publish into `tmp/` while
-    // it drains), so its busy road late-binds it at the pump
-    // (PendingArchivalCommand::trim_preset).
+    // composer (render_folder_creation_failure), answering false. Render All
+    // calls it at the press (a new folder: a killed render publishes only
+    // into a folder that already stands); Render reaches it through
+    // allocate_trim_preset_cell below.
     bool allocate_trim_preset_folder(bool always_new, std::string& out_folder);
+
+    // Allocate a TRIM PRESET'S RENDER CELL, the presets list's plain Render
+    // (architect 2026-11-25: "single render always uses the n+1 index b/c
+    // it's appended a foder"): the folder by allocate_trim_preset_folder
+    // (`always_new` false), and in it the basename `<n + 1>_<name>`, n the
+    // highest cell number the folder's wavs carry (render_cell_number,
+    // renders_dir.h, the listing's own parse), 0 in a new folder; the number
+    // the bare integer, no padding. The cell never overwrites one: every
+    // press is one more cell, the miscellaneous render's rule. Folder and
+    // basename into the outs; false on the folder's failure, carded there.
+    // MUST only run when the render worker is idle, for
+    // allocate_miscellaneous_cell's reason above (the killed render may still
+    // publish into `tmp/` while it drains, so a number scanned at the press
+    // could be stolen): the idle road calls it inline, the busy road at the
+    // pump (PendingArchivalCommand::trim_preset).
+    bool allocate_trim_preset_cell(const std::string& name,
+                                   std::string&       out_folder,
+                                   std::string&       out_basename);
 
     // Attach the process-wide render resources to an assembled request:
     // the single RenderCache (constructed in main, reached through
@@ -3129,14 +3144,14 @@ private:
     //       THE TRIM, THE PRESET'S PAIR in the request and in the snapshot
     //       (so the cell's `.settings` records it), NEVER IN THE STORE: the
     //       current trim, the tabs' trims, the undo history, the trim bar and
-    //       TRIM are untouched. Its cell is `<NN>_<name>.wav`, the
-    //       preset's place in the list and its name (the cell naming at the
-    //       definition), in the newest folder
-    //       when that is a presets folder, else a new `<N>_presets/`
-    //       (allocate_trim_preset_folder), late-bound at the pump on the busy
-    //       road; an existing cell of that name is overwritten. THE HOLD
-    //       (`all` true) is RENDER ALL: every preset, one cell each in the
-    //       list's order, into a NEW presets folder through the batch runner
+    //       TRIM are untouched. Its cell is `<n + 1>_<name>.wav`, the
+    //       folder's next number and the preset's name (the cell naming at
+    //       the definition), in the newest folder when that is a presets
+    //       folder, else a new `<N>_presets/` (allocate_trim_preset_cell),
+    //       the folder and the number late-bound at the pump on the busy
+    //       road; no cell is overwritten. THE HOLD (`all` true) is RENDER
+    //       ALL: every preset, one cell each in the list's order numbered
+    //       from 1, into a NEW presets folder through the batch runner
     //       (start_render_batch: the progress page, its Cancel, the player at
     //       the end). The face's terms (trim_presets_button_enabled) are
     //       asked again; a preset whose name is no file name

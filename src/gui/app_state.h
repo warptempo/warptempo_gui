@@ -9107,12 +9107,14 @@ struct AppState {
         bool                       miscellaneous = false;
         // A parked TRIM PRESET'S RENDER (architect 2026-11-25; the presets
         // list's Render, GuiInputHandler::trim_presets_render) late-binds its
-        // FOLDER at the pump for the miscellaneous cell's reason above — the
-        // newest folder joined when it is a presets folder, else a new one
-        // (allocate_trim_preset_folder) — its cell's name, `<NN>_<name>`,
-        // already in the request (`batch_basename`). Set only by that park
+        // FOLDER AND ITS NUMBER at the pump for the miscellaneous cell's
+        // reason above — the newest folder joined when it is a presets
+        // folder, else a new one, and the cell `<n + 1>_<name>` in it
+        // (allocate_trim_preset_cell), composed from `trim_preset_name`, the
+        // preset's name the command carries. Both set only by that park
         // site.
         bool                       trim_preset = false;
+        std::string                trim_preset_name;
     };
     PendingArchivalCommand pending_archival;
 
@@ -10422,8 +10424,8 @@ static_assert(
 // the hold does something the plain press does not, and with any preset it
 // does: Render All always makes a new presets folder, runs the progress page
 // and opens the render player on that folder, where the plain Render joins
-// the newest folder when it is a presets folder (a cell of that name
-// overwritten) and returns to the main page
+// the newest folder when it is a presets folder (one more cell, the folder's
+// next number) and returns to the main page
 // (GuiInputHandler::trim_presets_render).
 inline std::string trim_presets_button_shift_hint(
         AppState::TrimPresetsButtonAct act, bool list_holds_preset) {

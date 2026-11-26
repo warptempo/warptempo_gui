@@ -15,6 +15,7 @@
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -233,6 +234,37 @@ bool GuiInputHandler::allocate_trim_preset_folder(bool always_new,
         return false;
     }
     out_folder = target_folder.string();
+    return true;
+}
+
+// THE TRIM PRESET'S CELL (architect 2026-11-25: "single render always uses
+// the n+1 index b/c it's appended a foder"; the contract at the
+// declaration): the plain Render's folder (allocate_trim_preset_folder,
+// joining the newest presets folder) and the next number in it, n + 1 over
+// every wav the listing numbers (render_cell_number, the listing's own
+// parse), 1 in a new or empty folder. The number is the bare integer, the
+// miscellaneous cell's: the player orders by the parsed number, never the
+// text, so no padding is needed for the order, and in a folder Render All
+// made n + 1 already has its widest number's digits.
+bool GuiInputHandler::allocate_trim_preset_cell(const std::string& name,
+                                                std::string&       out_folder,
+                                                std::string&       out_basename) {
+    std::string folder;
+    if (!allocate_trim_preset_folder(/*always_new=*/false, folder))
+        return false;
+    int max_cell = 0;
+    std::error_code ec;
+    for_each_directory_entry(std::filesystem::path(folder), ec, [&max_cell](
+            const std::filesystem::directory_entry& fe) {
+        std::error_code entry_ec;
+        if (!fe.is_regular_file(entry_ec) || entry_ec) return;
+        if (fe.path().extension() != ".wav") return;
+        const std::optional<int> v =
+            render_cell_number(fe.path().stem().string());
+        if (v && *v > max_cell) max_cell = *v;
+    });
+    out_folder   = std::move(folder);
+    out_basename = std::to_string(max_cell + 1) + "_" + name;
     return true;
 }
 
@@ -621,14 +653,17 @@ bool GuiInputHandler::dispatch_pending_archival_command() {
             cmd.reqs.front().batch_folder   = std::move(folder);
             cmd.reqs.front().batch_basename = std::move(basename);
         } else if (cmd.trim_preset) {
-            // A TRIM PRESET'S RENDER late-binds its folder alone, for the
-            // same reason (PendingArchivalCommand::trim_preset); its cell's
-            // name, `<NN>_<name>`, rides in the request. A creation failure
-            // drops the command as the miscellaneous one's does.
-            std::string folder;
-            if (!allocate_trim_preset_folder(/*always_new=*/false, folder))
+            // A TRIM PRESET'S RENDER late-binds its folder AND its number,
+            // for the same reason (PendingArchivalCommand::trim_preset): the
+            // cell `<n + 1>_<name>` composed here from the parked name
+            // (allocate_trim_preset_cell). A creation failure drops the
+            // command as the miscellaneous one's does.
+            std::string folder, basename;
+            if (!allocate_trim_preset_cell(cmd.trim_preset_name, folder,
+                                           basename))
                 return false;
-            cmd.reqs.front().batch_folder = std::move(folder);
+            cmd.reqs.front().batch_folder   = std::move(folder);
+            cmd.reqs.front().batch_basename = std::move(basename);
         }
         dispatch_single_archival_render(std::move(cmd.reqs.front()));
     } else {
