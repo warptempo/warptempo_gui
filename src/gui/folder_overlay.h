@@ -3,10 +3,10 @@
 // THE FOLDER OVERLAY — the LIST PANEL (architect design 2026-08-28), laid in
 // the modal family's box (modal_box.h). ONE WIDGET, SIX CONTENTS: the RENDER
 // PLAYER's output folders and their wavs, the OPEN PROJECT PICKER's valid
-// project folders, THE SETTINGS PAGE's eighteen keys as `key=value` lines
+// project folders, THE SETTINGS PAGE's fifteen keys as `key=value` lines
 // (architect 2026-10-28: "yes" to the list; no title row, architect
 // 2026-11-22: "the user is expected to have expert knowledge") — the
-// sixteen editable keys of kSettingsEditorKeys and, among the piece's
+// thirteen editable keys of kSettingsEditorKeys and, among the piece's
 // lines, `scale` and `bpm` as disabled rows (architect 2026-10-29) — and
 // THE VALUE LIST, one listed key's values, the page's row for that key's
 // content (architect 2026-10-25: "maybe a drop down would make it quicker,

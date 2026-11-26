@@ -37,16 +37,16 @@
 // RECOLORED to `currentColor` by the one RECOLOR RULE (the README's; the
 // importer's one table the enumerator -> source list) and PAINTED IN
 // THE TEXT TONES — a lit key's in the print of its accent face —
-// (materials.h) at ONE ROAD, THE INK BOX (below), each seat naming its own
-// ink length (the battery's the title bar's cap band, render.h's title bar
-// block):
+// (materials.h) at ONE ROAD, THE BOX (below), each seat naming its own box
+// (the battery its ink's height, the title bar's cap band, render.h's title
+// bar block):
 //   THE KEYS (architect 2026-11-01: one visual size): every key carries
 //   one — the
 //   on-screen keyboard's glyph keys too, at the same one size
 //   (onscreen_keyboard::cap_icon: Tab FormatIndentMore, Enter KeyEnter, the
 //   rest shared drawings) —
-//   its 16 W canvas centered on its box (paint_key_glyph, paint_handler.cpp;
-//   2026-11-19), `text` (D3DAE3) at rest,
+//   its 16 W canvas in a 16 W box centered on the key's (paint_key_glyph,
+//   paint_handler.cpp; 2026-11-19), `text` (D3DAE3) at rest,
 //   `key_dim_ink` (7F8591) on a disabled key, `text_on_lit`
 //   (FFFFFF) on a lit or pressed one's accent face, and
 //   `text_on_lit_dim` (9AA1AF) on a lit disabled one's dimmed face
@@ -88,7 +88,7 @@
 // 2026-11-21: one drawing, one file).
 // THE SET PARSED AT LAUNCH through resvg (svg_icon.h: the wrapper and the
 // error rule), straight from the bundle — never copied into the config
-// folder (load_set, below) — and rasterised lazily, per (drawing, ink px,
+// folder (load_set, below) — and rasterised lazily, per (drawing, zoom,
 // color, x phase, y phase) — the place's fraction in 64ths on each axis —
 // into an ARGB32 surface that a draw copies at the place's whole device px,
 // no resample (draw_glyph, below).
@@ -195,87 +195,80 @@ std::optional<std::string> load_set();
 // THE RASTERS DROPPED, on a scale change (GuiInputHandler::apply_gui_scale)
 // and on a flip of True Colors (GuiInputHandler::apply_true_colors — the
 // rasters are converted for the window as they are made, svg_icon.h): the
-// cache refills lazily at the new sizes and in the new conversion, the
-// fits with them; the parsed drawings stay (a bound parse keys its sRGB
-// color, which neither change moves). A key's lit edge drops nothing:
-// the print on a lit face is one more color key beside the text tones.
+// cache refills lazily at the new sizes and in the new conversion; the
+// parsed drawings and their measures stay (a bound parse keys its sRGB
+// color, which neither change moves; a canvas and an ink are in the
+// drawing's own units). A key's lit edge drops nothing: the print on a lit
+// face is one more color key beside the text tones.
 void drop_rasters();
 
-// -- THE INK BOX: one road for every seat (architect 2026-11-01:
+// -- THE BOX: one road for every seat (architect 2026-11-01:
 // "the glyphs smaller … the problem with M3 was the uneven size, e.g. DRAG
 // was tiny" -> ONE VISUAL SIZE for every key glyph; 2026-11-02: the
 // seats off the keys on the same road at their own lengths) ---------------
 //
-// A GLYPH IS SCALED BY ITS INK, never by its viewBox: the drawing is
-// rendered at a uniform zoom from its origin (svg_icon::rasterise_zoom) and
-// its INK BOX — the bounds of every pixel whose alpha is > 0, the
-// antialiased rim included — is cropped out; THE FIT is the zoom at which
-// the ink box's LARGER SIDE is `ink_px`, found
-// thus: a probe at zoom 8 measures the ink in user units, the zoom is `ink_px`
-// over its larger side, and the zoom steps down by 1 % while the rim's
-// extra row makes it overrun. THE SEATS' LENGTHS, each its owner's: the
-// keys' drawing as its whole canvas in a 16 W box (kKeyDrawingBoxW,
-// paint_key_glyph, 32 device px on the tablet: Papirus's 16-px drawings at
-// their native size; 2026-11-19, ink_in_box below), the title bar's
-// note (the drawing's ink in a 12 W box,
-// ink_in_box below) and battery (the cap band's height, render.h's title
-// bar block) — the list rows' drawing as its whole canvas in a 16 W box
-// (kListDrawingBoxW, paint_handler.cpp's THE LIST VIEW;
-// 2026-11-19), the cards' drawing as
-// its whole canvas in a 16 W box (kNotificationGlyphBoxW, notifications.h,
-// ink_in_box; 2026-11-19). The fit
-// is the drawing's alpha alone, so it is held per (drawing, ink px) and
-// shared by the colors; the cropped raster per (drawing, ink px, color,
-// phase — draw_glyph below),
-// converted for the window as every raster (svg_icon::convert_to_display).
+// EVERY DRAWING STANDS AT THE EXACT ZOOM ITS SEAT ASKS, ITS CANVAS'S ORIGIN
+// ON THE SEAT'S EXACT PLACE (architect 2026-11-26: "I haven't noticed any
+// lack of sharpness with the stem lines or anything else that has gone off
+// the grid. So I don't see why the icons should be the one exception";
+// "Let's just go ahead and do it"). A seat names A BOX, a square `box_px`
+// real device px on a side with its top-left at a real place, and the
+// drawing is its whole canvas scaled into it: the zoom the box over the
+// canvas's larger side (svg_icon::canvas_side), the canvas's origin on the
+// box's top-left. Nothing stands between the drawing's own geometry and the
+// paint but that zoom and that place (the no-grid rule, render.h's hull):
+// no whole-px fit of the ink, no rounding of the zoom or of the seat.
+// THE SEATS' BOXES, each its owner's: the keys' 16 W box (kKeyDrawingBoxW,
+// paint_key_glyph, 32 device px on the tablet, zoom 2: Papirus's 16-px
+// drawings at their native size; 2026-11-19), the list rows' 16 W box
+// (kListDrawingBoxW, paint_handler.cpp's THE LIST VIEW; 2026-11-19), the
+// cards' 16 W box (kNotificationGlyphBoxW, notifications.h; 2026-11-19),
+// the title bar's note's 12 W box (render.h's title bar block), the note
+// seated by its ink (glyph_ink_in_box). A SEAT SIZED BY ITS INK names the
+// ink's length and takes the box that gives it (glyph_box_for_ink_height):
+// the title bar's battery, its ink's height the cap band's (render.h's THE
+// BATTERY). THE INK is the drawing's exact extent in its own units
+// (svg_icon::ink_bounds) times the box's zoom, real px: a seat that places
+// or sizes a drawing by its ink reads it there, never off a raster.
 
-// The ink box's size, device px, at `ink_px` (its larger side `ink_px` or
-// less; zeros for a drawing with no ink or `ink_px` <= 0).
-struct InkSize {
-    int w = 0, h = 0;
-};
-InkSize glyph_ink_size(Icon icon, int ink_px);
+// THE DRAWING'S INK IN A BOX: the ink's real rect, device px, offset from the
+// box's top-left, when the drawing's canvas is scaled into a `box_px`
+// square. Nullopt for a drawing with no ink or a box of no size.
+std::optional<GuiRectF> glyph_ink_in_box(Icon icon, double box_px);
 
-// A DRAWING IN A BOX (architect 2026-11-19: the title bar's note "in
-// a 12 W drawing box", "the logo should take the same font size as the
-// body"): what the ink-box road needs to draw the drawing as if its whole
-// canvas were scaled into a `box_px` square — `ink_px` the ink's larger side
-// at that scale (the drawing's ink over its canvas's larger side, both read
-// off the fit's zoom-8 probe, times the box, rounded to the nearest px: the
-// road's sizes are whole), and `left` / `top` the ink box's offset inside
-// the box at that scale, real px. Zeros for a drawing with no ink.
-struct InkInBox {
-    int    ink_px = 0;
-    double left   = 0.0;
-    double top    = 0.0;
-};
-InkInBox ink_in_box(Icon icon, int box_px);
+// THE BOX FOR AN INK'S HEIGHT: the box, device px, in which the drawing's ink
+// stands exactly `ink_h_px` tall — the zoom `ink_h_px` over the ink's height
+// in its units, unrounded, times the canvas. 0 for a drawing with no ink.
+double glyph_box_for_ink_height(Icon icon, double ink_h_px);
 
-// THE GLYPH, its INK BOX's top-left AT EXACTLY (x, y) — real device px
-// (architect 2026-11-15, the no-grid arc; render.h's hull holds the rule) —
-// in `color` (0xRRGGBB, sRGB — the caller's tone; the head's THE BOUND
-// DRAWING). THE INK BOX IS A REAL RECT: the fit's box (the bounds of the
-// drawing's ink at the fitted zoom, `glyph_ink_size`, whole px by its
-// measure) standing with its top-left corner on (x, y). THE RASTER IS
-// RENDERED AT THE PLACE'S FRACTION, to a 64th of a px on each axis (the
-// text's own resolution, text_raster.h): the drawing rasterized by resvg
-// with the fraction as its translation (svg_icon::rasterise_zoom's phase),
-// the fit's box cropped out of it with one column or row more for the ink
-// the fraction pushes right or down — the hull of the box at that phase —
-// and that crop copied at the whole part of the place, no resample, a
-// straight OVER. AT A WHOLE PLACE the raster is the phase-less one, byte
-// for byte (the same render call, the same crop). THE CACHE: one raster per
-// (drawing, ink px, color, x phase, y phase), BOUNDED — kept until the
-// set holds kGlyphRasterBound of them, then DROPPED WHOLE (the shaping
-// memo's rule); the bound's reason at the constant (icons.cpp).
-// Cairo state is saved and restored; the caller's clip stands. Cannot fail:
-// the launch's load parsed every drawing.
-void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
+// THE GLYPH IN ITS BOX: the drawing's canvas scaled into the `box_px` square
+// whose top-left is (x, y), real device px (THE BOX above; the no-grid arc,
+// architect 2026-11-15, render.h's hull), in `color` (0xRRGGBB, sRGB — the
+// caller's tone; the head's THE BOUND DRAWING). THE RASTER IS RENDERED AT
+// THE BOX'S ZOOM AND AT THE PLACE'S FRACTION, to a 64th of a px on each axis
+// (the text's own resolution, text_raster.h): resvg renders the drawing at
+// that zoom with the fraction as its translation (svg_icon::rasterise_zoom's
+// phase), the hull of the render's ink — the bounds of its pixels whose
+// alpha is non-zero — is cropped out and copied at the place's whole part
+// plus the crop's offset, no resample, a straight OVER (the pixels the crop
+// leaves out are wholly transparent, which OVER leaves as they were, so the
+// crop changes no byte). AT A WHOLE PLACE the raster is the phase-less one,
+// byte for byte. EVERYTHING IT INKS lies inside the hull of the box at that
+// place (resvg renders the canvas alone, and the phase's one column or row),
+// so a caller's damage over the box's hull covers it. THE CACHE: one raster
+// per (drawing, zoom, color, x phase, y phase), the zoom the exact double
+// the box gives (a seat's box is one length at a scale, computed the same
+// way on every frame, so its zoom compares exactly), BOUNDED — kept until the
+// set holds kGlyphRasterBound of them, then DROPPED WHOLE (the shaping memo's
+// rule); the bound's reason at the constant (icons.cpp). Cairo state is
+// saved and restored; the caller's clip stands. Cannot fail: the launch's
+// load parsed every drawing.
+void draw_glyph(cairo_t* cr, Icon icon, double x, double y, double box_px,
                 uint32_t color);
 
 // THE GLYPH IN A MIXED INK (architect 2026-11-20: a key's drawing
 // fades with its face, Arc's `transition: all` carrying `color`, the ink a
-// symbolic drawing is drawn in): THE SAME PLACE AND THE SAME CROPPED RASTER
+// symbolic drawing is drawn in): THE SAME BOX AND THE SAME CROPPED RASTER
 // AS draw_glyph's for `raster_color` (one of the mix's own inks, so the
 // cache holds no raster it would not hold at rest and grows by nothing), ITS
 // ALPHA THE MASK of a source in `window_word` — the mix's word, already the
@@ -286,7 +279,7 @@ void draw_glyph(cairo_t* cr, Icon icon, double x, double y, int ink_px,
 // ignores the tone (the head's THE BOUND DRAWING) and draws its one raster.
 // Used only while a fade runs: a plain ink takes draw_glyph, byte for byte.
 void draw_glyph_tinted(cairo_t* cr, Icon icon, double x, double y,
-                       int ink_px, uint32_t raster_color,
+                       double box_px, uint32_t raster_color,
                        uint32_t window_word);
 
 } // namespace icons

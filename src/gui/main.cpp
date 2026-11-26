@@ -4118,10 +4118,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // producing between sessions.
     gui.set_on_media_command({});
     // ON ANDROID THIS IS ONE STREAM STOP AND ONE START PER REOPEN: the AAudio
-    // stream stays started between plays for the transient's sake, and a
-    // reopen is the one moment it is torn down and brought back (the next
-    // session's init owns the rate, and projects may differ in it) — accepted,
-    // one transient per project change rather than per play. A LIT NOISE GAPS
+    // stream stays started between plays (the car's Bluetooth stutter,
+    // playback_aaudio.cpp's THE STREAM'S LIFECYCLE), and a reopen is the one
+    // moment it is torn down and brought back (the next session's init owns
+    // the rate, and projects may differ in it): shutdown closes the stream
+    // and the next init opens and starts one. A LIT NOISE GAPS
     // FOR IT and resumes where it was in the next session's first callback,
     // no fade (GuiNoiseVoice's thread note, noise.h): after this line no
     // callback of this engine touches the voice.
@@ -4244,18 +4245,8 @@ int gui_main() {
     // (GuiInputHandler::apply_gui_scale); the touch-slop inventory is at
     // GuiInputCore::set_touch_slop_px.
     set_gui_scale_percent(device_config.gui_scale);
-    // THE KEYBOARD'S KEY BOX RIDES THE SAME ROAD (the `osk_key_w` and
-    // `osk_key_h` tuning keys, architect 2026-10-29; render.h's seat): seeded
-    // before the first layout; the other road is the settings editor's two
-    // commits (GuiInputHandler::apply_osk_key_size).
-    set_osk_key_size_w(device_config.osk_key_w, device_config.osk_key_h);
-    // THE KEYBOARD'S CAP SIZE THE SAME (the `osk_font_px` tuning key,
-    // architect 2026-10-29; render.h's seat): seeded before the first
-    // paint; the other road is the settings editor's commit
-    // (GuiInputHandler::apply_osk_font_px).
-    set_osk_font_em_w(device_config.osk_font_px);
-    // THE WAVEFORM PLATE'S GROW THE SAME (the `waveform_grow` device key,
-    // architect 2026-10-31; render.h's seat): seeded before the first
+    // THE WAVEFORM PLATE'S GROW RIDES THE SAME ROAD (the `waveform_grow`
+    // device key, architect 2026-10-31; render.h's seat): seeded before the first
     // frame's draw list; the other road is the settings editor's commit and
     // its value list's tap (GuiInputHandler::apply_waveform_grow).
     set_waveform_grow_quarters(device_config.waveform_grow_quarters);

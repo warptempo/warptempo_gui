@@ -22,8 +22,8 @@
 // Arc's icon button; its case block, icon_case_w_px /
 // icon_case_h_px), the box the whole key, its border included, a linked
 // group's neighbors sharing one seam column (materials.h's
-// key_link_pitch_px); its drawing a fixed 16 W box centered on it by its
-// own ink-box road (paint_key_glyph).
+// key_link_pitch_px); its drawing a fixed 16 W box centered on it, the
+// drawing at the box's exact zoom and place (paint_key_glyph).
 // THE SIZE ON THE GLASS is gui_scale's (the device's choice, never this
 // header's).
 //

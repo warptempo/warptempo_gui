@@ -228,7 +228,8 @@
 // 2026-11-19) the title bar wears `title_text`, the marker labels
 // `sidebar_text` and the ruler's digits `ruler_text`; THE BOTTOM ICON ROW'S
 // TIMESTAMP wears `timestamp_text`, Arc's `.h4` A5ABB5, in its own Bold
-// 14 W (architect 2026-11-25; paint_handler.cpp's THE TIME FIELDS). ON A LIT KEY'S FACE
+// 18 W (architect 2026-11-25 / 2026-11-26; paint_handler.cpp's THE TIME
+// FIELDS). ON A LIT KEY'S FACE
 // the print — its glyph, the on-screen keyboard's lit cap — is
 // `text_on_lit`, Arc's white (architect 2026-11-17), in place
 // of `text`; on a lit

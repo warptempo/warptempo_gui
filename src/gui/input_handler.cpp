@@ -3369,8 +3369,8 @@ void GuiInputHandler::apply_gui_scale(int percent) {
                              failure->display);
     }
     set_gui_scale_percent(percent);
-    // THE ICON RASTERS ARE PER DEVICE PX (icons.h): the cache drops and
-    // refills lazily at the new scale's sizes.
+    // THE ICON RASTERS ARE PER ZOOM (icons.h): the cache drops the old
+    // scale's and refills lazily at the new scale's zooms.
     icons::drop_rasters();
     // THE INPUT CORE'S TOUCH SLOP IS A SCALED LENGTH TOO, and the core sits
     // below the GUI model and cannot resolve it (the contract and the
@@ -3381,23 +3381,6 @@ void GuiInputHandler::apply_gui_scale(int percent) {
     // drag_moved_threshold_px() reads the value that call just installed.
     gui.set_touch_slop_px(drag_moved_threshold_px());
     relayout_window();
-}
-
-void GuiInputHandler::apply_osk_key_size(int w_w, int h_w) {
-    // The contract is at the declaration (input_handler.h): the push, then
-    // every face's look at once and the whole window's damage, no relayout;
-    // the commit's arm owns the persist.
-    set_osk_key_size_w(w_w, h_w);
-    app.face_fades.drop_all();
-    viewport.invalidate_all();
-}
-
-void GuiInputHandler::apply_osk_font_px(int em_w) {
-    // The contract is at the declaration (input_handler.h): the push, then
-    // the whole window's damage, no relayout; the commit's arm owns the
-    // persist.
-    set_osk_font_em_w(em_w);
-    viewport.invalidate_all();
 }
 
 void GuiInputHandler::apply_waveform_grow(int quarters) {

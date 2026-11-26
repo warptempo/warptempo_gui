@@ -1082,7 +1082,7 @@ at its own site:
 - **JACK** counts `process_cycles`. That works because an active JACK client's
   process callback keeps running (silent) forever.
 - **AAudio** counts too, since 2026-08-27, and for the JACK reason: THE STREAM
-  NOW STAYS STARTED between plays (the click ruling below), so its data callback
+  NOW STAYS STARTED between plays (§11.4a below), so its data callback
   keeps running — silent, reading no sample — and `callback_cycles` keeps
   advancing. Two increments after `playing` is lowered are the proof, exactly as
   on JACK.
@@ -1101,28 +1101,66 @@ at its own site:
   then `waitForStateChange` until STOPPED or a terminal state, no result code
   ever read as quiescence — because a stream stopped between plays calls no
   callback and a counter would never have advanced. That `requestStop` at every
-  stop, with the matching `requestStart` at every play, is exactly what made the
-  click.
+  stop, with the matching `requestStart` at every play, is what §11.4a rules
+  out.
 
-### 11.4a The click at every play (architect 2026-08-27, on glass)
+### 11.4a The stream never stops between plays: the car's stutter (2026-08-27; the reason as the architect gave it 2026-11-26)
 
-"When I click the lower half of the waveform I hear a little click sound, like a
-keyboard's haptic click, behind the waveform." Android's own touch and haptic
-sounds were off on the device, so it was ours: STARTING AN AAUDIO STREAM IS
-AUDIBLE — the framework brings the output path up and the device's unmute
-transient rides out with the first frames — and the backend started the stream
-at every `play()` and stopped it at every `stop()`.
-
-THE STREAM IS NOW OPENED ONCE, STARTED ONCE AND NEVER STOPPED BETWEEN PLAYS. It
+THE STREAM IS OPENED ONCE, STARTED ONCE AND NEVER STOPPED BETWEEN PLAYS. It
 starts at open (`init`, and the reopen after a disconnect) and is stopped only
 where it is about to be CLOSED — shutdown and the dead-stream reopen, both in
 `close_stream`, which holds the file's one remaining `requestStop`. Between
 plays the callback's `playing` gate writes silence and never reaches the render
 body. The cost is a running stream on an already screen-on tablet (a few mW, no
-wakelock change), accepted; the benefit is that the one start transient of a
-session happens at launch, with no audition under it. A step-shaped click at a
-play START — the render body beginning mid-waveform at whatever sample sits
-there, with no ramp — is a different thing and is untouched.
+wakelock change), accepted.
+
+THE REASON IS THE CAR'S STUTTER, AND NOTHING ELSE (architect 2026-11-26: "What
+is known is the audio, the car has a stutter, I guess is a better way to
+describe it, when connecting to Bluetooth, and the Keep Alive prevents that."
+"I don't recall if the headphones had a crackle, but the car definitely did."):
+over the car's Bluetooth link every play on a stopped-and-restarted stream
+stutters throughout, while a fresh continuous stream is clean for hours (the
+2026-09-12 evidence; the lifecycle block at the head of `playback_aaudio.cpp`
+carries it).
+
+THE 2026-08-27 CLICK IS NO PART OF THE REASON. The stream was first kept
+started on that day's glass note — "When I click the lower half of the waveform
+I hear a little click sound, like a keyboard's haptic click, behind the
+waveform" — read then as the stream's start transient. His word 2026-11-26: it
+was a separate event, "not a pop or a click in the sense of a audio
+discontinuity", "not a connection dropout", its date and device uncertain ("I
+wouldn't really put too much concern on it"). Nothing here claims that a
+stream's start is audible or that the keep-alive cures a click.
+
+STARTING THE STREAM PER PLAY ON THE ORDINARY PATH IS RULED OUT (architect
+2026-11-26). The proposal: performance mode NONE, the mixer's own start and
+stop with fades, as a media player's, so the Bluetooth link would idle between
+plays. His test in the car, with a media player that does exactly that: "in the
+tablet on the car, and I just tried YouTube, and after about 10 seconds that
+crackling would come back. And yeah, so it's not a viable option." It repeats
+the 2026-09-04..12 experiment (the render player's rest stopping the stream,
+`1e7998ad`, reverted `465bb89f`) and an idle link would have to be woken at
+every play.
+
+THE CAR'S CODEC IS SWITCHED WITH THE APP CLOSED (architect 2026-11-26; the
+runbook's steps are INSTALL.md's "Bluetooth in the car"). The car's head unit
+offers AAC and SBC, he wants SBC there, and the tablet always connects on AAC.
+The car refuses a codec change on a STREAMING link — it reports "connection
+failed", the tablet's Bluetooth log showing the reconfiguration followed at
+once by the link's disconnect — and with this app open the link always
+streams: the stream the keep-alive holds running, carrying silence between plays
+(or the noise bed, while it is audible). So the switch (Developer options, HD audio
+off) is made with the app closed, the link idle, and the app opened again
+after it; his test in the car, 2026-11-26: "it worked". Nothing else on the
+tablet does it: the per-device optional-codecs flag behind the HD audio switch
+is ignored at connection by Samsung's Bluetooth service, stock Android would
+honor it only by the same post-connect switch the car refuses, and AAC's codec
+priority can be overridden only with root. The cost he names: closing the app
+wants a saved state and ends the session's undo history.
+
+A step-shaped click at a play START — the render body beginning mid-waveform at
+whatever sample sits there, with no ramp — is a different thing and is
+untouched.
 
 ### 11.5 The disconnect (UNTESTED ON HARDWARE)
 

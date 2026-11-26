@@ -705,8 +705,7 @@ void GuiSettingsEditor::commit() {
 // (2026-10-28) the same, at once and no
 // card, their arms after them (the level, `noise_level`, has no arm,
 // 2026-11-05 night: no Settings row, the top icon row's NOISE case its one
-// road, kSettingsEditorKeys), and the keyboard's three tuning keys `osk_key_w`,
-// `osk_key_h` and `osk_font_px` (2026-10-29) the same, their arms last.
+// road, kSettingsEditorKeys).
 // The
 // commit is the line editor's Enter for the keys whose row opens it,
 // and a list row's tap for the four keys with a value list
@@ -867,48 +866,6 @@ GuiSettingsEditor::apply_device_setting(const std::string& key,
         if (*s == app.device_config->noise_crossfade_s) return unchanged();
         app.device_config->noise_crossfade_s = *s;
         if (app.noise != nullptr) app.noise->set_crossfade_s(*s);
-        (void)persist();
-        return applied();
-    }
-
-    // THE ON-SCREEN KEYBOARD'S KEY BOX (architect 2026-10-29, two tuning keys;
-    // render.h's `osk_key_w` / `osk_key_h` seat): each an integer under the one
-    // grammar owner (parse_osk_key_size, device_config.h), APPLIED LIVE AT THE
-    // COMMIT — the live struct, then the one live act
-    // (GuiInputHandler::apply_osk_key_size: the renderer's seat and the window
-    // repainted at once, the box moving the keyboard's surface alone, which
-    // moves no lane) — and persisted, so NO CARD: the keyboard standing
-    // under this very editor is the answer. The page opens the line editor
-    // on each (no value list, 69 values no short domain); Tab on an empty
-    // entry recalls the writer's spelling (recall_gui_setting_value).
-    if (key == "osk_key_w" || key == "osk_key_h") {
-        const std::optional<int> px = parse_osk_key_size(value);
-        if (!px) return reject(kOskKeySizeGrammarReason);
-        int& live = key == "osk_key_w" ? app.device_config->osk_key_w
-                                       : app.device_config->osk_key_h;
-        if (*px == live) return unchanged();
-        live = *px;
-        input->apply_osk_key_size(app.device_config->osk_key_w,
-                                  app.device_config->osk_key_h);
-        (void)persist();
-        return applied();
-    }
-
-    // THE ON-SCREEN KEYBOARD'S CAP SIZE (architect 2026-10-29 night, a tuning
-    // key; render.h's `osk_font_px` seat): an integer under its one grammar
-    // owner (parse_osk_font_px, device_config.h), APPLIED LIVE AT THE COMMIT —
-    // the live struct, then the one live act
-    // (GuiInputHandler::apply_osk_font_px: the renderer's seat and the window
-    // repainted, no relayout) — and persisted, so NO CARD: the keyboard
-    // standing under this very editor is the answer. The page opens the line
-    // editor on it (no value list, 19 values no short domain); Tab on an empty
-    // entry recalls the writer's spelling (recall_gui_setting_value).
-    if (key == "osk_font_px") {
-        const std::optional<int> px = parse_osk_font_px(value);
-        if (!px) return reject(kOskFontPxGrammarReason);
-        if (*px == app.device_config->osk_font_px) return unchanged();
-        app.device_config->osk_font_px = *px;
-        input->apply_osk_font_px(*px);
         (void)persist();
         return applied();
     }

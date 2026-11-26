@@ -300,15 +300,17 @@ double gui_font_line_exact_px(const GuiFont& f) {
 }
 
 // THE LINE BOX IN W (gui_font.h): the file's ascender and descender times
-// the use's em in W, each ceiled to a whole W (FreeType's own size-request
-// rounding, which Pango's line box reads). The tolerance keeps a product
-// that lands on a whole W from ceiling past it.
+// the use's exact em in W, each ceiled to a whole W (our rule, GTK's line
+// box being whole px; FreeType's size request rounds the same way at a
+// whole-px size). The tolerance keeps a product that lands on a whole W
+// from ceiling past it.
 GuiLineBoxW gui_font_line_box_w(const GuiFont& f) {
     const FileMetrics& m = g_metrics[file_of(f.face)];
     const auto up = [](double v) {
         return static_cast<int>(std::ceil(v - 1e-9));
     };
-    return GuiLineBoxW{up(m.ascent_em * f.em_w), up(m.descent_em * f.em_w)};
+    const double em_w = gui_font_table_px(f.face);
+    return GuiLineBoxW{up(m.ascent_em * em_w), up(m.descent_em * em_w)};
 }
 
 double gui_font_cap_px(const GuiFont& f) {
@@ -384,13 +386,14 @@ GuiInkBand gui_font_ink_band(const GuiFont& f, std::string_view set) {
 
 cairo_scaled_font_t* gui_outline_scaled_font(const GuiFont& f) {
     // One per face, rebuilt when its EM moves — the scale (its two
-    // application points, set_gui_scale_percent) or the Keys face's live
-    // size (the `osk_font_px` tuning key, 2026-10-29 night, gui_font.h's
-    // GuiFont): a paint asks for it per run. The face fixes the file, so the
-    // em is the whole key. The hb font text_shape shapes with hangs on this
-    // scaled font as cairo user data and dies with it (text_shape.cpp's
-    // hb_font_of), so it follows this cache's key and rebuild without a
-    // second cache.
+    // application points, set_gui_scale_percent), every face's size being
+    // its table's (gui_font.h's GuiFont): a paint asks for it per run. The
+    // face fixes the file, so the em is the whole key — the exact double (gui_font_em_px, architect
+    // 2026-11-26), so a fractional em keys truthfully; cairo hands it to
+    // FreeType at 26.6 (FT_Set_Char_Size), a 64th of a px. The hb font
+    // text_shape shapes with hangs on this scaled font as cairo user data
+    // and dies with it (text_shape.cpp's hb_font_of), so it follows this
+    // cache's key and rebuild without a second cache.
     struct Cached {
         double               em   = -1.0;
         cairo_scaled_font_t* font = nullptr;

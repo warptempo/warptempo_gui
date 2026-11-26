@@ -528,7 +528,7 @@ uint64_t palette_generation();
 // CALLER OWES, after the call (GuiInputHandler::apply_true_colors; the
 // launch's call, before the window and every cache exist, owes none): the
 // icon rasters dropped (icons::drop_rasters — they convert at raster time
-// and key on the device px and, a key glyph's, its sRGB tone, which the
+// and key on the zoom and, a key glyph's, its sRGB tone, which the
 // flip does not move), then the waveform
 // plate kicked when its inks moved — the waveform_plate_inks pair read
 // before and after the call; when it moved, the synchronous plate rebuild
@@ -1083,48 +1083,16 @@ double gui_scale_factor();
 // case paragraph below) and the line-box baselines of the text on key-tall
 // boxes — the entries (entry_baseline: the clock's, the NOISE case's, the
 // fields') and the word buttons' words, in paint_handler.cpp; the gap's is
-// program_run_gap_px (the run gap paragraph below). The key's drawing is a
-// fixed 16 W box whatever the box (paint_key_glyph).
+// program_run_gap_px (the run gap paragraph below). THE ON-SCREEN
+// KEYBOARD'S KEY IS THIS BOX ROTATED, 28 W wide by 36 W tall, its band's
+// two pads the run gap (architect 2026-11-26: "the regular icon size
+// rotated 90 degrees ... And the run gap should be the padding above and
+// below the ... keys"), read through the same two accessors and
+// program_run_gap_px (onscreen_keyboard.h's geometry). The key's drawing is
+// a fixed 16 W box whatever the box (paint_key_glyph).
 inline constexpr int kKeyWidthW  = 36;
 inline constexpr int kKeyHeightW = 28;
 inline constexpr int kRunGapW    = 6;
-
-// THE ON-SCREEN KEYBOARD'S KEY BOX, THE `osk_key_w` AND `osk_key_h` TUNING
-// KEYS' SEAT (architect 2026-10-29, the compact keyboard: "small, centered,
-// like a phone … chiclets, taller than wide"): the live box IN W
-// (scaled_px's axis), read by onscreen_keyboard.h's geometry and nothing
-// else (osk_key_h moving the keyboard's height and so the surface's top,
-// which stands over the app and moves no lane, architect 2026-11-20 — its
-// pads the bottom icon row's own, onscreen_keyboard::pad_top_px /
-// pad_foot_px, 2026-11-19). The scale's
-// shape — file-scope state in render.cpp,
-// pushed by gui_main's startup read of the device config before the window
-// exists and by the settings editor's `osk_key_w=` / `osk_key_h=` commits
-// (GuiInputHandler::apply_osk_key_size, which repaints at once, no
-// relayout). The
-// grammar and the range are device_config.h's (parse_osk_key_size); the
-// construction state is 24 x 30 W (kOskKeyWDefaultW, kOskKeyHDefaultW; 48
-// x 60 device px on the tablet), the first-run values the shipped defaults
-// file's. It settles into two constexprs once he rules the
-// numbers, and these three go.
-void set_osk_key_size_w(int w_w, int h_w);
-int  osk_key_width_w();
-int  osk_key_height_w();
-
-// THE ON-SCREEN KEYBOARD'S CAP SIZE, THE `osk_font_px` TUNING KEY'S SEAT
-// (architect 2026-10-29, "font size osk config tmp key"): the live em
-// of the Keys face (gui_font.h) IN W, read by gui_font below and nothing
-// else. The key box seat's shape exactly — file-scope
-// state in render.cpp, pushed by gui_main's startup read of the device
-// config before the window exists and by the settings editor's
-// `osk_font_px=` commit (GuiInputHandler::apply_osk_font_px, which repaints
-// at once). The grammar and the range are device_config.h's
-// (parse_osk_font_px); the construction state is 12 (kOskFontPxDefaultW;
-// 24 device px on the tablet), the first-run value the shipped defaults
-// file's. It settles into the face table's Keys entry
-// once he rules the number, and this pair goes.
-void set_osk_font_em_w(int em_w);
-int  osk_font_em_w();
 
 // THE WAVEFORM PLATE'S GROW, THE `waveform_grow` KEY'S SEAT (architect
 // 2026-10-31; the reason at kWaveformSubcells below, the grammar
@@ -1136,15 +1104,14 @@ int  osk_font_em_w();
 // its list program, whose source the grow is baked into, at the first draw
 // of a list carrying another number (GuiGlCanvas::present_frame; the
 // specialization rule at kListFragmentShader's head, gl_canvas.cpp,
-// 2026-10-31 afternoon). The cap size seat's shape exactly — file-scope
+// 2026-10-31 afternoon). The scale seat's shape — file-scope
 // state in render.cpp,
 // pushed by gui_main's startup read of the device config before the window
 // exists and by the settings editor's `waveform_grow=` commit and its value
 // list's tap (GuiInputHandler::apply_waveform_grow, which repaints at once:
 // no plate re-render, the tips do not move). The construction state is 1
 // (kWaveformGrowDefaultQuarters), the first-run value the shipped defaults
-// file's. A PERMANENT KEY, unlike the
-// two tuning seats above: this pair stays.
+// file's. A PERMANENT KEY: this pair stays.
 void set_waveform_grow_quarters(int quarters);
 int  waveform_grow_quarters();
 
@@ -1162,16 +1129,13 @@ int  waveform_grow_quarters();
 // no fade field.
 inline constexpr int kWaveformFadeHundredths = 100;
 
-// A FACE AT THE LIVE SCALE AND SIZE (gui_font.h): what every painter and
-// every seat asks for its text — each use at the face-size table's size
-// (gui_font_table_px), the Keys face at the live `osk_font_px` seat's above
-// (2026-10-29), at the current gui_scale. THE ONE ROAD a GuiFont is
-// built by (GuiFont's own paragraph).
+// A FACE AT THE LIVE SCALE (gui_font.h): what every painter and every seat
+// asks for its text — the use at the current gui_scale, its size the
+// face-size table's (gui_font_table_px, read off the face by every reader;
+// architect 2026-11-26: the Keys face too). THE ONE ROAD a GuiFont is built
+// by (GuiFont's own paragraph).
 inline GuiFont gui_font(GuiFace face) {
-    return GuiFont{face, gui_scale_percent(),
-                   face == GuiFace::Keys
-                       ? static_cast<double>(osk_font_em_w())
-                       : gui_font_table_px(face)};
+    return GuiFont{face, gui_scale_percent()};
 }
 
 // One authored length in W -> device pixels, the ONE conversion every
@@ -1181,13 +1145,15 @@ inline GuiFont gui_font(GuiFace face) {
 // THE UNIT (architect 2026-11-05: "do the rebase to 200%. output should be
 // pixel identical"; "seems odd to use 300% and 2dpx"): ONE W = ONE PX AT
 // 100 % = 2 DEVICE PX ON THE TABLET AT ITS 200 %. EVERY AUTHORED LENGTH IS A
-// WHOLE W (an integer), the face sizes too (gui_font.h's table), and a line
-// is one W (hairline_px below). NO EXCEPTION: the gesture thresholds are
-// whole W too (the hover slop kHoverSlopW 5, kRulerMinMinorPitchPx 14 in
-// paint_handler.cpp, kNavZoomPxPerLevel 218 in app_state.h, each rounded up
-// from a half W, architect 2026-11-05: "round each up"), each seat naming
-// its one-device-px consequence. 300 % is never proposed again
-// (closed_questions.md).
+// WHOLE W (an integer), and a line is one W (hairline_px below). A FACE'S
+// EM IS NO LENGTH: it is its source's exact number, never rounded, and of
+// the text's geometry only the line's box is whole W (gui_font.h's head,
+// architect 2026-11-26). NO EXCEPTION AMONG THE LENGTHS: the gesture
+// thresholds are whole W too (the hover slop kHoverSlopW 5,
+// kRulerMinMinorPitchPx 14 in paint_handler.cpp, kNavZoomPxPerLevel 218
+// in app_state.h, each rounded up from a half W, architect 2026-11-05:
+// "round each up"), each seat naming its one-device-px consequence. 300 %
+// is never proposed again (closed_questions.md).
 //
 // ROUNDED AT THE ELEMENT, NEVER AT THE SCALE, AND A COMPOSITE IS BUILT FROM
 // ITS ROUNDED PARTS (architect 2026-10-02): a length that is the sum of
@@ -1203,8 +1169,8 @@ inline GuiFont gui_font(GuiFace face) {
 // face metrics (gui_font.h: a font quantity is not a grid point, rounded at
 // the seat that reads it) and the ruler's unrounded pitch compare — are a
 // different concept and deliberately do not come through here. THIS IS THE
-// ONE ROAD: every W-authored constant in the tree (`k…W`, the `osk_*`
-// seats, program_spec.h's fields) and every `k…Px` constant scale through
+// ONE ROAD: every W-authored constant in the tree (`k…W`, program_spec.h's
+// fields) and every `k…Px` constant scale through
 // it alike.
 inline int scaled_px(double authored) {
     return static_cast<int>(std::nearbyint(authored * gui_scale_factor()));
@@ -1285,10 +1251,9 @@ constexpr int kMinWindowHeightPx = 480;
 //   ON THE LEFT, THE NOTE: MusicNote16th (the BPM key's
 //     drawing) IN A 12 W DRAWING BOX (architect 2026-11-19: "the logo should
 //     take the same font size as the body" — a 16 W box sized for 16 W
-//     text, 16 · 12 / 16 = 12 W), on the ink-box road (icons.h):
-//     its ink length the box's share of the drawing's ink
-//     (icons::ink_px_in_box: Papirus's note inks 8 x 14 of its 16 units, so
-//     21 device px tall in the 24-px box, its ink box 12 px wide), ITS
+//     text, 16 · 12 / 16 = 12 W), at the box's exact zoom (icons.h's THE
+//     BOX, architect 2026-11-26; 24 / 16 = 1.5 on the tablet: Papirus's
+//     note inks 8 x 14 of its 16 units, so its ink 12 x 21 device px), ITS
 //     INK'S LEFT EDGE kTitleNoteInsetW = 8 W inside the panel (16 device px;
 //     architect 2026-11-19: "the note in the logo looks
 //     good now. It looks like it's aligned with the buttons"), ITS INK
@@ -1377,14 +1342,16 @@ constexpr int kMinWindowHeightPx = 480;
 //     "the glyph always there taking up space so that the clock doesn't
 //     move"): Battery000Charging (any power source
 //     attached, and a host with no battery; GuiLogoGlyph's rule) or
-//     Battery000 (discharging, or the plug state unknown), on the ink-box
-//     road, ITS INK BOX THE CAP BAND'S HEIGHT — the
-//     larger side of Papirus's upright batteries (11 x 15 and 10 x 14 user
-//     units; architect 2026-11-17) is their height
-//     (logo_glyph_ink_px, paint_handler.cpp) — ITS TOP ON THE CAP BAND'S TOP; THE
-//     CELL the larger of the two drawings' ink boxes on each axis, each
-//     drawing centered in it exactly. On the tablet the cell 17 rows tall
-//     (rows 19 .. 35, the baseline the edge under row 35).
+//     Battery000 (discharging, or the plug state unknown), SIZED BY ITS INK
+//     (icons.h's THE BOX): ITS INK'S HEIGHT THE CAP BAND'S, the zoom the
+//     band's rows over the ink's height in the drawing's units, unrounded
+//     (logo_glyph_box_px, paint_handler.cpp; Papirus's batteries ink 11 x 15
+//     and 10 x 14 user units, architect 2026-11-17; architect 2026-11-26)
+//     — ITS TOP ON THE CAP BAND'S TOP; THE CELL the larger of the two
+//     drawings' inks on each axis, real px, each drawing's ink centered in
+//     it exactly. On the tablet the band 17 rows (rows 19 .. 35, the
+//     baseline the edge under row 35), the zooms 17 / 15 and 17 / 14, the
+//     cell 12.47 x 17 device px (Battery000's 11 · 17 / 15 wide).
 inline constexpr double kTitleBarW           = 28.0;
 inline constexpr double kTitleBaselineW      = 18.0;
 inline constexpr double kTitleNoteBoxW       = 12.0;  // the note's drawing box (the body's size)
@@ -1401,8 +1368,9 @@ inline int title_bar_h_px() {
 
 // THE UNIT IS ONE W (its one statement at scaled_px above; the rebase to
 // 200 %, architect 2026-11-05): every `k…W` constant a whole number of W,
-// the face sizes too (gui_font.h's table), every length through scaled_px,
-// rounded at the element; on the tablet one W is 2 device px, so the keys
+// every length through scaled_px, rounded at the element (a face's em is
+// its source's exact number and no length, gui_font.h's head, architect
+// 2026-11-26); on the tablet one W is 2 device px, so the keys
 // keep their pitch (72 device px) and the icons their seats.
 // THE LINE RULE (architect 2026-11-04, the unit): THE LINE IS ONE W,
 // ROUNDED AT THE ELEMENT, FLOORED AT ONE DEVICE PX — 2 on the tablet at
@@ -1478,8 +1446,8 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // tablet at 200 % (the title bar 0 .. 55, the pad 56 .. 69, the faces 70 ..
 // 125, the pad 126 .. 139), on the body tone, no line between the title
 // bar and the row (a tone change only), the trim lane's first row the line
-// under it. (The on-screen keyboard's block reads the same pad,
-// onscreen_keyboard.h's pad_top_px / pad_foot_px.) Its runs are
+// under it. (The on-screen keyboard's band pads its grid by the run gap
+// instead, onscreen_keyboard.h's pad_top_px / pad_foot_px.) Its runs are
 // paint_icon_row's
 // walk (icon_row_seats: each run one linked group, the run gap of ground
 // between two groups, program_run_gap_px). The hit target is the painted
@@ -1523,8 +1491,9 @@ inline int key_gap_px() {
 // other, a 1-px quirk given up for the symmetric 7 / 7). Through scaled_px,
 // floored at one device px: 14 device px on the tablet at 200 %. THE
 // ON-SCREEN KEYBOARD, standing over the bottom icon row and the status bar
-// on the window's last rows, wears the same pad above and below its grid
-// (onscreen_keyboard.h's pad_top_px / pad_foot_px). His reason for room
+// on the window's last rows, pads its grid by the run gap, not by this
+// (onscreen_keyboard.h's pad_top_px / pad_foot_px, architect 2026-11-26).
+// His reason for room
 // under the bottom row: "my hand isn't naturally at the very edge of the
 // screen" — the status bar stands under it (status_bar_lane_h_px).
 inline constexpr double kToolbarPadW = 7.0;
@@ -1565,7 +1534,10 @@ inline int icon_row_h_px() {
 // the bottom icon row's runs packed right, and the controls rows' groups,
 // the render player's and the score viewer's group spaces included
 // (paint_handler.cpp's icon_row_seats, row8_lengths, player_row_layout and
-// the score rows). program_run_gap_px is THE ONE READER of kRunGapW: one
+// the score rows) — and the on-screen keyboard's two pads, above and below
+// its grid (onscreen_keyboard.h's pad_top_px / pad_foot_px; architect
+// 2026-11-26).
+// program_run_gap_px is THE ONE READER of kRunGapW: one
 // gap for every gap.
 // A TOO-LARGE GAP is the top icon row's overflow rule's, as a too-wide key
 // is (THE FIT at paint_icon_row's width math, paint_handler.cpp) — a
@@ -2346,7 +2318,7 @@ inline int waveform_line_px() {
 // THE CANVAS NOT SCALED WITH gui_scale (its bars are counted in device px —
 // one at the working zoom, 1 .. 2 across a level, architect 2026-11-14,
 // THE PLATE'S BARS — and its quarter-row tips are device px; the canvas's
-// lines are one W, waveform_line_px), so the waveform needs one tuning key
+// lines are one W, waveform_line_px), so the waveform needs one key
 // of its own and the grow is the appropriate one, kept for good because a
 // replacement panel may not come at this density: the grow is the device-px
 // number whose right value depends most on the panel's density. THE DEFAULT

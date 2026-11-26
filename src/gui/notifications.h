@@ -852,7 +852,7 @@ inline constexpr int kNotificationMaxLines = 3;
 //     the glyph's box to the text's pen (notifyd's icon margin_end);
 //   THE GLYPH'S DRAWING BOX — 16 W square, OURS (notifyd's icon is 48 px;
 //     ours is the 16 W drawing the lists and keys wear, the class drawing's
-//     whole canvas scaled into it, icons::ink_in_box), its top on the top
+//     whole canvas scaled into it, icons.h's THE BOX), its top on the top
 //     pad (+14 W) on every card;
 //   THE CONTENT'S HEIGHT — THE TALLER OF THE GLYPH'S BOX AND THE TEXT, as
 //     GTK's row box sizes it: one line (14 W) is shorter than the glyph, so
@@ -920,9 +920,8 @@ int notification_card_max_w_px(const AppState& a);
 // keyboard stands over the bottom icon row, onscreen_keyboard.h's
 // placement block; the cards paint after it, so the room's foot is what
 // keeps a card off its keys). On the tablet: rows 32 .. 1307 (the bottom
-// icon row's first row 1310 less the 2-row pad; 32 .. 1045 under the
-// keyboard at his tuning, its top line on 1048, 32 .. 1095 at the defaults,
-// on 1098), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title
+// icon row's first row 1310 less the 2-row pad; 32 .. 1039 under the
+// keyboard, its top line on 1042), the right edge on x 2271. NOTHING ELSE MOVES FOR IT: the title
 // bar and the top icon row paint whole under a card, its .95 fill over
 // them; a press on a card is the card's (claim_notification_press ranks
 // above every claim and veil), so a key or any chrome under it answers

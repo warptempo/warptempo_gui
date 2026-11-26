@@ -393,16 +393,6 @@ std::optional<std::string> recall_gui_setting_value(const AppState& app,
     if (key == "noise_crossfade_s" && app.device_config != nullptr)
         return format_noise_crossfade_s(
             app.device_config->noise_crossfade_s);
-    // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): through their
-    // one formatter (format_osk_key_size, device_config.h).
-    if (key == "osk_key_w" && app.device_config != nullptr)
-        return format_osk_key_size(app.device_config->osk_key_w);
-    if (key == "osk_key_h" && app.device_config != nullptr)
-        return format_osk_key_size(app.device_config->osk_key_h);
-    // THE KEYBOARD'S CAP SIZE (2026-10-29 night, a tuning key): through its
-    // one formatter (format_osk_font_px, device_config.h).
-    if (key == "osk_font_px" && app.device_config != nullptr)
-        return format_osk_font_px(app.device_config->osk_font_px);
 
     // Every other key — the piece's engine keys, `score_path`, a key none
     // of these files writes — recalls nothing here: the caller falls back to

@@ -47,8 +47,9 @@
 // next set's first geometry is redelivered explicitly (redeliver_geometry),
 // since no INIT_WINDOW comes for the window already adopted.
 // PLAYBACK DOES NOT SURVIVE: it is per project, shut down and re-inited with
-// the set, so a reopen costs one AAudio stream start (its one transient), the
-// accepted price.
+// the set, so a reopen shuts the AAudio stream down and the next session's
+// init opens and starts a new one (playback_aaudio.cpp's THE STREAM'S
+// LIFECYCLE).
 //
 // THE OPEN'S PRESENTATION HOLD (architect 2026-10-27: an open "paints from
 // left to right ... it looks kind of sloppy ... we could withhold the painting

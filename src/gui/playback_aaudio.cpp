@@ -29,13 +29,11 @@
 // recomputed at every open, which is what makes a reopen onto a DIFFERENT
 // device (a DAC plugged in after a disconnect) correct without any other edit.
 //
-// THE STREAM'S LIFECYCLE: OPENED ONCE, STARTED ONCE, NEVER STOPPED BETWEEN
-// PLAYS (architect 2026-08-27, on glass — "a little click sound, like a
-// keyboard's haptic click" at the start of every audition). STARTING AN AAUDIO
-// STREAM IS AUDIBLE: the framework brings the output path up and the device's
-// own unmute transient rides out with the first frames, so a stream started
-// at every play() and stopped at every stop() would begin every audition with
-// one of those transients — the click. The backend starts the
+// THE STREAM'S LIFECYCLE: STARTED AT EVERY SUCCESSFUL OPEN, NEVER STOPPED
+// BETWEEN PLAYS (architect 2026-11-26: "the car has a stutter ... when connecting to
+// Bluetooth, and the Keep Alive prevents that"). Over the car's Bluetooth link
+// every play on a stopped-and-restarted stream stutters throughout, while a
+// stream that is started once and kept running is clean. The backend starts the
 // stream ONCE, at open (init, and the reopen after a disconnect), and stops it
 // only where the stream is about to be CLOSED: shutdown, and the dead-stream
 // reopen. Both live in close_stream, which holds the file's ONE requestStop
@@ -45,32 +43,41 @@
 // the gate's answer rests on — the launch gates', the car's Play, NOISE's
 // wake, the callers at its declaration) and play()'s retry for
 // the roads that reach it ungated — are
-// one road and an ordinary play makes no device call at all.
+// one road and an ordinary play neither starts nor stops the stream (it still
+// queries the underrun count, AAudioStream_getXRunCount).
 //
-// THE RULING HAS NO NARROWING (2026-09-12, on the architect's car evidence):
-// the render player's rest does not stop the stream either. A fresh
-// continuous stream is clean for hours, while every play on a
-// stopped-and-restarted stream crackles throughout — the beginning, the middle
-// and the end of a 30-40 s stretch, never twice at the same spot, so it is the
-// restart itself and not the settling of its first seconds. What the head unit
-// makes of a stream that runs while the session says paused (silence fed to
-// the Bluetooth link, read as an active player) is therefore the
-// PUBLISH side's business (GuiRenderPlayer::publish_media_state), and the
-// device is never touched between plays by any road.
+// THE EVIDENCE (2026-09-12, on the architect's car): a fresh continuous stream
+// is clean for hours, while every play on a stopped-and-restarted stream
+// crackles throughout — the beginning, the middle and the end of a 30-40 s
+// stretch, never twice at the same spot, so it is the restart itself and not
+// the settling of its first seconds. THE RULING HAS NO NARROWING: the render
+// player's rest does not stop the stream either. What the head unit makes of a
+// stream that runs while the session says paused (a running stream the
+// Bluetooth link reads as an active player) is therefore the PUBLISH side's business
+// (GuiRenderPlayer::publish_media_state), and the device is never touched
+// between plays by any road. THE STREAM STARTED PER PLAY ON THE ORDINARY PATH
+// (the mixer's own start and stop, as a media player's) IS RULED OUT
+// (2026-11-26, on his test in the car: "I just tried YouTube, and after about
+// 10 seconds that crackling would come back ... it's not a viable option").
 //
-// So the transient happens once per session, at launch, with no audition under
-// it, and no play() or stop() touches the device's run state at all. BETWEEN
-// PLAYS THE STREAM RUNS AND THE CALLBACK WRITES SILENCE — its gate on the
+// So the stream is started once per successful open (at launch, with no
+// audition under it, and again at a reopen after a disconnect: a launch press,
+// the render player's Play through reopen_stream_if_dead, NOISE's wake), and
+// an ordinary play() or stop() requests neither a start nor a stop. BETWEEN
+// PLAYS THE STREAM RUNS AND THE PROJECT VOICE WRITES SILENCE — its gate on the
 // session word's playing bit
-// takes the silence arm and the render body is never reached, so an idle stream
-// reads no samples and costs the tablet a few mW of an already screen-on
-// device, which is the price the architect accepted for the click. THE
-// TABLET'S IDLE DRAIN IS THIS RUNNING STREAM, KNOWN (architect 2026-09-29,
+// takes the silence arm and the render body is never reached, so the idle
+// project voice reads no project samples; the noise bed, when audible, still
+// plays through the same callback, and the stream carries silence when both
+// voices are quiet. The running stream costs the tablet a few mW of an
+// already screen-on device, which is the price the architect accepted for the
+// car's clean stream.
+// THE TABLET'S IDLE DRAIN IS THIS RUNNING STREAM, KNOWN (architect 2026-09-29,
 // closing the power exploration): he closes the app when he is done, and no
 // Car Mode lamp, idle timer or power cap is built or re-proposed. (A
 // step-shaped click at the START of a play, from the render body beginning
-// mid-waveform at whatever sample value sits there with no ramp, is a
-// different thing and is untouched here.)
+// mid-waveform at whatever sample value sits there with no ramp, belongs to the
+// render body and not to the device stream, and is untouched here.)
 //
 // THREADING, above playback.h's own thread model. Three threads touch this
 // file:
@@ -213,10 +220,10 @@ aaudio_data_callback_result_t playback_data_callback(AAudioStream* /*stream*/,
         playback_write_silence(channel_buffers, channel_count,
                                kPlaybackOutputChannels, 0, frames);
         // CONTINUE, never STOP: this arm is what the stream spends most of its
-        // life in now (the lifecycle block at the head — the stream stays
+        // life in (the lifecycle block at the head — the stream stays
         // started between plays), and a stopped-by-the-callback stream would
         // both leave the main thread's `started` flag lying about the device
-        // and put the start transient back into the next play. NO SAMPLE OF
+        // and put a restart into the next play. NO SAMPLE OF
         // THE BOUND BUFFER IS READ HERE — the noise below reads its own bank —
         // which is what lets stop()'s fence count callbacks and what makes an
         // idle stream harmless to a buffer the main thread is about to
@@ -336,8 +343,8 @@ bool fence_state_is_quiesced(const GuiPlayback::Impl& impl,
 // that stays STARTED keeps calling its data callback whether or not
 // anything is playing (the lifecycle block at the head of this file), so the
 // counter keeps advancing and counting is a proof. (A fence that drove the
-// STREAM STATE MACHINE — requestStop, then wait for STOPPED — would make
-// exactly the click the lifecycle block rules out.)
+// STREAM STATE MACHINE — requestStop, then wait for STOPPED — would restart
+// the stream at every play, which the lifecycle block rules out.)
 //
 // THE PROOF. stop() lowers the session word's playing bit (seq_cst) before
 // calling here. One increment after that write retires a callback that may
@@ -652,7 +659,7 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
         return false;
     }
     impl_->device_ready = true;
-    // STARTED AT OPEN, so the device's start transient lands here — at launch,
+    // STARTED AT OPEN, so the stream's one start happens here — at launch,
     // under no audition — instead of at the first play (the lifecycle block at
     // the head of this file). The result is deliberately not read: a refused
     // start has already logged, playback is not disabled by it, and play()'s
@@ -738,9 +745,9 @@ void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
         return;
     }
 
-    // ORDINARILY A NO-OP, and that is the point of the new lifecycle: the
+    // ORDINARILY A NO-OP, and that is the point of the lifecycle: the
     // stream was started at open and has been running ever since, so an
-    // ordinary play makes no device call at all. Two paths still arrive here
+    // ordinary play requests no start. Two paths still arrive here
     // with a stopped stream and are started by this call — the reopen just
     // above (the head's, or the launch press's a moment earlier) and an init
     // whose own start was refused — and a refusal here disables the device
@@ -754,7 +761,7 @@ void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
 
     // THE SESSION'S UNDERRUN FLOOR, stamped at the publish's own tail because
     // a launch's session begins here: the stream has been running and
-    // callbacking silence since the last stop, and the underruns of that idle
+    // callbacking since the last stop, and the underruns of that idle
     // interval are not the audio about to be heard (report_xrun_count, above,
     // is the one reader). EVERY PUBLISH RE-STAMPS IT, a republish over a live
     // session included — the console's seek (GuiPlaybackLifecycle::
@@ -780,8 +787,9 @@ void GuiPlayback::stop() {
     // expects exactly the word its gate acquired, playing bit up, and this
     // fetch_and changed that word) — then fence on
     // the callback counter (fence_quiesced):
-    // the stream keeps running and the callback keeps writing silence, which
-    // is the whole of the no-click lifecycle at the head of this file. Then,
+    // the stream keeps running and the project voice keeps writing silence (the
+    // noise bed, when audible, still plays), which is the whole of the
+    // lifecycle at the head of this file. Then,
     // with the callback quiesced and its counter therefore still, the session's
     // UNDERRUN COUNT is said if the session lost anything since play() stamped
     // its floor (report_xrun_count, above — a logcat line and nothing else).
@@ -830,12 +838,13 @@ bool GuiPlayback::device_unavailable() const {
 // natural end and tears the scanner down — a silent false launch, repeatable.
 // So the transition happens HERE, before the gate answers: start_stream is
 // idempotent on `started`, so a stream already running (the ordinary play)
-// makes no device call at all, and only the two stopped paths — this reopen
+// takes no start request, and only the two stopped paths — this reopen
 // and init's refused start — actually request one. A refusal closes the
 // stream and answers false, which is the card's own condition.
-// The start's own transient (the lifecycle block at the head of this file:
-// starting an AAudio stream is audible) lands at the launch press,
-// microseconds ahead of play()'s.
+// The reopened stream's start (the lifecycle block at the head of this file)
+// happens at the launch press, microseconds ahead of play()'s; a render
+// player's Play, which has no gate, reaches the same reopen and start in
+// play() itself.
 // The answer is device_unavailable's own reading taken AFTER the reopen — the
 // latch cleared by close_stream, the stream standing or not — so the gates
 // card exactly when nothing can be opened. A device that never came up

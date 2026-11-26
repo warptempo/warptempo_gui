@@ -71,7 +71,7 @@ std::expected<Document, std::string> parse(
 // top-left, into a NEW ARGB32 surface the caller owns (cairo_surface_destroy)
 // of the drawing's size times `zoom`, each side rounded up (resvg's own
 // `--zoom`, the approved M5 mock's render), the antialiasing resvg's. EVERY
-// GLYPH'S RASTER (icons.h's THE INK BOX), whose ink the caller crops.
+// GLYPH'S RASTER (icons.h's THE BOX), whose ink the caller crops.
 // Cannot fail.
 // THE PHASE (architect 2026-11-15, the no-grid arc; icons.h's draw_glyph):
 // `dx`, `dy` in [0, 1) DEVICE PX move the whole drawing right and down by
@@ -90,6 +90,21 @@ std::expected<Document, std::string> parse(
 // ONE WITH NO PHASE, argument for argument, so its bytes are that render's.
 cairo_surface_t* rasterise_zoom(const Document& doc, double zoom,
                                 double dx = 0.0, double dy = 0.0);
+
+// THE DRAWING'S OWN MEASURES, in its user units (architect 2026-11-26, the
+// icons at their exact scale; icons.h's THE BOX), read off the parsed tree,
+// no render: `canvas_side` the canvas's larger side (resvg_get_image_size,
+// the size rasterise_zoom scales), and `ink_bounds` THE INK, resvg's
+// bounding box of everything the drawing paints, stroke included
+// (resvg_get_image_bbox) — the exact geometric extent, which the bounds of
+// the drawing's alpha approach as the zoom grows (a render's rim adds at
+// most a pixel a side, and a cusp's sliver may paint nothing), to the
+// tree's float precision. Nullopt for a drawing that paints nothing.
+struct InkBounds {
+    double x = 0.0, y = 0.0, w = 0.0, h = 0.0;
+};
+double canvas_side(const Document& doc);
+std::optional<InkBounds> ink_bounds(const Document& doc);
 
 // -- THE RASTER ROAD (architect 2026-10-21; the score viewer's pages its
 // reader, score_page_worker.h) ---------------------------------------------

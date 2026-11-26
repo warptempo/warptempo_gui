@@ -834,7 +834,7 @@ read_asset_whole(AAssetManager* mgr, const std::string& path) {
 // (parse_device_config_text), so every value — the 200 % scale the tablet
 // runs at, the literal projects_path (the external files dir's `projects/`,
 // the tablet's projects clone's, where adb pushes with no permission
-// granted), last_project, every tuning key — is the tablet's own config as
+// granted), last_project — is the tablet's own config as
 // last snapshotted, and none is spelled in code. THE ERROR ARM'S PRODUCERS:
 // an asset that will not open or read whole, and a file the reader refuses,
 // both build defects, the file being the program's own (no manager is

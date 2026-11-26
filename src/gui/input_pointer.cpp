@@ -8019,10 +8019,10 @@ void GuiInputHandler::update_level_press_motion(double x, double y) {
 // stream's first fill begins one fresh segment from silence with the
 // fade-in — no fill runs on the dead stream between the two, so the bed
 // itself enters on its fade-in with no step, and the stream takes one start
-// request, not two. That is the bed's claim alone: the stream start's own
-// output-path transient (the device's unmute) is the lifecycle's, recorded
-// at playback_aaudio.cpp's THE STREAM'S LIFECYCLE and
-// ensure_device_available_for_play, and this lift does not deny it.
+// request, not two. That is the bed's claim alone: the stream's reopen and
+// start themselves are the lifecycle's, recorded at playback_aaudio.cpp's
+// THE STREAM'S LIFECYCLE and ensure_device_available_for_play, which this
+// lift's wake calls.
 void GuiInputHandler::finish_level_press_release(
         const AppState::ChromePress& arm, const GuiPointerPlace& at) {
     if (arm.moved) return;

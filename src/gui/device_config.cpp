@@ -23,9 +23,10 @@
 namespace {
 
 // The file's key set, in on-disk order — the writer's order, and THE
-// REQUIRED SET, every one of them: FIFTEEN keys (architect 2026-11-22: a
-// tuning number he has settled is a constexpr of the program,
-// device_config.h's head naming each one's seat). THE ORDER IS THE
+// REQUIRED SET, every one of them: TWELVE keys (architect 2026-11-22 /
+// 2026-11-26: a tuning number he has settled is a constexpr of the program,
+// not a key — the on-screen keyboard's key box and cap among them,
+// device_config.h's head). THE ORDER IS THE
 // ARCHITECT'S OWN (2026-08-30): gui_scale, projects_repo, projects_path,
 // last_project. The scanner takes it as a SET: it checks that each key
 // ARRIVED, never that it arrived here, so this order is the writer's alone and
@@ -36,13 +37,11 @@ namespace {
 // something's wrong with the config or the setup" (architect 2026-10-10).
 //
 // TRUE COLORS (architect 2026-10-21): `true_colors` FOLLOWS last_project,
-// the display keys' head, and the tuning keys keep the end where they leave
-// from.
+// the display keys' head.
 //
 // THE PLATE'S GROW (architect 2026-10-31): `waveform_grow` FOLLOWS
 // `true_colors`, the display keys' end — a permanent key, the canvas's one
-// scaling concession (device_config.h's head), so it stands among the
-// permanent keys and not with the tuning keys at the end.
+// scaling concession (device_config.h's head).
 //
 // THE NOISE'S FOUR (architect 2026-10-28; the attenuation 2026-11-05):
 // `noise`, `noise_level`, `noise_attenuation_level` and `noise_crossfade_s`
@@ -52,11 +51,7 @@ namespace {
 // level it restores, between `noise_level` and the attenuation.
 //
 // THE STICKY LAMPS (architect 2026-11-24): `lit_lamps` FOLLOWS the noise's
-// keys, the permanent keys' end, a permanent key ahead of the tuning keys.
-//
-// THE TUNING KEYS stand after the permanent keys, each leaving when he
-// settles its value: the on-screen keyboard's key box, `osk_key_w` and
-// `osk_key_h`, and its cap size, `osk_font_px` (2026-10-29).
+// keys, the last.
 constexpr const char* kDeviceConfigKeys[] = {
     "gui_scale",
     "projects_repo",
@@ -70,9 +65,6 @@ constexpr const char* kDeviceConfigKeys[] = {
     "noise_attenuation_level",
     "noise_crossfade_s",
     "lit_lamps",
-    "osk_key_w",
-    "osk_key_h",
-    "osk_font_px",
 };
 // THE REQUIRED KEYS: every key of the writer's order (no key is optional,
 // 2026-10-26).
@@ -149,22 +141,6 @@ std::string format_lit_lamps(const DeviceLitLamps& lamps) {
         s += kLitLampWords[i];
     }
     return s;
-}
-
-// The keyboard's key box's canonical spelling (2026-10-29), one for its two
-// keys: `%d`, the noise integers' road.
-std::string format_osk_key_size(int px) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", px);
-    return std::string(buf);
-}
-
-// The keyboard's cap size's canonical spelling (2026-10-29 night): `%d`,
-// the noise integers' road.
-std::string format_osk_font_px(int px) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), "%d", px);
-    return std::string(buf);
 }
 
 // The plate's grow's canonical spelling (2026-10-31; the grammar's words at
@@ -247,16 +223,6 @@ std::string format_device_config_text(const DeviceConfig& cfg) {
             // The lit lamps' words in the canonical order, empty with every
             // lamp dark (format_lit_lamps).
             s += format_lit_lamps(cfg.lit_lamps);
-        } else if (k == "osk_key_w") {
-            // The keyboard's tuning keys' canonical integer
-            // (format_osk_key_size).
-            s += format_osk_key_size(cfg.osk_key_w);
-        } else if (k == "osk_key_h") {
-            s += format_osk_key_size(cfg.osk_key_h);
-        } else if (k == "osk_font_px") {
-            // The keyboard's cap size's canonical integer
-            // (format_osk_font_px).
-            s += format_osk_font_px(cfg.osk_font_px);
         }
         s += '\n';
     }
@@ -423,28 +389,6 @@ std::expected<DeviceConfig, std::string> read_device_config_stream(
                 return bad_value(ln, key, value, kLitLampsGrammarReason);
             }
             out.lit_lamps = *lamps;
-            return {};
-        }
-        // THE KEYBOARD'S KEY BOX (2026-10-29, two tuning keys): each under
-        // the one grammar owner (parse_osk_key_size, device_config.h),
-        // required like every key; any other spelling the launch's hard fail.
-        if (key == "osk_key_w" || key == "osk_key_h") {
-            const std::optional<int> px = parse_osk_key_size(value);
-            if (!px) {
-                return bad_value(ln, key, value, kOskKeySizeGrammarReason);
-            }
-            (key == "osk_key_w" ? out.osk_key_w : out.osk_key_h) = *px;
-            return {};
-        }
-        // THE KEYBOARD'S CAP SIZE (2026-10-29 night, a tuning key): under its
-        // one grammar owner (parse_osk_font_px, device_config.h), required
-        // like every key; any other spelling the launch's hard fail.
-        if (key == "osk_font_px") {
-            const std::optional<int> px = parse_osk_font_px(value);
-            if (!px) {
-                return bad_value(ln, key, value, kOskFontPxGrammarReason);
-            }
-            out.osk_font_px = *px;
             return {};
         }
         return warptempo_parse::prefix_line_error(

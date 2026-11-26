@@ -6876,10 +6876,9 @@ struct AppState {
     // PAINTED FOR THE FIRST TIME OR RE-LAID paints its look at once (no record,
     // or its box not the record's: a dialog, an overlay's row, the keyboard
     // appearing or changing its page, a relayout); THE WHOLE LIST IS DROPPED
-    // on a relayout and on a True Colors or
-    // on-screen keyboard key size commit (GuiInputHandler::relayout_window,
-    // apply_true_colors, apply_osk_key_size:
-    // drop_all), so every face paints its look at once;
+    // on a relayout and on a True Colors commit
+    // (GuiInputHandler::relayout_window, apply_true_colors: drop_all), so
+    // every face paints its look at once;
     // A SURFACE THAT LEAVES drops its faces (settle_face_fades: the keyboard
     // gone or on another page, a dialog stash's owner or session no longer
     // the live one, a roster key whose published box is empty — off the

@@ -13,7 +13,7 @@
 #include <system_error>
 
 // THE DEVICE CONFIG — the preferences that describe the MACHINE rather than the
-// piece (architect 2026-08-27). Fifteen keys live here and nowhere else,
+// piece (architect 2026-08-27). Twelve keys live here and nowhere else,
 // EVERY ONE REQUIRED (architect 2026-10-12, his "yes" 2026-10-14; the
 // strictness paragraph below):
 //
@@ -63,7 +63,7 @@
 //                            quarter-row tips are device px, while its
 //                            lines are one W (the
 //                            unit, render.h's waveform_line_px) — so the
-//                            waveform needs one tuning key of its own, and the grow
+//                            waveform needs one key of its own, and the grow
 //                            is the appropriate one, kept for good because a
 //                            replacement panel may not come at this density
 //                            (the grow is the device-px number whose right
@@ -175,46 +175,16 @@
 //                            VALUE DRAG, GRID ITERATIONS and every other
 //                            lamp, overlay and modal are no word of it:
 //                            they stand dark or closed at every open
-//   osk_key_w=<px>         THE ON-SCREEN KEYBOARD'S KEY BOX (architect
-//   osk_key_h=<px>           2026-10-29, the compact keyboard: "small,
-//                            centered, like a phone … chiclets, taller than
-//                            wide", the FLAGS sheet's 48 x 60 device px):
-//                            the painted keyboard's one-unit key's width
-//                            and every key's height IN W (scaled_px's
-//                            axis), each an integer in [12, 80] in canonical
-//                            spelling (parse_osk_key_size below), no
-//                            taller-than-wide constraint (his to tune),
-//                            live at the settings editor's Enter, the window
-//                            repainted at once
-//                            (GuiInputHandler::apply_osk_key_size); TWO
-//                            TUNING KEYS with Settings rows, REQUIRED like
-//                            every key while they stand, which settle into
-//                            constexprs once he rules the numbers
-//                            (onscreen_keyboard.h's geometry), their keys,
-//                            grammar and rows going then; the first-run
-//                            values the defaults file's
-//   osk_font_px=<px>         THE ON-SCREEN KEYBOARD'S CAP SIZE (architect
-//                            2026-10-29 night, "font size osk config tmp
-//                            key"): the keys face's em (gui_font.h's
-//                            GuiFace::Keys) IN W, scaled with gui_scale
-//                            like every table size, an integer in [6, 24]
-//                            in canonical spelling
-//                            (parse_osk_font_px below), live at the settings
-//                            editor's Enter, the window repainted at once
-//                            (GuiInputHandler::apply_osk_font_px); A TUNING
-//                            KEY with a Settings row, REQUIRED like every key
-//                            while it stands, which settles into the face
-//                            table's constexpr once he rules the number
-//                            (kGuiFaceSizes), its key, grammar and row going
-//                            then; the first-run value the defaults file's
+// (NO KEY SIZES THE ON-SCREEN KEYBOARD: its key box is the program key
+// rotated, render.h's kKeyHeightW x kKeyWidthW, and its caps the Keys face's
+// table size, gui_font.h's kGuiFaceSizes; architect 2026-11-26.)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30):
 // the scale and the three of the projects first (gui_scale, projects_repo,
 // projects_path, last_project), then the display keys (`true_colors`,
 // `waveform_grow`), then the noise's five — folder, level, the level its
 // tap restores, attenuation, crossfade — then the sticky lamps
-// (`lit_lamps`, 2026-11-24), the permanent keys' end, and the tuning keys
-// at the end (`osk_key_w`, `osk_key_h`, `osk_font_px`). The list above is
+// (`lit_lamps`, 2026-11-24), the last. The list above is
 // this file's telling of it and
 // kDeviceConfigKeys (device_config.cpp) is the one the program emits from.
 //
@@ -246,7 +216,7 @@
 // (architect 2026-11-08: "there should be a pipeline in place
 // that snapshots it each time we do an arc … so my settings are durable and
 // git-historied"; the design the planner's on his "I defer to you"): THIS
-// FILE'S OWN GRAMMAR AND KEY ORDER, all fifteen lines, last_project and
+// FILE'S OWN GRAMMAR AND KEY ORDER, all twelve lines, last_project and
 // projects_path included, its values the tablet's own config as
 // snapshotted — tools/snapshot_device_defaults.sh refreshes it from the
 // tablet at every arc's last commit, and a changed file rides that commit.
@@ -271,7 +241,7 @@
 // CANONICAL REWRITE, load_device_config below, 2026-11-24) and every later
 // commit rewrites it — so any violation is a hand edit, which the
 // two-category rule makes ADVERSARIAL: whole-file schema, EXACTLY the
-// fifteen keys and each at most once, EVERY KEY REQUIRED (architect
+// twelve keys and each at most once, EVERY KEY REQUIRED (architect
 // 2026-10-12, deferred, his "yes" 2026-10-14: "if one of these lines is not
 // in place, it means something's wrong with the config or the setup" — the
 // writer emits every line and the defaults file spells every key, so an absent
@@ -306,9 +276,8 @@
 // SETTINGS PAGE's row (settings_editor.h) — its value list, or the line
 // editor holding the value alone (architect 2026-11-19) — for
 // `gui_scale`, `projects_repo`, `projects_path`, `true_colors`,
-// `waveform_grow`, `noise`, `noise_attenuation_level`, `noise_crossfade_s`
-// and the tuning keys `osk_key_w`, `osk_key_h` and `osk_font_px`
-// (kSettingsEditorKeys) — Tab recalling a key's current value and
+// `waveform_grow`, `noise`, `noise_attenuation_level` and
+// `noise_crossfade_s` (kSettingsEditorKeys) — Tab recalling a key's current value and
 // completing the path key's folders, each committed through this file's
 // writer under the key's own grammar below. THREE KEYS ARE EDITED ON THE
 // MAIN PAGE ALONE (architect 2026-11-05 night: a key shown and edited on
@@ -385,15 +354,6 @@ struct DeviceConfig {
     // THE STICKY LAMPS STANDING LIT (2026-11-24, the head's list): required;
     // the construction state is every lamp dark.
     DeviceLitLamps lit_lamps;
-    // THE ON-SCREEN KEYBOARD'S KEY BOX in W (2026-10-29, the head's list;
-    // two tuning keys): required; the construction state is 24 x 30
-    // (kOskKeyWDefaultW, kOskKeyHDefaultW below).
-    int         osk_key_w         = 24;
-    int         osk_key_h         = 30;
-    // THE ON-SCREEN KEYBOARD'S CAP SIZE, its em in W (2026-10-29 night, the
-    // head's list; a tuning key): required; the construction state is 12
-    // (kOskFontPxDefaultW below).
-    int         osk_font_px       = 12;
 };
 
 // THE PROJECTS REPOSITORY AS CONSTRUCTED — AppState's `projects_repo`
@@ -737,73 +697,6 @@ inline std::optional<DeviceLitLamps> parse_lit_lamps(std::string_view v) {
     return out;
 }
 
-// THE osk_key_w AND osk_key_h GRAMMAR (architect 2026-10-29), ONE FOR THE
-// TWO — an integer in [12, 80] W in canonical spelling (24 to 160 device px
-// on the tablet), the one owner
-// the reader, the writer, the settings editor's commit and its recall read
-// (format_osk_key_size, parse_osk_key_size). kOskKeyWDefaultW and
-// kOskKeyHDefaultW ARE CONSTRUCTION STATE ALONE, render.cpp's seats'
-// initializers, overwritten by gui_main's startup seeding before the first
-// layout; THE FIRST-RUN VALUES ARE THE DEFAULTS FILE'S (THE FIRST-RUN
-// VALUES above). Theirs are the FLAGS sheet's key box, 24 W wide and 30
-// tall, 48 x 60 device px on the tablet; the range runs from half that width to
-// well past the height, wide enough for him to try a key wider than tall,
-// and its top keeps the widest row (thirteen units) inside the tablet's
-// 2304 device px (13 x (160 + 2) - 2 = 2104 there, the gap the program
-// keys' one W, 2 device px on the tablet). The
-// settings page opens the LINE EDITOR on each, not a value list (69 values
-// is no short domain, kSettingsValueListKeys' rule). TWO TUNING
-// KEYS: when he rules the numbers, the keys, these functions and their
-// Settings rows go, and the values become constexprs behind
-// onscreen_keyboard.h's key_w_px and key_h_px.
-inline constexpr int kOskKeySizeMinW  = 12;
-inline constexpr int kOskKeySizeMaxW  = 80;
-inline constexpr int kOskKeyWDefaultW = 24;
-inline constexpr int kOskKeyHDefaultW = 30;
-inline constexpr const char* kOskKeySizeGrammarReason =
-    "must be an integer in [12, 80] in canonical spelling";
-std::string format_osk_key_size(int px);
-inline std::optional<int> parse_osk_key_size(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kOskKeySizeMinW || *n > kOskKeySizeMaxW)
-        return std::nullopt;
-    return n;
-}
-
-// THE osk_font_px GRAMMAR (architect 2026-10-29 night) — an integer in
-// [6, 24] W in canonical spelling (12 to 48 device px on the tablet), the
-// keys face's em (gui_font.h's
-// GuiFace::Keys, scaled with gui_scale like every table size), the one
-// owner the reader, the writer, the settings editor's commit and its recall
-// read (format_osk_font_px, parse_osk_font_px). kOskFontPxDefaultW IS
-// CONSTRUCTION STATE ALONE, render.cpp's seat's initializer, overwritten by
-// gui_main's startup seeding before the first paint; THE FIRST-RUN VALUE IS
-// THE DEFAULTS FILE'S (THE FIRST-RUN VALUES above). Its 12 W is the face
-// table's, 24 device px on the tablet (architect 2026-10-24, "C24").
-// The range: 6 W, 12 device px, is the smallest em at which a cap stays
-// legible on the tablet; 24 W is twice 12 W, the em by which every
-// function word but "Bksp" and "Space" already overhangs its key at the
-// 24 x 30 key box ("Esc", the last of them, from em 21 W; "Bksp", 118
-// device px at em 24 W against the 2.5u key's 122-px face, not until 25), so a larger
-// cap would only overhang more (onscreen_keyboard.h's EVERY WORD FITS ITS
-// KEY paragraph, cap_word; architect 2026-10-29 night). The settings page
-// opens the LINE EDITOR on it, not a value list (19 values is no short
-// domain, kSettingsValueListKeys' rule). A TUNING KEY: when he rules the number, the
-// key, these functions and its Settings row go, and the value settles into
-// kGuiFaceSizes' Keys entry.
-inline constexpr int kOskFontPxMinW     = 6;
-inline constexpr int kOskFontPxMaxW     = 24;
-inline constexpr int kOskFontPxDefaultW = 12;
-inline constexpr const char* kOskFontPxGrammarReason =
-    "must be an integer in [6, 24] in canonical spelling";
-std::string format_osk_font_px(int px);
-inline std::optional<int> parse_osk_font_px(std::string_view v) {
-    const std::optional<int> n = parse_canonical_config_int(v);
-    if (!n || *n < kOskFontPxMinW || *n > kOskFontPxMaxW)
-        return std::nullopt;
-    return n;
-}
-
 // THE waveform_grow GRAMMAR (architect 2026-10-31; quarters of the 4x
 // lattice, render.h's kWaveformSubcells) — a
 // multiple of 0.25 DEVICE PX in [0, 2] in canonical spelling, held as
@@ -990,13 +883,11 @@ std::expected<DeviceConfig, std::string> parse_device_config_text(
 // THREE CALL SITES CARRY THE KEY COMMITS, and this is their inventory:
 // the scale's chokepoint GuiInputHandler::apply_gui_scale (input_handler.cpp);
 // the settings editor's ONE persist (GuiSettingsEditor::persist_device_config),
-// which serves its ONE device-key body — ten keys, `projects_repo=`,
+// which serves its ONE device-key body — seven keys, `projects_repo=`,
 // `projects_path=`, `true_colors=`, `waveform_grow=` (its live act
 // GuiInputHandler::apply_waveform_grow), `noise=` (its
 // GuiNoise::change_folder), `noise_attenuation_level=` (its
-// GuiNoise::set_attenuation_db), `noise_crossfade_s=`, and the tuning keys
-// `osk_key_w=` and `osk_key_h=` (theirs GuiInputHandler::apply_osk_key_size)
-// and `osk_font_px=` (its GuiInputHandler::apply_osk_font_px)
+// GuiNoise::set_attenuation_db) and `noise_crossfade_s=`
 // (GuiSettingsEditor::commit_device_setting, settings_editor.cpp) — the
 // top icon row's level case's end (GuiInputHandler::settle_level_case:
 // `noise_level=`, its live act GuiNoise::set_level_db, and at the tap

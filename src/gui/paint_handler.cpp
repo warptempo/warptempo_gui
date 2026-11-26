@@ -50,12 +50,13 @@
 // -- The bottom icon row's text tier ------------------------------------------
 //
 // THE FACES (gui_font.h): the bottom icon row's timestamp is ITS OWN FACE,
-// THE TIMESTAMP (Bold 14 W, 28 device px on the tablet; architect
-// 2026-11-25, "it is its own thing"), and the overlays' time label THE
-// PROGRAM FACE (Regular 12 W, 24 device px, every text 12 W but these);
-// every modal string and the status bar the body face, 12 W too, a row of
-// its own (gui_font.h's table). The no-wiggle guarantee is the time
-// fields' fixed width, each specimen's advance (THE TIME FIELDS' block).
+// THE TIMESTAMP (Bold 18 W, 36 device px on the tablet; architect
+// 2026-11-25, "it is its own thing"; its size Arc's `.h2`, 2026-11-26),
+// and the overlays' time label THE PROGRAM FACE (Regular 12 W, 24 device
+// px, every text 12 W but these); every modal string and the status bar
+// the body face, 12 W too, a row of its own (gui_font.h's table). The
+// no-wiggle guarantee is the time fields' fixed width, each specimen's
+// advance (THE TIME FIELDS' block).
 //
 // THE STANDING STATE — the queue/render status and the history walk line —
 // IS THE STATUS BAR'S PROCESS LINE (architect 2026-11-19;
@@ -430,21 +431,20 @@ std::optional<icons::Icon> render_player_button_icon(
     return std::nullopt;
 }
 
-// A KEY'S DRAWING ON ITS BOX (architect 2026-11-02; icons.h's THE INK BOX)
+// A KEY'S DRAWING ON ITS BOX (architect 2026-11-02; icons.h's THE BOX)
 // — THE ONE PLACE the drawing's seat, size and tone are decided, every
 // key's (the top icon row's, the bottom icon row's, the controls rows'
 // glyph keys, and the on-screen keyboard's glyph keys —
 // onscreen_keyboard::cap_icon, architect: "one ink size with the program
 // keys"); THE TOOLTIP names the act in words.
-// THE SET'S DRAWING CANVAS AT kKeyDrawingBoxW, 16 W (architect 2026-11-19:
-// Papirus's 16-px drawings at their native size are the design), 32 device
-// px on the tablet — ONE SIZE FOR EVERY KEY — the drawing scaled as its
-// whole canvas into
-// that box (icons::ink_in_box: its ink's length and its offset in the box),
+// THE SET'S DRAWING CANVAS IN A kKeyDrawingBoxW BOX, 16 W (architect
+// 2026-11-19: Papirus's 16-px drawings at their native size are the
+// design), 32 device px on the tablet, zoom 2 — ONE SIZE FOR EVERY KEY —
 // THE BOX CENTERED IN THE KEY'S BOX EXACTLY (+10 W, +6 W in the 36 x 28 W
 // key: 20 and 12 device px on the tablet; in another box half the spare on
-// each axis, a real place, the no-grid rule), the drawing rasterized at its
-// real place (icons::draw_glyph) in `tone`, the caller's — key_ink of the
+// each axis, a real place, the no-grid rule), the drawing's canvas on the
+// box at its exact zoom and place (icons::draw_glyph; architect 2026-11-26)
+// in `tone`, the caller's — key_ink of the
 // key's state (materials.h), the on-screen keyboard's lit or rest print. The
 // drawing is clipped to the key's whole pixels (its hull): a key smaller
 // than the box keeps its drawing centered and lets nothing overhang onto the
@@ -453,16 +453,14 @@ constexpr double kKeyDrawingBoxW = 16.0;
 void paint_key_glyph(cairo_t* cr, const GuiRectF& key, icons::Icon icon,
                      uint32_t tone) {
     if (!(key.w > 0.0) || !(key.h > 0.0)) return;
-    const int box = scaled_px(kKeyDrawingBoxW, 1);
-    const icons::InkInBox fit = icons::ink_in_box(icon, box);
-    if (fit.ink_px <= 0) return;
-    const double bx = key.x + (key.w - static_cast<double>(box)) * 0.5;
-    const double by = key.y + (key.h - static_cast<double>(box)) * 0.5;
+    const double box = static_cast<double>(scaled_px(kKeyDrawingBoxW, 1));
+    const double bx = key.x + (key.w - box) * 0.5;
+    const double by = key.y + (key.h - box) * 0.5;
     const GuiRect clip = hull(key);
     cairo_save(cr);
     cairo_rectangle(cr, clip.x, clip.y, clip.w, clip.h);
     cairo_clip(cr);
-    icons::draw_glyph(cr, icon, bx + fit.left, by + fit.top, fit.ink_px, tone);
+    icons::draw_glyph(cr, icon, bx, by, box, tone);
     cairo_restore(cr);
 }
 // THE DRAWING IN ITS INK AS PAINTED (architect 2026-11-20; THE
@@ -484,17 +482,14 @@ void paint_key_glyph(cairo_t* cr, const GuiRectF& key, icons::Icon icon,
         return;
     }
     if (!(key.w > 0.0) || !(key.h > 0.0)) return;
-    const int box = scaled_px(kKeyDrawingBoxW, 1);
-    const icons::InkInBox fit = icons::ink_in_box(icon, box);
-    if (fit.ink_px <= 0) return;
-    const double bx = key.x + (key.w - static_cast<double>(box)) * 0.5;
-    const double by = key.y + (key.h - static_cast<double>(box)) * 0.5;
+    const double box = static_cast<double>(scaled_px(kKeyDrawingBoxW, 1));
+    const double bx = key.x + (key.w - box) * 0.5;
+    const double by = key.y + (key.h - box) * 0.5;
     const GuiRect clip = hull(key);
     cairo_save(cr);
     cairo_rectangle(cr, clip.x, clip.y, clip.w, clip.h);
     cairo_clip(cr);
-    icons::draw_glyph_tinted(cr, icon, bx + fit.left, by + fit.top,
-                             fit.ink_px, word_of(ink.first()),
+    icons::draw_glyph_tinted(cr, icon, bx, by, box, word_of(ink.first()),
                              stamp_tone_word(ink));
     cairo_restore(cr);
 }
@@ -1002,9 +997,9 @@ constexpr IconRowDef kIconRowRightRun[] = {
 // THE CAP BAND IS THE FACE'S OWN (gui_font.h, gui_font_cap_px): the em
 // times the file's own "H" ink per em (Liberation Sans 1409 / 2048 units),
 // an unrounded double — 16.51 device rows at the tablet's 200 % for the
-// Keys face's default 12 W (a 24-device-px em). On the tablet at osk_key_h
-// 35 (a 70-row key) a cap's baseline stands (70 + 16.51) / 2 = 43.26 rows
-// under the key's top.
+// Keys face's 12 W (a 24-device-px em). On the tablet (a 72-row key, the
+// program key rotated, onscreen_keyboard.h's geometry) a cap's baseline
+// stands (72 + 16.51) / 2 = 44.26 rows under the key's top.
 //
 // EVERY OTHER TEXT TAKES ANOTHER SEAT. THE LINE-BOX RULE (render.h's
 // line_box_baseline, GTK's seat; 2026-11-19): the face's line box
@@ -1365,19 +1360,27 @@ namespace {
 int title_cap_rows() {
     return gui_font_ink_band(gui_font(GuiFace::Bold), kLogoLegendInkSet).above;
 }
-// THE BATTERY'S INK LENGTH (render.h's THE BATTERY): the cap band's height,
-// the two drawings being upright (their larger side their height), so the
-// ink box's larger side at the cap band makes their height the cap band.
-int logo_glyph_ink_px() { return title_cap_rows(); }
-// THE GLYPH CELL: the two battery drawings' common ink box at the one
-// length, the larger of the two on each axis.
-icons::InkSize logo_glyph_cell() {
-    const int glyph_ink = logo_glyph_ink_px();
-    const icons::InkSize on =
-        icons::glyph_ink_size(icons::Icon::Battery000Charging, glyph_ink);
-    const icons::InkSize off =
-        icons::glyph_ink_size(icons::Icon::Battery000, glyph_ink);
-    return icons::InkSize{std::max(on.w, off.w), std::max(on.h, off.h)};
+// THE BATTERY'S BOX (render.h's THE BATTERY; icons.h's THE BOX): the box in
+// which the drawing's ink stands exactly the cap band's height — its zoom
+// the band's rows over the ink's height in the drawing's units, unrounded.
+double logo_glyph_box_px(icons::Icon glyph) {
+    return icons::glyph_box_for_ink_height(
+        glyph, static_cast<double>(title_cap_rows()));
+}
+// THE BATTERY'S INK at its box, real px, offset from the box's top-left.
+GuiRectF logo_glyph_ink(icons::Icon glyph) {
+    return icons::glyph_ink_in_box(glyph, logo_glyph_box_px(glyph))
+        .value_or(GuiRectF{});
+}
+// THE GLYPH CELL: the two battery drawings' common ink box, real px, the
+// larger of the two inks on each axis.
+struct LogoGlyphCell {
+    double w = 0.0, h = 0.0;
+};
+LogoGlyphCell logo_glyph_cell() {
+    const GuiRectF on  = logo_glyph_ink(icons::Icon::Battery000Charging);
+    const GuiRectF off = logo_glyph_ink(icons::Icon::Battery000);
+    return LogoGlyphCell{std::max(on.w, off.w), std::max(on.h, off.h)};
 }
 // EVERY PLACE HERE IS REAL (architect 2026-11-15, the no-grid arc): the
 // runs' pens and their baseline, and the cell and the two lamps as exact
@@ -1424,10 +1427,8 @@ LogoLegendLayout logo_legend_layout(const AppState& app,
     // THE CELL: its right edge on the clock run's pen (the run's leading
     // spaces are the air between the battery and the pipe); ITS TOP THE CAP
     // BAND'S TOP.
-    const icons::InkSize cell = logo_glyph_cell();
-    l.cell = GuiRectF{l.clock_x - static_cast<double>(cell.w), l.cap_top,
-                      static_cast<double>(cell.w),
-                      static_cast<double>(cell.h)};
+    const LogoGlyphCell cell = logo_glyph_cell();
+    l.cell = GuiRectF{l.clock_x - cell.w, l.cap_top, cell.w, cell.h};
     // THE PERCENT'S RUN, "<percent> ": its advance ends on the cell's left
     // edge (the space the air between the digits and the battery).
     double percent_first_ink = l.cell.x;
@@ -1491,31 +1492,32 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     cairo_set_antialias(cr, CAIRO_ANTIALIAS_DEFAULT);
     const double baseline = title_baseline(lane);
 
-    // THE NOTE (MusicNote16th on the ink-box road — the BPM key's drawing
-    // THE NOTE (MusicNote16th on the ink-box road — the BPM key's drawing
-    // and the BPM form's rows' too, a deliberate share, icons.h's head) IN
-    // ITS 12 W BOX (architect 2026-11-19): ITS INK'S LEFT EDGE
-    // kTitleNoteInsetW inside the panel (architect 2026-11-19), its
-    // ink centered on the bar's rows exactly.
-    const icons::InkInBox note = icons::ink_in_box(
-        icons::Icon::MusicNote16th, scaled_px(kTitleNoteBoxW, 1));
-    const icons::InkSize note_ink =
-        icons::glyph_ink_size(icons::Icon::MusicNote16th, note.ink_px);
+    // THE NOTE (MusicNote16th — the BPM key's drawing and the BPM form's
+    // rows' too, a deliberate share, icons.h's head) IN ITS 12 W BOX
+    // (architect 2026-11-19), at the box's exact zoom (icons.h's THE BOX,
+    // architect 2026-11-26), SEATED BY ITS INK: the ink's left edge
+    // kTitleNoteInsetW inside the panel (architect 2026-11-19), the ink
+    // centered on the bar's rows exactly.
+    const double note_box = static_cast<double>(scaled_px(kTitleNoteBoxW, 1));
+    const GuiRectF note_ink =
+        icons::glyph_ink_in_box(icons::Icon::MusicNote16th, note_box)
+            .value_or(GuiRectF{});
     const double note_x =
         static_cast<double>(well.x + scaled_px(kTitleNoteInsetW));
-    icons::draw_glyph(cr, icons::Icon::MusicNote16th, note_x,
+    icons::draw_glyph(cr, icons::Icon::MusicNote16th, note_x - note_ink.x,
                       static_cast<double>(lane.y) +
-                          static_cast<double>(lane.h - note_ink.h) / 2.0,
-                      note.ink_px, ink_word);
+                          (static_cast<double>(lane.h) - note_ink.h) / 2.0 -
+                          note_ink.y,
+                      note_box, ink_word);
 
     // THE BRAND, a constant: ITS PEN kTitleNoteGapW AFTER THE NOTE'S INK'S
-    // RIGHT EDGE (architect 2026-11-19), the ink box's real edge.
+    // RIGHT EDGE (architect 2026-11-19), the ink's real edge.
     set_palette_source(cr, ink);
     {
         const GuiFont bold = gui_font(GuiFace::Bold);
         const text_shape::SharedRun brand =
             text_shape::memoized_run(bold, kLogoBrand);
-        const double x = note_x + static_cast<double>(note_ink.w) +
+        const double x = note_x + note_ink.w +
                          static_cast<double>(scaled_px(kTitleNoteGapW));
         text_shape::show_shaped_run(cr, *brand, x, baseline);
     }
@@ -1541,20 +1543,18 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
                    app.clip_lamp_lit ? p.clip_lamp : p.key_face);
 
     // THE BATTERY, the set's drawing by the plug state (GuiLogoGlyph's
-    // rule), its ink box centered in the cell exactly, at the cell's real
-    // place, in the title text's tone.
+    // rule), in its box (logo_glyph_box_px), its ink centered in the cell
+    // exactly, at the cell's real place, in the title text's tone.
     {
         const icons::Icon glyph =
             app.logo_legend.glyph == GuiLogoGlyph::Charging
                 ? icons::Icon::Battery000Charging
                 : icons::Icon::Battery000;
-        const int glyph_ink = logo_glyph_ink_px();
-        const icons::InkSize s = icons::glyph_ink_size(glyph, glyph_ink);
-        icons::draw_glyph(
-            cr, glyph,
-            l.cell.x + (l.cell.w - static_cast<double>(s.w)) / 2.0,
-            l.cell.y + (l.cell.h - static_cast<double>(s.h)) / 2.0, glyph_ink,
-            ink_word);
+        const GuiRectF s = logo_glyph_ink(glyph);
+        icons::draw_glyph(cr, glyph,
+                          l.cell.x + (l.cell.w - s.w) / 2.0 - s.x,
+                          l.cell.y + (l.cell.h - s.h) / 2.0 - s.y,
+                          logo_glyph_box_px(glyph), ink_word);
     }
 
     cairo_restore(cr);
@@ -2129,13 +2129,14 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 //
 //   THE TIMESTAMP (the bottom icon row's left run, its one text; the seats
 //   at bottom_left_run): "MM:SS.mmm" (format_timestamp, time_format.h) IN
-//   ITS OWN FACE, LIBERATION SANS BOLD 14 W (GuiFace::Timestamp, 28 device
+//   ITS OWN FACE, LIBERATION SANS BOLD 18 W (GuiFace::Timestamp, 36 device
 //   px on the tablet), ITS OWN TONE `timestamp_text` A5ABB5 (architect
-//   2026-11-25: "h4 at 14w"; "the timestamp is large and clearly a one-off
-//   in the whole app - it is its own thing"): Arc's `.h4, .category-label {
-//   color: #a5abb5; font-weight: 600; }` at GTK's "large" scale, 12 x 1.2
-//   = 14.4 W, to the whole W, 14. Its specimen kTimestampShape, its
-//   metrics timestamp_metrics.
+//   2026-11-25: "the timestamp is large and clearly a one-off in the whole
+//   app - it is its own thing"): Arc's `.h4, .category-label { color:
+//   #a5abb5; font-weight: 600; }` at Arc's `.h2 { font-size: 18px; }`
+//   (architect 2026-11-26: "I'd rather defer to arc. Truthful."; no one
+//   class of Arc's is all three, gui_font.h's head). Its specimen
+//   kTimestampShape, its metrics timestamp_metrics.
 //
 //   THE OVERLAYS' TIME LABEL (the render player's and the score viewer's
 //   media rows): ONE LABEL "<position> / <length>", mm:ss of whole
@@ -2228,7 +2229,8 @@ static std::string clock_time_text(const AppState& app,
 // (ten digits and the specimen) of the kind's face, that answer the same
 // thing on every frame until the scale moves — the widths are the face's
 // own. The scale is the whole key: both faces' sizes are the table's
-// (gui_font.h; the one live size is the Keys face's). Single-threaded paint
+// (gui_font.h; the Keys face's cap is the table's 12 W like every face, and
+// only gui_scale varies its em). Single-threaded paint
 // state; the waveform worker never reaches this file's text tiers.
 //
 // THE CELL IS THE SPECIMEN'S INK'S WHOLE HULL, THE SLOT ITS ADVANCE
@@ -2269,7 +2271,7 @@ static const TimeFieldMetrics& measure_time_field(TimeFieldMetrics& m,
     m.percent = font.percent;
     return m;
 }
-// THE TIMESTAMP'S: "00:00.000" in the Timestamp face (Bold 14 W).
+// THE TIMESTAMP'S: "00:00.000" in the Timestamp face (Bold 18 W).
 static TimeFieldMetrics g_timestamp_metrics;
 static const TimeFieldMetrics& timestamp_metrics() {
     return measure_time_field(g_timestamp_metrics, GuiFace::Timestamp,
@@ -2450,19 +2452,24 @@ static void row8_block_walk(bool history, const Row8Block& b,
 // THE BOTTOM ICON ROW'S LEFT RUN — THE TIMESTAMP ALONE (architect
 // 2026-11-24: "the timestamp at the bottom left-hand corner would be alone
 // after this"; the active tab is the top icon row's tab pair): ONE BOLD
-// 14 W RUN (GuiFace::Timestamp) in its own tone `timestamp_text`, Arc's
-// `.h4` A5ABB5 (architect 2026-11-25: "h4 at 14w"), kerning off (THE TIME
-// FIELDS' block) — NO ENTRY (architect 2026-11-19: "probably doesn't need to
-// be ... in its own input box"). ITS PEN kBottomLeftPenW
-// (14 W, render.h; "And then we put the timestamp line at 14W") from the
-// panel's left edge — the status bar's column under it (kStatusBarPenW,
-// the same 14 W by its own ruling) — ON THE LINE-BOX BASELINE: the face's
-// 16 W line box (13 + 3 W at 14 W, gui_font.h's THE LINE BOX) centered on
-// the keys' 28 W rows (line_box_baseline, its top 6 W down, the baseline
-// +19 W of the case), so with the row's 7 W above its keys and 7 W below,
-// 13 W of the row above the line box and 13 W under it. THE TIMESTAMP'S OWN
-// BOX (`time_box`): the specimen's advance ("00:00.000" in the Bold 14 W,
-// time_w: 63.05 W) from the pen by the line box's rows, real edges — the
+// 18 W RUN (GuiFace::Timestamp, Arc's `.h2` size, architect 2026-11-26) in
+// its own tone `timestamp_text`, Arc's `.h4` A5ABB5 (architect 2026-11-25),
+// kerning off (THE TIME FIELDS' block) — NO ENTRY (architect 2026-11-19:
+// "probably doesn't need to be ... in its own input box"). ITS PEN
+// kBottomLeftPenW (14 W, render.h; "And then we put the timestamp line at
+// 14W") from the panel's left edge — the status bar's column under it
+// (kStatusBarPenW, the same 14 W by its own ruling) — ON THE LINE-BOX
+// BASELINE: the face's 21 W line box (17 + 4 W at 18 W, gui_font.h's THE
+// LINE BOX) centered on the keys' 28 W rows (line_box_baseline, its top
+// floor(7 / 2) = 3 W down, the baseline +20 W of the case), so with the
+// row's 7 W above its keys and 7 W below, 10 W of the row above the line
+// box and 11 W under it. THE TIMESTAMP'S OWN BOX (`time_box`): the
+// specimen's shaped advance ("00:00.000" in the Bold 18 W, time_w: each
+// glyph's advance taken in 26.6 at the 36 px em, a digit 1281, the colon 767,
+// the point 640 sixty-fourths, so 162.09375 px, about 81.05 W; the nominal
+// design advance, seven digits of 1139 and the colon's 682 and the point's
+// 569 of 2048 units, 9224 / 2048 x 18 = 81.07 W, is not the shaped one)
+// from the pen by the line box's rows, real edges — the
 // damage cell's ground (a box of no press: the run presses nothing,
 // architect 2026-11-20). The row's painter's one layout.
 struct BottomLeftRun {
@@ -2581,8 +2588,10 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // panel's right edge) — the groups on x 834..975, 988..1129, 1142..1703,
     // 1716..1997 and 2010..2291 (Play 2220..2291); the timestamp from x 28
     // (kBottomLeftPenW):
-    // its advance 126.11 px (the 63.05-W advance of
-    // "00:00.000" in the Bold 14 W, kerning off), its cell x 27..155. IN
+    // its advance 162.09 px (the shaped 26.6 advance sum of
+    // "00:00.000" in the Bold 18 W, kerning off; 81.07 W is the nominal
+    // design advance), its cell x 27..191 by
+    // rows 1330..1371 (the line box's, the baseline at 1364). IN
     // THE HISTORY
     // VIEW (the hide; Play, Open Text Editor, Toggle Value Drag,
     // COPY and PASTE hidden there with the verbs — the duo whole, its run
@@ -2630,7 +2639,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // THE BOTTOM LEFT: THE TIMESTAMP ALONE, NO ENTRY (architect 2026-11-19;
     // alone, 2026-11-24; the seats and their
     // rules at bottom_left_run above), in ITS OWN FACE (GuiFace::Timestamp,
-    // Bold 14 W) and ITS OWN TONE `timestamp_text` (architect 2026-11-25),
+    // Bold 18 W) and ITS OWN TONE `timestamp_text` (architect 2026-11-25),
     // inside the save/restore this body already opened. The overlays' time
     // label has its own face and metrics (THE TIME FIELDS' block) and THE
     // TWO NEVER PAINT IN THE SAME FRAME: an overlay owns the row whole
@@ -3372,7 +3381,7 @@ std::vector<text_shape::SharedRun> notification_text_lines(
 // `card_standing_fill`), no border, no shadow; notifyd's ONE PADDING, 14 W
 // (kNotificationPadW); THE CLASS GLYPH, icons.h's
 // DialogInformation or DialogError, its whole drawing in a 16 W box at the
-// left and top padding (icons::ink_in_box) — then the padding again, then
+// left and top padding (icons.h's THE BOX) — then the padding again, then
 // THE SENTENCE, Regular 12 W, one line centered on the glyph's box (its
 // baseline +26 W), wrapped lines from the top padding (+25 W); the words and
 // the glyph one tone, a normal card's `sidebar_text`, a standing card's
@@ -3590,18 +3599,15 @@ void GuiPaintHandler::paint_notifications(cairo_t* cr) {
                            tone_alpha(fill_word));
         {
             // THE CLASS GLYPH, the drawing's whole canvas in the 16 W box at
-            // the left pad, the box's top glyph_top down (icons::ink_in_box:
-            // the ink's size and its offset in the box).
+            // the left pad, the box's top glyph_top down (icons.h's THE
+            // BOX: the box's exact zoom and place).
             const icons::Icon glyph = standing
                                           ? icons::Icon::DialogError
                                           : icons::Icon::DialogInformation;
-            const icons::InkInBox fit = icons::ink_in_box(glyph, glyph_box);
-            if (fit.ink_px > 0)
-                icons::draw_glyph(
-                    cr, glyph,
-                    static_cast<double>(card.x + pad) + fit.left,
-                    static_cast<double>(card.y + glyph_top) + fit.top,
-                    fit.ink_px, argb32_opaque_word(ink));
+            icons::draw_glyph(cr, glyph, static_cast<double>(card.x + pad),
+                              static_cast<double>(card.y + glyph_top),
+                              static_cast<double>(glyph_box),
+                              argb32_opaque_word(ink));
         }
 
         if (text_room > 0.0) {
@@ -5175,7 +5181,7 @@ void GuiPaintHandler::paint_trim(cairo_t* cr, const GuiRect& area,
 // rect runs FROM THE MARKER LANE'S LAST ROW — the chip's apex
 // row — THROUGH THE ONE-W LINE under the lane (the lane's foot line, one of
 // the well's lines) TO THE CANVAS'S LAST ROW (200 %: rows 233 .. 1307,
-// drawn to 1047 under the on-screen keyboard at his tuning, the canvas's
+// drawn to 1041 under the on-screen keyboard, the canvas's
 // clip cut at its top line, onscreen_keyboard::waveform_paint_area; on the
 // line's real span of columns: at a whole place the column left of the
 // marker's and the marker's own), so no gap stands between the apex and
@@ -5745,9 +5751,10 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
     // TONE (the palette's `face`, the row's `body_face`; 2026-11-19), the
     // lane the window's width over the status bar — laid
     // under the on-screen keyboard too, which covers it in the same pass
-    // (paint_keyboard_slot paints after this, opaque) — laid whole because
-    // the keyboard's height is a tuning key (`osk_key_h`): at a shorter
-    // keyboard part of the row's ground shows above it. The row's tenants
+    // (paint_keyboard_slot paints after this, opaque, the lane wholly under
+    // its surface: onscreen_keyboard.h's edge_damage_rect) — laid whole on
+    // every frame, so the lane's pixels never depend on what stood over it
+    // last. The row's tenants
     // are the program's (the bottom icon row's keys, and the modal family's
     // controls row — every
     // overlay's, modal_box.h, 2026-10-14), so this lane never changes for
@@ -7861,10 +7868,9 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
 // rect, the gap between faces the line, a face on a convex corner rounded
 // one W less (key_inner_corner_px). EVERY EDGE AT EXACT COVERAGE through one
 // coverage stamp pass (cool_edit_paint.h), the caps and the drawings after
-// it. THE CAPS on their own device keys (`osk_key_w`, `osk_key_h`,
-// `osk_font_px`, untouched): REGULAR in THE KEYS FACE (GuiFace::Keys, the
-// `osk_font_px` tuning key's em in W, 12 by default; architect 2026-10-29;
-// Regular, architect 2026-11-19), in `text` (D3DAE3), the cap band centered on
+// it. THE CAPS: REGULAR in THE KEYS FACE (GuiFace::Keys, the table's 12 W
+// on the key the program key rotated, architect 2026-11-26; Regular,
+// architect 2026-11-19), in `text` (D3DAE3), the cap band centered on
 // the
 // face (redesign_baseline); THE GLYPH KEYS (onscreen_keyboard::cap_icon,
 // 2026-11-08) the program keys' drawing at its 16 W canvas centered
@@ -8278,8 +8284,9 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // measured on his shot; the lists take their seats here, not modal_box.h's
 // kPageMarginPenW): EVERY ROW OF EVERY LIST WEARS A DRAWING, its 16 W box
 // kListDrawingMarginW = 6 W FROM THE VIEW'S LEFT EDGE, measured on the box,
-// never on the drawing's ink (the ink keeps its own offset inside the box,
-// icons::ink_in_box), and the name 6 W after the box (kListDrawingGapW,
+// never on the drawing's ink (the canvas on the box at its exact zoom and
+// place, the ink at its own offset in it: icons.h's THE BOX), and the name
+// 6 W after the box (kListDrawingGapW,
 // architect 2026-11-22: "increase the distance b/w icon and text in
 // lists, eg player", "6 w"): the name's pen 6 + 16 + 6 = 28 W, 56 device px
 // on the tablet. THE DRAWING IS THE ROW'S (list_row_drawing, below, the one
@@ -8449,15 +8456,11 @@ static void paint_list_view(cairo_t* cr, const GuiRect& exposed,
             // text tone on an acting row, the dim print on an inert one.
             {
                 const icons::Icon glyph = list_row_drawing(ov.owner, row.kind);
-                const icons::InkInBox fit =
-                    icons::ink_in_box(glyph, drawing_box);
-                if (fit.ink_px > 0)
-                    icons::draw_glyph(
-                        cr, glyph,
-                        r.x + static_cast<double>(drawing_margin) + fit.left,
-                        r.y + static_cast<double>(scaled_px(kListDrawingYW)) +
-                            fit.top,
-                        fit.ink_px, inert ? t.text_dim : t.text);
+                icons::draw_glyph(
+                    cr, glyph, r.x + static_cast<double>(drawing_margin),
+                    r.y + static_cast<double>(scaled_px(kListDrawingYW)),
+                    static_cast<double>(drawing_box),
+                    inert ? t.text_dim : t.text);
             }
             // THE NAME, cut the box's margin inside the view's right edge on
             // its own mask (text_shape::show_shaped_run_within: no clip per

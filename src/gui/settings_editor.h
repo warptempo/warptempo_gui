@@ -96,9 +96,8 @@ struct GuiInputHandler;
 // LISTS whose domain is no short list: the piece's `title`, `notes`, `url`
 // and `cover` and the score's folder `score_path`, and the per-device
 // config's `gui_scale` and every editable device key without a value list —
-// projects_repo, projects_path, the noise's fixed attenuation
-// noise_attenuation_level, and the on-screen keyboard's three tuning keys,
-// its key box osk_key_w and osk_key_h and its cap size osk_font_px; the four
+// projects_repo, projects_path and the noise's fixed attenuation
+// noise_attenuation_level; the four
 // keys with a value list — true_colors, waveform_grow, the noise's folder
 // noise and its crossfade noise_crossfade_s — commit through this editor's
 // own body from their lists. (The config's key last_project is the
@@ -109,8 +108,8 @@ struct GuiInputHandler;
 // funnels each key into the SAME code its other door uses (no parallel
 // writers). commit() routes the open's key through:
 // 1. The device keys other than the scale — projects_repo, projects_path,
-//    true_colors, waveform_grow, noise, noise_attenuation_level,
-//    noise_crossfade_s, osk_key_w, osk_key_h and osk_font_px — in ONE body,
+//    true_colors, waveform_grow, noise, noise_attenuation_level and
+//    noise_crossfade_s — in ONE body,
 //    apply_device_setting (commit_device_setting the line's door onto it,
 //    the value list the other, the four listed keys reaching it through the
 //    list alone): the key's own grammar owner in device_config.h decides (a
@@ -130,10 +129,7 @@ struct GuiInputHandler;
 //    noise's folder at once, the resident
 //    recordings freed and the new folder loaded under an audible level
 //    (GuiNoise::change_folder), no card (the NOISE case's face is the
-//    answer); the keyboard's key box at once, the window repainted
-//    (GuiInputHandler::apply_osk_key_size), no card (the keyboard standing
-//    under the editor is the answer); the keyboard's cap size the same
-//    (GuiInputHandler::apply_osk_font_px), no card.
+//    answer).
 // 2. `gui_scale` and `score_path` (commit_gui_setting): gui_scale, the one
 //    other editable device key, stays out of the body because it HAS a
 //    chokepoint of its own (apply_gui_scale, which writes the device config
@@ -164,13 +160,13 @@ struct GuiInputHandler;
 // IS NO CHOICE EDITOR EITHER (2026-10-28): its other rows commit nothing,
 // each opening this line editor.
 //
-// THE EDITABLE KEYS — ONE TABLE, THE SIXTEEN (architect 2026-11-22): the
+// THE EDITABLE KEYS — ONE TABLE, THE THIRTEEN (architect 2026-11-26): the
 // five
 // PIECE keys a hand edits (the
 // piece's metadata, the engine keys of engine_settings.h, and the score
 // folder, the score viewer's file's, typed only for another movement's
 // folder, architect 2026-10-26), then the DEVICE
-// CONFIG's eleven editable keys in that file's
+// CONFIG's eight editable keys in that file's
 // writer order (kDeviceConfigKeys, device_config.cpp — `last_project` has
 // no editor, nor have the level, the level its tap restores and the sticky
 // lamps, below). THE TABLE IS THE SETTINGS PAGE'S
@@ -202,7 +198,6 @@ inline constexpr const char* kSettingsEditorKeys[] = {
     "title", "notes", "url", "cover", "score_path",
     "gui_scale", "projects_repo", "projects_path", "true_colors",
     "waveform_grow", "noise", "noise_attenuation_level", "noise_crossfade_s",
-    "osk_key_w", "osk_key_h", "osk_font_px",
 };
 // THE PIECE KEYS' COUNT — the table's first five; the rest are the device
 // config's. The page's two runs of rows split the table here, and the asserts pin
@@ -262,10 +257,8 @@ static_assert(settings_page_piece_keys_pinned());
 // knowledge"). THE LIST IS THE KEY'S ONE DOOR: its
 // row never opens the line editor (settings_page_commit), so its value
 // reaches apply_device_setting through the list's tap alone.
-// (The keyboard's `osk_key_w` and `osk_key_h` are NOT here: their 69
-// values each are no short domain, so their rows open the line editor; nor
-// is its `osk_font_px`, 19; nor the noise's attenuation, a decimal, whose
-// row opens the line editor.)
+// (The noise's attenuation is NOT here: a decimal is no short domain, so
+// its row opens the line editor.)
 inline constexpr const char* kSettingsValueListKeys[] = {
     "true_colors", "waveform_grow", "noise", "noise_crossfade_s",
 };
@@ -296,8 +289,7 @@ struct GuiSettingsEditor {
     // dependency is a cycle resolved with a pointer set post-construction —
     // the same shape as the viewport request_* callbacks). Used to reach the
     // live acts that live on GuiInputHandler: apply_gui_scale and the device
-    // keys' apply_* (apply_true_colors, apply_waveform_grow,
-    // apply_osk_key_size, apply_osk_font_px).
+    // keys' apply_* (apply_true_colors and apply_waveform_grow).
     GuiInputHandler*      input = nullptr;
 
     GuiSettingsEditor(AppState&             app_,
@@ -384,8 +376,7 @@ struct GuiSettingsEditor {
     // THE DEVICE KEYS' COMMIT — ONE BODY, TWO DOORS (architect 2026-10-25,
     // 2026-10-28 for the value lists' keys): the line editor's commit
     // (commit_device_setting, below, the editor's door) for `projects_repo`,
-    // `projects_path`, `noise_attenuation_level` and the tuning keys
-    // `osk_key_w`, `osk_key_h` and `osk_font_px`, and a VALUE LIST's pick
+    // `projects_path` and `noise_attenuation_level`, and a VALUE LIST's pick
     // (GuiInputHandler::value_list_commit) for `true_colors`,
     // `waveform_grow`, `noise` and `noise_crossfade_s`, each key reaching it by
     // its one door since the line's key is its row's (architect 2026-11-19)

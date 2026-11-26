@@ -11,9 +11,10 @@
       the whole unit nearest centered, as Papirus seats a size that does
       not divide (x 4 to 12.864, 0.432 right of center); the face's
       quadratic curves kept as it draws them, coordinates to three
-      decimals; nothing redrawn. The key's ink-box fit (icons.cpp's fit_for)
+      decimals; nothing redrawn. The key's 16 W box (icons.h's THE BOX)
       draws it at zoom 2 on the tablet, 10 W tall, its top, baseline and
-      stem's left edge on whole pixels. The two counters wind against the
+      stem's left edge on whole pixels wherever the box stands on whole
+      pixels. The two counters wind against the
       outer contour, as the face draws them, so the nonzero fill leaves
       them hollow. The tab pair's Tab B (TabB) wears it as drawn; Tab A
       (TabA) is the face's A the same way (tools/icons/own/TabA.svg;

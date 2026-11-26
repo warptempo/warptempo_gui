@@ -101,10 +101,8 @@
 // and what the box lays cut at the keyboard's top line (paint_modal_dialog).
 // On the tablet: the view y 142..1307 (1166 rows), the
 // entry rows 166..221 — far above
-// the keyboard's top line at his tuning (osk_key_w 24, osk_key_h 35: the
-// keyboard 1048–1439, the view's visible part 142..1047), at the defaults
-// (osk_key_h 30: 1098–1439) and at the tallest keyboard the keys' range
-// allows (osk_key_h 80: five 160-row key rows, its top line near row 600).
+// the keyboard's top line (the keyboard 1042–1439, the view's visible part
+// 142..1041; onscreen_keyboard.h's placement block).
 //
 // Geometry here, every rect a fact that asks no standing, and the box's
 // standing predicate beside it (modal_box_stands); the painter is

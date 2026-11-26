@@ -39,8 +39,15 @@
 //       (the arm cairo takes when a glyph's box meets the boxes before it,
 //       _cairo_traps_compositor_glyphs' use_mask), and where no two boxes
 //       meet the sum of one is the glyph, which is what cairo's other arm
-//       (each glyph composited on its own) writes. Proven on the host at
-//       every size of kGuiFaceSizes for both files, on ARGB32 and A8.
+//       (each glyph composited on its own) writes. Proven on the host for
+//       both files, on ARGB32 and A8, at every size kGuiFaceSizes held when
+//       the road landed (2026-11-16: 7, 8, 9, 11 and 12 W, every em a
+//       whole count of px). An em outside those — the table's 10 W and
+//       18 W today, a fractional em at a scale whose product is one
+//       (gui_font.h's head, architect 2026-11-26) — is unmeasured: the
+//       argument (the same load, the same box, the same rasterizer, the em
+//       reaching FreeType as cairo's own 26.6 size) does not depend on the
+//       em, but no host run has held it there.
 //   (b) AT A FRACTION THE INK MOVES WITH THE PLACE, LINEARLY (its centroid
 //       by the fraction, to 1/64 px), and nothing is cut.
 // The one place the two roads part: a glyph INSIDE a run, whose pen is a

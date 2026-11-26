@@ -250,6 +250,18 @@ cairo_surface_t* rasterise_zoom(const Document& doc, double zoom, double dx,
     return s;
 }
 
+double canvas_side(const Document& doc) {
+    const resvg_size size = resvg_get_image_size(doc.tree.get());
+    return std::max(static_cast<double>(size.width),
+                    static_cast<double>(size.height));
+}
+
+std::optional<InkBounds> ink_bounds(const Document& doc) {
+    resvg_rect r{};
+    if (!resvg_get_image_bbox(doc.tree.get(), &r)) return std::nullopt;
+    return InkBounds{r.x, r.y, r.width, r.height};
+}
+
 void convert_to_display(cairo_surface_t* s) {
     if (!display_transform::active()) return;
     cairo_surface_flush(s);

@@ -4139,36 +4139,6 @@ private:
     // set_gui_scale_percent, not through here).
     void apply_gui_scale(int percent);
 
-    // THE KEYBOARD'S KEY BOX'S ONE LIVE ACT (the `osk_key_w` and `osk_key_h`
-    // tuning keys, architect 2026-10-29; render.h's seat): push the box to
-    // the renderer (set_osk_key_size_w), then every face's look at once
-    // (AppState::FaceFades' drop_all: the keyboard's keys are re-laid) and
-    // the whole window's damage, the true-colors act's shape. NO RELAYOUT:
-    // the box moves the keyboard's surface alone, which stands over the app
-    // and moves no lane (onscreen_keyboard.h's placement block; architect
-    // 2026-11-20) — the canvas's clip follows it on its own
-    // (waveform_paint_area, the GL canvas's upload rule) and every rect of
-    // the app's is unchanged. The settings editor's `osk_key_w=` and
-    // `osk_key_h=` commits are the sole callers, each passing the live
-    // pair; each gates the no-op, assigns the live config and persists it
-    // (apply_device_setting); the launch seeds the box before the window
-    // exists (main.cpp).
-    void apply_osk_key_size(int w_w, int h_w);
-
-    // THE KEYBOARD'S CAP SIZE'S ONE LIVE ACT (the `osk_font_px` tuning key,
-    // architect 2026-10-29; render.h's seat): push the em to the
-    // renderer (set_osk_font_em_w), then invalidate the whole window —
-    // the caps are the keyboard band's alone (paint_onscreen_keyboard, the
-    // Keys face's one reader), but the full invalidate is the live acts'
-    // shared first step and the cheapest truthful one. NO RELAYOUT: the
-    // size moves no lane (the keyboard's geometry is the key box's alone,
-    // onscreen_keyboard.h), and every cache a cap's run passes through keys
-    // on the size (gui_font.h's GuiFont), so nothing is dropped. The settings editor's `osk_font_px=`
-    // commit is the sole caller; it gates the no-op, assigns the live config
-    // and persists it (apply_device_setting); the launch seeds the size
-    // before the window exists (main.cpp).
-    void apply_osk_font_px(int em_w);
-
     // THE WAVEFORM PLATE'S GROW'S ONE LIVE ACT (the `waveform_grow` device
     // key, architect 2026-10-31; render.h's seat): push the quarters to the
     // renderer (set_waveform_grow_quarters), then invalidate the whole
@@ -4193,9 +4163,8 @@ private:
     // and the resize-path geometry-and-cache rebuild
     // (GuiPaintHandler::on_resize). Run after the new scale is pushed to the
     // renderer, which every step reads. (The
-    // on-screen keyboard's box and its coming and going move no lane, so
-    // neither calls it: apply_osk_key_size above, onscreen_keyboard.h's
-    // placement block.)
+    // on-screen keyboard's coming and going moves no lane, so it does not
+    // call it: onscreen_keyboard.h's placement block.)
     void relayout_window();
 
 

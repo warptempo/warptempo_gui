@@ -212,9 +212,11 @@ shopt -s nocaseglob
 #      bright_mix, retired 2026-11-21 with the mix fixed at 100, icons,
 #      the icon set's key, retired 2026-11-21 with one set, Papirus, and
 #      theme, the window's theme key, retired 2026-11-21 with one look,
-#      Arc-Dark, and the seven tuning keys key_height, key_width, run_gap,
+#      Arc-Dark, the seven tuning keys key_height, key_width, run_gap,
 #      lamp_hold_ms, tooltip_delay_ms, sweep_highlight and
-#      waveform_fade_px, retired 2026-11-22 into the program's constants
+#      waveform_fade_px, retired 2026-11-22 into the program's constants,
+#      and the on-screen keyboard's three tuning keys osk_key_w, osk_key_h
+#      and osk_font_px, retired 2026-11-26 into the program's constants
 #      (RETIRED_KEYS below; src/gui/device_config.h); every other line is
 #      kept.
 #   6. THE NOISE FOLDER (2026-10-28): the laptop's noise/ mirrored to the
@@ -343,7 +345,12 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # value), src/gui/main.cpp; tooltip_delay_ms (GTK's own 500 / 60 / 500 ms
 # timeouts), src/gui/render.h; sweep_highlight (3 %, Arc's row-hover
 # white), src/gui/paint_handler.cpp; and waveform_fade_px (1 device px, the
-# whole doubling), src/gui/render.h. A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
+# whole doubling), src/gui/render.h; and the on-screen keyboard's three
+# tuning keys of 2026-10-29, retired 2026-11-26, each now a constant in the
+# program: osk_key_w and osk_key_h, the keyboard's key box (the program key
+# rotated, 28 x 36 W, src/gui/render.h's kKeyHeightW x kKeyWidthW), and
+# osk_font_px, its caps' size (the Keys face's 12 W, src/gui/gui_font.h).
+# A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level line (the defaults
 # file's) takes its place, so the planner renames the two lines by hand at the
 # install, on both devices, the program not running; a crossfade in ms comes
@@ -364,7 +371,8 @@ RETIRED_KEYS=(sync_path theme_level
               tooltip_gap audio_level waveform_switch_px
               bright_mix icons theme
               key_height key_width run_gap lamp_hold_ms tooltip_delay_ms
-              sweep_highlight waveform_fade_px)
+              sweep_highlight waveform_fade_px
+              osk_key_w osk_key_h osk_font_px)
 TABLET_KEY="${WARPTEMPO_TABLET_DEPLOY_KEY:-}"
 # THE NOISE FOLDER on the tablet, relative to run-as's home (mirror_noise):
 # beside the app's settings file, the folder the app's NOISE slider plays.
@@ -1332,8 +1340,9 @@ apply_setup() {
     # crossfade's first names, the crossfade's ms key, role, the column
     # width's key, the color preset's waveform and chrome, the tooltip's
     # gap, the project voice's level, the waveform's switch width, the
-    # bright tones' mix, the icon set, the window's theme and the seven
-    # tuning keys of 2026-11-22, RETIRED_KEYS), the rest kept.
+    # bright tones' mix, the icon set, the window's theme, the seven
+    # tuning keys of 2026-11-22 and the on-screen keyboard's three of
+    # 2026-11-26, RETIRED_KEYS), the rest kept.
     # READ CHECKED, because it is rewritten from what is read: the whole file and
     # then a `warptempo_sync-end` mark (so a truncated reading cannot pass for the
     # file), or `warptempo_sync-absent`; a failed or unmarked reading stops setup
