@@ -6706,7 +6706,9 @@ bool GuiInputHandler::score_scrub_takes_press() const {
 //     reaches the top icon row alone (the three veils' claim); then
 //     the painted bits: enabled (under an overlay only the keys it leaves
 //     live are painted enabled, redesign_button_enabled's overlay arm) and
-//     NOT SELECTED — a lit key is unchanged.
+//     NOT SELECTED — a lit key is unchanged. NOISE'S ENTRY THE SAME
+//     (architect 2026-11-24): arm_level_case_press arms on its painted
+//     enabled bit under the same veils, and it is never selected.
 //   DIALOG — the published stash, while it names the live surface
 //     (modal_dialog_stash_current) and is this face's own (owner and
 //     session), a question's once it has painted (the press's painted gate):
@@ -6840,9 +6842,11 @@ bool GuiInputHandler::hover_face_live(
 // hit; architect 2026-11-21); THE DIALOG STASH's buttons
 // (modal_dialog_button_hit: the painted box less its seam), then THE SCRUB'S
 // KNOB, its disc where it is painted (the published center,
-// render_player_scrub_handle_hit); then THE ROSTER, the chord table's keys,
+// render_player_scrub_handle_hit); then THE ROSTER, the chord table's keys
+// and after them NOISE's entry (the claim's own order, claim_button_row_press:
+// arm_redesign_press, then arm_level_case_press; architect 2026-11-24),
 // each BY THE PRESS'S OWN HIT (RedesignButtonFace::contains, what
-// arm_redesign_press and the lift ask):
+// arm_redesign_press, arm_level_case_press and the lift ask):
 // its painted box less its seam — the bottom left's timestamp, a time label,
 // presses nothing, so by the gate ("a face hovers only where a press there
 // would act") the pen hovering it lights nothing (architect 2026-11-20:
@@ -6897,6 +6901,14 @@ AppState::FaceFades::Face GuiInputHandler::hover_face_under_pointer(
                 found = Face{Surface::Roster, i};
                 break;
             }
+        }
+        if (found.none()) {
+            // THE LEVEL CASE, the button rows' claim's second half
+            // (claim_button_row_press: arm_level_case_press's own hit, its
+            // published box, no seam).
+            const int i = redesign_button_index(RedesignButton::IconNoiseLevel);
+            if (app.redesign_buttons[static_cast<size_t>(i)].contains(at))
+                found = Face{Surface::Roster, i};
         }
         if (found.none() && lane.kind == PlainLanePress::Kind::Marker)
             found = Face::marker(lane.key);
@@ -7899,7 +7911,10 @@ void GuiInputHandler::invalidate_roster_press_face(int index) {
 // fraction and the clock (the stamp every arm takes; this kind's lift
 // measures no hold); A DISABLED CASE'S PRESS IS A CONSUMED NOTHING,
 // read as the roster's is, off the painted bit (RedesignButtonFace::enabled,
-// strictly as-painted). No face damage: a slider has no press look.
+// strictly as-painted). No face damage: a slider has no press look. THE
+// HOVER ASKS THE SAME HIT AND THE SAME BIT (architect 2026-11-24;
+// hover_face_under_pointer, hover_face_live's ROSTER arm), so the entry's
+// fill hovers exactly where this arm would take the press.
 bool GuiInputHandler::arm_level_case_press(const GuiPointerPlace& at) {
     const RedesignButton id = RedesignButton::IconNoiseLevel;
     const AppState::RedesignButtonFace& face =

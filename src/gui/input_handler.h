@@ -3322,10 +3322,14 @@ private:
     // materials.h's THE HOVER; the state, the gate, the fade and the damage
     // AppState::FaceFades, one owner; the walk walk_hover_face):
     //   * THE KEYS OF BOTH ICON ROWS — the roster's linked buttons, each
-    //     chord key's box (NOISE's entry is no key; the bottom left's
+    //     chord key's box (the bottom left's
     //     timestamp is plain text, presses nothing and lights nothing,
     //     architect 2026-11-20), each
     //     group's seams with them (AppState::FaceFades' THE SEAMS);
+    //   * NOISE'S ENTRY (architect 2026-11-24), a roster face too — its fill
+    //     alone, `key_hover_face` over the entry's own, the ring, the number
+    //     and the level line unchanged (paint_level_case) — on its press's
+    //     own hit and painted enabled bit (arm_level_case_press), no seam;
     //   * THE DIALOG STASH'S BUTTONS — every controls row's keys and word
     //     buttons (the render player's, the score viewer's, the trim presets
     //     list's, the BPM form's, the picker's one word, a question's
@@ -3417,8 +3421,8 @@ private:
     //   (pointer_barrel_held_): with it held the line shows over the
     //   waveform alone, where the zoom would anchor, with no triangle
     //   (architect 2026-11-21: "no triangle hover while barrel is held").
-    //   NOTHING ELSE LIGHTS BY HOVER: no entry (NOISE's and its level line, the
-    //   value sub-page's field), the title bar's two lamps, a marker's stem,
+    //   NOTHING ELSE LIGHTS BY HOVER: NOISE's level line and number, the
+    //   value sub-page's field, the title bar's two lamps, a marker's stem,
     //   the time labels, the title bar; a
     //   notification card's hover banks its clock and paints nothing
     //   (GuiNotifications::set_hover).

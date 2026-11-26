@@ -2208,7 +2208,14 @@ enum class RedesignButton {
     // it out), no lit look, no press face (a slider shows its value; its
     // fill is the feedback — architect 2026-11-05,
     // "no press face on the cases", paint_level_case, paint_handler.cpp), no
-    // hold-repeat, no hold twin, no barrel. THE FACE: ARC'S ENTRY, its own
+    // hold-repeat, no hold twin, no barrel. ITS HOVER IS ARC'S ONE HOVER FILL
+    // (architect 2026-11-24: "It's the only one that's button shaped next to
+    // the buttons that do have hovers"): under the hovering pen, where its
+    // press would act, the entry's fill fades to `key_hover_face` over 200 ms
+    // and back, the ring, the number and the line unchanged — Arc's entry has
+    // no `:hover`, and `button:hover` and `scale slider:hover` share that one
+    // fill (AppState::FaceFades, the owner; materials.h's THE HOVER). THE
+    // FACE: ARC'S ENTRY, its own
     // box a run gap after the row's third group (architect 2026-11-19;
     // paint_level_case), THE LEVEL ITS ENTRY PROGRESS — a 2 W line of the
     // accent along its foot inside the border from the left over t of the
@@ -2246,17 +2253,16 @@ enum class RedesignButton {
     // its order at finish_level_press_release. THE CASE GREYS
     // with no folder the `noise` key names or a failed load
     // (GuiNoise::available), and with the roster's blanket greys (no audio to
-    // dispatch on, a standing overlay), which it takes like every key: its
-    // fill in the disabled key ink and its number in the dim text tone (his
-    // pick, 2026-11-05, paint_level_case), the face unchanged, the
-    // slider inert.
+    // dispatch on, a standing overlay), which it takes like every key: no
+    // level line and its number in `entry_dim_text` (paint_level_case), the
+    // entry's fill and ring unchanged, no hover, the slider inert.
     // IT IS DEVICE STATE, NOT THE PIECE, and LIVE
     // on a locked tab, under grid iterations and in the `h` view (no chord,
     // so no allowlist walk reaches it: its arms at redesign_button_enabled
     // and history_mode_refuses_button_chord state it outright); under a
     // standing overlay it is dead as every roster key but the opener and
-    // the tooltip lamp, and wears the disabled look there — the fill
-    // `key_dim_ink`, the number `text_dim` — the press reading that painted
+    // the tooltip lamp, and wears the disabled look there — no line, the
+    // number `entry_dim_text` — the press and the hover reading that painted
     // bit (the inherited rule, redesign_button_enabled's overlay arm). THE
     // NOISE
     // LEVEL IS THE BED'S ONE SWITCH (noise.h's head): above -inf the bed
@@ -2873,7 +2879,9 @@ inline constexpr bool redesign_button_in_transport_row(RedesignButton b) {
 // (AppState::ChromePress's Level kind) and not by a chord. ITS READERS: the
 // top icon row's painter (paint_icon_row forks to paint_level_case and skips
 // the glyph), the row's press claim (arm_level_case_press, asked where
-// arm_redesign_press found no chord row), the `h` view's chord walk
+// arm_redesign_press found no chord row) and the hover's walk in the same
+// order (GuiInputHandler::hover_face_under_pointer, architect 2026-11-24),
+// the `h` view's chord walk
 // (history_mode_refuses_button_chord: LIVE, no chord to refuse) and the
 // chord table's static_assert (kToolbarChords covers the roster less this
 // one). The membership is this predicate's alone.
@@ -6804,7 +6812,8 @@ struct AppState {
     //     own) — found by the press's own hit (a roster key's box less its
     //     seam, RedesignButtonFace::contains — the bottom left's timestamp, a
     //     time label, presses nothing and so hovers nothing, architect
-    //     2026-11-20; a dialog
+    //     2026-11-20; NOISE's entry its published box, the level case's
+    //     arm's own hit, architect 2026-11-24; a dialog
     //     button's box less its seam, the keyboard's key_at, the knob's disc
     //     as painted), under no card.
     // EVERY LEAVE FADES OUT, as Arc's does when the pointer leaves the
@@ -6862,8 +6871,16 @@ struct AppState {
     // says: into greyed 200 ms, a lit key into lit-and-inert 50 ms, and back
     // when the modal leaves (rest 200, lit 50), each from the picture on
     // screen; no page paints a roster key's look at once for being under a
-    // veil. Not faces at all:
-    // NOISE's entry and its level line, the title bar's lamps,
+    // veil. NOISE'S ENTRY IS A ROSTER FACE OF TWO LOOKS, Rest and Hover
+    // (architect 2026-11-24; paint_level_case): its painter resolves Hover
+    // where it is painted enabled and is the hovered face, Rest in every
+    // other state — its disabled fill is the resting one, so a greying
+    // starts no fade of its own and a hovered entry going dead fades out
+    // over 200 ms — and no press turns it toward the accent (its arm is the
+    // Level kind, never press_face or hold_face: a slider has no press
+    // face), so a press's leave fades it out as every face's does. Its fill
+    // alone mixes; its number and its level line are no face. Not faces at
+    // all: the title bar's lamps,
     // the trim bar, the cards, the tooltips, the time labels, the title bar,
     // a marker's stem and the canvas's lines (the hover line is its own,
     // AppState::HoverLine).

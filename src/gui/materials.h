@@ -126,8 +126,13 @@
 // CSS line 136; its line of kArcDarkTones), THE BORDER, THE DRAWING AND THE WORD
 // UNCHANGED — on a key of both icon rows and of the controls rows, a word
 // button (a question's answers among them), an
-// on-screen keyboard key, and the scrub's
-// knob's fill inside its unchanged rim (Arc's scale slider:hover). IN A
+// on-screen keyboard key, the scrub's
+// knob's fill inside its unchanged rim (Arc's scale slider:hover), and
+// NOISE's entry's fill inside its unchanged ring, its number and its level
+// line unchanged (architect 2026-11-24: Arc's entry has no `:hover`, and
+// every control of Arc's that is pressed or dragged hovers in this one fill,
+// `button:hover` and `scale slider:hover` alike; NOISE is drawn as an entry
+// and worked as a slider and a toggle; paint_entry's `face`). IN A
 // LINKED GROUP THE SEAM COLUMN ON EACH SIDE OF THE HOVERING KEY WEARS THE
 // BORDER TONE `well_border` between the border's rows (measured on his
 // desktop, a linked pair and a message dialog's answers: the seam shows the
@@ -184,7 +189,9 @@
 // alone, no glyph"; paint_word_button): each its own ring, the same states,
 // the word `text`, `text_on_lit` lit, `text_dim` disabled. NOISE and the
 // value sub-page's field are Arc's entry (paint_entry), NOISE's level its
-// progress line, the sub-page's its focus line (Arc's entry:focus); THE
+// progress line and its fill hovering as a key's face does (THE HOVER above,
+// architect 2026-11-24), the sub-page's its focus line (Arc's entry:focus)
+// and no hover; THE
 // MARKER LANE'S EDITORS are GTK's in-place cell editor, the entry's fill in
 // a one-W accent border (render.h's EDITING paragraph); THE TIME FIELDS are
 // plain text pressing nothing (architect 2026-11-19 / 2026-11-20;
@@ -252,7 +259,8 @@
 // palette's `waveform_canvas`), its stereo divider the lines' tone. Every
 // number at its line of kArcDarkTones (gui_theme.h).
 // ARC'S ENTRY (NOISE's case, the value sub-page's field; paint_entry below):
-// the ruler's — the canvas's — tone in a one-W `well_border` ring; the
+// the ruler's — the canvas's — tone in a one-W `well_border` ring (NOISE's
+// fill `key_hover_face` under the hovering pen, THE HOVER above); the
 // marker lane's cell editor the same fill in the accent's square border.
 //
 // THE TRIM BAR'S TWO TONES (render_trim_flags): `trim_bar_face`, the trough,
@@ -477,6 +485,15 @@ inline GuiColor key_ring_tone(FaceLook l) {
     const GuiPalette& p = palette();
     return l == FaceLook::Disabled ? p.key_dim_border : p.well_border;
 }
+// THE FILL OF ARC'S ENTRY BY LOOK (paint_entry; the head's THE HOVER):
+// `key_hover_face` hovered (NOISE's entry under the hovering pen, architect
+// 2026-11-24: Arc's one hover fill for a control pressed or dragged), the
+// entry's own `ruler_face` in every other look — its ring, its print and
+// its progress line are the same in every look.
+inline GuiColor entry_fill_tone(FaceLook l) {
+    const GuiPalette& p = palette();
+    return l == FaceLook::Hover ? p.key_hover_face : p.ruler_face;
+}
 
 // THE INK OF A KEY'S DRAWING for its state, the compiled row's sRGB word
 // (the glyph road takes the word, icons::draw_glyph): `text` at rest,
@@ -656,7 +673,13 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 // sub-page's entry, which holds the focus for as long as it stands —
 // Arc's entry:focus) AN INNER ONE-W LINE OF THE
 // ACCENT `cue` on all four sides inside the ring: the padding box in the
-// accent, the fill one W further in over it (its corners one W less). Every
+// accent, the fill one W further in over it (its corners one W less). THE
+// FILL AS PAINTED (architect 2026-11-24, NOISE's hover): `face` the entry's
+// FaceMix (AppState::FaceFades::as_painted, the one owner), the fill
+// mix_looks of entry_fill_tone — `key_hover_face` by its Hover weight over
+// `ruler_face` — the ring and the progress line unmixed; the default, Rest
+// alone, is the plain `ruler_face`, byte for byte (the value sub-page's
+// focused entry never hovers and passes none). Every
 // edge at exact coverage over the ground the caller laid; one stamp pass,
 // nothing drawn inside it; the text is the caller's.
 // ITS OWN LENGTHS, ARC'S (gtk3 CSS `entry`: min-height 28 px, padding 8 px
@@ -672,7 +695,8 @@ inline constexpr double kEntryHeightW   = 28.0;
 inline constexpr double kEntryPenW      = 9.0;
 void paint_entry(cairo_t* cr, const GuiRect& box,
                  std::optional<double> progress = std::nullopt,
-                 bool focused = false);
+                 bool focused = false,
+                 const FaceMix& face = FaceMix::of(FaceLook::Rest));
 
 // A POINT PRESSES A KEY EXACTLY WHERE THE KEY IS PAINTED (the head's THE
 // KEY; architect 2026-11-02: "ground is not a button"): `key` the

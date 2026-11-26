@@ -325,8 +325,14 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 // after it, ITS OWN BOX `entry` (noise_entry_w_px
 // wide, the key's height): THE ENTRY (materials.h's paint_entry: the canvas
 // tone in a one-W `well_border`, its corners 3 W) — NEVER LIT, NEVER PRESSED:
-// a slider shows its value (his "no press face on the cases", 2026-11-05) —
-// and THE LEVEL ON IT AS ARC'S ENTRY PROGRESS: a 2 W line of the accent
+// a slider shows its value (his "no press face on the cases", 2026-11-05);
+// HOVERED, ITS FILL ALONE (architect 2026-11-24): `face` the entry's
+// picture as painted (AppState::FaceFades::as_painted, its caller's, a
+// roster face of two looks, Rest and Hover), the fill `key_hover_face` by
+// its Hover weight over the entry's own (paint_entry; Arc's one hover fill
+// for a control pressed or dragged, materials.h's THE HOVER), the ring, the
+// number and the line unchanged in both looks — and THE LEVEL ON IT AS
+// ARC'S ENTRY PROGRESS: a 2 W line of the accent
 // along the entry's foot inside its border, from the left over t of the
 // inner width, cut by the inner corner, t the exact level's travel fraction
 // (level_travel_fraction, the square-law taper, app_state.h: 0 dB the whole
@@ -357,11 +363,12 @@ void paint_roster_group(cairo_t* cr, AppState& app, const GuiAudio& audio,
 // (GuiInputHandler::apply_level_case) — the per-tick comparator watches no
 // level — and the enabled edge is the comparator's as every key's.
 void paint_level_case(cairo_t* cr, const GuiRect& entry, bool enabled,
-                      double level_db) {
+                      double level_db, const FaceMix& face) {
     if (entry.w <= 0 || entry.h <= 0) return;
     const double t = std::clamp(level_travel_fraction(level_db), 0.0, 1.0);
-    paint_entry(cr, entry, enabled && t > 0.0 ? std::optional<double>(t)
-                                              : std::nullopt);
+    paint_entry(cr, entry,
+                enabled && t > 0.0 ? std::optional<double>(t) : std::nullopt,
+                /*focused=*/false, face);
     const GuiFont font = gui_font(GuiFace::Body);
     const text_shape::SharedRun run =
         text_shape::memoized_run(font, format_level_db_face(level_db));
@@ -1607,7 +1614,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // face (architect 2026-11-20; paint_roster_group's hover span, the rule
     // AppState::FaceFades's); THE LEVEL CASE its own painter
     // (paint_level_case: Arc's entry, the level its progress line, never lit,
-    // never pressed, never hovered). The pointer walk finds the tooltip's
+    // never pressed, its fill alone hovered, architect 2026-11-24). The
+    // pointer walk finds the tooltip's
     // button (recompute_redesign_button_hover).
     // THE DISABLED FACE (the truthful-buttons ruling): a key greys wherever
     // its press would be a no-op, and WHICH KEYS WEAR IT is
@@ -1760,6 +1768,12 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             // rect, the hit box (no seam: it is no linked key) and the
             // damage — its own painter (paint_level_case: the entry, the
             // level's progress line and its number, no lit or press look).
+            // ITS HOVER (architect 2026-11-24): a roster face of two looks,
+            // Hover where it is painted enabled and is the hovered face, else
+            // Rest — the disabled entry's fill is the resting one, so a
+            // greying starts no fade of its own — its picture as painted the
+            // one owner's (AppState::FaceFades::face_as_painted), which
+            // begins the fade of a look that moved.
             const RedesignButton id = RedesignButton::IconNoiseLevel;
             const GuiRect entry{x, btn_y, noise_entry_w_px(), icon_case_h_px()};
             if (entry.x + entry.w > left_limit) {
@@ -1768,9 +1782,20 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
             } else {
                 AppState::RedesignButtonFace& face = publish_button_face(
                     cr, app, audio, playback, target_render, id, entry, entry);
-                if (clip_meets(cr, entry))
-                    paint_level_case(cr, entry, face.enabled,
-                                     app.device_config->noise_level);
+                if (clip_meets(cr, entry)) {
+                    using FaceFades = AppState::FaceFades;
+                    const FaceFades::Face hover_face{
+                        FaceFades::Surface::Roster, redesign_button_index(id)};
+                    const FaceLook look =
+                        face.enabled && app.face_fades.hovered == hover_face
+                            ? FaceLook::Hover
+                            : FaceLook::Rest;
+                    paint_level_case(
+                        cr, entry, face.enabled,
+                        app.device_config->noise_level,
+                        app.face_fades.face_as_painted(hover_face, entry, look,
+                                                       /*exposed=*/true));
+                }
             }
             x += entry.w + seats.gap;
         }

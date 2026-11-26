@@ -95,9 +95,11 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face) {
 }
 
 void paint_entry(cairo_t* cr, const GuiRect& box,
-                 std::optional<double> progress, bool focused) {
+                 std::optional<double> progress, bool focused,
+                 const FaceMix& face) {
     if (box.w <= 0 || box.h <= 0) return;
     const GuiPalette& p = palette();
+    const StampTone fill = mix_looks(face, entry_fill_tone);
     const double b  = static_cast<double>(key_border_px());
     const double R  = static_cast<double>(key_corner_px());
     const double r  = static_cast<double>(key_inner_corner_px());
@@ -111,9 +113,9 @@ void paint_entry(cairo_t* cr, const GuiRect& box,
         pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, p.cue);
         const double r2 = std::max(0.0, r - b);
         pass.rounded_rect(x0 + 2 * b, y0 + 2 * b, x1 - 2 * b, y1 - 2 * b, r2,
-                          r2, p.ruler_face);
+                          r2, fill);
     } else {
-        pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, p.ruler_face);
+        pass.rounded_rect(x0 + b, y0 + b, x1 - b, y1 - b, r, r, fill);
     }
     pass.rounded_ring(x0, y0, x1, y1, R, b, p.well_border);
     if (progress && *progress > 0.0) {

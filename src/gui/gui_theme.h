@@ -192,7 +192,11 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // `button:hover { background-color: #505666; }`, MEASURED ON HIS DESKTOP
     // too (the word button B2b and the linked pair C2d, 2026-11-20)
     // (architect 2026-11-18: "lets go arc truthful re: hoevers"; materials.h's
-    // THE HOVER).
+    // THE HOVER); AND NOISE's ENTRY's FILL, over the entry's `ruler_face`
+    // (architect 2026-11-24; paint_entry): Arc's entry has no `:hover`, and
+    // its pressed or dragged controls hover in this one fill — for this use
+    // `scale slider:hover { background-color: #505666; }`, the slider's
+    // knob.
     .key_hover_face = 0x505666,
     // A LIST ROW UNDER THE HOVERING PEN: Arc's `row.activatable:hover {
     // background-color: rgba(255, 255, 255, 0.03); }` over the list's view
