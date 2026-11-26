@@ -110,15 +110,17 @@ bool GuiAbAudition::other_tab_launch_ready() const {
 // no tab switch is refused under a lit lamp, into a locked tab included,
 // architect 2026-10-13.) THE DEVICE TERM IS A
 // READ,
-// NEVER A REOPEN, AND THE READ IS THE NEVER-CAME-UP HALF (2026-09-02, the
-// truthful-buttons rule): start() asks ensure_device_available_for_play,
+// NEVER A REOPEN, AND THE READ IS THE NEVER-CAME-UP HALF OR THE PENDING
+// DEVICE (2026-09-02, the truthful-buttons rule; pending, architect
+// 2026-11-26): start() asks ensure_device_available_for_play,
 // which reopens a dead AAudio stream and cards only when that fails, so this
-// asks device_absent — the one state a press cannot change — and the face
+// asks device_absent_or_pending — the states under which a press plays
+// nothing — and the face
 // agrees with the act (space_launch_would_play's plain term reads the same).
 bool ab_audition_preflight_ok(const AppState& app, const GuiAudio& audio,
                               const GuiPlayback& playback,
                               const GuiTargetRender& target_render) {
-    if (playback.device_absent()) return false;
+    if (playback.device_absent_or_pending()) return false;
     return active_tab_launch_ready_impl(app, audio, playback, target_render,
                                         app.playhead_cursor_sample) &&
            other_tab_launch_ready_impl(app, audio, playback, target_render);
@@ -165,13 +167,15 @@ void GuiAbAudition::start() {
     // that one too, which is exactly the "a refused act moves nothing"
     // promise the gates below are here to keep. It is not a per-tab fact
     // (nothing will sound on either), so it is asked once, before the pair is
-    // read at all. The sentence is the launch body's own literal, spelled
-    // once at playback_lifecycle.h; this arm returns, so the belt down there
+    // read at all. The sentence is the launch body's own, the chooser's
+    // (playback_device_refusal_card, playback_lifecycle.h: the pending
+    // device's where the reopen overran its bound or met a device job in
+    // flight); this arm returns, so the belt down there
     // never adds a second card to the press (its reopen finds the stream this
     // one opened).
     if (!playback.ensure_device_available_for_play()) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             kPlaybackDeviceUnavailableCard);
+                             playback_device_refusal_card(playback));
         return;
     }
     const char home  = app.active_tab_view;
@@ -364,13 +368,16 @@ void GuiAbAudition::fire_if_due() {
     // app_state.h): every clear the interrupt owes runs there, exactly as it
     // does for bare Space's stop, and the tab is left where the act had it —
     // an interruption never returns to the home tab. The card is the launch
-    // gate's own sentence, so a device lost mid-act and a device that was
-    // never there say the same thing. It fires ONCE: the stop body puts the
+    // gate's own sentence, through the gates' chooser
+    // (playback_device_refusal_card), so a device lost mid-act and a device
+    // that was never there say the same thing, and a device pending — no
+    // stream adopted, device_unavailable true — says it is not answering.
+    // It fires ONCE: the stop body puts the
     // phase to Idle, so the next tick returns at the compare above.
     if (playback.device_unavailable()) {
         playback_lifecycle.stop_playback_if_playing();
         notifications.notify(AppState::NotificationClass::Normal,
-                             kPlaybackDeviceUnavailableCard);
+                             playback_device_refusal_card(playback));
         return;
     }
     // Past here the act is resting or not, and the clock is read only for a

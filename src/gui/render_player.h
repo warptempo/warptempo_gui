@@ -893,7 +893,9 @@ private:
     // item's folder list and its place in it. `tapped` is true on the row
     // tap's own play alone (open_row's), which seats no band and scrolls
     // nothing; every other play brings the item's row into view. Returns
-    // whether it played; a refusal has raised its card and changed nothing.
+    // whether it bound the item — playing, or over a pending device resting
+    // PAUSED at its start (rest_if_launch_pending); a refusal has raised its
+    // card and changed nothing.
     bool play_wav(const std::filesystem::path& path,
                   const std::vector<AppState::FolderOverlayRow>& folder_wavs,
                   int index, bool tapped);
@@ -907,8 +909,17 @@ private:
     // THE RESUME ROAD'S ONE LAUNCH: the item LIVE from `from` to its end, the
     // row damaged and the head unit told. Its two callers have already
     // chosen `from` and passed their guards: resume() through the PLAY key's
-    // end rule, resume_at() through the live seek's clamp.
+    // end rule, resume_at() through the live seek's clamp. Over a pending
+    // device it rests PAUSED at `from` instead (rest_if_launch_pending).
     void play_live_from(int64_t from);
+    // A LAUNCH OVER A PENDING DEVICE RESTS WHERE IT WAS TO START (architect
+    // 2026-11-26; the rule and why the read is race-free at the definition):
+    // asked right after each play() of this file, with the transport LIVE.
+    // Pending, the resume point is written at `at`, the one stop body parks
+    // the transport at PAUSED (its fork damages the row and tells the head
+    // unit) and "Sound device is not answering" is carded once; answers
+    // whether it rested. Not pending, it does nothing.
+    bool rest_if_launch_pending(int64_t at);
     // The natural end: the fence through the one stop body, then — with the
     // REPEAT ONE lamp lit — the item again from its start (the sanctioned
     // exception at the head of this file), else the shared forward step
@@ -970,8 +981,10 @@ private:
     // callers are the
     // decode road's refusals (the probe's, the allocation ceiling's, the
     // read's, the rate-and-channel equality twice, "This wav holds no
-    // samples"), "No audio device to play the wav" and the opener's
-    // "Nothing to play: no renders under tmp/" — every one a
+    // samples"), "No audio device to play the wav", the pending device's
+    // sentence (kPlaybackDeviceNotAnsweringCard: a launch over a pending
+    // device, rest_if_launch_pending, and the tick's no-device arm) and the
+    // opener's "Nothing to play: no renders under tmp/" — every one a
     // sentence answering an act, none a state. A thin call, so the player's
     // refusals stay one grep.
     void status(const std::string& line);

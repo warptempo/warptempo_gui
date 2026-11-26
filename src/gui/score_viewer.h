@@ -402,9 +402,10 @@ inline bool score_viewer_skip_actionable(const AppState& a,
 // where NEITHER form would move the cursor (the roster skips' twin rule,
 // playhead_end_jump_actionable asked of both forms) — BACK at the range's
 // first frame, FWD at its end (LIVE, its last two frames); PLAY / PAUSE
-// until the soundtrack is loaded, on a device that never came up
-// (GuiPlayback::device_absent, the render player's own term: a press reopens
-// one that went away), and while the engine is not yet the viewer's under a
+// until the soundtrack is loaded, on a device that never came up or is
+// pending (GuiPlayback::device_absent_or_pending, the render player's own
+// term: a press reopens one that went away), and while the engine is not
+// yet the viewer's under a
 // render run (the head's THE OPEN); START at the range's first page, END at
 // its last, RESET when the range already is every page, all three under the
 // lock. The act asks the same.
@@ -425,7 +426,9 @@ inline bool score_viewer_button_enabled(const AppState& a,
                    score_viewer_skip_actionable(a, playback, forward, true);
         }
         case Act::PlayPause:
-            if (!a.score_audio.ready() || playback.device_absent()) return false;
+            if (!a.score_audio.ready() ||
+                playback.device_absent_or_pending())
+                return false;
             return a.score_viewer.transport !=
                        AppState::ScoreViewer::Transport::Idle ||
                    !load_in_place_render_blocked(a);
@@ -733,8 +736,8 @@ struct GuiScoreViewer {
     // THE PAUSE: LIVE parks at PAUSED through the one stop body, the cursor
     // kept, its page shown and the frame written; a no-op at rest. Its
     // callers are toggle_play, the scrub's press (architect 2026-10-26:
-    // the sound pauses while the scrub is held) and the tick's dead
-    // device.
+    // the sound pauses while the scrub is held), the tick's dead device and
+    // a live reseek over a pending device (seek_to, range_changed).
     void pause();
     // THE PLAY: the engine bound to the soundtrack where it is not yet, and
     // [the cursor, the range's end) played once — from the range's first
@@ -811,8 +814,16 @@ private:
     // THE RESUME ROAD'S ONE LAUNCH: the soundtrack LIVE from `from` to the
     // range's end, the page following, the row damaged. Its two callers have
     // chosen `from` and passed their guards: play() through the PLAY key's
-    // end rule, play_from() through the live seek's clamp.
+    // end rule, play_from() through the live seek's clamp. Over a pending
+    // device it rests PAUSED at `from` instead, the card said
+    // (rest_at_pending_launch; the rule at the definition).
     void play_live_from(int64_t from);
+    // A LAUNCH OVER A PENDING DEVICE, AT REST AT `at` (architect 2026-11-26):
+    // the position written, its page shown, the frame written through, the
+    // row damaged and "Sound device is not answering" carded once. The
+    // transport is PAUSED when it runs: play_live_from never marks it LIVE,
+    // and the live reseeks (seek_to, range_changed) take pause() first.
+    void rest_at_pending_launch(int64_t at);
     // The natural end: the fence through the one stop body, the rest at the
     // range's end, written.
     void on_natural_end();

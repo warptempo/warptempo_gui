@@ -232,8 +232,10 @@ void GuiTargetRender::trigger() {
     // CONDITIONAL — they are the freeze's own quiescence work, which only a
     // live session owes — while the clear above is not. A session that has
     // reached its NATURAL END reads false here and owes no fence: the
-    // callback is in its silence arm, the terminal's release orders its last
-    // buffer reads before a swap (rebind_buffer's own acquire), and the
+    // callback that committed the terminal is past its last read of the
+    // bound buffer — it may still be mixing the noise and clipping that
+    // block — and the terminal's release, read by is_playing()'s acquire
+    // (and rebind_buffer's own), orders its buffer reads before a swap; the
     // tick's natural-end branch tears the scanner down.
     if (playback.is_playing()) {
         playback.stop();

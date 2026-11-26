@@ -49,8 +49,9 @@
 //      release_device, architect 2026-11-26), so the bed resumes at the
 //      release's end on a fresh segment with the fade-in;
 //   2. EVERY REOPEN — reopen_stream_if_dead's dead arm, and launch_window's
-//      post-publish dead arm (playback_aaudio.cpp), ahead of the
-//      close_stream that clears the latch: a press that reaches the device
+//      post-publish dead arm (playback_aaudio.cpp's close_dead_stream),
+//      ahead of the device job's post, which clears the latch: a press that
+//      reaches the device
 //      before the tick (on Android input drains ahead of the tick) — a Play
 //      press, an audition start, THE CAR'S PLAY at a Bluetooth connect —
 //      resets the sequence there, so the old sequence never resumes
@@ -208,9 +209,10 @@ struct GuiNoiseBank {
 // callback — so a main thread that has read the latch (acquire, through
 // GuiPlayback::stream_dead or the reopen's own load of `stream_dead`) is the
 // ONE thread that can touch these fields until a reopen starts a new
-// callback thread; and every reopen is the main thread's own
-// (reopen_stream_if_dead, playback_aaudio.cpp), ordered after that write by
-// program order and before the new thread by its start.
+// callback thread; and every reopen is a device job the main thread posts
+// (reopen_stream_if_dead, playback_aaudio.cpp: the worker opens and starts
+// the stream), posted after that write by program order, the new thread
+// started by the job after its post.
 // THE SECOND EXCEPTION — THE MAIN THREAD BEHIND THE IN_FILL FENCE
 // (2026-10-28, GuiNoise::release_bank, the body change_folder and
 // release_if_silent share): with `bank` stored null and `in_fill` read false
@@ -273,12 +275,12 @@ void noise_mix_block(GuiNoiseVoice& voice, float* const* channel_buffers,
 // off voice's fade tail never plays after the reopen; the bed resumes at
 // the next reopen by his ruling. PRECONDITION:
 // THE STREAM IS DEAD, READ THROUGH THE LATCH ON THIS THREAD JUST BEFORE THE
-// CALL; no fill runs, and the reopen that follows is this thread's own — the
-// first exception at GuiNoiseVoice. Idempotent. Two callers:
+// CALL; no fill runs, and the reopen that follows is this thread's own to
+// post — the first exception at GuiNoiseVoice. Idempotent. Two callers:
 // GuiNoise::reset_on_dead_stream (the poll) and playback_aaudio.cpp's reset
-// ahead of a dead stream's close (the reopen). NOT at every close_stream: a
-// project switch and the shutdown close a live stream, and the bed survives
-// those (the thread note's last paragraph).
+// ahead of a dead stream's close (close_dead_stream: the reopen). NOT at
+// every close: a project switch and the shutdown close a live stream, and
+// the bed survives those (the thread note's last paragraph).
 void noise_voice_reset_on_dead_stream(GuiNoiseVoice& voice);
 
 // THE MAIN THREAD'S OBJECT — ONE FOR THE APP, owned by gui_main (main.cpp),

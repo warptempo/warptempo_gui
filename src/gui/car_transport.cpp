@@ -60,7 +60,11 @@ void GuiCarTransport::on_media_command(GuiMediaCommand cmd) {
             // render player's own arm answers ahead of its prompt guard for
             // that same reason, so both car roads answer a connect alike. The
             // answer is IGNORED: a console key is not a deliberate press at
-            // the glass, so a failed reopen raises no card; the next real
+            // the glass, so a failed reopen raises no card, nor does one
+            // that overruns its bound and leaves the device pending
+            // (architect 2026-11-26; GuiPlayback::device_pending — the
+            // screen waits for Android at most one second here, the car's
+            // connect being where its audio stalls); the next real
             // press meets the launch gates and cards there. A dead stream's
             // reopen here RESUMES AN AUDIBLE NOISE BED on the new route with
             // a fresh segment (2026-11-05, the route drop's reading;
