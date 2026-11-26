@@ -34,9 +34,11 @@
 // Bluetooth, and the Keep Alive prevents that"). Over the car's Bluetooth link
 // every play on a stopped-and-restarted stream stutters throughout, while a
 // stream that is started once and kept running is clean. The backend starts the
-// stream ONCE, at open (init, and the reopen after a disconnect), and stops it
-// only where the stream is about to be CLOSED: shutdown, and the dead-stream
-// reopen. Both live in close_stream, which holds the file's ONE requestStop
+// stream ONCE, at open (init, and the reopen after a disconnect or a
+// release), and stops it
+// only where the stream is about to be CLOSED: shutdown, the dead-stream
+// reopen and RELEASE (below). All live in close_stream, which holds the
+// file's ONE requestStop
 // call. `start_stream` is idempotent on `started`, so the
 // three sites that call it — init's own, the launch gate's
 // (ensure_device_available_for_play, where a reopened stream's start is what
@@ -54,8 +56,10 @@
 // player's rest does not stop the stream either. What the head unit makes of a
 // stream that runs while the session says paused (a running stream the
 // Bluetooth link reads as an active player) is therefore the PUBLISH side's business
-// (GuiRenderPlayer::publish_media_state), and the device is never touched
-// between plays by any road. THE STREAM STARTED PER PLAY ON THE ORDINARY PATH
+// (GuiRenderPlayer::publish_media_state), and no TRANSPORT road touches the
+// device between plays: play and stop leave it as it is. (The one other act
+// on it at rest is the RELEASE lamp's, below: its press closes the stream and
+// its three ends reopen it, architect 2026-11-26.) THE STREAM STARTED PER PLAY ON THE ORDINARY PATH
 // (the mixer's own start and stop, as a media player's) IS RULED OUT
 // (2026-11-26, on his test in the car: "I just tried YouTube, and after about
 // 10 seconds that crackling would come back ... it's not a viable option").
@@ -72,9 +76,31 @@
 // voices are quiet. The running stream costs the tablet a few mW of an
 // already screen-on device, which is the price the architect accepted for the
 // car's clean stream.
+// THE KEEP-ALIVE HOLDS THE STREAM RUNNING BETWEEN PLAYS BUT WHILE RELEASE IS
+// LIT (architect 2026-11-26: "the silent stream is there hiding, and we're
+// actually disabling the hidden"; "Okay to build the keep alive
+// suppression"). In the car the Bluetooth codec is switched once a drive
+// (Developer options, HD audio off), and the head unit refuses that switch
+// on a link that is streaming — which, with this stream kept running, it
+// always is. The top icon row's RELEASE lamp (RedesignButton::IconRelease)
+// closes the stream ON PURPOSE: the act (GuiPlayback::release_device) is the
+// dead-stream state below entered by choice — the latch, the rate 0, the
+// playing bit down, no stream — plus the one fact `suppressed`, the lamp.
+// THE FIRST OF THREE ENDS IT, and that reopen restarts the keep-alive with
+// the stream: the app's return from another screen (GuiPlaybackLifecycle::
+// note_window_activation), a play — any road that reopens a dead stream:
+// the launch gates, the car's Play, NOISE's wake, the render player's and
+// the score viewer's play — and a second press on the lit lamp. No timer.
+// The fact is cleared in the one body every reopen runs
+// (reopen_stream_if_dead), a refused reopen included. NOT A STANDING MODE
+// AND NOT A POWER CONTROL: between the release and its end the device is
+// simply absent, and once it ends the stream runs between plays as ruled.
+//
 // THE TABLET'S IDLE DRAIN IS THIS RUNNING STREAM, KNOWN (architect 2026-09-29,
 // closing the power exploration): he closes the app when he is done, and no
-// Car Mode lamp, idle timer or power cap is built or re-proposed. (A
+// Car Mode lamp, idle timer or power cap is built or re-proposed (RELEASE
+// above is none of the three: it idles the car's link for one switch, and the
+// stream per play stays ruled out). (A
 // step-shaped click at the START of a play, from the render body beginning
 // mid-waveform at whatever sample value sits there with no ramp, belongs to the
 // render body and not to the device stream, and is untouched here.)
@@ -84,6 +110,8 @@
 //   * MAIN owns the stream handle outright — every AAudio call in this file
 //     (open, requestStart, getState, requestStop, close) is made from
 //     init/ensure_device_available_for_play/play/stop/shutdown and from
+//     release_device (requestStop and close) and end_device_release (open
+//     and start: the second press and the window's return) and from
 //     nowhere else. There is no mutex and none is needed: no other thread
 //     reads `stream`.
 //   * The DATA CALLBACK thread runs the engine's render body and touches
@@ -94,6 +122,10 @@
 //     detached thread because it does not close there at all — the next
 //     launch press or NOISE's wake (ensure_device_available_for_play) or
 //     play() closes the dead stream on the main thread and reopens.
+//   * THE RELEASE (release_device) is MAIN's alone too: it closes the stream
+//     through close_stream after stop()'s fence, and writes the latch and
+//     `suppressed` only once AAudioStream_close has joined the callback
+//     thread, so no other thread is alive to race those writes.
 
 namespace {
 
@@ -153,8 +185,21 @@ struct GuiPlayback::Impl {
     // CLOSED, not a per-play bit (the lifecycle block at the head).
     AAudioStream* stream       = nullptr;
     bool          started      = false;
-    // init() bound a source AND opened a device. play()/stop() gate on it.
+    // init() bound a source AND opened a device — or came up RELEASED (the
+    // seated lamp, init's own arm), the stream then reopened at the first
+    // press as after a drop. play()/stop() gate on it.
     bool          device_ready = false;
+    // THE KEEP-ALIVE SUPPRESSED (architect 2026-11-26; the lifecycle block's
+    // RELEASE paragraph): true from release_device until the first reopen
+    // attempt (reopen_stream_if_dead, its one clearer, which logs the ender).
+    // MAIN THREAD ONLY: one writer of the set (release_device), one of the
+    // clear; read by device_released, the lamp's live fact. IT OUTLIVES
+    // shutdown() because init() begins with shutdown() and the open's seat
+    // runs before init, so the seat's fact must reach init's released arm;
+    // across a project switch it is carried by the device key `lit_lamps`
+    // (the lamp is the device's), this engine being per project
+    // (run_project's own GuiPlayback) and the next one seated afresh.
+    bool          suppressed   = false;
 
     // Written by the error callback, read by the main thread. `dead` is the
     // disconnect latch: the stream is finished and only a close-and-reopen can
@@ -403,16 +448,16 @@ bool start_stream(GuiPlayback::Impl& impl) {
 }
 
 void close_stream(GuiPlayback::Impl& impl) {
-    if (!impl.stream) {
-        impl.started = false;
-        return;
-    }
     AAudioStream* s = impl.stream;
     impl.stream = nullptr;
     impl.started = false;
     // Suspended for the engine the moment the device leaves (the error
     // callback's own clause), so a cursor read across the close holds.
     impl.state.output_rate.store(0, std::memory_order_relaxed);
+    // THE LATCH IS CLEARED WITH NO STREAM TOO: the released state is the
+    // latch over no stream (release_device), and its reopen's close here is
+    // what leaves a refused reopen the ordinary dead state — no stream, no
+    // latch — as it leaves a drop's.
     impl.stream_dead.store(false, std::memory_order_relaxed);
     impl.stream_error.store(0, std::memory_order_relaxed);
     // The underrun counter belongs to the STREAM: the next one opens at zero
@@ -422,9 +467,10 @@ void close_stream(GuiPlayback::Impl& impl) {
     // dead-stream reopen closes ahead of its open — so this is the whole seed
     // a fresh stream needs.
     impl.xrun_at_launch = -1;
+    if (!s) return;
     // THE FILE'S ONE requestStop call, and it is here because the stream is
-    // being CLOSED (shutdown, or the dead-stream reopen) — never between
-    // plays. The
+    // being CLOSED (shutdown, the dead-stream reopen, or RELEASE,
+    // release_device) — never between plays. The
     // close is the stronger fence anyway: it blocks until the callback thread
     // is gone, which is what makes it safe on a stream this function may be
     // stopping while a callback is mid-flight.
@@ -560,9 +606,10 @@ void close_dead_stream(GuiPlayback::Impl& impl) {
 // whether a stream stands after it. Called at the head of the one launch road
 // (launch_window, which play() and play_loop() both forward to) — the
 // render player's road, which reaches play() with no gate ahead of it — and
-// by ensure_device_available_for_play, the reopen at the press (architect
-// 2026-09-02), whose callers are inventoried once at its declaration
-// (playback.h: the launch gates, the car's Play and NOISE's wake): before
+// by ensure_device_started, the body of ensure_device_available_for_play, the
+// reopen at the press (architect 2026-09-02), whose callers are inventoried
+// once at its declaration (playback.h: the launch gates, the car's Play and
+// NOISE's wake), and of end_device_release, the release's own ends: before
 // it the gates READ the latch ahead of play() and so never let play() reopen,
 // leaving the tablet mute behind the card after every route drop. A failed
 // reopen leaves playback disabled until the next press — no retry, no timer —
@@ -575,12 +622,51 @@ void close_dead_stream(GuiPlayback::Impl& impl) {
 // the drop — a press on either road — ends the old sequence instead of
 // resuming it mid-segment on the new stream; an audible bed starts a fresh
 // segment there, the reopen its resume.
-bool reopen_stream_if_dead(GuiPlayback::Impl& impl) {
+// IT ENDS A RELEASE (architect 2026-11-26; the lifecycle block's RELEASE
+// paragraph): the one body every reopen runs — the play's (launch_window's
+// head), the press's (ensure_device_started: the launch gates, the car's
+// Play, NOISE's wake) and the release's own two ends (the return and the
+// second press, GuiPlayback::end_device_release) — so `suppressed` is
+// cleared HERE, at the attempt, and the lamp cannot outlive it: a refused
+// open ends the suppression too (the user ended it) and leaves the ordinary
+// dead state. `ender` names the road in the one logcat line said at that
+// clear (the car test's evidence). The released state is the latch over no
+// stream (release_device), so the dead arm below takes it as a drop's: the
+// noise voice's sequence reset, the close (a no-op on the null stream but
+// for the latch it clears), the open.
+bool reopen_stream_if_dead(GuiPlayback::Impl& impl, const char* ender) {
+    if (impl.suppressed) {
+        impl.suppressed = false;
+        std::fprintf(stderr,
+            "warptempo_gui: Sound device release ended by %s; reopening the "
+            "stream, the keep-alive with it.\n", ender);
+    }
     if (impl.stream_dead.load(std::memory_order_acquire)) {
         close_dead_stream(impl);
     }
     if (!impl.stream && !open_stream(impl)) return false;
     return true;
+}
+
+// THE PLAY'S ENDER WORD (reopen_stream_if_dead's `ender`): every reopen at a
+// launch, a car's Play or NOISE's wake.
+constexpr const char* kReleaseEndedByPlay = "a play or a wake";
+
+// THE PRESS'S REOPEN AND ITS START, ONE BODY (the contract at
+// ensure_device_available_for_play, whose body this is): the press's road and
+// the release's two ends (end_device_release) share it, differing in the
+// ender word alone.
+bool ensure_device_started(GuiPlayback::Impl& impl, const char* ender) {
+    if (!impl.device_ready) return false;
+    reopen_stream_if_dead(impl, ender);
+    // A null stream (the reopen just failed) takes this arm too: start_stream
+    // answers false on it and close_stream closes nothing there.
+    if (!start_stream(impl)) {
+        close_stream(impl);
+        return false;
+    }
+    return !(impl.stream_dead.load(std::memory_order_acquire) ||
+             impl.stream == nullptr);
 }
 
 // THE UNDERRUN COUNT, SAID ONCE PER SESSION THAT HAD ONE (architect
@@ -654,6 +740,24 @@ bool GuiPlayback::init(int sample_rate, int channels, const float* samples,
                                     samples, total_frames, domain_offset)) {
         return false;
     }
+    // THE OPEN WITH RELEASE SEATED LIT (architect 2026-11-26: the sticky
+    // lamp, seated before this init by GuiInputHandler::seat_lit_lamps,
+    // which reaches release_device while no device stands): the engine
+    // comes up IN THE RELEASED STATE — bound, `device_ready`, NO STREAM
+    // OPENED, the latch up over no stream exactly as release_device leaves
+    // it — so nothing streams, the noise bed included, until the first of
+    // the release's three ends reopens through reopen_stream_if_dead, and
+    // every launch gate meets the state as it meets a drop. shutdown()
+    // above leaves `suppressed` standing; nothing runs, so this thread
+    // writes the latch alone.
+    if (impl_->suppressed) {
+        impl_->device_ready = true;
+        impl_->stream_dead.store(true, std::memory_order_release);
+        std::fprintf(stderr,
+            "warptempo_gui: Sound device released at the open: no stream "
+            "opened until a play, the app's return or a second press.\n");
+        return true;
+    }
     if (!open_stream(*impl_)) {
         playback_clear_binding(impl_->state);
         return false;
@@ -696,7 +800,7 @@ void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
     // of this call, and the two-case argument below rests on this check
     // standing at the head. A failed reopen returns silently: the gates have
     // carded, and the player's road reads device_unavailable at its tick.
-    if (!reopen_stream_if_dead(*impl_)) return;
+    if (!reopen_stream_if_dead(*impl_, kReleaseEndedByPlay)) return;
 
     // Publish FIRST, start SECOND: the command packet and the session word
     // that releases it are what the callback's acquire gate is waiting to
@@ -808,7 +912,8 @@ bool GuiPlayback::is_playing() const {
 //  - `device_ready` false — init() never opened a stream at all, or shutdown()
 //    has closed it; play() is its documented silent no-op;
 //  - the error callback's `stream_dead` latch — a device that went away under
-//    a running stream (a headphone pulled, a Bluetooth route dropped);
+//    a running stream (a headphone pulled, a Bluetooth route dropped), or the
+//    latch RELEASE raises over the stream it closed (release_device);
 //  - no stream standing with `device_ready` still true — what a REFUSED REOPEN
 //    leaves behind: the reopen (reopen_stream_if_dead, at a launch press or
 //    at play()'s head) closes a dead stream (clearing the latch) and returns
@@ -853,16 +958,60 @@ bool GuiPlayback::device_unavailable() const {
 // as the read does. The error callback may still fire between this reopen and
 // play()'s publish; play()'s own head check and its post-publish fence answer
 // that, unchanged.
+// The body is ensure_device_started's (above), shared with the release's two
+// ends; this road's ender word is the play's.
 bool GuiPlayback::ensure_device_available_for_play() {
-    if (!impl_ || !impl_->device_ready) return false;
-    reopen_stream_if_dead(*impl_);
-    // A null stream (the reopen just failed) takes this arm too: start_stream
-    // answers false on it and close_stream is a no-op there.
-    if (!start_stream(*impl_)) {
+    if (!impl_) return false;
+    return ensure_device_started(*impl_, kReleaseEndedByPlay);
+}
+
+// RELEASE (contract at the declaration; the lifecycle block's RELEASE
+// paragraph at the head of this file). THE SEQUENCE, ALL ON MAIN:
+//   1. stop() — the playing bit lowered (seq_cst) and THE FENCE: two counted
+//      callback invocations after the lowering, or a state that is itself a
+//      proof (STOPPED, terminal, the latch; fence_state_is_quiesced), so no
+//      callback is inside the bound buffer when it returns; the session's
+//      underrun line said as at any stop;
+//   2. close_stream — the file's one requestStop and AAudioStream_close,
+//      which returns only once the callback thread has left (the same close
+//      shutdown() and the dead-stream reopen use): the handle is freed with
+//      no callback alive, the error callback's included;
+//   3. the latch raised over no stream — the drop's state for every reader:
+//      device_unavailable true, stream_dead true (gui_main's poll resets
+//      the noise voice's sequence on it, no fill running), `output_rate` 0
+//      (close_stream's), the playing bit down (stop's) — and `suppressed`.
+// Over a stream already dead or absent (a drop, a refused reopen) the same
+// three run, the close closing what stands. With no device standing yet
+// (the open's seat, ahead of init: GuiInputHandler::seat_lit_lamps calls this
+// directly, a seat and no toggle) only the fact is set, and init comes up
+// released. ALREADY RELEASED, it does nothing — the seat's no-op and the
+// reason the seat can call it unconditionally on a lit word.
+void GuiPlayback::release_device() {
+    if (!impl_ || impl_->suppressed) return;
+    if (impl_->device_ready) {
+        stop();
         close_stream(*impl_);
-        return false;
+        impl_->stream_dead.store(true, std::memory_order_release);
+        std::fprintf(stderr,
+            "warptempo_gui: Sound device released: stream closed, the "
+            "keep-alive suppressed until a play, the app's return or a "
+            "second press.\n");
     }
-    return !device_unavailable();
+    impl_->suppressed = true;
+}
+
+// THE RELEASE'S OWN TWO ENDS (contract at the declaration): the press's
+// reopen and start with the end's word, no play.
+bool GuiPlayback::end_device_release(GuiDeviceReleaseEnd why) {
+    if (!impl_ || !impl_->suppressed) return false;
+    return ensure_device_started(
+        *impl_, why == GuiDeviceReleaseEnd::Return ? "the app's return"
+                                                   : "a second press");
+}
+
+// The lamp's live fact (contract at the declaration).
+bool GuiPlayback::device_released() const {
+    return impl_ && impl_->suppressed;
 }
 
 // THE FACE'S READ (contract at the declaration): the first of
@@ -874,7 +1023,9 @@ bool GuiPlayback::device_absent() const {
 }
 
 // THE DROP'S LATCH ALONE (contract at the declaration): the error callback's
-// `stream_dead`, set once per drop and cleared by the first reopen attempt
+// `stream_dead`, set once per drop (and by RELEASE over the stream it
+// closed, release_device and init's released arm) and cleared by the first
+// reopen attempt
 // (close_stream inside reopen_stream_if_dead) — never the null stream a
 // refused reopen leaves, which device_unavailable also counts.
 bool GuiPlayback::stream_dead() const {

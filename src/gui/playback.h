@@ -217,6 +217,12 @@ struct GuiBoundAudio {
     }
 };
 
+// THE RELEASE'S OWN TWO ENDS (architect 2026-11-26; GuiPlayback::
+// end_device_release): the app's return from another screen and a second
+// press on the lit lamp. The third end, a play, is every reopen's own and
+// takes no word here.
+enum class GuiDeviceReleaseEnd { Return, SecondPress };
+
 // A PLAY POSITION IN BOTH FORMS, of one observation (GuiPlayback::
 // position_at, where the contract is): the integer domain cursor and the
 // pre-truncation double it is the floor of.
@@ -238,7 +244,10 @@ public:
     // represents displayed-domain coordinate `domain_offset` (see the head
     // comment). Returns true on success. On failure, logs to stderr and
     // leaves the object in an un-initialised state where play() is a silent
-    // no-op.
+    // no-op. WITH RELEASE SEATED LIT (release_device below, called before
+    // this init) a success binds the source and opens NO stream: the engine
+    // comes up released, `device_ready` with the latch up, and the stream
+    // opens at the first of the release's three ends (architect 2026-11-26).
     bool init(int sample_rate, int channels, const float* samples,
               int64_t total_frames, int64_t domain_offset);
 
@@ -317,7 +326,9 @@ public:
     // normally within about two of the device's callback periods. THE DEVICE
     // COUNTS CALLBACK INVOCATIONS for that proof — the AAudio stream's data
     // callback keeps running (silent) between plays, the device staying live
-    // from init to shutdown, so two counted invocations after the session
+    // from init to shutdown but while released (release_device below, whose
+    // stream is gone and so has nothing to fence), so two counted
+    // invocations after the session
     // word's playing bit is
     // lowered prove the callback is out of the sample buffer (and a fill that
     // was in flight at the lowering can commit no terminal: its exchange
@@ -370,7 +381,8 @@ public:
     // true whenever this engine cannot produce sound, WHICHEVER WAY it cannot
     // — the device that went away under a live stream (the AAudio disconnect
     // latch, a headphone pulled or a Bluetooth route dropped, and the reopen
-    // that was refused after it) AND the device that never came up at all (an
+    // that was refused after it; RELEASE's closed stream reads as that
+    // latch, release_device below) AND the device that never came up at all (an
     // init that failed — no AAudio stream — after which
     // play() is the documented silent no-op). The two are ONE ANSWER because
     // they are one fact to every consumer: nothing will sound.
@@ -407,7 +419,8 @@ public:
 
     // THE DROP ITSELF (architect 2026-10-28, the noise voice's reset): the
     // error callback's `stream_dead` latch ALONE — true from a route drop
-    // under a live stream until the first reopen attempt closes that stream.
+    // under a live stream until the first reopen attempt closes that stream,
+    // and over RELEASE's closed stream the same (release_device below).
     // `impl_ && impl_->stream_dead` (acquire). THE LATCH HAS TWO MAIN-THREAD
     // READERS THAT RESET THE NOISE VOICE'S SEQUENCE (2026-10-28, noise.h's
     // head, the two roads; the sequence alone, 2026-11-05, the level
@@ -435,7 +448,7 @@ public:
     // would change nothing): `!impl_ || !impl_->device_ready` — the
     // `stream_dead` latch and
     // the null stream are NOT terms, being exactly what the press reopens.
-    // FOUR READERS: the two PLAY-face predicates
+    // FIVE READERS: the two PLAY-face predicates
     // space_launch_would_play and ab_audition_preflight_ok, the render
     // player's modal
     // Play/Pause face, whose arm in render_player_button_enabled takes this
@@ -443,7 +456,10 @@ public:
     // reopens, so the latch is exactly what a press repairs there too), and
     // the score viewer's Play face, the PlayPause arm of
     // score_viewer_button_enabled (score_viewer.h), which greys the key when
-    // the soundtrack is not ready or this answers true.
+    // the soundtrack is not ready or this answers true, and the RELEASE
+    // key's enabled arm in redesign_button_enabled (app_state.h), which
+    // greys it when this answers true: no stream to release and no end
+    // could reopen one (architect 2026-11-26).
     // Main thread only; a pure read.
     bool    device_absent() const;
 
@@ -459,9 +475,10 @@ public:
     // level case's lift over a dead stream), which plays nothing — the
     // reopen and the start are the whole act, the bed resuming through the
     // running callback — and cards alike. (The bed itself asks nothing:
-    // every press's reopen is the bed's resume, noise.h's head.) No
-    // road reopens without a
-    // press. It closes a dead stream — the noise voice's sequence reset
+    // every press's reopen is the bed's resume, noise.h's head.) NO ROAD
+    // REOPENS A ROUTE DROP WITHOUT A PRESS; the one reopen that runs with no
+    // press is a RELEASE's end at the app's return (end_device_release,
+    // architect 2026-11-26), which reopens only what the lamp closed. It closes a dead stream — the noise voice's sequence reset
     // first (close_dead_stream, noise.h's head) — and reopens a dead or null
     // one at the head — play()'s own
     // first two lines, hoisted here so a route that dropped (a headphone
@@ -482,8 +499,44 @@ public:
     // the player's road reaches play() with no gate ahead of it, and the
     // ordering argument at play()'s second latch read rests on the head
     // check standing there. Main thread only; non-const because it may open
-    // and start a device.
+    // and start a device. IT ENDS A RELEASE (device_released below): its
+    // reopen is the one body every reopen runs, which clears the fact.
     bool    ensure_device_available_for_play();
+
+    // RELEASE — THE KEEP-ALIVE SUPPRESSED (architect 2026-11-26; the rule,
+    // his reason and its three ends at playback_aaudio.cpp's lifecycle
+    // block). ONE MAIN-THREAD ACT: whatever plays is stopped through stop()
+    // and its fence, then the stream is CLOSED (the device's one close,
+    // which joins the callback thread) and the engine is left exactly as a
+    // drop leaves it for every reader — device_unavailable and stream_dead
+    // true, the playing bit down, no stream — plus the fact
+    // device_released answers. The GUI's own teardown (the scanner, a
+    // transport's state) is its caller's, who runs the one stop body first
+    // (GuiPlaybackLifecycle::toggle_device_release). A no-op while already
+    // released — which is what makes it THE SEAT as well as the key's act:
+    // the open's seat of the sticky lamp (GuiInputHandler::seat_lit_lamps)
+    // calls it directly, asking for the released state, never toggling.
+    // CALLED BEFORE init() (that seat) it closes nothing and init comes up
+    // released, opening no stream. THE THREE ENDS: any reopen
+    // (ensure_device_available_for_play above, play()'s head) and
+    // end_device_release below.
+    void    release_device();
+
+    // THE RELEASE ENDED BY THE APP'S RETURN OR THE LIT LAMP'S SECOND PRESS:
+    // ensure_device_available_for_play's own reopen and start, nothing
+    // published — the stream reopened and started, silence (and the bed)
+    // running, the keep-alive restored — its answer the same. A no-op
+    // answering false when nothing is released. Main thread only.
+    bool    end_device_release(GuiDeviceReleaseEnd why);
+
+    // IS THE KEEP-ALIVE SUPPRESSED — the RELEASE lamp's live fact: true from
+    // release_device until the first reopen attempt, a refused one included.
+    // Its readers: the tick's lamp settle (GuiInputHandler::
+    // settle_device_release_lamp, the face's mirror AppState::
+    // device_released) and the sticky lamps' writer (main.cpp's
+    // refresh_lit_lamps), and the return's watch (GuiPlaybackLifecycle::
+    // note_window_activation). Main thread only; a pure read.
+    bool    device_released() const;
 
     // THE POSITION AT A GIVEN TIME, BOTH FORMS FROM ONE OBSERVATION
     // (architect 2026-11-16, the beats: the scanner's position at its

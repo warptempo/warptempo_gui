@@ -79,6 +79,13 @@ namespace GuiKeys {
     // that editor it would be an unbound key — and the keyboard greys it
     // everywhere else (onscreen_keyboard::key_live).
     constexpr GuiKey Pass       = 0xff63;
+    // THE RELEASE LAMP'S INTERNAL CHORD (architect 2026-11-26; the key
+    // RedesignButton::IconRelease): no physical key and no on-screen
+    // keyboard key, so no X11 name; it rides XK_Pause's code, a keysym
+    // nothing else here names. Its ONE PRODUCER is the roster's lift
+    // (kToolbarChords), bare; its one meaning the release toggle
+    // (is_release_lamp_key below).
+    constexpr GuiKey Release    = 0xff13;
 }
 
 // THE HOLD DELAY (architect 2026-09-29) — 300 ms: how long a hand rests on a
@@ -614,6 +621,11 @@ constexpr bool chord_is_bound(GuiKey key, GuiInputState mods,
         // both modes: the lamp is chrome and the `h` view's allowlist admits
         // it. Every modified backslash is unbound.
         case GuiKeys::Backslash: return bare;
+        // Toggle the release of the sound device (architect 2026-11-26, the
+        // RELEASE lamp's internal chord, is_release_lamp_key), bare in both
+        // modes: device state the `h` view's allowlist admits. Its one
+        // producer is the roster's lift, bare, so no decoration is spelled.
+        case GuiKeys::Release: return bare;
         // The `h` walk: bare steps, shift jumps to its ends — the mode's own
         // arm again (handle_history_mode_key, behind its mode return), so both
         // spellings are bound while the view stands and unbound outside it
@@ -1363,6 +1375,20 @@ inline bool is_label_paste_key(GuiKey key, GuiInputState mods) {
 // lamp stays live under every overlay).
 inline bool is_tooltip_lamp_key(GuiKey key, GuiInputState mods) {
     return key == GuiKeys::Backslash && !mods.ctrl && !mods.shift && !mods.alt;
+}
+
+// True for the chord that toggles THE RELEASE LAMP (architect 2026-11-26;
+// RedesignButton::IconRelease, the rule at playback_aaudio.cpp's lifecycle
+// block): GuiKeys::Release exactly, no modifier — the roster's lift its one
+// producer. Device state that authors nothing. One-shot. ITS READERS: the
+// read-only allowlist (read_only_key_blocked, which ADMITS it, the
+// grid-iterations lock's gate falling through to that list), the `h` view's
+// allowlist (history_mode_key_blocked, which admits it — the device is not
+// that view's business) and the dispatch arm (handle_plain_bare_keys,
+// input_key_dispatch.cpp). No overlay's router answers it: under an overlay
+// the key is dead, NOISE's rule (overlay_admits_button).
+inline bool is_release_lamp_key(GuiKey key, GuiInputState mods) {
+    return key == GuiKeys::Release && !mods.ctrl && !mods.shift && !mods.alt;
 }
 
 // One delivered touch-navigation frame (the nav update hook's payload — the

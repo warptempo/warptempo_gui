@@ -132,7 +132,7 @@ std::string format_noise_crossfade_s(int s) {
 // what parse_lit_lamps admits back.
 std::string format_lit_lamps(const DeviceLitLamps& lamps) {
     const bool bits[] = {lamps.magnify, lamps.follow, lamps.restrict,
-                         lamps.tips};
+                         lamps.tips, lamps.release};
     static_assert(std::size(bits) == std::size(kLitLampWords));
     std::string s;
     for (size_t i = 0; i < std::size(bits); ++i) {

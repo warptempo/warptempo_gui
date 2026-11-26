@@ -154,6 +154,7 @@
 //                            and overlays would be session only"): the words
 //                            of the top icon row's sticky lamps standing
 //                            lit — `magnify`, `follow`, `restrict`, `tips`,
+//                            `release` (RELEASE, architect 2026-11-26),
 //                            the vocabulary in the row's own left-to-right
 //                            order and the ONE CANONICAL ORDER of the value
 //                            — comma-separated, no spaces, the EMPTY value
@@ -168,8 +169,10 @@
 //                            and main.cpp's refresh_lit_lamps hold the
 //                            rule; MAGNIFY is seated as soon as its gain
 //                            curve is ready, AppState::
-//                            magnification_seat_pending); no Settings row (the main-page
-//                            rule: the four lamps are their keys);
+//                            magnification_seat_pending; RELEASE seated
+//                            before the load's init, which then opens no
+//                            stream); no Settings row (the main-page
+//                            rule: the five lamps are their keys);
 //                            PERMANENT and REQUIRED; the first-run value the
 //                            defaults file's (empty there). TRIM, ADD SEL,
 //                            VALUE DRAG, GRID ITERATIONS and every other
@@ -285,7 +288,8 @@
 // `noise_level`, the top icon row's NOISE case, whose lift writes through
 // the same writer; THE LEVEL ITS TAP RESTORES, `noise_restore_level`, the
 // same case's tap (2026-11-24); and THE STICKY LAMPS, `lit_lamps`, their
-// own four keys, written by the tick's comparator (2026-11-24, main.cpp's
+// own five keys (RELEASE the fifth, 2026-11-26), written by the tick's
+// comparator (2026-11-24, main.cpp's
 // refresh_lit_lamps). A HAND EDIT UNDER A RUNNING APP IS
 // CLOBBERED BY THE NEXT IN-APP COMMIT: the live struct is the truth and
 // every commit rewrites the whole file from it, ordinary behaviour for a
@@ -296,7 +300,10 @@
 
 // THE STICKY LAMPS' VALUE (architect 2026-11-24; the `lit_lamps` key, the
 // head's list): one bit per lamp of the vocabulary, true while that lamp
-// stands lit, `follow` and `restrict` never both (the radio). The
+// stands lit, `follow` and `restrict` never both (the radio); `release`
+// the RELEASE lamp, the sound device's stream closed (architect 2026-11-26:
+// "It's a lamp, so it should go in the lit lamps config ... Just for
+// thoroughness"). The
 // comparison the tick's one writer makes is this struct's whole equality
 // (main.cpp's refresh_lit_lamps).
 struct DeviceLitLamps {
@@ -304,6 +311,7 @@ struct DeviceLitLamps {
     bool follow   = false;
     bool restrict = false;
     bool tips     = false;
+    bool release  = false;
     bool operator==(const DeviceLitLamps&) const = default;
 };
 
@@ -657,7 +665,8 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
 // THE lit_lamps GRAMMAR (architect 2026-11-24, the head's list) — the one
 // owner the reader and the writer read (format_lit_lamps,
 // parse_lit_lamps): THE VOCABULARY IS kLitLampWords, in the top icon row's
-// own left-to-right order (MAGNIFY, FOLLOW, RESTR, TIPS), which is the ONE
+// own left-to-right order (MAGNIFY, FOLLOW, RESTR, TIPS, RELEASE; the fifth
+// architect 2026-11-26), which is the ONE
 // CANONICAL ORDER of the value; the value is the lit lamps' words in that
 // order joined by `,` with no space, the empty value every lamp dark. ONE
 // SPELLING PER STATE, the file being program-written: the reader admits
@@ -668,17 +677,19 @@ inline std::optional<int> parse_noise_crossfade_s(std::string_view v) {
 // GuiPlaybackLifecycle::toggle_follow / toggle_restrict) each refuse, the
 // launch's hard fail like any key's bad value.
 inline constexpr const char* kLitLampWords[] = {
-    "magnify", "follow", "restrict", "tips",
+    "magnify", "follow", "restrict", "tips", "release",
 };
 inline constexpr const char* kLitLampsGrammarReason =
     "must be empty or the lit lamps' words, magnify, follow, restrict, tips, "
-    "in that order, comma-separated, each at most once, follow and restrict "
-    "never together";
+    "release, in that order, comma-separated, each at most once, follow and "
+    "restrict never together";
 std::string format_lit_lamps(const DeviceLitLamps& lamps);
 inline std::optional<DeviceLitLamps> parse_lit_lamps(std::string_view v) {
     DeviceLitLamps out;
     if (v.empty()) return out;
-    bool* const bits[] = {&out.magnify, &out.follow, &out.restrict, &out.tips};
+    bool* const bits[] = {&out.magnify, &out.follow, &out.restrict, &out.tips,
+                          &out.release};
+    static_assert(std::size(bits) == std::size(kLitLampWords));
     constexpr int kWords = static_cast<int>(std::size(kLitLampWords));
     int last = -1;
     for (;;) {

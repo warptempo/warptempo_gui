@@ -312,10 +312,14 @@ public:
     // Fired ONLY on a CHANGE of the window's activation (keyboard focus),
     // from the focus commands (APP_CMD_GAINED_FOCUS / LOST_FOCUS). No face
     // takes an unfocused look, so the edge is the only consumer: main.cpp
-    // wires it to end the tooltip, the same shape the pointer-leave hook
-    // takes for the same reason (a platform edge with no other event to
-    // carry its effect). Null-safe.
+    // wires it to end the tooltip and to RELEASE's return watch, the same
+    // shape the pointer-leave hook takes for the same reason (a platform
+    // edge with no other event to carry its effect). Null-safe.
     void set_activation_changed_hook(std::function<void()> cb);
+    // THE ACTIVATION THE EDGE LEFT (window_activated_), read by the hook to
+    // tell a loss from a gain: RELEASE's return watch (main.cpp's hook,
+    // GuiPlaybackLifecycle::note_window_activation, architect 2026-11-26).
+    bool window_activated() const { return window_activated_; }
 
     // THE TOUCH NAVIGATION HOOKS. Contract at
     // GuiInputCore::set_touch_nav_hooks, input_core.h.

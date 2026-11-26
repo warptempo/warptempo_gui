@@ -187,8 +187,9 @@ struct GuiInputHandler;
 // persisted by the case's lift and written by the config's writer with
 // every key; so are, by the same rule (architect 2026-11-24), the level the
 // case's tap restores, `noise_restore_level`, written by that tap alone,
-// and the sticky lamps, `lit_lamps`, seen and set on their own four keys
-// (MAGNIFY, FOLLOW, RESTR, TIPS) and written by the tick's comparator
+// and the sticky lamps, `lit_lamps`, seen and set on their own five keys
+// (MAGNIFY, FOLLOW, RESTR, TIPS, RELEASE; RELEASE 2026-11-26) and written
+// by the tick's comparator
 // (main.cpp's refresh_lit_lamps).
 // GuiInputHandler::build_settings_page_rows lists the device keys first in
 // this table's order, the split at kSettingsEditorPieceKeyCount, and then

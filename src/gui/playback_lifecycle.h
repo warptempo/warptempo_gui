@@ -584,7 +584,40 @@ struct GuiPlaybackLifecycle {
     // toggle_follow's rule (architect 2026-11-25).
     void toggle_restrict();
 
+    // THE RELEASE KEY'S ONE CHOKEPOINT (architect 2026-11-26; the rule and
+    // its three ends at playback_aaudio.cpp's lifecycle block), THE KEY'S
+    // ACT ALONE: the icon-row button's internal chord (is_release_lamp_key,
+    // gui_input.h) is its one caller. The open's seat of the sticky lamp is
+    // no toggle and does not come here (GuiInputHandler::seat_lit_lamps
+    // calls GuiPlayback::release_device itself). DARK, IT RELEASES: whatever plays stopped through the
+    // ONE STOP BODY (stop_playback_if_playing: the scanner, the A/B act, a
+    // transport's state), then GuiPlayback::release_device — the fence, the
+    // close, the drop's state, the fact. LIT, IT IS THE SECOND PRESS:
+    // GuiPlayback::end_device_release, the stream reopened and started with
+    // no play, no card on a refused reopen (the lamp is the whole surface;
+    // the next play's gate cards). The lamp is the backend's fact
+    // (GuiPlayback::device_released), mirrored for the face by the tick's
+    // settle (GuiInputHandler::settle_device_release_lamp), which damages
+    // the key at every edge, so this mutator owes no damage.
+    void toggle_device_release();
+
+    // THE APP'S RETURN ENDS A RELEASE (architect 2026-11-26: "Number 1,
+    // agree"): the window's focus edge (GuiPlatform's activation hook,
+    // main.cpp; APP_CMD_GAINED_FOCUS / LOST_FOCUS), `active` its new value.
+    // A LOSS with the lamp lit is remembered; the NEXT GAIN, the lamp still
+    // lit, ends the release (GuiPlayback::end_device_release, Return) — the
+    // stream reopened with silence before any play. A gain with no loss
+    // seen under the lamp ends nothing, so the launch's own first focus over
+    // a seated lamp leaves it lit. Every loss of focus counts: Settings and
+    // every other screen, the task switcher, the notification shade, the
+    // screen dozing (each a LOST_FOCUS, its return the GAINED_FOCUS).
+    void note_window_activation(bool active);
+
 private:
+    // A FOCUS LOSS SEEN WITH RELEASE LIT, not yet answered by a gain
+    // (note_window_activation, its one writer and reader). Per project
+    // session, as this cluster is.
+    bool left_while_released_ = false;
     // The active view's PLAY END — the song's end in source view, the bound
     // preview buffer's domain end in target (the split and its ruling are at
     // the launch body's definition). The one owner of that split for the

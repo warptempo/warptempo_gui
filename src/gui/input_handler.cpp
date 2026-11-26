@@ -3470,7 +3470,18 @@ void GuiInputHandler::seat_lit_lamps(const DeviceLitLamps& lamps) {
     if (lamps.follow)   playback_lifecycle.toggle_follow();
     if (lamps.restrict) playback_lifecycle.toggle_restrict();
     if (lamps.tips)     set_show_tooltips(true);
+    if (lamps.release)  playback.release_device();
     app.magnification_seat_pending = lamps.magnify;
+}
+
+void GuiInputHandler::settle_device_release_lamp() {
+    // The rule — the face's one writer, the edge's own damage — is at the
+    // declaration (input_handler.h; architect 2026-11-26).
+    const bool released = playback.device_released();
+    if (released == app.device_released) return;
+    app.device_released = released;
+    invalidate_roster_press_face(
+        static_cast<int>(RedesignButton::IconRelease));
 }
 
 void GuiInputHandler::settle_pending_magnification() {

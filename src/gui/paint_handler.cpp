@@ -786,7 +786,7 @@ constexpr IconRowDef kIconRowButtons[] = {
     {RedesignButton::IconReadOnly},
     // THE SCORE (architect 2026-10-26), between the padlock and Settings
     // (architect 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS
-    // NOISE): bare `m`, the score viewer's opener and, while it stands, its
+    // NOISE; RELEASE between TIPS and NOISE, architect 2026-11-26): bare `m`, the score viewer's opener and, while it stands, its
     // closer (RedesignButton::IconScore).
     {RedesignButton::IconScore},
     // SETTINGS (architect 2026-09-29), right after the Score key (architect
@@ -795,11 +795,17 @@ constexpr IconRowDef kIconRowButtons[] = {
     // spelling.
     {RedesignButton::IconSettings},
     // ENABLE TOOLTIPS (architect 2026-09-29), behind Settings (architect
-    // 2026-10-01: help comes after settings), the level case behind it: the
-    // bare backslash's LAMP. Sticky, the device's (the key `lit_lamps`,
+    // 2026-10-01: help comes after settings), the release lamp behind it:
+    // the bare backslash's LAMP. Sticky, the device's (the key `lit_lamps`,
     // 2026-11-24), and while dark no tooltip
     // shows anywhere; lit, the Qt model as ruled.
     {RedesignButton::IconTooltips},
+    // RELEASE (architect 2026-11-26: "put it before noise"), behind the
+    // tooltip lamp, the LAST MEMBER OF THE THIRD RUN'S LINKED GROUP — its
+    // box sharing TIPS's seam column inside the group's one ring — NOISE's
+    // entry a run gap after it: the lamp that closes the sound device's
+    // stream, the keep-alive with it (RedesignButton::IconRelease).
+    {RedesignButton::IconRelease},
     // THE LEVEL CASE (architect 2026-11-05), the third run's last: NOISE,
     // the `noise_level` slider (RedesignButton::IconNoiseLevel, app_state.h;
     // paint_level_case above). On the tablet at the defaults the left walk
@@ -830,8 +836,9 @@ constexpr IconRowDef kIconRowButtons[] = {
 // and THE ITERATION GROUP (Ctrl+B, bare `i`, Ctrl+F). No other group is
 // refused whole in the view: the zoom group keeps Zoom In, Zoom Out and Zoom
 // to Fit (`=`, `-` and bare `0`) and the render-entry group Play Renders
-// (bare `l`), the tooltip lamp (bare backslash) and the level case (no
-// chord, LIVE by the walk's own arm).
+// (bare `l`), the tooltip lamp (bare backslash), the release lamp (its
+// internal chord, architect 2026-11-26) and the level case (no chord, LIVE by
+// the walk's own arm).
 //
 // THE SLOTS: UNDO'S THREE (Undo, Redo and Render) take the view's two acts,
 // Revert and Load in Place, so that group stands one case narrower in the
@@ -843,8 +850,8 @@ constexpr IconRowDef kIconRowButtons[] = {
 // stand-ins (kTransportHistoryStandIns). The zoom group stands on the four
 // members the view does not refuse in every session (Zoom In, Zoom Out,
 // Zoom to Fit and Waveform Magnification, architect 2026-10-12: he wants to
-// magnify while walking history) and the render-entry group on three (Play
-// Renders, Enable Tooltips and the level case), their others hidden
+// magnify while walking history) and the render-entry group on four (Play
+// Renders, Enable Tooltips, Release and the level case), their others hidden
 // (history_mode_hides_button, paint_icon_row's walk).
 // The history opener and the three pairs are right-anchored and do not
 // move (kIconRowHistoryOpener).
@@ -1564,8 +1571,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // THE TOP ICON ROW (the lane at the window's top, the window's width):
     // the title bar, Arc's pad, the cases, the pad on the body tone
     // (architect 2026-11-19; 7 W each side, architect 2026-11-20), the left
-    // members in THREE RUNS and the right seven in ONE — TWENTY-NINE members
-    // outside the history view and TWENTY inside it, COUNTED off the roster
+    // members in THREE RUNS and the right seven in ONE — THIRTY members
+    // outside the history view and TWENTY-ONE inside it, COUNTED off the roster
     // enum, the painter's tables and the run leaders: OPEN PROJECT at the
     // row's head (architect 2026-10-07, its Revert twin with it) with SAVE,
     // UNDO, REDO and RENDER behind it in the first run; ZOOM IN, ZOOM OUT,
@@ -1574,7 +1581,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // GROUP (the BPM opener, grid iteration mode and FLATTEN) in the second;
     // the RENDER-ENTRY group (Listen, the READ-ONLY toggle, the SCORE key —
     // between the padlock and Settings, architect 2026-11-10 — SETTINGS,
-    // ENABLE TOOLTIPS and the level case, NOISE) the third — then,
+    // ENABLE TOOLTIPS and RELEASE, one linked group, with the level case,
+    // NOISE, its own entry a run gap behind) the third — then,
     // RIGHT-ANCHORED, THE HISTORY OPENER attached to THE VIEW PAIRS and THE
     // TAB PAIR (kIconRowRightRun). IN THE HISTORY VIEW the history group's four
     // icon-row companions stand in two groups' slots — Revert and Load in
@@ -1592,8 +1600,8 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // Presets behind Zoom In, Zoom Out, Zoom to Fit and the magnification
     // lamp (which the view admits, architect 2026-10-12: he wants to magnify
     // while walking history), and the padlock, the Score key and Settings
-    // between Play Renders and Enable Tooltips, the level case behind it
-    // standing — its neighbors closing up and its run standing while any
+    // between Play Renders and Enable Tooltips, the release lamp and the
+    // level case behind it standing — its neighbors closing up and its run standing while any
     // member does. What the view refuses only BY STATE (Save with nothing to
     // commit, Revert with no subject, Load in Place over an empty walk) and
     // what any other mode refuses wears the DEAD FACE, and a window too
@@ -1609,22 +1617,22 @@ void GuiPaintHandler::paint_icon_row(cairo_t* cr) {
     // the right group 492 (seven keys, architect 2026-11-24), its last box
     // ending 12 px inside the panel's right edge (columns 1800..2291).
     // Outside the history view the LEFT WALK
-    // is three groups of 5, 11 and 5 and NOISE's entry (39 W, 78 px:
+    // is three groups of 5, 11 and 6 and NOISE's entry (39 W, 78 px:
     // noise_entry_w_px),
-    //   352 + 12 + 772 + 12 + 352 + 12 + 78 = 1590,
+    //   352 + 12 + 772 + 12 + 422 + 12 + 78 = 1660,
     // from column 12: OPEN .. RENDER 12..363, IN .. FLATTEN 376..1147,
-    // PLAYER .. TIPS 1160..1511, NOISE 1524..1601 — 198 px of ground before
-    // the history opener; inside the view three groups of 4, 6 and 2 (Open,
+    // PLAYER .. RELEASE 1160..1581, NOISE 1594..1671 — 128 px of ground before
+    // the history opener; inside the view three groups of 4, 6 and 3 (Open,
     // Save, Revert, Load in Place | Zoom In, Zoom Out, Zoom to Fit, the lamp,
-    // Cumulative, Session | Play Renders, Enable Tooltips) and NOISE,
-    //   282 + 12 + 422 + 12 + 142 + 12 + 78 = 960.
+    // Cumulative, Session | Play Renders, Enable Tooltips, Release) and NOISE,
+    //   282 + 12 + 422 + 12 + 212 + 12 + 78 = 1030.
     // A roster move restates these numbers.
     // THE FIT, the one statement every other site points to: outside the
     // view the left walk must end a run gap short of the right group — the
     // left runs' limit, the right group's first box less the run gap, 2304
     // − 12 − linked_group_w_px(7) − 12 = 1788 on the tablet at 200 % (the
     // tab pair's seven, architect 2026-11-24) — and
-    // there it ends at column 1601, so every member stands and NOISE stays
+    // there it ends at column 1671, so every member stands and NOISE stays
     // (inside the view
     // the shorter walk the more so). On a window too narrow the overflow rule
     // (kIconRowViewPairs) answers: every member whose box would end past the

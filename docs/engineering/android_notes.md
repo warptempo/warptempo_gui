@@ -1108,8 +1108,9 @@ at its own site:
 
 THE STREAM IS OPENED ONCE, STARTED ONCE AND NEVER STOPPED BETWEEN PLAYS. It
 starts at open (`init`, and the reopen after a disconnect) and is stopped only
-where it is about to be CLOSED — shutdown and the dead-stream reopen, both in
-`close_stream`, which holds the file's one remaining `requestStop`. Between
+where it is about to be CLOSED — shutdown, the dead-stream reopen and RELEASE's
+press (below), all in `close_stream`, which holds the file's one remaining
+`requestStop`. (An `init` with RELEASE seated lit opens no stream.) Between
 plays the callback's `playing` gate writes silence and never reaches the render
 body. The cost is a running stream on an already screen-on tablet (a few mW, no
 wakelock change), accepted.
@@ -1142,21 +1143,30 @@ the 2026-09-04..12 experiment (the render player's rest stopping the stream,
 `1e7998ad`, reverted `465bb89f`) and an idle link would have to be woken at
 every play.
 
-THE CAR'S CODEC IS SWITCHED WITH THE APP CLOSED (architect 2026-11-26; the
-runbook's steps are INSTALL.md's "Bluetooth in the car"). The car's head unit
+THE CAR'S CODEC IS SWITCHED WITH THE STREAM CLOSED: RELEASE (architect 2026-11-26;
+the runbook's steps are INSTALL.md's "Bluetooth in the car"). The car's head unit
 offers AAC and SBC, he wants SBC there, and the tablet always connects on AAC.
 The car refuses a codec change on a STREAMING link — it reports "connection
 failed", the tablet's Bluetooth log showing the reconfiguration followed at
-once by the link's disconnect — and with this app open the link always
-streams: the stream the keep-alive holds running, carrying silence between plays
+once by the link's disconnect — and with this app open and RELEASE dark the
+link always streams: the stream the keep-alive holds running, carrying silence between plays
 (or the noise bed, while it is audible). So the switch (Developer options, HD audio
-off) is made with the app closed, the link idle, and the app opened again
-after it; his test in the car, 2026-11-26: "it worked". Nothing else on the
+off) is made with the link idle. Closing the app does that (his test in the
+car, 2026-11-26: "it worked") at the cost of a saved state and the session's
+undo history ("closing the app feels like sort of a hack"), so the app has a
+lamp for it, RELEASE (Release Sound Device, the top icon row, before NOISE;
+`GuiPlayback::release_device`): ONE PRESS STOPS WHATEVER PLAYS, CLOSES THE
+DEVICE STREAM AND LIGHTS THE LAMP — the dead-stream state entered on purpose —
+AND THE LAMP GOES OUT, THE STREAM REOPENED AND THE KEEP-ALIVE WITH IT, AT THE
+FIRST OF the app's return from another screen (the window's focus regained
+after a loss seen while lit), a play or NOISE's wake (every road that reopens
+a dead stream), or a second press. No timer; a sticky lamp, the fifth word of
+`lit_lamps`. It is no standing mode: the stream started per play stays ruled
+out (above). Nothing else on the
 tablet does it: the per-device optional-codecs flag behind the HD audio switch
 is ignored at connection by Samsung's Bluetooth service, stock Android would
 honor it only by the same post-connect switch the car refuses, and AAC's codec
-priority can be overridden only with root. The cost he names: closing the app
-wants a saved state and ends the session's undo history.
+priority can be overridden only with root.
 
 A step-shaped click at a play START — the render body beginning mid-waveform at
 whatever sample sits there, with no ramp — is a different thing and is

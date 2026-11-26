@@ -2285,7 +2285,10 @@ void GuiPlatform::on_app_cmd(int32_t cmd) {
             if (active == window_activated_) break;
             window_activated_ = active;
             // What the edge does is the caller's business (main.cpp's
-            // activation hook: the tooltip ends); this hook is the EDGE.
+            // activation hook: the tooltip ends, and RELEASE's return
+            // watch reads window_activated() — a gain after a loss seen
+            // under the lit lamp ends the release, architect 2026-11-26);
+            // this hook is the EDGE.
             if (activation_changed_hook_) activation_changed_hook_();
             // FOCUS LEAVING PAUSES NOTHING, and that is recorded rather than
             // fixed (2026-09-02): "no background playback" is BUILD scope —

@@ -931,6 +931,27 @@ void GuiPlaybackLifecycle::toggle_follow() {
     }
 }
 
+// The release key's one chokepoint (contract at the header declaration).
+void GuiPlaybackLifecycle::toggle_device_release() {
+    if (playback.device_released()) {
+        (void)playback.end_device_release(GuiDeviceReleaseEnd::SecondPress);
+        return;
+    }
+    stop_playback_if_playing();
+    playback.release_device();
+}
+
+// The return's watch (contract at the header declaration).
+void GuiPlaybackLifecycle::note_window_activation(bool active) {
+    if (!active) {
+        left_while_released_ = playback.device_released();
+        return;
+    }
+    const bool ends = left_while_released_ && playback.device_released();
+    left_while_released_ = false;
+    if (ends) (void)playback.end_device_release(GuiDeviceReleaseEnd::Return);
+}
+
 // The restrict key's one chokepoint (contract at the header declaration),
 // shared by bare `r` and the icon-row button that synthesizes that chord.
 void GuiPlaybackLifecycle::toggle_restrict() {

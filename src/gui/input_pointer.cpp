@@ -313,7 +313,15 @@ constexpr ToolbarChord kToolbarChords[] = {
     // three allowlists admit it, so the derived partition leaves it lit).
     // No modifier, no repeat.
     {RedesignButton::IconTooltips, GuiKeys::Backslash, false, false, false}, // bare backslash
-    // (THE LEVEL CASE, IconNoiseLevel, behind the tooltip lamp, the third
+    // THE RELEASE LAMP (architect 2026-11-26), behind the tooltip lamp, the
+    // third run's group's last: its INTERNAL CHORD, GuiKeys::Release bare —
+    // no key spells it and the on-screen keyboard has none, so this row is
+    // its one producer — a TOGGLE with a lamp (GuiPlayback::
+    // device_released). Live on a locked tab, under the grid-iterations
+    // lock and in the `h` view (all three allowlists admit it). No
+    // modifier, no repeat, no hold (a lamp carries no second action).
+    {RedesignButton::IconRelease, GuiKeys::Release, false, false, false},  // the internal chord
+    // (THE LEVEL CASE, IconNoiseLevel, behind the release lamp, the third
     // run's last (2026-11-05), HAS NO ROW: a slider, pressed by its own
     // arm, arm_level_case_press, not by a chord — the one roster member off
     // this table, which the static_assert below counts out.)

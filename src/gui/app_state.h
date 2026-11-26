@@ -1737,9 +1737,9 @@ struct TrimBarPressSeed {
 
 // THE ROSTER OF REDESIGNED BUTTONS — the single enumeration of every flat
 // button the two icon rows carry: the top icon row's
-// THIRTY-THREE (counted off kIconRowButtons' twenty-two, the four history
-// stand-ins, the history opener and the three pairs' six; twenty-nine
-// standing outside the `h` view and twenty inside it), in painted order
+// THIRTY-FOUR (counted off kIconRowButtons' twenty-three, the four history
+// stand-ins, the history opener and the three pairs' six; thirty
+// standing outside the `h` view and twenty-one inside it), in painted order
 // — OPEN PROJECT leading them (2026-10-07), the
 // HISTORY OPENER, ITS WALK LAMP and ITS FOUR
 // COMPANIONS with LOAD IN PLACE at their tail — the walk lamp, Cumulative,
@@ -1756,7 +1756,7 @@ struct TrimBarPressSeed {
 // (kMarkerVerbGroup, paint_handler.cpp, owns that membership), the COPY /
 // PASTE duo (Copy Phase Resets and Paste Phase Resets), the marker-walk
 // three (Previous Marker, Next Marker and Center) and the
-// four cardinal arrows, in enum order (33 + 2 + 20 = 55 =
+// four cardinal arrows, in enum order (34 + 2 + 20 = 56 =
 // kRedesignButtonCount). THE ROW PAINTS ITS OWN ORDER (architect
 // 2026-10-18, the painter's tables kTransportStepWalkGroup and
 // kTransportNudgePlayGroup own both memberships): after the verbs, Down,
@@ -1773,7 +1773,7 @@ struct TrimBarPressSeed {
 // WHICH FACES EACH ROW TAKES is stated at each face's site rather than
 // modelled here (the disabled verdict's one owner is redesign_button_enabled
 // below). EVERY ROSTER BUTTON CARRIES A CHORD BUT THE
-// LEVEL CASE (54 chord rows + the one case = 55 = kRedesignButtonCount,
+// LEVEL CASE (55 chord rows + the one case = 56 = kRedesignButtonCount,
 // the count's own statement below; the case is a slider,
 // IconNoiseLevel's entry).
 //
@@ -1795,7 +1795,7 @@ enum class RedesignButton {
     // render-entry group — Play renders, THE READ-ONLY TOGGLE, THE SCORE KEY
     // (between the padlock and Settings, architect 2026-11-10),
     // SETTINGS and ENABLE TOOLTIPS (2026-09-29; in that order, 2026-10-01:
-    // help comes after settings) and
+    // help comes after settings), THE RELEASE LAMP (architect 2026-11-26) and
     // THE LEVEL CASE closing it — and THE HISTORY GROUP — the
     // HISTORY OPENER leading its WALK LAMP, its four companions and the
     // LOAD IN PLACE; the six behind the opener stand only in the `h` view (the walk
@@ -2132,7 +2132,8 @@ enum class RedesignButton {
     IconReadOnly,
     // THE SCORE (architect 2026-10-26), the top icon row's third run's
     // THIRD, directly after the padlock and ahead of Settings (architect
-    // 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS NOISE):
+    // 2026-11-10: the run reads PLAYER LOCK SCORE SETUP TIPS NOISE;
+    // RELEASE between TIPS and NOISE, architect 2026-11-26):
     // BARE `m`, wearing SCORE, opens THE SCORE VIEWER
     // (score_viewer.h) — the movement's sheet music one page at a time in
     // the modal family's box. IT IS AN OVERLAY'S OPENER: lit while the viewer
@@ -2165,8 +2166,8 @@ enum class RedesignButton {
     // pattern, redesign_button_selected).
     IconSettings,
     // ENABLE TOOLTIPS (architect 2026-09-29), directly after Settings
-    // (architect 2026-10-01: help comes after settings), the level
-    // case behind it: THE TOOLTIP
+    // (architect 2026-10-01: help comes after settings), the release lamp
+    // behind it: THE TOOLTIP
     // LAMP on bare backslash, wearing Tooltips. A STICKY LAMP, the device's
     // — AppState::show_tooltips, seated from the device key `lit_lamps` at
     // every open and stored at every edge (architect 2026-11-24;
@@ -2196,10 +2197,42 @@ enum class RedesignButton {
     // every key (a prompt, an editor, the progress modal). It admits no
     // modifier and does not repeat.
     IconTooltips,
+    // RELEASE SOUND DEVICE, RELEASE (architect 2026-11-26: "The mode would
+    // then be a suppress the Keep Alive rather than a car mode"; "put it
+    // before noise"), directly after the tooltip lamp, the LAST MEMBER OF
+    // THE THIRD RUN'S LINKED GROUP, NOISE's entry a run gap after it. A LAMP
+    // over the device's own fact, GuiPlayback::device_released (the rule,
+    // his reason and the three ends at playback_aaudio.cpp's lifecycle
+    // block): DARK, the press stops whatever plays through the one stop
+    // body and CLOSES THE DEVICE STREAM, the keep-alive with it, so the
+    // car's Bluetooth link goes idle and its codec can be switched; LIT, the
+    // press reopens the stream (the second press), as the app's return from
+    // another screen and any play do. The face reads the tick's mirror,
+    // AppState::device_released (GuiInputHandler::settle_device_release_lamp,
+    // which damages the key at every edge, the program's own included).
+    // A STICKY LAMP, the device's (architect 2026-11-26: "It's a lamp, so it
+    // should go in the lit lamps config ... Just for thoroughness"): stored
+    // in the device key `lit_lamps` at every edge (main.cpp's
+    // refresh_lit_lamps) and seated at every open
+    // (GuiInputHandler::seat_lit_lamps), the open then coming up with no
+    // stream (GuiPlayback::init's released arm). Its chord is INTERNAL
+    // (GuiKeys::Release, the roster's lift its one producer). IT SHARES
+    // NOISE'S RULES OF THE ROSTER, NOT NOISE'S LIVENESS: like NOISE it is
+    // live on a locked tab, under the grid-iterations lock and in the `h`
+    // view (the chord on all three allowlists), dead under a standing
+    // overlay (overlay_admits_button) and greyed with the whole roster under
+    // a modal (roster_greyed_whole), a lit one lit and inert there, and
+    // greyed with no audio loaded; the grey each key owns is its own: RELEASE's
+    // one grey is a device that never came up (GuiPlayback::device_absent),
+    // whose press could release nothing and which no end could reopen, while
+    // NOISE's is its folder's availability (GuiNoise::available), so with no
+    // noise folder RELEASE is live and NOISE greyed. Its
+    // tooltip "Release Sound Device". No modifier, no repeat, no hold.
+    IconRelease,
     // THE LEVEL CASE, NOISE (architect 2026-11-05), the top icon row's third
     // run's LAST — its own entry
     // a run gap after the run's linked group (2026-11-19) — directly
-    // after the tooltip lamp: the
+    // after the release lamp: the
     // `noise_level` device key's SLIDER (device_config.h's THE LEVEL
     // GRAMMAR). The project voice has no slider: it plays at 0 dB (architect
     // 2026-11-11: "realistically it's not clipping, and when it does clip,
@@ -2788,16 +2821,16 @@ enum class RedesignButton {
     TransportDown, TransportUp, TransportLeft, TransportRight
 };
 // THE ROSTER, re-derived by counting the enumerators above:
-// THIRTY-FIVE in the top icon row's enum block and TWENTY in the bottom
-// icon row's — 55.
-// PAINTED, the split is 33 + 22: HistoryOlder and HistoryNewer, enumerated
+// THIRTY-SIX in the top icon row's enum block and TWENTY in the bottom
+// icon row's — 56.
+// PAINTED, the split is 34 + 22: HistoryOlder and HistoryNewer, enumerated
 // in the top icon row's block, paint in the bottom icon row
 // (kTransportHistoryStandIns). THE CHORDS: every button has its row in
 // kToolbarChords except THE LEVEL CASE, which has none (a slider,
 // IconNoiseLevel's entry); the table's own static_assert checks it (its
 // rows plus the level case make the roster, input_pointer.cpp).
 // Adding or deleting a button restates these numbers and nothing else here.
-inline constexpr int kRedesignButtonCount = 55;
+inline constexpr int kRedesignButtonCount = 56;
 inline constexpr int redesign_button_index(RedesignButton b) {
     const int i = static_cast<int>(b);
     // STATE THE INVARIANT THE ENUM ALREADY CARRIES, don't add an arm. A scoped
@@ -4733,6 +4766,19 @@ struct AppState {
     // standing box down at the dark edge.
     bool    show_tooltips = false;
 
+    // THE RELEASE LAMP'S FACE (architect 2026-11-26; RedesignButton::
+    // IconRelease): A MIRROR, NOT THE TRUTH — the device's own fact is
+    // GuiPlayback::device_released, which the reopen body clears whatever
+    // road reopened (a play, the return, the second press), and this
+    // copy exists because the roster's lit predicate reads AppState alone
+    // (redesign_button_selected, its one reader). ITS ONE WRITER is
+    // GuiInputHandler::settle_device_release_lamp — at the tick's head, and
+    // right after the key's own act and the return's — which damages the
+    // key's face at every edge it copies, so the lamp lights or goes out in
+    // the frame after the act. Per project, session state: the fresh AppState of every open
+    // starts it dark and the first tick copies the seated fact.
+    bool    device_released = false;
+
     // Split-playhead state. The cursor (above, mirrored from the active
     // ViewState) is the user's stationary reference frame. The scanner is the
     // engine's playback position and is MEANINGFUL ONLY while
@@ -5043,8 +5089,9 @@ struct AppState {
     // below.)
     //
     // THE LAMPS ARE PER-PROJECT STATE, DARK AT EVERY PROJECT OPEN (this one,
-    // TRIM and VALUE DRAG; not the sticky lamps, MAGNIFY, FOLLOW, RESTRICT
-    // and TIPS, 2026-11-24, device_config.h's `lit_lamps`). The bit
+    // TRIM and VALUE DRAG; not the sticky lamps, MAGNIFY, FOLLOW, RESTRICT,
+    // TIPS and RELEASE, 2026-11-24 / 2026-11-26, device_config.h's
+    // `lit_lamps`). The bit
     // lives on this AppState, which run_project constructs fresh for each
     // project and which gui_main's loop constructs again at a REOPEN (the Open
     // Project button, Ctrl+O, the picker), so opening another piece starts every
@@ -16216,6 +16263,25 @@ inline bool redesign_button_enabled(const AppState& a,
         // and the overlay arm above leaves it live too (2026-11-10).
         case RedesignButton::IconTooltips:
             return true;
+        // THE RELEASE LAMP SHARES NOISE'S ROSTER RULES, NOT ITS LIVENESS
+        // (architect 2026-11-26; IconRelease's entry): the head gates above
+        // it takes like every key — a modal greys it with the whole roster,
+        // a standing overlay leaves it dead (overlay_admits_button), no audio
+        // greys it — and no lock and no `h` partition greys it (its internal
+        // chord is on all three allowlists), as for NOISE's entry. What each
+        // reads past those gates is its own: this arm the device's
+        // readiness, NOISE's arm below its folder's availability, so with a
+        // ready device and no noise folder this key is live and NOISE greyed.
+        // TRUTHFUL BOTH WAYS: dark, its press releases —
+        // stopping whatever plays first, and over a stream a drop already
+        // killed (or a refused reopen left absent) it still lights the lamp,
+        // the stream then closed by ruling as well as by accident, so the
+        // three ends reopen it as written; lit, its press reopens. ITS ONE
+        // GREY IS A DEVICE THAT NEVER CAME UP (GuiPlayback::device_absent,
+        // the launch faces' own read): no stream to release, and no end
+        // could reopen one, so the lamp would light over nothing.
+        case RedesignButton::IconRelease:
+            return !playback.device_absent();
         // THE SCORE KEY IS LIVE WITH A SCORE LOADED AND DEAD WITHOUT ONE
         // (architect 2026-10-26): `score_path` empty, its folder or pages.txt
         // absent or malformed — the load's advisory road (score_pages.h) —
@@ -17323,6 +17389,13 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         // tooltips' presence cannot drift.
         case RedesignButton::IconTooltips:
             return a.show_tooltips;
+        // THE RELEASE LAMP (architect 2026-11-26): the device's fact as the
+        // tick last mirrored it (AppState::device_released, written by
+        // GuiInputHandler::settle_device_release_lamp from
+        // GuiPlayback::device_released, which damages the key at each edge),
+        // so the lit face is the stream released, whichever road ended it.
+        case RedesignButton::IconRelease:
+            return a.device_released;
         // THE LEVEL CASE IS NEVER LIT (architect 2026-11-05,
         // IconNoiseLevel's entry): a slider has no checked state — its fill
         // is its value, painted by paint_level_case off the live level and
@@ -18021,6 +18094,11 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
         // tooltip anywhere, its own included.
         case RedesignButton::IconTooltips:
             return {"Toggle Tooltips", nullptr};
+        // THE RELEASE LAMP (architect 2026-11-26), one line: his name for
+        // the act, worn lit and dark alike as every lamp's text is; no
+        // twin (a lamp carries no second action).
+        case RedesignButton::IconRelease:
+            return {"Release Sound Device", nullptr};
         // THE SCORE (architect 2026-10-26), one line: the act's name as
         // every row writes it; no twin. It names the opener, the press under
         // the standing viewer being the same key's close.
@@ -18352,6 +18430,9 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::IconScore:                 return Icon::ViewMediaLyrics;
         case RedesignButton::IconSettings:              return Icon::SettingsConfigure;
         case RedesignButton::IconTooltips:              return Icon::HelpWhatsthis;
+        // RELEASE wears the Bluetooth sign between two dots (architect
+        // 2026-11-26, his pick, Papirus's panel/bluetooth-paired).
+        case RedesignButton::IconRelease:               return Icon::BluetoothPaired;
         // THE LEVEL CASE PAINTS NO GLYPH (a slider; IconNoiseLevel's
         // entry): paint_icon_row skips paint_key_glyph for the level case
         // (redesign_button_is_level_case), and this constant word only

@@ -127,8 +127,10 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # RE-PICKED BY HIM 2026-11-24: ZoomPrevious ("V1", view-restore's corners
 # with the halves 1 closer, our own drawing, OWN + 'ZoomPrevious.svg'), and
 # ZoneIn / ZoneOut ("G", Papirus's actions/bookmark-new and bookmark-remove,
-# untouched). A note names a pick that is not the enumerator's own name and
-# the date of a re-pick.
+# untouched); AND ONE ROW ADDED BY HIM 2026-11-26, his pick, RELEASE's
+# BluetoothPaired (the 16-px panel tree's bluetooth-paired, untouched). A
+# note names a pick that is not the enumerator's own name and the date of a
+# re-pick.
 SYM = 'symbolic/'
 ROSTER = [
     ('DocumentOpen', SYM + 'actions/document-open-symbolic.svg', ''),
@@ -185,6 +187,9 @@ ROSTER = [
      'no settings-configure; settings'),
     ('HelpWhatsthis', SYM + 'actions/help-about-symbolic.svg',
      'no help-whatsthis; help-about'),
+    ('BluetoothPaired', 'panel/bluetooth-paired.svg',
+     'the Bluetooth sign between two dots, RELEASE\'s, his pick '
+     '(2026-11-26)'),
     ('ViewMediaLyrics', SYM + 'places/folder-music-symbolic.svg',
      'no view-media-lyrics; folder-music, two beamed notes '
      '(re-picked 2026-11-22)'),

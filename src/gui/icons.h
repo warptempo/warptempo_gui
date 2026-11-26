@@ -9,7 +9,8 @@
 // symbolic set and drawings of its 16-px actions, devices and panel trees,
 // written by tools/icons/import_papirus.py, the roster the importer's table
 // as the architect picked it (2026-11-17; re-picks 2026-11-22 and
-// 2026-11-23; additions and re-picks 2026-11-24) — FOURTEEN enumerators OUR
+// 2026-11-23; additions and re-picks 2026-11-24; RELEASE's BluetoothPaired
+// added 2026-11-26, Papirus's panel/bluetooth-paired) — FOURTEEN enumerators OUR
 // OWN, from twelve sources in tools/icons/own/ (the README's THE OWN
 // DRAWINGS): BboxPrev / BboxNext the
 // arrow to a line from Papirus's go-first, one source, Next's mirrored by the
@@ -67,7 +68,8 @@
 //   form's rows (the launcher's art too, below); THE HEADPHONES TWO
 //   (architect 2026-11-22): the PLAYER key and the render player's
 //   wav rows; SOURCE's disc, ViewMediaTrack, is the key's alone.
-// THE ROSTER IS AS RULED (2026-11-17; 2026-11-22; 2026-11-23; 2026-11-24);
+// THE ROSTER IS AS RULED (2026-11-17; 2026-11-22; 2026-11-23; 2026-11-24;
+// 2026-11-26);
 // a re-pick is
 // a row of the importer's table and a rerun. EVERY FILE IS A
 // DISTINCT DRAWING (by the written shapes and transforms; the icon
@@ -138,7 +140,8 @@ namespace icons {
     X(TimelineUseZoneOn) X(EditCut) X(Bookmarks) X(MusicNote16th)       \
     X(Mathmode)                                                          \
     X(Merge) X(AudioHeadphones) X(Lock) X(SettingsConfigure)             \
-    X(HelpWhatsthis) X(ViewMediaLyrics) X(ShallowHistory)                \
+    X(HelpWhatsthis) X(BluetoothPaired) X(ViewMediaLyrics)               \
+    X(ShallowHistory)                                                    \
     X(DeepHistory) X(BlackSum) X(DocumentRevert) X(KeyframePrevious)     \
     X(KeyframeNext) X(DialogOkApply) X(ViewMediaTrack)                   \
     X(ViewMediaVisualization) X(Speedometer) X(ChronometerStart)         \

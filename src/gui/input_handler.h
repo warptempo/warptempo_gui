@@ -1189,8 +1189,17 @@ struct GuiInputHandler {
     // GuiPlaybackLifecycle::toggle_follow's lit edge and RESTRICT through
     // toggle_restrict's — at rest, nothing playing at an open, so the lit
     // edge writes its bit, the radio partner's and the suspension alone, and
-    // the first play launches as under a pressed lamp — and TIPS through
-    // set_show_tooltips. The grammar never stores FOLLOW beside RESTRICT
+    // the first play launches as under a pressed lamp — TIPS through
+    // set_show_tooltips, and RELEASE (architect 2026-11-26) SEATED, NOT
+    // TOGGLED: GuiPlayback::release_device itself, which asks for the
+    // released state and is a no-op where the engine already stands
+    // released. NO STOP BODY RUNS THERE: the seat comes before the loop's
+    // first tick and the load's GuiPlayback::init, so nothing plays and no
+    // device stands — release_device closes nothing and sets the device's
+    // fact, and init comes up released with no stream opened until the
+    // first of the release's three ends. (The key's act,
+    // GuiPlaybackLifecycle::toggle_device_release, is the press's alone.)
+    // The grammar never stores FOLLOW beside RESTRICT
     // (parse_lit_lamps), so at most one toggle runs. MAGNIFY IS SEATED WHEN
     // ITS CURVE IS READY: its bit may not stand lit before the source's gain
     // curve exists (waveform_magnified's declaration, warp_frame_map_view.h:
@@ -1200,6 +1209,19 @@ struct GuiInputHandler {
     // to the stored word instead and settle_pending_magnification below
     // lights the lamp on the first tick the curve is ready.
     void seat_lit_lamps(const DeviceLitLamps& lamps);
+    // THE RELEASE LAMP'S SETTLE, ITS FACE'S ONE WRITER (architect
+    // 2026-11-26): called on every tick at its head, ahead of the early
+    // returns and right before the sticky lamps' comparator (main.cpp's
+    // refresh_lit_lamps). It copies the device's fact
+    // (GuiPlayback::device_released) into AppState::device_released and, on
+    // an edge, DAMAGES THE KEY'S OWN FACE (invalidate_roster_press_face, the
+    // TRIM lamp's road), so the lamp follows every road that moves the fact
+    // — the key's own press, the app's return, a play's reopen anywhere —
+    // in the frame after it. Otherwise one compare. THE KEY'S OWN ARM AND
+    // THE RETURN'S HOOK (handle_plain_bare_keys' GuiKeys::Release case,
+    // main.cpp's activation hook) call it too, right after their act, so
+    // their edge is settled in the act's own pass, ahead of its paint.
+    void settle_device_release_lamp();
     // MAGNIFY'S DEFERRED SEAT, ITS ONE BODY (architect 2026-11-24): called on
     // every tick at its head, ahead of the early returns and right before the
     // sticky lamps' comparator (main.cpp's refresh_lit_lamps). With
@@ -1346,15 +1368,15 @@ struct GuiInputHandler {
 
 
     // THE ROSTER'S POINTER WALK, one entry serving the WHOLE roster — the top
-    // icon row's thirty-three and the bottom icon row's twenty-two
+    // icon row's thirty-four and the bottom icon row's twenty-two
     // (the painter's tables in paint_handler.cpp own each membership; the
     // counts are theirs):
-    //   THE TOP ICON ROW, 22 + 4 + 1 + 6 = 33 — the left walk's twenty-two
+    //   THE TOP ICON ROW, 23 + 4 + 1 + 6 = 34 — the left walk's twenty-three
     //   (kIconRowButtons: Open Project and Save; Undo, Redo and Render;
     //   Zoom In, Zoom Out, Zoom to Fit, Waveform Magnification, Follow,
     //   Restrict, the TRIM arm lamp and Presets;
     //   BPM, Iteration and Flatten; Listen, the padlock, the Score key,
-    //   Settings, Enable Tooltips and the level case, NOISE —
+    //   Settings, Enable Tooltips, the release lamp and the level case, NOISE —
     //   a slider with no chord, pressed by its own arm, arm_level_case_press),
     //   the history view's four stand-ins (Revert and Load in
     //   Place in Undo's slots, Cumulative and the walk lamp in the iteration
@@ -1362,13 +1384,13 @@ struct GuiInputHandler {
     //   right-anchored (kIconRowHistoryOpener) and the THREE PAIRS' six
     //   flush right behind it in one run (kIconRowViewPairs, Source /
     //   Target and Warp / Phase Reset; kIconRowTabPair, Tab A / Tab B,
-    //   architect 2026-11-24) — 29
+    //   architect 2026-11-24) — 30
     //   standing outside the `h` view (the four stand-ins publishing empty
-    //   rects) and 20 inside it (the stand-ins in, Undo's group and the
+    //   rects) and 21 inside it (the stand-ins in, Undo's group and the
     //   iteration group out, and the view's hide leaving Open Project and
     //   Save's group whole, Zoom In, Zoom Out, Zoom to Fit and Waveform
-    //   Magnification, Play Renders, Enable Tooltips and the level case
-    //   alone of theirs);
+    //   Magnification, Play Renders, Enable Tooltips, the release lamp and
+    //   the level case alone of theirs);
     //   THE BOTTOM ICON ROW, 2 + 2 + 8 + 4 + 4 + 2 = 22 — the COPY / PASTE DUO (Copy
     //   Phase Resets and Paste Phase Resets, kPhaseResetPropagateGroup,
     //   2026-11-08), the skips (Go to Start, Go to End,

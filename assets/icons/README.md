@@ -41,7 +41,8 @@ ADDED, the tab pair's Tab A / Tab B (`TabA` / `TabB`) OUR OWN, Liberation Sans B
 (THE OWN DRAWINGS below); and 2026-11-24, THREE ROWS RE-PICKED, FIT's recall (`ZoomPrevious`) OUR OWN, his pick
 "V1", `view-restore`'s four corners with the left and right pairs 1 closer (THE OWN DRAWINGS below), and the score's
 Start / End (`ZoneIn` / `ZoneOut`), his pick "G", Papirus's `bookmark-new` / `bookmark-remove`, a bookmark ribbon with
-a plus / a minus cut out of it, untouched. Papirus names few of the enumerators' acts, so
+a plus / a minus cut out of it, untouched; and 2026-11-26, ONE ROW ADDED, RELEASE's (`BluetoothPaired`), his pick,
+Papirus's `panel/bluetooth-paired`, the Bluetooth sign between two dots, untouched. Papirus names few of the enumerators' acts, so
 many rows are the nearest drawing by another name (the Note column).
 
 WHICH SEAT WEARS WHICH DRAWING is the act vocabularies' owners' (`redesign_button_icon` in `src/gui/app_state.h`,
@@ -195,6 +196,7 @@ changed, two of them wrapped in their transform.
 | `Lock` | `symbolic/actions/lock-symbolic.svg (-> actions/system-lock-screen.svg)` | `f43c953a60fa80e663b8fb4047b6967f0a93db0e349fe8178af057954c76e34e` |  |
 | `SettingsConfigure` | `symbolic/actions/settings-symbolic.svg (-> actions/configure.svg)` | `df30d791a1311a1f531afa4fe73960778fb02db47ed2a192853df521088bf36f` | no settings-configure; settings |
 | `HelpWhatsthis` | `symbolic/actions/help-about-symbolic.svg (-> actions/help-about.svg)` | `e07bc239c74f4c1372be356610350e51d18d42e268540c1a1d3c7c672a93d98e` | no help-whatsthis; help-about |
+| `BluetoothPaired` | `panel/bluetooth-paired.svg` | `7b49fef9869174ae4c7004c268ab7b52a3352c7a2850f68460c08a5fca1b537a` | the Bluetooth sign between two dots, RELEASE's, his pick (2026-11-26) |
 | `ViewMediaLyrics` | `symbolic/places/folder-music-symbolic.svg` | `01ffd6e4ff6b24a1980a2965a62719df2d1c8faa1d314406baf73f15aefa387d` | no view-media-lyrics; folder-music, two beamed notes (re-picked 2026-11-22) |
 | `ShallowHistory` | `symbolic/actions/recent-symbolic.svg (-> actions/document-open-recent.svg)` | `9b16854c8865286e4aacac9086b0e1a595c9e2029d3e8e2c346fcb54be7af3b6` | no shallow-history; recent (a clock) |
 | `DeepHistory` | `panel/network-unavailable.svg (-> panel/network-wired-offline.svg)` | `ffd38f78062e37210ae4d1c38b985b7fdee67f71bfca5fbd99c2b319a37dee65` | no deep-history; network-unavailable, a faded network port and a cross (re-picked 2026-11-22, send MM) |

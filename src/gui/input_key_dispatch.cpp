@@ -416,6 +416,11 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
     // the lock protects, so it is admitted on a locked tab and under the
     // grid-iterations lock, whose gate falls through to this list.
     const bool is_tooltip_lamp = is_tooltip_lamp_key(key, mods);
+    // THE RELEASE LAMP (architect 2026-11-26), its internal chord: device
+    // state — whether the sound device's stream stands — authoring nothing
+    // the lock protects, so it is admitted on a locked tab and under the
+    // grid-iterations lock, whose gate falls through to this list.
+    const bool is_release_lamp = is_release_lamp_key(key, mods);
     // BARE `m`, THE SCORE VIEWER (architect 2026-10-26): viewing a page,
     // paging and the remembered position's write author nothing the lock
     // protects, so the opener is admitted on a locked tab and, the iteration
@@ -480,7 +485,7 @@ bool read_only_key_blocked(const AppState& app, GuiKey key,
              is_copy_value || is_jump_to_value_source ||
              is_phase_reset_copy ||
              is_settings_page ||
-             is_tooltip_lamp || is_score_viewer ||
+             is_tooltip_lamp || is_release_lamp || is_score_viewer ||
              is_iteration_off_edge);
 }
 
@@ -2691,12 +2696,18 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // walk answers it LIVE by its own arm, history_mode_refuses_button_
     // chord, input_pointer.cpp — device state the view has no reason to
     // refuse.)
+    // THE RELEASE LAMP (architect 2026-11-26), its internal chord through
+    // the shared predicate: device state beside NOISE, touching nothing the
+    // view froze, so the view admits it and the key stands live in here by
+    // the derived partition, where NOISE stands.
+    const bool is_release_lamp = is_release_lamp_key(key, mods);
     return !(is_zoom_step || is_zero || is_play_renders ||
              is_view_selector || is_add_to_selection || is_tab_selector ||
              is_load_in_place || is_revert_act ||
              is_save || is_publish || is_open_project ||
              is_revert_project ||
-             is_tooltip_lamp || is_waveform_magnification);
+             is_tooltip_lamp || is_release_lamp ||
+             is_waveform_magnification);
 }
 
 bool history_mode_key_blocked(GuiKey key, GuiInputState mods,
@@ -8807,6 +8818,20 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // admit it — the `h` view's claim above this dispatch does not own
         // the key, so its press falls through to here).
         set_show_tooltips(!app.show_tooltips);
+        break;
+    case GuiKeys::Release:
+        // Toggle the release of the sound device (architect 2026-11-26, the
+        // RELEASE lamp; GuiPlaybackLifecycle::toggle_device_release, the
+        // one chokepoint: dark, the stop body and the release; lit, the
+        // reopen). The one bare form reaches here, its one producer the
+        // icon-row button's internal chord. Silent: the lamp's face shows
+        // the new state. History-less, legal on a locked tab, under the
+        // grid-iterations lock and in the `h` view (all three allowlists
+        // admit it; the view's claim above this dispatch does not own it).
+        // The face's mirror is settled here, in the press's own pass, so
+        // the lift's repaint shows the new lamp (settle_device_release_lamp).
+        playback_lifecycle.toggle_device_release();
+        settle_device_release_lamp();
         break;
     case GuiKeys::C:
         // The center command, whose recipe and whose history-mode twin both live

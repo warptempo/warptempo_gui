@@ -44,7 +44,10 @@
 // stream below):
 //   1. THE POLL — gui_main's beside tick() (GuiPlayback::stream_dead,
 //      GuiNoise::reset_on_dead_stream), for the press-less drop, the one
-//      road that reads the latch without reopening;
+//      road that reads the latch without reopening — and for RELEASE's
+//      closed stream, whose latch is the drop's (GuiPlayback::
+//      release_device, architect 2026-11-26), so the bed resumes at the
+//      release's end on a fresh segment with the fade-in;
 //   2. EVERY REOPEN — reopen_stream_if_dead's dead arm, and launch_window's
 //      post-publish dead arm (playback_aaudio.cpp), ahead of the
 //      close_stream that clears the latch: a press that reaches the device
@@ -59,7 +62,11 @@
 // stream (Play, an audition, the car's Play at a connect, or NOISE's own
 // wake: its tap, or a drag lifted on an audible level, over the dead
 // stream, architect 2026-11-24, GuiInputHandler::finish_level_press_release),
-// and that reopen is the bed's resume. AT -inf THE BED IS SHUT OFF WHOLE
+// and that reopen is the bed's resume. THE RELEASE LAMP IS THE SAME SILENCE
+// BY CHOICE (architect 2026-11-26; playback_aaudio.cpp's lifecycle block):
+// its three ends are the resume, the app's return among them with no press,
+// and a launch with the lamp seated lit opens no stream, so an audible bed
+// waits there for one of the three. AT -inf THE BED IS SHUT OFF WHOLE
 // (the voice dark, its bank freed at the lift); THE DEVICE STREAM'S
 // LIFECYCLE IS NOT THE LEVEL'S (playback_aaudio.cpp's THE STREAM'S
 // LIFECYCLE: opened once, started once, never stopped between plays).

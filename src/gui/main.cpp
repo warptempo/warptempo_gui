@@ -1615,26 +1615,31 @@ void refresh_status_bar(AppState& app, GuiPlatform& gui) {
 // stored as they stand): ON EVERY TICK, ahead of the tick's early returns,
 // so every mode reaches it (an overlay's TIPS, the `h` view's MAGNIFY), the
 // live bits — AppState::show_waveform_magnification, ::follow, ::restrict
-// and ::show_tooltips — are held against the struct's
+// and ::show_tooltips, and RELEASE's, the device's own fact
+// (GuiPlayback::device_released, architect 2026-11-26) — are held against
+// the struct's
 // DeviceConfig::lit_lamps, and on a difference the struct takes the live
 // set and the config is written ONCE, by the level case's own road
 // (GuiSettingsEditor::persist_device_config: a failure prints and cards,
 // the struct keeping the live set, so a failed write is not retried every
 // tick). WHY HERE, ONE SITE: it reads the bits, not the acts, so EVERY
 // WRITER OF A LAMP, PRESENT AND FUTURE, IS CAUGHT — the user's press, the
-// FOLLOW / RESTRICT radio's lit edge (the program's one darkening of a
-// sticky lamp: a zoom and the `h` view's entry put none of the four out,
-// architect 2026-11-25), the open's own seat (which leaves no difference)
+// FOLLOW / RESTRICT radio's lit edge and RELEASE's ends (the program's
+// darkenings of a sticky lamp — the return and a play's reopen put RELEASE
+// out, architect 2026-11-26; a zoom and the `h` view's entry put none of
+// the five out, architect 2026-11-25), the open's own seat (which leaves no
+// difference)
 // and MAGNIFY's deferred seat — with no config write threaded through any
-// of them. A tick with no difference costs the struct's four compares.
+// of them. A tick with no difference costs the struct's five compares.
 // WHILE MAGNIFY'S SEAT IS PENDING its word is CARRIED, NOT COMPARED
 // (AppState::magnification_seat_pending: the stored word names a lamp
 // whose curve is not ready yet), so the open's dark bit is never stored
 // over it; the tick's head runs GuiInputHandler::settle_pending_magnification
 // just before this, so the tick that seats the lamp compares it lit and
 // finds no difference, and from then on — and from the open whenever
-// nothing was pending — the bit is compared like the other three.
-void refresh_lit_lamps(AppState& app, GuiSettingsEditor& settings_editor) {
+// nothing was pending — the bit is compared like the other four.
+void refresh_lit_lamps(AppState& app, GuiSettingsEditor& settings_editor,
+                       const GuiPlayback& playback) {
     DeviceConfig& cfg = *app.device_config;
     const DeviceLitLamps live{
         .magnify  = app.magnification_seat_pending
@@ -1642,7 +1647,8 @@ void refresh_lit_lamps(AppState& app, GuiSettingsEditor& settings_editor) {
                         : app.show_waveform_magnification,
         .follow   = app.follow,
         .restrict = app.restrict,
-        .tips     = app.show_tooltips};
+        .tips     = app.show_tooltips,
+        .release  = playback.device_released()};
     if (live == cfg.lit_lamps) return;
     cfg.lit_lamps = live;
     (void)settings_editor.persist_device_config();
@@ -2540,8 +2546,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // flips (the platform owns the edge test). NOTHING ELSE TAKES AN
     // UNFOCUSED LOOK (architect 2026-10-03: one selected pair, focused or not,
     // render.h's palette block).
+    // AND RELEASE'S RETURN (architect 2026-11-26): the same edge is the app
+    // leaving for another screen and coming back, so its direction goes to
+    // the return's watch (GuiPlaybackLifecycle::note_window_activation),
+    // which ends a release at the gain after a loss seen under the lit lamp.
     gui.set_activation_changed_hook([&] {
         input_handler.hide_shift_tooltip();
+        playback_lifecycle.note_window_activation(gui.window_activated());
+        input_handler.settle_device_release_lamp();
     });
 
     gui.set_on_motion([&](const GuiPointerPlace& at, GuiInputState mods) {
@@ -2622,10 +2634,14 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         refresh_status_bar(app, gui);
         // THE STICKY LAMPS the same way (2026-11-24): MAGNIFY's deferred
         // seat first (GuiInputHandler::settle_pending_magnification, one
-        // compare once seated), then the one writer of their device key
-        // (refresh_lit_lamps), four compares on a still tick.
+        // compare once seated), RELEASE's face settle beside it (architect
+        // 2026-11-26; GuiInputHandler::settle_device_release_lamp, the face's
+        // mirror of the device's fact and its damage, one compare at rest),
+        // then the one writer of their device key (refresh_lit_lamps), five
+        // compares on a still tick.
         input_handler.settle_pending_magnification();
-        refresh_lit_lamps(app, settings_editor);
+        input_handler.settle_device_release_lamp();
+        refresh_lit_lamps(app, settings_editor, playback);
 
         // THE DISPLAY KEEP-ALIVE (architect 2026-11-13; the
         // facts and the ruling — a brief window after a fast Stop — at
@@ -2689,7 +2705,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // reads the drop exactly as it did. The latch stands until a press
         // reopens, so this calls again on every tick of the dead interval, its
         // writes idempotent and no fill running. THIS IS THE PRESS-LESS DROP'S
-        // ROAD ALONE (noise.h's head, the two roads): on Android input drains
+        // ROAD ALONE — and RELEASE's, whose closed stream wears the drop's
+        // latch (GuiPlayback::release_device, architect 2026-11-26) — (noise.h's
+        // head, the two roads): on Android input drains
         // ahead of this tick, and a press that reopens first — Play, an
         // audition start, the car's Play at a connect — clears the latch
         // before this read, so the reopen resets the sequence itself ahead of
@@ -4125,7 +4143,12 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // and the next init opens and starts one. A LIT NOISE GAPS
     // FOR IT and resumes where it was in the next session's first callback,
     // no fade (GuiNoiseVoice's thread note, noise.h): after this line no
-    // callback of this engine touches the voice.
+    // callback of this engine touches the voice. WITH RELEASE LIT ACROSS THE
+    // SWITCH (architect 2026-11-26) the old stream is already closed, the
+    // next project seats the stored lamp and its init opens and starts
+    // nothing (GuiPlayback::init's released arm), so there is no stop and no
+    // start at this reopen, and an audible bed stays silent until one of
+    // the release's three ends opens a stream.
     playback.shutdown();
     // Join the render worker before cache teardown so a render completing
     // during shutdown cannot touch the dismantled cache. Idempotent; the
