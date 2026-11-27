@@ -114,8 +114,10 @@
 // scroll where the rows allow). FROM NONE the walk takes THE FIRST ROW in
 // either direction (move_highlight_target), the render player's Play
 // resumes a bound item listed there or plays the listing's first render
-// (render_player_band_row), and the car's acts follow (render_player.h's THE
-// CAR'S OWN ACTS); the painter lights nothing and every ACTING row hovers
+// (render_player_band_row), and the car's two steps start from the row its
+// title names, as if it were lit — the car has no display for the highlight
+// (GuiRenderPlayer::car_origin_row, render_player.h's THE CAR'S OWN ACTS,
+// architect 2026-11-27); the painter lights nothing and every ACTING row hovers
 // (an inert row never does, the hover's gate, row_is_inert).
 //
 // THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S. Two owners,
@@ -684,17 +686,11 @@ inline bool seat_tapped_row(AppState& a, int index) {
 // THE ROW A WALK STEPS FROM: the highlight, or -1 where NO ROW IS LIT (the
 // head's rule, architect 2026-11-27) — and a walk from none steps from no
 // row: it TAKES THE FIRST ROW, whichever its direction
-// (move_highlight_target below). ONE OWNER, TWO READERS —
-// move_highlight_target, the step itself, and THE CAR'S PREVIOUS, whose
-// rest arm steps up only from a lit row below the first and otherwise
-// leaves the folder (GuiRenderPlayer::car_previous: at the first row and
-// from none alike). They must not drift: both read "where the walk starts"
-// here, never a field of their own.
+// (move_highlight_target below, its one reader). The glass's walk alone:
+// the car's steps start from the row its title names
+// (GuiRenderPlayer::car_origin_row, architect 2026-11-27).
 inline int walk_origin_row(const AppState::FolderOverlay& ov) {
     return ov.highlight_row < 0 ? -1 : ov.highlight_row;
-}
-inline int walk_origin_row(const AppState& a) {
-    return walk_origin_row(a.folder_overlay);
 }
 
 // THE ROW A WALK OF `delta` ROWS LANDS ON, or -1 for an empty listing (the

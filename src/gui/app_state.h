@@ -10604,11 +10604,13 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 // LISTING'S FIRST RENDER — what Play plays from none, the row then lit as
 // the playing render's (play_wav's seat); at the root with none lit, and on
 // an empty listing, -1 (nothing to play: the transport's own arm answers
-// there). THREE READERS: render_player_highlight_act_row below, the head
+// there). FOUR READERS: render_player_highlight_act_row below, the head
 // unit's silence-track title (GuiRenderPlayer::publish_media_state), so the
-// title names what the console's button would start, and
+// title names what the console's button would start,
 // GuiRenderPlayer::seat_band_on_listed_item, which lights the bound item's
-// row it names before Play resumes that item. The row keys (Load in place,
+// row it names before Play resumes that item, and
+// GuiRenderPlayer::car_origin_row, the car's two steps starting from the row
+// the title names (architect 2026-11-27). The row keys (Load in place,
 // Delete) read the lit row alone.
 // Defined in render_player.cpp.
 int render_player_band_row(const AppState& a);

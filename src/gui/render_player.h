@@ -358,8 +358,8 @@ struct GuiRenderPlayer {
     // tap found it (play_wav's band seat).
     void open_row(int index, bool tapped);
     // One folder up — THE MODAL ROW'S UP BUTTON (2026-09-01), and THE CAR'S
-    // OWN PREVIOUS AT REST: car_previous() composes this body at the band's
-    // first row and with no row lit, so the act has TWO roads on ONE body (the button and
+    // OWN PREVIOUS AT REST: car_previous() composes this body where its
+    // origin is the first row (car_origin_row), so the act has TWO roads on ONE body (the button and
     // car_previous()'s rest arm; its live arm is a seek, architect
     // 2026-11-25). The highlight pair is the
     // plain band walk and the Home button the previous-track act, so leaving
@@ -626,18 +626,23 @@ struct GuiRenderPlayer {
     //   takes play_button_act WHOLE, the tablet's Play button: a highlighted
     //   folder opens, a highlighted other wav plays, and the item's own row
     //   resumes.
+    // THE TWO STEPS AT REST START FROM THE CAR'S ORIGIN (car_origin_row,
+    //   architect 2026-11-27): the lit row, or WITH NO ROW LIT
+    //   (folder_overlay.h's head) the row the car's title names, as if it
+    //   were lit — the car has no display for the highlight — else the
+    //   first row; the tablet's walk pair is not the car's.
     // car_previous() — REWIND: WHILE LIVE it is car_seek() back (architect
     //   2026-11-25: "render player in car should also do ... skip back/forth
     //   when audio is playing"). At REST (paused and idle alike) it walks the
-    //   band UP one row, and AT THE BAND'S FIRST ROW — or with NO ROW LIT
-    //   (folder_overlay.h's head, architect 2026-11-27) — it goes UP A FOLDER
-    //   (up() whole: the item unloaded, the sound stopped, the band seated on
-    //   the folder just left); at the ROOT's first row, or none, it is a
+    //   band UP one row from the origin, and AT THE FIRST ROW it goes UP A
+    //   FOLDER (up() whole: the item unloaded, the sound stopped, the band
+    //   seated on the folder just left); at the ROOT's first row it is a
     //   silent walled no-op.
     // car_next() — FAST-FORWARD: WHILE LIVE it is car_seek() forward; at REST
-    //   it walks the band DOWN one row — from NO ROW LIT onto the first row
-    //   (the walk's from-none landing) — a silent walled no-op at the
-    //   listing's last row.
+    //   it walks the band DOWN one row from the origin — from none in a fresh
+    //   folder onto the SECOND render — clamped at the listing's last row,
+    //   a silent wall from a lit last row (from none on a one-row listing
+    //   the step lights that row).
     // car_toggle()'s Play from NO ROW LIT is the tablet's: inside a folder
     //   the bound item listed there, resumed with its row lit, else the
     //   listing's first render (render_player_band_row), at the root
@@ -665,8 +670,9 @@ struct GuiRenderPlayer {
     // quickly"): these are transport- and band-based, never press-timed.
     //
     // NO WALL PREDICATE STANDS IN FRONT OF THEM: each refusal is the silent
-    // return of the body composed here — folder_overlay::move_highlight's
-    // clamp, up()'s root return, seek_to's for the seek — and with a constant
+    // return of the body composed here — the step's clamp (car_step_to,
+    // nothing where the landing is the lit row), up()'s root return,
+    // seek_to's for the seek — and with a constant
     // PLAYING published there is no drifted display for a walled press to
     // correct, so no wall is consulted ahead of them.
     void car_toggle();
@@ -988,6 +994,28 @@ private:
     // shorter listing leaves no departed rows standing above it.
     void damage_band();
     void damage_row();
+    // THE CAR'S ORIGIN — THE ROW ITS TWO STEPS START FROM at rest
+    // (car_previous / car_next; architect 2026-11-27: "I think the implicit
+    // rule, if not the explicit rule, should be that the car still has the
+    // first row highlight feature. It's just the car doesn't actually have a
+    // display for that." — "Agree."): the lit row; WITH NO ROW LIT the row
+    // the car's title names, as if it were lit (render_player_band_row: the
+    // bound item's row where listed, else the folder's first render), else
+    // the listing's first row (the folder list, where the band names none);
+    // -1 for an empty listing. ONE OWNER, read by both steps. THE CAR ALONE:
+    // it has no display for the highlight, and its title already names this
+    // row, so a step from it is a step from what the listener was shown; the
+    // tablet's walk pair keeps the glass's own rule (from none the first row,
+    // folder_overlay::move_highlight_target), the glass showing that no row
+    // is lit.
+    int  car_origin_row() const;
+    // THE CAR'S STEP'S LANDING: `row` lit as the walk lights its landing —
+    // folder_overlay::set_highlight (the keep-visible scroll), the band's and
+    // the row's damage, the resume-abandon rule
+    // (abandon_paused_resume_if_band_left_item) and the title's republish off
+    // a non-live transport — move_highlight's own tail on a landing the car's
+    // origin names. Nothing where the highlight already stands there.
+    void car_step_to(int row);
     // A PAUSED ITEM'S RESUME POINT, ABANDONED WHEN THE BAND LEAVES ITS ROW
     // (architect 2026-09-15): while paused, `resume_frame` rests where the
     // pause left it ONLY WHILE THE HIGHLIGHT STANDS ON THE ITEM'S OWN ROW — a

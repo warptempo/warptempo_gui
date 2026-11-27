@@ -1395,34 +1395,67 @@ void GuiRenderPlayer::car_toggle() {
 // THE WHEEL'S REWIND. WHILE LIVE IT IS THE CAR'S SEEK BACK (architect
 // 2026-11-25: "render player in car should also do ... skip back/forth when
 // audio is playing", the step the project transport's 3 s): car_seek below.
-// AT REST THE BAND IS THE PLAYLIST: a row above steps to it, and the FIRST row
-// leaves the folder instead — the one direction of travel that does, because
-// a listener knows which file starts a folder and never how many it holds,
-// so this exit is always deliberate — and so does a band with NO ROW LIT
-// (architect 2026-11-27; walk_origin_row's -1, no row above it). At the
-// ROOT's first row, or none, up() is its own silent wall. Changing track
-// from the car is pause, step, play.
+// THE CAR'S ORIGIN (the contract at the declaration): the lit row; with no
+// row lit the row the car's title names (render_player_band_row), else the
+// listing's first row; -1 for an empty listing.
+int GuiRenderPlayer::car_origin_row() const {
+    const AppState::FolderOverlay& ov = app.folder_overlay;
+    const int n = static_cast<int>(ov.rows.size());
+    if (n <= 0) return -1;
+    if (ov.highlight_row >= 0 && ov.highlight_row < n) return ov.highlight_row;
+    if (const int row = render_player_band_row(app); row >= 0) return row;
+    return 0;
+}
+
+// THE CAR'S STEP'S LANDING (the contract at the declaration): the walk's own
+// seat and tail, move_highlight's, on a row named by the car's origin.
+void GuiRenderPlayer::car_step_to(int row) {
+    if (folder_overlay::set_highlight(app, row)) {
+        damage_band();
+        damage_row();
+        abandon_paused_resume_if_band_left_item();
+        if (app.render_player.transport != Transport::Live)
+            publish_media_state();
+    }
+}
+
+// THE WHEEL'S REWIND. WHILE LIVE IT IS THE CAR'S SEEK BACK (architect
+// 2026-11-25: "render player in car should also do ... skip back/forth when
+// audio is playing", the step the project transport's 3 s): car_seek below.
+// AT REST THE BAND IS THE PLAYLIST: from the car's origin (car_origin_row —
+// with no row lit the row the car's title names, architect 2026-11-27) a row
+// above steps to it, and the FIRST row leaves the folder instead — the one
+// direction of travel that does, because a listener knows which file starts
+// a folder and never how many it holds, so this exit is always deliberate.
+// At the ROOT's first row, or an empty listing, up() is its own silent wall.
+// Changing track from the car is pause, step, play.
 void GuiRenderPlayer::car_previous() {
     if (app.render_player.transport == Transport::Live) {
         car_seek(/*forward=*/false);
         return;
     }
-    if (folder_overlay::walk_origin_row(app) > 0) move_highlight(-1);
-    else                                          up();
+    const int origin = car_origin_row();
+    if (origin > 0) car_step_to(origin - 1);
+    else            up();
 }
 
 // THE WHEEL'S FAST-FORWARD — Rewind's mirror image with ONE difference, and it
 // is the ruling's own: this act NEVER LEAVES A FOLDER. While live, the car's
-// seek forward; at rest, one row down and no further — from NO ROW LIT the
-// first row (the walk's from-none landing, architect 2026-11-27) — the
-// listing's last row a silent wall (move_highlight's own clamp), never an
-// exit and never a wrap.
+// seek forward; at rest, one row down from the car's origin (car_origin_row —
+// with no row lit the row the car's title names, so from a fresh folder it
+// lands on the SECOND render, architect 2026-11-27) and no further, the
+// listing's last row a silent wall (the clamp: from a lit last row nothing
+// moves, and from none on a one-row listing the step lights that row), never
+// an exit and never a wrap.
 void GuiRenderPlayer::car_next() {
     if (app.render_player.transport == Transport::Live) {
         car_seek(/*forward=*/true);
         return;
     }
-    move_highlight(+1);
+    const int origin = car_origin_row();
+    if (origin < 0) return;
+    const int last = static_cast<int>(app.folder_overlay.rows.size()) - 1;
+    car_step_to(std::min(origin + 1, last));
 }
 
 // THE CAR'S ONE SEEK (architect 2026-11-25; the contract at the declaration):
