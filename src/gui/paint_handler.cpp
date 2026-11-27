@@ -1050,12 +1050,12 @@ static constexpr const char* kSegmentSeparator = " | ";
 // THE SHAPE (architect 2026-09-28; the GitHub segment ahead of the scale
 // 2026-09-29; the date after the position 2026-11-25): SEGMENTS SEPARATED BY
 // ` | `, every one alike — the POSITION `x/y`, then on the commit walk the
-// DATE segment `YYYY-MM-DD h:mm AM` when the window holds a member, then the
+// DATE segment `YYYY-MM-DD hh:mm AM` when the window holds a member, then the
 // GITHUB segment `GitHub: <word>` when there is one, then the SCALE segment
 // `Scale: [-]<then token> [+]<now token>` when the scale changed (all three
 // below) — so an absent segment leaves no separator behind it and nothing
-// leads or trails: `03/14 | 2026-11-24 3:38 PM | GitHub: up to date |
-// Scale: [-]1.0 [+]1.1`, `03/14 | 2026-11-24 3:38 PM | GitHub: behind`,
+// leads or trails: `03/14 | 2026-11-24 03:38 PM | GitHub: up to date |
+// Scale: [-]1.0 [+]1.1`, `03/14 | 2026-11-24 03:38 PM | GitHub: behind`,
 // `007/114` on the local walk. The same shape on BOTH walks, the date the
 // commit walk's alone. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
 // token and `[+]` before the now one, spelled here: the lane's labels carry
@@ -1116,7 +1116,7 @@ static std::string history_walk_line(AppState& app) {
     // 2026-11-25: "github history should show date of commit"): the viewed
     // commit's committer time in the DEVICE'S LOCAL TIME, the date ISO and
     // the time the title bar clock's own spelling (clock_spelling,
-    // gui_battery.h, the one owner) — `2026-11-24 3:38 PM` — read from the
+    // gui_battery.h, the one owner) — `2026-11-24 03:38 PM` — read from the
     // walk's member (GuiHistoryDiff::commit_time_at; the walk read it off the
     // commit, so this runs no git). It stands second, ahead of the GitHub
     // word, by his agreed example's order, the bar clipping at its right

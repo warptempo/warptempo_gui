@@ -1265,12 +1265,12 @@ constexpr int kMinWindowHeightPx = 480;
 //     the note and the warptempo font" — one more than the picture's 5),
 //     both off the drawing's real ink box, not its 12 W box (on the tablet
 //     the ink 16 .. 28 with Papirus's note, the pen 28 + 12 = 40).
-//   ON THE RIGHT, THE GROUP "[limiter][clip] 92% <battery>  |  2:12 PM" AS
+//   ON THE RIGHT, THE GROUP "[limiter][clip] 92% <battery>  |  02:12 PM" AS
 //     ONE TEXT RUN in the Bold 12 W (architect 2026-11-19: the pipe "could
 //     just become a text pipe, since we're going to use those text pipes
 //     in the status bar"; gui_battery.h's composer for the
 //     parts; the tick's refresh_logo_legend, main.cpp), LAID RIGHT TO LEFT
-//     on the baseline: the run "  |  2:12 PM" — the status bar's own field
+//     on the baseline: the run "  |  02:12 PM" — the status bar's own field
 //     separator (two spaces each side of the pipe, kStatusFieldSeparator,
 //     paint_handler.cpp) then the clock — with its LAST INK
 //     kTitleRightInsetW = 8 W inside the panel's right edge (the note's

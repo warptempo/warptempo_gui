@@ -46,7 +46,7 @@ struct GuiBattery {
 // bolt or its exclamation mark (2026-11-17), render.h's title bar block.
 enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 
-// THE LEGEND — "92% <glyph>  |  2:12 PM" — AS THREE COMPOSED PARTS, laid
+// THE LEGEND — "92% <glyph>  |  02:12 PM" — AS THREE COMPOSED PARTS, laid
 // right to left by the painter as one text run (render.h's title bar block):
 // THE CLOCK, the glyph, and the PERCENT. THE TEXT PIPE before the clock
 // ("  |  ", the status bar's field separator; architect 2026-11-19) and
@@ -57,7 +57,7 @@ enum class GuiLogoGlyph : uint8_t { Charging, Discharging };
 struct GuiLogoLegend {
     std::string  percent;   // "92%", or empty: no battery, or no level read
     GuiLogoGlyph glyph = GuiLogoGlyph::Charging;
-    std::string  clock;     // "2:12 PM"
+    std::string  clock;     // "02:12 PM"
     bool operator==(const GuiLogoLegend&) const = default;
 };
 
@@ -66,9 +66,11 @@ struct GuiLogoLegend {
 //     leftward, away from the clock — the painter's right-to-left walk); an
 //     unreadable level, or no battery, drops it and keeps the glyph.
 //   * THE GLYPH: GuiLogoGlyph's rule above.
-//   * THE CLOCK: the wall clock in 12-HOUR LOCAL time with AM / PM and NO
-//     LEADING ZERO on the hour ("2:12 PM", "12:05 AM"), from the C library
-//     (localtime_r). The AM / PM words are spelled here rather than taken
+//   * THE CLOCK: the wall clock in 12-HOUR LOCAL time with AM / PM and THE
+//     HOUR TWO DIGITS, ZERO-PADDED ("02:12 PM", "12:05 AM"; architect
+//     2026-11-27: "follow GTK", his Xfce panel's clock reading "01:24 AM"),
+//     from the C library (localtime_r), so every time of day is the same
+//     glyph count. The AM / PM words are spelled here rather than taken
 //     from strftime's %p: the product's text is its own, and %p is the
 //     locale's word. ITS ALPHABET IS kLogoLegendInkSet's (render.h: the
 //     digits, "%", ":", the space and "AMP", the percent's too), which seats
@@ -84,7 +86,7 @@ inline std::string clock_spelling(const std::tm& local) {
     int hour = local.tm_hour % 12;
     if (hour == 0) hour = 12;
     char clock[24];
-    std::snprintf(clock, sizeof(clock), "%d:%02d %s", hour, local.tm_min,
+    std::snprintf(clock, sizeof(clock), "%02d:%02d %s", hour, local.tm_min,
                   local.tm_hour < 12 ? "AM" : "PM");
     return clock;
 }
