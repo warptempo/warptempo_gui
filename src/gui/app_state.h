@@ -1833,8 +1833,8 @@ enum class RedesignButton {
     // is right-anchored (2026-10-06; kIconRowHistoryOpener, paint_handler.cpp).
     //
     // OPEN PROJECT LEADS THE ROW (architect 2026-10-07: "the first icon
-    // should be the open folder icon, to open a project"), Windows' own
-    // standard-toolbar order — Open before Save — ONE BUTTON, the act and its
+    // should be the open folder icon, to open a project"), Mousepad's
+    // toolbar order — Open before Save — ONE BUTTON, the act and its
     // shift twin ("just to keep those two together", no drop-down), at the
     // head of the top icon row's first run (redesign_button_opens_icon_run, its
     // leader). ITS CHORD IS CTRL+O and
@@ -3397,8 +3397,8 @@ enum class DialogTrigger {
     // Delete, raised by the list's Delete key on the highlighted preset, and
     // "Save the current trim as '<name>'?" with
     // Cancel / Save, raised by its Save key on the highlighted preset (his
-    // glass, Windows' dialog words: Save writes into the preset
-    // chosen, Save As names a new one) — the subject parked at
+    // glass, GTK's own stock labels, the words Mousepad's File menu carries:
+    // Save writes into the preset chosen, Save As names a new one) — the subject parked at
     // AppState::FolderOverlay::trim_pending. Each STANDS OVER THE
     // LIST as the player's stands over the player. Trim has no undo, so only
     // the answer's own press acts. The answer runs the act and the list

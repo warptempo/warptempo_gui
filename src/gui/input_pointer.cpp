@@ -2935,8 +2935,8 @@ bool GuiInputHandler::dispatch_modal_dialog_button(int index, bool shifted) {
                 render_player.move_highlight(-1);
                 return true;
             case AppState::PlayerButtonAct::Up:
-                // THE `..` ROW'S ACT, ON THE ROW (2026-09-01), with its
-                // own silent wall at the root.
+                // THE UP BUTTON'S ACT (the listings carry no `..` row,
+                // render_player.h), with its own silent wall at the root.
                 render_player.up();
                 return true;
             case AppState::PlayerButtonAct::LoadInPlace:
@@ -3901,7 +3901,8 @@ bool GuiInputHandler::finish_folder_overlay_release(
     if (press.scrolling) return true;
     // A MOTIONLESS LIFT ON THE ARMED ROW HIGHLIGHTS IT AND THEN OPENS IT — A
     // CLICK ACTIVATES (architect 2026-08-29: in the player a wav plays from
-    // its start, a folder is entered and `..` goes up; in the Open project
+    // its start and a folder is entered (the listings carry no `..` row; going
+    // up is the player's Up button); in the Open project
     // picker the row's project opens, refusals and all). THIS LIFT IS THE ONE
     // ROAD TO A ROW'S OPEN: no Enter reaches a row (folder_overlay.h's head).
     // The band moves first, so what the act runs on is what the user
@@ -4504,8 +4505,8 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                                       GuiInputState mods) {
     const int x = at.x;
     const int y = at.y;
-    // ANY PRESS IS THE TOOLTIP'S HARD END, above every gate — Windows hides a
-    // tooltip at a click ("About Tooltip Controls"), and a hint left floating
+    // ANY PRESS IS THE TOOLTIP'S HARD END, above every gate — gtktooltip.c hides
+    // the tooltip on GDK_BUTTON_PRESS, and a hint left floating
     // over the thing the user just clicked is noise. The release is one too
     // (on_button_release); the press is the one that matters, because the
     // hint's job ends the moment the user acts on it, not when they let go;

@@ -350,8 +350,8 @@ struct TrimRange {
 // under `text_on_lit_dim` (architect 2026-11-11; materials.h's THE KEY;
 // under an overlay too); a CUE'S inert label is the dim print `text_dim`
 // (render.cpp's cue_label_ink; the marker-lane paragraph); the settings
-// page's inert GROUP ROWS wear the dim print (`text_dim`,
-// paint_folder_overlay, 2026-10-28). Nothing else dims.
+// page's inert rows (`scale` and `bpm`, paint_folder_overlay) wear the dim
+// print (`text_dim`). Nothing else dims.
 
 // -- THE CHOKEPOINTS ----------------------------------------------------------
 //

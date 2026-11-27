@@ -362,7 +362,7 @@ int top_lane_height(int lane) {
 // The bottom strip's THREE lanes, indexed from the WINDOW'S FOOT inward
 // like every lane table here: lane 0 is THE STATUS BAR on the window's foot
 // (architect 2026-11-19: its line and its 22 W; render.h's status
-// bar block), lane 1 THE BOTTOM ICON ROW (the clock left, the buttons
+// bar block), lane 1 THE BOTTOM ICON ROW (the timestamp left, the buttons
 // flush right; the layout is
 // paint_bottom_row_buttons_and_clock's), lane 2 THE WELL'S FOOT (one of the
 // well's lines). THE ORDER IS FIXED: no tenant of the row moves a lane — the

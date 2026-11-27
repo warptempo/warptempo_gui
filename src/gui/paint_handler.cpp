@@ -5908,7 +5908,7 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
-// end to end — the same Qt timing, the same box, the same painter, the same
+// end to end — the same GTK timing (render.h's THE TIMING), the same box, the same painter, the same
 // AppState::redesign_tooltip state, whose owner names either surface. The
 // TEXT is a word button's word alone, a glyph button's the player's own,
 // published in the stash beside the rect; the WAIT is written by this surface's own hover walk

@@ -256,7 +256,10 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 //     baseline the line box's ascent under that; CUT kPageMarginPenW inside
 //     the view's right edge (`text_end_x`; it never wraps);
 //   THE BAR (the progress page's) from the pen's column to the right cut,
-//     kPageProgressBarW (6 W) tall, ITS TOP kPageLabelGapW UNDER THE
+//     kPageProgressBarW tall (6 W: GtkProgressBar's own minimum bar height,
+//     gtkprogressbar.c's MIN_HORIZONTAL_BAR_HEIGHT, the default of its
+//     `min-horizontal-bar-height` style property; Arc's sheet sets none and
+//     rounds it with its 3 px radius), ITS TOP kPageLabelGapW UNDER THE
 //     SENTENCE'S LINE BOX;
 //   THE COUNT ("3 of 11"; Regular 10 W, GuiFace::Caption, GTK's "small") at
 //     the same pen, ITS LINE BOX (13 W) kPageLabelGapW UNDER THE BAR;
@@ -281,6 +284,8 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 // (rows 203..252 on the tablet) — the damage
 // GuiInputHandler::set_batch_progress_index declares, the sentence and the
 // page round it untouched.
+// THE BAR'S HEIGHT: GtkProgressBar's own minimum (gtkprogressbar.c's
+// MIN_HORIZONTAL_BAR_HEIGHT, 6; the layout block above says whose number).
 inline constexpr double kPageProgressBarW = 6.0;
 struct ModalPageLines {
     GuiRect view{0, 0, 0, 0};

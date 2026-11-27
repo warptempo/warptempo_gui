@@ -3677,8 +3677,8 @@ private:
     // the pen has moved half a key across — by then it is on the neighbor
     // or off the key, or still on it only by a move as deliberate — and a
     // step to the next key always rearms; the on-screen keyboard's keys'
-    // pitch (25 W across at the tablet's tuning, 50 device px) is above it
-    // too, so a step to the next key rearms there.
+    // pitch (the program key rotated, onscreen_keyboard.h's placement block
+    // owns its numbers) is above it too, so a step to the next key rearms there.
     // Authored in W as every chrome length, though the drift is physical:
     // the tablet is the one pen device; 18 W keeps the tablet's 36 device px
     // (the drift numbers above are device px). The blink is the roster's
@@ -4530,8 +4530,8 @@ private:
     void update_folder_overlay_press_motion(const GuiPointerPlace& at);
     // THE TWO HALVES OF THE ROW CLICK, FORKED ON THE OWNER and nowhere else:
     // the highlight (the band moves, under every owner — the picker has
-    // no field beside it) and the open act (the player enters a folder, goes
-    // up or plays a wav; the project picker reopens the row's project).
+    // no field beside it) and the open act (the player enters a folder or plays
+    // a wav; the project picker reopens the row's project).
     void folder_overlay_highlight_row(int index);
     void folder_overlay_open_row(int index);
     // (clear_folder_overlay_press is public, beside clear_modal_dialog_press:
@@ -4541,8 +4541,10 @@ private:
     // THE PLAY-SCRUB'S POINTER HALF (bodies in input_pointer.cpp), over the
     // painter's published scale item (AppState::ModalDialogGeometry::scrub,
     // Arc's scale, render.h's scrub block):
-    // EVERY PRESS ON THE ITEM ARMS THE THUMB DRAG (architect 2026-10-02,
-    // Windows' trackbar) — on the knob's disc (the one test,
+    // EVERY PRESS ON THE ITEM ARMS THE THUMB DRAG (architect 2026-10-02; GTK's
+    // warping slider, `gtk-primary-button-warps-slider` TRUE in gtksettings.c:
+    // a press on the trough warps the slider under the pointer and the same
+    // press drags it on, gtkrange.c) — on the knob's disc (the one test,
     // render_player_scrub_handle_hit) the knob is taken where it stands, and
     // anywhere else on the item it JUMPS to the press and the same press
     // drags it on, the knob held either way (its held look, render.h's
