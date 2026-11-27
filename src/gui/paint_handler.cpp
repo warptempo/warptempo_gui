@@ -6296,7 +6296,7 @@ void paint_value_page(cairo_t* cr, AppState& app, text_editor::State* ed) {
     // THE CARET, one W wide from its byte's exact x over the line box's
     // rows, in the field's text, cut at the entry's padding box (one border
     // in) — at the inner right edge it stands in the pad, GtkEntry's seat;
-    // shown on the blink's lit half (the entry always holds the focus), the
+    // shown on the blink's lit phases (the entry always holds the focus), the
     // selection never gated.
     if (text_editor::cursor_visible_now(*ed)) {
         cairo_save(cr);

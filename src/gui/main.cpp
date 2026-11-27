@@ -3476,7 +3476,11 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // Blink the editor cursor independently of playback. Compare the
         // current visibility against the last painted state and invalidate
-        // the top strip when it flips. Cheap: top_strip is small.
+        // the top strip when it flips. Cheap: top_strip is small. THE FLIPS
+        // NEED NO DEADLINE OF THEIR OWN: this tick is the free-running 5 ms
+        // timerfd (arm_playback_timer), so each flip of GtkEntry's timeline
+        // (text_editor::cursor_visible_now) is seen within one tick, and
+        // past its last flip the answer stands and nothing is damaged.
         if (text_editor::is_active(app.top_flag_editor)) {
             const bool now_visible =
                 text_editor::cursor_visible_now(app.top_flag_editor);

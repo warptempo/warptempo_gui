@@ -442,9 +442,10 @@ struct State {
     // structurally a change of State, so nothing else needs keeping in step.
     double view_offset_px = 0.0;
 
-    // Cursor blink: monotonic timestamp at which the cursor became
-    // visible. The renderer tests `(now - blink_epoch) % period < period/2`
-    // to decide whether to draw the bar this frame.
+    // THE CARET'S LAST ACTIVITY: the monotonic stamp of the last edit, caret
+    // move, open or blink restart (restart_blink, its one writer), from which
+    // the caret's whole GTK timeline runs (cursor_visible_now and the
+    // constants beside its declaration).
     std::chrono::steady_clock::time_point blink_epoch =
         std::chrono::steady_clock::now();
 };
@@ -615,23 +616,72 @@ bool        replace_selection(State& s, const std::string& raw);
 // bytes its key's press inserts.
 std::string encode_utf8(uint32_t cp);
 
-// Render-side helper: returns true if the cursor should be drawn this
-// frame. Period is 1000ms (~500ms on, ~500ms off) and resets at every
-// `pending` mutation so the cursor stays visible immediately after a
-// keystroke.
+// THE CARET BLINKS AS GTKENTRY'S (architect 2026-11-27: "follow GTK"), on
+// gtk-3-24's own numbers: the two settings' defaults (gtksettings.c) and the
+// four multipliers of gtkentry.c's blink machinery.
+//   gtk-cursor-blink-time, 1200 ms: one cycle.
+inline constexpr int kCaretBlinkTimeMs      = 1200;
+//   gtk-cursor-blink-timeout, 10 s: how long the caret blinks with no input.
+inline constexpr int kCaretBlinkTimeoutS    = 10;
+//   CURSOR_ON_MULTIPLIER 2, CURSOR_OFF_MULTIPLIER 1, CURSOR_PEND_MULTIPLIER 3,
+//   CURSOR_DIVIDER 3: lit 2/3 of the cycle, dark 1/3, and after an activity
+//   the caret stands solid 3/3 of it before the first dark phase.
+inline constexpr int kCaretOnMultiplier     = 2;
+inline constexpr int kCaretOffMultiplier    = 1;
+inline constexpr int kCaretPendMultiplier   = 3;
+inline constexpr int kCaretDivider          = 3;
+inline constexpr int kCaretLitMs  =
+    kCaretBlinkTimeMs * kCaretOnMultiplier / kCaretDivider;     // 800
+inline constexpr int kCaretDarkMs =
+    kCaretBlinkTimeMs * kCaretOffMultiplier / kCaretDivider;    // 400
+inline constexpr int kCaretPendMs =
+    kCaretBlinkTimeMs * kCaretPendMultiplier / kCaretDivider;   // 1200
+// One dark phase and the lit phase after it: the step between two hides.
+inline constexpr int kCaretCycleMs = kCaretDarkMs + kCaretLitMs;  // 1200
+// THE STOP, as gtkentry.c's blink_cb counts it: `blink_time` is zeroed by
+// every activity and grows by kCaretBlinkTimeMs at each re-show after a dark
+// phase; the test `blink_time > 1000 * timeout` runs when the timer next
+// fires, at a hide, and passing it shows the caret and sets no timer. The
+// hide at kCaretPendMs + j * kCaretCycleMs therefore meets blink_time
+// j * kCaretBlinkTimeMs, and goes dark exactly while that is not past the
+// timeout: THE DARK PHASES ARE j = 0 .. kCaretDarkPhases - 1, the first j
+// past it being timeout / blink time + 1 (integer division; the test is
+// strict). The last of them ends in the re-show that stands for good.
+inline constexpr int kCaretDarkPhases =
+    kCaretBlinkTimeoutS * 1000 / kCaretBlinkTimeMs + 1;            // 9
+inline constexpr int kCaretSteadyFromMs =
+    kCaretPendMs + (kCaretDarkPhases - 1) * kCaretCycleMs +
+    kCaretDarkMs;                                                  // 11 200
+static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200,
+              "gtk-3-24's defaults give nine dark phases, the caret lit for "
+              "good from 11 200 ms");
+
+// Whether the caret is drawn this frame: false for an inactive editor; else
+// read off the time since State::blink_epoch, the last activity —
+//   lit  [0, kCaretPendMs)                              the pend, solid
+//   dark [kCaretPendMs + j * kCaretCycleMs,
+//         ... + kCaretDarkMs)              j = 0 .. kCaretDarkPhases - 1
+//   lit  from kCaretSteadyFromMs on, for good
+// (1200 ms solid, nine 400 ms dark phases with 800 ms lit between, lit from
+// 11 200 ms). Every edit, caret move and open restarts it (touch_blink /
+// restart_blink), so the caret stands lit straight after a keystroke. THE
+// LAST FLIP IS THE RE-SHOW AT kCaretSteadyFromMs: past it the answer never
+// changes, so the tick's flip compares (main.cpp) damage nothing for a
+// resting editor, GTK's stopped blink.
 bool cursor_visible_now(const State& s);
 
-// THE CARET MOVED OR THE TEXT CHANGED — restart the blink phase (the caret
-// becomes visible NOW and the period runs from here): every caret motion and
+// THE CARET MOVED OR THE TEXT CHANGED — restart the blink (the caret becomes
+// visible NOW and the timeline runs from here): every caret motion and
 // every edit inside this module calls it, and so do the pointer's caret
 // seats.
 void touch_blink(State& s);
 
-// RESTART THE BLINK PHASE ALONE, the caret unmoved — for the callers that
-// move nothing: a finger's caret drag ending where its last frame seated the
+// RESTART THE BLINK ALONE, the caret unmoved — for the callers that move
+// nothing: a finger's caret drag ending where its last frame seated the
 // caret, an insert the capacity refused, and a refused Enter (refuse). Each
-// restarts the phase so the caret shows at once rather than possibly landing
-// in the dark half of a period it kept running through.
+// restarts the timeline so the caret shows at once and stands solid through
+// the pend rather than possibly landing in a dark phase of the timeline it
+// kept running through.
 void restart_blink(State& s);
 
 // THE ONE CLICK-X -> BYTE MAPPING: `boundaries` is the per-byte pen offset vector the

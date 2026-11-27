@@ -1009,7 +1009,7 @@ int editor_stop_at(const ActiveEditorText& g, double mouse_x) {
 // 2026-11-08: a tap seats the caret, a drag moves it, the
 // selection is the keys' alone), restarts the blink phase as the keyboard's
 // own motion keys do, so a caret being dragged is lit where it lands rather
-// than possibly caught in the dark half of a period.
+// than possibly caught in a dark phase of the blink.
 void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x) {
     g.ed->selection_anchor = -1;
     g.ed->cursor_pos = editor_stop_at(g, mouse_x);
@@ -2556,7 +2556,7 @@ void GuiInputHandler::end_touch_caret_drag() {
     // route), nothing seeds, and the editor stays open. What the end owes
     // is a blink restart, so the
     // resting caret is lit the instant the finger leaves rather than caught
-    // in the dark half of a period the drag's last seat started — the blink
+    // in a dark phase of the blink the drag's last seat started — the blink
     // alone, the caret where that seat put it.
     text_editor::restart_blink(*g.ed);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
