@@ -851,9 +851,12 @@ struct UndoHistory {
 // the drag through the region hooks. UNDER THE LIT ADD SEL LAMP the same
 // begin reaches arm_selection_sweep_at instead (the `select` former below,
 // architect 2026-11-10), the two lamps a radio pair so one
-// former answers each drag. THE `h` VIEW HAS NO SWEEP (2026-11-07:
-// "history cannot edit trim"; the lamp is
-// inert there, GuiInputHandler::touch_sweep_armed).
+// former answers each drag. THE `h` VIEW HAS NO TRIM SWEEP (2026-11-07:
+// "history cannot edit trim"; the TRIM lamp is dark there,
+// GuiInputHandler::touch_sweep_armed) AND RUNS THE ADD SEL SWEEP ON ITS OWN
+// SELECTION (architect 2026-11-27: "The add to selection button in history
+// doesn't allow me to drag on the waveform to select multiple, but it
+// should."; the `history` field below).
 //
 // THE SWEEP HAS NO WIDTH RULE (2026-08-18; architect 2026-08-19: an
 // enforced minimum was distracting and too short to be worth its
@@ -935,13 +938,26 @@ struct RegionDragState {
     // past the gate ahead of the membership (apply_selection_sweep_to,
     // which damages the stretch the move changed).
     double        pen_x        = -1.0;
+    // THE `h` VIEW'S ARM (architect 2026-11-27): true when the begin armed
+    // this former while the history view stands, so the sweep's items are
+    // the view's diff items (AppState::HistoryMode::flags) and its selection
+    // the view's own (HistoryMode::selection / focus), never a store's
+    // markers or the live selection — the press's fact, recorded where the
+    // press knows it, as ScrollDragState's `history` is. The view cannot
+    // open or close under a held sweep by plain use (one pointer, the view's
+    // keys chrome; the one asynchronous closer force-ends every gesture
+    // first, on_history_prefetch_ready), so the fact holds to the end.
+    bool          history      = false;
     // THE SELECTION STANDING AT THE DOWN, snapshotted at the arm: the union's
-    // fixed half, so pulling the span back drops only what this sweep added.
+    // fixed half, so pulling the span back drops only what this sweep added
+    // — the live selection's members and focus, or on the `history` arm the
+    // view's set and focus.
     std::set<int> prior_members;
     int           prior_focus  = -1;
     // The focus the last update seated FROM THE SWEPT SPAN — a swept member
     // that was not a prior member — or -1 when the span holds none: the end
-    // owner lands the playhead (and stops a live play) only when it is >= 0.
+    // owner lands the playhead (and, off the `h` view, stops a live play) only
+    // when it is >= 0.
     int           swept_focus  = -1;
 };
 
@@ -2685,7 +2701,8 @@ enum class RedesignButton {
     // ITS GATES ARE ITS OWN, like the marker verbs beside it, and they are NOT
     // theirs: the `h` view LEAVES IT LIT (2026-09-17; bare `k` is on
     // history_mode_key_blocked's allowlist — the lamp produces that view's
-    // own multi-selection, the one road onto it a finger has — and the derived
+    // own multi-selection, a finger's roads onto it its click and its sweep
+    // (architect 2026-11-27) — and the derived
     // partition follows the gate with no arm of its own), while the READ-ONLY
     // LOCK LEAVES IT LIT — a selection is navigation, not authored content,
     // the same reasoning that keeps the trim gestures legal on a locked tab,
@@ -5045,8 +5062,12 @@ struct AppState {
     // last swept member; the playhead lands on that focus at the lift (the
     // rule at apply_selection_sweep_to, input_pointer.cpp). A tap
     // stays the playhead tap, a pinch the pinch, the barrel-held drag the
-    // one-finger zoom. INERT IN THE `h` VIEW: the drag there stays the pan,
-    // the lamp's role in the view its diff-flag click alone (below).
+    // one-finger zoom. AND IN THE `h` VIEW (architect 2026-11-27: "The add to
+    // selection button in history doesn't allow me to drag on the waveform
+    // to select multiple, but it should."): there the sweep adds the diff
+    // items it spans to the view's OWN selection, the live one untouched
+    // (the `h` arm at apply_selection_sweep_to), beside the lamp's diff-flag
+    // click (below).
     // SESSION SCRATCH, NEVER SERIALIZED, like the history view's reading
     // (HistoryMode::cumulative): no sidecar
     // key, no undo entry, no snapshot field.
@@ -5065,7 +5086,9 @@ struct AppState {
     // select them both if I want to revert"). That view has its own
     // mode-local multi-selection over its own press router, whose one other
     // road onto it is the CTRL press (the S Pen's barrel), so the lamp is the
-    // fingertip's road to a two-flag selection for bare `v` to revert. So
+    // fingertip's road to a two-flag selection for bare `v` to revert, by
+    // click and, lit, by THE SWEEP over the waveform (architect 2026-11-27,
+    // above). So
     // bare `k` is on history_mode_key_blocked's allowlist, the
     // button lights through the derived partition with no arm of its own, and
     // while the lamp stands a plain diff-flag press runs that mode's CTRL body
@@ -5101,7 +5124,9 @@ struct AppState {
     // and THE `h` VIEW'S ENTRY (architect 2026-11-25;
     // GuiInputHandler::darken_sweep_lamps, which damages the bottom icon
     // row's face as bare `k` does). A pan or a zoom leaves it lit, and
-    // inside the `h` view bare `k` may light it again for the diff flags.
+    // inside the `h` view bare `k` may light it again for the diff flags,
+    // its click and its sweep building the view's own selection (its sweep's
+    // commit putting it out there as here).
     // That is bare `f`'s posture but for the open
     // (AppState::follow): the session lamps are one family, in no settings
     // vocabulary, never serialized, and per-project state for as long as the
@@ -8313,11 +8338,15 @@ struct AppState {
         // surface, the stems being inert (focus_history_diff_flag); the LANE's
         // two MODIFIED clicks, which focus
         // the flag they select (select_history_diff_flags_modified — flag
-        // boxes alone); and the mode's own
-        // bare Tab / Shift+Tab cycle. Each sets it and lands the
-        // playhead on that flag's frame, and nothing else writes it true.
-        // ALL THREE CLICKS RUN AT THE PRESS (2026-08-17), on the index the press
-        // resolved: the setters are the same three bodies.
+        // boxes alone); the mode's own
+        // bare Tab / Shift+Tab cycle; and THE ADD SEL SWEEP (architect
+        // 2026-11-27; GuiInputHandler::apply_selection_sweep_to's `h` arm),
+        // which seats the last item it swept, or back the focus standing at
+        // its down, per motion, and lands the playhead on that item at the
+        // lift (commit_region_sweep). Each other setter sets it and lands the
+        // playhead on that flag's frame at once, and nothing else writes it
+        // true. ALL THREE CLICKS RUN AT THE PRESS (2026-08-17), on the index
+        // the press resolved: the setters are the same three bodies.
         //
         // EVERY CLEARER, the whole list, and all but the last clear for ONE
         // reason: the value is an ordinal into the PAINTED list, so anything
@@ -8363,8 +8392,10 @@ struct AppState {
         // pair runs through that owner, and the two direct writers are SETTERS
         // rather than clearers —
         // the plain focus click, which calls the owner and then re-seats the
-        // focus over it, and the modified lane pair, which writes a non-empty
-        // set and the focus it lands on.
+        // focus over it, the modified lane pair, which writes the toggled set
+        // and the focus it lands on, and the ADD SEL sweep, which writes the
+        // set standing at its down united with the items it spans, and its
+        // focus (the setter above).
         int         focus  = -1;
         // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into
         // `flags` beside the focus and the REVERT ACT's subject. It is the live
@@ -8381,10 +8412,15 @@ struct AppState {
         // in one lookup.
         //
         // EVERY SETTER: the MODIFIED (ctrl) diff-flag click, ON THE LANE'S FLAG
-        // BOXES and nowhere else (select_history_diff_flags_modified,
+        // BOXES (select_history_diff_flags_modified,
         // input_pointer.cpp — the stems are pointer-inert in every context
         // (2026-08-12), and waveform/lane modifiers off a flag are gesture
-        // vocabulary in every view). Nothing else writes a member — the Tab cycle and
+        // vocabulary in every view), and THE ADD SEL SWEEP ON THE WAVEFORM
+        // (architect 2026-11-27: "The add to selection button in history
+        // doesn't allow me to drag on the waveform to select multiple, but it
+        // should."; GuiInputHandler::apply_selection_sweep_to's `h` arm), which
+        // adds every item its span covers to the set standing at its down.
+        // Nothing else writes a member — the Tab cycle and
         // the plain click both leave it EMPTY, the live cycle's own
         // replace-with-a-singleton shape.
         //
@@ -14630,8 +14666,11 @@ inline bool history_step_button_actionable(
 // "ONE CLEARER" IS EXACT, re-derived by grepping every writer of the two
 // fields (the plain focus click's empty-lane arm clears through here). What
 // remains outside is SETTERS, not clearers: that same click re-seats the focus
-// over this call, and
-// the ctrl lane click writes the toggled set with the focus it lands on.
+// over this call,
+// the ctrl lane click writes the toggled set with the focus it lands on, and
+// the ADD SEL sweep writes the set and focus standing at its down united with
+// what it spans — the down's own pair again where it spans nothing new
+// (GuiInputHandler::apply_selection_sweep_to).
 //
 // It RETURNS WHETHER ANYTHING WAS STANDING, because some of those sites damage
 // the window only when something actually changed (bare Home / End and the
@@ -16996,8 +17035,8 @@ inline bool redesign_button_enabled(const AppState& a,
         // (2026-09-17) by the derived partition at the top of this body,
         // with nothing hand-listed either way: bare `k` is on
         // history_mode_key_blocked's allowlist (architect — the lamp
-        // produces that view's own multi-selection, the one road onto it a
-        // finger has), so the face follows the gate. GRID ITERATIONS DOES NOT
+        // produces that view's own multi-selection, a finger's roads onto it
+        // its click and its sweep, 2026-11-27), so the face follows the gate. GRID ITERATIONS DOES NOT
         // GREY IT: the sticky ctrl's fold reaches the PAYLOAD BOX alone
         // (run_marker_click_act, input_pointer.cpp), the bound cells keep the
         // plain click they are addressed by, and the key is admitted — so a

@@ -2396,13 +2396,17 @@ bool GuiInputHandler::touch_point_in_pan_zone(
 
 bool GuiInputHandler::touch_sweep_armed() const {
     // EITHER LAMP ARMS THE DRAG (the radio pair, so at most one stands).
-    // BOTH ARE INERT IN THE `h` VIEW: TRIM's key is hidden there (the history
-    // allowlist naming no bare `w`) and the view cannot edit the trim; ADD
-    // SEL's role in there is its diff-flag click alone (bare `k` on the
-    // allowlist), so the drag stays the pan. The view's entry puts both out
-    // (darken_sweep_lamps, architect 2026-11-25).
-    return (app.trim_armed || app.add_to_selection) &&
-           !app.history_mode.active;
+    // IN THE `h` VIEW ADD SEL ALONE (architect 2026-11-27: "The add to
+    // selection button in history doesn't allow me to drag on the waveform
+    // to select multiple, but it should."): its sweep there builds the
+    // view's own selection over the diff items (apply_selection_sweep_to's
+    // `history` arm). TRIM ARMS NOTHING THERE: the view cannot edit the trim
+    // ("history cannot edit trim", architect 2026-11-07) — its entry puts
+    // the lamp out (darken_sweep_lamps, architect 2026-11-25) and its key is
+    // hidden there (the history allowlist naming no bare `w`), so the term
+    // below states the refusal the view's lamps already keep.
+    if (app.history_mode.active) return app.add_to_selection;
+    return app.trim_armed || app.add_to_selection;
 }
 
 void GuiInputHandler::begin_touch_region(const GuiPointerPlace& at) {
@@ -2417,8 +2421,9 @@ void GuiInputHandler::begin_touch_region(const GuiPointerPlace& at) {
     // pointer gesture must not be torn by a second writer. THE EDITOR GATE
     // IS THE ONE PREDICATE FOR A KEYBOARD-TAKING MODAL
     // (keyboard_modal_editor_active), every editor a modal (2026-10-25),
-    // the touch navigation reading the same one. (The `h` view never reaches
-    // here: touch_sweep_armed answers false there, so its drag is the pan.)
+    // the touch navigation reading the same one. (The `h` view reaches here
+    // under ADD SEL alone, touch_sweep_armed; its sweep is the selection
+    // former's, on the view's own selection.)
     // A refused begin arms nothing — the update/end hooks then no-op on the
     // drag's own !active guard, so the refused stream is dead rather than a
     // fallback pan, and the lamp stays lit.
@@ -5483,6 +5488,16 @@ void GuiInputHandler::arm_selection_sweep_at(double anchor_x,
     app.region_drag.anchor_x      = anchor_x;
     app.region_drag.press_x       = at.rx;
     app.region_drag.press_y       = at.ry;
+    // THE `h` VIEW'S ARM SNAPSHOTS THE VIEW'S OWN SELECTION (architect
+    // 2026-11-27; RegionDragState::history): its set as it stands and its
+    // focus — the base the sweep adds to — never the live selection, which
+    // the view leaves untouched.
+    if (app.history_mode.active) {
+        app.region_drag.history       = true;
+        app.region_drag.prior_members = app.history_mode.selection;
+        app.region_drag.prior_focus   = app.history_mode.focus;
+        return;
+    }
     app.region_drag.prior_members = app.selected_markers;
     app.region_drag.prior_focus   = app.last_selected_marker;
 }
@@ -5521,7 +5536,25 @@ void GuiInputHandler::arm_selection_sweep_at(double anchor_x,
 //     With no such member the focus is the prior one (or none).
 //   * THE WRITE IS THE SELECTION MUTATOR'S (Selection::replace_selection, its
 //     publish the damage), and only when the membership or the focus moved,
-//     so a motion that spans no new mark republishes nothing. THE SWEEP'S
+//     so a motion that spans no new mark republishes nothing.
+//   * IN THE `h` VIEW (architect 2026-11-27: "The add to selection button in
+//     history doesn't allow me to drag on the waveform to select multiple,
+//     but it should."; RegionDragState::history) THE ITEMS ARE THE VIEW'S
+//     DIFF ITEMS (HistoryMode::flags) and the selection the view's own, the
+//     rule above unchanged over them: EVERY ITEM IS ELIGIBLE, removed, added
+//     or changed alike, as every item is to the view's tap
+//     (select_history_diff_flags_modified admits any item of the list); the
+//     place is the same road on the same map and basis, the item's one frame
+//     (HistoryDiffFlag::time_frame, a source frame like a marker's) being
+//     what the diff lane's painter maps through the flag iterator
+//     (render_history_diff_flags); the same closed span, the same focus and
+//     tie rule over the list's ordinals. THE WRITE IS THE VIEW'S PAIR, as
+//     the tap writes it: HistoryMode::selection and its focus, then the flag
+//     cache refreshed (Viewport::refresh_flag_cache), whose fingerprint
+//     carries the view's selection hash and whose `h` rebuild declares the
+//     lane and the waveform whole (the stems' damage). NOTHING ELSE IS
+//     WRITTEN: no store, no live selection, no undo entry, no dirty mark —
+//     the view's selection is session scratch, as its tap's is. THE SWEEP'S
 //     PICTURE is the stems appearing AND THE CANVAS HIGHLIGHT on the swept
 //     span while the pointer is down (architect 2026-11-12: "the add selection
 //     relies on the marker stems, which are dark in color, and they don't
@@ -5560,10 +5593,15 @@ void GuiInputHandler::apply_selection_sweep_to(double pen_x) {
     std::set<int> members = d.prior_members;
     int    swept_focus = -1;
     double focus_x     = 0.0;
-    const int n = active_marker_count(app);
+    const std::vector<HistoryDiffFlag>& items = app.history_mode.flags;
+    const int n = d.history ? static_cast<int>(items.size())
+                            : active_marker_count(app);
     for (int i = 0; i < n; ++i) {
+        const int64_t frame =
+            d.history ? items[static_cast<std::size_t>(i)].time_frame
+                      : active_marker_time_frame(app, i);
         const double c = painted_x_of_source_frame_on_basis(
-            app, audio, static_cast<double>(active_marker_time_frame(app, i)),
+            app, audio, static_cast<double>(frame),
             dmap, basis.vp_start, basis.spp, basis.lattice_origin);
         if (c < lo || c > hi) continue;
         members.insert(i);
@@ -5576,6 +5614,14 @@ void GuiInputHandler::apply_selection_sweep_to(double pen_x) {
     }
     d.swept_focus = swept_focus;
     const int focus = swept_focus >= 0 ? swept_focus : d.prior_focus;
+    if (d.history) {
+        AppState::HistoryMode& mode = app.history_mode;
+        if (members == mode.selection && focus == mode.focus) return;
+        mode.selection = std::move(members);
+        mode.focus     = focus;
+        viewport.refresh_flag_cache();
+        return;
+    }
     if (members == app.selected_markers && focus == app.last_selected_marker)
         return;
     selection.replace_selection(std::move(members), focus);
@@ -5604,6 +5650,7 @@ void GuiInputHandler::commit_region_sweep() {
         viewport.invalidate_rect(top_trim_row_area(app));
     const bool moved = app.region_drag.moved;
     const bool select = app.region_drag.select;
+    const bool history = app.region_drag.history;
     const int swept_focus = app.region_drag.swept_focus;
     app.region_drag = RegionDragState{};
     if (select) {
@@ -5618,6 +5665,22 @@ void GuiInputHandler::commit_region_sweep() {
         if (moved && app.add_to_selection) {
             app.add_to_selection = false;
             viewport.invalidate_rect(bottom_row_area(app));
+        }
+        // IN THE `h` VIEW THE LANDING IS THE VIEW TAP'S OWN (architect
+        // 2026-11-27; select_history_diff_flags_modified's tail): the
+        // focused item's one frame through the movement owner's domain form,
+        // under the same "a member this sweep added" condition — and no
+        // playback stop, the view having no playback, as its tap stops none.
+        if (history) {
+            if (swept_focus >= 0 && app.history_mode.focus >= 0) {
+                land_playhead_on_domain_frame(
+                    app, audio, viewport,
+                    history_diff_flag_landing_domain_frame(
+                        app, audio,
+                        app.history_mode.flags[static_cast<std::size_t>(
+                            app.history_mode.focus)]));
+            }
+            return;
         }
         // THE PLAYHEAD LANDS ON THE FOCUS AT THE LIFT, the way a marker click
         // lands it (the playhead is the focus's one mark), behind the click's
@@ -8604,8 +8667,9 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 //     ADD TO SELECTION FORKS THIS ACT (architect 2026-09-17): with the
 //     lamp lit the very same press runs the CTRL click below instead — the
 //     membership toggle over the mode's list — which is the sticky ctrl's own
-//     meaning applied to this router, and the one road onto a two-flag
-//     selection a finger has (AppState::add_to_selection).
+//     meaning applied to this router, and a finger's click road onto a
+//     two-flag selection (AppState::add_to_selection; its drag road the
+//     ADD SEL sweep, below).
 //   * the MARKER LANE's CTRL click, on its FLAG BOXES: it toggles one flag's
 //     membership, then focuses the clicked flag and lands the playhead on it
 //     (the live selection model over the mode's own list; the store selection
@@ -8614,14 +8678,22 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 //     the plain claim's own fork above. A ctrl lane press that hits NO flag
 //     answers exactly as in the live views: a consumed nothing — the lanes
 //     being placement surfaces (2026-09-25).
-//   * (NO SWEEP: the view cannot edit the trim; the TRIM arm lamp is inert in
-//     here, GuiInputHandler::touch_sweep_armed.)
+//   * THE ADD SEL SWEEP (architect 2026-11-27: "The add to selection button
+//     in history doesn't allow me to drag on the waveform to select
+//     multiple, but it should."): with that lamp lit a waveform drag past
+//     the pan's slop is the sweep, not the pan, adding every diff item it
+//     spans to this view's own selection — the platform's region hooks, not
+//     this router (GuiInputHandler::touch_sweep_armed; the rule at
+//     apply_selection_sweep_to). NO TRIM SWEEP: the view cannot edit the
+//     trim, the TRIM lamp dark in here (touch_sweep_armed).
 //
 // THE SYMMETRY RULING (architect 2026-08-06) is why the acts read as they do:
 // THE HISTORY VIEW AND THE REGULAR VIEWS ANSWER A WAVEFORM CLICK IDENTICALLY,
 // and the regular views' standing model is the model. THE WAVEFORM RESOLVES NO
 // FLAG AT ALL — SELECTION is LANE vocabulary (the flag boxes' plain and ctrl
-// clicks), the stems pointer-inert in all contexts (2026-08-12).
+// clicks), the stems pointer-inert in all contexts (2026-08-12); the one
+// waveform road to a selection is the lit ADD SEL lamp's sweep, which spans
+// rather than resolves, in both views alike (architect 2026-11-27).
 //
 // EVERYTHING ELSE IS A CONSUMED NO-OP — the marker clicks' drag arm, the
 // diff flag's double tap (a diff flag seeds no Marker candidate: its press is
@@ -9246,9 +9318,9 @@ void GuiInputHandler::apply_region_drag_motion(const GuiPointerPlace& at) {
     // clock cell (Viewport::invalidate_standing_scanner), the deselect
     // its stems and ring (the flag rebuild's tail).
     //
-    // (The `h` view needs no carve-out here: the armed sweep never begins in
-    // the view, touch_sweep_armed — "history cannot edit trim", architect
-    // 2026-11-07.)
+    // (The `h` view needs no carve-out here: no trim sweep begins in the
+    // view, touch_sweep_armed — "history cannot edit trim", architect
+    // 2026-11-07 — and its ADD SEL sweep takes the branch below.)
     //
     // THE ADD SEL FORMER TAKES THE SAME COLUMN AND WRITES THE SELECTION
     // INSTEAD (architect 2026-11-10; the rule at

@@ -471,7 +471,8 @@ public:
     //     (the barrel-held drag stays the one-finger zoom, lamp or not): true
     //     resolves the crossing to the region trio below instead of the
     //     single-finger pan. A STATE ANSWER, not geometry — the lamp is the
-    //     GUI's (GuiInputHandler::touch_sweep_armed, dark in the `h` view);
+    //     GUI's (GuiInputHandler::touch_sweep_armed, ADD SEL's alone in the
+    //     `h` view);
     //     the begin's own refusals stay the begin body's. Null — or
     //     answering false — means the pan.
     //   * region_begin(at): the armed sweep resolved on the pan zone at the

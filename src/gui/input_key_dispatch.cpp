@@ -1253,7 +1253,9 @@ void GuiInputHandler::open_history_mode_fresh() {
     // THE ENTRY PUTS OUT TRIM AND ADD SEL (architect 2026-11-25;
     // GuiInputHandler::darken_sweep_lamps): the view arrives with no sweep
     // armed. In here TRIM stays dark (its key off the view's allowlist); ADD
-    // SEL may be lit again for the diff flags (bare `k`). FOLLOW AND
+    // SEL may be lit again for the diff flags (bare `k`), its click and its
+    // waveform sweep building the view's own selection (architect
+    // 2026-11-27, GuiInputHandler::touch_sweep_armed). FOLLOW AND
     // RESTRICT ARE LEFT AS THEY STAND: a lit one stays lit through the view
     // and does nothing there (its chord off the allowlist, its key hidden,
     // the view having no playback) and acts again on leaving.
@@ -2307,7 +2309,13 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             CTRL body (select_history_diff_flags_modified
 //                             with extend=false, at the router's plain lane
 //                             claim, input_pointer.cpp), which is exactly what
-//                             the sticky ctrl does to a live flag. THE REASON
+//                             the sticky ctrl does to a live flag, AND A
+//                             WAVEFORM DRAG IS ITS SWEEP over the diff items
+//                             (architect 2026-11-27: "The add to selection
+//                             button in history doesn't allow me to drag on
+//                             the waveform to select multiple, but it
+//                             should."; GuiInputHandler::touch_sweep_armed,
+//                             apply_selection_sweep_to). THE REASON
 //                             IS THE RIG: the view's multi-selection's other
 //                             road is the barrel's ctrl click, which the
 //                             fingertip lacks, so the two-flag selection
@@ -2316,11 +2324,11 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             (AppState::add_to_selection).
 //                             ADMITTED ON THE HEADER'S OWN STANDARD, the
 //                             read-only allowlist's argument repeated: the
-//                             chord flips a session bit and the click it
-//                             enables is a SELECTION act over the mode's own
-//                             ordinals — no store, no undo entry, no dirty
-//                             bit, and the LIVE store selection stays as
-//                             untouched as the plain click leaves it. It is
+//                             chord flips a session bit and the click and the
+//                             sweep it enables are SELECTION acts over the
+//                             mode's own ordinals — no store, no undo entry,
+//                             no dirty bit, and the LIVE store selection stays
+//                             as untouched as the plain click leaves it. It is
 //                             not dispatched from here and not from a mode arm
 //                             either: the admission lets the press fall
 //                             through to on_key's ordinary body, below the
@@ -2642,8 +2650,9 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // ADD TO SELECTION (architect 2026-09-17), bare-exact — exactly the
     // dispatch arm's own spelling and the roster row's, so the key, the button
     // and this admission cannot drift. The argument is in the header's bullet:
-    // the lamp turns a plain diff-flag press into the mode's ctrl body, which
-    // is the only road to a two-flag selection a finger has.
+    // the lamp turns a plain diff-flag press into the mode's ctrl body and a
+    // waveform drag into its sweep (architect 2026-11-27), a finger's roads to
+    // a multi-item selection.
     const bool is_add_to_selection = (key == GuiKeys::K && bare);
     // THE A/B TAB SWITCH (architect 2026-08-18): the tab switch "should work
     // as normal in history view — it becomes essentially another view but in
@@ -7784,8 +7793,9 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
     // should work in the Git history… so that I can select two events") —
     // history_mode_key_blocked admits the chord, so the press reaches this
     // arm from in there too and the lamp lights the same bit for the mode's
-    // DIFF flags: a plain diff-flag press then runs the mode's ctrl body, the
-    // only road onto that multi-selection a finger has. It stops no playback: turning the mode on IS NOT a selection act — the
+    // DIFF flags: a plain diff-flag press then runs the mode's ctrl body and
+    // a waveform drag its sweep (architect 2026-11-27), a finger's roads onto
+    // that multi-selection. It stops no playback: turning the mode on IS NOT a selection act — the
     // click that follows is, and that click runs the marker act's own stop.
     //
     // THE REPAINT IS THE BOTTOM LANE'S — the button's lamp lives there, so
