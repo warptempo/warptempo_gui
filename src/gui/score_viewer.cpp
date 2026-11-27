@@ -277,10 +277,8 @@ void GuiScoreViewer::pause() {
     // a cursor that crossed a page boundary since the last tick would leave
     // the previous page shown under the next page's clock for the whole
     // pause. EVERY PAUSE IS THIS BODY (2026-10-27): toggle_play —
-    // PAUSE / Space, and RESET's question through it — the scrub's press,
-    // the tick's dead device and a live reseek over a pending device
-    // (seek_to, range_changed: the pending launch's rest follows it); the
-    // natural end follows its own rest.
+    // PAUSE / Space, and RESET's question through it — the scrub's press and
+    // the tick's dead device; the natural end follows its own rest.
     playback_lifecycle.stop_playback_if_playing();
     follow_cursor(active_view_state(app).score_position);
     write_score_viewer_file(app);
@@ -332,36 +330,9 @@ void GuiScoreViewer::play_live_from(int64_t from) {
     AppState::ScoreViewer& sv = app.score_viewer;
     sv.painted_cursor = -1;
     playback.play(from, score_viewer_frame_range(app).end);
-    // A LAUNCH OVER A PENDING DEVICE RESTS WHERE IT WAS TO START (architect
-    // 2026-11-26, his ruling 3; the render player's rest_if_launch_pending
-    // carries the reason and why this read is race-free): play() returned
-    // with nothing published, so the transport is NOT marked LIVE — it stays
-    // PAUSED, as bind_soundtrack left it (both callers bind first) — and the
-    // pause's own seating is taken at `from`: the position written, its page
-    // shown, the frame written through, the row damaged, and the card said
-    // once. Never LIVE, the stop body's fork never replaces the position
-    // with the engine's old cursor, and a later answer reads no natural end.
-    // PENDING ONLY: a refused launch goes LIVE and takes the tick's
-    // no-device arm, as it always has.
-    if (playback.device_pending()) {
-        rest_at_pending_launch(from);
-        return;
-    }
     sv.transport = Transport::Live;
     follow_cursor(from);
     damage_row();
-}
-
-// THE PENDING LAUNCH'S REST (play_live_from's rule above; the live reseeks'
-// rest ends here too, after their pause): the position at `at`, its page
-// shown, the frame written through, the row damaged, the card said once.
-void GuiScoreViewer::rest_at_pending_launch(int64_t at) {
-    active_view_state(app).score_position = at;
-    follow_cursor(at);
-    write_score_viewer_file(app);
-    damage_row();
-    notifications.notify(AppState::NotificationClass::Normal,
-                         kPlaybackDeviceNotAnsweringCard);
 }
 
 void GuiScoreViewer::seek_to(int64_t frame) {
@@ -379,14 +350,6 @@ void GuiScoreViewer::seek_to(int64_t frame) {
         // over.
         sv.painted_cursor = -1;
         playback.play(*landing, score_viewer_frame_range(app).end);
-        // OVER A PENDING DEVICE (play_live_from's rule): the pause body parks
-        // the LIVE transport at PAUSED, then the rest at the landing
-        // overwrites the cursor its stop body read.
-        if (playback.device_pending()) {
-            pause();
-            rest_at_pending_launch(*landing);
-            return;
-        }
     }
     rest = *landing;
     follow_cursor(rest);
@@ -448,13 +411,6 @@ void GuiScoreViewer::range_changed() {
         const int64_t at = std::clamp(playback.cursor(), fr.begin, fr.end - 2);
         sv.painted_cursor = -1;
         playback.play(at, fr.end);
-        // OVER A PENDING DEVICE (play_live_from's rule; seek_to's shape):
-        // PAUSED through the pause body, then the rest at `at`.
-        if (playback.device_pending()) {
-            pause();
-            rest_at_pending_launch(at);
-            return;
-        }
         rest = at;
     } else {
         rest = std::clamp(rest, fr.begin, fr.end);
@@ -519,15 +475,11 @@ void GuiScoreViewer::tick() {
         if (playback.device_unavailable()) {
             // NO DEVICE PAUSES (the render player's tick's rule): the pause
             // body itself — the held cursor parked, its page followed, the
-            // frame written — and the one card said, the gates' chooser's
-            // (playback_device_refusal_card, playback_lifecycle.h: a pending
-            // device met LIVE is told the device is not answering; a launch
-            // over a pending device never reaches here, resting where it was
-            // to start, play_live_from). Nothing here retries:
+            // frame written — and the one card said. Nothing here retries:
             // the next PLAY press reopens through play().
             pause();
             notifications.notify(AppState::NotificationClass::Normal,
-                                 playback_device_refusal_card(playback));
+                                 kPlaybackDeviceUnavailableCard);
         } else if (!playback.is_playing()) {
             on_natural_end();
         } else {

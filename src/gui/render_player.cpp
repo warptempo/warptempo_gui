@@ -664,19 +664,17 @@ bool render_player_button_enabled(const AppState& a,
             if (const int row = render_player_highlight_act_row(a); row >= 0) {
                 const Row& r = a.folder_overlay.rows[static_cast<size_t>(row)];
                 if (r.kind == Row::Kind::Folder) return true;
-                return !playback.device_absent_or_pending();
+                return !playback.device_absent();
             }
             // THE TRANSPORT TAIL, EVERY ACT OF WHICH SOUNDS
             // (transport_toggle_act: a live transport pauses, a paused one
             // RESUMES; an IDLE one has no item, the invariant at
             // AppState::RenderPlayer::transport, and does nothing) — so the
-            // never-came-up device greys the whole tail, and so does a
-            // pending one (GuiPlayback::device_absent_or_pending, the
-            // faces' one read; architect 2026-11-26). It is not
+            // never-came-up device greys the whole tail. It is not
             // device_unavailable: the player's road reaches play(), which
             // reopens a dead stream at its head, so a route that dropped
             // mid-session is exactly what a press repairs.
-            if (playback.device_absent_or_pending()) return false;
+            if (playback.device_absent()) return false;
             return rp.transport != Transport::Idle;
         }
         // THE HIGHLIGHT PAIR (architect 2026-10-10): the band walk's own
@@ -861,10 +859,6 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // project's playhead does not move.
     playback.play(0, rp.frames);
     rp.transport = Transport::Live;
-    // OVER A PENDING DEVICE THE ITEM RESTS PAUSED AT ITS START, the card said
-    // (rest_if_launch_pending); the band, the damage and the head unit below
-    // are the seat's either way.
-    rest_if_launch_pending(0);
     // THE BAND FOLLOWS THE ITEM AT A CHANGE (2026-08-28, the contract at the
     // head of render_player.h): this is the ONE place the item changes, so
     // seating the highlight here covers every change the transport makes on its
@@ -1006,12 +1000,10 @@ void GuiRenderPlayer::pause() {
     // the same call, so the picture does not step at the pause.
     // THE PROJECT'S OWN STOP PARKS NOTHING, verified:
     // stop_playback_if_playing leaves app.playhead_cursor_sample where
-    // the user put it, so the player's pauses are the whole
+    // the user put it, so the player's two pauses are the whole
     // resting-write set — this arm and the tick's dead-device arm, which
     // reads the predictor's position exactly as this one does and writes
-    // it before the stop body too, and a launch over a pending device,
-    // which writes the point it was to play from before the same body
-    // (rest_if_launch_pending; up() unloads the item and writes no
+    // it before the stop body too (up() unloads the item and writes no
     // resume point at all).
     rp.resume_frame =
         std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
@@ -1065,42 +1057,9 @@ void GuiRenderPlayer::play_live_from(int64_t from) {
     rp.painted_cursor = -1;
     playback.play(from, rp.frames);
     rp.transport = Transport::Live;
-    // Over a pending device: PAUSED at `from`, the stop body's fork having
-    // damaged the row and told the head unit (rest_if_launch_pending).
-    if (rest_if_launch_pending(from)) return;
     damage_row();
     // The head unit: playing again (the inventory at the declaration).
     publish_media_state();
-}
-
-// A LAUNCH OVER A PENDING DEVICE RESTS WHERE IT WAS TO START (architect
-// 2026-11-26, his ruling 3: "Sound device is not answering", no queued play —
-// the press plays at once or not at all; the pending rule's one owner is THE
-// SCREEN NEVER WAITS ON ANDROID'S AUDIO, playback_aaudio.cpp's head). play()
-// over a device whose call overran its bound returns with NOTHING PUBLISHED
-// and the device pending; a transport left LIVE there would meet the tick
-// with the bit down, and an answer adopted before that tick would read as a
-// NATURAL END and walk the folder — a press that timed out starting
-// something else. So right after each launch's play() — play_wav's, the
-// resume road's (play_live_from) and seek_to's live reseek, every play() of
-// this file — this asks GuiPlayback::device_pending: RACE-FREE THERE, the
-// adoption running on this thread alone, so the read is that call's own
-// verdict, and it survives a later answer because the transport never stays
-// LIVE. Pending, the PAUSE'S OWN SEATING: the resume point written first at
-// `at` — where the launch was to play from — then the one stop body, whose
-// player fork parks the transport at PAUSED, damages the row and publishes
-// the head unit's state (the silence track: a paused item's clock is not
-// published), and the card said ONCE. The next Play resumes there as after
-// any pause. PENDING ONLY: a refused launch (no device, a refused reopen)
-// stays LIVE and takes the tick's no-device arm and its card, as it always
-// has. PRECONDITION: the transport is LIVE (each caller has just written or
-// found it), so the fork takes it down.
-bool GuiRenderPlayer::rest_if_launch_pending(int64_t at) {
-    if (!playback.device_pending()) return false;
-    app.render_player.resume_frame = at;
-    playback_lifecycle.stop_playback_if_playing();
-    status(kPlaybackDeviceNotAnsweringCard);
-    return true;
 }
 
 // THE TWO FOLDER WALKS SAY NOTHING AT ALL (architect 2026-08-31 — the
@@ -1177,9 +1136,6 @@ void GuiRenderPlayer::seek_to(int64_t frame) {
         // skipped frames as heard; -1 makes its next tick seed afresh.
         app.limiter_lamp_prev_frame = -1;
         playback.play(live_target, rp.frames);
-        // Over a pending device: PAUSED at the target, the fork's damage and
-        // push said (rest_if_launch_pending).
-        if (rest_if_launch_pending(live_target)) return;
         damage_row();
         // The head unit's clock, re-anchored on the seek (the inventory at
         // the declaration).
@@ -1450,12 +1406,7 @@ void GuiRenderPlayer::tick() {
         // natural-end test — and it covers BOTH shapes, the device that went
         // away mid-play (the AAudio latch) and the device that never came up
         // (an init that failed), either of which
-        // would otherwise race through the folder a wav per tick — and a
-        // PENDING device met LIVE (architect 2026-11-26; GuiPlayback::
-        // device_pending: no stream adopted while a device call stands past
-        // its bound), which pauses here the same way. A launch over a pending
-        // device never reaches this arm: it rests where it was to start, its
-        // card said (rest_if_launch_pending). It is the pause
+        // would otherwise race through the folder a wav per tick. It is the pause
         // arm of toggle_pause with one line added — the resume point is the
         // engine's held cursor (a suspended device holds it rather than
         // extrapolating), read before the stop body, whose fence returns at
@@ -1463,12 +1414,9 @@ void GuiRenderPlayer::tick() {
         // transport to PAUSED and pushes the head unit's own state —
         // PAUSED AT THE HELD CURSOR EVEN WHERE THAT IS FRAME 0, which is the
         // whole reason the state is stored: the next Play resumes this item at
-        // that cursor rather than restarting it. ONE LINE FOR THE GONE AND
-        // THE NEVER-THERE: what the user needs to know is that nothing will
-        // sound, not which way it will not; THE PENDING DEVICE HAS ITS OWN,
-        // the one choice below (architect 2026-11-26, his ruling 3: the
-        // device is there and Android is not answering for it).
-        // Nothing here retries, and this fork is a READ
+        // that cursor rather than restarting it. ONE LINE FOR BOTH SHAPES:
+        // what the user needs to know is that nothing will sound, not which
+        // way it will not. Nothing here retries, and this fork is a READ
         // (device_unavailable, never the reopen): on Android the next play
         // PRESS reopens the device — the main window's launch gates through
         // GuiPlayback::ensure_device_available_for_play, this player's own
@@ -1484,8 +1432,7 @@ void GuiRenderPlayer::tick() {
         // really closes a stream that went away is the reopen the next play
         // press takes.
         // ONE CLAUSE (2026-09-01): a card is one clause.
-        status(playback.device_pending() ? kPlaybackDeviceNotAnsweringCard
-                                         : "No audio device to play the wav");
+        status("No audio device to play the wav");
         return;
     }
     // THE NATURAL END IS THE FLAG'S DROP, the main window's tick's own shape
@@ -1772,9 +1719,7 @@ void GuiRenderPlayer::on_media_command(GuiMediaCommand cmd) {
     // SILENT under the car's own fade-in, where the crackle is spent. No
     // transport starts, nothing is published, and the answer is ignored — a
     // console key is not a deliberate press at the glass, so a failed reopen
-    // raises no card, nor one that overruns its bound and leaves the device
-    // pending (GuiCarTransport::on_media_command's arm, architect
-    // 2026-11-26), and the next real press cards at the launch gates.
+    // raises no card and the next real press cards at the launch gates.
     //
     // THE PROMPT HAS NOTHING TO PROTECT FROM IT, which is why it runs first:
     // the reopen writes no authored, transport, modal or published state, and

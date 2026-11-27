@@ -47,15 +47,6 @@ struct GuiNoiseVoice;   // noise.h
 //     and position_at() per paint (the scanner's advance; cursor() the same
 //     observation at `now` for every other reader — the design note's one
 //     observation, below).
-//   - Device worker (architect 2026-11-26; THE SCREEN NEVER WAITS ON
-//     ANDROID'S AUDIO, the rule's one owner, at the head of
-//     playback_aaudio.cpp): makes every call on the device's stream — open
-//     and start, stop and close — one job at a time, posted by the main
-//     thread, which waits for the answer at most one second (init and
-//     shutdown with no bound) and otherwise adopts it at a later tick
-//     (adopt_device_answer below); until then the device is PENDING
-//     (device_pending below). The session's underrun count is its read
-//     too, asked by a note the main thread never waits for.
 //
 // PLAYBACK PLAYS THE BOUND BUFFER AT ITS OWN RATE (the source's, or the score
 // soundtrack's, 2026-10-26 night, GuiBoundAudio). The read is fractional —
@@ -253,12 +244,7 @@ public:
     // represents displayed-domain coordinate `domain_offset` (see the head
     // comment). Returns true on success. On failure, logs to stderr and
     // leaves the object in an un-initialised state where play() is a silent
-    // no-op. THE OPEN RUNS ON THE DEVICE WORKER AND IS WAITED FOR WITH NO
-    // BOUND (architect 2026-11-26: a piece's open keeps waiting for
-    // Android), the stream OPENED AND STARTED in one body; a start refused
-    // on a granted stream is still a success here — the device came up,
-    // no stream stands, and the next press reopens.
-    // WITH RELEASE SEATED LIT (release_device below, called before
+    // no-op. WITH RELEASE SEATED LIT (release_device below, called before
     // this init) a success binds the source and opens NO stream: the engine
     // comes up released, `device_ready` with the latch up, and the stream
     // opens at the first of the release's three ends (architect 2026-11-26).
@@ -338,15 +324,13 @@ public:
 
     // Stop playback and return only once no audio callback is inside the
     // bound buffer: the session word's playing bit is lowered, and the wait
-    // runs only while our own data callback is inside — made only of our
-    // own callbacks' runtimes, ordinarily one or none (a callback entering
-    // after the lowering can add its own) — never for the device to call
-    // again: no future callback is needed to end it, so a device that stops
-    // calling, a dead stream or none (released, release_device below;
-    // pending, device_pending below) cannot hold it (the proof at
-    // playback_aaudio.cpp's GuiPlayback::stop(), architect 2026-11-26).
-    // Once it returns no callback is in the render arm until the next
-    // publish, and everything a fill did is ordered before what the
+    // runs only while our own data callback is inside — at most one
+    // callback's own runtime, none when no callback is inside — never for
+    // the device to call again, so a device that stops calling, a dead
+    // stream or none (released, release_device below) cannot hold it (the
+    // proof at playback_aaudio.cpp's GuiPlayback::stop(), architect
+    // 2026-11-26). Once it returns no callback is in the render arm until
+    // the next publish, and everything a fill did is ordered before what the
     // caller does next (and a fill that was in flight at the lowering can
     // commit no terminal: its exchange expects the word its gate acquired,
     // which the lowering changed). THE DEVICE IS NOT STOPPED HERE: the
@@ -400,10 +384,7 @@ public:
     // latch, release_device below) AND the device that never came up at all (an
     // init that failed — no AAudio stream — after which
     // play() is the documented silent no-op). The two are ONE ANSWER because
-    // they are one fact to every consumer: nothing will sound. A PENDING
-    // DEVICE ANSWERS TRUE AS WELL (architect 2026-11-26; device_pending
-    // below): no stream is adopted from a device job's post until its
-    // answer's adoption, so the body needs no term for it.
+    // they are one fact to every consumer: nothing will sound.
     // IT IS NOT A NATURAL END, and that is what it exists to separate: a
     // silent engine leaves the session word's playing bit down exactly as a
     // window that reached its end does, and a consumer reading is_playing()
@@ -420,31 +401,25 @@ public:
     // render player's (a
     // dead stream mid-play must PAUSE, not advance), the A/B audition's,
     // GuiAbAudition::fire_if_due, which ends the whole act
-    // through the one stop body and cards the device's sentence
-    // (playback_device_refusal_card, playback_lifecycle.h: the chooser
-    // between kPlaybackDeviceUnavailableCard and the pending device's),
-    // and the score viewer's
+    // through the one stop body and cards
+    // kPlaybackDeviceUnavailableCard, and the score viewer's
     // (GuiScoreViewer::tick, Live transport), which pauses the held cursor
-    // and cards the same way for a dropped soundtrack. ONE LIFT READER:
+    // and cards the same sentence for a dropped soundtrack. ONE LIFT READER:
     // the NOISE case's (GuiInputHandler::finish_level_press_release for the
     // tap, take_chrome_press for a moved press; architect 2026-11-24), read
     // live to decide whether the lift wakes the stream through the reopen
-    // below — nothing on screen shows the answer — and asked together with
-    // device_pending: THE WAKE IS SKIPPED WHILE THE DEVICE IS PENDING
-    // (architect 2026-11-26), where no reopen is attempted. Plus the
+    // below — nothing on screen shows the answer. Plus the
     // reopen's own post-reopen read
     // inside ensure_device_available_for_play. A launch press does not read
     // it: a launch press reopens.
-    // The launch FACES do not read it — they read device_absent_or_pending
-    // below, the never-came-up half and the pending device, because the
-    // press reopens what this latches.
+    // The launch FACES do not read it — they read device_absent below, the
+    // never-came-up half alone, because the press reopens what this latches.
     bool    device_unavailable() const;
 
     // THE DROP ITSELF (architect 2026-10-28, the noise voice's reset): the
     // error callback's `stream_dead` latch ALONE — true from a route drop
     // under a live stream until the first reopen attempt closes that stream,
-    // and over RELEASE's closed stream the same, from its close's adoption
-    // (release_device below).
+    // and over RELEASE's closed stream the same (release_device below).
     // `impl_ && impl_->stream_dead` (acquire). THE LATCH HAS TWO MAIN-THREAD
     // READERS THAT RESET THE NOISE VOICE'S SEQUENCE (2026-10-28, noise.h's
     // head, the two roads; the sequence alone, 2026-11-05, the level
@@ -456,8 +431,7 @@ public:
     // nothing) and reopens nothing; (2) the device's own load of the latch at
     // a reopen (reopen_stream_if_dead and launch_window's post-publish arm,
     // through close_dead_stream, playback_aaudio.cpp), which resets the
-    // sequence ahead of the device job's post, which clears the latch, so a
-    // press that
+    // sequence ahead of the close that clears the latch, so a press that
     // reaches the device before the tick consumes no drop unseen. A pure
     // read; main thread only. NOT device_unavailable: the latch alone, not
     // the null stream, so the reset runs only over the interval a drop
@@ -465,21 +439,14 @@ public:
     bool    stream_dead() const;
 
     // WHAT A FACE READS (architect 2026-09-02, the truthful-buttons rule over
-    // the reopen at the press; the pending half architect 2026-11-26): THE
-    // NEVER-CAME-UP HALF, OR THE DEVICE PENDING. The press
-    // reopens a dead stream, so of device_unavailable's ways only a device
-    // that never came up greys a
+    // the reopen at the press): THE NEVER-CAME-UP HALF ALONE. The press
+    // reopens a dead stream, so only a device that never came up greys a
     // launch button — a face that read the latch would grey Play on the
     // tablet after every route drop while Space, the same act, reopened and
     // played (the twin rule: a button greys only when every admitted variant
     // would change nothing): `!impl_ || !impl_->device_ready` — the
     // `stream_dead` latch and
-    // the null stream of a refused reopen are NOT terms, being exactly what
-    // the press reopens. WHILE THE DEVICE IS PENDING (device_pending below:
-    // a device job in flight past its bound) THE SOUND KEYS GREY TOO
-    // (architect 2026-11-26): no reopen is attempted over a job in flight,
-    // so the press would play nothing, and the grey lifts at the answer's
-    // adoption. ONE MEMBER ANSWERS BOTH, the face's whole question.
+    // the null stream are NOT terms, being exactly what the press reopens.
     // FIVE READERS: the two PLAY-face predicates
     // space_launch_would_play and ab_audition_preflight_ok, the render
     // player's modal
@@ -491,61 +458,21 @@ public:
     // the soundtrack is not ready or this answers true, and the RELEASE
     // key's enabled arm in redesign_button_enabled (app_state.h), which
     // greys it when this answers true: no stream to release and no end
-    // could reopen one (architect 2026-11-26) — a lit RELEASE is then lit
-    // and inert, its lit arm reading AppState::device_released.
-    // THE PENDING EDGE IS DAMAGED BY THE FACES' OWN COMPARATORS, the tick's
-    // as-painted walks that hold each face's painted enabled bit against
-    // these live predicates (main.cpp: the roster's, the render player's
-    // row's, the score viewer's row's), so the keys grey and light in the
-    // frame after the edge and nothing is damaged at rest.
+    // could reopen one (architect 2026-11-26).
     // Main thread only; a pure read.
-    bool    device_absent_or_pending() const;
-
-    // IS THE DEVICE PENDING (architect 2026-11-26; THE SCREEN NEVER WAITS ON
-    // ANDROID'S AUDIO, playback_aaudio.cpp's head): true from the moment a
-    // device job passes its bound — a reopen, RELEASE's close — until its
-    // answer is adopted (adopt_device_answer below, or the head of the next
-    // road that would post). While it stands: no stream is adopted
-    // (device_unavailable true), nothing is published (play() is a silent
-    // no-op), ensure_device_available_for_play and end_device_release
-    // attempt nothing and answer false, release_device does nothing, and
-    // stop() and rebind_buffer are as ever. ITS READERS: the card's chooser
-    // (playback_device_refusal_card, playback_lifecycle.h — every gate that
-    // cards a false device answer), RELEASE's own press
-    // (GuiPlaybackLifecycle::toggle_device_release, which cards an
-    // overrun), NOISE's two lift reads beside device_unavailable (above),
-    // the two overlays' launches, which read it right after their play() and
-    // rest where they were to start (GuiRenderPlayer::rest_if_launch_pending,
-    // GuiScoreViewer::play_live_from and its live reseeks), and the render
-    // player's tick's card. Main thread only; a pure read of a main-thread
-    // field.
-    bool    device_pending() const;
-
-    // ADOPT THE DEVICE'S ANSWER (architect 2026-11-26; THE ADOPTION at
-    // playback_aaudio.cpp's head): where a device job answered past its
-    // bound, seat its answer — the stream standing or none, a release
-    // completed, the pending fact cleared, the log's answer line said. ONE
-    // CALLER: gui_main's tick, every tick, ahead of the dead-stream poll
-    // and RELEASE's face settle (main.cpp), so a release's raised latch and
-    // the faces' edge are read in the tick that adopted. AT REST ONE PLAIN
-    // BOOL COMPARE on a main-thread field — no atomic, no lock; while
-    // pending, one read of the worker's answer slot. The roads that would
-    // post a job adopt at their own heads through the same body. Main
-    // thread only.
-    void    adopt_device_answer();
+    bool    device_absent() const;
 
     // THE REOPEN AT THE PRESS (architect 2026-09-02). Asked at a LAUNCH press
     // by the three launch gates — toggle_playback's target pre-sum gate,
     // GuiAbAudition::start's preflight and the launch body's belt
-    // (playback_lifecycle.cpp, ab_audition.cpp) — which card the device's
-    // sentence (playback_device_refusal_card, playback_lifecycle.h) only
-    // when this answers FALSE; by the
+    // (playback_lifecycle.cpp, ab_audition.cpp) — which card
+    // kPlaybackDeviceUnavailableCard only when this answers FALSE; by the
     // car's Play (car_toggle_playback's play arm, which cards alike, and the two media
     // Play arms, GuiCarTransport::on_media_command and the render player's,
     // which ignore the answer); and BY NOISE'S WAKE
     // (GuiInputHandler::wake_device_for_level_case, architect 2026-11-24: the
     // level case's lift over a dead stream), which plays nothing — the
-    // reopen is the whole act, the bed resuming through the
+    // reopen and the start are the whole act, the bed resuming through the
     // running callback — and cards alike. (The bed itself asks nothing:
     // every press's reopen is the bed's resume, noise.h's head.) NO ROAD
     // REOPENS A ROUTE DROP WITHOUT A PRESS; the one reopen that runs with no
@@ -556,67 +483,49 @@ public:
     // first two lines, hoisted here so a route that dropped (a headphone
     // pulled, a Bluetooth route gone) comes back at the NEXT PRESS
     // instead of leaving every main-window launch road carding forever
-    // behind a read that never reopened — OPENED AND STARTED, because the
+    // behind a read that never reopened — AND THEN STARTS IT, because the
     // question a launch gate asks is whether this device will SOUND, not
-    // whether a stream object stands, AND THE OPEN'S OWN BODY ANSWERS IT
-    // (architect 2026-11-26): the reopen opens and starts in one device job
-    // or leaves nothing, a refused start request closing its stream there,
-    // so a stream that stands is one whose start was accepted. A start left
-    // to play() would run AFTER the publish, where a refusal lowers the
-    // playing bit and closes the stream while the launch body has already
-    // seeded the scanner and returned true, the next tick reading that bit
-    // as a natural end: a silent false launch with no card. A stream already running posts no
-    // job, so an ordinary play makes no device call here; a refused open or
-    // start answers false, which is the card. It does not
-    // replace play()'s own reopen or its post-publish race check:
+    // whether a stream object stands: a
+    // reopened stream is stopped, and an init whose start was refused leaves a
+    // non-null stopped one, neither of which device_unavailable can see. Left
+    // to play()'s own start — which runs AFTER the publish — a refused start
+    // lowers the playing bit and closes the stream while the launch body has
+    // already seeded the scanner and returned true, so the next tick reads
+    // that bit as a natural end: a silent false launch with no card. The start
+    // is idempotent, so an ordinary play makes no device call here; a refused
+    // one closes the stream and answers false, which is the card. It does not
+    // replace play()'s own reopen and start or its post-publish race check:
     // the player's road reaches play() with no gate ahead of it, and the
     // ordering argument at play()'s second latch read rests on the head
     // check standing there. Main thread only; non-const because it may open
     // and start a device. IT ENDS A RELEASE (device_released below): its
     // reopen is the one body every reopen runs, which clears the fact.
-    // THE REOPEN IS ONE DEVICE JOB, WAITED FOR AT MOST ONE SECOND (architect
-    // 2026-11-26; the rule at playback_aaudio.cpp's head): inside the bound
-    // the answer is the synchronous one; A REOPEN THAT OVERRUNS ANSWERS
-    // FALSE WITH THE DEVICE PENDING (device_pending above), and WHILE A JOB
-    // IS IN FLIGHT THIS ATTEMPTS NOTHING and answers false, a standing
-    // release's fact left as it is — the gates then card "Sound device is
-    // not answering" through the chooser. NO QUEUED PLAY: the press plays
-    // at once or not at all.
     bool    ensure_device_available_for_play();
 
     // RELEASE — THE KEEP-ALIVE SUPPRESSED (architect 2026-11-26; the rule,
     // his reason and its three ends at playback_aaudio.cpp's lifecycle
-    // block). ONE ACT: whatever plays is stopped through stop()
+    // block). ONE MAIN-THREAD ACT: whatever plays is stopped through stop()
     // and its fence, then the stream is CLOSED (the device's one close,
-    // which joins the callback thread — a device job on the worker, waited
-    // for at most one second) and the engine is left exactly as a
+    // which joins the callback thread) and the engine is left exactly as a
     // drop leaves it for every reader — device_unavailable and stream_dead
     // true, the playing bit down, no stream — plus the fact
-    // device_released answers. THE FACT IS SET AS THE CLOSE IS POSTED, so
-    // the lamp lights with the press; A CLOSE THAT OVERRUNS ITS BOUND leaves
-    // the device pending (device_pending above) under the lit lamp, and the
-    // released state completes — the latch, the log's line — when the
-    // answer is adopted. The GUI's own teardown (the scanner, a
+    // device_released answers. The GUI's own teardown (the scanner, a
     // transport's state) is its caller's, who runs the one stop body first
     // (GuiPlaybackLifecycle::toggle_device_release). A no-op while already
     // released — which is what makes it THE SEAT as well as the key's act:
     // the open's seat of the sticky lamp (GuiInputHandler::seat_lit_lamps)
     // calls it directly, asking for the released state, never toggling.
-    // CALLED BEFORE init() (that seat) it closes nothing, posts nothing and
-    // init comes up released, opening no stream. A NO-OP TOO WHILE A DEVICE
-    // JOB IS IN FLIGHT (its key is greyed then). THE THREE ENDS: any reopen
+    // CALLED BEFORE init() (that seat) it closes nothing and init comes up
+    // released, opening no stream. THE THREE ENDS: any reopen
     // (ensure_device_available_for_play above, play()'s head) and
     // end_device_release below.
     void    release_device();
 
     // THE RELEASE ENDED BY THE APP'S RETURN OR THE LIT LAMP'S SECOND PRESS:
-    // ensure_device_available_for_play's own reopen, nothing
+    // ensure_device_available_for_play's own reopen and start, nothing
     // published — the stream reopened and started, silence (and the bed)
-    // running, the keep-alive restored — its answer the same, the overrun's
-    // false with the device pending included. A no-op
-    // answering false when nothing is released, AND WHILE A DEVICE JOB IS
-    // IN FLIGHT (the release's own close not yet answered): nothing is
-    // attempted and the fact stands. Main thread only.
+    // running, the keep-alive restored — its answer the same. A no-op
+    // answering false when nothing is released. Main thread only.
     bool    end_device_release(GuiDeviceReleaseEnd why);
 
     // IS THE KEEP-ALIVE SUPPRESSED — the RELEASE lamp's live fact: true from
@@ -679,10 +588,7 @@ public:
     // buffer at its close).
     void rebind_buffer(const GuiBoundAudio& buffer);
 
-    // Tear down the device. Blocks until the audio callback has drained:
-    // the close runs on the device worker and is waited for WITH NO BOUND
-    // (architect 2026-11-26: a piece's close keeps waiting for Android), a
-    // device job still in flight waited out and adopted first.
+    // Tear down the device. Blocks until the audio callback has drained.
     // Call before the sample buffer dies (at shutdown).
     void shutdown();
 

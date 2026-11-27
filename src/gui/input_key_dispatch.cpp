@@ -8825,9 +8825,7 @@ void GuiInputHandler::handle_plain_bare_keys(GuiKey key) {
         // one chokepoint: dark, the stop body and the release; lit, the
         // reopen). The one bare form reaches here, its one producer the
         // icon-row button's internal chord. Silent: the lamp's face shows
-        // the new state — but for a press whose device call does not settle
-        // within its bound, which cards there (architect 2026-11-26).
-        // History-less, legal on a locked tab, under the
+        // the new state. History-less, legal on a locked tab, under the
         // grid-iterations lock and in the `h` view (all three allowlists
         // admit it; the view's claim above this dispatch does not own it).
         // The face's mirror is settled here, in the press's own pass, so

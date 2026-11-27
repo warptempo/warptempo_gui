@@ -78,21 +78,21 @@ void GuiPlaybackLifecycle::stop_playback_if_playing() {
         viewport.invalidate_modal_dialog_area();
         // THE HEAD UNIT'S PUSH AT EVERY PLAYER STOP LIVES HERE AND NOWHERE
         // ELSE (2026-08-28): this fork is the one place every player stop passes
-        // — the pause, the natural end, the dead device, a launch over a
-        // pending device (GuiRenderPlayer::rest_if_launch_pending), the close,
-        // the Up act's unload, the rebind ahead of the next item — so the
-        // push lives inside it and no caller can forget it. The callers that
-        // go on to an item's own push, an "inactive" one or a SILENCE TRACK
-        // (play_wav's tail, the close, and the Up act through its root
-        // entry's rebuild_rows) supersede this one a moment later, two
-        // binder calls where one would do; accepted, the alternative being
-        // one push per caller that the next caller forgets — and under up()
-        // the supersession is load-bearing rather than merely tidy, this
-        // push still carrying the item that act is dropping. The resume
-        // point the push reads is the caller's to have written BEFORE
-        // calling here (toggle_pause, the tick's dead-device arm and the
-        // pending launch's rest do; the natural end writes the item's end
-        // first for the same reason).
+        // — the pause, the natural end, the dead device, the close, the Up
+        // act's unload, the rebind ahead of the next item — so the push lives
+        // inside it and no caller can forget it. The callers that go on to an
+        // item's own push, an "inactive" one or a SILENCE TRACK (play_wav's
+        // tail, the close, and the Up act through its root entry's
+        // rebuild_rows)
+        // supersede this one a moment later, two binder calls
+        // where one would do; accepted, the
+        // alternative being one push per caller that the next caller
+        // forgets — and under up() the supersession is load-bearing rather
+        // than merely tidy, this push still carrying the item that act is
+        // dropping. The resume point the push reads is the caller's to have
+        // written BEFORE calling here (toggle_pause and the tick's
+        // dead-device arm do; the natural end writes the item's end first
+        // for the same reason).
         if (render_player) render_player->publish_media_state();
         return;
     }
@@ -244,16 +244,13 @@ void GuiPlaybackLifecycle::toggle_playback(int64_t launch_offset) {
     // refusal of its own before control could reach the body, so a dead device
     // met at the domain's end would be told the wrong cause. Asked once for
     // both views because the fact is neither view's: nothing will sound. The
-    // sentence is the launch body's own — the chooser's
-    // (playback_device_refusal_card, playback_lifecycle.h: the pending
-    // device's where this press's reopen overran its bound or met a device
-    // job in flight, architect 2026-11-26) — and this arm returns, so the
+    // sentence is the launch body's own literal, and this arm returns, so the
     // belt below never adds a second card to the press (the belt's reopen then
     // finds the stream this one opened, a no-op).
     if (!playback.ensure_device_available_for_play()) {
         n2_toggle_branch = "device refused";
         notifications.notify(AppState::NotificationClass::Normal,
-                             playback_device_refusal_card(playback));
+                             kPlaybackDeviceUnavailableCard);
         return;
     }
     int64_t launch_pos = app.playhead_cursor_sample;
@@ -337,19 +334,17 @@ static bool launch_frame_on_painted_window(const AppState& a,
 // toggle_playback so the composition
 // and the act read as one; a gate added to the press must be added here.
 // THE DEVICE TERM IS A READ, NEVER A REOPEN, AND THE READ IS THE
-// NEVER-CAME-UP HALF OR THE PENDING DEVICE (2026-09-02, the truthful-buttons
-// rule; pending, architect 2026-11-26): the press asks
+// NEVER-CAME-UP HALF (2026-09-02, the truthful-buttons rule): the press asks
 // ensure_device_available_for_play, which reopens a dead AAudio stream and
-// cards only when that fails, so the face asks device_absent_or_pending —
-// the device that never came up, and the device whose last call Android has
-// not answered, the two states under which a press plays nothing — and
-// AGREES with the act: a dropped route on the tablet leaves Play lit, and
-// its press reopens and plays exactly as Space does.
+// cards only when that fails, so the face asks device_absent — the device
+// that never came up, the one state a press cannot change — and AGREES with
+// the act: a dropped route on the tablet leaves Play lit, and its press
+// reopens and plays exactly as Space does.
 bool space_launch_would_play(const AppState& a, const GuiAudio& audio,
                              const GuiPlayback& playback,
                              const GuiTargetRender& target_render,
                              int64_t total_frames) {
-    if (playback.device_absent_or_pending()) return false;
+    if (playback.device_absent()) return false;
     int64_t launch_pos = a.playhead_cursor_sample;
     if (a.active_audio_view == 'T') {
         if (!target_preview_ready(target_render)) return false;
@@ -479,14 +474,14 @@ void GuiPlaybackLifecycle::car_toggle_playback() {
         return;
     }
     // The play arm's prologue is toggle_playback's: the device reopened at
-    // the press (carding a failed reopen through the same chooser; the
-    // launch body's belt then finds the stream this one opened, a no-op). The pre-sum end gate of
+    // the press (carding a failed reopen; the launch body's belt then finds
+    // the stream this one opened, a no-op). The pre-sum end gate of
     // toggle_playback's target arm has no counterpart here: there is no
     // offset to add, so the start below is an already-formed frame and the
     // launch body's own playable gate is the whole position verdict.
     if (!playback.ensure_device_available_for_play()) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             playback_device_refusal_card(playback));
+                             kPlaybackDeviceUnavailableCard);
         return;
     }
     // THE LOOP WINDOW IS THE ACTIVE DOMAIN'S TRIM — Viewport::trim_range, the
@@ -814,13 +809,11 @@ bool GuiPlaybackLifecycle::launch_playback_window(int64_t start, int64_t end,
     // the only gate on the scrub's launch, which has no outer road at all —
     // so the scrub's reopen is this one — and each of the three returns, so
     // exactly one card is raised per press (behind a gate that reopened, this
-    // reopen finds the stream standing and is a no-op). The sentence is the
-    // chooser's (playback_device_refusal_card, at the header for all three):
-    // kPlaybackDeviceUnavailableCard, or the pending device's where the
-    // reopen overran its bound or met a device job in flight.
+    // reopen finds the stream standing and is a no-op). The sentence is
+    // kPlaybackDeviceUnavailableCard, spelled once at the header for all three.
     if (!playback.ensure_device_available_for_play()) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             playback_device_refusal_card(playback));
+                             kPlaybackDeviceUnavailableCard);
         return false;
     }
     // AND A LAUNCH POSITION WITH NOTHING LEFT REFUSES IN SILENCE (architect
@@ -942,23 +935,13 @@ void GuiPlaybackLifecycle::toggle_follow() {
 void GuiPlaybackLifecycle::toggle_device_release() {
     if (playback.device_released()) {
         (void)playback.end_device_release(GuiDeviceReleaseEnd::SecondPress);
-    } else {
-        stop_playback_if_playing();
-        playback.release_device();
+        return;
     }
-    // THE PRESS WHOSE DEVICE CALL DID NOT SETTLE WITHIN THE BOUND SAYS SO
-    // (architect 2026-11-26; the card block at the head of
-    // playback_lifecycle.h): the dark press's close or the second press's
-    // reopen left the device pending — or the press met a job already in
-    // flight, under which neither act attempts anything.
-    if (playback.device_pending())
-        notifications.notify(AppState::NotificationClass::Normal,
-                             kPlaybackDeviceNotAnsweringCard);
+    stop_playback_if_playing();
+    playback.release_device();
 }
 
-// The return's watch (contract at the header declaration; a gain that meets
-// a device job in flight consumes its loss and ends nothing, the
-// declaration's last paragraph).
+// The return's watch (contract at the header declaration).
 void GuiPlaybackLifecycle::note_window_activation(bool active) {
     if (!active) {
         left_while_released_ = playback.device_released();

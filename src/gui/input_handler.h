@@ -1217,13 +1217,7 @@ struct GuiInputHandler {
     // an edge, DAMAGES THE KEY'S OWN FACE (invalidate_roster_press_face, the
     // TRIM lamp's road), so the lamp follows every road that moves the fact
     // — the key's own press, the app's return, a play's reopen anywhere —
-    // in the frame after it. Otherwise one compare. THE FACT MOVES AT A
-    // DEVICE JOB'S POST, never at its answer (architect 2026-11-26;
-    // GuiPlayback::release_device, reopen_stream_if_dead), so the lamp
-    // lights or goes out with the press even where Android then overruns
-    // its bound; the key's GREY while the device is pending is its enabled
-    // bit's (GuiPlayback::device_absent_or_pending), carried by the
-    // roster's face comparator, not by this settle. THE KEY'S OWN ARM AND
+    // in the frame after it. Otherwise one compare. THE KEY'S OWN ARM AND
     // THE RETURN'S HOOK (handle_plain_bare_keys' GuiKeys::Release case,
     // main.cpp's activation hook) call it too, right after their act, so
     // their edge is settled in the act's own pass, ahead of its paint.
@@ -1800,14 +1794,8 @@ struct GuiInputHandler {
     // wake_device_for_level_case is the wake's one body, the tap's and a
     // moved press's (take_chrome_press, after the settle, on an audible
     // level): GuiPlayback::ensure_device_available_for_play — the launch
-    // gates' device question, nothing played — and the gates' card on a
-    // false answer (playback_device_refusal_card, playback_lifecycle.h).
-    // WHILE THE DEVICE IS PENDING THE WAKE IS SKIPPED, SILENTLY (architect
-    // 2026-11-26; GuiPlayback::device_pending): the two lifts ask "dead and
-    // not pending", so the drag sets the level live and the tap toggles as
-    // on a live stream, and no device question is asked over a device job
-    // in flight; a wake whose own reopen overruns its bound cards the
-    // pending device's sentence through that chooser.
+    // gates' device question, nothing played — and
+    // kPlaybackDeviceUnavailableCard on a false answer.
     // apply_level_case writes the level into the live struct, hands it to
     // the bed's voice (GuiNoise::set_level_db) and DAMAGES THE CASE'S FACE
     // RECT — the one damage of a level edge: the

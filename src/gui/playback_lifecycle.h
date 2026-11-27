@@ -22,15 +22,14 @@
 struct GuiRenderPlayer;
 
 // THE DEAD DEVICE'S SENTENCE, ONE SPELLING AND FOUR SITES (2026-08-30,
-// 2026-09-04; ITS SECOND SENTENCE, the pending device's, and the chooser
-// between the two, below): the one launch body's own device gate — the BELT,
+// 2026-09-04): the one launch body's own device gate — the BELT,
 // which every road that plays passes — and the TWO PRE-LAUNCH GATES that decide
 // something before reaching it and so must ask the same question first:
 // toggle_playback's target-view
 // pre-sum position gate (which would otherwise answer a dead device with the
 // POSITION sentence) and GuiAbAudition::start's press-time preflight (which
 // would otherwise run `c` and switch tabs before the belt refused). Only one of
-// the three fires per press — each returns — so the shared chooser is what
+// the three fires per press — each returns — so the shared literal is what
 // keeps one fact one sentence.
 // THE FOURTH SITE IS NOT A PRESS AT ALL and is the one exception to the
 // launch-road reading below: GuiAbAudition::fire_if_due, the A/B audition's
@@ -61,52 +60,11 @@ struct GuiRenderPlayer;
 // pauses it and cards this sentence), and NOISE's lift reads it live to
 // choose its wake — and the
 // two PLAY-face predicates (space_launch_would_play,
-// ab_audition_preflight_ok) read device_absent_or_pending, the
-// never-came-up half and the pending device — a face is a read, never a
-// reopen, and it must not grey what the press would reopen.
+// ab_audition_preflight_ok) read device_absent, the never-came-up half alone
+// — a face is a read, never a reopen, and it must not grey what the press
+// would reopen.
 inline constexpr const char* kPlaybackDeviceUnavailableCard =
     "Playback is unavailable on this device";
-
-// THE PENDING DEVICE'S SENTENCE (architect 2026-11-26: "Keep the screen live
-// while Android's audio is stuck"; the rule's one owner is THE SCREEN NEVER
-// WAITS ON ANDROID'S AUDIO, playback_aaudio.cpp's head): a device call that
-// did not answer within its bound leaves the device PENDING
-// (GuiPlayback::device_pending), and a press that meets it — the press whose
-// own reopen overran, and every press that cannot be greyed while it stands
-// (a waveform audition tap, the scrub, the car's Play) — is told so, the
-// device being there and Android not answering for it.
-inline constexpr const char* kPlaybackDeviceNotAnsweringCard =
-    "Sound device is not answering";
-
-// THE CHOOSER, ONE OWNER OF WHICH SENTENCE A FALSE DEVICE ANSWER SAYS
-// (architect 2026-11-26): with the device pending the pending device's,
-// otherwise the dead device's. EVERY SITE THAT CARDS A FALSE DEVICE ANSWER
-// WITH THE DEAD DEVICE'S SENTENCE CALLS IT — the block above's: the three
-// launch sites
-// (toggle_playback's pre-sum gate, GuiAbAudition::start's preflight, the
-// launch body's belt), the car's Play (car_toggle_playback's play arm),
-// the A/B audition's tick (GuiAbAudition::fire_if_due), the score viewer's
-// tick and NOISE's wake (GuiInputHandler::wake_device_for_level_case) — and
-// asks after the answer, so the press whose own reopen just overran reads
-// the device pending. THE SITES THAT CARD NOTHING stay silent under a
-// pending device as under a dead one: the two media Play arms that ignore
-// the answer (GuiCarTransport::on_media_command, the render player's). THE
-// RENDER PLAYER'S TICK makes the same choice over its own dead-device
-// sentence, "No audio device to play the wav" (GuiRenderPlayer::tick).
-// BESIDE THE CHOOSER, THE SITES THAT SAY THE PENDING SENTENCE ALONE:
-// RELEASE's own press (GuiPlaybackLifecycle::toggle_device_release), which
-// cards only where its device call did not settle within the bound and
-// nothing on a refused reopen; and THE TWO OVERLAYS' LAUNCHES, every play()
-// of the render player (GuiRenderPlayer::rest_if_launch_pending: play_wav,
-// play_live_from, seek_to's live reseek) and of the score viewer
-// (GuiScoreViewer::play_live_from and the live reseeks of seek_to and
-// range_changed, through rest_at_pending_launch), each of which, finding the
-// device pending right after its play(), rests PAUSED where it was to start
-// and cards once — a refused launch there taking its tick's card instead.
-inline const char* playback_device_refusal_card(const GuiPlayback& playback) {
-    return playback.device_pending() ? kPlaybackDeviceNotAnsweringCard
-                                     : kPlaybackDeviceUnavailableCard;
-}
 
 // THE DISPLAY KEEP-ALIVE, A BRIEF WINDOW AFTER A FAST STOP (architect
 // 2026-11-13) — THE ONE OWNER OF ITS FACTS AND ITS RULING.
@@ -637,14 +595,7 @@ struct GuiPlaybackLifecycle {
     // close, the drop's state, the fact. LIT, IT IS THE SECOND PRESS:
     // GuiPlayback::end_device_release, the stream reopened and started with
     // no play, no card on a refused reopen (the lamp is the whole surface;
-    // the next play's gate cards). A PRESS WHOSE DEVICE CALL DOES NOT
-    // SETTLE WITHIN THE BOUND CARDS (architect 2026-11-26: "Regarding the
-    // release card, if it doesn't settle within the bound, I agree";
-    // kPlaybackDeviceNotAnsweringCard above): the dark press's close
-    // overrunning — the lamp lit at once, the fact set as the close is
-    // posted, the key then lit and inert and the sound keys grey until
-    // Android answers — and the second press's reopen overrunning, the lamp
-    // dark from the attempt. The lamp is the backend's fact
+    // the next play's gate cards). The lamp is the backend's fact
     // (GuiPlayback::device_released), mirrored for the face by the tick's
     // settle (GuiInputHandler::settle_device_release_lamp), which damages
     // the key at every edge, so this mutator owes no damage.
@@ -660,14 +611,6 @@ struct GuiPlaybackLifecycle {
     // a seated lamp leaves it lit. Every loss of focus counts: Settings and
     // every other screen, the task switcher, the notification shade, the
     // screen dozing (each a LOST_FOCUS, its return the GAINED_FOCUS).
-    // A RETURN WHOSE REOPEN OVERRUNS ITS BOUND CARDS NOTHING (architect
-    // 2026-11-26: no press asked): the device is pending, the lamp dark
-    // from the attempt, the sound keys grey until Android answers. A
-    // RETURN THAT ARRIVES WHILE A DEVICE JOB IS IN FLIGHT ATTEMPTS NOTHING
-    // (GuiPlayback::end_device_release) and the loss it answered is
-    // consumed all the same, so the lamp then waits for a press or a play;
-    // reaching that takes the release's own close stuck past its bound and
-    // a leave and a return inside that stall.
     void note_window_activation(bool active);
 
 private:

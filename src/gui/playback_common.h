@@ -11,10 +11,8 @@ struct GuiNoiseVoice;   // noise.h — the second voice the callback sums
 // (playback_aaudio.cpp), everything else is the engine here.
 //
 // THE SPLIT, stated once:
-//   * DEVICE (playback_aaudio.cpp): opening and closing the device — on
-//     its device worker thread, the main thread waiting a bounded time for
-//     each answer (that file's THE SCREEN NEVER WAITS ON ANDROID'S AUDIO)
-//     — registering the callbacks, the callback's own entry/exit, and stop()'s
+//   * DEVICE (playback_aaudio.cpp): opening and closing the device,
+//     registering the callbacks, the callback's own entry/exit, and stop()'s
 //     QUIESCENCE FENCE — the callback's mark at its entry and exit and
 //     stop()'s wait while it stands, the proof stated once at
 //     GuiPlayback::stop().

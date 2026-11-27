@@ -2223,11 +2223,8 @@ enum class RedesignButton {
     // overlay (overlay_admits_button) and greyed with the whole roster under
     // a modal (roster_greyed_whole), a lit one lit and inert there, and
     // greyed with no audio loaded; the grey each key owns is its own: RELEASE's
-    // own grey is a device that never came up, whose press could release
-    // nothing and which no end could reopen, or a device pending — a device
-    // call past its bound, its own close or reopen among them, under which
-    // the press attempts nothing; lit, it is then lit and inert —
-    // (GuiPlayback::device_absent_or_pending, architect 2026-11-26), while
+    // one grey is a device that never came up (GuiPlayback::device_absent),
+    // whose press could release nothing and which no end could reopen, while
     // NOISE's is its folder's availability (GuiNoise::available), so with no
     // noise folder RELEASE is live and NOISE greyed. Its
     // tooltip "Release Sound Device". No modifier, no repeat, no hold.
@@ -9623,8 +9620,7 @@ struct AppState {
     //              (GuiPlaybackLifecycle::stop_playback_if_playing — every
     //              live transport that stops passes there, the pause, the
     //              dead device, the natural end, the Up act's unload and the
-    //              close alike, and a launch over a pending device,
-    //              GuiRenderPlayer::rest_if_launch_pending), and IDLE
+    //              close alike), and IDLE
     //              at the THREE acts that mean "nothing to resume":
     //              open()'s reset,
     //              and close() and up() through the unload body they share
@@ -10542,18 +10538,17 @@ int render_player_highlight_act_row(const AppState& a);
 //   a bound item, that arm's own record.)
 //   AND THE DEVICE IS A TERM OF EVERY ARM THAT SOUNDS (architect 2026-09-02,
 //   closing the asymmetry with the roster's own
-//   Play face): a device that NEVER CAME UP plays nothing on any road, and
-//   neither does a PENDING one (architect 2026-11-26), so
-//   !playback.device_absent_or_pending() joins the highlight's WAV arm and
-//   the whole transport tail — a paused transport RESUMES — while the highlight's
+//   Play face): a device that NEVER CAME UP plays nothing on any road, so
+//   !playback.device_absent() joins the highlight's WAV arm and the whole
+//   transport tail — a paused transport RESUMES — while the highlight's
 //   FOLDER arm keeps no term at all, open_row
 //   entering a listing without sounding anything, which is the
 //   truthful-buttons rule read exactly: a face greys iff the act would be a
 //   no-op, and going into a folder is not one. The fork is open_row's own,
 //   read without acting, so the face and the act are one decision. It is the
-//   never-came-up half and the pending device, the same read
-//   space_launch_would_play and ab_audition_preflight_ok take (the contract
-//   is at GuiPlayback::device_absent_or_pending), and NOT device_unavailable: the player's
+//   never-came-up half alone, the same read space_launch_would_play and
+//   ab_audition_preflight_ok take (the contract is at
+//   GuiPlayback::device_absent), and NOT device_unavailable: the player's
 //   road reaches play(), which reopens a dead stream at its head, so a route
 //   that dropped mid-session is exactly what a press repairs and must not
 //   grey.
@@ -16281,16 +16276,12 @@ inline bool redesign_button_enabled(const AppState& a,
         // stopping whatever plays first, and over a stream a drop already
         // killed (or a refused reopen left absent) it still lights the lamp,
         // the stream then closed by ruling as well as by accident, so the
-        // three ends reopen it as written; lit, its press reopens. ITS OWN
-        // GREY IS A DEVICE THAT NEVER CAME UP, OR ONE PENDING
-        // (GuiPlayback::device_absent_or_pending, the launch faces' own
-        // read): no stream to release and no end that could reopen one, so
-        // the lamp would light over nothing; or a device call Android has
-        // not answered within its bound (architect 2026-11-26), under which
-        // the press attempts nothing — the key lit and inert there when the
-        // call is its own close.
+        // three ends reopen it as written; lit, its press reopens. ITS ONE
+        // GREY IS A DEVICE THAT NEVER CAME UP (GuiPlayback::device_absent,
+        // the launch faces' own read): no stream to release, and no end
+        // could reopen one, so the lamp would light over nothing.
         case RedesignButton::IconRelease:
-            return !playback.device_absent_or_pending();
+            return !playback.device_absent();
         // THE SCORE KEY IS LIVE WITH A SCORE LOADED AND DEAD WITHOUT ONE
         // (architect 2026-10-26): `score_path` empty, its folder or pages.txt
         // absent or malformed — the load's advisory road (score_pages.h) —

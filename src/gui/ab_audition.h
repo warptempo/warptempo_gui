@@ -196,13 +196,11 @@ struct GuiInputHandler;
 // (2026-08-30, the strictness ruling: the whole act is silence and a camera
 // move, so a refusal that said nothing was indistinguishable from one):
 // A DEAD OR ABSENT DEVICE, asked once for the pair ahead of everything below
-// it because nothing will sound on either tab (the launch body's own
-// sentence, the chooser's: playback_device_refusal_card,
-// playback_lifecycle.h) — and the question REOPENS (2026-09-02)
+// it because nothing will sound on either tab (the launch body's own literal,
+// kPlaybackDeviceUnavailableCard) — and the question REOPENS (2026-09-02)
 // a dead AAudio stream first (GuiPlayback::ensure_device_available_for_play,
 // the reopen at the press), so it cards only a device that stayed dead after
-// the reopen, never came up at all, or is pending (its reopen past its
-// bound, architect 2026-11-26);
+// the reopen or never came up at all;
 // in TARGET VIEW, a preview not ready (GuiTargetRender::preview_ready) or the
 // ACTIVE tab's playhead outside the bound buffer's playable range (the launch
 // body's own predicate — at the press the bound buffer is this tab's trim's

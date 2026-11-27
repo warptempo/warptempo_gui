@@ -562,10 +562,8 @@ bool playback_publish_play(GuiPlaybackState& state, int64_t start_sample,
     // head check has already closed the dead stream (AAudioStream_close
     // returns only once the callback thread has left); the natural end lowers
     // only a once-through session's bit, and that window never wraps. Each
-    // of those lowerings is ordered before this load (stop() runs on this
-    // thread, and the close on the device worker in a job whose answer this
-    // thread adopted ahead of this publish, GuiPlayback::launch_window's
-    // head; the launch entries read is_playing with acquire),
+    // of those lowerings is ordered before this load (stop() and the close
+    // run on this thread; the launch entries read is_playing with acquire),
     // so a down bit read here is the truth. (The one leg left — a loss
     // landing between that head check and this publish, its last fill still
     // running — is the publish's own failure: the disconnect outranks the

@@ -7878,15 +7878,12 @@ AppState::ChromePress GuiInputHandler::take_chrome_press() {
     // STREAM (architect 2026-11-24; the rule at finish_level_press_release)
     // WAKES IT after the settle where its end leaves an audible level —
     // device_unavailable() read live here, nothing painted for it; an end on
-    // -inf asks nothing. WHILE THE DEVICE IS PENDING THE WAKE IS SKIPPED
-    // (architect 2026-11-26; GuiPlayback::device_pending — the rule at
-    // finish_level_press_release): dead and not pending is the question.
-    // A press that never moved is the tap's, which wakes
+    // -inf asks nothing. A press that never moved is the tap's, which wakes
     // in its own body, so the device question is never asked twice.
     if (arm.kind == AppState::ChromePress::Kind::Level) {
         settle_level_case(arm.level_changed);
         if (arm.moved && app.device_config->noise_level != kLevelDbOff &&
-            playback.device_unavailable() && !playback.device_pending())
+            playback.device_unavailable())
             wake_device_for_level_case();
     }
     return arm;
@@ -8034,21 +8031,13 @@ void GuiInputHandler::update_level_press_motion(double x, double y) {
 // start themselves are the lifecycle's, recorded at playback_aaudio.cpp's
 // THE STREAM'S LIFECYCLE and ensure_device_available_for_play, which this
 // lift's wake calls.
-// WHILE THE DEVICE IS PENDING THE LIFT'S WAKE IS SKIPPED, SILENTLY
-// (architect 2026-11-26; GuiPlayback::device_pending, a device call past
-// its bound, playback_aaudio.cpp's THE SCREEN NEVER WAITS ON ANDROID'S
-// AUDIO): `dead` below is "dead and not pending", so over a pending device
-// the tap toggles exactly as on a live stream and asks no device question —
-// none is attempted over a device job in flight — and the bed resumes
-// through whichever stream the pending call leaves.
 void GuiInputHandler::finish_level_press_release(
         const AppState::ChromePress& arm, const GuiPointerPlace& at) {
     if (arm.moved) return;
     const RedesignButton id = static_cast<RedesignButton>(arm.index);
     if (!redesign_button_hit(app, id, at)) return;
     const double standing = app.device_config->noise_level;
-    const bool   dead     = playback.device_unavailable() &&
-                            !playback.device_pending();
+    const bool   dead     = playback.device_unavailable();
     if (dead && standing != kLevelDbOff) {
         wake_device_for_level_case();
         return;
@@ -8068,19 +8057,15 @@ void GuiInputHandler::finish_level_press_release(
 // question, GuiPlayback::ensure_device_available_for_play — the dead stream
 // closed (the noise voice's sequence reset first, close_dead_stream),
 // reopened at the new route's rate and STARTED, so the bed resumes through
-// the running callback and NOTHING PLAYS — and the gates' card on a false
-// answer, through their chooser (playback_device_refusal_card,
-// playback_lifecycle.h): kPlaybackDeviceUnavailableCard where the reopen
-// was refused or the device never came up, which no press opens, and the
-// pending device's sentence where this wake's own reopen overran its bound
-// (architect 2026-11-26) — as every launch gate cards: a device asked for
-// and none given. A true answer raises nothing.
-// The callers ask it only on a dead stream read live at their lift, and
-// never over a pending device.
+// the running callback and NOTHING PLAYS — and
+// kPlaybackDeviceUnavailableCard on a false answer (the reopen refused, or
+// a device that never came up, which no press opens), as every launch gate
+// cards: a device asked for and none given. A true answer raises nothing.
+// The callers ask it only on a dead stream read live at their lift.
 void GuiInputHandler::wake_device_for_level_case() {
     if (!playback.ensure_device_available_for_play())
         notifications.notify(AppState::NotificationClass::Normal,
-                             playback_device_refusal_card(playback));
+                             kPlaybackDeviceUnavailableCard);
 }
 
 // THE LIVE APPLY, ONE BODY FOR THE DRAG AND THE TAP (the case is

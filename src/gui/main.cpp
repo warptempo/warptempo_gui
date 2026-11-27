@@ -2632,20 +2632,6 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE STATUS BAR the same way (refresh_status_bar): its
         // string is standing state, compared each tick with the one painted.
         refresh_status_bar(app, gui);
-        // THE DEVICE'S ANSWER, ADOPTED ON EVERY TICK (architect 2026-11-26;
-        // THE SCREEN NEVER WAITS ON ANDROID'S AUDIO, playback_aaudio.cpp's
-        // head; GuiPlayback::adopt_device_answer): a device call that
-        // answered past its one-second bound — a reopen, RELEASE's close —
-        // becomes the engine's state on this thread here, at the 5 ms tick,
-        // which runs at rest. AHEAD OF RELEASE's face settle just below and
-        // of the dead-stream poll further down, so the latch a completed
-        // release raises and the sound keys' edge out of pending — the face
-        // comparators below, which hold each painted enabled bit against
-        // GuiPlayback::device_absent_or_pending (the roster's, the render
-        // player's row's, the score viewer's row's) — are read in the tick
-        // that adopted. At rest one plain bool compare; nothing is damaged
-        // here.
-        playback.adopt_device_answer();
         // THE STICKY LAMPS the same way (2026-11-24): MAGNIFY's deferred
         // seat first (GuiInputHandler::settle_pending_magnification, one
         // compare once seated), RELEASE's face settle beside it (architect
@@ -2976,11 +2962,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // iteration mode, finishes a load — or MUTATES THE
         // SELECTION, switches a view or steps the history walk (the
         // truthful-buttons ruling's face terms, redesign_button_enabled) —
-        // carries an invalidate of its own; THE SOUND DEVICE GOING PENDING
-        // AND ANSWERING (architect 2026-11-26: Play, the A/B audition and
-        // RELEASE grey through GuiPlayback::device_absent_or_pending) is
-        // such an edge, a device job's overrun and its answer's adoption
-        // damaging nothing themselves.
+        // carries an invalidate of its own.
         // Those facts change with no top-strip damage whatsoever, so the strip
         // would keep showing yesterday's faces; here the LIVE bits are compared
         // against the ones the painter last painted
@@ -3327,8 +3309,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // THE RENDER PLAYER'S MODAL ROW, the same comparator for the second
         // stash (architect 2026-09-24, strictly as-painted): a button's face
         // (render_player_button_enabled) moves with state that damages no part
-        // of the row — the device coming up, going absent or pending and
-        // answering (GuiPlayback::device_absent_or_pending), a render run
+        // of the row — the device coming up or going absent, a render run
         // starting or finishing under the Load face, a lock flipping — so the
         // as-painted bits (AppState::ModalDialogButton::enabled, published by
         // paint_modal_dialog under a covering clip) are held against the live
@@ -3355,8 +3336,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
 
         // THE SCORE VIEWER'S ROW, the same comparator (2026-10-26):
         // its PLAY key's face (score_viewer_button_enabled) moves with the
-        // soundtrack's load landing, the device (absent, or pending and
-        // answering) and a render run ending, and
+        // soundtrack's load landing, the device and a render run ending, and
         // its skips' faces (2026-10-27) with the playing cursor, whose frames
         // damage the clock and the scrub alone — none of which damages the
         // keys (the painter carries their bits as painted).
@@ -3764,11 +3744,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // `is_playing()`-gated stop and rebind UNFENCED. Taking the fence here, at
         // the stop edge, closes it at the source — the Space-symmetric design, and
         // the reason the rebind sites keep their conditional stops rather than
-        // becoming unconditional. Cost: the fence blocks the tick only for
-        // our own callbacks' runtimes — ordinarily one, nothing when none is
-        // inside; no future callback is needed to end it and no state of the
-        // device can extend it — once per playback session, which is
-        // precisely what Space's stop edge pays.
+        // becoming unconditional. Cost: the fence blocks the tick for at most
+        // one callback's own runtime, nothing when none is inside, once per
+        // playback session, which is precisely what Space's stop edge pays.
         // stop() is idempotent on an already-flag-stopped session — it
         // re-stores the same false and then waits the same way.
         //
@@ -4163,11 +4141,7 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
     // playback_aaudio.cpp's THE STREAM'S LIFECYCLE), and a reopen is the one
     // moment it is torn down and brought back (the next session's init owns
     // the rate, and projects may differ in it): shutdown closes the stream
-    // and the next init opens and starts one — each a job on the engine's
-    // device worker that this thread waits for WITH NO BOUND (architect
-    // 2026-11-26: a piece's open and close keep waiting for Android;
-    // playback_aaudio.cpp's THE SCREEN NEVER WAITS ON ANDROID'S AUDIO), a
-    // device job still in flight waited out first. A LIT NOISE GAPS
+    // and the next init opens and starts one. A LIT NOISE GAPS
     // FOR IT and resumes where it was in the next session's first callback,
     // no fade (GuiNoiseVoice's thread note, noise.h): after this line no
     // callback of this engine touches the voice. WITH RELEASE LIT ACROSS THE
