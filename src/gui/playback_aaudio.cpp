@@ -90,9 +90,13 @@
 // LIT (architect 2026-11-26: "the silent stream is there hiding, and we're
 // actually disabling the hidden"; "Okay to build the keep alive
 // suppression"). In the car the Bluetooth codec is switched once a drive
-// (Developer options, HD audio off), and the head unit refuses that switch
-// on a link that is streaming — which, with this stream kept running, it
-// always is. The top icon row's RELEASE lamp (RedesignButton::IconRelease)
+// (Developer options, HD audio off), and he makes that switch with this
+// stream off the link, which, kept running, it is always on. The car does
+// not refuse a switch on a streaming link: it sometimes misses one
+// (Android's Bluetooth stack gives the car up after 15 s, the link drops and
+// comes back), and whether an idle link spares the miss is unproven (the
+// tablet's log of the car test: docs/engineering/android_notes.md §11.4a).
+// The top icon row's RELEASE lamp (RedesignButton::IconRelease)
 // closes the stream ON PURPOSE: the act (GuiPlayback::release_device) is the
 // dead-stream state below entered by choice — the latch, the rate 0, the
 // playing bit down, no stream — plus the one fact `suppressed`, the lamp.

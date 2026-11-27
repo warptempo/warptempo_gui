@@ -1100,6 +1100,11 @@ waited the whole run on the screen thread. A proof that needs the device to
 call again can be held by the device; the mark needs only our own code to
 leave.
 
+THE PROOF ON THE TABLET (the car test of that evening, the same stall met
+again: §11.4a's missed codec switch). RELEASE pressed 14 s into it, the stream
+started and uncalled since it began, ran its stop request and its close in
+2 ms (20:57:11.751 to .753), and Android showed no "isn't responding" dialog.
+
 (The fence that drove the STREAM STATE MACHINE — `requestStop` at every stop,
 `requestStart` at every play — is what §11.4a rules out.)
 
@@ -1146,12 +1151,12 @@ every play.
 THE CAR'S CODEC IS SWITCHED WITH THE STREAM CLOSED: RELEASE (architect 2026-11-26;
 the runbook's steps are INSTALL.md's "Bluetooth in the car"). The car's head unit
 offers AAC and SBC, he wants SBC there, and the tablet always connects on AAC.
-The car refuses a codec change on a STREAMING link — it reports "connection
-failed", the tablet's Bluetooth log showing the reconfiguration followed at
-once by the link's disconnect — and with this app open and RELEASE dark the
+With this app open and RELEASE dark the
 link always streams: the stream the keep-alive holds running, carrying silence between plays
-(or the noise bed, while it is audible). So the switch (Developer options, HD audio
-off) is made with the link idle. Closing the app does that (his test in the
+(or the noise bed, while it is audible). The switch (Developer options, HD audio
+off) is made with that stream closed, so nothing of the app is on the link
+while the codec changes (what the switch is and what the car does with it:
+the paragraph after this one). Closing the app does that (his test in the
 car, 2026-11-26: "it worked") at the cost of a saved state and the session's
 undo history ("closing the app feels like sort of a hack"), so the app has a
 lamp for it, RELEASE (Release Sound Device, the top icon row, before NOISE;
@@ -1165,8 +1170,43 @@ a dead stream), or a second press. No timer; a sticky lamp, the fifth word of
 out (above). Nothing else on the
 tablet does it: the per-device optional-codecs flag behind the HD audio switch
 is ignored at connection by Samsung's Bluetooth service, stock Android would
-honor it only by the same post-connect switch the car refuses, and AAC's codec
+honor it only by the same post-connect switch the car sometimes misses, and AAC's codec
 priority can be overridden only with root.
+
+WHAT THE SWITCH IS, AND WHAT THE CAR DOES WITH IT (the tablet's log of the car
+test, 2026-11-26, 20:56 to 20:58, send VV installed; this section first read
+the car as REFUSING a codec change on a streaming link, which that log does
+not show). EVERY CODEC CHANGE IS ANDROID'S OWN RECONFIGURATION, the same
+sequence whether or not the link streams: AVDTP SUSPEND (only if the stream is
+started), CLOSE, a new SETCONFIG, and START once the car has answered it. The
+car never sees a codec change on a started stream. Nine switches that evening:
+one with RELEASE lit (the SETCONFIG answered in 71 ms) and eight with the
+app's stream running, the app in the background (five of them with the piece
+playing). THE CAR ANSWERED SEVEN OF THE EIGHT in 7 to 54 ms, the sound back
+0.09 to 0.25 s after it stopped, AND ONCE NEVER ANSWERED: the SETCONFIG sent
+at 20:56:57.605 got no response, the car sent a SETCONFIG of its own 7.4 s
+later (not taken: the stack was mid-reconfiguration), and ANDROID'S BLUETOOTH
+STACK GAVE THE CAR UP 15.001 s AFTER ITS REQUEST (20:57:12.606: it closed the
+signaling channel itself, `STR_DISC_FAIL`, the source disconnected), a timer
+and not a reaction to anything the app did — RELEASE had closed the app's
+stream 0.85 s before. The car connected again 7.3 s later, after one failed
+try, and sent Play, as it does about a second after every connection. Nothing
+on the tablet's side tells the missed switch from the seven that took: the
+same sequence in the same order, the app in the background with its stream
+open in all eight. The log does not see the air, so why the car missed is
+not known. THE LOG'S `notify_start_failed` LINES ARE NOT THE CAR REFUSING
+ANYTHING: while the reconfiguration is unfinished the stack rejects its own
+audio side's start request (`bta_av_start_rejected`, nothing sent to the car),
+the audio HAL retries about 28 times a second, and the app's stream stays
+started and uncalled — two to six such lines in a switch that takes, 416 in
+the fifteen seconds of the one that did not (the stream's
+frame count says 14.4 s of its 55.8 s went uncalled). WHAT RELEASE DOES IN THE
+CAR, then: the app's stream is not on the link during the switch, so none of
+that reaches the app. NOT ESTABLISHED: that an idle link spares the car's miss
+(one switch of one took that evening; his own test with the app closed, "it
+worked"). AFTER RELEASE THE LINK STREAMS ON FOR 3.0 s: Android's output goes
+to standby that long after its last stream closes (the close at 20:56:09.277,
+the link's SUSPEND at 20:56:12.273).
 
 A step-shaped click at a play START — the render body beginning mid-waveform at
 whatever sample sits there, with no ramp — is a different thing and is
@@ -1224,6 +1264,15 @@ whether an open, start, stop-request or close would itself stall in one is
 unproven either way — each is a binder call into the same audio server. The
 worker makes the question moot for the screen; its two log lines will answer
 it the next time a run happens.
+
+THE NEXT RUN, THAT EVENING (send VV on the tablet, the car test; §11.4a's
+missed codec switch, fifteen seconds long). NEITHER LINE WAS LOGGED. Every
+control call of the test ran on the worker's thread and the longest job, an
+open with its start on the car's new route, took 63 ms. THE STOP REQUEST AND
+THE CLOSE MADE INSIDE THE RUN ANSWERED IN 2 ms, so those two do not stall in
+such a run; an open inside one has still not been made. THE PENDING ROAD (the
+card, the greyed sound keys, the adoption) HAS NEVER RUN ON THE TABLET: the
+one stall his two devices have produced leaves Android's calls answering.
 
 THE UNDERRUN READS ARE THE WORKER'S TOO (Android's source, read 2026-11-26:
 `platform/frameworks/av` at android14-release, android15-release and main, the
