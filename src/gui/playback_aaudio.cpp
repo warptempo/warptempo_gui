@@ -79,9 +79,13 @@
 // LIT (architect 2026-11-26: "the silent stream is there hiding, and we're
 // actually disabling the hidden"; "Okay to build the keep alive
 // suppression"). In the car the Bluetooth codec is switched once a drive
-// (Developer options, HD audio off), and the head unit refuses that switch
-// on a link that is streaming — which, with this stream kept running, it
-// always is. The top icon row's RELEASE lamp (RedesignButton::IconRelease)
+// (Developer options, HD audio off), and he makes that switch with this
+// stream off the link, which, kept running, it is always on. The car does
+// not refuse a switch on a streaming link: it sometimes misses one
+// (Android's Bluetooth stack gives the car up after 15 s, the link drops and
+// comes back), and whether an idle link spares the miss is unproven (the
+// tablet's log of the car test: docs/engineering/android_notes.md §11.4a).
+// The top icon row's RELEASE lamp (RedesignButton::IconRelease)
 // closes the stream ON PURPOSE: the act (GuiPlayback::release_device) is the
 // dead-stream state below entered by choice — the latch, the rate 0, the
 // playing bit down, no stream — plus the one fact `suppressed`, the lamp.
@@ -116,7 +120,9 @@
 //   * The DATA CALLBACK thread runs the engine's render body, the noise mix
 //     and the clip, and raises and lowers its own mark (Impl::in_callback,
 //     stop()'s fence) — no allocation, no I/O, no locks, no AAudio call.
-//   * The ERROR CALLBACK thread writes three atomics and logs. It calls NO
+//   * The ERROR CALLBACK thread writes four atomics — the error, the rate,
+//     the latch and the session word's playing bit, a seq_cst fence between
+//     the latch and the bit — and logs. It calls NO
 //     AAudio stream function, which is Google's own rule and the reason the
 //     spike used a detached thread to do its closing; this backend needs no
 //     detached thread because it does not close there at all — the next
@@ -884,14 +890,24 @@ void GuiPlayback::stop() {
     //      mutates after it. THIS IS WHAT rebind_buffer, THE BUFFER'S FREE AND
     //      THE WRAP COUNT'S LEVEL REST ON (playback_rebind_buffer;
     //      playback_publish_play's THE WRAP COUNT A SESSION STARTS FROM).
-    //  (c) THE WAIT IS BOUNDED BY OUR OWN CODE. The callback makes no
-    //      blocking call — no lock, no allocation, no I/O, no AAudio call
-    //      (the head's THREADING block) — so the mark is up for one
-    //      callback's own runtime, and NO STATE OF THE DEVICE CAN EXTEND IT:
-    //      a stream that stops calling leaves the mark down and stop()
-    //      returns at once, as it does over a dead stream or none. The
-    //      evidence: the car's stall of 2026-11-26, the stream STARTED and
-    //      its data callback uncalled for 10 s (architect 2026-11-26).
+    //  (c) THE WAIT IS MADE ONLY OF OUR OWN CALLBACKS' RUNTIMES. The
+    //      callback makes no blocking call — no lock, no allocation, no I/O,
+    //      no AAudio call (the head's THREADING block) — so each raising of
+    //      the mark lasts one callback's own runtime. The wait ends at the
+    //      first load that finds no callback inside; a load can find the
+    //      NEXT callback inside (it entered after the lowering, reads the
+    //      bit down and touches no sample, but its mark is up), so
+    //      back-to-back callbacks can each add their own runtime — ordinarily
+    //      the wait is one callback's or none. NO FUTURE CALLBACK IS NEEDED
+    //      TO END IT, AND NO STATE OF THE DEVICE CAN EXTEND IT: a stream that
+    //      stops calling leaves the mark down and stop() returns at once, as
+    //      it does over a dead stream or none. The evidence: the car's
+    //      stalls of 2026-11-26, the stream STARTED and its data callback
+    //      uncalled until Android's Bluetooth stack gave the car up, 15 s
+    //      after its unanswered request; the old fence waited 10 s inside
+    //      one and froze the screen, and inside another the stop request and
+    //      the close answered in 2 ms (the tablet's logs of that day,
+    //      android_notes.md §11.4; architect 2026-11-26).
     //  (d) THE MARK IS ONE BOOL BECAUSE AT MOST ONE STREAM'S DATA CALLBACK
     //      THREAD EXISTS AT A TIME: every reopen closes before it opens
     //      (init's shutdown; reopen_stream_if_dead opens only over no
