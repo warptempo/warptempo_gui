@@ -37,8 +37,8 @@
 // REVERT is Revert's (Ctrl+Alt+O): it COMPLETES AS A REOPEN, naming the
 // project already open, and differs in the QUESTION alone — a revert never
 // saves, so a dirty session is asked "Discard unsaved changes and reload?"
-// with Cancel / OK (REVERT_CONFIRM) instead of Discard / Cancel / Save, and a
-// clean one reopens with no question at all.
+// with Cancel / Reload (REVERT_CONFIRM) instead of Discard / Cancel / Save,
+// and a clean one reopens with no question at all.
 enum class GuiCloseTarget { Exit, Reopen, Revert };
 
 struct GuiInputHandler;
@@ -59,7 +59,7 @@ struct GuiPrompt {
     // constructed (the input handler holds this prompt by reference, so the
     // dependency is a cycle resolved with a pointer set post-construction —
     // the settings editor's own shape). TWO READERS: the load
-    // confirmation, whose OK and Cancel reach the acts that live on
+    // confirmation, whose Load and Cancel reach the acts that live on
     // GuiInputHandler (confirm_load_in_place, cancel_load_in_place)
     // — the three load acts being private to that struct — and
     // request_close's own closing steps
@@ -111,7 +111,7 @@ struct GuiPrompt {
     // `question_asked` SKIPS THE QUESTION, for the one road that has asked its
     // own already: the pull's reload (architect 2026-09-27), whose
     // confirmation "Pull GitHub's newer checkpoint and reload this piece?"
-    // (Cancel / OK) is the discard question, completes its
+    // (Cancel / Pull) is the discard question, completes its
     // Revert with no second one.
     void request_close(GuiCloseTarget target, bool question_asked = false);
     void activate_response(char k);
@@ -151,7 +151,7 @@ struct GuiPrompt {
     // prefetch's FAILED-SCAN arrival (GuiInputHandler::on_history_prefetch_ready),
     // which closes the `h` view off a poll and with it clears the walk member
     // the question names — leaving an actionable "Load '<member>' in place?"
-    // over the ordinary editor whose OK would find no subject and load
+    // over the ordinary editor whose Load would find no subject and load
     // nothing, silently. This drops the question and both parked subjects
     // through the answer's own Cancel body, so a subject cannot outlive its
     // question on the asynchronous edge either.

@@ -142,7 +142,7 @@
 // republishes PLAY's end at the cursor (score_viewer.cpp's range_changed).
 // THE QUESTION STANDS OVER THE VIEWER as the load confirmation stands over the
 // render player (the model for standing), PAUSING a live soundtrack as the
-// render player's Delete question pauses its transport, and only OK's own
+// render player's Delete question pauses its transport, and only Reset's own
 // press resets (a destructive act with no undo behind it; the buttons are a
 // prompt's one road, architect 2026-10-30). The three are
 // AUTHORING and grey on a
@@ -779,9 +779,9 @@ struct GuiScoreViewer {
     void set_start();
     void set_end();
     // RESET: raises its question (DialogTrigger::SCORE_RESET_CONFIRM, Cancel /
-    // OK, only OK's own press resetting — the head), pausing a live
+    // Reset, only Reset's own press resetting — the head), pausing a live
     // soundtrack first, where its key is live; confirm_reset is the
-    // question's OK.
+    // question's Reset.
     void raise_reset();
     void confirm_reset();
 

@@ -1923,7 +1923,8 @@ struct GuiInputHandler {
     void update_score_scrub_motion(double x);
     bool finish_score_scrub_release();
     // THE PROMPT'S ROADS INTO THE VIEWER (prompt.cpp, which holds this
-    // handler and not the viewer): the exit road's teardown and RESET's OK.
+    // handler and not the viewer): the exit road's teardown and RESET's
+    // Reset.
     void close_score_viewer();
     void confirm_score_reset();
     // THE NOTIFICATION CARDS' POINTER HALVES (2026-08-29; the rule is at
@@ -1952,9 +1953,9 @@ struct GuiInputHandler {
     void on_window_close();
     // THE LOAD CONFIRMATION'S TWO ANSWERS (2026-08-28), called by GuiPrompt
     // through its back-pointer when the LOAD_IN_PLACE_CONFIRM prompt answers
-    // OK or Cancel. ONE PROMPT BODY, TWO SUBJECTS (2026-08-29: the
+    // Load or Cancel. ONE PROMPT BODY, TWO SUBJECTS (2026-08-29: the
     // player's highlighted batch entry, and the `h` view's viewed walk
-    // member): the OK forks on which subject the raise parked and the Cancel
+    // member): the Load forks on which subject the raise parked and the Cancel
     // drops both. The two roads' contracts are at render_player_load_in_place
     // and history_load_in_place.
     void confirm_load_in_place();
@@ -1982,7 +1983,7 @@ struct GuiInputHandler {
     void confirm_trim_preset_save();
     void cancel_trim_preset_confirm();
     // THE PULL CONFIRMATION'S TWO ANSWERS (architect 2026-10-19), called by
-    // GuiPrompt through its back-pointer when PULL_CONFIRM answers: OK runs
+    // GuiPrompt through its back-pointer when PULL_CONFIRM answers: Pull runs
     // the parked plan (AppState::pending_history_pull) through
     // run_history_pull and reloads the piece; Cancel drops it and changes
     // nothing.
@@ -2977,7 +2978,8 @@ private:
     //       completing a reopen instead of an exit (GuiCloseTarget,
     //       prompt.h). THE PICKER STAYS STANDING UNDER THAT QUESTION
     //       (architect 2026-10-25, the overlays' one rule: an overlay stands
-    //       under its own question, Cancel returning to it, OK ending it),
+    //       under its own question, Cancel returning to it, the affirmative
+    //       ending it),
     //       and it ends with the session when the reopen completes — its
     //       state is the per-project AppState's, which run_project destroys.
     //       A RUNNING RENDER IS KILLED BY THE
@@ -3343,7 +3345,7 @@ private:
     // the commit worker; a load that fails never reaches a reopen). A clean
     // session reopens with no
     // question; a dirty one is asked "Discard unsaved changes and reload?",
-    // Cancel / OK, as the load confirmation is
+    // Cancel / Reload, as the load confirmation is
     // (GuiPrompt::request_close). A running
     // render is killed by the teardown's worker join, as the picker's reopen
     // kills one. Legal on a read-only tab, under the iteration lock and in the
@@ -4579,7 +4581,7 @@ private:
     // pauses the transport and raises the LOAD_IN_PLACE_CONFIRM prompt on
     // the highlighted entry (the buttons are the prompt's one road, architect
     // 2026-10-30). The
-    // prompt's OK runs confirm_load_in_place's player arm (the shared act
+    // prompt's Load runs confirm_load_in_place's player arm (the shared act
     // load_render_entry_in_place, WHICH SAYS ITS OWN REFUSAL on a card and on
     // stderr, and whose success closes the player); Cancel runs
     // cancel_load_in_place. load_render_entry_in_place has this one caller.
@@ -4587,8 +4589,8 @@ private:
     // THE `h` VIEW'S OWN LOAD ROAD (architect 2026-08-29): bare `'` there
     // (the view's Load in Place button) raises
     // THE SAME PROMPT on the VIEWED walk member — "Load '<member label>' in
-    // place?", Cancel / OK —
-    // and the OK runs that walk's own act (the fork is at
+    // place?", Cancel / Load —
+    // and the Load runs that walk's own act (the fork is at
     // confirm_load_in_place, the one site of it). Its guards: the mode
     // standing, no prompt or editor, no player and no
     // picker, a source loaded, and a walk that carries a member (the
@@ -4860,7 +4862,7 @@ private:
     // THE PULL (architect 2026-09-27): the publish chord (SAVE's long press
     // on the main page, the `h` view's Save key) while the GitHub status reads
     // Behind, on the session that press read. The press plans it (plan_history_pull, local
-    // and synchronous), asks its Cancel / OK confirmation only when the pull
+    // and synchronous), asks its Cancel / Pull confirmation only when the pull
     // changes the open piece, and runs it (execute_history_pull) at once
     // otherwise — the one road.
     void run_history_pull_press(const GuiHistoryDiff& session);

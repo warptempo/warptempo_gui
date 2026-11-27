@@ -436,7 +436,7 @@ void PhaseResetPropagate::open_paste_confirmation() {
     app.prompt.present(
         "Paste phase resets into matching blocks, "
         "clearing the ones already there?",
-        kPromptCancelYes,
+        kPromptCancelPaste,
         DialogTrigger::PASTE_CONFIRM);
     viewport.invalidate_all();
 }

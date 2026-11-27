@@ -57,15 +57,15 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 // THE REVERT CONFIRMATION (architect 2026-09-13): a dirty session's Revert
 // (Open Project's long press) asks one question, and it is a discard-only one because a revert
 // never saves — Discard / Cancel / Save would offer an answer the act does not
-// have. Cancel / OK, the affirmative last as on every prompt; OK's `o` is its
-// dispatch char alone, its press the answer (no key reaches a prompt,
-// architect 2026-10-30). The stop below is every prompt's own
+// have. Cancel / Reload, the affirmative last as on every prompt; Reload's
+// `r` is its dispatch char alone, its press the answer (no key reaches a
+// prompt, architect 2026-10-30). The stop below is every prompt's own
 // opening act, not something this one adds: playback stops and an A/B audition ends, exactly as
 // raising any other prompt does.
 void GuiPrompt::open_revert_confirm() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Discard unsaved changes and reload?",
-                       kPromptCancelOk,
+                       kPromptCancelReload,
                        DialogTrigger::REVERT_CONFIRM);
     viewport.invalidate_all();
 }
@@ -95,9 +95,10 @@ void GuiPrompt::activate_response(char k) {
 
     if (trigger == DialogTrigger::PASTE_CONFIRM) {
         // ONE SUBJECT: the phase reset paste, raised by
-        // PhaseResetPropagate::open_paste_confirmation. The prompt closes
-        // first, so the act runs on the ordinary modal state.
-        if (k == 'y') {
+        // PhaseResetPropagate::open_paste_confirmation: Paste (`p`, its
+        // dispatch char) runs the paste. The prompt closes first, so the act
+        // runs on the ordinary modal state.
+        if (k == 'p') {
             app.prompt.active = false;
             viewport.invalidate_all();
             phase_reset_propagate.paste_apply();
@@ -113,12 +114,13 @@ void GuiPrompt::activate_response(char k) {
     if (trigger == DialogTrigger::LOAD_IN_PLACE_CONFIRM) {
         // THE LOAD CONFIRMATION (2026-08-28; TWO SUBJECTS, 2026-08-29 —
         // the render player's highlighted batch entry and the `h` view's
-        // viewed walk member): OK (`o`, its dispatch char) runs the act the parked subject
-        // names, through the input handler; Escape drops both parked subjects.
-        // ONE PROMPT BODY, so this arm knows nothing about which raise it is
-        // answering — the fork is the handler's. The prompt closes first
-        // either way, so the act runs on the ordinary modal state.
-        if (k == 'o') {
+        // viewed walk member): Load (`l`, its dispatch char) runs the act the
+        // parked subject names, through the input handler; Escape drops both
+        // parked subjects. ONE PROMPT BODY, so this arm knows nothing about
+        // which raise it is answering — the fork is the handler's. The
+        // prompt closes first either way, so the act runs on the ordinary
+        // modal state.
+        if (k == 'l') {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) input->confirm_load_in_place();
@@ -134,12 +136,12 @@ void GuiPrompt::activate_response(char k) {
     }
 
     if (trigger == DialogTrigger::PULL_CONFIRM) {
-        // THE PULL'S CONFIRMATION (architect 2026-10-19): OK (`o`, its
+        // THE PULL'S CONFIRMATION (architect 2026-10-19): Pull (`p`, its
         // dispatch char) runs the parked plan through the input handler and
         // reloads the piece; Escape drops it. The prompt closes first either
         // way, so the pull runs on the ordinary modal state (and the reload's
         // reopen asks nothing more).
-        if (k == 'o') {
+        if (k == 'p') {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) input->answer_history_pull();
@@ -203,11 +205,12 @@ void GuiPrompt::activate_response(char k) {
         return;
     }
 
-    // THE SCORE VIEWER'S RESET (2026-10-26): OK writes the range's two
-    // edges through the viewer (GuiScoreViewer::confirm_reset), Cancel
-    // leaves it; the viewer stands under its question either way.
+    // THE SCORE VIEWER'S RESET (2026-10-26): Reset (`r`, its dispatch char)
+    // writes the range's two edges through the viewer
+    // (GuiScoreViewer::confirm_reset), Cancel leaves it; the viewer stands
+    // under its question either way.
     if (trigger == DialogTrigger::SCORE_RESET_CONFIRM) {
-        if (k == 'o') {
+        if (k == 'r') {
             app.prompt.active = false;
             viewport.invalidate_all();
             if (input != nullptr) input->confirm_score_reset();
@@ -222,11 +225,12 @@ void GuiPrompt::activate_response(char k) {
     }
 
     if (trigger == DialogTrigger::REVERT_CONFIRM) {
-        // OK completes the revert through proceed (close_target_ is Revert,
-        // seated by the request that raised this); Escape keeps the authored
-        // state and the undo history as they stood (the seated reopen name
-        // unread) — the transport stays stopped, as under every prompt.
-        if (k == 'o') {
+        // Reload (`r`, its dispatch char) completes the revert through
+        // proceed (close_target_ is Revert, seated by the request that
+        // raised this); Escape keeps the authored state and the undo history
+        // as they stood (the seated reopen name unread) — the transport stays
+        // stopped, as under every prompt.
+        if (k == 'r') {
             app.prompt.active = false;
             viewport.invalidate_all();
             proceed(trigger);
@@ -325,10 +329,11 @@ void GuiPrompt::request_close(GuiCloseTarget target, bool question_asked) {
     // shape one mode over — one close body, close_picker, which takes the
     // overlay down with it. ON THE REOPEN AND REVERT ROADS IT STAYS
     // (architect 2026-10-25, one rule for the overlays: an overlay stays
-    // standing under its own question, Cancel returning to it, OK ending
-    // it): with a picker standing, those two targets are reached only from
-    // the picker itself — its pick (open_project_commit) and its Ctrl+Alt+O
-    // (route_picker_key), the OPEN key's long press among its spellings —
+    // standing under its own question, Cancel returning to it, the
+    // affirmative ending it): with a picker standing, those two targets are
+    // reached only from the picker itself — its pick (open_project_commit)
+    // and its Ctrl+Alt+O (route_picker_key), the OPEN key's long press among
+    // its spellings —
     // so the question is the picker's own, painted over the list, and the
     // picker ends with its session when the reopen completes (AppState dies
     // with run_project's frame, main.cpp). An exit is no question of the

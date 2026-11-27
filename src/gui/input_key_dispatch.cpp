@@ -1421,7 +1421,7 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //   * THE LOAD CONFIRMATION raised by bare `'` on the viewed member
 //     (history_load_in_place). close_history_mode's whole-struct reset clears
 //     pending_load_member, so a question left painted would name a subject that
-//     no longer exists and its OK would load nothing, silently. The prompt is
+//     no longer exists and its Load would load nothing, silently. The prompt is
 //     dropped through the answer's own Cancel body first
 //     (GuiPrompt::cancel_load_confirmation). THE HISTORY SUBJECT IS THE TERM
 //     and the player's cannot be standing here: the player and this view
@@ -2341,7 +2341,8 @@ bool GuiInputHandler::handle_history_mode_key(GuiKey key, GuiInputState mods) {
 //                             MUTATOR (2026-08-04). It is admitted because in
 //                             the mode it loads something else in place: the
 //                             key names the member the walk stands on and its
-//                             OK loads THAT MEMBER's state in place, which is
+//                             Load answer loads THAT MEMBER's state in place,
+//                             which is
 //                             the mode's own
 //                             act rather than an authoring chord that would
 //                             leave the frozen now side describing a state that
@@ -2792,7 +2793,7 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 //     the answer being what the next press acts on — silent in the view, whose
 //     status bar's walk line shows the asking, and a card outside it, where
 //     the status bar carries no GitHub word; BEHIND is the PULL
-//     (run_history_pull_press, its Cancel / OK confirmation when the pull
+//     (run_history_pull_press, its Cancel / Pull confirmation when the pull
 //     changes the open piece; the press owns the one road); UP TO DATE OR
 //     AHEAD COMMITS: the act saves first, and the worker commits whatever git
 //     sees in the three sidecars and pushes, or pushes what the branch already
@@ -3259,9 +3260,9 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
 // `Pull refused: this device has moved`, the status taking what the refs now
 // show. THE QUESTION IS ASKED ONLY WHEN THE PULL CHANGES THE OPEN PIECE, and
 // only here, by the key — never by an asynchronous arrival: "Pull GitHub's
-// newer checkpoint and reload this piece?", Cancel / OK (architect
-// 2026-10-19: one road, OK reloads — a confirmation whose OK discards the
-// session). A pull that leaves
+// newer checkpoint and reload this piece?", Cancel / Pull (architect
+// 2026-10-19: one road, Pull reloads — a confirmation whose Pull discards
+// the session). A pull that leaves
 // the open piece alone runs at once: the face said Pull, and nothing on
 // screen changes.
 void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
@@ -3302,7 +3303,7 @@ void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
     app.pending_history_pull = std::move(plan);
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Pull GitHub's newer checkpoint and reload this piece?",
-                       kPromptCancelOk,
+                       kPromptCancelPull,
                        DialogTrigger::PULL_CONFIRM);
     viewport.invalidate_all();
 }
@@ -6015,7 +6016,7 @@ void GuiInputHandler::open_project_commit(int index) {
     // clean. THE PICKER STAYS STANDING UNDER ITS QUESTION (architect
     // 2026-10-25, the render player's precedent made one rule for the
     // overlays: an overlay stays standing under its own question, Cancel
-    // returning to it, OK ending it — the classes' record at
+    // returning to it, the affirmative ending it — the classes' record at
     // redesign_button_enabled's head): the question's page takes the view in
     // place of the list (architect 2026-11-20) and owns the keyboard and the
     // pointer ahead of the picker's router and veil, and its Cancel finds
@@ -7006,7 +7007,7 @@ void GuiInputHandler::revert_project(bool question_asked) {
 // members and the lane already shows the one the walk stands on, so the key
 // raises THE CONFIRMATION straight away — the render player's own prompt body
 // with the walk member as its subject, "Load '<member label>' in place?",
-// Cancel / OK, the buttons its one road (architect 2026-10-30).
+// Cancel / Load, the buttons its one road (architect 2026-10-30).
 //
 // THE MODE IS THE CALLER'S GATE rather than a term of this body: the one key
 // caller is on_key's `'` arm under history_mode.active, which is where the
@@ -7035,10 +7036,10 @@ void GuiInputHandler::history_load_in_place() {
     app.history_mode.pending_load_member = member;
     // The member in the ONE spelling both walks share (member_label — the
     // short SHA on the Remote tab, the displayed number on the Local one).
-    // Cancel / OK, the affirmative last, as on every prompt.
+    // Cancel / Load, the affirmative last, as on every prompt.
     app.prompt.present(
         "Load '" + app.history_mode.member_label(member) + "' in place?",
-        kPromptCancelOk,
+        kPromptCancelLoad,
         DialogTrigger::LOAD_IN_PLACE_CONFIRM);
     viewport.invalidate_all();
 }
@@ -8213,14 +8214,14 @@ void GuiInputHandler::render_player_load_in_place() {
     // THE CONFIRMATION: the entry's id in its one spelling (render_entry_id,
     // renders_dir.h) and SINGLE-QUOTED like every other name in a sentence
     // (2026-09-01, the product's one quoting form on cards and prompts alike),
-    // Cancel / OK — the affirmative last like every prompt's; `o` is OK's
-    // dispatch char. The ONE LOAD PROMPT, raised from its TWO subjects
+    // Cancel / Load — the affirmative last like every prompt's; `l` is
+    // Load's dispatch char. The ONE LOAD PROMPT, raised from its TWO subjects
     // (architect 2026-08-28): it is this same prompt body that the `h` view's
     // Load in Place raises on its viewed member; the buttons are its one road
     // (architect 2026-10-30). Through PromptState::present, the one raise
     // route, so the painted gate holds.
     app.prompt.present("Load '" + render_entry_id(*entry) + "' in place?",
-                       kPromptCancelOk,
+                       kPromptCancelLoad,
                        DialogTrigger::LOAD_IN_PLACE_CONFIRM);
     viewport.invalidate_all();
 }
@@ -8320,7 +8321,7 @@ void GuiInputHandler::cancel_render_player_delete() {
     app.render_player.pending_delete_render.reset();
 }
 
-// THE LOAD CONFIRMATION'S OK — ONE PROMPT BODY, TWO SUBJECTS (architect
+// THE LOAD CONFIRMATION'S LOAD — ONE PROMPT BODY, TWO SUBJECTS (architect
 // 2026-08-29). The raise parks exactly one of them and this fork runs the act
 // that subject names: the PLAYER's highlighted batch entry
 // (AppState::RenderPlayer::pending_load, raised by its Load in place button or

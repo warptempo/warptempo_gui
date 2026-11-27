@@ -318,7 +318,7 @@ struct GuiPlaybackLifecycle {
     // (open_project_picker), THE SETTINGS PAGE (open_settings_page, the
     // picker's second content, whose rows for the listed keys swap a value
     // list in under the stop already taken) and the PULL confirmation
-    // (run_history_pull_press, Cancel / OK); THE SCORE VIEWER's open
+    // (run_history_pull_press, Cancel / Pull); THE SCORE VIEWER's open
     // (GuiScoreViewer::open, score_viewer.cpp); the TWO
     // prompt opens (prompt.cpp: unsaved, and Revert's confirmation); THE
     // RENDER PLAYER's open (GuiRenderPlayer::open, render_player.cpp — the

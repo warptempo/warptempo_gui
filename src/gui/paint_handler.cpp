@@ -5882,8 +5882,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // 2026-11-20):
 //   A PROMPT — its question one line of plain Regular 12 W on the view, its
 //   answers Arc's word buttons on the controls row, each its PLAIN WORD
-//   ("Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete"), the
-//   leave word last (kModalCancelLabel's rule), no letter underlined
+//   (the act's own verb, or the leave word, kModalCancelLabel's rule;
+//   the words at the answer tables' head, app_state.h), the affirmative
+//   last and Cancel beside it (PromptState's fact (i)), no letter underlined
 //   (architect 2026-10-30: the buttons are the prompt's one road), and NO
 //   BUTTON FOCUSED (architect 2026-11-02: a prompt has no focus, the rule
 //   at PromptState).
@@ -6900,7 +6901,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //        Cancel; laid by the word rows' one rule (modal_word_buttons on
     //        modal_controls_seats: max(85 W, the widest word + 34 W) each,
     //        4 W apart, flush right 6 W inside the panel — on the tablet
-    //        Cancel x 1944..2113 and OK x 2122..2291 on rows 1324..1379), on
+    //        Cancel x 1944..2113 and Load x 2122..2291 on rows 1324..1379), on
     //        the row's ground in the body tone with NO timestamp,
     //        NO roster key and none of an overlay's own controls
     //        (modal_owns_bottom_row). EVERY ANSWER IS LIVE while its page

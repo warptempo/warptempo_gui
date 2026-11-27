@@ -3318,12 +3318,12 @@ inline int grab_moved_threshold_px() {
 enum class DialogTrigger {
     CLOSE_WINDOW,
     // THE PHASE RESET PASTE'S CONFIRMATION — its question alone, raised by
-    // PhaseResetPropagate::open_paste_confirmation and answered by one `y`
-    // arm with nothing to fork on. It asks because that paste CLEARS the
-    // destination blocks' existing resets.
+    // PhaseResetPropagate::open_paste_confirmation and answered by one `p`
+    // arm (Paste) with nothing to fork on. It asks because that paste CLEARS
+    // the destination blocks' existing resets.
     PASTE_CONFIRM,
     // THE PULL'S CONFIRMATION (architect 2026-10-19): "Pull GitHub's newer
-    // checkpoint and reload this piece?", Cancel / OK (its OK discards the
+    // checkpoint and reload this piece?", Cancel / Pull (its Pull discards the
     // session). Raised by the publish chord,
     // Ctrl+Shift+S, in either view (SAVE's long press on the main page, the
     // `h` view's Save key), only when the pull
@@ -3331,12 +3331,12 @@ enum class DialogTrigger {
     // AppState::pending_history_pull.
     PULL_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
-    // place?", Cancel / OK. ONE PROMPT BODY, TWO SUBJECTS (architect
+    // place?", Cancel / Load. ONE PROMPT BODY, TWO SUBJECTS (architect
     // 2026-08-29): the RENDER PLAYER's — raised by its Load in place button,
-    // the entry parked at AppState::RenderPlayer::pending_load, OK running
+    // the entry parked at AppState::RenderPlayer::pending_load, Load running
     // the shared load_render_entry_in_place — and the `h` VIEW's, raised by
     // the view's Load in Place button (bare `'`) on the VIEWED walk member
-    // (parked at AppState::HistoryMode::pending_load_member, OK running that
+    // (parked at AppState::HistoryMode::pending_load_member, Load running that
     // walk's own load act). The two raises cannot coexist, so the answer
     // forks on which subject is parked; its buttons are its one road
     // (architect 2026-10-30, PromptState's head). The raises and the answers
@@ -3346,9 +3346,9 @@ enum class DialogTrigger {
     // which the prompt reaches through its input-handler back-pointer.
     LOAD_IN_PLACE_CONFIRM,
     // REVERT'S CONFIRMATION (architect 2026-09-13): "Discard unsaved
-    // changes and reload?", Cancel / OK, raised only over a DIRTY session by
-    // GuiPrompt::request_close on the Revert target (a clean session reverts
-    // with no question). OK completes the close as a reopen of the project
+    // changes and reload?", Cancel / Reload, raised only over a DIRTY session
+    // by GuiPrompt::request_close on the Revert target (a clean session reverts
+    // with no question). Reload completes the close as a reopen of the project
     // already open; Cancel leaves the session standing.
     REVERT_CONFIRM,
     // THE RENDER PLAYER'S DELETE (architect 2026-09-29; one render's delete
@@ -3364,12 +3364,12 @@ enum class DialogTrigger {
     RENDER_PLAYER_DELETE_CONFIRM,
     // THE SCORE VIEWER'S RESET (architect 2026-10-26: "a modal
     // confirmation because there's no undo"): "Reset the page range to every
-    // page?", Cancel / OK, raised over the standing viewer by its RESET key
-    // (GuiScoreViewer::raise_reset). OK writes the range 0 / 0
+    // page?", Cancel / Reset, raised over the standing viewer by its RESET key
+    // (GuiScoreViewer::raise_reset). Reset writes the range 0 / 0
     // (GuiScoreViewer::confirm_reset); Cancel leaves it as it stood. It
     // STANDS OVER THE VIEWER as the load confirmation stands over the render
     // player (LOAD_IN_PLACE_CONFIRM, the model for that). No undo stands
-    // behind it, which is the whole reason it asks, so only OK's own press
+    // behind it, which is the whole reason it asks, so only Reset's own press
     // confirms.
     SCORE_RESET_CONFIRM,
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect 2026-10-28,
@@ -3406,7 +3406,8 @@ enum class DialogTrigger {
 // stands and its key gate in on_key consumes whatever could. The answers
 // are a PromptAnswer table (below): each answer's dispatch char (`key`,
 // what activate_response forks on) and its button's PLAIN WORD (`label` —
-// "Save", "Discard", "Cancel", "Retry", "Yes", "OK", "Delete"), no letter
+// "Save", "Discard", "Cancel", "Retry", "Reload", "Pull", "Load", "Reset",
+// "Paste", "Delete": the act's own verb, the answer tables' head), no letter
 // underlined and never bracketed; the tooltip is the act's name alone.
 // A PROMPT IS ANSWERED BY ITS BUTTONS ALONE (architect 2026-10-30): no Enter,
 // Space or Esc reaches it, so no answer is a key's, and A PROMPT HAS NO FOCUS
@@ -3429,11 +3430,11 @@ enum class DialogTrigger {
 //        last (kPromptAnswerTablesValid asserts it): the unsaved-work prompt
 //        (Discard / Cancel / SAVE), its save-failed restatement (Discard /
 //        Cancel / RETRY), THE PHASE RESET PASTE'S CONFIRMATION (Cancel /
-//        YES), THE LOAD CONFIRMATION (Cancel / OK — one prompt body, two
+//        PASTE), THE LOAD CONFIRMATION (Cancel / LOAD — one prompt body, two
 //        subjects: the render player's highlighted entry and the `h` view's
-//        viewed walk member), the revert confirmation (Cancel / OK), the
-//        pull's (Cancel / OK), the score viewer's reset (Cancel / OK) and the
-//        deletes and the trim preset's save (Cancel / DELETE or SAVE).
+//        viewed walk member), the revert confirmation (Cancel / RELOAD), the
+//        pull's (Cancel / PULL), the score viewer's reset (Cancel / RESET) and
+//        the deletes and the trim preset's save (Cancel / DELETE or SAVE).
 //        On the tablet the affirmative stands at x 2122..2291, Cancel at
 //        1944..2113 and the alternative at 1766..1935 (the word rows' one
 //        layout, modal_word_buttons, paint_handler.cpp).
@@ -3498,10 +3499,22 @@ inline constexpr PromptAnswer kPromptDiscardCancelSave[] = {
     {'d', "Discard"}, {'\x1b', "Cancel"}, {'s', "Save"}};
 inline constexpr PromptAnswer kPromptDiscardCancelRetry[] = {
     {'d', "Discard"}, {'\x1b', "Cancel"}, {'r', "Retry"}};
-inline constexpr PromptAnswer kPromptCancelYes[] = {
-    {'\x1b', "Cancel"}, {'y', "Yes"}};
-inline constexpr PromptAnswer kPromptCancelOk[] = {
-    {'\x1b', "Cancel"}, {'o', "OK"}};
+// THE AFFIRMATIVE IS THE ACT'S OWN VERB, never "OK" or "Yes" (architect
+// 2026-11-27, "agree": those are MessageBox's MB_OKCANCEL / MB_YESNO; the
+// GNOME HIG asks for the verb, as Save, Discard, Delete and Retry already
+// are), its dispatch char the verb's initial as theirs are: the revert
+// confirmation's Reload, the pull's Pull, both load confirmations' Load, the
+// score viewer's reset's Reset, the phase reset paste's Paste.
+inline constexpr PromptAnswer kPromptCancelReload[] = {
+    {'\x1b', "Cancel"}, {'r', "Reload"}};
+inline constexpr PromptAnswer kPromptCancelPull[] = {
+    {'\x1b', "Cancel"}, {'p', "Pull"}};
+inline constexpr PromptAnswer kPromptCancelLoad[] = {
+    {'\x1b', "Cancel"}, {'l', "Load"}};
+inline constexpr PromptAnswer kPromptCancelReset[] = {
+    {'\x1b', "Cancel"}, {'r', "Reset"}};
+inline constexpr PromptAnswer kPromptCancelPaste[] = {
+    {'\x1b', "Cancel"}, {'p', "Paste"}};
 inline constexpr PromptAnswer kPromptCancelDelete[] = {
     {'\x1b', "Cancel"}, {'d', "Delete"}};
 // THE TRIM PRESET'S SAVE (architect 2026-10-28): its answer is the
@@ -3511,8 +3524,9 @@ inline constexpr PromptAnswer kPromptCancelSave[] = {
 // EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
 // walks it. A table a raise passes must be listed here.
 inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
-    kPromptDiscardCancelSave, kPromptDiscardCancelRetry, kPromptCancelYes,
-    kPromptCancelOk, kPromptCancelDelete, kPromptCancelSave};
+    kPromptDiscardCancelSave, kPromptDiscardCancelRetry, kPromptCancelReload,
+    kPromptCancelPull, kPromptCancelLoad, kPromptCancelReset,
+    kPromptCancelPaste, kPromptCancelDelete, kPromptCancelSave};
 // A TABLE IS WELL FORMED when every dispatch char is distinct, it holds at
 // least Cancel and an affirmative, and the second-to-last answer is Cancel's,
 // the '\x1b' its button carries and every activate_response arm forks on (the
@@ -8036,7 +8050,7 @@ struct AppState {
     // wherever the active walk carries a member and FORKS ON THE
     // SOURCE — its confirmation names the viewed member in the walk's own
     // spelling (member_label below: a short SHA on the Remote tab, a member
-    // NUMBER on the Local one), and the act behind its OK is a different
+    // NUMBER on the Local one), and the act behind its Load is a different
     // function per walk (the fork at confirm_load_in_place) — and
     // FORCE SAVE AND COMMIT, whose reach
     // and grey stay the commit walk's because the act publishes into the
@@ -8061,10 +8075,10 @@ struct AppState {
     // don't really need it" — there is already a way to
     // step backwards and forwards, and the member the walk stands on is the
     // one the lane is showing): the key raises the CONFIRMATION straight away,
-    // "Load '<member label>' in place?" Cancel / OK —
+    // "Load '<member label>' in place?" Cancel / Load —
     // the render player's own confirmation body, one prompt with two subjects
     // (DialogTrigger::LOAD_IN_PLACE_CONFIRM; the subject parked here is
-    // `pending_load_member` below) — and OK runs the walk's own act.
+    // `pending_load_member` below) — and Load runs the walk's own act.
     // ON THE REMOTE TAB that act loads THE VIEWED COMMIT's RECIPE — its marker
     // pair and engine block, the rest of its sidecar state read past (the rule
     // at apply_recipe_in_place, input_handler.h) — into the live session in
@@ -8533,7 +8547,7 @@ struct AppState {
         // by GuiInputHandler::confirm_load_in_place / cancel_load_in_place.
         //
         // THREE CLEARERS, and the third is why the second is reachable
-        // programmatically: OK (confirm_load_in_place, which consumes it),
+        // programmatically: Load (confirm_load_in_place, which consumes it),
         // Cancel (cancel_load_in_place), and THE FAILED-SCAN ARRIVAL —
         // the one asynchronous edge that ends a visit
         // (GuiInputHandler::on_history_prefetch_ready), which cancels the
@@ -8902,9 +8916,9 @@ struct AppState {
 
     // THE PULL PARKED UNDER ITS QUESTION (architect 2026-09-27): a pull that
     // changes the open piece asks "Pull GitHub's newer checkpoint and reload
-    // this piece?" (DialogTrigger::PULL_CONFIRM, Cancel / OK,
+    // this piece?" (DialogTrigger::PULL_CONFIRM, Cancel / Pull,
     // 2026-10-19), and the plan the press made waits here for the answer —
-    // OK runs it (GuiInputHandler::answer_history_pull), Cancel drops it.
+    // Pull runs it (GuiInputHandler::answer_history_pull), Cancel drops it.
     // Self-contained (it carries the clone, the directory and the base name),
     // so a view closed under the question leaves nothing it needs behind.
     std::optional<GuiHistoryPullPlan> pending_history_pull;
@@ -9717,7 +9731,7 @@ struct AppState {
     //              2026-08-31, "we simplify — play on last file means play
     //              last file");
     //   `pending_load` the entry the standing LOAD_IN_PLACE_CONFIRM prompt
-    //              asks about; consumed by its OK, dropped by its Cancel. It
+    //              asks about; consumed by its Load, dropped by its Cancel. It
     //              is one of that prompt's TWO subjects — the `h` view's is
     //              AppState::HistoryMode::pending_load_member — and the two
     //              cannot both be parked (neither raise is reachable under the
