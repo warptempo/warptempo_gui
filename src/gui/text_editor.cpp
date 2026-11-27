@@ -499,6 +499,42 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
     return KeyAction::NotConsumed;
 }
 
+void pointer_seated_caret(State& s, bool had_selection, bool position_changed,
+                          bool press) {
+    // The cases and GTK's calls are at the declaration. Exact durations, so
+    // the continued phase keeps its sub-millisecond place.
+    using namespace std::chrono;
+    const auto now   = steady_clock::now();
+    const auto t     = now - s.blink_epoch;
+    const milliseconds first{s.blink_from_focus_in ? kCaretLitMs
+                                                   : kCaretPendMs};
+    const milliseconds steady{s.blink_from_focus_in ? kCaretFocusInSteadyFromMs
+                                                    : kCaretSteadyFromMs};
+    const milliseconds cycle{kCaretCycleMs};
+    const milliseconds dark{kCaretDarkMs};
+    const milliseconds lit{kCaretLitMs};
+    // GTK's timer runs on past the last re-show until it fires a lit phase
+    // later and finds the count spent: running until steady + lit.
+    const bool running = !had_selection && t < steady + lit;
+    if (!running) {
+        // (1) a stopped blink started as the focus-in's; (2) nothing.
+        if (position_changed) {
+            s.blink_epoch         = now;
+            s.blink_from_focus_in = true;
+        }
+        return;
+    }
+    // (3') a drag's move: the timer and the count run on.
+    if (!press) return;
+    // (3) the phase continues, the count restarts; fresh inside the first
+    // lit phase.
+    if (t < first) return;
+    const auto u = (t - first) % cycle;
+    const auto c = now - u;
+    s.blink_epoch         = u < dark ? c - lit : c + dark;
+    s.blink_from_focus_in = true;
+}
+
 bool cursor_visible_now(const State& s) {
     // No caret beside a standing selection (the declaration's ruling).
     if (!is_active(s) || has_selection(s)) return false;

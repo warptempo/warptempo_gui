@@ -445,17 +445,19 @@ struct State {
 
     // THE CARET'S LAST ACTIVITY: the monotonic stamp of the last key
     // delivered to the editor (GuiInputHandler::on_key's seat, whatever the
-    // key did), edit, caret move or other blink restart (restart_blink), or
-    // of the editor's open (select_whole_text, the focus-in's stamp), from
-    // which the caret's whole GTK timeline runs (cursor_visible_now and the
+    // key did), edit, caret move or other blink restart (restart_blink), of
+    // the editor's open (select_whole_text, the focus-in's stamp), or the
+    // start a pointer's caret seat sets (pointer_seated_caret), from which
+    // the caret's whole GTK timeline runs (cursor_visible_now and the
     // constants beside its declaration).
     std::chrono::steady_clock::time_point blink_epoch =
         std::chrono::steady_clock::now();
     // WHICH OF GTK'S TWO STARTS THAT ACTIVITY WAS: true for an editor's open,
-    // GtkEntry's focus-in (the first lit phase kCaretLitMs), false for every
-    // later restart, a key's (the pend, kCaretPendMs). Written beside
-    // blink_epoch by its two writers alone: select_whole_text sets it,
-    // restart_blink clears it.
+    // GtkEntry's focus-in (the first lit phase kCaretLitMs), and for the
+    // start a pointer's seat sets; false for a key's restart (the pend,
+    // kCaretPendMs). Written beside blink_epoch by its three writers alone:
+    // select_whole_text and pointer_seated_caret set it, restart_blink
+    // clears it.
     bool blink_from_focus_in = false;
 };
 
@@ -526,8 +528,9 @@ void enter(State& s, int target,
 // because the prefill before it (replace_selection) restarts the blink as a
 // key's; blink_epoch restarts now and blink_from_focus_in is set, the
 // timeline at cursor_visible_now. It shows only where the open selects
-// nothing (an empty text): a selected open draws no caret until a key or a
-// pointer seat collapses the band, and that restart is the pend's.
+// nothing (an empty text): a selected open draws no caret until a key
+// collapses the band (the key's restart, the pend's) or a pointer seat does
+// (the focus-in's start again, pointer_seated_caret's case (1)).
 void select_whole_text(State& s);
 
 // Apply a key event to the editor. Returns true if the key was consumed
@@ -711,8 +714,9 @@ static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200 &&
 // for both painters and the tick's compares (main.cpp), so no caret is
 // painted and no flip damaged for a hidden caret. Else read off the time
 // since State::blink_epoch, the last activity, its first lit phase FIRST
-// the pend kCaretPendMs after a key, edit or caret move, kCaretLitMs after
-// an open (State::blink_from_focus_in, GtkEntry's focus-in) —
+// the pend kCaretPendMs after a key, edit or caret move by key, kCaretLitMs
+// after a focus-in start (State::blink_from_focus_in: an open, or a
+// pointer's seat, pointer_seated_caret) —
 //   lit  [0, FIRST)                                    solid
 //   dark [FIRST + j * kCaretCycleMs,
 //         ... + kCaretDarkMs)              j = 0 .. kCaretDarkPhases - 1
@@ -722,29 +726,81 @@ static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200 &&
 // between, lit from 11 200 ms; after an open the same from 800 ms, lit from
 // 10 800 ms). Every key delivered to the editor restarts it, whatever the
 // key did (THE ONE SEAT, GuiInputHandler::on_key, where GTK's source is
-// stated), and so do every edit and caret move on any road (touch_blink /
+// stated), and so do every edit and caret move a key makes (touch_blink /
 // restart_blink), so the caret stands lit straight after a keystroke; the
-// open stamps its own start last (select_whole_text). THE LAST FLIP IS THE
+// open stamps its own start last (select_whole_text), and a pointer's seat
+// leaves the blink as GtkEntry does (pointer_seated_caret). THE LAST FLIP IS THE
 // RE-SHOW AT THE STEADY MARK: past it the answer never changes, so the
 // tick's flip compares (main.cpp) damage nothing for a resting editor,
 // GTK's stopped blink.
 bool cursor_visible_now(const State& s);
 
-// THE CARET MOVED OR THE TEXT CHANGED — restart the blink (the caret becomes
-// visible NOW and the timeline runs from here): every caret motion and
-// every edit inside this module calls it, and so do the pointer's caret
-// seats. A key's own restart is the key entry's (GuiInputHandler::on_key,
-// every key whatever its outcome); this one serves the roads no key takes —
-// the pointer's caret seats and enter (whose open then stamps the focus-in
-// over it, select_whole_text) — and repeats the key's on the arms a key
-// reaches, harmlessly. Its start is the pend's (restart_blink).
+// THE CARET MOVED OR THE TEXT CHANGED BY A KEY'S ACT — restart the blink
+// (the caret becomes visible NOW and the timeline runs from here): every
+// caret motion and every edit inside this module calls it. A key's own
+// restart is the key entry's (GuiInputHandler::on_key, every key whatever
+// its outcome), so on the arms a key reaches this repeats it, harmlessly;
+// the one road no key takes is enter (whose open then stamps the focus-in
+// over it, select_whole_text). A POINTER'S CARET SEAT DOES NOT CALL IT
+// (pointer_seated_caret, GtkEntry's own rule). Its start is the pend's
+// (restart_blink).
 void touch_blink(State& s);
+
+// A POINTER SEATED THE CARET (architect 2026-11-27, "Follow GTK."): the
+// blink is left as GtkEntry leaves it, never restarted as a key's. The
+// pointer's caret seat in either editor (set_editor_caret_from_x,
+// input_pointer.cpp — the press, the pointer road's sub-slop motions, the
+// finger's caret drag) calls this after seating, with `had_selection`
+// (a selection stood before the seat), `position_changed` (the caret moved
+// or a selection collapsed — GTK's selection_bound / current_pos compare;
+// a degenerate anchor collapsing is no change) and `press` (the seat is a
+// press, not a drag's move).
+// GTK (gtk-3-24 gtkentry.c): a press (gtk_entry_multipress_gesture_pressed)
+// calls gtk_entry_reset_blink_time — the 10 s count restarts — and NOT
+// gtk_entry_pend_cursor_blink (the keys'); the positions then move through
+// gtk_entry_set_positions, which recomputes ONLY IF a position changed, and
+// the recompute's gtk_entry_check_cursor_blink with no selection either
+// starts a stopped blink (the caret shown, its first timer the ordinary lit
+// phase, the focus-in's) or leaves a running one alone; a drag's move
+// (gtk_entry_drag_gesture_update) moves the positions the same way and
+// resets no count. ON OUR STATELESS TIMELINE (t = now - blink_epoch, the
+// blink RUNNING — GTK's timer pending — exactly when no selection stood and
+// t is before its steady mark plus kCaretLitMs: the last re-show's timer
+// still runs that lit phase, and a press inside it resets the count before
+// it fires, so the blink goes on; a standing selection removes the timer):
+//  (1) not running and a position changed: the focus-in's start at now
+//      (blink_epoch now, blink_from_focus_in set): shown, kCaretLitMs.
+//  (2) not running and no position changed (a tap on the caret's own place
+//      over a stopped blink): nothing.
+//  (3) running, a press: THE PHASE CONTINUES AND THE COUNT RESTARTS — the
+//      caret as lit or as dark at this instant as it was, nine dark phases
+//      ahead again. Inside the first lit phase the count is fresh: nothing.
+//      Else, u the time into the current cycle (which opens on its dark
+//      phase) and C = now - u that cycle's start: dark now (u <
+//      kCaretDarkMs), the current dark phase is the first of the nine, the
+//      focus-in's start at C - kCaretLitMs; lit now, the dark phase after
+//      this lit one is the first of the nine, the focus-in's start at
+//      C + kCaretDarkMs. A tap can land in a dark phase and leave the caret
+//      unseen for up to kCaretDarkMs: the ruling's chosen consequence.
+//  (3') running, a drag's move: nothing (the timer and the count run on).
+// A drag's move over a stopped blink takes case (1) with a fresh count,
+// GTK's own answer wherever the gesture's press left the count fresh; it
+// differs only where one held gesture outlasts the whole blink it found
+// running (over 10 s) and then moves, where GTK's spent count keeps the
+// caret steady and this blinks again.
+// A selection standing after the seat (GTK: the timer removed, no caret
+// drawn) has no producer here — every pointer seat collapses the selection
+// (set_editor_caret_from_x); a later collapse is case (1).
+// It changes the epoch alone: a flip it makes visible is the tick's
+// compare-and-damage's (main.cpp), and the seat's own field damage covers a
+// moved caret.
+void pointer_seated_caret(State& s, bool had_selection, bool position_changed,
+                          bool press);
 
 // RESTART THE BLINK ALONE, the caret unmoved: THE KEY ENTRY'S ONE SEAT
 // (GuiInputHandler::on_key — every key delivered to a standing editor,
-// whatever its outcome), and the callers that move nothing: a finger's caret
-// drag ending where its last frame seated the caret, an insert the capacity
-// refused, and a refused Enter (refuse) — the last two behind a key whose
+// whatever its outcome), and the callers that move nothing: an insert the
+// capacity refused and a refused Enter (refuse) — both behind a key whose
 // seat already restarted it, kept so each primitive holds its own contract.
 // Each restarts the timeline so the caret shows at once and stands solid
 // through the pend rather than possibly landing in a dark phase of the

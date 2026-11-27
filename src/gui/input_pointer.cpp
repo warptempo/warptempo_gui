@@ -1007,13 +1007,20 @@ int editor_stop_at(const ActiveEditorText& g, double mouse_x) {
 // caret drag (a tap's sub-slop motions) and the finger's caret drag (the
 // touch trio's bodies below) — and it COLLAPSES ANY SELECTION (architect
 // 2026-11-08: a tap seats the caret, a drag moves it, the
-// selection is the keys' alone), restarts the blink phase as the keyboard's
-// own motion keys do, so a caret being dragged is lit where it lands rather
-// than possibly caught in a dark phase of the blink.
-void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x) {
+// selection is the keys' alone). THE BLINK IS LEFT AS GtkEntry LEAVES IT,
+// never restarted as a key's (architect 2026-11-27, "Follow GTK.";
+// text_editor::pointer_seated_caret, the cases and the GTK source): `press`
+// is true for the gesture's down (the plain press, the finger drag's begin),
+// whose seat restarts the blink's count, false for a drag's move.
+void set_editor_caret_from_x(const ActiveEditorText& g, double mouse_x,
+                             bool press) {
+    const bool had_selection = text_editor::has_selection(*g.ed);
+    const int  was_cursor    = g.ed->cursor_pos;
     g.ed->selection_anchor = -1;
     g.ed->cursor_pos = editor_stop_at(g, mouse_x);
-    text_editor::touch_blink(*g.ed);
+    text_editor::pointer_seated_caret(
+        *g.ed, had_selection,
+        had_selection || g.ed->cursor_pos != was_cursor, press);
 }
 
 } // namespace
@@ -2532,8 +2539,8 @@ void GuiInputHandler::begin_touch_caret_drag(const GuiPointerPlace& at) {
     // apply); the stream's own end
     // seeds nothing.
     app.double_click = DoubleClickCandidate{};
-    // The seat restarts the blink.
-    set_editor_caret_from_x(g, at.rx);
+    // The down: the seat as a press (the blink's count restarts, GTK's).
+    set_editor_caret_from_x(g, at.rx, /*press=*/true);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
@@ -2545,8 +2552,8 @@ void GuiInputHandler::update_touch_caret_drag(const GuiPointerPlace& at) {
     // 2026-10-30; the contract at the declaration).
     if (!g.valid) return;
     // The I-beam follows the finger and nothing selects — the seat drops the
-    // anchor at every frame.
-    set_editor_caret_from_x(g, at.rx);
+    // anchor at every frame, a drag's move for the blink.
+    set_editor_caret_from_x(g, at.rx, /*press=*/false);
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
@@ -2559,12 +2566,9 @@ void GuiInputHandler::end_touch_caret_drag() {
     if (!g.valid) return;
     // THE DRAIN RULE: the caret stays where the last delivered frame seated
     // it, nothing selects, nothing commits (Enter remains the one commit
-    // route), nothing seeds, and the editor stays open. What the end owes
-    // is a blink restart, so the
-    // resting caret is lit the instant the finger leaves rather than caught
-    // in a dark phase of the blink the drag's last seat started — the blink
-    // alone, the caret where that seat put it.
-    text_editor::restart_blink(*g.ed);
+    // route), nothing seeds, and the editor stays open. THE BLINK IS LEFT AS
+    // IT RUNS: a lift seats nothing, and GtkEntry's release touches no blink
+    // (architect 2026-11-27, "Follow GTK."; text_editor::pointer_seated_caret).
     if (g.dialog) viewport.invalidate_dialog_editor_box();
     else          viewport.invalidate_top_strip();
 }
@@ -4798,7 +4802,7 @@ void GuiInputHandler::on_button_press(const GuiPointerPlace& at,
                 // and a drag are the field's whole vocabulary): the seat
                 // collapses the selection, and the
                 // selection is the keys' alone (Shift + LEFT / RIGHT).
-                set_editor_caret_from_x(g, at.rx);
+                set_editor_caret_from_x(g, at.rx, /*press=*/true);
                 app.editor_text_drag = EditorTextDragState{};
                 app.editor_text_drag.active = true;
                 // The line editors' edit damage is the entry's box
@@ -9585,8 +9589,8 @@ void GuiInputHandler::on_motion(const GuiPointerPlace& at,
             // which collapses the selection, on every motion. No gate (a
             // tap's sub-slop motions are this road's only producer; a drag
             // past the slop is the touch translation's caret drag and never
-            // arrives here).
-            set_editor_caret_from_x(g, at.rx);
+            // arrives here). A drag's move for the blink.
+            set_editor_caret_from_x(g, at.rx, /*press=*/false);
             if (g.dialog) viewport.invalidate_dialog_editor_box();
             else          viewport.invalidate_top_strip();
         }

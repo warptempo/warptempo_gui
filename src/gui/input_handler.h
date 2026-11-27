@@ -1359,14 +1359,15 @@ struct GuiInputHandler {
     // seed (a caret drag is motion, and motion breaks a candidate, the
     // rule the nav frames apply), drop any selection, seat
     // the caret under x through THE ONE POINTER SEAT (set_editor_caret_from_x,
-    // which restarts the blink) and damage the editor's surface.
+    // a press: the blink left as GtkEntry's, its count restarted) and damage
+    // the editor's surface.
     // update_touch_caret_drag(x, y): the same seat per delivered frame,
     // nothing selecting — the I-beam follows the finger.
     // end_touch_caret_drag(): THE DRAIN RULE — the caret stays where it was
     // last seated, nothing selects, nothing commits, the
-    // editor stays open and Enter remains its one commit route; the body
-    // restarts the blink so the resting caret is lit the instant the finger
-    // leaves, and damages for it. Fired on the finger's lift and on the hard
+    // editor stays open and Enter remains its one commit route; the blink is
+    // left as it runs (GtkEntry's release touches none), and the body damages
+    // the field. Fired on the finger's lift and on the hard
     // ends alike (the platform's end split delivers or drops the staged
     // final frame ahead of it, its record).
     void begin_touch_caret_drag(const GuiPointerPlace& at);

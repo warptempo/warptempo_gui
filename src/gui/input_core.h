@@ -540,8 +540,8 @@ public:
     //     touch-capability loss. THE DRAIN RULE: the caret stays where it
     //     was last seated, nothing selects, nothing commits, nothing seeds a
     //     double-click, and the editor stays open with Enter its one commit
-    //     route; the GUI restarts the blink so the resting caret is lit the
-    //     instant the finger leaves. Fired UNCONDITIONALLY once the drag
+    //     route; the GUI leaves the caret's blink as it runs (GtkEntry's
+    //     release touches none). Fired UNCONDITIONALLY once the drag
     //     began (the region end's rule).
     //
     // The hooks carry ONE modifier bit, the nav frame's ctrl (the one-finger
