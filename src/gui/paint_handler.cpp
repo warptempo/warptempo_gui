@@ -6153,7 +6153,8 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 //     line-box baseline (+18 W of its 28), the caret one W in the field's
 //     text tone over the line box's rows, its blink the tick's, NOT DRAWN
 //     WHILE A SELECTION STANDS (text_editor::cursor_visible_now), the
-//     selection the selection pair.
+//     selection the selection pair — the whole text at the open
+//     (text_editor::select_whole_text), the first frame the band alone.
 // ON THE TABLET (200 %; the view's top row 142): the entry x 24..2279,
 // rows 166..221 (1128 x 28 W), its text's pen x 42, its inner width
 // 42..2261.

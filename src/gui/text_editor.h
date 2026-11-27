@@ -483,7 +483,8 @@ void deactivate(State& s);
 void refuse(State& s);
 
 // Begin editing `target` with the given seed pending.
-// Cursor lands at end of pending. `kind` selects the vocabulary the
+// Cursor lands at end of pending, nothing selected; every editor's open then
+// selects its prefill whole (select_whole_text). `kind` selects the vocabulary the
 // keystroke handler will accept while this editor is active; `iter_upper`
 // names the bound an IterBound session edits and `iter_hops` its grammar (the
 // phase-reset column's whole hops rather than the warp column's cents), and
@@ -493,6 +494,21 @@ void enter(State& s, int target,
            Kind kind = Kind::FlagPayload,
            bool iter_upper = false,
            bool iter_hops = false);
+
+// AN EDITOR OPENS WITH ITS WHOLE TEXT SELECTED, THE CARET AT ITS END
+// (architect 2026-11-27, "Agree"): the first keystroke replaces the text
+// (replace_selection) and a caret move collapses the band. GTK's way:
+// `gtk-entry-select-on-focus` TRUE (gtksettings.c; GtkEntry selects its
+// whole text when it takes the focus), and GtkCellRendererText's
+// start_editing does the same. An EMPTY text selects nothing (the caret at
+// 0, no anchor), so has_selection stays false. THE OPENS' ONE STEP, called
+// once the prefill stands: the flag editor's and a bound's
+// (enter_top_flag_edit, enter_iter_bound_edit), a settings value's
+// (GuiSettingsEditor::open), a trim preset's Rename and Save As
+// (open_trim_preset_name_editor; Save As's field is empty) and the BPM
+// form's field (bpm_form_commit). The blink is the open's own (enter, and
+// the prefill's replace_selection), so this moves no blink.
+void select_whole_text(State& s);
 
 // Apply a key event to the editor. Returns true if the key was consumed
 // — the caller should NOT route a consumed key to other handlers.

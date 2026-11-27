@@ -6593,10 +6593,12 @@ void GuiInputHandler::open_trim_preset_name_editor(bool rename) {
                        text_editor::Kind::TrimPresetName);
     // RENAME'S PREFILL IS THE PRESET'S NAME and it lands as a settings
     // value's does (GuiSettingsEditor::open): through the one incoming filter
-    // into the empty entry, the caret at its end, nothing selected. A name
-    // the list holds passed that filter at its read (trim_preset_name_refusal),
-    // so the land is whole.
+    // into the empty entry, then selected whole, the caret at its end
+    // (text_editor::select_whole_text, every editor's open; Save As's empty
+    // field selects nothing). A name the list holds passed that filter at its
+    // read (trim_preset_name_refusal), so the land is whole.
     if (rename) (void)text_editor::replace_selection(app.settings_editor, held);
+    text_editor::select_whole_text(app.settings_editor);
     // A MODAL OPEN damages the whole window (the settings editor's open
     // carries the rule).
     viewport.invalidate_all();
@@ -6864,11 +6866,12 @@ void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
 // (close_picker, the mode standing) AND THE LINE EDITOR OPENS PREFILLED WITH
 // THE ROW'S VALUE as painted — its line past the first `=`, the value alone
 // (architect 2026-11-19; the sub-page 2026-11-20, no label 2026-11-22) —
-// the caret at its end, the
+// selected whole, the caret at its end, the
 // settings editor's open (GuiSettingsEditor::open): an empty session, then
 // the value through the one incoming filter, silent on capacity (the text is
 // the product's own recall, within its field's cap by the reader's own
-// spelling); row `index` is field `index`. The editor's modal stop is a no-op, playback
+// spelling), then text_editor::select_whole_text (every editor's open;
+// architect 2026-11-27); row `index` is field `index`. The editor's modal stop is a no-op, playback
 // stopped at the form's open; it is spelled for the opener's shape
 // (open_trim_preset_name_editor's).
 void GuiInputHandler::bpm_form_commit(int index) {
@@ -6891,6 +6894,7 @@ void GuiInputHandler::bpm_form_commit(int index) {
     (void)text_editor::replace_selection(
         app.settings_editor,
         eq == std::string::npos ? std::string() : line.substr(eq + 1));
+    text_editor::select_whole_text(app.settings_editor);
     // A MODAL OPEN damages the whole window (the settings editor's open
     // carries the rule).
     viewport.invalidate_all();

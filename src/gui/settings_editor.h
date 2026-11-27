@@ -25,7 +25,8 @@ struct GuiInputHandler;
 // (GuiInputHandler::open_settings_page), and the tap of an
 // editable row whose key has no value list closes the page and opens this
 // editor ON THAT ROW'S KEY, ITS ENTRY PREFILLED WITH THE VALUE THE KEY HOLDS,
-// the caret at its end. It is the flag editor's primitive (text_editor::State,
+// selected whole, the caret at its end (text_editor::select_whole_text,
+// architect 2026-11-27). It is the flag editor's primitive (text_editor::State,
 // kind-dispatched keyboard vocabulary, the field standing as it was and a
 // card on a refusal) painted AS THE VALUE SUB-PAGE (architect 2026-11-20:
 // "a subpage where if the user clicks on a value a single line text input is
@@ -316,8 +317,9 @@ struct GuiSettingsEditor {
     // caller, after the page's close; asserted), its entry prefilled with
     // THE VALUE THE KEY HOLDS (setting_value, the writer's spelling), landed
     // as every Tab advance lands — through text_editor::replace_selection,
-    // the one incoming filter, the caret at the VALUE'S END and nothing
-    // selected. It RECORDS THE KEY (page_key, below).
+    // the one incoming filter — then SELECTED WHOLE, the caret at the
+    // VALUE'S END (text_editor::select_whole_text, every editor's open). It
+    // RECORDS THE KEY (page_key, below).
     void open(const std::string& key);
     // THE OPEN'S KEY (architect 2026-10-28 night, the editor a sub-page of
     // the settings page; 2026-11-19, the key the commit writes):

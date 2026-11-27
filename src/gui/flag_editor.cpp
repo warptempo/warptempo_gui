@@ -212,19 +212,10 @@ void GuiFlagEditor::enter_text_edit(int idx,
         std::move(initial_pending),
         kind);
 
-    // Open-selected: fully select the seeded content (anchor=0 /
-    // cursor=end) so the first keystroke replaces it
-    // wholesale; a blank seed
-    // selects nothing and rests at caret 0. text_editor::enter already
-    // refreshed blink_epoch, so no touch_blink is needed here.
-    if (!app.top_flag_editor.pending.empty()) {
-        app.top_flag_editor.selection_anchor = 0;
-        app.top_flag_editor.cursor_pos =
-            static_cast<int>(app.top_flag_editor.pending.size());
-    } else {
-        app.top_flag_editor.selection_anchor = -1;
-        app.top_flag_editor.cursor_pos = 0;
-    }
+    // Open-selected, every editor's open (text_editor::select_whole_text):
+    // the seed selected whole, the caret at its end, so the first keystroke
+    // replaces it; a blank seed selects nothing and rests at caret 0.
+    text_editor::select_whole_text(app.top_flag_editor);
 
     viewport.invalidate_top_strip();
 }
@@ -332,11 +323,10 @@ void GuiFlagEditor::enter_iter_bound_edit(char column, int idx,
                        /*iter_upper=*/side == MarkerCell::Upper,
                        /*iter_hops=*/phase);
 
-    // Open-selected, the family's rule: the token is fully selected so the
-    // first keystroke replaces it wholesale. The seed is never empty here.
-    app.top_flag_editor.selection_anchor = 0;
-    app.top_flag_editor.cursor_pos =
-        static_cast<int>(app.top_flag_editor.pending.size());
+    // Open-selected, every editor's open (text_editor::select_whole_text):
+    // the token selected whole so the first keystroke replaces it. The seed
+    // is never empty here.
+    text_editor::select_whole_text(app.top_flag_editor);
 
     viewport.invalidate_top_strip();
 }

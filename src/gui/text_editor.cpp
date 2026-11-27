@@ -227,6 +227,17 @@ void refuse(State& s) {
     restart_blink(s);
 }
 
+void select_whole_text(State& s) {
+    // The contract is at the declaration.
+    if (s.pending.empty()) {
+        s.selection_anchor = -1;
+        s.cursor_pos       = 0;
+    } else {
+        s.selection_anchor = 0;
+        s.cursor_pos       = static_cast<int>(s.pending.size());
+    }
+}
+
 void deactivate(State& s) {
     s.target            = -1;
     s.kind              = Kind::FlagPayload;

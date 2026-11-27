@@ -3023,8 +3023,9 @@ private:
     //       LIST is swapped in, in place, under the same picker session
     //       (build_value_list_rows), a sub-page returning here; on every
     //       other row close_picker and
-    //       then GuiSettingsEditor::open prefilled with the row's line, the
-    //       caret at its end — the overlay and the keyboard never both
+    //       then GuiSettingsEditor::open prefilled with the row's line,
+    //       selected whole, the caret at its end — the overlay and the
+    //       keyboard never both
     //       stand, so the page closes before the editor opens, and the
     //       editor's Enter and Esc reopen it on the row's key, the editor a
     //       sub-page too (architect 2026-10-28,
@@ -3119,12 +3120,12 @@ private:
     //       the commit and the return.
     //     trim_presets_rename: RENAME (architect 2026-11-25: "need way to
     //       rename preset"), live with a highlight: Save As's road, the name
-    //       editor HOLDING THE HIGHLIGHTED PRESET'S NAME, the caret at its
-    //       end, no question (Enter is the answer).
+    //       editor HOLDING THE HIGHLIGHTED PRESET'S NAME, selected whole,
+    //       the caret at its end, no question (Enter is the answer).
     //     open_trim_preset_name_editor: the two openers' one body — the
     //       session memory written (trim_name_presets_, trim_name_seat_,
     //       trim_name_rename_), the list closed, the editor entered empty
-    //       or, for Rename, holding the name.
+    //       or, for Rename, holding the name selected whole.
     //     commit_trim_preset_name: the name editor's Enter: the name
     //       judged by its one grammar (trim_preset_name_refusal — non-empty,
     //       no edge space, the incoming filter's alphabet, unique) and then
@@ -3212,8 +3213,8 @@ private:
     //       one road: the form closes (close_picker, the mode STANDING — the
     //       overlay and the on-screen keyboard never both stand) and THE
     //       LINE EDITOR opens PREFILLED with the row's VALUE alone, no label
-    //       (architect 2026-11-19, 2026-11-20 and 2026-11-22), the
-    //       caret at its end, on the line editor's buffer
+    //       (architect 2026-11-19, 2026-11-20 and 2026-11-22), selected
+    //       whole, the caret at its end, on the line editor's buffer
     //       (text_editor::Kind::BpmField, `target` the field). Its commit is
     //       GuiFlagEditor::commit_bpm_field; its Enter and Esc return to the
     //       form seated on that row (handle_settings_editor_key's hook).

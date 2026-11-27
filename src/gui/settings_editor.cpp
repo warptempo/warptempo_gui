@@ -262,13 +262,15 @@ void GuiSettingsEditor::open(const std::string& key) {
                        text_editor::Kind::SettingsAssignment);
     // THE PREFILL IS THE VALUE THE KEY HOLDS (setting_value, the writer's
     // spelling) and it lands as every Tab advance lands (the head): through
-    // the one incoming filter into the empty entry, so the caret stands at
-    // the value's end with nothing selected. Its over-capacity refusal is
-    // silent for the recall's reason (the text is the product's own recall,
-    // autocomplete_value's account; kMaxPendingCharsSettings says what it
-    // leaves).
+    // the one incoming filter into the empty entry. Its over-capacity
+    // refusal is silent for the recall's reason (the text is the product's
+    // own recall, autocomplete_value's account; kMaxPendingCharsSettings
+    // says what it leaves). THEN THE OPEN SELECTS IT WHOLE, the caret at its
+    // end (text_editor::select_whole_text, every editor's open; architect
+    // 2026-11-27), so the first keystroke replaces it.
     (void)text_editor::replace_selection(app.settings_editor,
                                          setting_value(key));
+    text_editor::select_whole_text(app.settings_editor);
     // A MODAL OPEN damages the whole window: the modal's rect does not exist
     // before its first paint (the stash is the painter's), so the status-row
     // owner's modal rider cannot cover it here. Every later repaint of the
