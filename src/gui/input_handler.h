@@ -4772,7 +4772,8 @@ private:
     //   * select_history_diff_flags_modified is the CTRL click's body (the
     //     barrel; no shift reaches the pointer),
     //     over the MARKER LANE ALONE — the membership
-    //     toggle, then focusing the clicked flag and landing on it (over
+    //     toggle in the view's selection as a set, the focus and the land
+    //     the main page's toggle's (architect 2026-11-27) (over
     //     the waveform a modifier names a gesture, not a selection — the
     //     2026-08-06 symmetry ruling — and a plain waveform press resolves
     //     no flag either: the placement press at every column, 2026-08-12).

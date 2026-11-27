@@ -951,7 +951,8 @@ struct RegionDragState {
     // THE SELECTION STANDING AT THE DOWN, snapshotted at the arm: the union's
     // fixed half, so pulling the span back drops only what this sweep added
     // — the live selection's members and focus, or on the `history` arm the
-    // view's set and focus.
+    // view's set and focus, a focus standing alone counting as a set of one
+    // (history_mode_selection_as_set).
     std::set<int> prior_members;
     int           prior_focus  = -1;
     // The focus the last update seated FROM THE SWEPT SPAN — a swept member
@@ -8336,16 +8337,19 @@ struct AppState {
         // EVERY SETTER (re-derived by grep 2026-08-12): the mode's own PLAIN
         // focus CLICK on a diff flag's box in the lane, its ONE pointer
         // surface, the stems being inert (focus_history_diff_flag); the LANE's
-        // two MODIFIED clicks, which focus
-        // the flag they select (select_history_diff_flags_modified — flag
+        // two MODIFIED clicks, whose toggle seats the focus as the main
+        // page's does — the clicked flag on an add, the largest remaining
+        // member or none on removing the focused one
+        // (select_history_diff_flags_modified — flag
         // boxes alone); the mode's own
         // bare Tab / Shift+Tab cycle; and THE ADD SEL SWEEP (architect
         // 2026-11-27; GuiInputHandler::apply_selection_sweep_to's `h` arm),
         // which seats the last item it swept, or back the focus standing at
         // its down, per motion, and lands the playhead on that item at the
         // lift (commit_region_sweep). Each other setter sets it and lands the
-        // playhead on that flag's frame at once, and nothing else writes it
-        // true. ALL THREE CLICKS RUN AT THE PRESS (2026-08-17), on the index
+        // playhead on that flag's frame at once (a modified click whose
+        // toggle leaves the set empty landing nothing), and nothing else
+        // writes it true. ALL THREE CLICKS RUN AT THE PRESS (2026-08-17), on the index
         // the press resolved: the setters are the same three bodies.
         //
         // EVERY CLEARER, the whole list, and all but the last clear for ONE
@@ -8393,7 +8397,7 @@ struct AppState {
         // rather than clearers —
         // the plain focus click, which calls the owner and then re-seats the
         // focus over it, the modified lane pair, which writes the toggled set
-        // and the focus it lands on, and the ADD SEL sweep, which writes the
+        // and the focus the toggle leaves, and the ADD SEL sweep, which writes the
         // set standing at its down united with the items it spans, and its
         // focus (the setter above).
         int         focus  = -1;
@@ -8402,7 +8406,9 @@ struct AppState {
         // selection model re-expressed mode-locally — the ctrl click (the
         // barrel, or the add-to-selection lamp) toggles one
         // flag's membership, and a PLAIN click clears it, the focus alone then being a
-        // selection of one — and it touches the store selection no more than the
+        // selection of one, which the ctrl click and the ADD SEL sweep add to
+        // (architect 2026-11-27; history_mode_selection_as_set below this
+        // struct) — and it touches the store selection no more than the
         // focus does.
         //
         // WHY A SET AND NOT A SPAN: the ctrl toggle can leave any subset
@@ -8419,7 +8425,9 @@ struct AppState {
         // (architect 2026-11-27: "The add to selection button in history
         // doesn't allow me to drag on the waveform to select multiple, but it
         // should."; GuiInputHandler::apply_selection_sweep_to's `h` arm), which
-        // adds every item its span covers to the set standing at its down.
+        // adds every item its span covers to the set standing at its down;
+        // both take a focus standing alone with an empty set as its selection
+        // of one (history_mode_selection_as_set).
         // Nothing else writes a member — the Tab cycle and
         // the plain click both leave it EMPTY, the live cycle's own
         // replace-with-a-singleton shape.
@@ -14667,7 +14675,10 @@ inline bool history_step_button_actionable(
 // fields (the plain focus click's empty-lane arm clears through here). What
 // remains outside is SETTERS, not clearers: that same click re-seats the focus
 // over this call,
-// the ctrl lane click writes the toggled set with the focus it lands on, and
+// the ctrl lane click writes the toggled set with the focus the toggle leaves
+// — empty and none where it toggles the last member out, the main page's
+// toggle's own rest (Selection::toggle_selection_membership), not a clear for
+// a rebuilt list — and
 // the ADD SEL sweep writes the set and focus standing at its down united with
 // what it spans — the down's own pair again where it spans nothing new
 // (GuiInputHandler::apply_selection_sweep_to).
@@ -14684,6 +14695,26 @@ inline bool clear_history_mode_focus(AppState::HistoryMode& mode) {
     mode.focus = -1;
     mode.selection.clear();
     return stood;
+}
+
+// THE HISTORY VIEW'S SELECTION AS A SET — what an ADD SEL (or ctrl) click and
+// the ADD SEL sweep add to (architect 2026-11-27: "Agree. Match the main
+// page."): the set where it is non-empty, else the focus alone as a set of
+// one, else nothing. THE VIEW'S PLAIN TAP AND ITS TAB STEP HOLD THEIR ITEM AS
+// THE FOCUS WITH AN EMPTY SET, and that focus IS a selection of one — the
+// revert's own reading of the pair ("the set if non-empty, else the focus",
+// run_history_revert; history_mode_revert_subject_standing) and the painter's
+// (a focused item and a member wear one selected look,
+// render_history_diff_flags) — so adding to it keeps the tapped item, as the
+// main page's plain tap leaves its marker a member
+// (Selection::set_single_selection): tap A, then ADD SEL on B, is {A, B}.
+// TWO READERS, the two adders: GuiInputHandler::
+// select_history_diff_flags_modified (its seed) and arm_selection_sweep_at
+// (the sweep's base).
+inline std::set<int> history_mode_selection_as_set(
+        const AppState::HistoryMode& mode) {
+    if (!mode.selection.empty() || mode.focus < 0) return mode.selection;
+    return std::set<int>{mode.focus};
 }
 
 // END THE A/B AUDITION SEQUENCE — the one spelling of "the act is over", so

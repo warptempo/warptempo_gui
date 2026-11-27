@@ -5489,12 +5489,14 @@ void GuiInputHandler::arm_selection_sweep_at(double anchor_x,
     app.region_drag.press_x       = at.rx;
     app.region_drag.press_y       = at.ry;
     // THE `h` VIEW'S ARM SNAPSHOTS THE VIEW'S OWN SELECTION (architect
-    // 2026-11-27; RegionDragState::history): its set as it stands and its
-    // focus — the base the sweep adds to — never the live selection, which
-    // the view leaves untouched.
+    // 2026-11-27; RegionDragState::history): its set — a focus standing alone
+    // counting as a selection of one, so a plain-tapped item stays in
+    // (history_mode_selection_as_set) — and its focus, the base the sweep
+    // adds to; never the live selection, which the view leaves untouched.
     if (app.history_mode.active) {
         app.region_drag.history       = true;
-        app.region_drag.prior_members = app.history_mode.selection;
+        app.region_drag.prior_members =
+            history_mode_selection_as_set(app.history_mode);
         app.region_drag.prior_focus   = app.history_mode.focus;
         return;
     }
@@ -8671,7 +8673,9 @@ void GuiInputHandler::tick_chrome_press_repeat() {
 //     two-flag selection (AppState::add_to_selection; its drag road the
 //     ADD SEL sweep, below).
 //   * the MARKER LANE's CTRL click, on its FLAG BOXES: it toggles one flag's
-//     membership, then focuses the clicked flag and lands the playhead on it
+//     membership in the view's selection as a set (a focus standing alone a
+//     selection of one, architect 2026-11-27), the focus and the land the
+//     main page's toggle's (select_history_diff_flags_modified)
 //     (the live selection model over the mode's own list; the store selection
 //     stays as untouched as the plain click leaves it). IT HAS A SECOND
 //     PRODUCER (2026-09-17) — a PLAIN press while Add to selection stands,
@@ -8722,7 +8726,8 @@ bool GuiInputHandler::handle_history_mode_press(
 
     // THE MULTI-SELECTION'S MODIFIED CLICK (architect 2026-08-05), the one
     // modified press in this mode that hits an ITEM: ctrl toggles one flag's
-    // membership, then focuses the clicked flag and lands the playhead on it —
+    // membership, the focus and the land the main page's toggle's
+    // (select_history_diff_flags_modified) —
     // the live selection model re-expressed over the mode's own list, with the
     // store selection as untouched as the plain click leaves it. FLAG BOXES
     // ONLY (the symmetry ruling, 2026-08-06). EVERY OTHER CTRL PRESS IS A
@@ -8888,7 +8893,11 @@ bool GuiInputHandler::handle_history_mode_press(
 // IT CLEARS THE MULTI-SELECTION (architect 2026-08-05), which is the live
 // model's own shape rather than a rule of the mode's: a plain click REPLACES the
 // selection with what it hit, so the focus alone is then a selection of one, and
-// the revert act's subject falls back to that focus with nothing to remember.
+// the revert act's subject falls back to that focus with nothing to remember;
+// an ADD SEL or ctrl click, or the ADD SEL sweep, after it adds to that
+// selection of one (architect 2026-11-27: "Agree. Match the main page.";
+// history_mode_selection_as_set, app_state.h — the main page's plain tap
+// leaving its marker a member, Selection::set_single_selection).
 //
 // IT LANDS THROUGH THE MOVEMENT OWNER (land_playhead_on_domain_frame). The
 // out-of-range arm (`hit` < 0, tolerance the router cannot produce) lands
@@ -8948,43 +8957,51 @@ void GuiInputHandler::focus_history_diff_flag(int hit) {
 // set is a set. (No pointer range-extends here, architect 2026-10-30: no
 // pointer carries a shift bit.)
 //
-// IT THEN FOCUSES THE CLICKED FLAG AND LANDS THE PLAYHEAD ON IT, the live
-// model's "a modified press lands on the focus it sets" applied here, and it
-// leaves the STORE selection exactly as untouched as the plain click does —
-// the mode owns no live marker.
+// THE SET IT TOGGLES IN IS THE VIEW'S SELECTION AS A SET (architect
+// 2026-11-27: "Agree. Match the main page."; history_mode_selection_as_set,
+// app_state.h): a plain tap's or a Tab step's focus standing alone is a
+// selection of one, so a click on another item after it holds both — tap A,
+// then ADD SEL on B, is {A, B} — and a click on that same item toggles it out.
 //
-// A CTRL PRESS THAT REMOVES THE LAST MEMBER therefore rests on the focus alone,
-// with that flag still lit and still the act's subject. That is the recorded
-// consequence rather than an oversight, and it is the SAME state a plain click
-// leaves ("focus = a selection of one"): the live column repairs its focus onto
-// another member when a toggle removes the focused one, and this mode has no
-// such repair to run — its focus is where the playhead just landed, which the
-// removal did not take back.
-//
-// IT LANDS THROUGH THE MOVEMENT OWNER, past the range guard below.
+// THE FOCUS AND THE LAND ARE THE MAIN PAGE'S TOGGLE'S
+// (Selection::toggle_selection_membership, run_marker_click_act's toggle
+// arm): an add focuses the clicked item; a removal of the focused item
+// repairs the focus to the largest remaining ordinal, or to none where the
+// set is left empty; a removal of another item leaves the focus — and the
+// playhead lands on the focus the toggle leaves whenever the set stands
+// non-empty, through the movement owner. So the focus is a member of every
+// non-empty set this click leaves, and a click that toggles the last member
+// out leaves nothing selected and the playhead where it was. It leaves the
+// STORE selection exactly as untouched as the plain click does — the mode
+// owns no live marker.
 //
 // DAMAGE IS THE FOCUS CLICK'S: full-window, unconditional here, because the
 // toggle always flips the clicked flag's face.
 void GuiInputHandler::select_history_diff_flags_modified(int hit) {
     const int n = static_cast<int>(app.history_mode.flags.size());
     if (hit < 0 || hit >= n) return;
-    std::set<int>& sel = app.history_mode.selection;
-    {
-        const auto it = sel.find(hit);
-        if (it != sel.end()) sel.erase(it);
-        else                 sel.insert(hit);
+    AppState::HistoryMode& mode = app.history_mode;
+    std::set<int> sel = history_mode_selection_as_set(mode);
+    if (sel.erase(hit) == 0) {
+        sel.insert(hit);
+        mode.focus = hit;
+    } else if (mode.focus == hit) {
+        mode.focus = sel.empty() ? -1 : *sel.rbegin();
     }
-    app.history_mode.focus = hit;
+    mode.selection = std::move(sel);
     // THE STEMS IN THIS EVENT (2026-11-05, paint_marker_stems' ONE-STATE
     // RULE): the mode's focus and selection are the diff lane's selected
     // look, its stems among it, so the flag cache is rebuilt here, before the
     // land below can paint the playhead beside the old stems
     // (Viewport::refresh_flag_cache, fingerprint-guarded).
     viewport.refresh_flag_cache();
-    land_playhead_on_domain_frame(
-        app, audio, viewport,
-        history_diff_flag_landing_domain_frame(
-            app, audio, app.history_mode.flags[static_cast<std::size_t>(hit)]));
+    if (!mode.selection.empty()) {
+        land_playhead_on_domain_frame(
+            app, audio, viewport,
+            history_diff_flag_landing_domain_frame(
+                app, audio,
+                mode.flags[static_cast<std::size_t>(mode.focus)]));
+    }
     viewport.invalidate_all();
 }
 
