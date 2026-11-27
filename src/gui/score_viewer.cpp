@@ -511,6 +511,13 @@ void GuiScoreViewer::tick() {
     }
 
     if (sv.transport == Transport::Live) {
+        // THE PLAYING BIT IS SAMPLED FIRST, THE DEVICE READ AFTER IT
+        // (architect 2026-11-26, the review's round; the render player's
+        // tick carries the ordering: the error callback's latch is published
+        // before its release RMW lowers the bit, and is_playing() is an
+        // acquire load), so a drop never reads as a natural end — the rest
+        // at the range's end with no card.
+        const bool playing = playback.is_playing();
         if (playback.device_unavailable()) {
             // NO DEVICE PAUSES (the render player's tick's rule): the pause
             // body itself — the held cursor parked, its page followed, the
@@ -519,7 +526,7 @@ void GuiScoreViewer::tick() {
             pause();
             notifications.notify(AppState::NotificationClass::Normal,
                                  kPlaybackDeviceUnavailableCard);
-        } else if (!playback.is_playing()) {
+        } else if (!playing) {
             on_natural_end();
         } else {
             // THE PAGE FOLLOWS THE CURSOR, the turn's position owed until the

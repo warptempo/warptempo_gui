@@ -1457,6 +1457,15 @@ void GuiRenderPlayer::on_natural_end() {
 void GuiRenderPlayer::tick() {
     AppState::RenderPlayer& rp = app.render_player;
     if (rp.transport != Transport::Live) return;
+    // THE PLAYING BIT IS SAMPLED FIRST, THE DEVICE READ AFTER IT (architect
+    // 2026-11-26, the review's round): the error callback publishes the
+    // `stream_dead` latch (release), fences, then lowers the bit with a
+    // release RMW (playback_aaudio.cpp's error callback), and is_playing()
+    // is an acquire load — so a bit read down because of a drop
+    // synchronizes with that RMW and the device read below sees the latch:
+    // a drop never reads as a natural end, which would overwrite the resume
+    // point with the item's end and launch the next wav.
+    const bool playing = playback.is_playing();
     if (playback.device_unavailable()) {
         // NO DEVICE PAUSES, IT DOES NOT ADVANCE (the rule at on_natural_end's
         // declaration): an engine that cannot sound leaves the session word's
@@ -1504,7 +1513,7 @@ void GuiRenderPlayer::tick() {
     // carries. Every OTHER road out of LIVE (the pause, the
     // dead-device arm above, the close, the rebind ahead of the next item)
     // takes the stop body at once.
-    if (!playback.is_playing()) {
+    if (!playing) {
         on_natural_end();
         return;
     }
