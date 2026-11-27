@@ -6268,14 +6268,18 @@ void GuiInputHandler::value_list_commit(int index) {
 // confirmations' answers. The highlight, the close and the key router are the
 // picker's shared machinery below.
 
-// THE OPENER — bare `t` and the TRIM key's plain press, with no seat name; and
-// THE NAME EDITOR'S RETURN, seated on the name it hands over
-// (handle_settings_editor_key). The project picker's own guards, for its
+// THE OPENER — bare `t` and the TRIM key's plain press, a FRESH OPEN
+// (`return_seat` std::nullopt); and THE NAME EDITOR'S RETURN, handing over
+// the seat it left (handle_settings_editor_key): a preset's name, or EMPTY
+// FOR NONE — the list stood with no row lit when the editor opened and the
+// Esc or a failed write brings it back so (no preset is named empty: the
+// name grammar's first refusal). The project picker's own guards, for its
 // reasons, and the shared modal stop once the open is certain. THE FILE IS
 // READ HERE, at the list's open and nowhere else (trim_presets_file.h's three
 // outcomes against the piece's frame count); the acts keep the overlay's copy
 // and write it whole.
-void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
+void GuiInputHandler::open_trim_presets(
+        std::optional<std::string_view> return_seat) {
     if (app.prompt.active) return;
     if (picker_active()) return;
     if (app.loading) return;
@@ -6288,24 +6292,29 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
     ov.owner        = AppState::FolderOverlay::Owner::TrimPresets;
     ov.trim_presets = read_trim_presets_file(
         score_viewer_project_folder(app), audio.total_frames());
-    // THE SEAT: the named preset (the return), else the preset whose pair is
-    // the active tab's trim — the window on screen named, the first in the
-    // list's order when two names share the pair — else NONE, the list at
-    // its top (a row is lit only where it reflects something,
-    // folder_overlay.h's head, architect 2026-11-27).
+    // THE SEAT (a row is lit only where it reflects something,
+    // folder_overlay.h's head, architect 2026-11-27): THE RETURN'S is the
+    // seat it hands over — the named preset's row, or none — and is never
+    // derived from the trim, so a list that stood with none comes back with
+    // none; A FRESH OPEN'S is the preset whose pair is the active tab's
+    // trim — the window on screen named, the first in the list's order when
+    // two names share the pair — else NONE, the list at its top.
     int seat = -1;
-    bool seated = false;
-    for (std::size_t i = 0; i < ov.trim_presets.size() && !seated; ++i) {
-        if (!seat_name.empty() && ov.trim_presets[i].name == seat_name) {
-            seat   = static_cast<int>(i);
-            seated = true;
+    if (return_seat) {
+        for (std::size_t i = 0; i < ov.trim_presets.size(); ++i) {
+            if (!return_seat->empty() && ov.trim_presets[i].name == *return_seat) {
+                seat = static_cast<int>(i);
+                break;
+            }
         }
-    }
-    for (std::size_t i = 0; i < ov.trim_presets.size() && !seated; ++i) {
-        const GuiTrimPreset& p = ov.trim_presets[i];
-        if (p.begin == app.trim.begin_frame && p.end == app.trim.end_frame) {
-            seat   = static_cast<int>(i);
-            seated = true;
+    } else {
+        for (std::size_t i = 0; i < ov.trim_presets.size(); ++i) {
+            const GuiTrimPreset& p = ov.trim_presets[i];
+            if (p.begin == app.trim.begin_frame &&
+                p.end == app.trim.end_frame) {
+                seat = static_cast<int>(i);
+                break;
+            }
         }
     }
     build_trim_presets_rows(seat);
@@ -6817,6 +6826,12 @@ bool GuiInputHandler::persist_trim_presets(
     return !failure;
 }
 
+// WOULD RENDER ALL ACT (the contract at the declaration, app_state.h).
+bool trim_presets_render_all_actionable(const AppState& a) {
+    return !a.folder_overlay.trim_presets.empty() &&
+           !a.iteration_mode_enabled && !a.source_audio_path.empty();
+}
+
 // THE LIST'S ROW FACES (the contract is at the declaration, app_state.h).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act) {
@@ -6834,11 +6849,11 @@ bool trim_presets_button_enabled(const AppState& a,
         case Act::Close:
             return true;
         case Act::Render:
-            // THE PLAIN PRESS'S ROW OR THE HOLD'S LIST: Render All needs no
-            // lit row, so with none the key stays live for its hold and its
-            // tap cards (the rule at the declaration, architect 2026-11-27).
-            return !ov.trim_presets.empty() && !a.iteration_mode_enabled &&
-                   !a.source_audio_path.empty();
+            // THE HOLD'S OWN ELIGIBILITY, the plain press's implying it:
+            // Render All needs no lit row, so with none the key stays live
+            // for its hold and its tap cards (the rule at the declaration,
+            // architect 2026-11-27).
+            return trim_presets_render_all_actionable(a);
         case Act::Save: {
             // NO ROW LIT: live only on an empty list, where it creates (Save
             // As's act, "both create", 2026-10-28); greyed beside Save As on
@@ -8347,8 +8362,10 @@ void GuiInputHandler::render_player_delete(bool all) {
     // takes a deletion back, so only the Delete answer's own press confirms.
     // Through PromptState::present, the one raise route, so the painted gate
     // holds. A shifted press over a one-folder root parks that one folder —
-    // the highlighted one — and asks the named question, the shift line being
-    // absent there for the same reason.
+    // the sole listed one, lit or not — and asks the named question; the
+    // shift line is absent there with the folder lit (the plain press
+    // reaching the same folder) and stands with no row lit (the plain press
+    // then only carding; delete_shift_differs, paint_handler.cpp).
     const std::string question =
         render
             ? "Delete '" + render_entry_id(*render) + "'?"
@@ -9021,7 +9038,8 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
 // and the return: no completion (Tab greyed, tab_key_live), the name's
 // commit (commit_trim_preset_name), and on the close THE TRIM PRESETS LIST
 // REOPENS (open_trim_presets) seated on the name the commit or the name
-// editor's open left (trim_name_seat_), the settings page's return one content over; a refused
+// editor's open left (trim_name_seat_; empty for a list that stood with no
+// row lit, which comes back with none), the settings page's return one content over; a refused
 // name leaves the editor standing and reopens nothing.
 // THE BPM FORM'S LINE EDITOR RIDES IT THE SAME WAY (architect 2026-10-29):
 // Kind::BpmField, read before the route like the name's, forks the route

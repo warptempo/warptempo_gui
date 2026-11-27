@@ -115,7 +115,8 @@
 // either direction (move_highlight_target), the render player's Play
 // resumes a bound item listed there or plays the listing's first render
 // (render_player_band_row), and the car's acts follow (render_player.h's THE
-// CAR'S OWN ACTS); the painter lights nothing and every row hovers.
+// CAR'S OWN ACTS); the painter lights nothing and every ACTING row hovers
+// (an inert row never does, the hover's gate, row_is_inert).
 //
 // THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S. Two owners,
 // neither restated here:

@@ -951,8 +951,10 @@ struct RegionDragState {
     // THE SELECTION STANDING AT THE DOWN, snapshotted at the arm: the union's
     // fixed half, so pulling the span back drops only what this sweep added
     // — the live selection's members and focus, or on the `history` arm the
-    // view's set and focus, a focus standing alone counting as a set of one
-    // (history_mode_selection_as_set).
+    // view's EFFECTIVE selection and focus, a focus standing alone counting
+    // as a set of one (history_mode_selection_as_set) — so a sweep there that
+    // spans nothing new writes the set {A} with focus A over a tap's lone
+    // focus A, the same look and the same Revert subject.
     std::set<int> prior_members;
     int           prior_focus  = -1;
     // The focus the last update seated FROM THE SWEPT SPAN — a swept member
@@ -8393,13 +8395,16 @@ struct AppState {
         // reason too, and a second clearer inventory to keep in step is exactly
         // what that helper exists to prevent. By grep of every writer of
         // `history_mode.focus` and `history_mode.selection`: every CLEAR of the
-        // pair runs through that owner, and the two direct writers are SETTERS
-        // rather than clearers —
-        // the plain focus click, which calls the owner and then re-seats the
-        // focus over it, the modified lane pair, which writes the toggled set
-        // and the focus the toggle leaves, and the ADD SEL sweep, which writes the
-        // set standing at its down united with the items it spans, and its
-        // focus (the setter above).
+        // pair runs through that owner, and the four direct writers are
+        // SETTERS rather than clearers — the plain focus click
+        // (focus_history_diff_flag) and the diff-flag cycle
+        // (cycle_history_diff_flag_focus), each of which calls the owner and
+        // then re-seats the focus over it; the modified lane pair
+        // (select_history_diff_flags_modified), which writes the toggled set
+        // and the focus the toggle leaves; and the ADD SEL sweep
+        // (apply_selection_sweep_to's history arm), which writes the set
+        // standing at its down united with the items it spans, and its focus
+        // (the setter above).
         int         focus  = -1;
         // THE MODE'S OWN MULTI-SELECTION (architect 2026-08-05), ordinals into
         // `flags` beside the focus and the REVERT ACT's subject. It is the live
@@ -8457,7 +8462,10 @@ struct AppState {
         // Tab cycle and its bare `c` (handle_history_mode_key), and BOTH CLICK
         // BODIES — the plain focus click (focus_history_diff_flag) and the
         // modified pair (select_history_diff_flags_modified), which reads it for
-        // the frame it lands on. Every one of them reads
+        // the frame it lands on — and THE ADD SEL SWEEP (architect 2026-11-27):
+        // apply_selection_sweep_to's history arm, which reads every item's
+        // frame for the span it covers, and commit_region_sweep, which reads
+        // the focused item's frame for the landing. Every one of them reads
         // an EMPTY list as "nothing there" — the cold answer the drop relies on.
         std::vector<HistoryDiffFlag> flags;
 
@@ -9480,7 +9488,8 @@ struct AppState {
     //                 PLAY BUTTON (2026-08-31) act on: Play reads the band
     //                 FIRST (render_player_highlight_act_row, through
     //                 render_player_band_row — with none lit inside a
-    //                 folder, the listing's first render) and falls to the
+    //                 folder, the bound item's row where it is listed, else
+    //                 the listing's first render) and falls to the
     //                 transport's own toggle only where the band stands on
     //                 the transport's item or names no row;
     //                 under a PICKER it is THE WHOLE STATE, with no field
@@ -10537,7 +10546,8 @@ static_assert(
 // dispatch (dispatch_modal_dialog_button's trim arm, which hands the verdict
 // on only where this admits) and the modifier line
 // (trim_presets_button_shift_hint below, whose one arm is this member, its
-// line standing wherever the list holds a preset).
+// line standing wherever the hold would act,
+// trim_presets_render_all_actionable).
 inline constexpr bool trim_presets_button_shift_admits(
         AppState::TrimPresetsButtonAct act) {
     return act == AppState::TrimPresetsButtonAct::Render;
@@ -10558,17 +10568,20 @@ static_assert(
 
 // THE MODIFIER LINE, in the roster's own form ("Hold to ..."): non-empty on
 // RENDER alone, the member trim_presets_button_shift_admits names, and there
-// WHEREVER THE LIST HOLDS A PRESET, one or more (`list_holds_preset`,
-// composed at the plan builder; architect 2026-11-25). The line stands where
-// the hold does something the plain press does not, and with any preset it
-// does: Render All always makes a new presets folder, runs the progress page
+// ONLY WHERE THE HOLD WOULD ACT (`hold_acts`, composed at the plan builder
+// from trim_presets_render_all_actionable, the hold's one question, which
+// the face and the act ask too; architect 2026-11-25, the line following
+// the hold's own eligibility 2026-11-27): never on a face greyed under a
+// lit Grid Iterations lamp or with no source. Where the hold acts it does
+// something the plain press does not: Render All always makes a new
+// presets folder, runs the progress page
 // and opens the render player on that folder, where the plain Render joins
 // the newest folder when it is a presets folder (one more cell, the folder's
 // next number) and returns to the main page
 // (GuiInputHandler::trim_presets_render).
 inline std::string trim_presets_button_shift_hint(
-        AppState::TrimPresetsButtonAct act, bool list_holds_preset) {
-    if (act == AppState::TrimPresetsButtonAct::Render && list_holds_preset)
+        AppState::TrimPresetsButtonAct act, bool hold_acts) {
+    if (act == AppState::TrimPresetsButtonAct::Render && hold_acts)
         return "Hold to render all";
     return std::string();
 }
@@ -10591,10 +10604,12 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 // LISTING'S FIRST RENDER — what Play plays from none, the row then lit as
 // the playing render's (play_wav's seat); at the root with none lit, and on
 // an empty listing, -1 (nothing to play: the transport's own arm answers
-// there). TWO READERS: render_player_highlight_act_row below
-// and the head unit's silence-track title (GuiRenderPlayer::
-// publish_media_state), so the title names what the console's button would
-// start. The row keys (Load in place, Delete) read the lit row alone.
+// there). THREE READERS: render_player_highlight_act_row below, the head
+// unit's silence-track title (GuiRenderPlayer::publish_media_state), so the
+// title names what the console's button would start, and
+// GuiRenderPlayer::seat_band_on_listed_item, which lights the bound item's
+// row it names before Play resumes that item. The row keys (Load in place,
+// Delete) read the lit row alone.
 // Defined in render_player.cpp.
 int render_player_band_row(const AppState& a);
 
@@ -10779,6 +10794,16 @@ bool render_player_button_enabled(const AppState& a,
 // 2026-11-19).
 bool trim_presets_button_enabled(const AppState& a,
                                  AppState::TrimPresetsButtonAct act);
+// WOULD RENDER ALL ACT — RENDER'S HOLD'S ONE QUESTION (architect
+// 2026-11-27): a preset in the list, a loaded source and the Grid
+// Iterations lamp dark, the terms named at trim_presets_button_enabled's
+// Render arm, no lit row needed. THREE READERS, which must not drift: the
+// face (trim_presets_button_enabled's Render arm — the plain press's
+// question implies it), the hold line (trim_presets_button_shift_hint's
+// `hold_acts`, composed at the plan builder) and the act
+// (GuiInputHandler::trim_presets_render, through the face's guard).
+// Defined beside the list's acts (input_key_dispatch.cpp).
+bool trim_presets_render_all_actionable(const AppState& a);
 
 // THE BPM FORM'S CONTROLS ROW FACES (architect 2026-10-29), THE TRUTHFUL
 // GREY's owner for that row: RENDER LIVE EXACTLY WHEN ITS PRESS COULD RENDER
@@ -10812,19 +10837,27 @@ bool render_player_up_actionable(const AppState& a);
 
 // THE ROOT'S BATCH FOLDERS (architect 2026-09-29, the player's Delete): how
 // many Folder rows the listing shows while it stands at the root — `tmp/`'s
-// own batch folders, the enumeration's — and 0 inside a batch folder. THE
-// FOLDER LIST'S SHIFT LINE reads it (RenderPlayerHintState::
-// delete_shift_differs: more than one), the long press parking exactly these
-// rows' paths (render_player_delete). Defined in render_player.cpp beside
+// own batch folders, the enumeration's — and 0 inside a batch folder. TWO
+// READERS: the long press's question at the root
+// (render_player_delete_all_actionable: more than none), that press parking
+// exactly these rows' paths (render_player_delete), and THE FOLDER
+// LIST'S SHIFT LINE with a folder lit (RenderPlayerHintState::
+// delete_shift_differs: more than one; with no row lit the line follows the
+// long press's question instead). Defined in render_player.cpp beside
 // the listing it counts.
 int render_player_root_folder_count(const AppState& a);
 // THE LISTED FOLDER'S RENDERS (architect 2026-11-25, the one render's
 // delete): how many Wav rows the listing shows while it stands inside a batch
-// folder, and 0 at the root. THE ACT'S OWN COUNT, READ BY TWO: the render's
-// delete, where a count of one is the folder's delete (the last render takes
-// the emptied folder with it, GuiRenderPlayer::delete_render), and the render
-// list's shift line (RenderPlayerHintState::delete_shift_differs: more than
-// one — with one, the long press reaches what the plain press does). Defined
+// folder, and 0 at the root. THE ACT'S OWN COUNT, READ BY THREE: the
+// render's delete, where a count of one is the folder's delete (the last
+// render takes the emptied folder with it, GuiRenderPlayer::delete_render);
+// the long press's question inside a folder
+// (render_player_delete_all_actionable: more than none); and the render
+// list's shift line with a render lit (RenderPlayerHintState::
+// delete_shift_differs: more than one — with one, the long press reaches
+// what the plain press does). WITH NO ROW LIT the tap only cards and the
+// long press asks to delete the folder, so the line stands wherever the long
+// press acts (architect 2026-11-27). Defined
 // in render_player.cpp beside the listing it counts.
 int render_player_batch_render_count(const AppState& a);
 // WOULD DELETE'S PLAIN PRESS ACT — in each list the band on a row of the
@@ -14153,7 +14186,8 @@ int marker_walk_landing_on_entry(const AppState& a, const GuiAudio& audio,
                                  int64_t parked_playhead, bool forward);
 
 // WHERE A HISTORY ITEM LANDS THE PLAYHEAD, IN THE DISPLAYED DOMAIN —
-// the Tab walk's, the focus click's, the Center press's and the walk's seed
+// the Tab walk's, the focus click's, the modified pair's, the ADD SEL sweep's
+// lift (commit_region_sweep), the Center press's and the walk's seed
 // (history_diff_cycle_target below), each landing it through the movement
 // owner's domain form (land_playhead_on_domain_frame, input_handler.h): THE
 // ITEM'S ONE FRAME forward-mapped (HistoryDiffFlag::time_frame; one item, one
@@ -14738,7 +14772,10 @@ inline bool history_step_button_actionable(
 // toggle's own rest (Selection::toggle_selection_membership), not a clear for
 // a rebuilt list — and
 // the ADD SEL sweep writes the set and focus standing at its down united with
-// what it spans — the down's own pair again where it spans nothing new
+// what it spans — where it spans nothing new, THE DOWN'S EFFECTIVE SELECTION:
+// the set seeded from history_mode_selection_as_set, so a focus that stood
+// alone with an empty set (a plain tap on A) comes back as the set {A} with
+// focus A, the same look and the same Revert subject
 // (GuiInputHandler::apply_selection_sweep_to).
 //
 // It RETURNS WHETHER ANYTHING WAS STANDING, because some of those sites damage

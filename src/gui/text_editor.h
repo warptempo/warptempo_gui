@@ -443,8 +443,10 @@ struct State {
     // structurally a change of State, so nothing else needs keeping in step.
     double view_offset_px = 0.0;
 
-    // THE CARET'S LAST ACTIVITY: the monotonic stamp of the last edit, caret
-    // move, open or blink restart (restart_blink, its one writer), from which
+    // THE CARET'S LAST ACTIVITY: the monotonic stamp of the last key
+    // delivered to the editor (GuiInputHandler::on_key's seat, whatever the
+    // key did), edit, caret move, open or other blink restart (restart_blink,
+    // its one writer), from which
     // the caret's whole GTK timeline runs (cursor_visible_now and the
     // constants beside its declaration).
     std::chrono::steady_clock::time_point blink_epoch =
@@ -471,8 +473,9 @@ void deactivate(State& s);
 
 // A REFUSED ENTER (architect 2026-11-27: "Follow GTK."): THE FIELD STANDS AS
 // IT WAS — the text, the caret and the selection untouched — and the blink
-// restarts lit (restart_blink), so the caret shows at once, as after any
-// keystroke. GTK's way: no widget selects on a refusal; GtkEntry's
+// restarts lit (restart_blink; the Enter's own key entry restarted it
+// already, GuiInputHandler::on_key), so the caret shows at once, as after
+// any keystroke. GTK's way: no widget selects on a refusal; GtkEntry's
 // `activate` hands Enter to the application, and the caret and the selection
 // stay where they are. THE REFUSING OWNER'S CARD IS THE REFUSAL'S WHOLE
 // VISIBLE STATEMENT: no frame or face changes colour (architect 2026-10-03:
@@ -687,8 +690,10 @@ static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200,
 //         ... + kCaretDarkMs)              j = 0 .. kCaretDarkPhases - 1
 //   lit  from kCaretSteadyFromMs on, for good
 // (1200 ms solid, nine 400 ms dark phases with 800 ms lit between, lit from
-// 11 200 ms). Every edit, caret move and open restarts it (touch_blink /
-// restart_blink), so the caret stands lit straight after a keystroke. THE
+// 11 200 ms). Every key delivered to the editor restarts it, whatever the
+// key did (THE ONE SEAT, GuiInputHandler::on_key, where GTK's source is
+// stated), and so do every edit, caret move and open on any road (touch_blink
+// / restart_blink), so the caret stands lit straight after a keystroke. THE
 // LAST FLIP IS THE RE-SHOW AT kCaretSteadyFromMs: past it the answer never
 // changes, so the tick's flip compares (main.cpp) damage nothing for a
 // resting editor, GTK's stopped blink.
@@ -697,15 +702,21 @@ bool cursor_visible_now(const State& s);
 // THE CARET MOVED OR THE TEXT CHANGED — restart the blink (the caret becomes
 // visible NOW and the timeline runs from here): every caret motion and
 // every edit inside this module calls it, and so do the pointer's caret
-// seats.
+// seats. A key's own restart is the key entry's (GuiInputHandler::on_key,
+// every key whatever its outcome); this one serves the roads no key takes —
+// the pointer's caret seats and the opens (enter) — and repeats the key's on
+// the arms a key reaches, harmlessly.
 void touch_blink(State& s);
 
-// RESTART THE BLINK ALONE, the caret unmoved — for the callers that move
-// nothing: a finger's caret drag ending where its last frame seated the
-// caret, an insert the capacity refused, and a refused Enter (refuse). Each
-// restarts the timeline so the caret shows at once and stands solid through
-// the pend rather than possibly landing in a dark phase of the timeline it
-// kept running through.
+// RESTART THE BLINK ALONE, the caret unmoved: THE KEY ENTRY'S ONE SEAT
+// (GuiInputHandler::on_key — every key delivered to a standing editor,
+// whatever its outcome), and the callers that move nothing: a finger's caret
+// drag ending where its last frame seated the caret, an insert the capacity
+// refused, and a refused Enter (refuse) — the last two behind a key whose
+// seat already restarted it, kept so each primitive holds its own contract.
+// Each restarts the timeline so the caret shows at once and stands solid
+// through the pend rather than possibly landing in a dark phase of the
+// timeline it kept running through.
 void restart_blink(State& s);
 
 // THE ONE CLICK-X -> BYTE MAPPING: `boundaries` is the per-byte pen offset vector the

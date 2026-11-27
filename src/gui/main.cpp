@@ -3490,8 +3490,10 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             }
         }
         // Same shape for the line editor of the value sub-page, whose entry
-        // holds the focus for as long as it stands (the caret always
-        // shown): its caret damages the entry's box alone, where it paints
+        // holds the focus for as long as it stands: the caret's visibility
+        // (text_editor::cursor_visible_now — the blink's timeline, and false
+        // while a selection stands) compared against the last painted, and
+        // a flip damages the entry's box alone, where the caret paints
         // (Viewport::invalidate_dialog_editor_box, the edits' one owner).
         if (text_editor::is_active(app.settings_editor)) {
             const bool now_visible =

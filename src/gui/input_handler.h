@@ -3102,12 +3102,15 @@ private:
     //     open_trim_presets: the opener, open_project_picker's own guards
     //       (a prompt, a standing picker, a load) and its modal stop; the
     //       file read into the overlay (AppState::FolderOverlay::
-    //       trim_presets) and the rows built, SEATED on `seat_name`'s preset
-    //       when one is named (the name editor's return), else on the preset
-    //       whose pair IS the active tab's trim, else on NONE (a row is lit
-    //       only where it reflects something, folder_overlay.h's head,
-    //       architect 2026-11-27), a lit row centered as far as the ends
-    //       allow, none leaving the list at its top.
+    //       trim_presets) and the rows built. THE NAME EDITOR'S RETURN
+    //       (`return_seat` set) is SEATED on the seat it hands over — its
+    //       preset's row, or NONE for an empty name, the list having stood
+    //       with no row lit — never derived from the trim; A FRESH OPEN
+    //       (std::nullopt) on the preset whose pair IS the active tab's trim,
+    //       else on NONE (a row is lit only where it reflects something,
+    //       folder_overlay.h's head, architect 2026-11-27); a lit row
+    //       centered as far as the ends allow, none leaving the list at its
+    //       top.
     //     build_trim_presets_rows: the rows from the overlay's presets,
     //       rebuilt whole, the highlight seated on `highlight` (clamped onto
     //       the listing's last row, -1 none) — the open's and every act's
@@ -3160,7 +3163,8 @@ private:
     //       editor's own: Enter and Esc alike reopen the list
     //       (open_trim_presets), seated on the new or renamed row or, after
     //       Esc, an unchanged name or a failed write, the row the editor was
-    //       opened over; the quit road never passes it.
+    //       opened over — NONE where the list stood with no row lit; the
+    //       quit road never passes it.
     //     trim_presets_save / trim_presets_delete: SAVE and DELETE (the
     //       buttons): each
     //       raises its CONFIRMATION over the list on the highlighted preset
@@ -3322,7 +3326,7 @@ private:
     void build_value_list_rows(const std::string& key);
     void value_list_commit(int index);
     void return_to_settings_page(std::string seat_key);
-    void open_trim_presets(std::string_view seat_name);
+    void open_trim_presets(std::optional<std::string_view> return_seat);
     void build_trim_presets_rows(int highlight);
     void trim_presets_apply(int index);
     void trim_presets_render(bool all);
@@ -3350,7 +3354,8 @@ private:
     // as it stood when the name editor opened, which the commit judges the
     // name against and appends to (Save As) or renames in (Rename), and the
     // name the return seats the list on — the highlighted preset's at the
-    // open (Cancel's return; under Rename the preset being renamed), the new
+    // open (Cancel's return; under Rename the preset being renamed), EMPTY
+    // where no row was lit (the return then lighting none), the new
     // one's after a commit; and WHICH ACT OPENED THE EDITOR, Rename or Save
     // As (architect 2026-11-25), the one bit the commit forks on. Written by
     // open_trim_preset_name_editor and the commit alone; the editor is modal,

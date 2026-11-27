@@ -7156,9 +7156,10 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // row's tap is the act. Each face is the act's own truthful answer
         // (trim_presets_button_enabled). RENDER'S TOOLTIP is its word, as
         // every word button's, AND ITS HOLD LINE, "Hold to render all"
-        // (trim_presets_button_shift_hint), wherever the list holds a
-        // preset: with one or more, the hold's Render All does what the
-        // plain press does not (architect 2026-11-25).
+        // (trim_presets_button_shift_hint), wherever the hold would act
+        // (trim_presets_render_all_actionable: a preset listed, a source
+        // loaded, the Grid Iterations lamp dark): there the hold's Render
+        // All does what the plain press does not (architect 2026-11-25).
         using Act = AppState::TrimPresetsButtonAct;
         for (const Act act : {Act::HighlightDown, Act::HighlightUp}) {
             DialogButtonPlan b;
@@ -7183,7 +7184,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         word(Act::Render, "Render");
         plan.back().tooltip2 = trim_presets_button_shift_hint(
             Act::Render,
-            /*list_holds_preset=*/!app.folder_overlay.trim_presets.empty());
+            /*hold_acts=*/trim_presets_render_all_actionable(app));
         word(Act::Close, kModalCloseLabel);
     } else if (row_bpm) {
         // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the

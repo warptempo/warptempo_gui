@@ -280,6 +280,33 @@ void GuiInputHandler::on_key(GuiKey key, GuiInputState mods) {
         return;
     }
 
+    // EVERY KEY DELIVERED TO A STANDING EDITOR RESTARTS THE CARET'S BLINK,
+    // WHATEVER ITS OUTCOME (architect 2026-11-27, "follow GTK") — THE ONE
+    // SEAT, here at the editors' key entry, ahead of both editor blocks and so
+    // of every arm below them: the extra keys answered ahead of the route
+    // (handle_top_flag_editor_key) and route_modal_editor_key's Tab,
+    // clipboard and keymap arms. GTK's way: gtk_entry_key_press (gtk-3-24
+    // gtkentry.c) calls gtk_entry_reset_blink_time and then
+    // gtk_entry_pend_cursor_blink on key entry, before the key's outcome is
+    // known — so a key that changes nothing (a Tab that completes nothing, a
+    // paste of an empty clipboard, UP / DOWN or the pass key on a text not
+    // well formed, LEFT at the text's start) lights the caret (where no
+    // selection hides it, text_editor::cursor_visible_now) and stands it
+    // solid through the pend all the same. Every key the platform and the
+    // on-screen keyboard produce reaches the editors through this body
+    // (on_key); a chord the gate above drops is no editor key and restarts
+    // nothing. A key that closes the editor needs nothing, and the restart
+    // is harmless there (deactivate ends the session). THE DAMAGE IS THE
+    // TICK'S: the restart changes the epoch alone, and a caret it turns from
+    // dark to lit is a flip the tick's compare (main.cpp) sees against its
+    // last painted visibility within one tick and damages the field for; a
+    // caret already lit (the pend, a lit phase, the stopped tail) flips
+    // nothing and owes nothing.
+    if (text_editor::is_active(app.top_flag_editor))
+        text_editor::restart_blink(app.top_flag_editor);
+    else if (text_editor::is_active(app.settings_editor))
+        text_editor::restart_blink(app.settings_editor);
+
     // The top-flag editor owns the keyboard while active. Only its own editor
     // keys pass the gate above, so
     // this block cannot see a command, and it consumes every key it is handed

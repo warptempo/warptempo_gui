@@ -639,7 +639,8 @@ struct GuiRenderPlayer {
     //   (the walk's from-none landing) — a silent walled no-op at the
     //   listing's last row.
     // car_toggle()'s Play from NO ROW LIT is the tablet's: inside a folder
-    //   the listing's first render (render_player_band_row), at the root
+    //   the bound item listed there, resumed with its row lit, else the
+    //   listing's first render (render_player_band_row), at the root
     //   nothing.
     //   Changing track from the car is therefore pause, step, play (architect
     //   2026-11-25, accepted).
@@ -820,10 +821,14 @@ struct GuiRenderPlayer {
     //     SILENCE TRACK, which is what plays while the listener is at the top
     //     level walking folders: the artist is THE FOLDER THE BAND IS IN,
     //     `tmp` at the root and the batch folder's own name inside one, and
-    //     the title is THE HIGHLIGHTED ROW'S OWN NAME — a wav's or a folder's,
+    //     the title is THE NAME OF THE ROW PLAY WOULD ACT ON
+    //     (render_player_band_row: the highlighted row, or with no row lit
+    //     inside a folder the bound item's row or the first render;
+    //     architect 2026-11-27) — a wav's or a folder's,
     //     bare and with no trailing slash, the artist beneath it already
-    //     saying where that name lives — or, with nothing to highlight at
-    //     all, the LISTED FOLDER naming itself, the same word the artist
+    //     saying where that name lives — or, where that names no row (the
+    //     root with none lit, an empty listing), the LISTED FOLDER naming
+    //     itself, the same word the artist
     //     carries. AT POSITION 0 WITH THE DURATION UNKNOWN (duration_ms = -1;
     //     the sliver puts METADATA_KEY_DURATION only for a value above 0), so
     //     the console counts up from zero with no length to run into. A
@@ -832,7 +837,7 @@ struct GuiRenderPlayer {
     //     into the track's end. The tablet's row is where a paused item's
     //     clock lives.
     // Title and album are never empty on any push this body makes — a row has
-    // a name, or with nothing to highlight the listed folder names itself into
+    // a name, or with no row named the listed folder names itself into
     // the title, and the project always has a name — AND THERE IS NO EMPTY
     // PAIR AND NO STOPPED STATE ANYWHERE (architect 2026-09-17): close()
     // pushes nothing, the mode-down arm

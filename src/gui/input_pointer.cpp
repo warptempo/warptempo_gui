@@ -1449,8 +1449,9 @@ void reseat_playhead_on_marker(AppState& app, const GuiAudio& audio,
 
 // The frame-shaped half, above — the MOVEMENT owner's frame form: the
 // audition's end, then the seat. Every caller of this one is a command whose
-// subject is the playhead (the `h` mode's Tab cycle, its `c` and its two
-// diff-flag click bodies), so none of them wants the reseat. IT TAKES A
+// subject is the playhead (the `h` mode's Tab cycle, its `c`, its two
+// diff-flag click bodies and the ADD SEL sweep's lift, commit_region_sweep),
+// so none of them wants the reseat. IT TAKES A
 // DISPLAYED-DOMAIN FRAME (2026-10-11): its callers land a diff flag's cue
 // where it is painted, its frame mapped into the displayed domain once by the
 // one owner (history_diff_flag_landing_domain_frame, app_state.h).

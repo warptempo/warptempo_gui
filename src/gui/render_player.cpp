@@ -151,8 +151,9 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     // out. A named folder that is not in the listing — deleted while the
     // player stood, the listing being rebuilt from disk at every entry —
     // falls through to none like any other miss. FROM NONE the Play button
-    // and the car's toggle play the listing's first render
-    // (render_player_band_row; at the root, nothing to play) and the walk
+    // and the car's toggle resume a bound item listed here or play the
+    // listing's first render (render_player_band_row; at the root, nothing
+    // to play) and the walk
     // takes the first row (folder_overlay::move_highlight_target).
     ov.scroll_px     = 0.0;
     ov.press         = AppState::FolderOverlayPress{};
@@ -593,7 +594,8 @@ int render_player_band_row(const AppState& a) {
 // THE ROW SPACE WOULD OPEN (architect 2026-08-31) — the contract and the
 // three-reader inventory are at the declaration (app_state.h). The fork is the
 // band's row (render_player_band_row: the lit row, or with none lit inside a
-// folder its first render) — its KIND plus one identity compare: a folder is
+// folder the bound item's row or its first render) — its KIND plus one
+// identity compare: a folder is
 // always somewhere to go, a
 // wav is somewhere to go unless it is what is already bound, and the
 // transport's own item hands the press back to the transport. (Going up is
@@ -961,9 +963,10 @@ void GuiRenderPlayer::play_button_act() {
     // DRIVEN IN THE PLAYER). A folder or
     // a wav that is NOT the transport's item under the band is somewhere to
     // GO, and Play goes there whatever is playing — with NO ROW LIT inside a
-    // folder, the listing's first render (render_player_band_row, architect
-    // 2026-11-27), its row then lit by play_wav's seat as the playing
-    // render's; the transport's own item and a band naming no row (an empty
+    // folder, the listing's first render where no bound item is listed
+    // (render_player_band_row, architect 2026-11-27), its row then lit by
+    // play_wav's seat as the playing render's; the transport's own item (the
+    // band's row with none lit where it is listed) and a band naming no row (an empty
     // one, the root with none lit) fall through to transport_toggle_act below, which
     // the IMPOSED INTERRUPTS reach WITHOUT this fork (the reasons are at that
     // body). THE CAR'S TOGGLE REACHES THIS WHOLE BODY past its LIVE arm
@@ -2036,7 +2039,8 @@ void GuiRenderPlayer::publish_media_state() {
     // walking folders (his own framing). THE ARTIST IS THE FOLDER THE BAND IS
     // IN, `tmp` at the root and the batch folder's own name inside one, and
     // THE TITLE IS THE BAND'S ROW'S OWN NAME (render_player_band_row: the
-    // highlighted row, or with no row lit inside a folder its first render),
+    // highlighted row, or with no row lit inside a folder the bound item's
+    // row or its first render),
     // which is what the console's button would start — a wav's or a
     // folder's, bare, the artist under it already saying where that name
     // lives.
