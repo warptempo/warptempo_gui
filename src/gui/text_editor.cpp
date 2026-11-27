@@ -8,7 +8,8 @@
 namespace text_editor {
 
 void restart_blink(State& s) {
-    s.blink_epoch = std::chrono::steady_clock::now();
+    s.blink_epoch         = std::chrono::steady_clock::now();
+    s.blink_from_focus_in = false;
 }
 
 void touch_blink(State& s) {
@@ -236,6 +237,9 @@ void select_whole_text(State& s) {
         s.selection_anchor = 0;
         s.cursor_pos       = static_cast<int>(s.pending.size());
     }
+    // The focus-in's blink, stamped last (the declaration).
+    s.blink_epoch         = std::chrono::steady_clock::now();
+    s.blink_from_focus_in = true;
 }
 
 void deactivate(State& s) {
@@ -501,10 +505,14 @@ bool cursor_visible_now(const State& s) {
     using namespace std::chrono;
     const auto now = steady_clock::now();
     const auto ms  = duration_cast<milliseconds>(now - s.blink_epoch).count();
-    // The timeline at the declaration: the pend, then the dark phases, each
-    // the first kCaretDarkMs of its cycle, then lit for good.
-    if (ms < kCaretPendMs || ms >= kCaretSteadyFromMs) return true;
-    return (ms - kCaretPendMs) % kCaretCycleMs >= kCaretDarkMs;
+    // The timeline at the declaration: the first lit phase (the pend after
+    // a key, an ordinary lit phase after an open's focus-in), then the dark
+    // phases, each the first kCaretDarkMs of its cycle, then lit for good.
+    const int first  = s.blink_from_focus_in ? kCaretLitMs : kCaretPendMs;
+    const int steady = s.blink_from_focus_in ? kCaretFocusInSteadyFromMs
+                                             : kCaretSteadyFromMs;
+    if (ms < first || ms >= steady) return true;
+    return (ms - first) % kCaretCycleMs >= kCaretDarkMs;
 }
 
 } // namespace text_editor

@@ -445,12 +445,18 @@ struct State {
 
     // THE CARET'S LAST ACTIVITY: the monotonic stamp of the last key
     // delivered to the editor (GuiInputHandler::on_key's seat, whatever the
-    // key did), edit, caret move, open or other blink restart (restart_blink,
-    // its one writer), from which
-    // the caret's whole GTK timeline runs (cursor_visible_now and the
+    // key did), edit, caret move or other blink restart (restart_blink), or
+    // of the editor's open (select_whole_text, the focus-in's stamp), from
+    // which the caret's whole GTK timeline runs (cursor_visible_now and the
     // constants beside its declaration).
     std::chrono::steady_clock::time_point blink_epoch =
         std::chrono::steady_clock::now();
+    // WHICH OF GTK'S TWO STARTS THAT ACTIVITY WAS: true for an editor's open,
+    // GtkEntry's focus-in (the first lit phase kCaretLitMs), false for every
+    // later restart, a key's (the pend, kCaretPendMs). Written beside
+    // blink_epoch by its two writers alone: select_whole_text sets it,
+    // restart_blink clears it.
+    bool blink_from_focus_in = false;
 };
 
 inline bool is_active(const State& s) { return s.target >= 0; }
@@ -487,7 +493,8 @@ void refuse(State& s);
 
 // Begin editing `target` with the given seed pending.
 // Cursor lands at end of pending, nothing selected; every editor's open then
-// selects its prefill whole (select_whole_text). `kind` selects the vocabulary the
+// selects its prefill whole and stamps the focus-in's blink
+// (select_whole_text). `kind` selects the vocabulary the
 // keystroke handler will accept while this editor is active; `iter_upper`
 // names the bound an IterBound session edits and `iter_hops` its grammar (the
 // phase-reset column's whole hops rather than the warp column's cents), and
@@ -509,8 +516,18 @@ void enter(State& s, int target,
 // (enter_top_flag_edit, enter_iter_bound_edit), a settings value's
 // (GuiSettingsEditor::open), a trim preset's Rename and Save As
 // (open_trim_preset_name_editor; Save As's field is empty) and the BPM
-// form's field (bpm_form_commit). The blink is the open's own (enter, and
-// the prefill's replace_selection), so this moves no blink.
+// form's field (bpm_form_commit).
+// AND IT STAMPS THE OPEN'S BLINK AS GtkEntry's FOCUS-IN (architect
+// 2026-11-27, "Follow GTK."): gtk_entry_focus_in (gtk-3-24 gtkentry.c) calls
+// gtk_entry_reset_blink_time and gtk_entry_check_cursor_blink, whose first
+// timer is an ordinary lit phase (CURSOR_ON_MULTIPLIER, kCaretLitMs, 800
+// ms), where a key's gtk_entry_pend_cursor_blink stands the pend
+// (kCaretPendMs, 1200 ms). The stamp lands here, the opens' last step,
+// because the prefill before it (replace_selection) restarts the blink as a
+// key's; blink_epoch restarts now and blink_from_focus_in is set, the
+// timeline at cursor_visible_now. It shows only where the open selects
+// nothing (an empty text): a selected open draws no caret until a key or a
+// pointer seat collapses the band, and that restart is the pend's.
 void select_whole_text(State& s);
 
 // Apply a key event to the editor. Returns true if the key was consumed
@@ -672,9 +689,18 @@ inline constexpr int kCaretDarkPhases =
 inline constexpr int kCaretSteadyFromMs =
     kCaretPendMs + (kCaretDarkPhases - 1) * kCaretCycleMs +
     kCaretDarkMs;                                                  // 11 200
-static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200,
+// THE FOCUS-IN'S TIMELINE (an editor's open, select_whole_text) is the
+// key's with its first lit phase kCaretLitMs in place of kCaretPendMs: the
+// same count (blink_time zeroed at the focus-in and grown at each re-show),
+// so the same nine dark phases, each kCaretPendMs - kCaretLitMs earlier.
+inline constexpr int kCaretFocusInSteadyFromMs =
+    kCaretLitMs + (kCaretDarkPhases - 1) * kCaretCycleMs +
+    kCaretDarkMs;                                                  // 10 800
+static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200 &&
+                  kCaretFocusInSteadyFromMs == 10800,
               "gtk-3-24's defaults give nine dark phases, the caret lit for "
-              "good from 11 200 ms");
+              "good from 11 200 ms after a key and 10 800 ms after a "
+              "focus-in");
 
 // Whether the caret is drawn this frame: false for an inactive editor, and
 // FALSE WHILE A SELECTION STANDS (architect 2026-11-27, "agree"): the band
@@ -684,19 +710,24 @@ static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200,
 // caret) is no selection (has_selection), so the caret shows. ONE PREDICATE
 // for both painters and the tick's compares (main.cpp), so no caret is
 // painted and no flip damaged for a hidden caret. Else read off the time
-// since State::blink_epoch, the last activity —
-//   lit  [0, kCaretPendMs)                              the pend, solid
-//   dark [kCaretPendMs + j * kCaretCycleMs,
+// since State::blink_epoch, the last activity, its first lit phase FIRST
+// the pend kCaretPendMs after a key, edit or caret move, kCaretLitMs after
+// an open (State::blink_from_focus_in, GtkEntry's focus-in) —
+//   lit  [0, FIRST)                                    solid
+//   dark [FIRST + j * kCaretCycleMs,
 //         ... + kCaretDarkMs)              j = 0 .. kCaretDarkPhases - 1
-//   lit  from kCaretSteadyFromMs on, for good
-// (1200 ms solid, nine 400 ms dark phases with 800 ms lit between, lit from
-// 11 200 ms). Every key delivered to the editor restarts it, whatever the
+//   lit  from FIRST + (kCaretDarkPhases - 1) * kCaretCycleMs + kCaretDarkMs
+//        on, for good (kCaretSteadyFromMs, kCaretFocusInSteadyFromMs)
+// (after a key 1200 ms solid, nine 400 ms dark phases with 800 ms lit
+// between, lit from 11 200 ms; after an open the same from 800 ms, lit from
+// 10 800 ms). Every key delivered to the editor restarts it, whatever the
 // key did (THE ONE SEAT, GuiInputHandler::on_key, where GTK's source is
-// stated), and so do every edit, caret move and open on any road (touch_blink
-// / restart_blink), so the caret stands lit straight after a keystroke. THE
-// LAST FLIP IS THE RE-SHOW AT kCaretSteadyFromMs: past it the answer never
-// changes, so the tick's flip compares (main.cpp) damage nothing for a
-// resting editor, GTK's stopped blink.
+// stated), and so do every edit and caret move on any road (touch_blink /
+// restart_blink), so the caret stands lit straight after a keystroke; the
+// open stamps its own start last (select_whole_text). THE LAST FLIP IS THE
+// RE-SHOW AT THE STEADY MARK: past it the answer never changes, so the
+// tick's flip compares (main.cpp) damage nothing for a resting editor,
+// GTK's stopped blink.
 bool cursor_visible_now(const State& s);
 
 // THE CARET MOVED OR THE TEXT CHANGED — restart the blink (the caret becomes
@@ -704,8 +735,9 @@ bool cursor_visible_now(const State& s);
 // every edit inside this module calls it, and so do the pointer's caret
 // seats. A key's own restart is the key entry's (GuiInputHandler::on_key,
 // every key whatever its outcome); this one serves the roads no key takes —
-// the pointer's caret seats and the opens (enter) — and repeats the key's on
-// the arms a key reaches, harmlessly.
+// the pointer's caret seats and enter (whose open then stamps the focus-in
+// over it, select_whole_text) — and repeats the key's on the arms a key
+// reaches, harmlessly. Its start is the pend's (restart_blink).
 void touch_blink(State& s);
 
 // RESTART THE BLINK ALONE, the caret unmoved: THE KEY ENTRY'S ONE SEAT
@@ -716,7 +748,8 @@ void touch_blink(State& s);
 // seat already restarted it, kept so each primitive holds its own contract.
 // Each restarts the timeline so the caret shows at once and stands solid
 // through the pend rather than possibly landing in a dark phase of the
-// timeline it kept running through.
+// timeline it kept running through: the epoch now and the start the pend's
+// (blink_from_focus_in cleared — a key's start, never the open's).
 void restart_blink(State& s);
 
 // THE ONE CLICK-X -> BYTE MAPPING: `boundaries` is the per-byte pen offset vector the
