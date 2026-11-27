@@ -811,8 +811,12 @@ private:
     // THE RESUME ROAD'S ONE LAUNCH: the soundtrack LIVE from `from` to the
     // range's end, the page following, the row damaged. Its two callers have
     // chosen `from` and passed their guards: play() through the PLAY key's
-    // end rule, play_from() through the live seek's clamp.
+    // end rule, play_from() through the live seek's clamp. Over a refused
+    // device it rests PAUSED at `from` instead (rest_at_refused_launch).
     void play_live_from(int64_t from);
+    // A refused launch's rest at `from`, never LIVE (the rule at the
+    // definition, architect 2026-11-26).
+    void rest_at_refused_launch(int64_t from);
     // The natural end: the fence through the one stop body, the rest at the
     // range's end, written.
     void on_natural_end();

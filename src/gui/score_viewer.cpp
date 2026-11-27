@@ -330,9 +330,47 @@ void GuiScoreViewer::play_live_from(int64_t from) {
     AppState::ScoreViewer& sv = app.score_viewer;
     sv.painted_cursor = -1;
     playback.play(from, score_viewer_frame_range(app).end);
+    if (playback.device_unavailable()) {
+        rest_at_refused_launch(from);
+        return;
+    }
     sv.transport = Transport::Live;
     follow_cursor(from);
     damage_row();
+}
+
+// A LAUNCH OVER A REFUSED DEVICE RESTS WHERE IT WAS TO PLAY FROM (architect
+// 2026-11-26). The Play face is lit while the device came up once
+// (device_absent false), but the press's reopen can still be refused — or
+// the reopened stream's start, or a drop seen at the publish's own re-check
+// (GuiPlayback::launch_window) — and play() then returns with NOTHING
+// SOUNDING. Marked LIVE there, the transport met the tick's no-device arm,
+// whose pause() runs the stop body's score fork, which reads the ENGINE'S
+// OLD CURSOR into the resting position: a paused move (the scrub, a skip, a
+// page step) was lost. So the transport stays PAUSED, as bind_soundtrack
+// left it (both callers, play() and play_from(), bind first), and the
+// pause's own seating is taken here at `from`: the position written, its
+// page shown, the frame written through, the row damaged, and the refused
+// device's own card said once (play() itself cards nothing). Never LIVE,
+// the stop body never replaces the position and the tick's no-device arm
+// never runs for this launch; the next Play reopens from here.
+// THE READ, device_unavailable right after play() on this thread: every
+// refusal inside play() leaves the stream null, and the null stream is
+// written on this thread alone (a refused open sets nothing, a refused start
+// and the publish's dead re-check close it), so a refused launch answers
+// true and a good one false. The one other writer is the error callback's
+// latch, on the device's thread: a drop landing between play()'s return and
+// this read answers true for a launch that did start — a real drop, after
+// which nothing sounds (the callback lowers the playing bit itself), so the
+// rest here is the tick's pause with the cursor at `from`, where the engine's
+// held cursor all but stands.
+void GuiScoreViewer::rest_at_refused_launch(int64_t from) {
+    active_view_state(app).score_position = from;
+    follow_cursor(from);
+    write_score_viewer_file(app);
+    damage_row();
+    notifications.notify(AppState::NotificationClass::Normal,
+                         kPlaybackDeviceUnavailableCard);
 }
 
 void GuiScoreViewer::seek_to(int64_t frame) {
