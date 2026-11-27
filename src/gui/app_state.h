@@ -10319,7 +10319,10 @@ PlayerPlayFace render_player_play_face(const AppState& a);
 //                   act's own count); in a render list while the folder lists
 //                   more than one render (architect 2026-11-25) — the delete
 //                   of a folder's one render takes the folder with it
-//                   (render_player_batch_render_count, the act's own count).
+//                   (render_player_batch_render_count, the act's own count);
+//                   and WITH NO ROW LIT wherever the long press acts at all,
+//                   the plain press then only carding (architect 2026-11-27,
+//                   render_player_delete_actionable's declaration).
 struct RenderPlayerHintState {
     PlayerPlayFace play_face            = PlayerPlayFace::Play;
     bool           home_previous        = false;
@@ -10461,7 +10464,8 @@ inline std::string render_player_button_shift_hint(
         // the plain one: a folder list of two or more batch folders
         // (architect 2026-09-29), a render list of two or more renders
         // (architect 2026-11-25; a folder's one render takes the folder with
-        // it).
+        // it), and with no row lit any list the long press acts on (the
+        // plain press carding, architect 2026-11-27).
         case AppState::PlayerButtonAct::Delete:
             if (!s.delete_shift_differs) return std::string();
             return s.delete_names_render ? "Hold to delete the folder"
@@ -10666,7 +10670,9 @@ int render_player_highlight_act_row(const AppState& a);
 //   button's whole message.
 //   LOAD IN PLACE greys on a read-only tab (the lock refuses the load), on
 //   a highlight with no recipe (render_player_highlighted_entry, the act's
-//   own question — every row of the folder list, a folder naming no recipe)
+//   own question — every row of the folder list, a folder naming no recipe,
+//   and NO ROW LIT, its act needing a row and its press no hold: architect
+//   2026-11-27)
 //   and WHILE A RENDER IS RUNNING —
 //   load_in_place_render_blocked, the act's own third refusal (architect
 //   2026-09-01: a lit "Load in place" over a press that cards is a lie the
@@ -10682,8 +10688,12 @@ int render_player_highlight_act_row(const AppState& a);
 //   live: the walk from none takes the first row in either direction
 //   (move_highlight_target, architect 2026-11-27). The
 //   keys stay silent at the walls and the grey is the buttons' whole message.
-//   DELETE greys where the band stands on nothing its list deletes
-//   (render_player_delete_actionable, the act's own question, in both lists).
+//   DELETE greys only where its list holds nothing it deletes: live where
+//   the band stands on a row of its list's kind
+//   (render_player_delete_actionable) OR the listing holds any such row for
+//   the long press (render_player_delete_all_actionable) — WITH NO ROW LIT
+//   live for its hold, its tap carding (architect 2026-11-27; the rule at
+//   the declarations).
 //   REPEAT ONE never greys (the lamp always toggles).
 // TWO READER CLASSES: the plan builder (paint_modal_dialog, publishing the
 // bit per frame beside the rects) and main.cpp's per-tick comparator, which
@@ -10723,24 +10733,34 @@ bool render_player_button_enabled(const AppState& a,
 // button's act run now — the truthful-buttons rule on the list's controls
 // row, one arm per act: the HIGHLIGHT PAIR where its walk would move the
 // highlight (folder_overlay::move_highlight_actionable, the player's own
-// answer); RENDER (architect 2026-11-25) with a highlight, a loaded source
-// and the Grid Iterations lamp dark — the terms of the roster's own one-file
-// archival render into a batch cell (the miscellaneous render's arm,
-// handle_render_dispatch_keys: no source is silent, and "archival is a
-// plain-mode act"), where Render All, its hold, refuses too; WITH NO ROW
-// LIT (folder_overlay.h's head, architect 2026-11-27) the face greys and
-// Render All with it, though the list holds presets. A RUNNING RENDER IS NO TERM (the
+// answer); RENDER (architect 2026-11-25) with a preset in the list, a
+// loaded source and the Grid Iterations lamp dark — the terms of the
+// roster's own one-file archival render into a batch cell (the
+// miscellaneous render's arm, handle_render_dispatch_keys: no source is
+// silent, and "archival is a plain-mode act"), where Render All, its hold,
+// refuses too. THE PLAIN PRESS RENDERS THE LIT PRESET AND THE HOLD EVERY
+// PRESET, so the face is their OR under the twin rule, the hold's list: A
+// KEY THAT ACTS ON A ROW BUT WHOSE LONG PRESS ACTS GLOBALLY STAYS ENABLED
+// WITH NOTHING SELECTED (architect 2026-11-27: "keys that act on a row but
+// have a long press that acts globally should remain enabled with nothing
+// selected"), and ITS TAP WITH NO ROW LIT (folder_overlay.h's head) RAISES
+// ONE CARD, "No preset is selected" (the same day: "Yes to the card for
+// delete and render with nothing selected"), the list standing — a live
+// face whose tap did nothing would read as a broken button
+// (trim_presets_render). A RUNNING RENDER IS NO TERM (the
 // dispatch kills it and parks the new command, newest wins), nor is the
 // tab's lock (a render writes no authoring), and a name that is no file
-// name is a refusal that cards, not a grey (trim_presets_render); SAVE with
-// no highlight (an empty list, or no row lit — folder_overlay.h's head —
-// where it creates, Save
-// As's act) and with a highlight whose pair is not the active tab's trim,
-// GREYING only where the highlighted pair already is the tab's trim (the
+// name is a refusal that cards, not a grey (trim_presets_render); SAVE live
+// on an empty list (where it creates, Save As's act — "both create",
+// 2026-10-28) and with a highlight whose pair is not the active tab's trim,
+// GREYING where the highlighted pair already is the tab's trim (the
 // no-op the open's seat stands on when a preset names the window on screen;
-// his glass, 2026-10-28 night); SAVE
+// his glass, 2026-10-28 night) and WITH NO ROW LIT on a list that holds
+// presets, Save As standing beside it (architect 2026-11-27: a row key with
+// no hold); SAVE
 // AS always, while the list stands; RENAME and DELETE with a highlight
-// (architect 2026-11-25), greyed on an empty list; CLOSE always.
+// (architect 2026-11-25), greyed with no row lit (an empty list among
+// them; row keys with no hold, architect 2026-11-27); CLOSE always.
 // Defined beside the list's acts (input_key_dispatch.cpp); Render's, Save's,
 // Rename's and Delete's bodies ask it too, for their roads that are not the
 // painted face (the Delete key's card).
@@ -10803,16 +10823,28 @@ int render_player_root_folder_count(const AppState& a);
 // one — with one, the long press reaches what the plain press does). Defined
 // in render_player.cpp beside the listing it counts.
 int render_player_batch_render_count(const AppState& a);
-// WOULD DELETE ACT — its face's one arm, in each list the band on a row of
-// the kind its plain press deletes: at the root a batch folder, inside a
-// batch folder a render. With a row lit its long press (every batch folder
-// at the root, the folder's own delete inside one) has something to take
-// wherever the plain press does; WITH NO ROW LIT (folder_overlay.h's head,
-// architect 2026-11-27) the face greys and the long press with it, though
-// the listing holds what that press would take. The act asks
-// the same question at its head and cards where the face would grey
-// (render_player_delete, input_key_dispatch.cpp).
+// WOULD DELETE'S PLAIN PRESS ACT — in each list the band on a row of the
+// kind it deletes: at the root a batch folder, inside a batch folder a
+// render. False with NO ROW LIT (folder_overlay.h's head).
+// WOULD ITS LONG PRESS ACT (render_player_delete_all_actionable) — the
+// listing holds a row of that kind at all: every batch folder at the root,
+// the listed folder itself inside one, needing no lit row.
+// THE FACE IS THEIR OR (render_player_button_enabled's Delete arm, the twin
+// rule), the plain press's question implying the long press's: A KEY THAT
+// ACTS ON A ROW BUT WHOSE LONG PRESS ACTS GLOBALLY STAYS ENABLED WITH NOTHING
+// SELECTED (architect 2026-11-27: "keys that act on a row but have a long
+// press that acts globally should remain enabled with nothing selected"),
+// and ITS TAP WITH NO ROW LIT RAISES ONE CARD naming what is missing — "No
+// render is selected" in a folder's render list, "No folder is selected" in
+// the folder list (the same day: "Yes to the card for delete and render
+// with nothing selected"), the list standing, nothing asked or paused: a
+// live face whose tap did nothing would read as a broken button. The act
+// asks both at its head (render_player_delete, input_key_dispatch.cpp),
+// carding "There is no render to delete" / "There is no folder to delete"
+// where neither would act (a face painted live over a listing gone empty).
+// Both defined in render_player.cpp beside the listing they read.
 bool render_player_delete_actionable(const AppState& a);
+bool render_player_delete_all_actionable(const AppState& a);
 
 // THE TWO SHIFTED TWINS' OWN WALLS (architect 2026-09-01: the act, the face
 // and the hint read one owner): would the jump to the TRANSPORT ITEM'S folder's

@@ -7080,13 +7080,18 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         // standing only where the folder lists more than one render (its one
         // render's delete takes the folder with it); in the folder list the
         // highlighted folder, held every folder, the line standing only where
-        // "all" is more than the highlighted one (architect 2026-09-29).
+        // "all" is more than the highlighted one (architect 2026-09-29) — and
+        // WITH NO ROW LIT wherever the hold acts at all, the plain press then
+        // only carding (render_player_delete_actionable's declaration,
+        // architect 2026-11-27).
         const bool in_folder =
             app.render_player.folder == AppState::RenderPlayer::Folder::Batch;
         hint.delete_names_render  = in_folder;
         hint.delete_shift_differs =
-            in_folder ? render_player_batch_render_count(app) > 1
-                      : render_player_root_folder_count(app) > 1;
+            !render_player_delete_actionable(app)
+                ? render_player_delete_all_actionable(app)
+                : in_folder ? render_player_batch_render_count(app) > 1
+                            : render_player_root_folder_count(app) > 1;
         glyph_button(AppState::PlayerButtonAct::LoadInPlace);
         glyph_button(AppState::PlayerButtonAct::Delete);
         // THE TRANSPORT, FLUSH RIGHT (architect 2026-11-10), the row's last

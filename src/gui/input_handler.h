@@ -3169,14 +3169,15 @@ private:
     //       (AppState::FolderOverlay::trim_pending); Save gives the preset
     //       the active tab's trim, its name kept, THE HIGHLIGHT FOLLOWING THE
     //       PRESET to its row in the list's order (found by name), and
-    //       Delete's answer seats the row that takes its place. WITH NO
-    //       PRESET TO SAVE INTO — an empty list, no highlight — SAVE IS SAVE
-    //       AS (2026-10-28: "with no presets
-    //       yet, both create a new preset"): the name editor, no question.
+    //       Delete's answer seats the row that takes its place. ON AN EMPTY
+    //       LIST SAVE IS SAVE AS (2026-10-28: "with no presets
+    //       yet, both create a new preset"): the name editor, no question;
+    //       with no row lit on a list that holds presets SAVE greys
+    //       (architect 2026-11-27).
     //       A greyed face's act is silent; a face painted live whose act has
-    //       gone dead inside that frame — no highlight, an empty list — cards
-    //       "There is no preset to delete", the render player's own refusal
-    //       one surface over.
+    //       gone dead inside that frame — an empty list, or no row lit —
+    //       cards "There is no preset to delete" / "No preset is selected",
+    //       the render player's own refusals one surface over.
     //     trim_presets_render: RENDER (architect 2026-11-25: "Add 'render'
     //       button to presets page with long press as render all. New render
     //       folder category ... A new render all always creates a new
@@ -3196,7 +3197,10 @@ private:
     //       from 1, into a NEW presets folder through the batch runner
     //       (start_render_batch: the progress page, its Cancel, the player at
     //       the end). The face's terms (trim_presets_button_enabled) are
-    //       asked again; a preset whose name is no file name
+    //       asked again; the plain press WITH NO ROW LIT, the key live for
+    //       Render All, cards "No preset is selected" and does nothing else
+    //       (architect 2026-11-27; the rule at the face's declaration); a
+    //       preset whose name is no file name
     //       (trim_preset_file_name_refusal) is refused on a card that says
     //       to rename it, the list standing, and Render All skips it with
     //       the same card (or one counting several), running the rest — with
@@ -4636,7 +4640,10 @@ private:
     // delete — a face painted live whose act went dead inside the frame — it
     // cards "There is no folder to delete" / "There is no render to delete"
     // (the face greys on the same question,
-    // render_player_delete_actionable). The prompt's two answers are
+    // render_player_delete_all_actionable); its plain press WITH NO ROW LIT,
+    // the key live for its long press, cards "No folder is selected" / "No
+    // render is selected" and does nothing else (architect 2026-11-27; the
+    // rule at render_player_delete_actionable's declaration). The prompt's two answers are
     // confirm_render_player_delete / cancel_render_player_delete (public,
     // beside the load's).
     void render_player_delete(bool all);

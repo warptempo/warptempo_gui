@@ -145,8 +145,13 @@
 //     "Render player is unavailable while rendering", "A folder carries no
 //     recipe to load in place", "Cannot load in place while a render is
 //     running", the decode's rate / channel, empty and no-device sentences
-//     and the frozen reader's own words, "There is no folder to delete", and
-//     every `Load in place refused: …`); the `h` view's `'` and revert
+//     and the frozen reader's own words, "There is no folder to delete",
+//     the row keys' taps with no row lit, "No render is selected" / "No
+//     folder is selected" (Delete, and Load in place's stale face), and
+//     every `Load in place refused: …`); the trim presets list's Render tap
+//     with no row lit, "No preset is selected" (architect 2026-11-27,
+//     trim_presets_button_enabled; Delete's stale face too, beside its
+//     "There is no preset to delete"); the `h` view's `'` and revert
 //     refusals (`Load in place refused: …`, `Revert refused: …`, the
 //     duplicate-label grammar's `Revert refused: label '<l>' is already
 //     defined at another marker`); the Open project picker's three refusals

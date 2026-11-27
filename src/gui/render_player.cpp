@@ -298,6 +298,15 @@ bool render_player_delete_actionable(const AppState& a) {
     return false;
 }
 
+// WOULD DELETE'S LONG PRESS ACT (the contract at the declaration): the
+// listing holds a row of the kind its list deletes — any batch folder at the
+// root, any render inside a batch folder — whatever row is lit.
+bool render_player_delete_all_actionable(const AppState& a) {
+    return a.render_player.folder == Folder::Root
+               ? render_player_root_folder_count(a) > 0
+               : render_player_batch_render_count(a) > 0;
+}
+
 // A FOLDER DELETE, ANSWERED (the contract is at the declaration).
 void GuiRenderPlayer::delete_batch_folders(
         const std::vector<std::filesystem::path>& folders) {
@@ -725,15 +734,18 @@ bool render_player_button_enabled(const AppState& a,
                    !load_in_place_render_blocked(a) &&
                    render_player_highlighted_entry(a) != nullptr;
         // DELETE (architect 2026-09-29; in both lists 2026-11-25): the act's
-        // own question (render_player_delete_actionable — the band on a
-        // batch folder at the root, on a render inside a batch folder; with
-        // no row lit the face greys, its long press with it: the twin's
-        // reading is at the declaration). A RUNNING RENDER IS NO TERM: no run can
+        // questions under the twin rule — the plain press's
+        // (render_player_delete_actionable, a lit row of its list's kind) OR
+        // the long press's (render_player_delete_all_actionable, any row of
+        // that kind) — so WITH NO ROW LIT the key stays live for its hold and
+        // its tap cards (architect 2026-11-27; the rule at the declarations).
+        // A RUNNING RENDER IS NO TERM: no run can
         // stand while the player does (open() refuses over one, and nothing
         // under the player starts one). THE LOCKS ARE NO TERM: a delete
         // writes no authoring.
         case AppState::PlayerButtonAct::Delete:
-            return render_player_delete_actionable(a);
+            return render_player_delete_actionable(a) ||
+                   render_player_delete_all_actionable(a);
         case AppState::PlayerButtonAct::RepeatOne:
             return true;
         case AppState::PlayerButtonAct::None:

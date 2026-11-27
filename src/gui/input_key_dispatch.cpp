@@ -6422,6 +6422,18 @@ void GuiInputHandler::trim_presets_render(bool all) {
     if (!trim_presets_button_enabled(app,
                                      AppState::TrimPresetsButtonAct::Render))
         return;
+    // THE TAP WITH NO ROW LIT CARDS (architect 2026-11-27; the rule and the
+    // reason at trim_presets_button_enabled's declaration): the key is live
+    // for Render All alone, so its plain press names what it lacks, in
+    // kNoRenderRunningCard's words' shape, and does nothing else, the list
+    // standing.
+    const int lit = ov.highlight_row;
+    if (!all &&
+        (lit < 0 || lit >= static_cast<int>(ov.trim_presets.size()))) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "No preset is selected");
+        return;
+    }
     // THE SUBJECTS: the highlighted preset, or every preset in the list's
     // order (the music's, trim_preset_before). A NAME THAT IS NO FILE NAME
     // (trim_preset_file_name_refusal; a preset saved before the name editor
@@ -6676,9 +6688,9 @@ void GuiInputHandler::commit_trim_preset_name() {
 }
 
 // SAVE: its question over the list on the highlighted preset (the
-// declaration's contract), or, WITH NO PRESET TO SAVE INTO — an empty list
-// or no row lit (folder_overlay.h's head) — SAVE AS's name editor, no
-// question, there being nothing to
+// declaration's contract), or, WITH NO PRESET TO SAVE INTO — an empty list;
+// with no row lit on a list that holds presets the face greys — SAVE AS's
+// name editor, no question, there being nothing to
 // overwrite (architect 2026-10-28: "with no presets yet, both create a new
 // preset"). The greyed face's road is silent
 // — the button's press never arms — so this guard is the face's own
@@ -6709,9 +6721,11 @@ void GuiInputHandler::trim_presets_save() {
     viewport.invalidate_all();
 }
 
-// DELETE: the button. With no highlight — an empty list, the button grey —
-// a face painted live whose act went dead inside that frame cards, the
-// render player's "There is no folder to delete" one surface over.
+// DELETE: the button. With no highlight — the button grey: an empty list,
+// or no row lit (architect 2026-11-27, a row key with no hold) — a face
+// painted live whose act went dead inside that frame cards, the render
+// player's own words one surface over: "There is no preset to delete" on an
+// empty list, "No preset is selected" with presets listed and none lit.
 void GuiInputHandler::trim_presets_delete() {
     if (!app.picker.active || app.prompt.active) return;
     AppState::FolderOverlay& ov = app.folder_overlay;
@@ -6719,7 +6733,9 @@ void GuiInputHandler::trim_presets_delete() {
     if (!trim_presets_button_enabled(
             app, AppState::TrimPresetsButtonAct::Delete)) {
         notifications.notify(AppState::NotificationClass::Normal,
-                             "There is no preset to delete");
+                             ov.trim_presets.empty()
+                                 ? "There is no preset to delete"
+                                 : "No preset is selected");
         return;
     }
     ov.trim_pending = ov.highlight_row;
@@ -6814,10 +6830,16 @@ bool trim_presets_button_enabled(const AppState& a,
         case Act::Close:
             return true;
         case Act::Render:
-            return seated && !a.iteration_mode_enabled &&
+            // THE PLAIN PRESS'S ROW OR THE HOLD'S LIST: Render All needs no
+            // lit row, so with none the key stays live for its hold and its
+            // tap cards (the rule at the declaration, architect 2026-11-27).
+            return !ov.trim_presets.empty() && !a.iteration_mode_enabled &&
                    !a.source_audio_path.empty();
         case Act::Save: {
-            if (!seated) return true;
+            // NO ROW LIT: live only on an empty list, where it creates (Save
+            // As's act, "both create", 2026-10-28); greyed beside Save As on
+            // a list that holds presets (architect 2026-11-27).
+            if (!seated) return ov.trim_presets.empty();
             const GuiTrimPreset& p = ov.trim_presets[static_cast<std::size_t>(h)];
             return p.begin != a.trim.begin_frame || p.end != a.trim.end_frame;
         }
@@ -8211,20 +8233,24 @@ void GuiInputHandler::render_player_load_in_place() {
     }
     const AppState::RenderEntry* entry = render_player.highlighted_entry();
     if (entry == nullptr) {
-        // Said on a card because the button and `'` are live on every row
-        // the band can hold, so a silent nothing would read as a broken
-        // button. The act's own subject test, input routing: it judges no
-        // data, and the load's data guards are its mutator's. THE SENTENCE
-        // NAMES THE EXCLUDED SET (2026-08-30) AND NAMES ONLY WHAT IS REACHABLE
-        // (2026-09-01, the gates-stop-lying rule — a refusal's wording, like a
-        // gate's membership, must describe the state the user can actually be
-        // in): the player lists tmp/ alone, so no deliverable under render/
-        // is a row, and there is no `..` row (Up is a button), so a FOLDER
-        // ROW is the whole of what can reach this arm. ONE CLAUSE (2026-09-01,
-        // the sentence-shape rule).
+        // THE BUTTON GREYS HERE (render_player_button_enabled's Load in place
+        // arm: a folder row, or NO ROW LIT — architect 2026-11-27, its act
+        // needing a row and its press no hold), so this card answers a face
+        // painted live whose act went dead inside the frame. The act's own
+        // subject test, input routing: it judges no data, and the load's
+        // data guards are its mutator's. THE SENTENCE NAMES WHAT IS MISSING
+        // AND ONLY WHAT IS REACHABLE (2026-09-01, the gates-stop-lying rule —
+        // a refusal's wording, like a gate's membership, must describe the
+        // state the user can actually be in): with no row lit, no render is
+        // selected — Delete's tap's own words (render_player_delete); on a
+        // row, the player lists tmp/ alone and carries no `..` row, so a
+        // FOLDER ROW is the rest of what can reach this arm. ONE CLAUSE
+        // (2026-09-01, the sentence-shape rule).
         notifications.notify(
             AppState::NotificationClass::Normal,
-            "A folder carries no recipe to load in place");
+            app.folder_overlay.highlight_row < 0
+                ? "No render is selected"
+                : "A folder carries no recipe to load in place");
         return;
     }
     // A modal surface is opening over a possibly live transport: PAUSE it
@@ -8258,13 +8284,24 @@ void GuiInputHandler::render_player_delete(bool all) {
     const bool in_folder =
         app.render_player.folder == AppState::RenderPlayer::Folder::Batch;
     // NOTHING TO DELETE CARDS (the face greys on the same question,
-    // render_player_delete_actionable): a face painted live whose act went
-    // dead inside the frame — at the root an empty `tmp/`, the band on no
-    // row.
-    if (!render_player_delete_actionable(app)) {
+    // render_player_delete_all_actionable — the plain press's own implying
+    // it): a face painted live whose act went dead inside the frame, the
+    // listing holding nothing its list deletes.
+    if (!render_player_delete_all_actionable(app)) {
         notifications.notify(AppState::NotificationClass::Normal,
                              in_folder ? "There is no render to delete"
                                        : "There is no folder to delete");
+        return;
+    }
+    // THE TAP WITH NO ROW LIT CARDS (architect 2026-11-27; the rule and the
+    // reason at render_player_delete_actionable's declaration): the key is
+    // live for its long press alone, so its plain press names what it lacks,
+    // in kNoRenderRunningCard's words' shape, and does nothing else — no
+    // question, no pause, the list standing.
+    if (!all && !render_player_delete_actionable(app)) {
+        notifications.notify(AppState::NotificationClass::Normal,
+                             in_folder ? "No render is selected"
+                                       : "No folder is selected");
         return;
     }
     const AppState::FolderOverlay& ov = app.folder_overlay;
