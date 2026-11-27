@@ -325,10 +325,11 @@ An APK that adds a key to the device config (The config, above) needs `scripts/w
 
 ### Bluetooth headphones
 
-For the AirPods Pro: SBC, encoded in software (architect 2026-11-25). Two settings on the tablet, under Settings > Developer options:
+For the AirPods Pro: SBC, encoded in software (architect 2026-11-25). Three settings on the tablet, under Settings > Developer options:
 
 1. **Disable Bluetooth A2DP hardware offload: ON.** Set it once: it takes effect at once and survives reboots (`persist.bluetooth.a2dp_offload.disabled=1`).
 2. **Bluetooth Audio Codec: SBC, after every connect.** The tablet does not remember the choice: every reconnect comes back on AAC. Bluetooth Audio Sample Rate stays at 44.1 kHz, the only rate the AirPods accept.
+3. **Disable absolute volume: ON.** The tablet's volume and the Bluetooth device's own volume are then two separate controls, not one shared. Kept on by preference, not by measurement (architect 2026-11-27: "I'm not sure if it's helping ... I do feel like it seems better. In either case, it's certainly not hurting.").
 
 That codec row is the check before playing. The app cannot make it for you: an app cannot read the active codec (only system apps can), cannot see Samsung's bitrate cuts (they are in the system log alone), and cannot hear a silent right bud (the AirPods relay between the buds themselves).
 
