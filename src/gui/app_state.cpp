@@ -62,7 +62,7 @@ void remap_marker_indices_after_reorder(AppState& app,
 
 // The hit tests, `app` and `audio` explicit arguments. There is no grab
 // tolerance: the trim grabs are the trim bar's span's end zones, each from
-// 2 W outside its bound to 12 W inside it, a narrow trim's two split at the
+// 2 U outside its bound to 12 U inside it, a narrow trim's two split at the
 // midpoint (architect 2026-11-20: an authored zone, not a tolerance round a
 // target; render.h's THE TRIM BAR'S CAPS AND GRABS), and the marker
 // surfaces (the cues' triangles and labels) hit on their painted rects,
@@ -226,8 +226,8 @@ TrimHit hit_test_trim_endcap(const AppState& app, double mouse_x,
     // tested as it is, with no tolerance,
     // THE POINTER'S REAL PLACE AGAINST THE ZONE'S REAL EDGES, half-open
     // (architect 2026-11-15, the no-grid arc).
-    // The two rects never overlap — each zone reaches 2 W past its bound and
-    // 12 W into the span, and where the two inside reaches would cross they
+    // The two rects never overlap — each zone reaches 2 U past its bound and
+    // 12 U into the span, and where the two inside reaches would cross they
     // split at the midpoint between the bounds (trim_endcap_rect; render.h's
     // THE TRIM BAR'S CAPS AND GRABS, architect 2026-11-20) — so the
     // order of the two tests decides nothing. The bar's hover asks this same

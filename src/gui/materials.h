@@ -31,7 +31,7 @@
 // controls row (the pages wear the lists' view tone, `ruler_face`). The
 // well's lines — under the top icon row, the
 // trough, the ruler and the marker lane, the stereo divider, the well's
-// foot and the status bar's line — are `well_border`, each one W
+// foot and the status bar's line — are `well_border`, each one U
 // (render.h's hairline_px). FLAT, NO GRADIENT, NO
 // SHADOW: every pixel of either ground is a solid fill through the
 // palette's chokepoint (set_palette_source, render.h), which converts it for
@@ -42,17 +42,17 @@
 // THE KEY IS ARC'S BUTTON (architect 2026-11-18 / 2026-11-19; Arc's gtk3
 // CSS `button`, `.linked`; paint_linked_group,
 // paint_word_button and paint_entry below): every key of the top icon
-// row, the bottom icon row and the controls rows — A BOX 36 x 28 W
-// (render.h's kKeyWidthW x kKeyHeightW, its case block; 72 x 56 device px
+// row, the bottom icon row and the controls rows — A BOX 36 x 28 U
+// (render.h's kKeyWidthU x kKeyHeightU, its case block; 72 x 56 device px
 // on the tablet at 200 %), BORDER INCLUDED ("the border is
-// clickable"), in A ONE-W `well_border` RING (arc_dark 2B2E39) WITH 3 W
-// OUTER CORNERS (kKeyCornerW, the faces' 2 W
+// clickable"), in A ONE-U `well_border` RING (arc_dark 2B2E39) WITH 3 U
+// OUTER CORNERS (kKeyCornerU, the faces' 2 U
 // inside it), its face `key_face` (arc_dark 444A58), every edge at exact
 // coverage. THE KEYS OF ONE GROUP ARE
 // ARC'S LINKED BUTTONS: neighbors SHARE ONE SEAM COLUMN, one ring round the
 // group, its four outer corners rounded, the seam wearing the face at rest —
 // no divider line (key_link_pitch_px / linked_group_w_px below). THE
-// DRAWING the set's 16 W canvas centered on the box (paint_key_glyph,
+// DRAWING the set's 16 U canvas centered on the box (paint_key_glyph,
 // paint_handler.cpp). NO DEPTH, NO SHADOW.
 // THE STATES ARE ARC'S (key_state below; architect 2026-11-19: "Arc's own
 // answer" on every key; "we can let go of the green"; "lit but
@@ -193,23 +193,23 @@
 // architect 2026-11-24), the sub-page's its focus line (Arc's entry:focus)
 // and no hover; THE
 // MARKER LANE'S EDITORS are GTK's in-place cell editor, the entry's fill in
-// a one-W accent border (render.h's EDITING paragraph); THE TIME FIELDS are
+// a one-U accent border (render.h's EDITING paragraph); THE TIME FIELDS are
 // plain text pressing nothing (architect 2026-11-19 / 2026-11-20;
 // paint_handler.cpp's THE TIME FIELDS). THE ON-SCREEN KEYBOARD'S KEYS are
 // one grid of Arc's button tones
 // with shared lines (paint_handler.cpp's
 // paint_onscreen_keyboard); THE SCRUB IS ARC'S SCALE — its trough
 // `scale_trough`, its played part the accent, its knob `key_face` in a
-// one-W `scale_slider_border` rim, held the whole disc the accent
+// one-U `scale_slider_border` rim, held the whole disc the accent
 // (render.h's scrub block, paint_scale; architect 2026-11-18 / 19: "I'm
 // hoping we're gonna have a proper arc thumb"). EVERY KEY SURFACE IS
 // ARC'S (architect 2026-11-18 / 19).
 //
 // THE EDGE RULE IS THE KEYS': both icon rows' and the controls rows'
-// outermost BOXES stand kEdgeInsetW (6 W) inside the panel's first and last
+// outermost BOXES stand kEdgeInsetU (6 U) inside the panel's first and last
 // columns (render.h's THE EDGE RULE at well_columns; architect 2026-11-19;
 // the seats' walks, paint_handler.cpp), two groups a run gap apart
-// (render.h's program_run_gap_px, 6 W). THE GROUND IS NOT
+// (render.h's program_run_gap_px, 6 U). THE GROUND IS NOT
 // PRESSABLE (architect 2026-11-02: "ground is not a button"): THE
 // PAINTED BOX IS THE HIT BOX (point_on_key below), a seam belonging to the
 // key on its left, so a press, a lift and the tooltip answer on the box
@@ -228,7 +228,7 @@
 // 2026-11-19) the title bar wears `title_text`, the marker labels
 // `sidebar_text` and the ruler's digits `ruler_text`; THE BOTTOM ICON ROW'S
 // TIMESTAMP wears `timestamp_text`, Arc's `.h4` A5ABB5, in its own Bold
-// 18 W (architect 2026-11-25 / 2026-11-26; paint_handler.cpp's THE TIME
+// 18 U (architect 2026-11-25 / 2026-11-26; paint_handler.cpp's THE TIME
 // FIELDS). ON A LIT KEY'S FACE
 // the print — its glyph, the on-screen keyboard's lit cap — is
 // `text_on_lit`, Arc's white (architect 2026-11-17), in place
@@ -247,10 +247,10 @@
 // architect 2026-11-17; EDGE TO EDGE 2026-11-19): FLAT REGIONS ACROSS THE
 // PANEL'S WHOLE WIDTH, no ring, no
 // frame (render.h's well_columns, THE EDGE RULE). THE LINES, `well_border`
-// (Arc's $borders_color, Thunar's pane border): one W under the top icon
+// (Arc's $borders_color, Thunar's pane border): one U under the top icon
 // row, between the lanes, under the canvas,
 // and the stereo divider in the same tone (render.h's THE WELL'S EDGES).
-// Top to bottom — THE TRIM BAR, ARC'S SCROLLBAR: the 12-W
+// Top to bottom — THE TRIM BAR, ARC'S SCROLLBAR: the 12-U
 // trough `trim_bar_face`, and on it THE PILL, the span,
 // `trim_span_face`, at rest — its hovered, held and
 // swept looks and the caps THE TRIM BAR'S TWO TONES below and render.h's
@@ -262,7 +262,7 @@
 // palette's `waveform_canvas`), its stereo divider the lines' tone. Every
 // number at its line of kArcDarkTones (gui_theme.h).
 // ARC'S ENTRY (NOISE's case, the value sub-page's field; paint_entry below):
-// the ruler's — the canvas's — tone in a one-W `well_border` ring (NOISE's
+// the ruler's — the canvas's — tone in a one-U `well_border` ring (NOISE's
 // fill `key_hover_face` under the hovering pen, THE HOVER above); the
 // marker lane's cell editor the same fill in the accent's square border.
 //
@@ -544,16 +544,16 @@ inline StampTone word_button_ink_tone(const FaceMix& m) {
 }
 
 // THE KEY'S LENGTHS (the head's THE KEY; render.h's case block owns the
-// box): THE BOX kKeyWidthW x kKeyHeightW (icon_case_w_px /
-// icon_case_h_px, 36 x 28 W, 72 x 56 device px on the tablet at 200 %), BORDER INCLUDED ("the border is clickable"); THE BORDER one W
+// box): THE BOX kKeyWidthU x kKeyHeightU (icon_case_w_px /
+// icon_case_h_px, 36 x 28 U, 72 x 56 device px on the tablet at 200 %), BORDER INCLUDED ("the border is clickable"); THE BORDER one U
 // (hairline_px, the line rule: 2 device px on the tablet, floored at one);
-// THE OUTER CORNER kKeyCornerW, 3 W (Arc's button border-radius, gtk3
+// THE OUTER CORNER kKeyCornerU, 3 U (Arc's button border-radius, gtk3
 // CSS), 6 device px, floored at one; the faces' corners inside the border the outer
 // less the border (GTK's padding box), 4 device px. Each through scaled_px,
 // rounded at the element.
-inline constexpr double kKeyCornerW = 3.0;
+inline constexpr double kKeyCornerU = 3.0;
 inline int key_border_px() { return hairline_px(); }
-inline int key_corner_px() { return scaled_px(kKeyCornerW, 1); }
+inline int key_corner_px() { return scaled_px(kKeyCornerU, 1); }
 inline int key_inner_corner_px() {
     return std::max(0, key_corner_px() - key_border_px());
 }
@@ -561,7 +561,7 @@ inline int key_inner_corner_px() {
 // THE LINKED GROUP'S PITCH (Arc's `.linked`, gtk3 CSS): two
 // neighbors SHARE ONE SEAM COLUMN, so a key stands one box less one border
 // right of the one before it — 70 device px on the tablet (72 − 2), 35 at
-// 100 % — and A GROUP OF n IS key + (n − 1)(key − 1 W) WIDE, each part
+// 100 % — and A GROUP OF n IS key + (n − 1)(key − 1 U) WIDE, each part
 // rounded on its own (0 for none): every group walk's (the top icon row's
 // icon_row_seats, the bottom icon row's row8_block_walk, the controls rows'
 // layouts, paint_handler.cpp). The ground between two GROUPS is the run gap
@@ -669,14 +669,14 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 // $base_color, 404552 on arc_dark), THEN THE RING over it (the outer rounded
 // box, corners key_corner_px, less the padding box) in `well_border` — and,
 // with `progress` t in (0, 1], ARC'S ENTRY PROGRESS over the fill: the
-// padding box (its own inner corners) CUT to its last kEntryProgressW (2 W)
+// padding box (its own inner corners) CUT to its last kEntryProgressU (2 U)
 // rows and to its first t of its width, in the accent `cue` — so the line's
 // left end follows the inner corner's arc and its right end stands at its
 // real x. FOCUSED (`focused`, 2026-11-19: the value
 // sub-page's entry, which holds the focus for as long as it stands —
-// Arc's entry:focus) AN INNER ONE-W LINE OF THE
+// Arc's entry:focus) AN INNER ONE-U LINE OF THE
 // ACCENT `cue` on all four sides inside the ring: the padding box in the
-// accent, the fill one W further in over it (its corners one W less). THE
+// accent, the fill one U further in over it (its corners one U less). THE
 // FILL AS PAINTED (architect 2026-11-24, NOISE's hover): `face` the entry's
 // FaceMix (AppState::FaceFades::as_painted, the one owner), the fill
 // mix_looks of entry_fill_tone — `key_hover_face` by its Hover weight over
@@ -686,16 +686,16 @@ void paint_word_button(cairo_t* cr, const GuiRect& box, const FaceMix& face);
 // edge at exact coverage over the ground the caller laid; one stamp pass,
 // nothing drawn inside it; the text is the caller's.
 // ITS OWN LENGTHS, ARC'S (gtk3 CSS `entry`: min-height 28 px, padding 8 px
-// inside a 1 px border; every Arc px one W): kEntryHeightW (28 W) THE HEIGHT OF AN
+// inside a 1 px border; every Arc px one U): kEntryHeightU (28 U) THE HEIGHT OF AN
 // ENTRY THAT STANDS ON NO KEY ROW — the value sub-page's (modal_box.h's
-// modal_page_lines; NOISE's, on the top icon row, is the key's height, 28 W
-// at the default) — and kEntryPenW (9 W) ITS TEXT'S PEN inside its left
-// edge, the border and the pad, the same 9 W kept clear inside its right
+// modal_page_lines; NOISE's, on the top icon row, is the key's height, 28 U
+// at the default) — and kEntryPenU (9 U) ITS TEXT'S PEN inside its left
+// edge, the border and the pad, the same 9 U kept clear inside its right
 // edge (a text is cut at the two inner edges); the baseline by the line-box
-// rule in the entry's height (+18 W of the 28).
-inline constexpr double kEntryProgressW = 2.0;
-inline constexpr double kEntryHeightW   = 28.0;
-inline constexpr double kEntryPenW      = 9.0;
+// rule in the entry's height (+18 U of the 28).
+inline constexpr double kEntryProgressU = 2.0;
+inline constexpr double kEntryHeightU   = 28.0;
+inline constexpr double kEntryPenU      = 9.0;
 void paint_entry(cairo_t* cr, const GuiRect& box,
                  std::optional<double> progress = std::nullopt,
                  bool focused = false,

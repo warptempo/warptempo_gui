@@ -162,7 +162,7 @@ struct GuiPointerPlace {
 
 // THE TOUCH SLOP AT gui_scale 100, in device pixels — the value a freshly
 // built core carries until the GUI pushes its own (set_touch_slop_px). It is
-// the AUTHORED length (9 W, the drag gate's, kDragMovedThresholdPx in
+// the AUTHORED length (9 U, the drag gate's, kDragMovedThresholdPx in
 // app_state.h); this layer never resolves it, because this layer never
 // learns the scale.
 inline constexpr double kDefaultTouchSlopPx = 9.0;
@@ -575,7 +575,7 @@ public:
     // has done, so no third use exists.
     //
     // IT IS A LENGTH, SO IT RIDES gui_scale — AND THE CORE NEVER LEARNS THE
-    // SCALE. The authored length is 9 W (2026-11-05), 18 device px on the
+    // SCALE. The authored length is 9 U (2026-11-05), 18 device px on the
     // tablet at 200 %, about 1.8 mm at its 249 PPI; unscaled, the same
     // number of device px is under a millimetre there, which a fingertip's
     // roll crosses during a relaxed double tap. The GUI resolves it and

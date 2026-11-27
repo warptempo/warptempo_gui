@@ -11,8 +11,8 @@
       nearest centered, as Papirus seats a size that does not divide
       (x 3 to 12.752, 0.124 left of center); the face's quadratic curves
       kept as it draws them, coordinates to three decimals; nothing
-      redrawn. The key's 16 W box (icons.h's THE BOX) draws it at zoom 2
-      on the tablet, 10 W tall, its top, baseline and left edge on whole
+      redrawn. The key's 16 U box (icons.h's THE BOX) draws it at zoom 2
+      on the tablet, 10 U tall, its top, baseline and left edge on whole
       pixels wherever the box stands on whole pixels. The counter winds against the outer contour, as the face
       draws it, so the nonzero fill leaves it hollow. The tab pair's Tab A
       (TabA) wears it as drawn; Tab B (TabB) is the face's B the same way

@@ -299,18 +299,18 @@ double gui_font_line_exact_px(const GuiFont& f) {
     return g_metrics[file_of(f.face)].line_em * gui_font_em_px(f);
 }
 
-// THE LINE BOX IN W (gui_font.h): the file's ascender and descender times
-// the use's exact em in W, each ceiled to a whole W (our rule, GTK's line
+// THE LINE BOX IN U (gui_font.h): the file's ascender and descender times
+// the use's exact em in U, each ceiled to a whole U (our rule, GTK's line
 // box being whole px; FreeType's size request rounds the same way at a
-// whole-px size). The tolerance keeps a product that lands on a whole W
+// whole-px size). The tolerance keeps a product that lands on a whole U
 // from ceiling past it.
-GuiLineBoxW gui_font_line_box_w(const GuiFont& f) {
+GuiLineBoxU gui_font_line_box_u(const GuiFont& f) {
     const FileMetrics& m = g_metrics[file_of(f.face)];
     const auto up = [](double v) {
         return static_cast<int>(std::ceil(v - 1e-9));
     };
-    const double em_w = gui_font_table_px(f.face);
-    return GuiLineBoxW{up(m.ascent_em * em_w), up(m.descent_em * em_w)};
+    const double em_u = gui_font_table_px(f.face);
+    return GuiLineBoxU{up(m.ascent_em * em_u), up(m.descent_em * em_u)};
 }
 
 double gui_font_cap_px(const GuiFont& f) {

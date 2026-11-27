@@ -217,7 +217,7 @@ double ink_left_px(const ShapedRun& run);
 // edge of its ink, measured the same way (the run's own positioned glyphs'
 // outline boxes, unrounded); an empty run answers 0. ITS CONSUMERS: THE
 // TITLE BAR'S RIGHT GROUP (render.h's title bar block): the clock run's last
-// ink 8 W inside the panel's right edge (paint_handler.cpp's
+// ink 8 U inside the panel's right edge (paint_handler.cpp's
 // logo_legend_layout, which reads ink_left_px for the percent's first ink
 // column — the lamps' seat); and THE TIMESTAMP'S DAMAGE CELL
 // (paint_handler.cpp's bottom_left_clock_cell): the widest-digit specimen's

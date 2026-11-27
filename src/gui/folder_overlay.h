@@ -54,7 +54,7 @@
 // DISABLED rows, drawing and name in the dim print (`text_dim`), the `scale`
 // and `bpm` lines (architect 2026-10-29). NO LIST CARRIES A TITLE ROW
 // (architect 2026-11-22). Every list seats its rows alike: the drawing's box
-// 6 W in, the name at 28 W, cut 6 W inside the right edge (the painter's
+// 6 U in, the name at 28 U, cut 6 U inside the right edge (the painter's
 // names' column, paint_list_view) — painted in THE MODAL FAMILY'S BOX
 // (architect 2026-10-14, modal_box.h, the one owner of the shape:
 // "overlays/modals can take over the area from the trim bar on down, with
@@ -130,11 +130,11 @@
 //     scrolls. The content's height
 //     stays the SCROLL CLAMP's input and is nothing else's.
 //   * THE ROW IS THUNAR'S DETAILS ROW, GIVEN AIR (architect 2026-11-19:
-//     "use tunar"; the height ours, architect 2026-11-21): a row 24 W,
-//     edge to edge, no gap (kListRowW below, where Thunar's own and the air
+//     "use tunar"; the height ours, architect 2026-11-21): a row 24 U,
+//     edge to edge, no gap (kListRowU below, where Thunar's own and the air
 //     are told). A
 //     NAME TOO LONG FOR THE LINE RUNS OFF THE EDGE — no wrap, no ellipsis
-//     ("project and file names will be short"), the painter cutting it 6 W
+//     ("project and file names will be short"), the painter cutting it 6 U
 //     inside the view's right edge, the drawing's margin's twin
 //     (paint_handler.cpp's THE ROW'S DRAWING AND NAME; architect 2026-11-22).
 // The panel's own authored number is the row height below; the head
@@ -219,15 +219,15 @@ namespace folder_overlay {
 // -- The geometry ------------------------------------------------------------
 //
 // THE ROW IS THUNAR'S DETAILS ROW AT 9 pt, GIVEN AIR (architect 2026-11-19,
-// "use tunar", at 12 W text;
+// "use tunar", at 12 U text;
 // THE HEIGHT OURS, architect 2026-11-21, below): the panel owns the
 // row height, the row's face and baseline (kListRowFace,
 // row_baseline_px) and the head pad derived from them (head_pad_px); the
 // row's drawing and its pens stand at the painter's own constants
 // (paint_handler.cpp's THE LIST VIEW, kListDrawing*), the right cut too
-// (the box's 6 W margin's twin, architect 2026-11-22).
+// (the box's 6 U margin's twin, architect 2026-11-22).
 
-// THE CARDS' FOOT MARGIN (notifications.cpp, its one reader): ONE W, the
+// THE CARDS' FOOT MARGIN (notifications.cpp, its one reader): ONE U, the
 // line rule's hairline_px (render.h: 2 device px on
 // the tablet at 200 %, 1 at 100 % and below). The rows read none of it:
 // they stand edge to edge across the view under the head pad (below).
@@ -237,18 +237,18 @@ inline int pad_px()               { return hairline_px(); }
 // look too crowded ... Whenever there's like a single entry text box, that
 // looks good ... We don't have to make the list height that tall, but you
 // know, I think a little more than what we have now would be good"): A
-// LIST ROW kListRowW = 24 W (48 device px on the tablet at 200 %) — a
-// little more than Thunar's 20 W, not as tall as the entry's 28 W (the
-// value sub-page's, kEntryHeightW); its 14 W line box with 5 W of air above
+// LIST ROW kListRowU = 24 U (48 device px on the tablet at 200 %) — a
+// little more than Thunar's 20 U, not as tall as the entry's 28 U (the
+// value sub-page's, kEntryHeightU); its 14 U line box with 5 U of air above
 // and below. ONE NAMED NUMBER, so his glass
 // moves it in one line; through scaled_px, rounded at the element,
 // floored at one. (Thunar's own, measured on his shot at 9 pt: the row
-// 20 W, 3 + 14 + 3 — ours 4 W taller, 2 W more air above and below.)
+// 20 U, 3 + 14 + 3 — ours 4 U taller, 2 U more air above and below.)
 // EVERYTHING ELSE OF THE LIST FOLLOWS FROM IT: the baseline (row_baseline_px), the
 // head pad (head_pad_px), the content's height and so the scroll ceiling, every
 // row's rect and so the walks, the centering, the hit test and the damage,
 // and the row's drawing, centered in the list row (paint_handler.cpp's
-// kListDrawingYW). THE ROWS STAND
+// kListDrawingYU). THE ROWS STAND
 // EDGE TO EDGE ACROSS THE VIEW: no inset at its sides, no gap between rows
 // (Thunar's list draws none) — so the lit row's bar runs the view's whole
 // width — and over the first row THE HEAD PAD (head_pad_px below), the one
@@ -256,8 +256,8 @@ inline int pad_px()               { return hairline_px(); }
 // ON IT — the render player's folders and wavs, the project picker, the
 // settings page, its value lists, the trim presets, the BPM form; no list
 // carries a title row (architect 2026-11-22).
-inline constexpr double kListRowW = 24.0;
-inline int list_row_height_px() { return scaled_px(kListRowW, 1); }
+inline constexpr double kListRowU = 24.0;
+inline int list_row_height_px() { return scaled_px(kListRowU, 1); }
 // IS A ROW OF THIS KIND INERT (the walk's row_is_inert below asks it of an
 // index): a Disabled row.
 inline bool row_kind_is_inert(AppState::FolderOverlayRow::Kind kind) {
@@ -265,27 +265,27 @@ inline bool row_kind_is_inert(AppState::FolderOverlayRow::Kind kind) {
 }
 
 // A ROW'S TEXT SEAT, ONE DEFINITION FOR THE PAINTER AND THE HEAD PAD: its
-// FACE, the Regular 12 W (GuiFace::Body, gui_font.h), every kind alike —
+// FACE, the Regular 12 U (GuiFace::Body, gui_font.h), every kind alike —
 // and its BASELINE'S DEPTH UNDER THE ROW'S TOP by the line-box rule in the
-// row's height (render.h's line_box_baseline: the 14 W line box 5 W down in
-// the 24 W row, +16 W; one whole-W offset, 32 device px on the tablet at
+// row's height (render.h's line_box_baseline: the 14 U line box 5 U down in
+// the 24 U row, +16 U; one whole-U offset, 32 device px on the tablet at
 // 200 %). The painter seats the row's text at its real top plus this depth
 // (paint_handler.cpp's paint_list_view); the head pad below reads the same
 // depth, so the pad cannot seat a baseline the painter does not draw.
 inline constexpr GuiFace kListRowFace = GuiFace::Body;
 inline double row_baseline_px() {
     return line_box_baseline(gui_font(kListRowFace), 0.0,
-                             static_cast<int>(kListRowW));
+                             static_cast<int>(kListRowU));
 }
 
 // THE HEAD PAD (architect 2026-11-20; THE PAGE MARGIN's top,
 // modal_box.h, the rule's owner: "the ink stands 13 W from the view's top
 // and from its left" — "1 agree" / "2 agree"): A PAD OF CONTENT OVER THE
-// FIRST ROW that puts THE FIRST LINE'S CAP TOP kPageMarginCapTopW (13 W)
+// FIRST ROW that puts THE FIRST LINE'S CAP TOP kPageMarginCapTopU (13 U)
 // UNDER THE VIEW'S TOP at scroll 0. THE RULE IS THE CAP TOP AND THE
 // PAD IS DERIVED, never an authored number (modal_box.h's
 // page_margin_head_pad_px, the arithmetic's one definition, the two pages'
-// first line reading it too): the margin's 13 W less the cap
+// first line reading it too): the margin's 13 U less the cap
 // top's depth inside the first row — the row's baseline (row_baseline_px)
 // less its face's cap band (gui_font_cap_px, the file's own unhinted "H",
 // the metric every placement reads); every row being one height and one
@@ -300,7 +300,7 @@ inline double row_baseline_px() {
 // (gui_font_bundled.cpp's head), so the painted capitals' first row stands
 // at the margin exactly. ON THE TABLET (200 %; the cap band 16.51 px of the
 // 24-px em, 17 rows as hinted; the view's top row 142, the margin row 168;
-// the row 24 W), every list alike — the picker, the player,
+// the row 24 U), every list alike — the picker, the player,
 // the settings page, a value list, the trim presets, the BPM form: the caps
 // 32 − 16.51 = 15.49 px deep, the pad 26 − 15.49 = 10.51 -> 11 px; the
 // first row 153..200, its baseline 185, the painted caps' first row 168

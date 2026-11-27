@@ -3522,7 +3522,7 @@ private:
     //   cursor would be if I tapped or if I zoomed"): its own walk and its
     //   own one-value state (walk_hover_line, run inside walk_hover_face and
     //   again ahead of every frame; AppState::HoverLine), the look, the place
-    //   rule and the damage at render.h's render_hover_line. A one-W line in
+    //   rule and the damage at render.h's render_hover_line. A one-U line in
     //   `hover_line` down the canvas alone, WITH ITS TRIANGLE IN THE RULER
     //   (the playhead head's drawing in the line's tone; architect
     //   2026-11-21: "for symmetry"), at the exact place the
@@ -3655,8 +3655,8 @@ private:
     // hold (the lift's restore motion wrote the stroke's last bit) the
     // latch refuses first; a finger's motions carry the held button.
     bool pointer_barrel_held_ = false;
-    // THE RE-ARM DISTANCE, 18 W (architect 2026-10-08, on measured data; in
-    // W, architect 2026-11-05): 36 device px on the tablet at
+    // THE RE-ARM DISTANCE, 18 U (architect 2026-10-08, on measured data; in
+    // U, architect 2026-11-05): 36 device px on the tablet at
     // 200 %, 18 at 100 %, converted through scaled_px at the compare and
     // MEASURED FROM THE ANCHOR, the
     // pen's first hover report after the lift (the rule at pen_hot_latch_).
@@ -3671,16 +3671,16 @@ private:
     // along the pen's axis as the tip rises — NOT THE HAND. 36 device px sits above
     // that drift (peak ~30, settled ~15) and well below a deliberate move to
     // the neighboring button, a key pitch (a linked group's, the face less
-    // its shared seam, 35 W, 70 device px on the tablet, the key 36 W wide
+    // its shared seam, 35 U, 70 device px on the tablet, the key 36 U wide
     // — materials.h's key_link_pitch_px): HALF A
-    // KEY'S 36 W BOX, so after a tap the tapped key shows no hover until
+    // KEY'S 36 U BOX, so after a tap the tapped key shows no hover until
     // the pen has moved half a key across — by then it is on the neighbor
     // or off the key, or still on it only by a move as deliberate — and a
     // step to the next key always rearms; the on-screen keyboard's keys'
     // pitch (the program key rotated, onscreen_keyboard.h's placement block
     // owns its numbers) is above it too, so a step to the next key rearms there.
-    // Authored in W as every chrome length, though the drift is physical:
-    // the tablet is the one pen device; 18 W keeps the tablet's 36 device px
+    // Authored in U as every chrome length, though the drift is physical:
+    // the tablet is the one pen device; 18 U keeps the tablet's 36 device px
     // (the drift numbers above are device px). The blink is the roster's
     // hover face's, Arc's hover (architect 2026-11-20).
     static constexpr double kPenHotRearmPx = 18.0;

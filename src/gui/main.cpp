@@ -78,7 +78,7 @@ namespace {
 
 // The strip/lane geometry is a fixed-pixel per-strip lane stack derived from
 // the authored gui_scale row heights (icon_row_h_px() — its key's rows, and
-// the bottom icon row's, render.h's kKeyHeightW —
+// the bottom icon row's, render.h's kKeyHeightU —
 // the well's four, its foot, plus bottom_row_h_px() —
 // the bottom icon row — and the status bar's), kRowGapPx and kFlagBottomLiftPx (see the
 // geometry helpers below); nothing is window-proportional or
@@ -136,30 +136,30 @@ namespace {
 // NUMBERS (architect 2026-11-19): the TOP strip is FIVE lanes — from the
 // window edge inward:
 // THE TITLE BAR AND THE TOP ICON ROW, ONE LANE (icon_row_h_px(), at the
-// surface's top): THE TITLE BAR (28 W, render.h's title bar block) and THE
-// TOP ICON ROW (Arc's toolbar: 7 W, the key — kKeyWidthW wide by
-// kKeyHeightW tall, 36 x 28 W, Arc's icon button — and 7 W; render.h's THE
+// surface's top): THE TITLE BAR (28 U, render.h's title bar block) and THE
+// TOP ICON ROW (Arc's toolbar: 7 U, the key — kKeyWidthU wide by
+// kKeyHeightU tall, 36 x 28 U, Arc's icon button — and 7 U; render.h's THE
 // TITLE BAR AND THE TOP ICON ROW), then FLEXIBLE GAP 1, then THE WELL — THE
 // PROGRAM'S CANVAS
 // COLUMN, flat regions RUNNING THE PANEL'S WHOLE WIDTH (render.h's THE
 // WELL'S EDGES): the TRIM lane (trim_lane_h_px(), the line under the top
-// icon row, Arc's 12-W scrollbar trough with its pill and the line under
-// it, 14 W), the RULER lane (ruler_lane_h_px(), the column header in
-// Arc's tones, 16 W — the Bold Small (10 W) timestamps on their line-box
+// icon row, Arc's 12-U scrollbar trough with its pill and the line under
+// it, 14 U), the RULER lane (ruler_lane_h_px(), the column header in
+// Arc's tones, 16 U — the Bold Small (10 U) timestamps on their line-box
 // baseline, the ticks and the PLAYHEAD'S HEAD on its foot rows — and its
 // line; a PLACEMENT LANE: a motionless click places the playhead
 // and every drag there does nothing but the head's, which drags the playhead
 // (2026-10-09), the navigation surface being the waveform alone
 // (point_on_placement_lanes and point_on_playhead_head, input_pointer.cpp)),
-// the MARKER lane (marker_lane_h_px(), 16 W, the ruler's height, Cool
+// the MARKER lane (marker_lane_h_px(), 16 U, the ruler's height, Cool
 // Edit's cues, the label's box and the flag editor's the whole lane)
 // and THE LANE'S FOOT
 // LINE (lane_foot_line_h_px(), one hairline), whose bottom edge is the
-// waveform top. EVERY LANE rides the gui_scale axis, its lines one W rounded
+// waveform top. EVERY LANE rides the gui_scale axis, its lines one U rounded
 // at the element (render.h's line rule). The BOTTOM strip is THREE LANES,
 // from the window's foot inward: THE STATUS BAR (status_bar_lane_h_px(), its
-// line and 22 W, Thunar's; render.h's status bar block), THE BOTTOM ICON ROW
-// (bottom_row_h_px(), 7 W, the key, 7 W) — the timestamp alone in plain
+// line and 22 U, Thunar's; render.h's status bar block), THE BOTTOM ICON ROW
+// (bottom_row_h_px(), 7 U, the key, 7 U) — the timestamp alone in plain
 // text (architect 2026-11-24), and, packed against the right
 // edge, the COPY / PASTE duo, the two skips, the MARKER-VERB GROUP
 // (kMarkerVerbGroup, paint_handler.cpp, owns its membership), the step and
@@ -208,8 +208,8 @@ namespace {
 //   gap 2    = max(0, leftover - W - gap 1)                = bottom_flex_gap.
 // WITH THE WAVEFORM THE WHOLE LEFTOVER, BOTH GAPS ARE ZERO ON EVERY WINDOW
 // (2026-10-07): gap 1's midpoint term comes to half the bottom
-// strip less half the top stack, negative at every scale (118 W above
-// against 66 W below on the tablet's lanes), so it floors at 0,
+// strip less half the top stack, negative at every scale (118 U above
+// against 66 U below on the tablet's lanes), so it floors at 0,
 // and gap 2 is the leftover's remainder after W, 0. The centering is
 // infeasible by construction and the waveform takes the whole leftover,
 // which is the rule's own floor rather than a special case; the two gaps'
@@ -217,8 +217,8 @@ namespace {
 // lane through them.
 //
 // THE STACKS BELOW, THE ONE RECORD (read off the lane table; every line
-// one W, 2 device px on the tablet; the text 12 W, the ruler's 10 W; the
-// device rows below the tablet's at 200 %, the key 28 W tall). Every
+// one U, 2 device px on the tablet; the text 12 U, the ruler's 10 U; the
+// device rows below the tablet's at 200 %, the key 28 U tall). Every
 // lane is its own composite of rounded parts (scaled_px's rule), so the
 // device rows below are read off the lane accessors, never off a total
 // times the factor.
@@ -230,8 +230,8 @@ namespace {
 //   + THE TRIM LANE 28 (the line 140–141, the trough 142–165, the line
 //   166–167) + THE RULER LANE 34 (the ruler 168–199, the line 200–201) +
 //   THE MARKER LANE 32 (202–233) + THE FOOT LINE 2 (234–235) = 236 above
-//   (the ruler and the marker lane 16 W each, architect 2026-11-19; the
-//   icon rows' pads 7 W above and below, architect 2026-11-20);
+//   (the ruler and the marker lane 16 U each, architect 2026-11-19; the
+//   icon rows' pads 7 U above and below, architect 2026-11-20);
 //   132 below (THE WELL'S FOOT 1308–1309, THE BOTTOM ICON ROW 1310–1393, its
 //   faces 1324–1379, THE STATUS BAR'S LINE 1394–1395 and THE BAR 1396–1439);
 //   leftover 1072: the waveform 1072 rows on 236–1307, both gaps 0; the
@@ -310,7 +310,7 @@ namespace {
 // on the GUI-SCALE axis, a composite of its rounded parts (icon_row_h_px(),
 // the well's first three — trim_lane_h_px(), ruler_lane_h_px(),
 // marker_lane_h_px() — and bottom_row_h_px()); THE TWO FRAME LINES
-// (lane_foot_line_h_px(), well_foot_h_px()) are ONE W, the hairline itself
+// (lane_foot_line_h_px(), well_foot_h_px()) are ONE U, the hairline itself
 // (hairline_px: 2 device rows on the tablet at 200 %, 1 at 100 % and
 // below, the unit of 2026-11-04). The lanes' rulings are at those
 // accessors' declarations in render.h.
@@ -318,11 +318,11 @@ namespace {
 // THE CSS BOX MODEL: the architect's stated content height excludes borders,
 // and the lane owns every pixel it paints. The ICON lane is THE TITLE BAR
 // AND THE TOP ICON ROW: the title bar, the pad, the key (its height
-// render.h's kKeyHeightW) and the pad again (render.h's THE TITLE BAR AND
+// render.h's kKeyHeightU) and the pad again (render.h's THE TITLE BAR AND
 // THE TOP ICON ROW, icon_row_h_px), the well's four lanes the trim bar, the
 // ruler, the marker lane and the lane's foot line (render.h's THE WELL'S
 // LANES): 28 + 34 + 32
-// + 2 = 96 device rows on the tablet — THE WELL'S FOOT one W too
+// + 2 = 96 device rows on the tablet — THE WELL'S FOOT one U too
 // (well_foot_h_px), THE BOTTOM ICON ROW the strip (bottom_row_h_px) and THE
 // STATUS BAR its line and its bar (status_bar_lane_h_px; 2026-11-19).
 constexpr int kTopLaneCount    = 5;
@@ -361,7 +361,7 @@ int top_lane_height(int lane) {
 }
 // The bottom strip's THREE lanes, indexed from the WINDOW'S FOOT inward
 // like every lane table here: lane 0 is THE STATUS BAR on the window's foot
-// (architect 2026-11-19: its line and its 22 W; render.h's status
+// (architect 2026-11-19: its line and its 22 U; render.h's status
 // bar block), lane 1 THE BOTTOM ICON ROW (the timestamp left, the buttons
 // flush right; the layout is
 // paint_bottom_row_buttons_and_clock's), lane 2 THE WELL'S FOOT (one of the
@@ -407,7 +407,7 @@ int strip_total_h(bool top_strip) {
 // design, 2026-10-07, under the architect's free rein): a vocabulary lays
 // its lanes at its own period's metrics and the well takes what they leave,
 // no lane squeezed to hold a number. On the tablet's 2304 x 1440 at
-// gui_scale 200, the key 28 W tall, the lanes leave 1440 − 236 − 132 = 1072
+// gui_scale 200, the key 28 U tall, the lanes leave 1440 − 236 − 132 = 1072
 // device rows, the on-screen keyboard standing or not.
 // No color moves a lane. May
 // be NEGATIVE on an absurd window (a lane stack taller than the window itself —
@@ -506,12 +506,12 @@ GuiRect waveform_area(const AppState& a) {
     //
     // THE LANE STACK IS SCHEMA-LEGAL PAST THE WINDOW: the lanes scale with
     // gui_scale (lane by lane, each from its rounded parts, which is not one
-    // multiply of the sum), the well's lines one W each (2026-11-04), and at
+    // multiply of the sum), the well's lines one U each (2026-11-04), and at
     // the 1000 % ceiling (architect 2026-10-05) they PASS the tablet's 1440
-    // rows at the key 28 W tall: the title bar and the top icon row
+    // rows at the key 28 U tall: the title bar and the top icon row
     // (280 + 70 + 280 + 70 = 700) and the bottom icon row (70 + 280 + 70 =
     // 420) and the status bar (10 + 220) take 1350 before the well's lanes,
-    // so the top of the vocabulary lands on this floor (one W is 10 device
+    // so the top of the vocabulary lands on this floor (one U is 10 device
     // px there). (The tablet runs far below it at 200 % on its 1440-tall
     // surface, where they take 368 and leave the waveform 1072, the stack
     // record at the lane table above.) The guard does not rest on that
@@ -693,8 +693,8 @@ GuiRect well_foot_area(const AppState& a) {
     return strip_row_rect(a, /*top_strip=*/false, kBottomWellFootLane);
 }
 
-// THE BOTTOM ICON ROW (render.h's THE STRIP) — Arc's pad 7 W, the key, the pad 7 W on the body tone
-// (architect 2026-11-19; 7 W above and below, architect 2026-11-20), at the
+// THE BOTTOM ICON ROW (render.h's THE STRIP) — Arc's pad 7 U, the key, the pad 7 U on the body tone
+// (architect 2026-11-19; 7 U above and below, architect 2026-11-20), at the
 // left one plain-text run — the timestamp alone (architect 2026-11-24;
 // paint_handler.cpp's bottom_left_run) — and, packed against
 // the right edge, the COPY / PASTE duo, the skips (Go to Start, Go to End;
@@ -703,7 +703,7 @@ GuiRect well_foot_area(const AppState& a) {
 // Marker) and the nudge and play (Center, Left, Right and Play /
 // Stop, the last case; architect 2026-10-18), each one linked group,
 // the run gap of bare ground between two (render.h's program_run_gap_px,
-// kRunGapW). It is BOTTOM LANE 1, over the status bar (lane 0)
+// kRunGapU). It is BOTTOM LANE 1, over the status bar (lane 0)
 // and under the well's foot (lane 2, well_foot_area above), the window's whole
 // width, whatever stands over it (the modal family's controls row on its
 // rows and the on-screen keyboard over it while it stands are never lanes:
@@ -746,7 +746,7 @@ GuiRectF tooltip_box_rect(const AppState& a, const GuiRectF& face, double w,
     // LEFT-ALIGNED ON THE FACE: the box's left edge the face's.
     double x = face.x;
     // UNDER A TOP-ROW KEY, ABOVE EVERY OTHER FACE (2026-11-19): the
-    // box's top edge the gap (kTooltipGapW, render.h) under a top-row face's
+    // box's top edge the gap (kTooltipGapU, render.h) under a top-row face's
     // bottom edge, else its bottom edge the gap over the face's top edge.
     const double gap = static_cast<double>(tooltip_gap_px());
     double y = tooltip_face_in_band(a, face) ? face.y + face.h + gap
@@ -1376,12 +1376,12 @@ bool rects_intersect(GuiRect a, GuiRect b) {
 // columns it can touch are [col − H − 1, col + H + 1), H the chip's height
 // (cue_chip_paint_reach_px, render.h: 9 each side, 18 device px on the
 // tablet at 200 %, 5 each side at 100 %) — its rows the envelope's, below —
-// which also holds the one-W line of
+// which also holds the one-U line of
 // the cursor at its exact place: the line's x lies within half a px of
 // `col`, so the cells its real interval [x − t / 2, x + t / 2] touches lie
 // in [col − t / 2 − 1, col + t / 2 + 1), t waveform_line_px — two columns
 // either side of the column's left edge on the tablet, and inside the box
-// at every scale (H is the chip's rows, 4 W, cue_chip_h_px, and t one W,
+// at every scale (H is the chip's rows, 4 U, cue_chip_h_px, and t one U,
 // so the box reaches 4 t + 1 columns or more each side) — so a move
 // repaints every column the head and the line stood on.
 // `col` is the waveform's own column (offset from area.x, as every
@@ -1442,7 +1442,7 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 // the ceil of its right (GuiCanvasSink::blended_rect), the hull's own, and
 // render_playhead's cull, on the whole column, drops only a line whose span
 // is empty (its reach is wider than the line: the chip's, more than half a
-// W and half a px). The list's clip (the waveform's painted rect,
+// U and half a px). The list's clip (the waveform's painted rect,
 // onscreen_keyboard::waveform_paint_area) only cuts the line shorter. THE SPAN'S EMPTINESS IS THE RECT'S: a
 // line with no part inside the strip — the scanner off screen — is an
 // empty rect (w 0), and so is an area with no rows.
@@ -1451,7 +1451,7 @@ GuiRect playhead_invalidate_rect(const AppState& a, const GuiRect& area,
 // when they touch and invalidates what comes out — REAL DAMAGE, for the two
 // per-frame scanner sites and the launch's and the stop's edges
 // (Viewport::invalidate_standing_scanner, architect 2026-11-16), and
-// for THE WAVEFORM'S HOVER LINE, the same one-W line over the same rows
+// for THE WAVEFORM'S HOVER LINE, the same one-U line over the same rows
 // (Viewport::invalidate_hover_line, architect 2026-11-21: this
 // rect its one owner too);
 // the tick's offscreen fallback in this file reads only the WIDTH, as an

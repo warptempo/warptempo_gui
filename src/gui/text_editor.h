@@ -426,7 +426,7 @@ struct State {
     // jumps, and it never moves at all while the caret sits inside the
     // window. The marker lane reserves the caret's own column inside its
     // viewport; the dialog entry lets the caret stand on its inner right edge,
-    // its one W in the pad, as GtkEntry draws it.
+    // its one U in the pad, as GtkEntry draws it.
     //
     // THE CLICK-TO-BYTE PATH NEEDS NO TERM FOR IT: each painter folds the
     // offset into the ORIGIN it publishes (FlagEditorBox::text_origin_x,

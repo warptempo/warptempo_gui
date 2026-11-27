@@ -851,7 +851,7 @@ struct Viewport {
     // AppState::HoverLine, the state): the line's cells as last painted and
     // its cells at its new place, each the scanner's rect at that place
     // (scanner_invalidate_rect, main.cpp, the one rect owner: the hull of a
-    // one-W line's span over the canvas's rows, NOTHING ABOVE THE CANVAS)
+    // one-U line's span over the canvas's rows, NOTHING ABOVE THE CANVAS)
     // through invalidate_scanner_line — united where they touch; a side
     // that is none declares nothing (the line not painted, or gone). The
     // rows are the area's whole: where the on-screen keyboard stands over

@@ -1063,7 +1063,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // the panel's whole width (waveform_area x 0, edge to edge), so the
     // glass ends at the strip's right edge and the end's towed place reaches
     // the frame there only from a grab left of the end's own place (g < 0).
-    // EACH ZONE REACHES 2 W PAST ITS BOUND AND 12 W INTO THE SPAN
+    // EACH ZONE REACHES 2 U PAST ITS BOUND AND 12 U INTO THE SPAN
     // (trim_endcap_rect; render.h's THE TRIM BAR'S CAPS AND GRABS, architect
     // 2026-11-20: 4 and 24 device px on the tablet), and g is the
     // press less the bound's PLACE — a begin's place is its bound, an end's
@@ -1097,7 +1097,7 @@ void GuiInputHandler::update_trim_drag(double mouse_x) {
     // GRAB CAN BEGIN ON A BOUND JUST OFF SCREEN (architect 2026-10-05): a
     // zone sliding off an edge is grabbed by its visible columns
     // (hit_test_trim_endcap tests what the painter published), its bound up
-    // to the zone's inside reach, 12 W, past that edge — so the clamp's
+    // to the zone's inside reach, 12 U, past that edge — so the clamp's
     // edge on that side
     // widens to the bound's own resting frame, the drag never pushing it
     // farther off than it began and never pulling it in by a jump at the
@@ -1517,9 +1517,9 @@ void GuiInputHandler::set_trim_bound_at_click_then_arm_drag(double mouse_x,
 // authored content, so a locked tab arms the endcap and bridge drags
 // exactly as a writable one does.
 // The two arms:
-//   CAP HIT: a press in an end's zone — a 6 W core from 1 W outside the
-//     pill's tip to the cap's cut line, and 4 W of air either side of it,
-//     from 2 W outside the bound to 12 W inside it (render.h's THE TRIM
+//   CAP HIT: a press in an end's zone — a 6 U core from 1 U outside the
+//     pill's tip to the cap's cut line, and 4 U of air either side of it,
+//     from 2 U outside the bound to 12 U inside it (render.h's THE TRIM
 //     BAR'S CAPS AND GRABS, architect 2026-11-20), the zone as
 //     published and no tolerance (hit_test_trim_endcap, itself y-gated to the
 //     trim bar lane) — arms that bound's single drag.

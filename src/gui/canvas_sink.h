@@ -31,7 +31,7 @@
 // each a solid converted color on whole device pixels (the divider's row
 // chrome, a solid integral rect), the plate is the
 // antialiased waveform (architect 2026-10-30, render_waveform_columns'
-// head), EVERY LINE STANDS AT ITS EXACT PLACE, one W wide
+// head), EVERY LINE STANDS AT ITS EXACT PLACE, one U wide
 // (waveform_line_px; architect
 // 2026-11-14: "the anti-aliasing I would like to commit to that as
 // well, the full anti-aliasing") — the verticals on their frames' exact

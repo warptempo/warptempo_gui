@@ -61,7 +61,7 @@
 //                            are counted in device px (one at the working
 //                            zoom, render.h's THE PLATE'S BARS) and its
 //                            quarter-row tips are device px, while its
-//                            lines are one W (the
+//                            lines are one U (the
 //                            unit, render.h's waveform_line_px) — so the
 //                            waveform needs one key of its own, and the grow
 //                            is the appropriate one, kept for good because a
@@ -179,7 +179,7 @@
 //                            lamp, overlay and modal are no word of it:
 //                            they stand dark or closed at every open
 // (NO KEY SIZES THE ON-SCREEN KEYBOARD: its key box is the program key
-// rotated, render.h's kKeyHeightW x kKeyWidthW, and its caps the Keys face's
+// rotated, render.h's kKeyHeightU x kKeyWidthU, and its caps the Keys face's
 // table size, gui_font.h's kGuiFaceSizes; architect 2026-11-26.)
 //
 // THAT IS THE WRITER'S ORDER and it is the architect's own (2026-08-30):
@@ -384,9 +384,9 @@ inline constexpr const char* kDefaultProjectsRepo =
 // editor's `gui_scale=` refused commit ("loadable iff it commits", the
 // standing rule).
 //
-// THE PERCENT IS DEVICE PX PER W, ONE ARC PX (the unit's statement is at
-// render.h's scaled_px): the tablet runs 200 (a 16-W glyph at 32 device px,
-// 16 · 2); 100 is one device px per W; 1000 is the ceiling; 50 is the
+// THE PERCENT IS DEVICE PX PER U, ONE UNSCALED PX (the unit's statement is at
+// render.h's scaled_px): the tablet runs 200 (a 16-U glyph at 32 device px,
+// 16 · 2); 100 is one device px per U; 1000 is the ceiling; 50 is the
 // half-size floor,
 // which is where every structural dimension in render.h's scaled_px
 // accessors still has a floor holding it above zero.
@@ -394,7 +394,7 @@ inline constexpr const char* kDefaultProjectsRepo =
 // THE CEILING IS 1000 (architect 2026-10-05). It is a vocabulary, not a
 // fit: the lanes above the waveform — the title bar, the top icon row over
 // Arc's toolbar pads and its case, the trim lane, the ruler and the marker
-// lane and their lines, one W each — and below it — the line under the
+// lane and their lines, one U each — and below it — the line under the
 // canvas, the bottom icon row and the status bar — scale with gui_scale
 // (main.cpp's lane table and its stacks' record); whether they pass the
 // tablet's 1440 rows short of the ceiling turns on the scale, and where
@@ -409,7 +409,7 @@ inline constexpr const char* kDefaultProjectsRepo =
 // and the right run stands whole (the overflow rule at kIconRowViewPairs,
 // paint_handler.cpp). Where that is — the window widths
 // and the scales the tablet's 2304-px panel holds the row whole at, the
-// key's width (render.h's kKeyWidthW) and the run gap (kRunGapW) moving it
+// key's width (render.h's kKeyWidthU) and the run gap (kRunGapU) moving it
 // and the key's height none of it — is THE FIT at paint_icon_row's width math (paint_handler.cpp),
 // its one statement. There is no
 // collision rule anywhere: the crop-at-the-floor allowance recorded at

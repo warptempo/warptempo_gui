@@ -21,7 +21,7 @@ struct GuiTargetRender;
 //
 // AN OPEN IS GTK'S IN-PLACE CELL EDITOR (a field, architect 2026-10-09;
 // Arc's look 2026-11-18 / 19): the marker-lane editors paint a square box in the entry's fill with
-// a one-W border of the accent over the edited segment, the selected
+// a one-U border of the accent over the edited segment, the selected
 // substring in the chrome's selected pair — the picture is
 // render_flag_editor_box's (render.h's EDITING paragraph owns the look and
 // the ruling's reason).

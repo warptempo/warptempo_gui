@@ -341,7 +341,7 @@ struct WaveformCache {
 // y, `origin_y`) through the top strip's bottom (the lane's foot line's
 // foot) — the ruler lane, the marker lane and the foot line, 34 + 32 + 2 =
 // 68 device rows on the tablet at 200 % where the whole strip from row 0 is
-// 236 (the key 28 W tall, the icon rows' 7 W pads, architect 2026-11-20).
+// 236 (the key 28 U tall, the icon rows' 7 U pads, architect 2026-11-20).
 // Every cue pixel is
 // inside the marker lane's rows BY THE PAINTER'S OWN CLIP, not by a bound on
 // the font: paint_cues (render.cpp) paints every label's text and strike
@@ -412,7 +412,7 @@ struct FlagCache {
     // every rebuild with the surface it describes; read by the blit, which
     // refuses a surface whose origin or height is not the live strip's. KEYED
     // BY ITS OWN FIELD, fp_origin_y below: the rows above the ruler are the
-    // scale's lengths (the key's box among them, render.h's kKeyHeightW), so
+    // scale's lengths (the key's box among them, render.h's kKeyHeightU), so
     // the ruler's top is keyed directly rather than through whatever moves
     // it.
     int              origin_y = 0;
@@ -1249,7 +1249,7 @@ private:
     // after them touches their lanes, the flag cache being transparent there.
     void paint_icon_row(cairo_t* cr);
     // THE TITLE BAR (2026-11-19; render.h's title bar block): the first
-    // 28 W of `band`, the one lane of the title bar and the top icon row —
+    // 28 U of `band`, the one lane of the title bar and the top icon row —
     // its own fill in the title tone, the note, the
     // brand and the right group (the lamps, the percent, the battery, the
     // pipe, the clock) — painted by paint_icon_row after the lane's body
@@ -1320,7 +1320,7 @@ private:
     // the frame's draw list (build_canvas_list).
     void paint_waveform_plate(GuiCanvasSink& sink, const GuiRect& area);
     // The overlay band's RING — the phase-reset overlay's whole visual, four
-    // solid one-W lines in the `cue_outline` (architect 2026-11-04), each at
+    // solid one-U lines in the `cue_outline` (architect 2026-11-04), each at
     // its exact place, its left side centered on the reset's frame
     // (architect 2026-11-14) — painted AFTER the plate and before
     // the stems, over the ink like every line on the canvas.
@@ -1341,7 +1341,7 @@ private:
     void paint_trim(cairo_t* cr, const GuiRect& area, const GuiRect& top_strip,
                     bool content);
     // THE SELECTION STEM (architect 2026-11-05) — the per-frame waveform
-    // overlay: on every published entry, a SOLID ONE-W `cue_outline` line
+    // overlay: on every published entry, a SOLID ONE-U `cue_outline` line
     // down the canvas's whole height at the entry's exact place (render.h's
     // marker-lane paragraph; the `h` view's cues alike, each at its own
     // place). The painter publishes
@@ -1370,7 +1370,7 @@ private:
     void paint_marker_stem_heads(cairo_t* cr);
     // THE ONE GEOMETRY both stem painters read (architect 2026-11-14): one
     // real span of window columns per DISTINCT EXACT PLACE among the
-    // stash's entries — the one-W line centered on that place, drawn where
+    // stash's entries — the one-U line centered on that place, drawn where
     // any of it is inside `area`'s columns and cut to them
     // (waveform_line_span, render.h; the rule at paint_marker_stems), two
     // entries on one exact x
@@ -1392,7 +1392,7 @@ private:
     GuiRect marker_stem_damage_rect(const GuiRect& area, double x) const;
 
     // THE RESTING CURSOR's canvas line (its head is paint_ruler_row's;
-    // nothing over the trim bar, architect 2026-10-09): a solid one-W
+    // nothing over the trim bar, architect 2026-10-09): a solid one-U
     // line at the cursor's exact place in the palette's static
     // `playhead_line` (render_playhead's paragraph, 2026-11-12) — before
     // the selection stems, and not drawn where one

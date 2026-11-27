@@ -268,7 +268,7 @@ inline int64_t viewport_edge_margin_samples(int64_t visible) {
 // nav_zoom_px_per_level() below and the one reader divides by that accessor,
 // never by this constant. The scaling rule and its rationale are stated there.
 //
-// Architect-tunable. 218 W, A WHOLE W BY HIS RULING OF 2026-11-05 ("round
+// Architect-tunable. 218 U, A WHOLE U BY HIS RULING OF 2026-11-05 ("round
 // each up"), as every authored number is: a level costs 436 device px of
 // travel on the tablet.
 constexpr double kNavZoomPxPerLevel = 218.0;
@@ -283,7 +283,7 @@ constexpr double kNavZoomPxPerLevel = 218.0;
 // the panel at every scale, not the same count of device pixels: 200 raw
 // device px is only ~20 mm on the tablet's 249 PPI
 // panel, which is exactly the "too fast" the architect drove. At the tablet's
-// own 200 % a level costs 436 device px (218 W, kNavZoomPxPerLevel; a
+// own 200 % a level costs 436 device px (218 U, kNavZoomPxPerLevel; a
 // double, never rounded at the read — below)
 // — ~44 mm on that panel. Durations never scale; lengths do — the same split the
 // press road's four pixel thresholds take (drag_moved_threshold_px,
@@ -302,7 +302,7 @@ constexpr double kNavZoomPxPerLevel = 218.0;
 // divisor rather than a painted dimension, and rounding it to an int would
 // quantize the feel for no gain (render.h's conversion pair states that the
 // double-domain readers deliberately stay out of it). At gui_scale 100 the
-// rate is the authored 218 W exactly; the tablet's 200 % gives 436.
+// rate is the authored 218 U exactly; the tablet's 200 % gives 436.
 // The floor keeps the divisor away from zero at any factor the schema could
 // ever admit; inside the live [50, 1000] bracket the value rests in
 // [109, 2180] and the floor cannot fire.
@@ -631,13 +631,13 @@ struct ValueDragState {
 // number, and a retune is this line (architect 2026-09-10). It is a LENGTH and
 // so it SCALES: the drag reads it through scaled_px, exactly as every other
 // authored press-road distance does (the drag gate, the double-click slack,
-// the touch slop), because a hand's 9 W at 200 % (18 device px) is not the
+// the touch slop), because a hand's 9 U at 200 % (18 device px) is not the
 // same gesture as at 100 % (9). Durations never scale; this is not one. The same
 // travel buys a cent, a bound cent and a hop alike — the
 // step is one step whatever the cell's domain is, which is what makes the
 // gesture read the same on every cell of every flag.
 //
-// 9 W (architect 2026-11-05): 18 device px on the tablet, as the drag gate
+// 9 U (architect 2026-11-05): 18 device px on the tablet, as the drag gate
 // is (half of it was "a little fast" on his own first drag, architect
 // 2026-09-10). It is the drag
 // gate's own length and half the flag's grab gate (grab_moved_threshold_px),
@@ -1693,9 +1693,9 @@ struct DoubleClickCandidate {
     int64_t time_ms   = 0;      // CLOCK_MONOTONIC ms at the seeding press/release
     double  press_x   = 0.0;    // seed x, REAL: Marker and TrimBar seed at
     double  press_y   = 0.0;    //   any release whose press never crossed
-                                //   the grab gate (18 W), wherever inside it
+                                //   the grab gate (18 U), wherever inside it
                                 //   the lift is, at their PRESS place;
-                                //   EmptyLane at a lift inside the 9 W drag
+                                //   EmptyLane at a lift inside the 9 U drag
                                 //   gate, at the lift's place
     int     target    = -1;     // marker index for Marker; unused otherwise
     // WHICH CELL THE SEEDING PRESS LANDED ON (Marker only; unused otherwise).
@@ -2270,7 +2270,7 @@ enum class RedesignButton {
     // fill (AppState::FaceFades, the owner; materials.h's THE HOVER). THE
     // FACE: ARC'S ENTRY, its own
     // box a run gap after the row's third group (architect 2026-11-19;
-    // paint_level_case), THE LEVEL ITS ENTRY PROGRESS — a 2 W line of the
+    // paint_level_case), THE LEVEL ITS ENTRY PROGRESS — a 2 U line of the
     // accent along its foot inside the border from the left over t of the
     // inner width, none at
     // -inf — where t is the level's TRAVEL FRACTION (level_travel_fraction below, the
@@ -2452,7 +2452,7 @@ enum class RedesignButton {
     // architect 2026-11-08: "least used left, most used right"; the
     // timestamp alone at the row's left, architect 2026-11-24), the block's
     // last face ending
-    // 6 W inside the panel's last column (architect 2026-09-29, the right-handed tablet's
+    // 6 U inside the panel's last column (architect 2026-09-29, the right-handed tablet's
     // layout). THE PAINTED ORDER IS THE PAINTER'S (architect 2026-10-18) and
     // nothing reads this block's order: Copy and Paste
     // (kPhaseResetPropagateGroup), the skips START | END
@@ -2959,7 +2959,7 @@ inline constexpr bool redesign_button_is_level_case(RedesignButton b) {
 // exact level, so the picture and the file agree. Two readers of each:
 // the painter (paint_level_case, paint_handler.cpp) and the drag
 // (GuiInputHandler::update_level_press_motion, input_pointer.cpp); the
-// travel's length is render.h's kLevelTravelW.
+// travel's length is render.h's kLevelTravelU.
 inline double level_travel_fraction(double db) {
     if (db == kLevelDbOff) return 0.0;
     return std::pow(10.0, db / 40.0);
@@ -3103,7 +3103,7 @@ inline constexpr bool redesign_button_opens_icon_run(RedesignButton b) {
 // lists the two of them apart from the holds, neither being one, and both
 // stay on the constant. Neither is a tuning key.
 constexpr int64_t kDoubleClickMs      = kHoldBeatMs;
-// 9 W (architect 2026-11-05): 18 device px on the tablet.
+// 9 U (architect 2026-11-05): 18 device px on the tablet.
 constexpr int     kDoubleClickSlackPx = 9;
 
 // The slack in DEVICE pixels at the live gui_scale — the compare sites' one
@@ -3242,7 +3242,7 @@ inline constexpr int64_t chrome_shift_hold_ms() { return kHoldDelayMs; }
 // relaxed double tap (the flag drag that ate the second tap). The RESOLVED
 // value is drag_moved_threshold_px() below;
 // every gate reads that accessor and never this constant, and at gui_scale 100
-// it is this number exactly. 9 W (architect 2026-11-05): at the tablet's
+// it is this number exactly. 9 U (architect 2026-11-05): at the tablet's
 // 200 % it is 18 device px — 9dp under its 320 density.
 constexpr int     kDragMovedThresholdPx = 9;
 
@@ -3271,7 +3271,7 @@ inline double real_travel_px(double x0, double y0, double x1, double y1) {
 // THE GRAB GATE (architect 2026-09-29): the Chebyshev distance a press that
 // GRABS A THING must travel before it becomes that thing's drag — TWICE the
 // drag gate above, derived from it so the two stay one authored number (18
-// W; twice the drag gate's rounded 18 device px, 36, on the tablet at 200 %). A
+// U; twice the drag gate's rounded 18 device px, 36, on the tablet at 200 %). A
 // grab is a press on an object whose
 // drag MOVES it — a click that rolls a few pixels on a flag or a trim endcap
 // must stay the click it meant to be, because the drag it would otherwise
@@ -5223,7 +5223,7 @@ struct AppState {
     // THE STEM IS THE SELECTION'S, THE PLAYHEAD THE FOCUS'S (architect
     // 2026-11-05: "only 1 playhead onscreen ever"): every selected
     // marker, enabled or disabled (architect 2026-11-11), wears
-    // a solid one-W `cue_outline` stem down the canvas over the playhead's
+    // a solid one-U `cue_outline` stem down the canvas over the playhead's
     // line (GuiPaintHandler::paint_marker_stems, off the marker painter's
     // stash); an unselected one never, the playhead on it or not. The focused member has no paint of its own: a
     // landing puts the playhead on its frame (render.h's THE STATES).
@@ -5641,7 +5641,7 @@ struct AppState {
         // predicate, point_on_key's linked form — a whole box, so
         // the place's pixel answers it. IT IS THE KEY'S ONE HIT, PLAY'S
         // INCLUDED: the bottom left's timestamp presses nothing (architect
-        // 2026-11-20: it is plain text at kBottomLeftPenW, render.h, so it is
+        // 2026-11-20: it is plain text at kBottomLeftPenU, render.h, so it is
         // ground), so no press,
         // hover or tooltip reaches PLAY from it. Every roster reader asks
         // `contains`: the press, the lift, the tooltip's owner and the
@@ -5691,7 +5691,7 @@ struct AppState {
     // carries one entry per SELECTED cue, enabled or disabled (2026-11-11),
     // which on the two LIVE columns means every selected marker whose stem's
     // line reaches the waveform's columns [0, w) (the producers' gate,
-    // stem_meets_waveform in render.cpp: any of the one-W line inside them;
+    // stem_meets_waveform in render.cpp: any of the one-U line inside them;
     // a flag hanging into view from further past either edge publishes no
     // entry) — an unselected marker has no stem, expressed as an
     // absent entry (MarkerStem, render.h) — and in the history mode every selected
@@ -6434,7 +6434,7 @@ struct AppState {
     // 2026-11-20) — so the pointer's arm above is the family's one.
 
     // THE CLOCK'S RESERVED CELL, published by paint_bottom_strip (the
-    // timestamp at the bottom icon row's left, plain text at kBottomLeftPenW that
+    // timestamp at the bottom icon row's left, plain text at kBottomLeftPenU that
     // presses nothing, architect 2026-11-20; the cell the timestamp's own
     // box — the specimen's advance by the line box, bottom_left_clock_cell).
     // It is a PAINTER
@@ -6626,7 +6626,7 @@ struct AppState {
     //            and `y0` its y (device px), `t0` the level's travel fraction
     //            at the press (level_travel_fraction; -inf is 0), `moved`
     //            true once a motion has left the hover slop
-    //            (kHoverSlopW, render.h, on either axis) — from then
+    //            (kHoverSlopU, render.h, on either axis) — from then
     //            on the press is a DRAG: on every motion t = clamp(t0 +
     //            (x − x0) / level_travel_px(), 0, 1), the level
     //            level_db_from_travel(t) (y ignored), applied live and the
@@ -7707,7 +7707,7 @@ struct AppState {
     //   * THE SHOW: the wait ripening shows its column's hint, the box SEATED
     //     OFF ITS OWNER'S FACE ALONE — under a top-row key, above every other
     //     face, its left edge on the face's,
-    //     one W between (architect 2026-11-07;
+    //     one U between (architect 2026-11-07;
     //     tooltip_box_rect, app_state.h, the placement's one statement) — so
     //     wherever the pen came onto the column, and however fast, the box
     //     stands in one place for that key, a chained show in the same
@@ -11058,7 +11058,7 @@ inline std::string time_label_text(int64_t position, int64_t length,
 //
 // THE KNOB STAYS INSIDE THE TROUGH, GTK'S WAY (architect 2026-11-18 / 19;
 // render.h's scrub block): the travel
-// starts half a knob (8.5 W) inside the trough's left end and THE USABLE
+// starts half a knob (8.5 U) inside the trough's left end and THE USABLE
 // SPAN IS THE TROUGH'S WIDTH LESS THE KNOB'S (scale_travel_x0 /
 // scale_travel_span, render.h), frame 0 at the first and the last frame at
 // the second. No item seats the center at the travel's start and answers
@@ -11195,7 +11195,7 @@ int window_foot_y(const AppState& a);
 // THE HOVER TOOLTIP'S SEAT AND THE BAND IT LIES IN (architect 2026-11-07,
 // his "1 yes 2 yes 3 a 4 agree", and on his glass: the centering "looked
 // odd", the box left-aligned on its face, the gap
-// ruled 1 W; the model at AppState::RedesignTooltip). THE SEAT DERIVES FROM
+// ruled 1 U; the model at AppState::RedesignTooltip). THE SEAT DERIVES FROM
 // THE OWNER'S FACE ALONE,
 // NEVER THE PEN: the pen picks the owner (the column, the wait, the chain),
 // and the box's place is a function of that owner's painted face and the
@@ -11214,10 +11214,10 @@ int window_foot_y(const AppState& a);
 //     a face standing in the top icon row (top_icon_row_area) gets the box
 //     UNDER it,
 //     its top row the gap under the face's bottom row (box.y = face.y +
-//     face.h + gap; the gap 1 W, render.h's kTooltipGapW, 2 device px on the
+//     face.h + gap; the gap 1 U, render.h's kTooltipGapU, 2 device px on the
 //     tablet at 200 %) — over the trim bar and the ruler while it stands; a
 //     bottom-row key, a controls row's button and a cue get it ABOVE (box.y
-//     = face.y − gap − h). On the tablet, the key 28 W tall, the top
+//     = face.y − gap − h). On the tablet, the key 28 U tall, the top
 //     icon row's faces end on row 125, so a top-row key's box starts on
 //     row 128; the bottom icon row's faces start on row 1324, so its box
 //     ends on row 1321;

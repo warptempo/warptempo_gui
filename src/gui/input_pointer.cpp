@@ -3839,7 +3839,7 @@ void GuiInputHandler::update_folder_overlay_press_motion(
         // THE DRAG GATE, the sweeps' and pans' crossing threshold (a flag and
         // the trim bar, the grab surfaces, read twice it), spelled here as at
         // every other pending press: CHEBYSHEV from the press
-        // (max(|dx|,|dy|)) against drag_moved_threshold_px() — 9 W through
+        // (max(|dx|,|dy|)) against drag_moved_threshold_px() — 9 U through
         // scaled_px, the touch slop's own number — and the crossing is
         // `>=`, not `>`, because the core resolves a touch into a drag at `>=`
         // its slop and the two gates must not disagree by one pixel (the
@@ -8018,7 +8018,7 @@ bool GuiInputHandler::arm_level_case_press(const GuiPointerPlace& at) {
 }
 
 // THE DRAG (on_motion, under a standing Level arm, the button held): until a
-// motion has left the hover slop on either axis (kHoverSlopW, render.h, its
+// motion has left the hover slop on either axis (kHoverSlopU, render.h, its
 // one reader this) the press is still a tap and moves
 // nothing — a wobble under a resting pen must not nudge the level and leave
 // the file behind the voice. Past it the press is a DRAG for good: on this

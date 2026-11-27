@@ -46,7 +46,7 @@
 //   on-screen keyboard's glyph keys too, at the same one size
 //   (onscreen_keyboard::cap_icon: Tab FormatIndentMore, Enter KeyEnter, the
 //   rest shared drawings) —
-//   its 16 W canvas in a 16 W box centered on the key's (paint_key_glyph,
+//   its 16 U canvas in a 16 U box centered on the key's (paint_key_glyph,
 //   paint_handler.cpp; 2026-11-19), `text` (D3DAE3) at rest,
 //   `key_dim_ink` (7F8591) on a disabled key, `text_on_lit`
 //   (FFFFFF) on a lit or pressed one's accent face, and
@@ -221,12 +221,12 @@ void drop_rasters();
 // box's top-left. Nothing stands between the drawing's own geometry and the
 // paint but that zoom and that place (the no-grid rule, render.h's hull):
 // no whole-px fit of the ink, no rounding of the zoom or of the seat.
-// THE SEATS' BOXES, each its owner's: the keys' 16 W box (kKeyDrawingBoxW,
+// THE SEATS' BOXES, each its owner's: the keys' 16 U box (kKeyDrawingBoxU,
 // paint_key_glyph, 32 device px on the tablet, zoom 2: Papirus's 16-px
-// drawings at their native size; 2026-11-19), the list rows' 16 W box
-// (kListDrawingBoxW, paint_handler.cpp's THE LIST VIEW; 2026-11-19), the
-// cards' 16 W box (kNotificationGlyphBoxW, notifications.h; 2026-11-19),
-// the title bar's note's 12 W box (render.h's title bar block), the note
+// drawings at their native size; 2026-11-19), the list rows' 16 U box
+// (kListDrawingBoxU, paint_handler.cpp's THE LIST VIEW; 2026-11-19), the
+// cards' 16 U box (kNotificationGlyphBoxU, notifications.h; 2026-11-19),
+// the title bar's note's 12 U box (render.h's title bar block), the note
 // seated by its ink (glyph_ink_in_box). A SEAT SIZED BY ITS INK names the
 // ink's length and takes the box that gives it (glyph_box_for_ink_height):
 // the title bar's battery, its ink's height the cap band's (render.h's THE

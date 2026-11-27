@@ -41,9 +41,9 @@
 //       meet the sum of one is the glyph, which is what cairo's other arm
 //       (each glyph composited on its own) writes. Proven on the host for
 //       both files, on ARGB32 and A8, at every size kGuiFaceSizes held when
-//       the road landed (2026-11-16: 7, 8, 9, 11 and 12 W, every em a
-//       whole count of px). An em outside those — the table's 10 W and
-//       18 W today, a fractional em at a scale whose product is one
+//       the road landed (2026-11-16: 7, 8, 9, 11 and 12 U, every em a
+//       whole count of px). An em outside those — the table's 10 U and
+//       18 U today, a fractional em at a scale whose product is one
 //       (gui_font.h's head, architect 2026-11-26) — is unmeasured: the
 //       argument (the same load, the same box, the same rasterizer, the em
 //       reaching FreeType as cairo's own 26.6 size) does not depend on the

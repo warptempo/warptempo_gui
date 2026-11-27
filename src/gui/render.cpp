@@ -161,7 +161,7 @@ void render_background(cairo_t* cr, int x, int y, int w, int h) {
 namespace {
 // ONE CANVAS LINE ACROSS THE AREA AT ITS EXACT ROWS (architect 2026-11-14;
 // the horizontals' one row rule, render.h's canvas_hline_span): the
-// line one W thick centered on the real window row `yc`, cut to the area's
+// line one U thick centered on the real window row `yc`, cut to the area's
 // rows, as ONE BLENDED RECT at 100 percent across the area's whole columns
 // — the word itself on every row it covers whole, the word over what lies
 // beneath by the row's coverage where its edge crosses a row; whole rows at
@@ -183,7 +183,7 @@ void canvas_grid_lines(GuiCanvasSink& sink, const GuiRect& area,
                        GuiColor color) {
     // THE LINES UNDER THE WAVEFORM, in the canvas order of render.h's THE
     // WAVEFORM block's canvas paragraph: the
-    // horizontal grid — t = waveform_line_px() thick, ONE W (2 device px on
+    // horizontal grid — t = waveform_line_px() thick, ONE U (2 device px on
     // the tablet at 200 %, the unit, architect 2026-11-04), each inside
     // its band. THE CENTER LINES STAND OVER THE WAVEFORM
     // (architect 2026-10-09), render_center_lines below, a pass after
@@ -225,7 +225,7 @@ void canvas_center_lines(GuiCanvasSink& sink, const GuiRect& area,
     // visible over the waveform. Otherwise, in a project like this with tape
     // hiss, there's never enough zero that the red line would become visible
     // ever"; the order at render.h's THE WAVEFORM block's canvas paragraph):
-    // one W, the
+    // one U, the
     // grid's row rule (canvas_hline), in the palette's `center`, the
     // channels' bands the plate's own (waveform_channel_band), so it is
     // TRULY CENTERED ON THE ZERO THE PLATE'S BARS STRADDLE (architect
@@ -392,7 +392,7 @@ void paint_ink_rect(cairo_t* cr, const GuiRectF& r, GuiColor c) {
 // 2026-11-18 / 19): one coverage-stamp
 // pass at exact coverage — the trough's pill in `scale_trough`; the played
 // part, the same pill cut at the knob's center, in the accent; the knob's
-// disc — at rest `key_face` inside a one-W `scale_slider_border` rim,
+// disc — at rest `key_face` inside a one-U `scale_slider_border` rim,
 // hovered its fill `key_hover_face`, held the whole disc the accent — AS
 // PAINTED, `knob` its FaceMix (Rest, Hover and Lit; architect 2026-11-20):
 // the fill and the rim each the mix of their looks' tones (the stamp's
@@ -838,7 +838,7 @@ void render_playhead(GuiCanvasSink& sink,
     // (cue_chip_paint_reach_px, render.h), stated in the same columns the
     // playhead's damage box takes (playhead_invalidate_rect, main.cpp) — wider than
     // the line by construction (the reach is the chip's height and one, the
-    // line reaches half a W from a place within half a px of the column),
+    // line reaches half a U from a place within half a px of the column),
     // so it never drops a line whose real interval reaches the area — which
     // the scanner's damage stands on: its rect is the hull of the span below
     // (scanner_invalidate_rect, main.cpp), every pixel this function can
@@ -1111,7 +1111,7 @@ void render_trim_flags(cairo_t* cr,
     // bounds, the grabs and the highlight); THE PILL IS ITS VISIBLE CORE
     // (render.h's THE SLIDER'S BOX AND ITS CORE; architect 2026-11-18:
     // "let's just make it as realistic as we can"): ITS ROWS
-    // trim_pill_h_px (6 W) CENTERED ON THE TROUGH, real edges, `seat` of
+    // trim_pill_h_px (6 U) CENTERED ON THE TROUGH, real edges, `seat` of
     // trough above and below (the inset, render.h);
     // ITS ENDS the box's ends drawn in by the same inset, AT THEIR REAL
     // PLACES WHEREVER THEY FALL, on screen or past the strip's edge, round
@@ -1189,7 +1189,7 @@ void render_trim_flags(cairo_t* cr,
     // THE GRABS, as painted: the span's two end zones and the body between
     // them (render.h's THE TRIM BAR'S CAPS AND GRABS, trim_endcap_rect,
     // trim_bridge_gap) — each zone cut to the lane's painted width, the clip
-    // the pixels take, so a zone overrunning the lane (its 2 W outside reach
+    // the pixels take, so a zone overrunning the lane (its 2 U outside reach
     // past a bound at the strip's edge among them) claims its visible
     // stretch alone, and a window wholly off one side publishes no zone on
     // that side and an empty bridge. REAL EDGES (architect 2026-11-15, the
@@ -1300,7 +1300,7 @@ bool clip_hit_rect_to_waveform_columns(FlagHitRect& r, int x0, int w) {
 // THE STEM STASH'S GATE IS THE LINE'S OWN (architect 2026-11-15, the no-grid
 // rule: "Only things that are basically impossible to move, like the damages
 // and the culls, should stay integer"): a selected marker publishes its
-// stem entry whenever ANY of the stem's real interval — the one-W line centered on the marker's
+// stem entry whenever ANY of the stem's real interval — the one-U line centered on the marker's
 // exact place `x`, device px from the waveform's first column — lies inside
 // the waveform's columns [0, w): the very span the stem painter draws
 // (waveform_line_span, render.h, its emptiness the gate), so a stem slides
@@ -1374,7 +1374,7 @@ void iterate_visible_flags_impl(
     // its triangle's left part ALONE on the last columns — every caller clips
     // its paint and its hit rect to [0, w), so nothing paints past w. Its
     // STEM is
-    // published where any of the one-W line reaches the columns
+    // published where any of the one-U line reaches the columns
     // (stem_meets_waveform), and source_frame_off_right_edge
     // (warp_frame_map_view.h) still refuses AUTHORING there — a triangle's
     // half is not the marker's column. The column is displayed_column_at's —
@@ -1384,10 +1384,10 @@ void iterate_visible_flags_impl(
     // the triangle's reach so it never drops a marker the column test would
     // admit.
     // THE CULLS ARE WIDER THAN EVERYTHING THE GATES ADMIT: a stem's line
-    // reaches half a W from its place and its place lies within half a px of
+    // reaches half a U from its place and its place lies within half a px of
     // the column, so a line that touches the columns has its column within
-    // W / 2 + 1 of them — inside the chip's reach on the right (H + 1, H the
-    // chip's rows, 4 W) and inside the label's width bound on
+    // U / 2 + 1 of them — inside the chip's reach on the right (H + 1, H the
+    // chip's rows, 4 U) and inside the label's width bound on
     // the left — and no cull here drops a stem the gate would draw.
     const int reach = cue_chip_paint_reach_px();
     const double cull_lo = static_cast<double>(viewport_start_sample) -
@@ -1628,7 +1628,7 @@ struct FlagFace {
 // prefer the smaller version without the outline"). EVERY
 // SELECTED CUE, ENABLED OR DISABLED, ADDS THE STEM (architect
 // 2026-11-11: "disabled markers also get the dark stem, same as
-// enabled ones") — a solid one-W `cue_outline` line from the chip's apex
+// enabled ones") — a solid one-U `cue_outline` line from the chip's apex
 // row down the canvas's whole height at the cue's exact place, in the
 // playhead's line's place where the two coincide (paint_marker_stems), the
 // playhead on it or not; no
@@ -2273,7 +2273,7 @@ void render_flag_boxes_impl(
     // cut off there. Released by the pass's closing restore.
     clip_to_waveform_columns(cr, lanes.columns_x, waveform_width,
                              top_strip_area.y, top_strip_area.h);
-    // THE LABEL FACE for the whole pass (gui_font.h: Regular Label 12 W, 24
+    // THE LABEL FACE for the whole pass (gui_font.h: Regular Label 12 U, 24
     // device px on the tablet),
     // every run carrying it (text_shape.h).
     const GuiFont font = gui_font(GuiFace::Label);
@@ -3154,8 +3154,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // the right of this one ride the edge. No fixed-width grammar could
     // pin a bound field in any case: this face is PROPORTIONAL, so `-3.75`
     // and `+1.00` are not the same width.
-    // The pad is the fill's (render.h's cue_fill_pad_px, one W, 2 device px
-    // on the tablet) and THE CARET ONE W (render.h's line rule, hairline_px, 2026-11-04;
+    // The pad is the fill's (render.h's cue_fill_pad_px, one U, 2 device px
+    // on the tablet) and THE CARET ONE U (render.h's line rule, hairline_px, 2026-11-04;
     // held to the pad, so at the defaults the whole pad), so the borrow takes
     // the caret's columns out of the right pad: a caret at end-of-text stands
     // in the pad, inside the box — visible ink, not a lost one, so the travel
@@ -3261,7 +3261,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // WHERE THE BORROW IS SPENT, on every kind: the viewport reaches one column
     // INTO the right pad — the column the box above deliberately does not buy —
     // so a caret at end-of-text is inside the viewport with the run standing
-    // exactly where the committed text stands. The caret one W (held to the
+    // exactly where the committed text stands. The caret one U (held to the
     // pad), the borrow takes those columns of the pad and the viewport ends
     // the rest of the pad short of the box's right edge.
     const double view_x0 = bx + static_cast<double>(pad_l);
@@ -3325,7 +3325,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                           .red.count(idx) > 0;
     // THE FIELD IS GTK'S IN-PLACE CELL EDITOR (architect 2026-11-18 / 19;
     // render.h's EDITING paragraph): the
-    // entry's fill `ruler_face` (arc_dark 404552) inside a one-W border of
+    // entry's fill `ruler_face` (arc_dark 404552) inside a one-U border of
     // the accent `cue`, square-cornered, the text and the caret the
     // chrome's `field_text` (the text tone) — on every state of the marker,
     // disabled included (the chip carries the state). WHY: the field is the
@@ -3354,7 +3354,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    box's, 2026-11-01, render.h's marker_lane_h_px): the
     //    segment's box — its run and the fill's pad either side, the text
     //    standing exactly where the resting label's does — with THE
-    //    EDITOR'S BORDER (render.h's cue_editor_border_px, one W, 2 device
+    //    EDITOR'S BORDER (render.h's cue_editor_border_px, one U, 2 device
     //    px on the tablet) in the accent round it, outside the pads on the
     //    left and right and on the lane's first and last rows, the entry's
     //    fill inside, square-cornered. IT PAINTS OVER THE LANE — the
@@ -3387,7 +3387,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     // (architect 2026-11-18 / 19: the value sub-page entry's rule, one look
     // for both editors; render.h's EDITING paragraph): read off the one derivation (cue_line_box_top_px,
     // cue_line_box_h_px, render.h), never re-derived here — on the tablet
-    // rows 2 .. 29 under the lane's 32, the box's whole inner 14 W inside
+    // rows 2 .. 29 under the lane's 32, the box's whole inner 14 U inside
     // the 2-row border.
     const double band_y = static_cast<double>(lane.y) + cue_line_box_top_px();
     const double band_h = cue_line_box_h_px();
@@ -3445,7 +3445,7 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
                                           s0, s1);
     }
 
-    // 4. The caret: a blink-gated one-W line FROM THE CURSOR'S OWN BYTE
+    // 4. The caret: a blink-gated one-U line FROM THE CURSOR'S OWN BYTE
     //    BOUNDARY'S EXACT x on the band's exact rows, at exact coverage, in
     //    the box's TEXT color, `field_ink` (architect 2026-10-03). It is
     //    drawn only while no selection stands (text_editor::cursor_visible_now

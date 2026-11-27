@@ -16,8 +16,8 @@
 // on TWO PAGES built for the product's own grammars — FLAGS, the letters, the
 // digits and the flag grammar's operators, and SYMBOLS, the rest of printable
 // ASCII (the layout table below) — its key box THE PROGRAM KEY ROTATED,
-// 28 W wide by 36 W tall (architect 2026-11-26; the geometry below), its
-// caps the Keys face's 12 W (cap_word's paragraph), the
+// 28 U wide by 36 U tall (architect 2026-11-26; the geometry below), its
+// caps the Keys face's 12 U (cap_word's paragraph), the
 // block of keys SEATED WITH THE GAP BETWEEN ITS
 // `5` AND `6` ON THE WINDOW'S CENTER (architect 2026-11-08, block_x_px) in a
 // band that runs the window's width ON THE WINDOW'S LAST ROWS, one line of
@@ -527,7 +527,7 @@ inline constexpr GuiKey keysym_of(char32_t base) {
 // TransportUp / TransportDown arms: the same act, the tempo step).
 // AT THE PROGRAM KEYS' ONE SIZE,
 // centered on the face (paint_key_glyph, paint_handler.cpp — the one owner
-// of the size, the set's 16 W canvas, never of
+// of the size, the set's 16 U canvas, never of
 // the key's box), in the key's ink (paint_onscreen_keyboard: the text tone at
 // rest, `text_on_lit` on a lit face — a latched key or a key under the
 // finger — and `key_dim_ink` on a greyed one, key_live). A null answer: the
@@ -554,7 +554,7 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 }
 
 // THE WORD KEYS: every word on the ONE sans face in the keys' own size
-// (gui_font.h's GuiFace::Keys, the table's 12 W; architect 2026-10-24 /
+// (gui_font.h's GuiFace::Keys, the table's 12 U; architect 2026-10-24 /
 // 2026-11-26),
 // shaped through the one chokepoint like every other label — Shift, Esc,
 // Space and the page key KEEP THEIR WORDS (architect 2026-11-08).
@@ -575,13 +575,13 @@ inline std::optional<icons::Icon> cap_icon(const KeyDef& k) {
 // EVERY WORD FITS ITS KEY WITH AIR, and there is NO FALLBACK: no second
 // form, no measure at paint, no second face — the key's box and the cap are
 // constants (the program key rotated, the geometry below; the Keys face's
-// 12 W, gui_font.h's table), so the fit is a fact of the build. Measured on
+// 12 U, gui_font.h's table), so the fit is a fact of the build. Measured on
 // Liberation Sans Regular, the face the Keys face wears (gui_font.h's
 // table): each word's advance (the file's own advances summed at the em,
 // ceiled; HarfBuzz's unhinted advances through FreeType, text_shape's road)
 // against the key's face — the whole key, no outline — in the tablet's
 // device px at 200 % (the key 56 px wide, the gap 2, the pitch 58, the
-// em 24), the key widths the slots' at the one-W gap: "Space" 69 px in the
+// em 24), the key widths the slots' at the one-U gap: "Space" 69 px in the
 // 4u key's 230, "&123" 57 in its 1.5u key's 85 — the tightest word, 28 px
 // to spare — "ABC" 50, "Shift" 49 and "Esc" 41 in theirs (every 1.5u key
 // the one width, quarter_offset_px), and the widest character cap, "@",
@@ -707,13 +707,13 @@ inline constexpr Page page_after(Role role, Page page) {
 // THE KEY BOX IS THE PROGRAM KEY ROTATED (architect 2026-11-26: "It would
 // just be the regular icon size rotated 90 degrees. So the width becomes the
 // height and the height becomes the width"): its WIDTH, one unit's key, the
-// program key's height, kKeyHeightW, 28 W, and its HEIGHT, every row's, the
-// program key's width, kKeyWidthW, 36 W (render.h's seat) — ONE SOURCE,
+// program key's height, kKeyHeightU, 28 U, and its HEIGHT, every row's, the
+// program key's width, kKeyWidthU, 36 U (render.h's seat) — ONE SOURCE,
 // read through the program key's own two accessors (icon_case_h_px /
 // icon_case_w_px, scaled_px rounded at the element), a chiclet taller than
 // wide (architect 2026-10-29, the compact keyboard): 56 x 72 device px on
 // the tablet. THE GAP between adjacent
-// keys, both axes, IS THE PROGRAM KEYS' GAP, ONE W (render.h's key_gap_px:
+// keys, both axes, IS THE PROGRAM KEYS' GAP, ONE U (render.h's key_gap_px:
 // 2 device px on the tablet at 200 %, 1 at 100 %; architect 2026-11-04, the
 // unit: "the same face and gap on every key surface"); THE PITCH is the key
 // plus the gap, in device px; a key of n units is n pitches less one gap,
@@ -729,7 +729,7 @@ inline constexpr Page page_after(Role role, Page page) {
 // px; at a scale where it is odd (100 %: 29) a half-unit edge stands on half
 // a px, the key's face painted at that coverage over the band's ground (the
 // exact fill). THE KEYBOARD'S KEYS ARE NO LINKED GROUP: the program key's
-// box turned on its side, one grid with the program's one-W gap between
+// box turned on its side, one grid with the program's one-U gap between
 // keys (paint_onscreen_keyboard), not a linked group's shared seam.
 // THE BAND IS OPAQUE CHROME AND WHOLE PIXELS (render.h's hull): its ground
 // is one fill across the whole band (paint_onscreen_keyboard), the band's
@@ -765,7 +765,7 @@ inline int block_w_px() {
 // gap between row 0's `5` and `6` keys (detail::seat_gap_quarters, 20
 // quarters into the block) stands on the band's center — the band being the
 // window's width, its center the window's — EXACTLY, IN DEVICE PX
-// (architect 2026-11-15, the no-grid arc: no rounding to a whole W):
+// (architect 2026-11-15, the no-grid arc: no rounding to a whole U):
 //   block_left = center − (q · pitch / 4 − gap / 2)
 // with q the seat's quarters, the pitch and the gap in device px and the
 // subtrahend the gap's own center off the block's left edge. Worked on the
@@ -791,15 +791,15 @@ inline double block_x_px(const GuiRect& band) {
 // 2026-11-19: "arc would place no min height and just apply a sensible
 // minimum vertical padding. i do like the osk key dimensions and overall
 // layout"): the band is its pads and the grid, NO HEIGHT FLOOR — no minimum
-// height and no line of the canvas it must reach. THE PADS ARE kRunGapW,
-// 6 W, between the keyboard's top line and the grid's upper outer line
+// height and no line of the canvas it must reach. THE PADS ARE kRunGapU,
+// 6 U, between the keyboard's top line and the grid's upper outer line
 // (pad_top_px) and again between the grid's lower outer line and the
 // window's last row (pad_foot_px) — SYMMETRIC (architect 2026-11-20) and
 // READ THROUGH THE RUN GAP'S ONE READER (render.h's program_run_gap_px), a
-// whole W through scaled_px. THE REASON: the key rotated stands 6 W from
+// whole U through scaled_px. THE REASON: the key rotated stands 6 U from
 // the band's top and from its foot as an icon row's outermost key stands
-// 6 W inside the panel's edge (the tab pair's B 6 W inside the right edge:
-// render.h's kEdgeInsetW, Arc's toolbar margin, the same 6 W as the run
+// 6 U inside the panel's edge (the tab pair's B 6 U inside the right edge:
+// render.h's kEdgeInsetU, Arc's toolbar margin, the same 6 U as the run
 // gap; THE FIT at paint_icon_row, paint_handler.cpp).
 // THE BAND IS WHOLE PIXELS and so is every key row: the pads, the five key
 // rows, the four gaps and the grid's two outer lines (key_gap_px each) are
@@ -808,7 +808,7 @@ inline double block_x_px(const GuiRect& band) {
 // row. THE KEYS KEEP THEIR OWN BOX (the program key rotated); across there
 // is no pad: the block stands on its seat (block_x_px) and the ground beside
 // it is what the window's width leaves.
-// Worked on the tablet at 200 % (2304 x 1440; 2 device px a W: the pads 12
+// Worked on the tablet at 200 % (2304 x 1440; 2 device px a U: the pads 12
 // each, the gap and the lines 2, the keys 56 x 72), the surface standing on
 // the window's last row (foot_y, the window's foot 1440): the grid 5 x 72 +
 // 4 x 2 + 2 x 2 = 372 rows, the band 12 + 372 + 12 = 396, the surface 398,
@@ -833,7 +833,7 @@ inline int key_rows_h_px() {
 // below; architect 2026-11-20).
 inline int foot_y(const AppState& a) { return window_foot_y(a); }
 // THE KEYBOARD'S TOP LINE (the keyboard parted from what stands above by
-// Thunar's pane line; architect 2026-11-19): ONE W of `well_border`
+// Thunar's pane line; architect 2026-11-19): ONE U of `well_border`
 // (hairline_px), the surface's first rows, over the band.
 inline int top_line_px() { return hairline_px(); }
 
@@ -941,8 +941,8 @@ inline bool stands(const AppState& a) {
 // redesign_button_enabled's first arm, app_state.h; architect 2026-11-20).
 // ONE LINE OF ITS OWN OVER IT (top_line_px, `well_border`: Thunar's pane
 // line parting the keyboard from what stands above; architect
-// 2026-11-19), THE RUN GAP'S 6 W (12 px, program_run_gap_px) ABOVE AND
-// BELOW THE GRID (the bottom icon row keeps its own 7 W pads) AND NO
+// 2026-11-19), THE RUN GAP'S 6 U (12 px, program_run_gap_px) ABOVE AND
+// BELOW THE GRID (the bottom icon row keeps its own 7 U pads) AND NO
 // HEIGHT FLOOR (pad_top_px / pad_foot_px, architect
 // 2026-11-19); THE BLOCK OF KEYS STANDS ON ITS SEAT, THE `5` | `6` GAP ON
 // THE WINDOW'S CENTER (architect 2026-11-08, block_x_px), the band's body
@@ -1026,8 +1026,8 @@ inline GuiRect slot_damage_rect(const AppState& a) {
 // bottom icon row (bottom_row_area) and the status bar (status_bar_area, its
 // line over the bar its lane's first rows) — so the show blanks and the hide
 // repaints every row that yields. The surface reaches above both lanes at
-// every scale — 199 W (its top line 1, the pads 6 + 6, five 36 W key rows,
-// four gaps and two outer lines of 1 W) against their 65 W (the bottom icon
+// every scale — 199 U (its top line 1, the pads 6 + 6, five 36 U key rows,
+// four gaps and two outer lines of 1 U) against their 65 U (the bottom icon
 // row 42, the status bar 23) — so the union IS the surface: on the tablet
 // the lanes stand on rows 1310..1439, under the surface's top, 1042.
 // The well's foot over that row yields nothing and is not owed.
@@ -1265,7 +1265,7 @@ inline void for_each_key(const AppState& a, Page page, Fn&& fn) {
 // THE GRID'S ROWS (architect 2026-11-19: one grid with shared lines):
 // `fn(row, x0, x1, y0, y1)` for every key row of `page`
 // top to bottom, the row's OUTER RECT IN THE LINE TONE — its keys and the
-// one-W line round them: from one gap left of the block to one gap past its
+// one-U line round them: from one gap left of the block to one gap past its
 // last key, from one gap above its keys to one gap below — so neighboring
 // rows share the line between them, the walk's own seats (for_each_key).
 // The painter's (paint_onscreen_keyboard) alone.

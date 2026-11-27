@@ -100,7 +100,7 @@ bool ValueDragOps::begin(int marker, MarkerCell cell, double origin_y) {
 
 void ValueDragOps::apply_motion(double mouse_y) {
     if (!app.value_drag.active) return;
-    // ONE STEP PER kValueDragPxPerStep WINDOWS PX, through the product's
+    // ONE STEP PER kValueDragPxPerStep U, through the product's
     // one scale conversion — a press-road LENGTH scales, exactly as the drag
     // gate, the double-click slack and the touch slop do, so the gesture asks
     // the hand for the same travel at every scale. Floored at 1: a

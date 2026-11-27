@@ -14,7 +14,7 @@
 // THE LOOK IS XFCE4-NOTIFYD'S BUBBLE UNDER ARC (architect 2026-11-19:
 // "Agree" to "normal cards the grey notifyd bubble, standing cards Arc's
 // red", and "good to build" on the approved picture): A ROUNDED BOX
-// (kNotificationRadiusW), NO BORDER, NO SHADOW (notifyd draws none,
+// (kNotificationRadiusU), NO BORDER, NO SHADOW (notifyd draws none,
 // measured), ITS FILL A CARRIED FILL AT ITS
 // OPACITY OVER WHAT LIES UNDER IT (gui_theme.h's THE THREE CARRIED FILLS; the
 // canvas's pixels composited by the GPU, canvas_sink.h's THE TRANSPARENCY
@@ -23,14 +23,14 @@
 // STANDING (critical) CARD Arc's destructive red `card_standing_fill`
 // (F04A50 at .95) with its words
 // and glyph in `card_text`, the print on a lit face (FFFFFF). INSIDE IT
-// notifyd's one padding (kNotificationPadW, 14 W on all four sides), THE CLASS GLYPH in a
-// kNotificationGlyphBoxW drawing box at the left —
+// notifyd's one padding (kNotificationPadU, 14 U on all four sides), THE CLASS GLYPH in a
+// kNotificationGlyphBoxU drawing box at the left —
 // icons.h's: DialogInformation on a normal card, DialogError on a standing
 // one, each the mark cut out of its shape (the i and the ! cut out of a
 // disc), the mark showing the card's face through one color — then the same padding again, then THE CLAUSE,
-// Regular 12 W, one line box (14 W) a line, a single line centered on the
-// glyph's box (its baseline +26 W), wrapped lines from the top pad (the
-// first baseline +25 W). THE WHOLE CARD IS ONE BUTTON (architect 2026-10-01,
+// Regular 12 U, one line box (14 U) a line, a single line centered on the
+// glyph's box (its baseline +26 U), wrapped lines from the top pad (the
+// first baseline +25 U). THE WHOLE CARD IS ONE BUTTON (architect 2026-10-01,
 // "whole card dismisses, X gone"): a click or tap anywhere on the card
 // dismisses it at the lift (the hit section below). A sentence too long for
 // one line WRAPS DOWNWARD (architect 2026-08-30): the card grows taller and
@@ -822,17 +822,17 @@ inline std::string lowercase_initial(std::string_view s) {
 // MAY COVER BUTTONS ON THE TABLET and that is accepted in his own words —
 // "it's okay if it covers up some buttons": a card is a sentence to read and
 // it leaves on its own. A length, so it scales; the life beside it
-// (kNotificationMs) is a duration and does not. 698 W (architect
-// 2026-11-05: 697.5 RULED TO 698, a painted length being a whole W), 1396
+// (kNotificationMs) is a duration and does not. 698 U (architect
+// 2026-11-05: 697.5 RULED TO 698, a painted length being a whole U), 1396
 // device px on the tablet.
 inline constexpr double kNotificationMaxWidthPx = 698.0;
 
-// THE GAP BETWEEN TWO CARDS IN THE STACK: kNotificationGapW, 6 W
+// THE GAP BETWEEN TWO CARDS IN THE STACK: kNotificationGapU, 6 U
 // (notifyd's stack, measured; architect 2026-11-19), 12 device px
 // on the tablet, scaled_px floored at one so the cards never touch; read by
 // the painter (paint_notifications) and the room's count
 // (notification_capacity) and by nothing else.
-inline constexpr double kNotificationGapW = 6.0;
+inline constexpr double kNotificationGapU = 6.0;
 int notification_gap_px();
 
 // HOW MANY LINES A SENTENCE MAY TAKE (architect 2026-08-30, "a few"): a card
@@ -850,44 +850,44 @@ inline constexpr int kNotificationMaxLines = 3;
 // arc's canonical padding" — xfce4-notifyd's `#define DEFAULT_PADDING 14.0`,
 // xfce-notify-window.c, the content box's border on all four sides AND the
 // icon's margin_end, the summary and body packed with no margin), each a
-// whole W through scaled_px, rounded at the element:
-//   THE PADDING — kNotificationPadW, 14 W, USED FOUR WAYS AND ONLY HERE, so
+// whole U through scaled_px, rounded at the element:
+//   THE PADDING — kNotificationPadU, 14 U, USED FOUR WAYS AND ONLY HERE, so
 //     no site can disagree: the box's edge to the content above, below, at
 //     the left of the glyph's box and at the right of the text's room — AND
 //     the glyph's box to the text's pen (notifyd's icon margin_end);
-//   THE GLYPH'S DRAWING BOX — 16 W square, OURS (notifyd's icon is 48 px;
-//     ours is the 16 W drawing the lists and keys wear, the class drawing's
+//   THE GLYPH'S DRAWING BOX — 16 U square, OURS (notifyd's icon is 48 px;
+//     ours is the 16 U drawing the lists and keys wear, the class drawing's
 //     whole canvas scaled into it, icons.h's THE BOX), its top on the top
-//     pad (+14 W) on every card;
+//     pad (+14 U) on every card;
 //   THE CONTENT'S HEIGHT — THE TALLER OF THE GLYPH'S BOX AND THE TEXT, as
-//     GTK's row box sizes it: one line (14 W) is shorter than the glyph, so
-//     a one-line card is 14 + 16 + 14 = 44 W (88 device rows on the tablet)
-//     and its line box stands CENTERED ON THE GLYPH'S ROWS (+15 W, the
-//     baseline +26 W); two or three lines (28 / 42 W) are taller, so the
-//     card is 14 + the lines + 14 W, the text from +14 W (the first baseline
-//     +25 W) and the glyph's box kept at +14 W (the text grows downward
+//     GTK's row box sizes it: one line (14 U) is shorter than the glyph, so
+//     a one-line card is 14 + 16 + 14 = 44 U (88 device rows on the tablet)
+//     and its line box stands CENTERED ON THE GLYPH'S ROWS (+15 U, the
+//     baseline +26 U); two or three lines (28 / 42 U) are taller, so the
+//     card is 14 + the lines + 14 U, the text from +14 U (the first baseline
+//     +25 U) and the glyph's box kept at +14 U (the text grows downward
 //     beside it, nothing reflows);
-//   THE RADIUS — 2 W at each corner (Arc's);
+//   THE RADIUS — 2 U at each corner (Arc's);
 //   THE SEAT — notifyd's `#define SPACE 16`, off the screen's top and right
 //     (his panel is at the bottom; measured on his desktop): the stack's
-//     first card's top 16 W under the window's first row and every card's
-//     right edge 16 W inside the window's last column
+//     first card's top 16 U under the window's first row and every card's
+//     right edge 16 U inside the window's last column
 //     (notification_stack_bound).
-inline constexpr double kNotificationPadW       = 14.0;
-inline constexpr double kNotificationGlyphBoxW  = 16.0;
-inline constexpr double kNotificationRadiusW    = 2.0;
-inline constexpr double kNotificationSeatW      = 16.0;
+inline constexpr double kNotificationPadU       = 14.0;
+inline constexpr double kNotificationGlyphBoxU  = 16.0;
+inline constexpr double kNotificationRadiusU    = 2.0;
+inline constexpr double kNotificationSeatU      = 16.0;
 
 // THE CARD'S LINE PITCH, device px: the body face's LINE BOX (the line-box
-// rule, gui_font_line_box_w — 11 + 3 = 14 W at Regular 12 W), whole: a
+// rule, gui_font_line_box_u — 11 + 3 = 14 U at Regular 12 U), whole: a
 // line box stacked on a line box, Pango's lines in notifyd's one label, 28
 // device px on the tablet.
 int notification_line_px();
 
 // A card of `lines` lines' height (the padding's block above): the padding,
 // the taller of the glyph's box and the lines' line boxes, the padding —
-// each part its own rounded W. On the tablet one line 28 + 32 + 28 = 88
-// device rows (44 W), two 28 + 56 + 28 = 112 (56 W), three 140 (70 W). THE
+// each part its own rounded U. On the tablet one line 28 + 32 + 28 = 88
+// device rows (44 U), two 28 + 56 + 28 = 112 (56 U), three 140 (70 U). THE
 // ONE-LINE CARD (the default) is what the room's count reads
 // (notification_capacity); a card's line count needs a shaped run, which
 // only the painter has, so its real height is the painter's to ask.
@@ -895,14 +895,14 @@ int notification_card_h_px(int lines = 1);
 
 // THE TEXT'S TOP in a card of `lines` lines, device px under the card's top:
 // the padding, plus — where the lines are shorter than the glyph's box (one
-// line) — half the difference in whole W, GTK's centering of the label on
-// the row box: +15 W for one line (30 device rows on the tablet), +14 W for
-// more. The first baseline is this plus the line box's ascent (11 W).
+// line) — half the difference in whole U, GTK's centering of the label on
+// the row box: +15 U for one line (30 device rows on the tablet), +14 U for
+// more. The first baseline is this plus the line box's ascent (11 U).
 int notification_text_top_px(int lines);
 
 // The card's largest possible width at this window and scale: the scaled
 // ceiling above, and — where the window cannot even hold that — the window
-// itself less the stack's two side seats (kNotificationSeatW each side). THE
+// itself less the stack's two side seats (kNotificationSeatU each side). THE
 // WINDOW TERM IS A SAFETY AND NOT A DESIGN (architect 2026-08-31): the
 // ceiling is what the design says a card is wide, and the clamp only keeps a card inside
 // a window too narrow for it (the tablet's portrait panel, a contrived
@@ -912,15 +912,15 @@ int notification_text_top_px(int lines);
 int notification_card_max_w_px(const AppState& a);
 
 // THE STACK'S ROOM: the rect the stack may occupy — the maximum card width,
-// its right edge kNotificationSeatW (16 W) inside the window's last column,
-// from THE CARD SEAT — kNotificationSeatW under the window's first row,
+// its right edge kNotificationSeatU (16 U) inside the window's last column,
+// from THE CARD SEAT — kNotificationSeatU under the window's first row,
 // OVER THE TITLE BAR AND THE TOP ICON ROW, WHATEVER STANDS THERE (architect
 // 2026-11-19: "in xfce the card appears at the top right of the
 // screen without regard for what it obstructs - it can always be dismissed
 // with a tap. consider having ours do that, simply using the xfce
 // notification margin"; notifyd's SPACE 16 off the screen's top and right,
 // the block above) — DOWN TO THE PANEL'S PAD OF AIR (folder_overlay::pad_px,
-// one W) ABOVE THE BOTTOM ROW'S LANE, or above THE ON-SCREEN KEYBOARD'S TOP
+// one U) ABOVE THE BOTTOM ROW'S LANE, or above THE ON-SCREEN KEYBOARD'S TOP
 // LINE while it stands, whichever is higher (architect 2026-11-20: the
 // keyboard stands over the bottom icon row, onscreen_keyboard.h's
 // placement block; the cards paint after it, so the room's foot is what
@@ -932,7 +932,7 @@ int notification_card_max_w_px(const AppState& a);
 // above every claim and veil), so a key or any chrome under it answers
 // nothing while it stands there, and no key
 // under it starts a tooltip (recompute_redesign_button_hover's under_card).
-// WORKED ON THE TABLET (2304 x 1440 at 200 %, the key 28 W tall; the advances
+// WORKED ON THE TABLET (2304 x 1440 at 200 %, the key 28 U tall; the advances
 // MEASURED off fonts/LiberationSans-Regular.ttf at 24 px the product's way —
 // unhinted hmtx advances and the GPOS `kern` pairs, each to 1/64 px, which
 // gives "2 warp markers coincide" its recorded 260.1 — the boxes
@@ -949,10 +949,10 @@ int notification_card_max_w_px(const AppState& a);
 // only with the number of places named and the digits of the two counts,
 // never with a place's own value beyond that pair. THE LONGEST FORM, three
 // places and the rest, "10 warp markers coincide at 00:12.345, 01:23.456,
-// 02:05.000 and 2 more", advances 781.8 px: 898 wide (449 W), x 1374 ..
-// 2271, against the ceiling's 1396 (698 W) — a sentence's room of 1280 px,
+// 02:05.000 and 2 more", advances 781.8 px: 898 wide (449 U), x 1374 ..
+// 2271, against the ceiling's 1396 (698 U) — a sentence's room of 1280 px,
 // which no count a piece can hold reaches (each further digit of a count
-// 13.34 px), so THE STRUCK CARD NEVER WRAPS; its wrap, its seat (16 W off
+// 13.34 px), so THE STRUCK CARD NEVER WRAPS; its wrap, its seat (16 U off
 // the window's top and right) and its padding the cards' own, untouched.
 // (Two places, "4 … at 00:12.345 and 01:23.456", 560.3 px: 677 wide;
 // three, "6 … and 02:05.000", 680.4 px: 797 wide.) A SECOND ONE-LINE CARD

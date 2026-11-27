@@ -13,14 +13,14 @@
 #include <utility>
 
 int notification_gap_px() {
-    // notifyd's 6 W (the ruling at the declaration), floored at one px.
-    return scaled_px(kNotificationGapW, 1);
+    // notifyd's 6 U (the ruling at the declaration), floored at one px.
+    return scaled_px(kNotificationGapU, 1);
 }
 
 int notification_line_px() {
-    // The body face's line box in W, whole (the declaration): 14 W, 28
+    // The body face's line box in U, whole (the declaration): 14 U, 28
     // device px on the tablet.
-    return scaled_px(gui_font_line_box_w(gui_font(GuiFace::Body)).line(), 1);
+    return scaled_px(gui_font_line_box_u(gui_font(GuiFace::Body)).line(), 1);
 }
 
 int notification_card_h_px(int lines) {
@@ -28,21 +28,21 @@ int notification_card_h_px(int lines) {
     // (notifyd's one 14 and GTK's row box, the declaration), each its own
     // rounded part (the composite rule, scaled_px's head): 28 + max(32,
     // 28 n) + 28 device rows on the tablet at 200 %.
-    const int pad = scaled_px(kNotificationPadW, 1);
-    const int content = std::max(scaled_px(kNotificationGlyphBoxW, 1),
+    const int pad = scaled_px(kNotificationPadU, 1);
+    const int content = std::max(scaled_px(kNotificationGlyphBoxU, 1),
                                  std::max(1, lines) * notification_line_px());
     return pad + content + pad;
 }
 
 int notification_text_top_px(int lines) {
-    // The declaration's rule, in whole W: the lines centered on the glyph's
-    // box where they are shorter than it (one line: (16 − 14) / 2 = 1 W),
+    // The declaration's rule, in whole U: the lines centered on the glyph's
+    // box where they are shorter than it (one line: (16 − 14) / 2 = 1 U),
     // the top pad otherwise.
-    const int line_w = gui_font_line_box_w(gui_font(GuiFace::Body)).line();
-    const int text_w = std::max(1, lines) * line_w;
-    const int glyph_w = static_cast<int>(kNotificationGlyphBoxW);
-    const int centered_w = text_w < glyph_w ? (glyph_w - text_w) / 2 : 0;
-    return scaled_px(kNotificationPadW, 1) + scaled_px(centered_w);
+    const int line_u = gui_font_line_box_u(gui_font(GuiFace::Body)).line();
+    const int text_u = std::max(1, lines) * line_u;
+    const int glyph_u = static_cast<int>(kNotificationGlyphBoxU);
+    const int centered_u = text_u < glyph_u ? (glyph_u - text_u) / 2 : 0;
+    return scaled_px(kNotificationPadU, 1) + scaled_px(centered_u);
 }
 
 int notification_card_max_w_px(const AppState& a) {
@@ -57,7 +57,7 @@ int notification_card_max_w_px(const AppState& a) {
     // what it has. This number is also the ROOM the painter clips to and
     // publishes within, and with no floor (architect 2026-11-19) no card is
     // wider than it.
-    const int room_w = a.width - 2 * scaled_px(kNotificationSeatW);
+    const int room_w = a.width - 2 * scaled_px(kNotificationSeatU);
     return std::max(0, std::min(ceiling_w, room_w));
 }
 
@@ -66,12 +66,12 @@ GuiRect notification_stack_bound(const AppState& a) {
     // PAD AT THE FOOT (architect 2026-11-19: "in xfce the card
     // appears at the top right of the screen without regard for what it
     // obstructs - it can always be dismissed with a tap ... simply using the
-    // xfce notification margin"): the first card's top kNotificationSeatW
-    // (16 W) under the window's first row and its right edge 16 W inside the
+    // xfce notification margin"): the first card's top kNotificationSeatU
+    // (16 U) under the window's first row and its right edge 16 U inside the
     // window's last column — rows from 32 and columns to 2271 on the tablet
     // — over the title bar and the top icon row, whatever stands there. The
     // foot is the panel's own pad, folder_overlay::pad_px (architect
-    // 2026-08-30; one W) above the bottom icon row's lane, OR ABOVE THE
+    // 2026-08-30; one U) above the bottom icon row's lane, OR ABOVE THE
     // ON-SCREEN KEYBOARD'S TOP LINE WHILE IT STANDS, whichever is higher
     // (architect 2026-11-20: the keyboard stands over the bottom
     // icon row, onscreen_keyboard.h's placement block) — the cards paint
@@ -84,7 +84,7 @@ GuiRect notification_stack_bound(const AppState& a) {
     // arithmetic can say how much taller, so this is the space the stack has
     // to grow into and the painter clips to it.
     const int pad     = folder_overlay::pad_px();
-    const int seat    = scaled_px(kNotificationSeatW);
+    const int seat    = scaled_px(kNotificationSeatU);
     const int w       = notification_card_max_w_px(a);
     const int x       = a.width - seat - w;
     const int y       = seat;

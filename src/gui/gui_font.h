@@ -11,27 +11,27 @@
 // (architect 2026-10-12; no other family is proposed,
 // docs/engineering/closed_questions.md).
 //
-// THE SIZES ARE ONE PIXEL TABLE: kGuiFaceSizes below, each use's EM IN W,
-// SCALED WITH gui_scale AND NEVER ROUNDED (size_px = em_w · gui_scale /
-// 100, exact: gui_font_em_px; one W = 2 device px on the tablet at its
+// THE SIZES ARE ONE PIXEL TABLE: kGuiFaceSizes below, each use's EM IN U,
+// SCALED WITH gui_scale AND NEVER ROUNDED (size_px = em_u · gui_scale /
+// 100, exact: gui_font_em_px; one U = 2 device px on the tablet at its
 // 200 %, render.h's scaled_px). A FACE'S EM IS ITS SOURCE'S EXACT NUMBER
 // (architect 2026-11-26, the no-grid rule carried to the faces: "why are
 // the fonts not following that rule of not snapping to integers"; GTK does
-// not round an em): the whole-W rule is the AUTHORED LENGTHS' (render.h's
+// not round an em): the whole-U rule is the AUTHORED LENGTHS' (render.h's
 // scaled_px), and of the text's geometry only THE LINE'S BOX stays whole
 // (THE LINE BOX below; GTK's line box is whole px). The table's sources
-// happen to be whole W — 12, 12 / 1.2 = 10, 18 — so at the tablet's 200 %
+// happen to be whole U — 12, 12 / 1.2 = 10, 18 — so at the tablet's 200 %
 // every em is a whole count of device px; at another scale an em may
 // carry a fraction, and every reader takes it as a double (the scaled
 // font's matrix, the per-em metrics; the one grid it still meets is
 // FreeType's own 26.6 size, a 64th of a px, where cairo hands the em to
-// FT_Set_Char_Size). EVERY TEXT IS 12 W, ARC'S 9 pt (architect
-// 2026-11-18: "set it so that the font is actually at 9 point"; one Arc px
-// is one W, Arc being drawn for 9 pt = 12 px) — 24 device px on the tablet
-// — BUT THE RULER'S DIGITS, 10 W (20 device px; Arc's `font-size:
+// FT_Set_Char_Size). EVERY TEXT IS 12 U, ARC'S 9 pt (architect
+// 2026-11-18: "set it so that the font is actually at 9 point"; one Arc
+// px laid as one U, Arc being drawn for 9 pt = 12 px) — 24 device px on
+// the tablet — BUT THE RULER'S DIGITS, 10 U (20 device px; Arc's `font-size:
 // smaller`, 12 / 1.2: "the ruler, we should make the ruler font small
 // still"). No other size on the main page but the timestamp's (below). THE
-// PROGRESS PAGE'S COUNT TAKES GTK'S "small" (2026-11-19): CAPTION 10 W
+// PROGRESS PAGE'S COUNT TAKES GTK'S "small" (2026-11-19): CAPTION 10 U
 // (Pango's "small", 12 / 1.2). A question's
 // and the progress page's sentence are plain Body text, no larger face
 // (architect 2026-11-20: GTK's "large" is a popup's — "the oversized text
@@ -56,7 +56,7 @@
 // `.h1 { font-size: 24px; }`, `.h2 { font-size: 18px; }`, `.h3 {
 // font-size: 11px; }`, `.h4, .category-label { color: #a5abb5;
 // font-weight: 600; }` — and the timestamp wears `.h4`'s tone and weight
-// at `.h2`'s size, 18 W: NO ONE CLASS OF ARC'S IS ALL THREE. 18 is also
+// at `.h2`'s size, 18 U: NO ONE CLASS OF ARC'S IS ALL THREE. 18 is also
 // GTK CSS's `x-large` (3/2 of 12); Pango's markup x-large, 1.44 (17.28),
 // is nowhere in Arc, whose sheet names no absolute size keyword at all
 // (`smaller`, percents and literal px). The rows
@@ -68,22 +68,22 @@
 // BOLD FOR THE TITLE BAR (Bold), THE RULER'S DIGITS (Small) AND THE
 // TIMESTAMP (Timestamp: Arc's `.h4, .category-label { color: #a5abb5;
 // font-weight: 600; }`, the 600 drawn by the face's one Bold; architect
-// 2026-11-25, at `.h2`'s 18 W, 2026-11-26), as GTK Arc sets them (xfwm's
+// 2026-11-25, at `.h2`'s 18 U, 2026-11-26), as GTK Arc sets them (xfwm's
 // title bold, every other text regular).
 // Every length authored round the text follows these sizes (each length's
 // own comment records its class).
 //
 // THE LINE BOX (architect 2026-11-19; GTK's seat; whole while the em is
 // exact, 2026-11-26): what Pango lays a line in — the face's ascent and
-// descent AT THE EM IN W, each rounded UP to a whole W, gui_font_line_box_w
+// descent AT THE EM IN U, each rounded UP to a whole U, gui_font_line_box_u
 // below. THE ROUNDING IS OUR RULE, GTK's line box being whole px: it holds
 // for any em, a fractional one included (at a whole-px size it is what
 // FreeType's size request does, the ascender ceiled and the descender
 // floored). Liberation Sans Regular and
 // Bold carry one hhea (ascender 1854, descender -434 of 2048 units): 10.86 +
-// 2.54 at 12 W, so 11 + 3 = 14 W; 9.05 + 2.12 at 10 W, so 10 + 3 = 13 W;
-// 16.30 + 3.81 at 18 W, so 17 + 4 = 21 W.
-// render.h's line_box_baseline seats a text by it in a box of whole W.
+// 2.54 at 12 U, so 11 + 3 = 14 U; 9.05 + 2.12 at 10 U, so 10 + 3 = 13 U;
+// 16.30 + 3.81 at 18 U, so 17 + 4 = 21 U.
+// render.h's line_box_baseline seats a text by it in a box of whole U.
 //
 // THE VERTICAL METRICS ARE THE FACE'S OWN AT THAT PIXEL SIZE (architect
 // 2026-10-23: the face's own box is the truthful one): FreeType's
@@ -163,16 +163,17 @@ inline constexpr const char* kGuiFontFiles[kGuiFontFileCount] = {
 };
 
 // THE PIXEL TABLE (the head): per use, in GuiFace's order, the file it is
-// drawn from and its em in W, its source's exact number, never rounded
-// (one W = one px at 100 %, 2 device px on the tablet at 200 %;
-// gui_font_em_px; architect 2026-11-26): 12 W everywhere but the ruler's
-// and the progress page's count's 10 and the timestamp's 18, the Regular
+// drawn from and its em in U, its source's exact number, never rounded
+// (one U = one unscaled px: one px at gui_scale 100, 2 device px on the
+// tablet at 200 %; gui_font_em_px; architect 2026-11-26): 12 U everywhere
+// but the ruler's and the progress page's count's 10 and the timestamp's
+// 18, the Regular
 // for body text and the keyboard's caps, the Bold for the title bar, the
 // ruler and the timestamp (architect 2026-11-18 / 2026-11-19 /
 // 2026-11-25 / 2026-11-26).
 struct GuiFaceSize {
     std::size_t file = 0;
-    double      em_w = 0.0;
+    double      em_u = 0.0;
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 12.0},   // Body: the lists, the cards, the pages, the status bar
@@ -189,11 +190,11 @@ inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
                  // architect 2026-11-26)
 };
 
-// THE USE'S TABLE SIZE, its em in W — the one read of the table's sizes:
+// THE USE'S TABLE SIZE, its em in U — the one read of the table's sizes:
 // every reader of a GuiFont's size takes it off the font's face here
-// (gui_font_em_px, gui_font_line_box_w), the size riding in no value.
+// (gui_font_em_px, gui_font_line_box_u), the size riding in no value.
 inline constexpr double gui_font_table_px(GuiFace face) {
-    return kGuiFaceSizes[static_cast<std::size_t>(face)].em_w;
+    return kGuiFaceSizes[static_cast<std::size_t>(face)].em_u;
 }
 
 struct GuiFontBytes {
@@ -220,7 +221,7 @@ bool gui_font_install_bundled(const GuiFontBytes (&files)[kGuiFontFileCount]);
 // A FACE AT A SCALE: what every text consumer holds, the successor of a
 // cairo scaled font. `percent` is gui_scale; THE SIZE IS THE FACE'S, every
 // use's em the table's (gui_font_table_px; architect 2026-11-26: the
-// on-screen keyboard's caps the Keys face's 12 W, no live size), so the
+// on-screen keyboard's caps the Keys face's 12 U, no live size), so the
 // value carries none and every cache keyed on a GuiFont keys on the face
 // and the percent (the scaled font, gui_font_bundled.cpp's
 // gui_outline_scaled_font, keyed on the em; text_shape's run memo, keyed on
@@ -232,16 +233,16 @@ struct GuiFont {
     int     percent = 100;
 };
 
-// THE USE'S EM IN DEVICE PX at the font's scale: its em in W times gui_scale
+// THE USE'S EM IN DEVICE PX at the font's scale: its em in U times gui_scale
 // over 100, EXACT — NOT ROUNDED (architect 2026-11-26, the head's THE SIZES:
-// a face's em is its source's exact number; the whole-W rule and scaled_px's
-// rounding are the authored lengths'): 24 on the tablet at 200 % for a 12-W
-// face, 36 for the 18-W timestamp, 16.56 at 138 % for a 12-W one. THE ONE
+// a face's em is its source's exact number; the whole-U rule and scaled_px's
+// rounding are the authored lengths'): 24 on the tablet at 200 % for a 12-U
+// face, 36 for the 18-U timestamp, 16.56 at 138 % for a 12-U one. THE ONE
 // READ OF THE EM IN PX: every px-domain font quantity takes it as a double
 // (the scaled font's matrix and its cache key, the per-em metrics, the cap,
 // the strike, the lifts, the advance bound, the ink band's memo); FreeType
 // receives it at its own 26.6, a 64th of a px (the head). NO FLOOR: the
-// smallest em any producer makes is 5 px — the table's least, 10 W, at
+// smallest em any producer makes is 5 px — the table's least, 10 U, at
 // gui_scale's least 50 % (device_config.h's is_gui_scale_percent, refused
 // at the load) — so every em is positive, which is all its readers need
 // (cairo's font matrix must not be singular).
@@ -266,19 +267,19 @@ double gui_font_line_px(const GuiFont& f);
 double gui_font_ascent_exact_px(const GuiFont& f);
 double gui_font_descent_exact_px(const GuiFont& f);
 double gui_font_line_exact_px(const GuiFont& f);
-// THE LINE BOX IN W (the head's THE LINE BOX; architect 2026-11-19):
-// the face's ascent and descent at the use's exact em IN W — its size at
-// 100 % — each rounded up to a whole W (our rule, GTK's line box being
+// THE LINE BOX IN U (the head's THE LINE BOX; architect 2026-11-19):
+// the face's ascent and descent at the use's exact em IN U — its size at
+// 100 % — each rounded up to a whole U (our rule, GTK's line box being
 // whole px; at a whole-px size FreeType's size request rounds them the same
-// way), the line box their sum. 11 + 3 at 12 W, 10 + 3 at 10 W, 17 + 4 at
-// 18 W (Liberation Sans, both files). Out of line: the file's metrics are
+// way), the line box their sum. 11 + 3 at 12 U, 10 + 3 at 10 U, 17 + 4 at
+// 18 U (Liberation Sans, both files). Out of line: the file's metrics are
 // the install's.
-struct GuiLineBoxW {
+struct GuiLineBoxU {
     int ascent  = 0;
     int descent = 0;
     int line() const { return ascent + descent; }
 };
-GuiLineBoxW gui_font_line_box_w(const GuiFont& f);
+GuiLineBoxU gui_font_line_box_u(const GuiFont& f);
 // THE CAP BAND in device px at the font's scale, unrounded — what
 // redesign_baseline centers on an on-screen keyboard key (paint_handler.cpp):
 // the em times the use's file's own "H" ink per em.
@@ -302,7 +303,7 @@ double gui_font_cap_px(const GuiFont& f);
 // 19 + 3), and
 // the design's unhinted bounds rounded miss the
 // hinter's own rows (Bold 12: 8.38 rounds to 8, the paint 9). Its readers:
-// the title bar's right group (the alphabet of its runs in the Bold 12 W,
+// the title bar's right group (the alphabet of its runs in the Bold 12 U,
 // the cap band the battery and the lamps stand on — render.h's
 // title bar block). A reader takes the integers as they are.
 // Measured once per file,

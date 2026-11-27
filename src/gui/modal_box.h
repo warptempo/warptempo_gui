@@ -37,10 +37,10 @@
 //      exception (below); no frame, no ring, no shadow (paint_modal_box,
 //      paint_handler.cpp);
 //   2. directly under it THE CONTROLS ROW, THE BOTTOM ICON ROW'S OWN ROWS —
-//      the pad 7 W, the key (36 W wide and 28 W tall, render.h's
-//      icon_case_w_px / icon_case_h_px), the pad 7 W
-//      (strip_h_px) — on the body tone, its outermost BOXES 6 W INSIDE THE
-//      PANEL (render.h's kEdgeInsetW; materials.h's THE KEY). THE ROW IS
+//      the pad 7 U, the key (36 U wide and 28 U tall, render.h's
+//      icon_case_w_px / icon_case_h_px), the pad 7 U
+//      (strip_h_px) — on the body tone, its outermost BOXES 6 U INSIDE THE
+//      PANEL (render.h's kEdgeInsetU; materials.h's THE KEY). THE ROW IS
 //      THE PAGE'S THAT STANDS IN THE VIEW (architect 2026-11-19, his "i
 //      take your recommends for all"; the two pages architect 2026-11-20):
 //      the overlay's own controls while an overlay stands, A
@@ -57,7 +57,7 @@
 //      and drops its selection count; BLANK while a batch's progress stands,
 //      status_bar_text), covered by the on-screen keyboard under every
 //      editor (below).
-// At the tablet's 2304 x 1440 and 200 % (the key 36 x 28 W; the 56-row
+// At the tablet's 2304 x 1440 and 200 % (the key 36 x 28 U; the 56-row
 // title bar), the keyboard standing or not: the box's line
 // rows 140–141 and 1308–1309, THE VIEW x 0..2303 and y 142..1307 (1166
 // rows); the controls row 1310–1393, its face rows 1324–1379, its first
@@ -177,53 +177,53 @@ inline GuiRect modal_box_interior_rect(const AppState& a) {
 // player, presets) would then inherit the spacing so as to make it uniform.
 // ok to deviate a little"; on the rule as worded here, "1 agree" / "2
 // agree"): ON EVERY PAGE BUT THE MAIN ONE — whatever is laid in the view —
-// THE INK STANDS 13 W FROM THE VIEW'S LEFT AND FROM ITS TOP. Two numbers,
+// THE INK STANDS 13 U FROM THE VIEW'S LEFT AND FROM ITS TOP. Two numbers,
 // this their one owner:
-//   kPageMarginPenW 12 W     a text's PEN from the view's left edge, its ink
-//                            then about 13 W in (the face's own left
+//   kPageMarginPenU 12 U     a text's PEN from the view's left edge, its ink
+//                            then about 13 U in (the face's own left
 //                            bearing) — THE XFCE APPEARANCE DIALOG'S INK,
 //                            MEASURED 13 on his desktop; and on a page
 //                            (not a list, below) NOTHING STANDS CLOSER THAN
-//                            THE SAME 12 W TO THE VIEW'S RIGHT EDGE (a text
+//                            THE SAME 12 U TO THE VIEW'S RIGHT EDGE (a text
 //                            is cut there);
-//   kPageMarginCapTopW 13 W  the first line's CAP TOP under the view's top,
+//   kPageMarginCapTopU 13 U  the first line's CAP TOP under the view's top,
 //                            whatever that line's kind — OURS, RULED: GTK
 //                            lays its margin to the line box, which leaves
 //                            more air above the capitals than left of the
 //                            ink ("it looks liek it has more padding above
 //                            than on the left"), so the top is measured to
 //                            the ink as the left is.
-//   kPageLabelGapW 6 W       A LABEL TO THE CONTROL UNDER IT, line box to
+//   kPageLabelGapU 6 U       A LABEL TO THE CONTROL UNDER IT, line box to
 //                            box — THE XFCE APPEARANCE DIALOG'S, 6 px
 //                            between a label and its control (his "1
 //                            agree" on "a label to its control 6 W"): the
 //                            progress page's sentence to its bar and the bar
 //                            to its count.
-// Each a whole W through scaled_px, rounded at the element (24, 26 and 12
+// Each a whole U through scaled_px, rounded at the element (24, 26 and 12
 // device px on the tablet at 200 %). A FILL ACROSS THE VIEW KEEPS THE VIEW'S
 // WHOLE WIDTH (a list's lit row, x 0..2303 on the tablet): the margin seats
 // ink, not faces. ITS READERS: the lists — the pad over a list's first row
 // that seats its caps (folder_overlay.h's head_pad_px); A LIST'S SIDE SEATS
-// ARE THE LIST VIEW'S OWN CONSTANTS, not kPageMarginPenW (architect
-// 2026-11-22: every row's drawing box 6 W in, its name at
-// 28 W, cut 6 W inside the right edge; paint_handler.cpp's THE LIST VIEW,
-// kListDrawingMarginW and kListDrawingGapW) — and the three pages, a question's, the progress page
-// and the value sub-page (modal_page_lines below), which keep the 12 W pen;
-// the value sub-page's entry box stands kPageMarginPenW from the view's left
+// ARE THE LIST VIEW'S OWN CONSTANTS, not kPageMarginPenU (architect
+// 2026-11-22: every row's drawing box 6 U in, its name at
+// 28 U, cut 6 U inside the right edge; paint_handler.cpp's THE LIST VIEW,
+// kListDrawingMarginU and kListDrawingGapU) — and the three pages, a question's, the progress page
+// and the value sub-page (modal_page_lines below), which keep the 12 U pen;
+// the value sub-page's entry box stands kPageMarginPenU from the view's left
 // AND its top, a box measured to its border (the cap-top rule is a text
 // line's). The score viewer's page is a picture on its mat and takes none.
-inline constexpr double kPageMarginPenW    = 12.0;
-inline constexpr double kPageMarginCapTopW = 13.0;
-inline constexpr double kPageLabelGapW     = 6.0;
-inline int page_margin_pen_px()     { return scaled_px(kPageMarginPenW); }
-inline int page_margin_cap_top_px() { return scaled_px(kPageMarginCapTopW); }
-inline int page_label_gap_px()      { return scaled_px(kPageLabelGapW); }
+inline constexpr double kPageMarginPenU    = 12.0;
+inline constexpr double kPageMarginCapTopU = 13.0;
+inline constexpr double kPageLabelGapU     = 6.0;
+inline int page_margin_pen_px()     { return scaled_px(kPageMarginPenU); }
+inline int page_margin_cap_top_px() { return scaled_px(kPageMarginCapTopU); }
+inline int page_label_gap_px()      { return scaled_px(kPageLabelGapU); }
 
 // THE PAD OVER A PAGE'S FIRST LINE — THE CAP-TOP ARITHMETIC'S ONE DEFINITION
 // (architect 2026-11-20; THE PAGE MARGIN's top): the whole device
 // px from the view's top to the top of the first line's BOX — a list's first
 // row, a page's first line box — that put THAT LINE'S CAP TOP
-// kPageMarginCapTopW under the view's top: the margin less the cap top's
+// kPageMarginCapTopU under the view's top: the margin less the cap top's
 // depth inside the box, `baseline_depth_px` (the baseline under the box's
 // top, the line-box rule's whole offset) less the face's cap band
 // (gui_font_cap_px, the file's own unhinted "H", the metric every placement
@@ -249,24 +249,24 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 // and THE VALUE SUB-PAGE the painters and the rules' owners). In the view
 // (modal_box_interior_rect), every length THE PAGE MARGIN's:
 //   THE SENTENCE — a question or the progress page's "Rendering..." — one
-//     line of Regular 12 W (GuiFace::Body, the lists' rows' face), its PEN
-//     kPageMarginPenW from the view's left, its line box (the face's 14 W,
-//     gui_font_line_box_w) under the head pad that seats ITS CAP TOP
-//     kPageMarginCapTopW under the view's top (page_margin_head_pad_px), its
-//     baseline the line box's ascent under that; CUT kPageMarginPenW inside
+//     line of Regular 12 U (GuiFace::Body, the lists' rows' face), its PEN
+//     kPageMarginPenU from the view's left, its line box (the face's 14 U,
+//     gui_font_line_box_u) under the head pad that seats ITS CAP TOP
+//     kPageMarginCapTopU under the view's top (page_margin_head_pad_px), its
+//     baseline the line box's ascent under that; CUT kPageMarginPenU inside
 //     the view's right edge (`text_end_x`; it never wraps);
 //   THE BAR (the progress page's) from the pen's column to the right cut,
-//     kPageProgressBarW tall (6 W: GtkProgressBar's own minimum bar height,
+//     kPageProgressBarU tall (6 U: GtkProgressBar's own minimum bar height,
 //     gtkprogressbar.c's MIN_HORIZONTAL_BAR_HEIGHT, the default of its
 //     `min-horizontal-bar-height` style property; Arc's sheet sets none and
-//     rounds it with its 3 px radius), ITS TOP kPageLabelGapW UNDER THE
+//     rounds it with its 3 px radius), ITS TOP kPageLabelGapU UNDER THE
 //     SENTENCE'S LINE BOX;
-//   THE COUNT ("3 of 11"; Regular 10 W, GuiFace::Caption, GTK's "small") at
-//     the same pen, ITS LINE BOX (13 W) kPageLabelGapW UNDER THE BAR;
+//   THE COUNT ("3 of 11"; Regular 10 U, GuiFace::Caption, GTK's "small") at
+//     the same pen, ITS LINE BOX (13 U) kPageLabelGapU UNDER THE BAR;
 //   THE ENTRY (the value sub-page's, alone on its page, no label; Arc's,
 //     materials.h's paint_entry) from the pen's column to the right cut —
-//     12 W inside the view's left edge to 12 W inside its right —
-//     kEntryHeightW (28 W, Arc's) tall, ITS TOP kPageMarginPenW (12 W)
+//     12 U inside the view's left edge to 12 U inside its right —
+//     kEntryHeightU (28 U, Arc's) tall, ITS TOP kPageMarginPenU (12 U)
 //     UNDER THE VIEW'S TOP, the box at the page margin on both sides of its
 //     corner (measured to its border, as its left edge is): a fact of the
 //     view alone, whatever the text, so the entry never moves or grows with
@@ -276,7 +276,7 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 // sentence's line box rows 163..190, its baseline 185, the painted caps'
 // first row 168; the bar x 24..2279, rows 203..214; the count's line box
 // rows 227..252, its baseline 247; the entry x 24..2279, rows 166..221
-// (1128 x 28 W), its text's pen x 42 (kEntryPenW).
+// (1128 x 28 U), its text's pen x 42 (kEntryPenU).
 // `sentence_line` and `count_line` are the two texts' line boxes' rows
 // across the view's whole width (every row their ink can stand on: the
 // painter's exposure test). `step` IS WHAT A PROGRESS STEP CHANGES: the
@@ -286,7 +286,7 @@ inline int page_margin_head_pad_px(const GuiFont& face,
 // page round it untouched.
 // THE BAR'S HEIGHT: GtkProgressBar's own minimum (gtkprogressbar.c's
 // MIN_HORIZONTAL_BAR_HEIGHT, 6; the layout block above says whose number).
-inline constexpr double kPageProgressBarW = 6.0;
+inline constexpr double kPageProgressBarU = 6.0;
 struct ModalPageLines {
     GuiRect view{0, 0, 0, 0};
     int     pen_x             = 0;
@@ -305,8 +305,8 @@ inline ModalPageLines modal_page_lines(const AppState& a) {
     if (l.view.w <= 0 || l.view.h <= 0) return l;
     const GuiFont body    = gui_font(GuiFace::Body);
     const GuiFont caption = gui_font(GuiFace::Caption);
-    const GuiLineBoxW lb  = gui_font_line_box_w(body);
-    const GuiLineBoxW cb  = gui_font_line_box_w(caption);
+    const GuiLineBoxU lb  = gui_font_line_box_u(body);
+    const GuiLineBoxU cb  = gui_font_line_box_u(caption);
     l.pen_x      = l.view.x + page_margin_pen_px();
     l.text_end_x = l.view.x + l.view.w - page_margin_pen_px();
     const int sentence_top =
@@ -317,7 +317,7 @@ inline ModalPageLines modal_page_lines(const AppState& a) {
     l.sentence_line =
         GuiRect{l.view.x, sentence_top, l.view.w, scaled_px(lb.line())};
     const int bar_y = sentence_top + l.sentence_line.h + page_label_gap_px();
-    const int bar_h = scaled_px(kPageProgressBarW, 1);
+    const int bar_h = scaled_px(kPageProgressBarU, 1);
     l.bar = GuiRect{l.pen_x, bar_y, std::max(0, l.text_end_x - l.pen_x), bar_h};
     const int count_top = bar_y + bar_h + page_label_gap_px();
     l.count_baseline =
@@ -327,7 +327,7 @@ inline ModalPageLines modal_page_lines(const AppState& a) {
                      count_top + l.count_line.h - bar_y};
     l.entry = GuiRect{l.pen_x, l.view.y + page_margin_pen_px(),
                       std::max(0, l.text_end_x - l.pen_x),
-                      scaled_px(kEntryHeightW)};
+                      scaled_px(kEntryHeightU)};
     return l;
 }
 

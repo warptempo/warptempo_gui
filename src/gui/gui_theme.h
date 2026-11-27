@@ -240,7 +240,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // THE MARKER LANE: Arc's $dark_sidebar_bg (`@define-color text_view_bg
     // #353945`), between $header_bg and $bg_color.
     .lane_face = 0x353945,
-    // THE TRIM BAR'S 12-W TROUGH under the pill: Arc's scrollbar trough,
+    // THE TRIM BAR'S 12-U TROUGH under the pill: Arc's scrollbar trough,
     // `scrollbar { background-color: #3e434f; }`, $_scrollbar_bg_color =
     // darken($base_color, 1%) (architect 2026-11-17: "the scroll bar and
     // the trough should be accurate to whatever Arc uses").
@@ -254,7 +254,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // }`, Thunar's slider under the pointer as MEASURED ON HIS DESKTOP
     // (2026-11-20; trim_bar_tones; GuiInputHandler::walk_trim_bar_hover).
     .trim_span_hover_face = 0x676B78,
-    // THE WELL'S LINES — the one-W lines across the panel, the stereo
+    // THE WELL'S LINES — the one-U lines across the panel, the stereo
     // divider, the status bar's line — and the keys', word buttons' and
     // entries' rings: Arc's $borders_color (`@define-color borders
     // #2b2e39`), darken($bg_color, 6%), Thunar's pane border (architect
@@ -275,7 +275,7 @@ inline constexpr GuiThemeTones kArcDarkTones = {
     // and `scale trough { background-color: #2d303b; }` (architect
     // 2026-11-19: GTK's progress bar).
     .scale_trough = 0x2D303B,
-    // THE SCRUB'S KNOB'S ONE-W RIM AT REST: Arc's `scale slider { border:
+    // THE SCRUB'S KNOB'S ONE-U RIM AT REST: Arc's `scale slider { border:
     // 1px solid #262933; }`, MEASURED ON HIS DESKTOP too (the scale shot
     // C4g, 2026-11-19; paint_scale).
     .scale_slider_border = 0x262933,

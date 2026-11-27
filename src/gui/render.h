@@ -83,7 +83,7 @@ struct GuiRectF {
 //     damage is its hull.
 //   THE LAYOUT'S BOXES — lanes, rows, the keys' faces, fields, panes, the
 //     waveform area and the well's columns: every box
-//     another thing is laid out against. Their sizes are whole W through
+//     another thing is laid out against. Their sizes are whole U through
 //     scaled_px (rounded at the element, its own rule, below) or the
 //     whole-px hull of a font metric (a row's pitch from the line height, the
 //     time field's height from the cap); the rule governs what is painted
@@ -91,7 +91,7 @@ struct GuiRectF {
 //     text's own width or whose place is a mark's — takes its exact size and
 //     place.
 //   AN AUTHORED LENGTH — scaled_px rounds each at the element, so on the
-//     tablet (gui_scale 200) every W is 2 device px and every sum of W is
+//     tablet (gui_scale 200) every U is 2 device px and every sum of U is
 //     whole; at another scale each element rounds.
 //   THE AUDIO'S LATTICE — the plate's bars and columns,
 //     painter_quantized_spp, the sixteenth-frame grid, authored frames (whole
@@ -113,7 +113,7 @@ struct GuiRectF {
 //     TRULY (2026-11-19: their carried fills at
 //     .95, their rounded corners, the tooltip's shadow — the GPU's blend
 //     inside their hulls), and stay whole px as LAYOUT: their sizes the ceiling of their
-//     text under whole-W pads, their seats a face's and the panel's whole
+//     text under whole-U pads, their seats a face's and the panel's whole
 //     edges. What is painted IN such a box — its text, its inner marks — is
 //     exact.
 inline GuiRect hull(const GuiRectF& r) {
@@ -242,7 +242,7 @@ struct TrimRange {
 // the pen, Arc's `row.activatable:hover` (3 % white over the view), in at
 // once and out over Arc's 150 ms row transition (architect 2026-11-21;
 // paint_handler.cpp's THE LIST VIEW).
-// THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 W outer corners, 2026-11-19:
+// THE KEYS' RINGS AND ENTRIES ARE ROUNDED (3 U outer corners, 2026-11-19:
 // Arc's button and entry, A BUTTON IS ARC'S BUTTON below), their edges at
 // exact coverage, as every mark placed by time is (THE COVERAGE STAMP,
 // cool_edit_paint.h), and THE WAVEFORM PLATE'S EDGE is antialiased and
@@ -260,7 +260,7 @@ struct TrimRange {
 //
 // NO RELIEF (the flat look, architect 2026-11-01; the overlays' part
 // 2026-11-02): no edge in the product is raised, sunken or two-toned. THE
-// CHROME'S LINES are flat ONE-W lines (hairline_px, below, the line rule of
+// CHROME'S LINES are flat ONE-U lines (hairline_px, below, the line rule of
 // 2026-11-04) in `well_border` (the well's lines, THE WELL'S EDGES; the
 // keys' rings); the floating surfaces have none (THE FLOATING SURFACES,
 // below).
@@ -329,13 +329,13 @@ struct TrimRange {
 // set_palette_source_alpha over the chrome, the GPU's blend inside the
 // floaters' hulls over the canvas — canvas_sink.h's THE TRANSPARENCY
 // INVARIANT): THE TOOLTIP
-// `tooltip_fill` (Arc's $osd_bg_color, arc_dark 4B5162 at .95), radius 2 W,
+// `tooltip_fill` (Arc's $osd_bg_color, arc_dark 4B5162 at .95), radius 2 U,
 // its words `sidebar_text`, ARC'S SHADOW outside it (the tooltip block's
 // THE TOOLTIP IS ARC'S and ARC'S TOOLTIP SHADOW); A NORMAL CARD notifyd's
 // grey `card_fill` (353945 at .95) under `sidebar_text`, A STANDING CARD
 // Arc's destructive red `card_standing_fill` (F04A50 at .95) under
 // `card_text` (= `card_ink`, Arc's white on its destructive red), radius
-// 2 W, no shadow (notifications.h's THE LOOK). THIS PARAGRAPH IS THE RULE'S
+// 2 U, no shadow (notifications.h's THE LOOK). THIS PARAGRAPH IS THE RULE'S
 // ONE STATEMENT.
 // THE CANVAS RUNS THE PANEL'S WHOLE WIDTH (architect 2026-11-19, edge to
 // edge; render.h's THE WELL'S EDGES): its two channels' wells are
@@ -558,17 +558,17 @@ void install_true_colors(bool on);
 // lengths 2026-11-03; ARC'S NUMBERS 2026-11-19): THE TRIM BAR, THE RULER
 // FLIPPED and THE MARKER LANE OF CUES directly under the top icon row, THE
 // CANVAS under them (THE WAVEFORM block's canvas paragraph) — FLAT REGIONS,
-// NO RING, NO SHADOW, PARTED BY LINES of one W in `well_border` (architect
+// NO RING, NO SHADOW, PARTED BY LINES of one U in `well_border` (architect
 // 2026-11-17; THE WELL'S EDGES at the well-edge accessors below;
 // materials.h's THE WELL, every tone's owner), EDGE TO EDGE (architect
 // 2026-11-19: no side margin): THE LANES, THEIR LINES AND THE CANVAS STAND ON THE
 // PANEL'S COLUMNS, 0 .. 2303 on the tablet's 2304 — the waveform area every
 // painter and hit test reads (THE EDGE RULE at well_columns below; the
-// keys' outermost faces 6 W inside). Every line in the well is ONE W, rounded at the
+// keys' outermost faces 6 U inside). Every line in the well is ONE U, rounded at the
 // element (hairline_px, the line rule; architect 2026-11-04, the unit; one
-// W = 2 device px on the tablet at 200 %; the ruler's ticks and every
-// canvas line the same W, waveform_line_px). THE ROWS ON THE TABLET (200 %;
-// main.cpp's lane table the record; the key 28 W tall, kKeyHeightW): rows
+// U = 2 device px on the tablet at 200 %; the ruler's ticks and every
+// canvas line the same U, waveform_line_px). THE ROWS ON THE TABLET (200 %;
+// main.cpp's lane table the record; the key 28 U tall, kKeyHeightU): rows
 // 140 .. 141 the line under the top icon row, the
 // trough 142 .. 165, rows 166 .. 167 its line, the ruler 168 .. 199, rows
 // 200 .. 201 its line, the marker lane 202 .. 233, rows 234 .. 235 its
@@ -579,10 +579,10 @@ void install_true_colors(bool on);
 // THE TRIM BAR IS ARC'S SCROLLBAR (render_trim_flags owns the pill's
 // drawing, paint_trim's ground step the trough and the lines, trim_lane_h_px
 // the rows; architect 2026-11-17): under the
-// line under the top icon row, THE TROUGH (trim_trough_h_px, 12 W, 24 device rows at
+// line under the top icon row, THE TROUGH (trim_trough_h_px, 12 U, 24 device rows at
 // 200 %) across the waveform area's columns in `trim_bar_face` (Arc's scrollbar
 // trough, its line of kArcDarkTones), and on it THE SPAN AS
-// ARC'S SLIDER, A PILL (trim_pill_h_px, 6 W, centered, the seat of trough above
+// ARC'S SLIDER, A PILL (trim_pill_h_px, 6 U, centered, the seat of trough above
 // and below), the trim window from the begin bound's exact place to the end
 // bound's (architect 2026-11-14) — THE SLIDER'S BOX, the pill its core
 // (architect 2026-11-18, THE SLIDER'S BOX AND ITS CORE in the lanes block
@@ -615,18 +615,18 @@ void install_true_colors(bool on);
 // THE RULER IS COOL EDIT'S, FLIPPED (paint_ruler_row):
 // FLAT `ruler_face`, THE CANVAS'S TONE (architect 2026-11-17) directly
 // under the trough's line, on the waveform area's columns, NO LINE OF ITS
-// OWN ON ITS TOP; THE TICKS `ruler_tick`, ONE W WIDE (the canvas's line,
+// OWN ON ITS TOP; THE TICKS `ruler_tick`, ONE U WIDE (the canvas's line,
 // waveform_line_px, 2026-11-04), EACH CENTERED ON ITS OWN EXACT TIME'S
 // PLACE at its exact coverage (architect 2026-11-14; the line rule,
 // waveform_line_span), STANDING ON THE
-// RULER'S FOOT, the major 2 W and the minor 1 W (4 and 2 device rows at
+// RULER'S FOOT, the major 2 U and the minor 1 U (4 and 2 device rows at
 // 200 %, scaled_px), overlaying its bottom pad, NO SHADOW; THE DIGITS the
-// ruler face (GuiFace::Small, BOLD 10 W, 20 device px at 200 %, Arc's
+// ruler face (GuiFace::Small, BOLD 10 U, 20 device px at 200 %, Arc's
 // `font-size: smaller`) in `ruler_text` (the text at 55 % over the ruler,
 // Arc's `.dim-label` of the font color, arc_dark 9197A2: under the head
 // A5ABB5, over the hover line 767B87; architect 2026-11-21), bare, ON THE
 // LINE-BOX BASELINE (ruler_baseline_px, the ruler block below); then THE
-// WELL'S LINE, one W, the ruler lane's last (ruler_lane_h_px).
+// WELL'S LINE, one U, the ruler lane's last (ruler_lane_h_px).
 
 // THE PLAYHEAD IS COOL EDIT'S CURSOR (architect 2026-10-09):
 // ITS HEAD the cue's chip, THE SAME DRAWING (architect 2026-11-04,
@@ -644,7 +644,7 @@ void install_true_colors(bool on);
 // for fine tune, just ballpark") (paint_ruler_row; its painted reach the
 // cull's and the move's damage box's, cue_chip_paint_reach_px, its hit the
 // chip's hit extent); IN THE
-// CANVAS A SOLID LINE, ONE W, AT ITS FRAME'S EXACT PLACE (architect
+// CANVAS A SOLID LINE, ONE U, AT ITS FRAME'S EXACT PLACE (architect
 // 2026-11-04; the exact place architect 2026-11-14, waveform_line_span;
 // canvas_line, the scanner's form) in
 // THE PALETTE'S `playhead_line` (arc_dark A5ABB5), down
@@ -694,9 +694,9 @@ void install_true_colors(bool on);
 // stem and the scanner are both white, which unifies them: the non-playhead
 // stems that are related to the controls should be white, and then the
 // playhead is [colored]"): THE SCANNER — the moving playback line,
-// paint_scanner — a SOLID line one W wide over the canvas, at the predictor
+// paint_scanner — a SOLID line one U wide over the canvas, at the predictor
 // position's exact place (Cool Edit's playback cursor is a solid line; one
-// W, waveform_line_px's rule; the exact place architect 2026-11-14), and
+// U, waveform_line_px's rule; the exact place architect 2026-11-14), and
 // THE ZOOM ANCHOR'S STEM
 // (render_strip_anchor_stem), the same solid line at the pivot's exact
 // place;
@@ -715,7 +715,7 @@ void install_true_colors(bool on);
 // MARKER'S EXACT PLACE (architect 2026-11-14: "I think the chips should
 // also go anti-aliased";
 // cool_edit_paint.h's THE CUE'S CHIP owns the drawing, the cue block below
-// its lengths: its rows scaled, cue_triangle_rows, 4 W, 8 at 200 %, 4 at
+// its lengths: its rows scaled, cue_triangle_rows, 4 U, 8 at 200 %, 4 at
 // 100 %; Cool Edit's own 9 by 5): the triangle of the nominal rows (16 x 8
 // at 200 %), on the lane's last rows, its apex ON THE STEM'S CENTER on the
 // bottom edge of the lane's last row, directly above the well's line
@@ -723,22 +723,22 @@ void install_true_colors(bool on);
 // THE LABEL — the marker's one label, at rest in `sidebar_text` (Arc's
 // sidebar text, arc_dark BAC3CF; an inert label `text_dim`; architect
 // 2026-11-19; resolve_flag_face's table), NO SHADOW (2026-11-02), in
-// THE LABEL FACE, REGULAR Label 12 W, 24 device px at 200 % (gui_font.h's
+// THE LABEL FACE, REGULAR Label 12 U, 24 device px at 200 % (gui_font.h's
 // kGuiFaceSizes; "yes, regular is good"), starting the chip's reach
-// right and a gap of 5 W
-// right of the mark (cue_label_lead_px: 9 W, 18 device px at 200 %) —
+// right and a gap of 5 U
+// right of the mark (cue_label_lead_px: 9 U, 18 device px at 200 %) —
 // STANDING WITH ITS MARK EXACTLY, its pen the cue's exact place plus that
 // lead, a real x (architect 2026-11-15, the no-grid arc: "looks better
 // because it just feels more cohesive now. The whole thing is just one
 // unit"; show_cue_label's head, paint_cues) — ON
 // THE LANE'S ONE BASELINE
 // at rest and in the editor (cue_baseline_px, the line-box rule at
-// marker_lane_h_px: +12 W of the lane's 16, 24 device rows at 200 %) —
+// marker_lane_h_px: +12 U of the lane's 16, 24 device rows at 200 %) —
 // `show_cue_label`,
 // render.cpp,
 // the one painter of every label look on the face; and THE STEM, ON EVERY
 // SELECTED MARKER, ENABLED OR DISABLED (architect 2026-11-11)
-// — a SOLID ONE-W LINE in the `cue_outline`, centered on
+// — a SOLID ONE-U LINE in the `cue_outline`, centered on
 // the marker's frame at its exact place (architect 2026-11-14, the
 // line rule at waveform_line_span),
 // FROM THE CHIP'S APEX ROW (the
@@ -823,7 +823,7 @@ void install_true_colors(bool on);
 //             the playhead on it or not (architect 2026-11-05);
 //   SELECTED  a member of the selection set, enabled or disabled: its own
 //             chip as at rest (the `cue_fill` fill, or the disabled grey), and A SOLID
-//             ONE-W `cue_outline` STEM at its exact place, under the
+//             ONE-U `cue_outline` STEM at its exact place, under the
 //             chip's apex, FROM THE CHIP'S APEX
 //             ROW (the lane's last) THROUGH THE LINE UNDER THE LANE
 //             TO THE CANVAS'S LAST ROW (2026-11-04: no gap under
@@ -831,7 +831,7 @@ void install_true_colors(bool on);
 //             2026-11-05; MarkerStem, paint_marker_stems — THE RESOLVER
 //             NEVER SEES THE PLAYHEAD). THE STEM STANDS IN THE PLAYHEAD'S
 //             LINE'S PLACE (the paint order playhead, stems, scanner): both
-//             are one W on one exact place, so the line under the stem is
+//             are one U on one exact place, so the line under the stem is
 //             not drawn (paint_playheads' THE COINCIDENT LINES, architect
 //             2026-11-14); while the playhead rests on a selected marker
 //             the dark stem is what shows and the ruler's head marks the
@@ -876,13 +876,13 @@ void install_true_colors(bool on);
 // (materials.h's head),
 // never a marker's; under a contact its hover fades out.
 //
-// THE PHASE-RESET LEAD-IN RING on the waveform is FOUR SOLID ONE-W LINES in
+// THE PHASE-RESET LEAD-IN RING on the waveform is FOUR SOLID ONE-U LINES in
 // the `cue_outline` (architect 2026-11-04;
 // paint_phase_reset_overlay_ring — the ring and the cue one unit, architect
 // 2026-09-17), EACH AT ITS EXACT PLACE (architect 2026-11-14): its
 // left side centered on the reset's frame, its right side flush inside the
 // seed grain's end, both on the canvas's rows between its top and bottom
-// runs, the runs along the canvas's first and last W of rows, WHATEVER THE
+// runs, the runs along the canvas's first and last U of rows, WHATEVER THE
 // SELECTION — every live reset's, a coincident one's too, its struck label
 // the mark (2026-10-26); a disabled reset paints no ring.
 //
@@ -891,18 +891,18 @@ void install_true_colors(bool on);
 // render_flag_editor_box's), THE
 // PAYLOAD EDITOR AND THE ITERATION-BOUND EDITOR ALIKE: A SQUARE-CORNERED
 // BOX, its fill the entry's tone (`ruler_face`, what paint_entry lays;
-// arc_dark 404552), its BORDER ONE W OF THE ACCENT (`cue`) on all four
-// sides (cue_editor_border_px), no radius; the text Regular 12 W in the
-// field text (`field_text`, the text tone), THE CARET ONE W in it, THE
+// arc_dark 404552), its BORDER ONE U OF THE ACCENT (`cue`) on all four
+// sides (cue_editor_border_px), no radius; the text Regular 12 U in the
+// field text (`field_text`, the text tone), THE CARET ONE U in it, THE
 // SELECTED SUBSTRING the selection pair (`selected_fill` under
 // `selected_text`: on arc_dark the accent under the lit print), the caret
 // not drawn while a selection stands (text_editor::cursor_visible_now) — the
 // caret and the selection band on THE TEXT'S LINE BOX ROWS
-// (cue_line_box_top_px, cue_line_box_h_px), which in the 16 W lane inside
-// the one-W border are the box's whole inner 14 W (the value editors'
+// (cue_line_box_top_px, cue_line_box_h_px), which in the 16 U lane inside
+// the one-U border are the box's whole inner 14 U (the value editors'
 // rule, one look for both editors). THE GEOMETRY IS THE SEGMENT'S: the box
 // over the edited segment's box on THE WHOLE LANE'S ROWS (the border on the
-// lane's first and last rows and just outside the fill's pads, one W
+// lane's first and last rows and just outside the fill's pads, one U
 // either side of the run, cue_fill_pad_px), the text at the segment's own
 // seat ON THE LANE'S ONE BASELINE — the resting label's (cue_baseline_px)
 // — so the text does not move when the editor opens. The field grows and
@@ -959,7 +959,7 @@ void install_true_colors(bool on);
 // canvas reads the well's whole width with the ground directly beside it.
 // THE ORDER, bottom to top: UNDER THE WAVEFORM, in render_canvas's
 // one pass, the `waveform_canvas` fill and THE HORIZONTAL GRID — per
-// channel, a `grid` line one W tall (the unit of 2026-11-04) CENTERED ON
+// channel, a `grid` line one U tall (the unit of 2026-11-04) CENTERED ON
 // ITS EXACT ROW (architect 2026-11-14; canvas_hline_span), the
 // channel's exact zero ± k · H / 4 rows for k = 1, 2, 3, H the
 // channel's half height (its zero to its band's edge; the k = 4 line
@@ -968,7 +968,7 @@ void install_true_colors(bool on);
 // Cool Edit's grid under the ink; then THE WAVEFORM'S PLATE (antialiased,
 // its soft edge blended over the canvas and the grid,
 // render_waveform_columns' head); then THE CENTER
-// LINE per channel centered on its exact zero, one W, in `center`, OVER THE INK
+// LINE per channel centered on its exact zero, one U, in `center`, OVER THE INK
 // (architect 2026-10-09 evening: "it's supposed to be visible over the
 // waveform. Otherwise, in a project like this with tape hiss, there's never
 // enough zero that the red line would become visible ever";
@@ -1051,10 +1051,10 @@ WaveformPlateInks waveform_plate_inks();
 // application points (gui_main's startup, before the window exists, and the
 // settings editor's `gui_scale=` commit).
 //
-// THE UNIT IS ONE W, ONE ARC PX AT 9 pt (the one statement at scaled_px
-// below): every authored chrome length is a whole number of W, and
-// gui_scale is the number of DEVICE px per W, in percent — the tablet 200
-// (architect 2026-11-05; a 16-W glyph = 32 device px). EVERY PAINTED
+// THE UNIT IS ONE U, ONE UNSCALED PX (the one statement at scaled_px
+// below): every authored chrome length is a whole number of U, and
+// gui_scale is the number of DEVICE px per U, in percent — the tablet 200
+// (architect 2026-11-05; a 16-U glyph = 32 device px). EVERY PAINTED
 // DIMENSION IN THE TREE RIDES IT through scaled_px, below, where the
 // rounding rule is stated.
 void   set_gui_scale_percent(int percent);
@@ -1068,31 +1068,31 @@ void   set_gui_scale_percent(int percent);
 // dimension goes on reading gui_scale_factor / scaled_px.
 int    gui_scale_percent();
 
-// Scale factor s = gui_scale / 100, device px per W: as low as 0.5, the
+// Scale factor s = gui_scale / 100, device px per U: as low as 0.5, the
 // setting's grammar floor of 50 (architect 2026-08-10).
 double gui_scale_factor();
 
-// THE KEY'S BOX AND THE RUN GAP, IN W (architect 2026-11-22: "the regular
+// THE KEY'S BOX AND THE RUN GAP, IN U (architect 2026-11-22: "the regular
 // key height and key width are from Arc, and also the [run] gap I think is
 // from Arc ... okay to retire all of them"): ARC'S ICON BUTTON AT 9 PT, ITS
-// BORDER INCLUDED — 36 W wide by 28 W tall, 72 x 56 device px on the tablet
+// BORDER INCLUDED — 36 U wide by 28 U tall, 72 x 56 device px on the tablet
 // at 200 % (architect 2026-11-18 / 2026-11-19: "about 72 device pixel
 // width ... the border is clickable"; materials.h's THE KEY owns its look)
-// — and ARC'S GAP BETWEEN TOOLBAR GROUPS, 6 W, 12 device px (the groups 6 W
+// — and ARC'S GAP BETWEEN TOOLBAR GROUPS, 6 U, 12 device px (the groups 6 U
 // apart). The box's one readers are icon_case_w_px and icon_case_h_px (the
 // case paragraph below) and the line-box baselines of the text on key-tall
 // boxes — the entries (entry_baseline: the clock's, the NOISE case's, the
 // fields') and the word buttons' words, in paint_handler.cpp; the gap's is
 // program_run_gap_px (the run gap paragraph below). THE ON-SCREEN
-// KEYBOARD'S KEY IS THIS BOX ROTATED, 28 W wide by 36 W tall, its band's
+// KEYBOARD'S KEY IS THIS BOX ROTATED, 28 U wide by 36 U tall, its band's
 // two pads the run gap (architect 2026-11-26: "the regular icon size
 // rotated 90 degrees ... And the run gap should be the padding above and
 // below the ... keys"), read through the same two accessors and
 // program_run_gap_px (onscreen_keyboard.h's geometry). The key's drawing is
-// a fixed 16 W box whatever the box (paint_key_glyph).
-inline constexpr int kKeyWidthW  = 36;
-inline constexpr int kKeyHeightW = 28;
-inline constexpr int kRunGapW    = 6;
+// a fixed 16 U box whatever the box (paint_key_glyph).
+inline constexpr int kKeyWidthU  = 36;
+inline constexpr int kKeyHeightU = 28;
+inline constexpr int kRunGapU    = 6;
 
 // THE WAVEFORM PLATE'S GROW, THE `waveform_grow` KEY'S SEAT (architect
 // 2026-10-31; the reason at kWaveformSubcells below, the grammar
@@ -1138,20 +1138,22 @@ inline GuiFont gui_font(GuiFace face) {
     return GuiFont{face, gui_scale_percent()};
 }
 
-// One authored length in W -> device pixels, the ONE conversion every
-// scaled dimension in the tree takes: device = std::nearbyint(w × percent /
-// 100), like every other integer-domain conversion.
+// One authored length in U -> device pixels, the ONE conversion every
+// scaled dimension in the tree takes: device = std::nearbyint(authored ×
+// percent / 100), like every other integer-domain conversion.
 //
 // THE UNIT (architect 2026-11-05: "do the rebase to 200%. output should be
-// pixel identical"; "seems odd to use 300% and 2dpx"): ONE W = ONE PX AT
-// 100 % = 2 DEVICE PX ON THE TABLET AT ITS 200 %. EVERY AUTHORED LENGTH IS A
-// WHOLE W (an integer), and a line is one W (hairline_px below). A FACE'S
+// pixel identical"; "seems odd to use 300% and 2dpx"): ONE U = ONE UNSCALED
+// PX (one px at gui_scale 100; 2 device px on the tablet at 200). Arc
+// measures in its own CSS px, and one Arc px is laid as one U, so an Arc
+// number is a number of U as it stands. EVERY AUTHORED LENGTH IS A
+// WHOLE U (an integer), and a line is one U (hairline_px below). A FACE'S
 // EM IS NO LENGTH: it is its source's exact number, never rounded, and of
-// the text's geometry only the line's box is whole W (gui_font.h's head,
+// the text's geometry only the line's box is whole U (gui_font.h's head,
 // architect 2026-11-26). NO EXCEPTION AMONG THE LENGTHS: the gesture
-// thresholds are whole W too (the hover slop kHoverSlopW 5,
+// thresholds are whole U too (the hover slop kHoverSlopU 5,
 // kRulerMinMinorPitchPx 14 in paint_handler.cpp, kNavZoomPxPerLevel 218
-// in app_state.h, each rounded up from a half W, architect 2026-11-05:
+// in app_state.h, each rounded up from a half U, architect 2026-11-05:
 // "round each up"), each seat naming its one-device-px consequence. 300 %
 // is never proposed again (closed_questions.md).
 //
@@ -1169,7 +1171,7 @@ inline GuiFont gui_font(GuiFace face) {
 // face metrics (gui_font.h: a font quantity is not a grid point, rounded at
 // the seat that reads it) and the ruler's unrounded pitch compare — are a
 // different concept and deliberately do not come through here. THIS IS THE
-// ONE ROAD: every W-authored constant in the tree (`k…W`, program_spec.h's
+// ONE ROAD: every U-authored constant in the tree (`k…U`, program_spec.h's
 // fields) and every `k…Px` constant scale through
 // it alike.
 inline int scaled_px(double authored) {
@@ -1229,7 +1231,7 @@ constexpr int kMinWindowHeightPx = 480;
 // (architect 2026-11-18 / 2026-11-19): "We're sort of modeling it on XFWM, but we
 // shouldn't do it 1-to-1"; "the metrics don't really change. Like for the
 // XFWM title bar ... the size of that doesn't change. Only the font size
-// did". THE BAR IS kTitleBarW, 28 W through scaled_px (56 device px on the
+// did". THE BAR IS kTitleBarU, 28 U through scaled_px (56 device px on the
 // tablet at 200 %), whatever the key's height (title_bar_h_px), the top of
 // the top strip's lane 0, the top icon row under it with no line between
 // (a tone change only). IT ALONE WEARS THE TITLE TONE `ground` (2F343F,
@@ -1237,9 +1239,9 @@ constexpr int kMinWindowHeightPx = 480;
 // would only apply to the top line, the title bar" — everything under it is
 // the body tone `body_face`. INERT CHROME WHOLE: no hit, no tooltip, no
 // gesture, the lamps included (THE TWO LAMPS below; architect 2026-11-24).
-// EVERY TEXT ON IT IS THE BOLD 12 W (GuiFace::Bold, gui_font.h) IN
+// EVERY TEXT ON IT IS THE BOLD 12 U (GuiFace::Bold, gui_font.h) IN
 // `title_text` (xfwm's title text; arc_dark AFB8C5), ON ONE BASELINE,
-// kTitleBaselineW = 18 W under the bar's top (36 device rows on the tablet;
+// kTitleBaselineU = 18 U under the bar's top (36 device rows on the tablet;
 // xfwm's measured seat on his 9 pt shot: the title's capitals on +9 .. +17
 // of the un-maximized 28-row bar, so the baseline +18), every drawing on it
 // in the same tone; THE CAP BAND the alphabet's painted ink rows above that
@@ -1249,42 +1251,42 @@ constexpr int kMinWindowHeightPx = 480;
 // group's layout is logo_legend_layout (paint_handler.cpp), the painter's
 // and the tick's damage's one road.
 //   ON THE LEFT, THE NOTE: MusicNote16th (the BPM key's
-//     drawing) IN A 12 W DRAWING BOX (architect 2026-11-19: "the logo should
-//     take the same font size as the body" — a 16 W box sized for 16 W
-//     text, 16 · 12 / 16 = 12 W), at the box's exact zoom (icons.h's THE
+//     drawing) IN A 12 U DRAWING BOX (architect 2026-11-19: "the logo should
+//     take the same font size as the body" — a 16 U box sized for 16 U
+//     text, 16 · 12 / 16 = 12 U), at the box's exact zoom (icons.h's THE
 //     BOX, architect 2026-11-26; 24 / 16 = 1.5 on the tablet: Papirus's
 //     note inks 8 x 14 of its 16 units, so its ink 12 x 21 device px), ITS
-//     INK'S LEFT EDGE kTitleNoteInsetW = 8 W inside the panel (16 device px;
+//     INK'S LEFT EDGE kTitleNoteInsetU = 8 U inside the panel (16 device px;
 //     architect 2026-11-19: "the note in the logo looks
 //     good now. It looks like it's aligned with the buttons"), ITS INK
 //     CENTERED ON THE BAR'S ROWS EXACTLY (the note inks symmetrically in
-//     its canvas, so this is the box centered, its top +8 W; on the
+//     its canvas, so this is the box centered, its top +8 U; on the
 //     tablet the ink 17.5 .. 38.5). THEN THE BRAND, "Warptempo" (kLogoBrand,
-//     a constant), ITS PEN kTitleNoteGapW = 6 W AFTER THE NOTE'S INK'S RIGHT
+//     a constant), ITS PEN kTitleNoteGapU = 6 U AFTER THE NOTE'S INK'S RIGHT
 //     EDGE (architect 2026-11-19: "Maybe one more W spacing between
 //     the note and the warptempo font" — one more than the picture's 5),
-//     both off the drawing's real ink box, not its 12 W box (on the tablet
+//     both off the drawing's real ink box, not its 12 U box (on the tablet
 //     the ink 16 .. 28 with Papirus's note, the pen 28 + 12 = 40).
 //   ON THE RIGHT, THE GROUP "[limiter][clip] 92% <battery>  |  02:12 PM" AS
-//     ONE TEXT RUN in the Bold 12 W (architect 2026-11-19: the pipe "could
+//     ONE TEXT RUN in the Bold 12 U (architect 2026-11-19: the pipe "could
 //     just become a text pipe, since we're going to use those text pipes
 //     in the status bar"; gui_battery.h's composer for the
 //     parts; the tick's refresh_logo_legend, main.cpp), LAID RIGHT TO LEFT
 //     on the baseline: the run "  |  02:12 PM" — the status bar's own field
 //     separator (two spaces each side of the pipe, kStatusFieldSeparator,
 //     paint_handler.cpp) then the clock — with its LAST INK
-//     kTitleRightInsetW = 8 W inside the panel's right edge (the note's
+//     kTitleRightInsetU = 8 U inside the panel's right edge (the note's
 //     inset mirrored); THE BATTERY (below), its cell's right edge on that
 //     run's pen; the run "92% " — the percent and a space — its advance
 //     ending on the cell's left edge, so "100%" grows leftward, away from
-//     the clock; kLogoLampGapW (4 W) of ground; THE CLIP LAMP; one W (the
+//     the clock; kLogoLampGapU (4 U) of ground; THE CLIP LAMP; one U (the
 //     key gap); THE LIMITER LAMP. The insets and the lamps' gap are
 //     measured from the runs' REAL ink edges (text_shape::ink_left_px /
 //     ink_right_px), the battery between the runs' advances, nothing
 //     floored, so the battery and the lamps stand at real x (the no-grid
 //     rule).
 //   THE TWO LAMPS (architect 2026-11-05; the size, the rows and the gap
-//     2026-11-06): two kLogoLampW = 8 W squares
+//     2026-11-06): two kLogoLampU = 8 U squares
 //     (16 x 16 device px), "LIMITER LEFT, CLIP RIGHT, mirroring the level
 //     sliders", THEIR TOP ON THE CAP BAND'S TOP. THEIR FACES: AT REST
 //     `key_face`; LIT, THE LIMITER `limiter_lamp` ("a warning"; its own
@@ -1352,27 +1354,27 @@ constexpr int kMinWindowHeightPx = 480;
 //     it exactly. On the tablet the band 17 rows (rows 19 .. 35, the
 //     baseline the edge under row 35), the zooms 17 / 15 and 17 / 14, the
 //     cell 12.47 x 17 device px (Battery000's 11 · 17 / 15 wide).
-inline constexpr double kTitleBarW           = 28.0;
-inline constexpr double kTitleBaselineW      = 18.0;
-inline constexpr double kTitleNoteBoxW       = 12.0;  // the note's drawing box (the body's size)
-inline constexpr double kTitleNoteInsetW     = 8.0;   // the panel's left edge to the note's ink
-inline constexpr double kTitleNoteGapW       = 6.0;   // the note's ink's right edge to the brand's pen
-inline constexpr double kTitleRightInsetW    = 8.0;   // the right group's last ink to the panel's right edge
-inline constexpr double kLogoLampW           = 8.0;   // each lamp's square
-inline constexpr double kLogoLampGapW        = 4.0;   // the clip lamp to the percent's first ink
+inline constexpr double kTitleBarU           = 28.0;
+inline constexpr double kTitleBaselineU      = 18.0;
+inline constexpr double kTitleNoteBoxU       = 12.0;  // the note's drawing box (the body's size)
+inline constexpr double kTitleNoteInsetU     = 8.0;   // the panel's left edge to the note's ink
+inline constexpr double kTitleNoteGapU       = 6.0;   // the note's ink's right edge to the brand's pen
+inline constexpr double kTitleRightInsetU    = 8.0;   // the right group's last ink to the panel's right edge
+inline constexpr double kLogoLampU           = 8.0;   // each lamp's square
+inline constexpr double kLogoLampGapU        = 4.0;   // the clip lamp to the percent's first ink
 inline constexpr const char* kLogoBrand = "Warptempo";
 inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";
 inline int title_bar_h_px() {
-    return scaled_px(kTitleBarW, 1);
+    return scaled_px(kTitleBarU, 1);
 }
 
-// THE UNIT IS ONE W (its one statement at scaled_px above; the rebase to
-// 200 %, architect 2026-11-05): every `k…W` constant a whole number of W,
+// THE UNIT IS ONE U (its one statement at scaled_px above; the rebase to
+// 200 %, architect 2026-11-05): every `k…U` constant a whole number of U,
 // every length through scaled_px, rounded at the element (a face's em is
 // its source's exact number and no length, gui_font.h's head, architect
-// 2026-11-26); on the tablet one W is 2 device px, so the keys
+// 2026-11-26); on the tablet one U is 2 device px, so the keys
 // keep their pitch (72 device px) and the icons their seats.
-// THE LINE RULE (architect 2026-11-04, the unit): THE LINE IS ONE W,
+// THE LINE RULE (architect 2026-11-04, the unit): THE LINE IS ONE U,
 // ROUNDED AT THE ELEMENT, FLOORED AT ONE DEVICE PX — 2 on the tablet at
 // 200 %, 1 at 100 % — the chokepoint beside scaled_px for every LINE the
 // skin draws:
@@ -1424,25 +1426,25 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // takes the accessors below, so the three rows cannot drift apart.
 //
 // THE KEY IS ARC'S ICON BUTTON, ITS BOX BORDER INCLUDED (architect
-// 2026-11-18 / 2026-11-19; materials.h's THE KEY owns its look): kKeyWidthW
-// WIDE by kKeyHeightW TALL (their seat above — Arc's icon button, 36 x 28
-// W, architect 2026-11-18: "about 72 device pixel width ... the border is
+// 2026-11-18 / 2026-11-19; materials.h's THE KEY owns its look): kKeyWidthU
+// WIDE by kKeyHeightU TALL (their seat above — Arc's icon button, 36 x 28
+// U, architect 2026-11-18: "about 72 device pixel width ... the border is
 // clickable"), both through scaled_px, rounded at the element: 72 x 56
-// device px on the tablet at 200 %. THE BOX IS THE WHOLE KEY, its one-W ring
+// device px on the tablet at 200 %. THE BOX IS THE WHOLE KEY, its one-U ring
 // included, and THE KEYS OF A GROUP ARE LINKED, NEIGHBORS SHARING ONE SEAM
 // COLUMN (materials.h's key_link_pitch_px and linked_group_w_px: the pitch
 // 70 device px on the tablet, a group of n 72 + 70 (n − 1)); the box is the
 // key's hit box (a seam its left key's) and its drawing's seat.
-// Every key carries its set's drawing, the 16 W canvas centered on its box
+// Every key carries its set's drawing, the 16 U canvas centered on its box
 // (paint_key_glyph, paint_handler.cpp; icons.h's THE KEYS), one size for
 // every key. No printed word under it (architect 2026-11-18); the tooltip
 // names the act.
 //
 // THE TITLE BAR AND THE TOP ICON ROW (architect 2026-11-18 / 2026-11-19):
 // THE TITLE BAR (title_bar_h_px, its block above), then ARC'S TOOLBAR, ONE
-// PAD ON BOTH SIDES OF THE FACES — kToolbarPadW, 7 W above them and 7 W below (architect 2026-11-20:
+// PAD ON BOTH SIDES OF THE FACES — kToolbarPadU, 7 U above them and 7 U below (architect 2026-11-20:
 // symmetric on his word, the bottom icon row the same; ARC'S TOOLBAR PADS
-// below). With the key 28 W tall: 28 + 7 + 28 + 7 = 70 W, 140 device rows on the
+// below). With the key 28 U tall: 28 + 7 + 28 + 7 = 70 U, 140 device rows on the
 // tablet at 200 % (the title bar 0 .. 55, the pad 56 .. 69, the faces 70 ..
 // 125, the pad 126 .. 139), on the body tone, no line between the title
 // bar and the row (a tone change only), the trim lane's first row the line
@@ -1457,37 +1459,37 @@ inline int hairline_px() { return scaled_px(1.0, 1); }
 // THESE NUMBERS LIVE HERE rather than beside the row's walk because the
 // case is not one row's: paint_handler.cpp's three rows read it. THE CARD
 // AND THE FOLDER OVERLAY'S LIST ROWS ARE NOT THE CASE: a card's glyph
-// stands in its own 16 W box at its own pad (notifications.h's notifyd
+// stands in its own 16 U box at its own pad (notifications.h's notifyd
 // lengths, 2026-11-19), and a list row's at the painter's own constants
 // (paint_handler.cpp's THE LIST VIEW).
-// THE FACE'S WIDTH, kKeyWidthW, and ITS HEIGHT, kKeyHeightW (their seat
+// THE FACE'S WIDTH, kKeyWidthU, and ITS HEIGHT, kKeyHeightU (their seat
 // above; the case paragraph): scaled_px, floored at three device px so a key never shrinks
 // to a sliver at a tiny scale. icon_case_w_px is THE ONE READER of the
 // width: every key surface's walk, seat and hit box takes it (or
 // key_link_pitch_px / linked_group_w_px, materials.h, built on it).
 inline int icon_case_w_px() {
-    return scaled_px(kKeyWidthW, 3);
+    return scaled_px(kKeyWidthU, 3);
 }
 inline int icon_case_h_px() {
-    return scaled_px(kKeyHeightW, 3);
+    return scaled_px(kKeyHeightU, 3);
 }
-// THE ONE W BETWEEN TWO FACES (architect 2026-11-04): kKeyGapW,
-// ONE W through scaled_px — 2 device px on the tablet at 200 %, 1 at 100 %
+// THE ONE U BETWEEN TWO FACES (architect 2026-11-04): kKeyGapU,
+// ONE U through scaled_px — 2 device px on the tablet at 200 %, 1 at 100 %
 // — FLOORED AT ONE DEVICE PX so two faces stand apart at every scale: the
 // on-screen keyboard's (onscreen_keyboard.h's key_gap_px, its grid's shared
-// one-W lines) and the title bar's two lamps' (logo_legend_layout). The top
+// one-U lines) and the title bar's two lamps' (logo_legend_layout). The top
 // icon row's, the bottom icon row's and the controls rows' keys share a
 // seam instead, linked groups (materials.h's key_link_pitch_px).
-inline constexpr double kKeyGapW = 1.0;
+inline constexpr double kKeyGapU = 1.0;
 inline int key_gap_px() {
-    return scaled_px(kKeyGapW, 1);
+    return scaled_px(kKeyGapU, 1);
 }
 // ARC'S TOOLBAR PADS (architect 2026-11-18 / 2026-11-19; THE TITLE BAR AND
-// THE TOP ICON ROW paragraph above): kToolbarPadW, 7 W, ON BOTH SIDES OF THE
+// THE TOP ICON ROW paragraph above): kToolbarPadU, 7 U, ON BOTH SIDES OF THE
 // FACES IN BOTH ICON ROWS — above and below the top row's, above and below
 // the bottom row's (architect 2026-11-20: "we dont' want to be
 // injecitng an asymmetry where there doesnt have to be one"; Arc's toolbar
-// as Thunar and Mousepad draw it stands 8 W on one side and 7 W on the
+// as Thunar and Mousepad draw it stands 8 U on one side and 7 U on the
 // other, a 1-px quirk given up for the symmetric 7 / 7). Through scaled_px,
 // floored at one device px: 14 device px on the tablet at 200 %. THE
 // ON-SCREEN KEYBOARD, standing over the bottom icon row and the status bar
@@ -1496,38 +1498,38 @@ inline int key_gap_px() {
 // His reason for room
 // under the bottom row: "my hand isn't naturally at the very edge of the
 // screen" — the status bar stands under it (status_bar_lane_h_px).
-inline constexpr double kToolbarPadW = 7.0;
+inline constexpr double kToolbarPadU = 7.0;
 inline int toolbar_pad_px() {
-    return scaled_px(kToolbarPadW, 1);
+    return scaled_px(kToolbarPadU, 1);
 }
 // THE CASE'S TOP, AS AN OFFSET FROM THE BOTTOM ICON ROW'S TOP and the modal
-// controls row's: the pad (7 W), the one expression every reader of those
+// controls row's: the pad (7 U), the one expression every reader of those
 // strips' case seat takes (the bottom row's and the controls row's seats,
 // hit rects, tooltips).
 inline int icon_case_top_offset_px() {
     return toolbar_pad_px();
 }
 // THE TOP ICON ROW'S CASE TOP, AS AN OFFSET FROM THE TITLE BAR'S TOP: the
-// title bar and the pad (28 + 7 = 35 W, 70 device rows on the tablet), read
+// title bar and the pad (28 + 7 = 35 U, 70 device rows on the tablet), read
 // by the top icon row's seats alone (icon_row_seats, paint_handler.cpp,
 // which every reader of the row takes).
 inline int band_case_top_offset_px() {
     return title_bar_h_px() + toolbar_pad_px();
 }
 // THE STRIP — the bottom icon row's: the pad, the case, the pad (7 + 28 + 7
-// = 42 W, 84 device rows on the tablet).
+// = 42 U, 84 device rows on the tablet).
 inline int strip_h_px() {
     return toolbar_pad_px() + icon_case_h_px() + toolbar_pad_px();
 }
 // THE TITLE BAR AND THE TOP ICON ROW, one lane: the title bar, the pad,
-// the case, the pad (28 + 7 + 28 + 7 = 70 W, 140 device rows on the
+// the case, the pad (28 + 7 + 28 + 7 = 70 U, 140 device rows on the
 // tablet).
 inline int icon_row_h_px() {
     return title_bar_h_px() + toolbar_pad_px() + icon_case_h_px() +
            toolbar_pad_px();
 }
-// THE GROUND BETWEEN TWO RUNS (Arc's toolbar groups 6 W apart, architect
-// 2026-11-22): kRunGapW (its seat above) through scaled_px — 12 device px
+// THE GROUND BETWEEN TWO RUNS (Arc's toolbar groups 6 U apart, architect
+// 2026-11-22): kRunGapU (its seat above) through scaled_px — 12 device px
 // on the tablet at 200 % — between two runs' FACES (the key is its face):
 // the top icon row's runs and
 // the one run gap the left runs' clip stands short of the history opener,
@@ -1537,7 +1539,7 @@ inline int icon_row_h_px() {
 // the score rows) — and the on-screen keyboard's two pads, above and below
 // its grid (onscreen_keyboard.h's pad_top_px / pad_foot_px; architect
 // 2026-11-26).
-// program_run_gap_px is THE ONE READER of kRunGapW: one
+// program_run_gap_px is THE ONE READER of kRunGapU: one
 // gap for every gap.
 // A TOO-LARGE GAP is the top icon row's overflow rule's, as a too-wide key
 // is (THE FIT at paint_icon_row's width math, paint_handler.cpp) — a
@@ -1548,13 +1550,13 @@ inline int icon_row_h_px() {
 // the score viewer's rows take the gap from the scrub's trough, which
 // their floor of two knobs drops whole when too little is left.
 inline int program_run_gap_px() {
-    return scaled_px(kRunGapW);
+    return scaled_px(kRunGapU);
 }
 
 // A BUTTON IS ARC'S BUTTON, ITS OUTER CORNERS ROUNDED (architect 2026-11-18
 // / 2026-11-19): every key of both icon rows and of the controls rows
-// a box in a one-W `well_border` ring whose outer corners are 3 W
-// (materials.h's kKeyCornerW, the faces' inside it 2 W), a group of keys one
+// a box in a one-U `well_border` ring whose outer corners are 3 U
+// (materials.h's kKeyCornerU, the faces' inside it 2 U), a group of keys one
 // LINKED GROUP — one ring, the keys sharing one seam column each — and every
 // word button and entry its own ring (materials.h's paint_linked_group,
 // paint_word_button, paint_entry; their exact-coverage road the coverage
@@ -1569,18 +1571,18 @@ inline int program_run_gap_px() {
 // The render player's controls row and the score viewer's (its media face
 // and its page road's face alike) carry ONE SCRUB, GTK's `scale` under Arc,
 // one widget:
-//   THE TROUGH — kScaleTroughW, 5 W thick (10 device px on the tablet at
+//   THE TROUGH — kScaleTroughU, 5 U thick (10 device px on the tablet at
 //     200 %), a full pill (radius half its thickness), `scale_trough` (2D303B,
 //     its line of kArcDarkTones; the progress page's bar's too),
-//     CENTERED EXACTLY ON THE KEYS' ROWS (the tablet, the key 28 W tall: keys
+//     CENTERED EXACTLY ON THE KEYS' ROWS (the tablet, the key 28 U tall: keys
 //     1324..1379, the trough rows 1347..1356), across the item's columns.
 //     THE PLAYED PART — Arc's `scale highlight` — from the trough's left end
 //     to the knob's center, THE ACCENT (`cue`, the progress bar's done
 //     part's tone), the same pill cut at the knob's center: the scrub shows
 //     how much has played.
-//   THE KNOB — kScaleKnobW, a 17 W DISC (34 device px), centered on the
+//   THE KNOB — kScaleKnobU, a 17 U DISC (34 device px), centered on the
 //     trough's center row (the tablet: rows 1335..1368), its fill
-//     `key_face` in a ONE-W RIM of `scale_slider_border` (Arc's
+//     `key_face` in a ONE-U RIM of `scale_slider_border` (Arc's
 //     slider border 262933, its line of kArcDarkTones); HELD — the owner's ScrubDrag
 //     armed (RenderPlayer::ScrubDrag::armed, the score viewer's the same),
 //     HOWEVER THE PRESS TOOK IT, on the knob or on the trough beside it
@@ -1606,7 +1608,7 @@ inline int program_run_gap_px() {
 //     _of_frame), painted at exact coverage through the coverage stamp's
 //     rounded shapes (paint_scale).
 //   THE KNOB STAYS INSIDE THE TROUGH, GTK'S WAY: its center travels from
-//     the trough's left end plus half the knob (8.5 W) to its right end less
+//     the trough's left end plus half the knob (8.5 U) to its right end less
 //     half the knob — frame 0 / the first page at the first, the last frame
 //     / page at the second (scale_travel_x0 / scale_travel_span below; the
 //     mappings, app_state.h and score_viewer.h, and their inverses in the
@@ -1648,30 +1650,30 @@ inline int program_run_gap_px() {
 // (main.cpp's lane table), the last one's bottom edge the waveform's top with
 // no gap (the palette block's well paragraph owns the look; every length is
 // derived here at the element: scaled_px for a chrome length authored in
-// W, hairline_px for a line — one W, rounded at the element (architect
+// U, hairline_px for a line — one U, rounded at the element (architect
 // 2026-11-04, the unit) — the faces' own metrics for the text's bands).
 // The device rows below are the tablet's, 200 %:
 //   THE TRIM   the line under the top icon row, THE TROUGH, the line under
-//              it (trim_lane_h_px): 14 W, 28 device rows (2 + 24 + 2).
-//   THE RULER  the ruler (ruler_h_px: kRulerW, the digits' line box
+//              it (trim_lane_h_px): 14 U, 28 device rows (2 + 24 + 2).
+//   THE RULER  the ruler (ruler_h_px: kRulerU, the digits' line box
 //              centered in it; the ticks overlay its foot) and its line
-//              (ruler_lane_h_px): 16 W + 1 W, 32 + 2 device rows.
-//   THE MARKER 16 W, the editor's box on its whole rows (marker_lane_h_px:
-//              the one-W border, the label's 14 W line box on the
+//              (ruler_lane_h_px): 16 U + 1 U, 32 + 2 device rows.
+//   THE MARKER 16 U, the editor's box on its whole rows (marker_lane_h_px:
+//              the one-U border, the label's 14 U line box on the
 //              line-box baseline, the border): 32 device rows; the cue's
 //              chip its last rows (cue_chip_h_px, 8).
 //   THE LINE   the line between the lane and the canvas, one hairline
-//              (lane_foot_line_h_px, below): 2 device rows, 1 W.
-// Every one-W line of the well is `well_border` (THE WELL'S EDGES, below;
+//              (lane_foot_line_h_px, below): 2 device rows, 1 U.
+// Every one-U line of the well is `well_border` (THE WELL'S EDGES, below;
 // architect 2026-11-17), across the panel's whole width, the
 // lanes' own fills on the same columns (edge to edge, 2026-11-19).
 //
 // THE TRIM BAR IS ARC'S SCROLLBAR (architect 2026-11-17: "The scroll bar
 // and the trough should be accurate to whatever Arc uses"; "Let's use the
 // real 12W" — Thunar measured, trough 12,
-// slider 6, 3 px of trough each side): THE TROUGH 12 W, kTrimTroughW (24
+// slider 6, 3 px of trough each side): THE TROUGH 12 U, kTrimTroughU (24
 // device rows on the tablet at 200 %, 12 at 100 %, floor 1), and on it THE
-// PILL 6 W tall, kTrimPillW, centered (the seat of trough above and below,
+// PILL 6 U tall, kTrimPillU, centered (the seat of trough above and below,
 // below), its
 // ends' radius half its height — a full pill (render_trim_flags). THE
 // SLIDER'S BOX AND ITS CORE (architect 2026-11-18, his "let's just make it
@@ -1686,11 +1688,11 @@ inline int program_run_gap_px() {
 // one statement, every other mention of it naming it so — the pill's seat
 // across the trough as painted, (trough rows − pill rows) / 2, half
 // the difference of the two painted heights, a real length with no
-// rounding of its own: 3 W wherever both heights are whole numbers of
+// rounding of its own: 3 U wherever both heights are whole numbers of
 // device rows at the scale (6 device px on the tablet at 200 %, 4.5 at
 // 150 %, 3 at 100 %), and off it by the rounding where one is not (125 %:
 // the trough 15 rows, the pill's 7.5 rounded to 8, the seat 3.5 px, 2.8
-// W). THE CORE STANDS AT ITS REAL PLACE,
+// U). THE CORE STANDS AT ITS REAL PLACE,
 // round at both of its own ends, and the strip's edge cuts it (the no-grid
 // rule, `hull`'s block: what is painted stands where its arithmetic puts
 // it, so nothing jumps as a bound crosses the edge): a bound on screen
@@ -1702,18 +1704,18 @@ inline int program_run_gap_px() {
 // the grabs around them: THE TRIM BAR'S CAPS AND GRABS below. THE TRIM
 // LANE: the line under the top icon row, the trough and the line under it
 // (the line Arc's scrollbar draws in $borders_color on its content side):
-// 14 W, 28 device rows, rows 140 .. 167 on the tablet, the
+// 14 U, 28 device rows, rows 140 .. 167 on the tablet, the
 // trough 142 .. 165. The modal family's box keeps its seat on the lane's
 // first row (modal_box.h); the cards stand at the window's top right over
 // whatever is there, notifyd's seat (notification_stack_bound,
 // 2026-11-19).
-inline constexpr double kTrimTroughW = 12.0;
-inline constexpr double kTrimPillW   = 6.0;
+inline constexpr double kTrimTroughU = 12.0;
+inline constexpr double kTrimPillU   = 6.0;
 inline int trim_trough_h_px() {
-    return scaled_px(kTrimTroughW, 1);
+    return scaled_px(kTrimTroughU, 1);
 }
 inline int trim_pill_h_px() {
-    return scaled_px(kTrimPillW, 1);
+    return scaled_px(kTrimPillU, 1);
 }
 inline int trim_lane_h_px() {
     return hairline_px() + trim_trough_h_px() + hairline_px();
@@ -1733,60 +1735,60 @@ inline GuiRect trim_trough_rect(const GuiRect& trim_lane, int lane_x,
                    std::min(trim_trough_h_px(), trim_lane.h - px)};
 }
 // THE RULER'S TICKS (architect 2026-11-01; the major 2026-11-03; the width
-// one W, the unit, 2026-11-04): ONE CANVAS LINE
-// WIDE — waveform_line_px, the line rule's W, 2 device px on the tablet at
+// one U, the unit, 2026-11-04): ONE CANVAS LINE
+// WIDE — waveform_line_px, the line rule's U, 2 device px on the tablet at
 // 200 %, 1 at 100 % — CENTERED ON THE TICK'S OWN EXACT TIME'S PLACE
 // (architect 2026-11-14; waveform_line_span's rule, RulerComb's
-// tick_frames), THE MAJOR 2 W (architect 2026-11-19: "You can make the major 2W. Or you could just have it sit underneath the
-// text") and the minor 1 W tall, 4 and 2 device rows on the tablet
+// tick_frames), THE MAJOR 2 U (architect 2026-11-19: "You can make the major 2W. Or you could just have it sit underneath the
+// text") and the minor 1 U tall, 4 and 2 device rows on the tablet
 // (scaled_px, each floored at one row). THEY OVERLAY THE RULER'S FOOT AND ADD
 // NO HEIGHT (architect 2026-11-03: "the ticks can be adjusted later — they
-// don't change height of anything else"): in the 16 W ruler the digits'
-// line box ends 14 W down (its top 1 W, its 13 W), so the major's 2 W are
-// the two W under it, THREE W OF RULER CLEAR BETWEEN ITS TOP AND THE INK'S
-// FOOT on the baseline at +11 W (six device rows at 200 %; the minor 1 W;
+// don't change height of anything else"): in the 16 U ruler the digits'
+// line box ends 14 U down (its top 1 U, its 13 U), so the major's 2 U are
+// the two U under it, THREE U OF RULER CLEAR BETWEEN ITS TOP AND THE INK'S
+// FOOT on the baseline at +11 U (six device rows at 200 %; the minor 1 U;
 // never over the ink).
-inline constexpr double kRulerMajorTickRowsW = 2.0;
-inline constexpr double kRulerMinorTickRowsW = 1.0;
+inline constexpr double kRulerMajorTickRowsU = 2.0;
+inline constexpr double kRulerMinorTickRowsU = 1.0;
 inline int ruler_major_tick_h_px() {
-    return scaled_px(kRulerMajorTickRowsW, 1);
+    return scaled_px(kRulerMajorTickRowsU, 1);
 }
 inline int ruler_minor_tick_h_px() {
-    return scaled_px(kRulerMinorTickRowsW, 1);
+    return scaled_px(kRulerMinorTickRowsU, 1);
 }
 // THE LINE-BOX RULE, GTK'S SEAT (architect 2026-11-19, what the approved
-// pictures show): in a box `box_w` W tall standing at
-// `box_y`, THE FACE'S LINE BOX (gui_font_line_box_w: its ascent and descent
-// at the size in W, each rounded up — 11 + 3 = 14 W at 12 W, 10 + 3 = 13 W
-// at the ruler's 10 W Bold) IS CENTERED AS PANGO CENTERS IT, its top
-// floor((box − line) / 2) W down, and THE BASELINE IS THE ASCENT UNDER
-// THAT — one whole-W offset through scaled_px, so on the tablet a whole
-// device row: +11 W in the 16 W ruler, +12 W in the 16 W marker lane, +15 W
-// in the 22 W status bar. Its readers: the ruler's digits
+// pictures show): in a box `box_w` U tall standing at
+// `box_y`, THE FACE'S LINE BOX (gui_font_line_box_u: its ascent and descent
+// at the size in U, each rounded up — 11 + 3 = 14 U at 12 U, 10 + 3 = 13 U
+// at the ruler's 10 U Bold) IS CENTERED AS PANGO CENTERS IT, its top
+// floor((box − line) / 2) U down, and THE BASELINE IS THE ASCENT UNDER
+// THAT — one whole-U offset through scaled_px, so on the tablet a whole
+// device row: +11 U in the 16 U ruler, +12 U in the 16 U marker lane, +15 U
+// in the 22 U status bar. Its readers: the ruler's digits
 // (ruler_baseline_px), the cues' labels and the lane's editors
 // (cue_baseline_px) and the status bar (paint_status_bar). THE TITLE BAR'S
-// BASELINE IS A STATED +18 W of its 28 (xfwm's measured seat, kTitleBaselineW).
+// BASELINE IS A STATED +18 U of its 28 (xfwm's measured seat, kTitleBaselineU).
 double line_box_baseline(const GuiFont& font, double box_y, int box_w);
-// THE RULER, kRulerW = 16 W, AN AUTHORED HEIGHT (architect 2026-11-19: "the
+// THE RULER, kRulerU = 16 U, AN AUTHORED HEIGHT (architect 2026-11-19: "the
 // markers lane looks like, if this was being designed by whoever designed
 // Arc, it would be smaller in height ... a tighter lane ... And perhaps for
 // the ruler as well ... Maybe the same height, then they both should shrink
-// in sync" — the ruler and the marker lane 16 W each): 16 W through
+// in sync" — the ruler and the marker lane 16 U each): 16 U through
 // scaled_px, 32 device rows on the tablet at 200 %. Its digits are the
-// Bold 10 W (Small, gui_font.h; the line box 10 + 3 W, gui_font_line_box_w)
+// Bold 10 U (Small, gui_font.h; the line box 10 + 3 U, gui_font_line_box_u)
 // — the header's weight. THE BASELINE by the line-box rule
-// (line_box_baseline): the 13 W box centered in 16, its top floor(3 / 2) =
-// 1 W down, the baseline the ascent under it, +11 W (22 device rows) under
-// the ruler's top. The ticks overlay its foot (the majors' 2 W under the
+// (line_box_baseline): the 13 U box centered in 16, its top floor(3 / 2) =
+// 1 U down, the baseline the ascent under it, +11 U (22 device rows) under
+// the ruler's top. The ticks overlay its foot (the majors' 2 U under the
 // line box's foot, which they meet; the digits have no descender ink
 // there), the playhead's head its last rows.
-inline constexpr double kRulerW = 16.0;
+inline constexpr double kRulerU = 16.0;
 inline int ruler_baseline_px() {
     return static_cast<int>(line_box_baseline(gui_font(GuiFace::Small), 0.0,
-                                              static_cast<int>(kRulerW)));
+                                              static_cast<int>(kRulerU)));
 }
 inline int ruler_h_px() {
-    return scaled_px(kRulerW, 1);
+    return scaled_px(kRulerU, 1);
 }
 inline int ruler_lane_h_px() {
     return ruler_h_px() + hairline_px();
@@ -1800,21 +1802,21 @@ inline int ruler_lane_h_px() {
 // outline"; no outline because "the scroll bar has no outline"): the fill's
 // own triangle.
 //
-// THE TRIANGLE'S NOMINAL ROWS: 4 W through scaled_px (8
+// THE TRIANGLE'S NOMINAL ROWS: 4 U through scaled_px (8
 // device px on the tablet at 200 %), rounded at the element like every
 // length off the canvas (architect 2026-10-26 ~13:40, on the row count as a
 // per-device number: "why density? why not just simple scale? tablet is
 // only real surface. later tablets may have higher dpi, but not lower" —
-// "yes" to the planner's proposal). 4 W (architect 2026-11-12: "shorter
+// "yes" to the planner's proposal). 4 U (architect 2026-11-12: "shorter
 // triangles, yes, and then move labels one W left, yes"; "it stays touching
 // the border ... they don't rise up as far"). 8 at
 // 200 %, 4 at 100 %, 2 at the scale's floor of 50 % (is_gui_scale_percent,
 // device_config.h) — no floor, no clamp. READERS: the chip's height
 // (cue_chip_h_exact_px below) and the label's lead (cue_label_lead_px, the
 // rows' reach).
-inline constexpr double kCueTriangleRowsW = 4.0;
+inline constexpr double kCueTriangleRowsU = 4.0;
 inline int cue_triangle_rows() {
-    return scaled_px(kCueTriangleRowsW);
+    return scaled_px(kCueTriangleRowsU);
 }
 // THE CHIP'S HEIGHT H, the triangle's height and half-base in device px —
 // and the ruler's head's: THE NOMINAL ROWS ALONE (architect 2026-11-19,
@@ -1842,25 +1844,25 @@ inline double cue_chip_h_exact_px() {
 inline int cue_chip_h_px() {
     return static_cast<int>(std::ceil(cue_chip_h_exact_px()));
 }
-// THE LABEL'S HORIZONTAL LENGTHS, WHOLE W through scaled_px (the text
-// round, architect 2026-11-03; whole W, the unit, 2026-11-04): THE
-// FILL'S PAD either side of a segment's text, kCueFillPadW = 1, one W (a
+// THE LABEL'S HORIZONTAL LENGTHS, WHOLE U through scaled_px (the text
+// round, architect 2026-11-03; whole U, the unit, 2026-11-04): THE
+// FILL'S PAD either side of a segment's text, kCueFillPadU = 1, one U (a
 // pad inside a box; 2 device px on the tablet at 200 %, 1 at 100 %)
 // — the resting segment's box, the press target, the flag editor's field
 // round its run (the caret's column borrowed from its right pad, the caret
-// one W too) — and THE SEGMENT GAP between two of a marker's segments' boxes
-// (the bound cells, the history's two halves), kCueSegmentGapW = 6 W (12
+// one U too) — and THE SEGMENT GAP between two of a marker's segments' boxes
+// (the bound cells, the history's two halves), kCueSegmentGapU = 6 U (12
 // device px at 200 %, 6 at 100 %), each floored at one device px; the cull
 // bounds sum them (marker_flag_max_width_px, the history lane's). THE PAIR
-// 2 / 12 (the unit, architect 2026-11-04: every authored length a whole W,
+// 2 / 12 (the unit, architect 2026-11-04: every authored length a whole U,
 // so the 4 / 13 he kept on 2026-11-03 rounds to the unit's pair).
-inline constexpr double kCueFillPadW    = 1.0;
-inline constexpr double kCueSegmentGapW = 6.0;
+inline constexpr double kCueFillPadU    = 1.0;
+inline constexpr double kCueSegmentGapU = 6.0;
 inline int cue_fill_pad_px() {
-    return scaled_px(kCueFillPadW, 1);
+    return scaled_px(kCueFillPadU, 1);
 }
 inline int cue_segment_gap_px() {
-    return scaled_px(kCueSegmentGapW, 1);
+    return scaled_px(kCueSegmentGapU, 1);
 }
 // FROM ONE SEGMENT'S TEXT END TO THE NEXT SEGMENT'S TEXT START: the first's
 // right pad, the segment gap, the second's left pad — the run-to-run step
@@ -1878,14 +1880,14 @@ inline int cue_segment_text_gap_px() {
 // rows: "It seems the lead-in was not scaled — increasing rows seems to not
 // move text, but it should, relative to what I tuned it to"): the chip's
 // reach (the rows, cue_triangle_rows — the bare triangle's half-base, its
-// top corner's distance from the mark), then THE GAP, 5 W (kCueLabelGapW;
+// top corner's distance from the mark), then THE GAP, 5 U (kCueLabelGapU;
 // 10 device px on the tablet at 200 %) through scaled_px, rounded at the
 // element — so the label follows the rows and keeps the gap. THE GAP IS
 // MEASURED FROM THE CHIP'S OWN TOP CORNER to the text's origin (architect
 // 2026-11-19, on the smaller chip: "the text should move left to make sure
 // that the margin remains the same" — the margin the
 // outlined chip's corner kept to the text, 9.17 device px on the tablet,
-// 4.59 W, OFF THE GRID, TAKEN AT THE NEAREST WHOLE W, 5 W, 10 device px),
+// 4.59 U, OFF THE GRID, TAKEN AT THE NEAREST WHOLE U, 5 U, 10 device px),
 // AT EVERY ROW COUNT. At 200 %: 8 + 10 = 18 device px; at 100 %: 4 + 5 = 9.
 // The gap is never negative, so the text never stands under the flag. THE
 // FILL'S LEAD IS THE LEAD LESS THE FILL'S PAD (cue_fill_lead_px): the text
@@ -1893,9 +1895,9 @@ inline int cue_segment_text_gap_px() {
 // the segment boxes (cue_segment_boxes), the cull bounds
 // (marker_flag_max_width_px below, the history lane's), the flag editor's
 // field (render_flag_editor_box, at the edited segment's seat).
-inline constexpr double kCueLabelGapW = 5.0;
+inline constexpr double kCueLabelGapU = 5.0;
 inline int cue_label_lead_px() {
-    return cue_triangle_rows() + scaled_px(kCueLabelGapW);
+    return cue_triangle_rows() + scaled_px(kCueLabelGapU);
 }
 inline int cue_fill_lead_px() {
     return cue_label_lead_px() - cue_fill_pad_px();
@@ -1903,29 +1905,29 @@ inline int cue_fill_lead_px() {
 // THE MARKER LANE (architect 2026-11-19: "the markers lane looks like, if
 // this was being designed by whoever designed Arc, it would be smaller in
 // height ... a tighter lane"; the ruler and the lane "should shrink in
-// sync"): kMarkerLaneW, 16 W through scaled_px — 32 device rows on the
-// tablet at 200 % — the ruler's height (kRulerW), A STATED NUMBER. THE
+// sync"): kMarkerLaneU, 16 U through scaled_px — 32 device rows on the
+// tablet at 200 % — the ruler's height (kRulerU), A STATED NUMBER. THE
 // LABEL'S BASELINE by the line-box rule (line_box_baseline): the Label
-// face's 14 W line box (Regular 12 W, 11 + 3) centered in 16, its top
-// floor(2 / 2) = 1 W down, the baseline the ascent under it, +12 W (24
+// face's 14 U line box (Regular 12 U, 11 + 3) centered in 16, its top
+// floor(2 / 2) = 1 U down, the baseline the ascent under it, +12 U (24
 // device rows) under the lane's top (cue_baseline_px). ITS WHOLE
 // ROWS ARE THE FLAG EDITOR'S BOX, GTK's in-place cell editor (the EDITING
-// paragraph above): its ONE-W BORDER (kCueEditorBorderW) on the lane's
+// paragraph above): its ONE-U BORDER (kCueEditorBorderU) on the lane's
 // first and last rows, and inside it THE LINE BOX'S ROWS (the caret's and
 // the selection's, cue_line_box_top_px / cue_line_box_h_px below) — in the
-// 16 W lane the 14 W line box stands 1 W down, so the border and the line
+// 16 U lane the 14 U line box stands 1 U down, so the border and the line
 // box tile the lane: on the tablet at 200 % the border rows 0..1 and
 // 30..31 under the lane's top, the line box rows 2..29 (28 rows), the
 // baseline 24. The chip's rows are the lane's bottom rows
 // (cue_above_chip_h_px the remainder above its hull: 32 − 8 = 24 on the
 // tablet).
-inline constexpr double kMarkerLaneW = 16.0;
-inline constexpr double kCueEditorBorderW = 1.0;
+inline constexpr double kMarkerLaneU = 16.0;
+inline constexpr double kCueEditorBorderU = 1.0;
 inline int cue_editor_border_px() {
-    return scaled_px(kCueEditorBorderW, 1);
+    return scaled_px(kCueEditorBorderU, 1);
 }
 inline int marker_lane_h_px() {
-    return scaled_px(kMarkerLaneW, 1);
+    return scaled_px(kMarkerLaneU, 1);
 }
 inline int cue_above_chip_h_px() {
     return marker_lane_h_px() - cue_chip_h_px();
@@ -1946,28 +1948,28 @@ inline int cue_fill_h_px() {
 double redesign_baseline(const GuiFont& font, double box_y, double box_h);
 // THE CUE LABEL'S BASELINE AND THE EDITOR'S LINE BOX under the marker
 // lane's top (the lane's rule above): THE BASELINE the line-box rule's,
-// +12 W (24 device rows on the tablet at 200 %); THE LINE BOX — the flag
+// +12 U (24 device rows on the tablet at 200 %); THE LINE BOX — the flag
 // editor's caret and selection rows (render_flag_editor_box reads
 // cue_line_box_top_px and cue_line_box_h_px, never a second derivation;
 // the value editors' rule, one look for both editors) — the Label face's
-// ascent above the baseline and its descent below, whole W (the face's
-// line box, gui_font_line_box_w): rows 2 .. 29 under the lane's top on the
+// ascent above the baseline and its descent below, whole U (the face's
+// line box, gui_font_line_box_u): rows 2 .. 29 under the lane's top on the
 // tablet, 1 .. 14 at 100 %.
 // Every label segment — the resting label, the bound cells, the history's
 // two halves — and the flag editor's text ride the baseline (the editor's
 // text sits at the label's seat).
 inline double cue_baseline_px() {
     return line_box_baseline(gui_font(GuiFace::Label), 0.0,
-                             static_cast<int>(kMarkerLaneW));
+                             static_cast<int>(kMarkerLaneU));
 }
 inline double cue_line_box_top_px() {
     return cue_baseline_px() -
            static_cast<double>(
-               scaled_px(gui_font_line_box_w(gui_font(GuiFace::Label)).ascent));
+               scaled_px(gui_font_line_box_u(gui_font(GuiFace::Label)).ascent));
 }
 inline double cue_line_box_h_px() {
     return static_cast<double>(
-        scaled_px(gui_font_line_box_w(gui_font(GuiFace::Label)).line()));
+        scaled_px(gui_font_line_box_u(gui_font(GuiFace::Label)).line()));
 }
 // THE CHIP'S TWO EXTENTS (architect 2026-11-14), H the chip's
 // height's whole hull (cue_chip_h_px) — the marker's chip
@@ -2020,7 +2022,7 @@ inline int cue_chip_hit_right_px() {
 // x 0 .. the window's last column.
 //
 // THE WELL'S LINES (architect 2026-11-17: "lets use the thunar border" — Arc's $borders_color; the tone `well_border`,
-// gui_theme.h): ONE W, ACROSS THE PANEL'S WHOLE WIDTH — the
+// gui_theme.h): ONE U, ACROSS THE PANEL'S WHOLE WIDTH — the
 // trim lane's first row (the line under the top icon row) and its last
 // (under the trough), the ruler lane's last row, the lane's foot line (top
 // lane 4), the well's foot, and on the canvas THE STEREO DIVIDER
@@ -2042,14 +2044,14 @@ inline int well_foot_h_px() {
 // The two lanes (main.cpp, beside the other lane accessors).
 GuiRect lane_foot_line_area(const AppState& a);
 GuiRect well_foot_area(const AppState& a);
-// THE PANEL'S INSET (architect 2026-11-19): kEdgeInsetW, 6 W through
+// THE PANEL'S INSET (architect 2026-11-19): kEdgeInsetU, 6 U through
 // scaled_px (12 device px on the tablet at 200 %) — THE KEYS' OUTERMOST
 // FACES in both icon rows stand this far inside the panel's left and right
 // edges (Arc's toolbar margin). (The title bar's first and last ink stand
-// 8 W in: kTitleNoteInsetW / kTitleRightInsetW.)
-inline constexpr double kEdgeInsetW = 6.0;
+// 8 U in: kTitleNoteInsetU / kTitleRightInsetU.)
+inline constexpr double kEdgeInsetU = 6.0;
 inline int edge_inset_px() {
-    return scaled_px(kEdgeInsetW, 0);
+    return scaled_px(kEdgeInsetU, 0);
 }
 // THE WELL'S COLUMNS (the one owner): its first column and one past its
 // last — THE PANEL'S, edge to edge (architect 2026-11-19): 0 and 2304 on
@@ -2057,14 +2059,14 @@ inline int edge_inset_px() {
 // "everything that sits closest to the window edge on all screens should
 // align to the waveform canvas", the canvas the panel's width): THE LANES,
 // THEIR LINES AND THE CANVAS RUN THESE COLUMNS; THE KEYS' OUTERMOST FACES
-// STAND kEdgeInsetW INSIDE THEM (the top icon row's ends, icon_row_seats;
+// STAND kEdgeInsetU INSIDE THEM (the top icon row's ends, icon_row_seats;
 // the bottom icon row's and the controls rows', bottom_row_seats), THE
 // TITLE BAR'S FIRST
-// AND LAST INK 8 W (kTitleNoteInsetW / kTitleRightInsetW, paint_title_bar),
-// THE BOTTOM ICON ROW'S LEFT RUN'S PEN 14 W (kBottomLeftPenW); THE TOOLTIP'S BOX
+// AND LAST INK 8 U (kTitleNoteInsetU / kTitleRightInsetU, paint_title_bar),
+// THE BOTTOM ICON ROW'S LEFT RUN'S PEN 14 U (kBottomLeftPenU); THE TOOLTIP'S BOX
 // AND THE MODAL PANE ARE HELD INSIDE THEM (the tooltip's clamp — its
 // shadow may hang past them — and modal_box_rect on these columns); THE
-// CARDS' STACK STANDS kNotificationSeatW (16 W) INSIDE THE WINDOW'S LAST
+// CARDS' STACK STANDS kNotificationSeatU (16 U) INSIDE THE WINDOW'S LAST
 // COLUMN AND UNDER ITS FIRST ROW, notifyd's seat (notification_stack_bound,
 // 2026-11-19). The
 // on-screen keyboard is exempt, a small block seated on the window's
@@ -2083,14 +2085,14 @@ WellColumns well_columns(const AppState& a);
 // walk (Down, Up, Previous Marker, Next Marker) and the nudge and play
 // (Center, Left, Right and Play / Stop, the last case; architect
 // 2026-10-18) packed right, each one linked group, the run gap
-// (program_run_gap_px, kRunGapW) of bare ground
+// (program_run_gap_px, kRunGapU) of bare ground
 // between two (kMarkerVerbGroup in paint_handler.cpp owns that group's
 // membership), all one lane over the status bar.
 //
 // THE ROW IS THE STRIP (architect 2026-10-22; Arc's pads 2026-11-19): THE
-// PAD (7 W), the program's key (the top icon row's own, read from its
-// accessors above so the rows cannot drift apart), THE PAD AGAIN (7 W,
-// symmetric, architect 2026-11-20) — strip_h_px, 42 W, 84 device rows on
+// PAD (7 U), the program's key (the top icon row's own, read from its
+// accessors above so the rows cannot drift apart), THE PAD AGAIN (7 U,
+// symmetric, architect 2026-11-20) — strip_h_px, 42 U, 84 device rows on
 // the tablet at 200 % (14 + 56 + 14) — on the body tone, no line, no bar
 // and no border. The layout is paint_bottom_row_buttons_and_clock's walk.
 // Every overlay — the render player, the project picker's contents, the
@@ -2112,21 +2114,21 @@ inline int bottom_row_h_px() {
 // "if you wanted to come up with a status bar, that might be good ... And
 // it's okay if it takes away from the waveform height"; measured on his
 // 9 pt shot: the line, then 22 rows): THE APP'S LAST LANE, under
-// the bottom icon row — ONE W OF `well_border` (Arc's $borders_color, the
-// line Thunar draws over its bar) AND THE BAR, kStatusBarPadW (4 W) + the
-// body face's line box (14 W, 11 + 3) + kStatusBarPadW: 1 + 22 = 23 W, 46
+// the bottom icon row — ONE U OF `well_border` (Arc's $borders_color, the
+// line Thunar draws over its bar) AND THE BAR, kStatusBarPadU (4 U) + the
+// body face's line box (14 U, 11 + 3) + kStatusBarPadU: 1 + 22 = 23 U, 46
 // device rows on the tablet at 200 % (the line 1394 .. 1395 and the bar
 // 1396 .. 1439, under the on-screen keyboard while it stands), each part
 // through scaled_px,
 // rounded at the element. THE BAR IS
-// THE BODY TONE `body_face`, its text Regular 12 W (GuiFace::Body) in `text`,
-// THE PEN kStatusBarPenW (14 W) from the panel's left edge — THUNAR'S
+// THE BODY TONE `body_face`, its text Regular 12 U (GuiFace::Body) in `text`,
+// THE PEN kStatusBarPenU (14 U) from the panel's left edge — THUNAR'S
 // MEASURED INSET (his 9 pt shot: the status text 14 px in, 4 px above and
-// below it), KEPT over a 4 W margin of our own (architect 2026-11-19:
+// below it), KEPT over a 4 U margin of our own (architect 2026-11-19:
 // "Good. I agree with Tunar's 14W. And then we put the timestamp line at
 // 14W") — so the bottom icon row's left run above it
-// (kBottomLeftPenW, its own 14 W by the same ruling) starts on the same
-// column — THE BASELINE by the line-box rule, +15 W of the 22
+// (kBottomLeftPenU, its own 14 U by the same ruling) starts on the same
+// column — THE BASELINE by the line-box rule, +15 U of the 22
 // (line_box_baseline). Its content and
 // its damage: paint_status_bar and status_bar_text (paint_handler.cpp).
 // INERT CHROME: no hit, no tooltip, no gesture. It stands under every
@@ -2137,24 +2139,24 @@ inline int bottom_row_h_px() {
 // painter yielding there (architect 2026-11-20: "The status bar
 // should just be obscured by the OSK"; onscreen_keyboard.h's placement
 // block).
-inline constexpr double kStatusBarPadW = 4.0;
-inline constexpr double kStatusBarPenW = 14.0;
+inline constexpr double kStatusBarPadU = 4.0;
+inline constexpr double kStatusBarPenU = 14.0;
 // THE BOTTOM ICON ROW'S LEFT RUN'S PEN (architect 2026-11-19: "And then
 // we put the timestamp line at 14W"): the timestamp alone (architect
 // 2026-11-24), plain text pressing nothing (architect
-// 2026-11-20), from 14 W inside the
+// 2026-11-20), from 14 U inside the
 // panel's left edge (28 device px on the tablet), the status bar's column
 // (paint_handler.cpp's bottom_left_run).
-inline constexpr double kBottomLeftPenW = 14.0;
-inline int status_bar_line_box_w() {
-    return gui_font_line_box_w(gui_font(GuiFace::Body)).line();
+inline constexpr double kBottomLeftPenU = 14.0;
+inline int status_bar_line_box_u() {
+    return gui_font_line_box_u(gui_font(GuiFace::Body)).line();
 }
-inline int status_bar_w() {
-    return 2 * static_cast<int>(kStatusBarPadW) + status_bar_line_box_w();
+inline int status_bar_u() {
+    return 2 * static_cast<int>(kStatusBarPadU) + status_bar_line_box_u();
 }
 inline int status_bar_h_px() {
-    return scaled_px(kStatusBarPadW, 0) + scaled_px(status_bar_line_box_w()) +
-           scaled_px(kStatusBarPadW, 0);
+    return scaled_px(kStatusBarPadU, 0) + scaled_px(status_bar_line_box_u()) +
+           scaled_px(kStatusBarPadU, 0);
 }
 inline int status_bar_lane_h_px() {
     return hairline_px() + status_bar_h_px();
@@ -2171,20 +2173,20 @@ inline int status_bar_lane_h_px() {
 // painted reach cue_chip_paint_reach_px left of its column, 9 device px on
 // the tablet at 200 %), so a marker just past the last
 // column shows the left half of its chip there, and of its stem the part
-// of the one-W line that still lies inside the columns (the stem stash's
+// of the one-U line that still lies inside the columns (the stem stash's
 // gate is the line's own span, stem_meets_waveform, render.cpp).
 // THE SCALE'S LENGTHS AND ITS ONE GEOMETRY (the scrub's block above; Arc's
 // CSS numbers for its scale: the trough 5 px thick, the slider 17 px — one Arc
-// px one W), each through scaled_px, rounded at the element: the trough
-// kScaleTroughW (10 device px on the tablet at 200 %, 5 at 100 %), the knob
-// kScaleKnobW (34 and 17). Every box below derives from THE ITEM, the
+// px one U), each through scaled_px, rounded at the element: the trough
+// kScaleTroughU (10 device px on the tablet at 200 %, 5 at 100 %), the knob
+// kScaleKnobU (34 and 17). Every box below derives from THE ITEM, the
 // published GuiRect (scale_item_rect), so the painter, the hit and the
 // damage read one geometry: the trough and the knob centered EXACTLY on the
 // item's rows (no half rounded), the knob's center a real x.
-inline constexpr double kScaleTroughW = 5.0;
-inline constexpr double kScaleKnobW   = 17.0;
-inline int scale_trough_h_px() { return scaled_px(kScaleTroughW, 1); }
-inline int scale_knob_px() { return scaled_px(kScaleKnobW, 3); }
+inline constexpr double kScaleTroughU = 5.0;
+inline constexpr double kScaleKnobU   = 17.0;
+inline int scale_trough_h_px() { return scaled_px(kScaleTroughU, 1); }
+inline int scale_knob_px() { return scaled_px(kScaleKnobU, 3); }
 // THE ITEM: the trough's columns [x0, x0 + w) by THE KNOB'S ROWS, the knob
 // centered exactly on `band`'s rows (the controls row's key rows) — the
 // knob's hull, so whole: on the tablet 1335..1368 under keys 1324..1379.
@@ -2256,7 +2258,7 @@ void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x,
 // THE WAVEFORM AREA CARRIES NO BORDER: the canvas has none (THE WAVEFORM
 // block's canvas paragraph), the rows and columns of ground stand outside
 // the area.
-// THE WAVEFORM'S LINE WIDTH — ONE W, THE LINE RULE'S (architect 2026-11-04,
+// THE WAVEFORM'S LINE WIDTH — ONE U, THE LINE RULE'S (architect 2026-11-04,
 // the unit: lines scale, as measured on his 100 % / 125 % shots):
 // hairline_px itself, 2 device px on the tablet at 200 %, 1 at 100 %.
 // EVERY LINE PAINTED ON THE CANVAS is this width: THE READERS — the one
@@ -2290,13 +2292,13 @@ void paint_scale(cairo_t* cr, const GuiRect& item, double knob_x,
 // plate: the line's paint alone. THE HORIZONTAL LINES ARE CENTERED ON THEIR
 // EXACT ROWS LIKEWISE (the grid and the center lines, canvas_hline_span:
 // the band's zero is the middle of a row on an odd band, the tablet's 535
-// rows with the key 28 W tall, so a center line is half a row, a whole row
+// rows with the key 28 U tall, so a center line is half a row, a whole row
 // and half a row; on an even band a row boundary, the line two whole rows).
 // THE CUE'S CHIP AND THE PLAYHEAD'S HEAD STAND ON THE SAME EXACT PLACE,
 // their apex on the line's center (architect 2026-11-14: "Agree on both.";
 // the chip's block at cue_chip_h_px). THE PLATE DRAWS NO LINE: the
 // magnified inner is a solid fill, THE CORE (architect 2026-11-04, THE CORE
-// below), so every line on the canvas is one W. EVERYTHING ELSE OFF THE
+// below), so every line on the canvas is one U. EVERYTHING ELSE OFF THE
 // CANVAS keeps its areas scaled (scaled_px).
 inline int waveform_line_px() {
     return hairline_px();
@@ -2322,7 +2324,7 @@ inline int waveform_line_px() {
 // THE CANVAS NOT SCALED WITH gui_scale (its bars are counted in device px —
 // one at the working zoom, 1 .. 2 across a level, architect 2026-11-14,
 // THE PLATE'S BARS — and its quarter-row tips are device px; the canvas's
-// lines are one W, waveform_line_px), so the waveform needs one key
+// lines are one U, waveform_line_px), so the waveform needs one key
 // of its own and the grow is the appropriate one, kept for good because a
 // replacement panel may not come at this density: the grow is the device-px
 // number whose right value depends most on the panel's density. THE DEFAULT
@@ -2361,7 +2363,7 @@ static_assert(kWaveformSubcells % 4 == 0,
 // "the anti-aliasing I would like to commit to that as well, the
 // full anti-aliasing"; "I would expect snapping nothing to integers and
 // leaving them rounding to yield decent results"): a vertical line of width
-// `t` (the canvas's line, one W, waveform_line_px) whose frame stands at
+// `t` (the canvas's line, one U, waveform_line_px) whose frame stands at
 // the exact place `x` (displayed_x_at, warp_frame_map_view.h: device px
 // from the strip's left edge, the frame a pixel BOUNDARY) is THE REAL
 // INTERVAL [X − t / 2, X + t / 2] in window px, X = area_x + x — centered
@@ -2396,7 +2398,7 @@ static_assert(kWaveformSubcells % 4 == 0,
 // ring's left side (paint_phase_reset_overlay_ring) and the ruler's ticks
 // (paint_ruler_row). CULLS STAY CULLS, on whole columns, and each is wider
 // than the line it could cut (the flag iterator's, render_playhead's: the
-// chip's reach, more than a W past the column a place lies within half a px
+// chip's reach, more than a U past the column a place lies within half a px
 // of).
 struct WaveformLineSpan {
     double x0 = 0.0;
@@ -2527,18 +2529,18 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // itself, not as jutting out from it"):
 //   THE CAP IS THE PILL'S OWN END, CUT BY ONE VERTICAL LINE: from the pill's
 //     tip inward, its round end (the pill's own radius, half its height —
-//     3 W) and kTrimCapStraightW (2 W) of its straight run — 5 W wide, the
-//     pill's own 6 W tall, its one computation render_trim_flags' `cap_w`
+//     3 U) and kTrimCapStraightU (2 U) of its straight run — 5 U wide, the
+//     pill's own 6 U tall, its one computation render_trim_flags' `cap_w`
 //     (render.cpp), off the pill's height as drawn (the pill's rows clamped
-//     to the trough's, which never binds: the 12 W trough holds the 6 W pill
+//     to the trough's, which never binds: the 12 U trough holds the 6 U pill
 //     at every scale), so the cap's round end is the drawn pill's own: NOTHING OF A CAP STANDS OUTSIDE
 //     THE PILL. Its outer edge is the pill's tip, the seat inside its bound
-//     (THE SLIDER'S BOX AND ITS CORE, above), its cut line the seat + 5 W
+//     (THE SLIDER'S BOX AND ITS CORE, above), its cut line the seat + 5 U
 //     inside it — the begin's off the begin's place, the end's the mirror
 //     image off the end's (the end column's right edge, end.x + 1). Authored
 //     as the pill's radius plus a straight length, so a retuned pill moves
 //     the cap. On the tablet at 200 % the cap 10 x 12 device px, rows
-//     148 .. 159 (the pill's), its tip 6 px and its cut line 16 px (8 W)
+//     148 .. 159 (the pill's), its tip 6 px and its cut line 16 px (8 U)
 //     inside its bound; at 100 % 5 x 6, the tip 3 and the cut 8; at 125 %
 //     6 x 8 (the radius 4 px, the straight run's 2.5 rounded to 2), the
 //     tip 3.5 and the cut 9.5.
@@ -2547,23 +2549,23 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 //     like the flags do" — a later flag's label covers an earlier one's):
 //     wherever the look shows caps (trim_bar_tones), both stand, at any
 //     length of the pill, down to its short forms (a disc of its height,
-//     then the box itself): the end's cap takes its 5 W from the right tip
+//     then the box itself): the end's cap takes its 5 U from the right tip
 //     (the whole pill when the pill is shorter), the begin's cap what is
-//     left of its own 5 W from the left tip, the body what is left between.
+//     left of its own 5 U from the left tip, the body what is left between.
 //     THE PILL IS STAMPED ONCE and its pixels colored by region
 //     (render_trim_flags; CoverageStampPass::rounded_rect_bands): no pixel
 //     is laid twice, so no seam shows between a cap and the body or between
 //     the two caps.
-//   THE GRABS — each end's ZONE over the trim lane's whole rows, from 2 W
+//   THE GRABS — each end's ZONE over the trim lane's whole rows, from 2 U
 //     OUTSIDE THE BOUND (trim_grab_outside_px, 4 device px on the tablet) to
-//     12 W INSIDE IT (trim_grab_inside_px, 24 device px): 14 W wide, 28
+//     12 U INSIDE IT (trim_grab_inside_px, 24 device px): 14 U wide, 28
 //     device px. THE ZONE IS NOT THE CAP WITH THE SAME AIR EACH SIDE:
-//     against the cap as drawn its air is 5 W outside the tip and 4 W
+//     against the cap as drawn its air is 5 U outside the tip and 4 U
 //     inside the cut line. It is the zone he tested on glass and ruled
 //     "good" (architect 2026-11-20), authored as that zone's own numbers,
-//     A CORE kTrimGrabCoreW (6 W) wide whose outer edge stands
-//     kTrimGrabCoreLeadW (1 W) outside the pill's tip, and kTrimGrabAirW
-//     (4 W) of air on each side of the core — the tested zone's rounded
+//     A CORE kTrimGrabCoreU (6 U) wide whose outer edge stands
+//     kTrimGrabCoreLeadU (1 U) outside the pill's tip, and kTrimGrabAirU
+//     (4 U) of air on each side of the core — the tested zone's rounded
 //     terms in its order, so its device px are the tested zone's at
 //     every gui_scale (100 %: 2 and 12; 125 %: 2.5 and 15.5; 200 %: 4 and
 //     24). The core's inner edge is the cap's cut line wherever the pill's
@@ -2572,9 +2574,9 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 //     zones' inner edges and drags the pair (render_trim_flags publishes all
 //     three; trim_endcap_rect and trim_bridge_gap own the rule). NARROW:
 //     where the two zones would overlap — the grabs' span under two inside
-//     reaches, 24 W — they split AT THE MIDPOINT BETWEEN THE BOUNDS, each
+//     reaches, 24 U — they split AT THE MIDPOINT BETWEEN THE BOUNDS, each
 //     keeping its own outside reach, so neither zone stands past its own
-//     bound's 2 W and the bridge is empty (trim_endcap_rect's rule). The
+//     bound's 2 U and the bridge is empty (trim_endcap_rect's rule). The
 //     strip's edge, which is the glass's, cuts a zone like anything else
 //     (the lane's clip).
 // The zones and the caps read the seat off the same two heights the
@@ -2582,29 +2584,29 @@ inline double marker_flag_max_width_px(bool iteration_on) {
 // trim lane is the trough and its two lines, trim_lane_h_px, so the painter
 // never clamps the trough), so they stand where they are drawn at every
 // scale.
-inline constexpr double kTrimCapStraightW  = 2.0;
-inline constexpr double kTrimGrabCoreLeadW = 1.0;
-inline constexpr double kTrimGrabCoreW     = 6.0;
-inline constexpr double kTrimGrabAirW      = 4.0;
+inline constexpr double kTrimCapStraightU  = 2.0;
+inline constexpr double kTrimGrabCoreLeadU = 1.0;
+inline constexpr double kTrimGrabCoreU     = 6.0;
+inline constexpr double kTrimGrabAirU      = 4.0;
 inline double trim_pill_seat_px() {
     return static_cast<double>(trim_trough_h_px() - trim_pill_h_px()) / 2.0;
 }
 inline int trim_cap_straight_px() {
-    return scaled_px(kTrimCapStraightW, 1);
+    return scaled_px(kTrimCapStraightU, 1);
 }
 // The grab core's outer edge off its bound: the pill's tip less the lead.
 inline double trim_grab_core_outer_px() {
     return trim_pill_seat_px() -
-           static_cast<double>(scaled_px(kTrimGrabCoreLeadW, 1));
+           static_cast<double>(scaled_px(kTrimGrabCoreLeadU, 1));
 }
 inline double trim_grab_outside_px() {
-    return std::max(0.0, static_cast<double>(scaled_px(kTrimGrabAirW, 1)) -
+    return std::max(0.0, static_cast<double>(scaled_px(kTrimGrabAirU, 1)) -
                              trim_grab_core_outer_px());
 }
 inline double trim_grab_inside_px() {
     return trim_grab_core_outer_px() +
-           static_cast<double>(scaled_px(kTrimGrabCoreW, 1)) +
-           static_cast<double>(scaled_px(kTrimGrabAirW, 1));
+           static_cast<double>(scaled_px(kTrimGrabCoreU, 1)) +
+           static_cast<double>(scaled_px(kTrimGrabAirU, 1));
 }
 
 // THE HOVER TOOLTIP'S SHARED NUMBERS — a DAMAGE BOUND on its box height, its
@@ -2621,7 +2623,7 @@ inline double trim_grab_inside_px() {
 // THE HEIGHT HERE IS A BOUND, NOT THE HEIGHT. The painter derives the real box
 // from its lines' line boxes under its pads (paint_shift_tooltip; Arc's,
 // 2026-11-19, below), so the run loop only needs to know it can never
-// exceed this: 75 W, 150 device rows on the tablet against the two-line
+// exceed this: 75 U, 150 device rows on the tablet against the two-line
 // box's 96. THE SHADOW HANGS OUTSIDE IT
 // (tooltip_shadow_reach below): the damage band adds its reach on both
 // sides of the box's rows (tooltip_damage_band, app_state.h).
@@ -2634,19 +2636,19 @@ inline int tooltip_damage_h_px() {
 // can do the transparency, we might as well"): Arc-Dark's `tooltip`
 // (G3:1428-1436) — ITS BOX THE CARRIED FILL `tooltip_fill` (Arc's
 // $osd_bg_color, rgba(75, 81, 98, .95)) AT ITS OPACITY OVER WHAT LIES UNDER
-// IT, radius kTooltipRadiusW, NO BORDER — and ITS LINES in `sidebar_text`
-// (BAC3CF), Regular 12 W, one line box (gui_font_line_box_w: 11 + 3 W) a
+// IT, radius kTooltipRadiusU, NO BORDER — and ITS LINES in `sidebar_text`
+// (BAC3CF), Regular 12 U, one line box (gui_font_line_box_u: 11 + 3 U) a
 // line, the hint line the same size and tone; between the box's edges and
-// the lines' line boxes kTooltipPadW on all four sides (GTK's tooltip
+// the lines' line boxes kTooltipPadU on all four sides (GTK's tooltip
 // window margin 6 + Arc's label padding 4, measured on his shots),
-// so the first baseline stands +21 W, one line's box is 34 W tall, two
-// lines' 48 W — 68 and 96 device rows on the tablet. THE BOX IS WHOLE PX
+// so the first baseline stands +21 U, one line's box is 34 U tall, two
+// lines' 48 U — 68 and 96 device rows on the tablet. THE BOX IS WHOLE PX
 // (its width the ceiling of the widest line's advance under the pads): a
 // floating surface's box, the hull rule's (render.h's hull).
-inline constexpr int kTooltipPadW    = 10;
-inline constexpr int kTooltipRadiusW = 2;
-inline int tooltip_pad_px()    { return scaled_px(kTooltipPadW, 1); }
-inline int tooltip_radius_px() { return scaled_px(kTooltipRadiusW, 0); }
+inline constexpr int kTooltipPadU    = 10;
+inline constexpr int kTooltipRadiusU = 2;
+inline int tooltip_pad_px()    { return scaled_px(kTooltipPadU, 1); }
+inline int tooltip_radius_px() { return scaled_px(kTooltipRadiusU, 0); }
 
 // ARC'S TOOLTIP SHADOW (G3:1528, `tooltip.csd decoration { box-shadow: 0 1px
 // 3px 1px rgba(0,0,0,.25) }`; his settings leave show_popup_shadow off, so
@@ -2654,22 +2656,22 @@ inline int tooltip_radius_px() { return scaled_px(kTooltipRadiusW, 0); }
 // (gtkcssshadowvalue.c's paint_box over gtkcairoblur.c, read in GTK's own
 // fetched source and reproduced to the byte on his shots by the mock kit):
 // THE BOX MOVED DOWN
-// kTooltipShadowOffsetW AND GROWN kTooltipShadowSpreadW on every side, its
-// corner radius the box's plus the spread (3 W), filled into an 8-bit mask
-// and BLURRED BY THREE BOX PASSES kTooltipShadowBoxW wide — GTK's
-// (int) (3 √(2π) / 4 · 3) = 5 px at its blur 3, laid in W, so 10 device px
+// kTooltipShadowOffsetU AND GROWN kTooltipShadowSpreadU on every side, its
+// corner radius the box's plus the spread (3 U), filled into an 8-bit mask
+// and BLURRED BY THREE BOX PASSES kTooltipShadowBoxU wide — GTK's
+// (int) (3 √(2π) / 4 · 3) = 5 px at its blur 3, laid in U, so 10 device px
 // on the tablet (even: GTK's (d, +1), (d, −1), (d + 1, centered) form) —
 // first down the columns, then along the rows, in GTK's integer arithmetic;
 // then BLACK AT kTooltipShadowAlpha painted through it, OUTSIDE THE BOX ONLY
 // (paint_tooltip_shadow, paint_handler.cpp). The seat is measured to the
 // box: the shadow may leave the panel or cover the owner's face.
-inline constexpr int    kTooltipShadowOffsetW = 1;
-inline constexpr int    kTooltipShadowSpreadW = 1;
-inline constexpr int    kTooltipShadowBoxW    = 5;
+inline constexpr int    kTooltipShadowOffsetU = 1;
+inline constexpr int    kTooltipShadowSpreadU = 1;
+inline constexpr int    kTooltipShadowBoxU    = 5;
 inline constexpr double kTooltipShadowAlpha   = 0.25;
-inline int tooltip_shadow_offset_px() { return scaled_px(kTooltipShadowOffsetW, 0); }
-inline int tooltip_shadow_spread_px() { return scaled_px(kTooltipShadowSpreadW, 0); }
-inline int tooltip_shadow_box_px()    { return scaled_px(kTooltipShadowBoxW, 1); }
+inline int tooltip_shadow_offset_px() { return scaled_px(kTooltipShadowOffsetU, 0); }
+inline int tooltip_shadow_spread_px() { return scaled_px(kTooltipShadowSpreadU, 0); }
+inline int tooltip_shadow_box_px()    { return scaled_px(kTooltipShadowBoxU, 1); }
 // THE BLUR'S REACH, device px, each side: what the three passes spread one
 // mask pixel — a pass of width d whose window ends `offset` past its output
 // spreads an input `offset` px one way and d − 1 − offset the other; odd d
@@ -2708,16 +2710,16 @@ inline GuiRect tooltip_painted_extent(const GuiRect& box) {
 // THE SEAT IS THE OWNER'S FACE'S (architect 2026-11-07): the box under a
 // top-row key's painted face and above every other (2026-11-19), ITS LEFT
 // EDGE ON
-// THE FACE'S, THE GAP kTooltipGapW between them, held inside the panel and
+// THE FACE'S, THE GAP kTooltipGapU between them, held inside the panel and
 // under the window's top; one rule on every surface. The placement's one statement is tooltip_box_rect
-// (app_state.h). THE GAP IS 1 W (architect 2026-11-07: "ok to remove the
+// (app_state.h). THE GAP IS 1 U (architect 2026-11-07: "ok to remove the
 // key", closed_questions.md), 2 device px on the tablet at 200 %; read by the seat
 // and its damage twin (tooltip_damage_band) alike. Floored at 0: a gap may
 // vanish at a small scale (0 at 50 %, banker's rounding), the box then
 // standing on the face's top row.
-inline constexpr int kTooltipGapW = 1;
+inline constexpr int kTooltipGapU = 1;
 inline int tooltip_gap_px() {
-    return scaled_px(kTooltipGapW, 0);
+    return scaled_px(kTooltipGapU, 0);
 }
 
 // THE TIMING IS GTK'S OWN (architect 2026-11-22: "just use their numbers,
@@ -2767,33 +2769,33 @@ inline GuiRect tooltip_column_rect(const GuiRect& box, int seam) {
 // the jitter which is typical for such input sources as stylus"), and that
 // slop is `config_viewConfigurationHoverSlop` = 4dp
 // (core/res/values/config.xml), half the platform's 8dp touch slop. It is
-// taken as 5 W through scaled_px, A WHOLE W BY HIS RULING OF 2026-11-05
-// ("round each up": every authored number a whole W). The
+// taken as 5 U through scaled_px, A WHOLE U BY HIS RULING OF 2026-11-05
+// ("round each up": every authored number a whole U). The
 // one-device-px consequence: 10 device px on the tablet at its 200 % under
 // the 320 density it runs at, 5dp — Android's 4dp to within one
-// dp — and the drag gate (kDragMovedThresholdPx 9 W = 18, app_state.h) to
+// dp — and the drag gate (kDragMovedThresholdPx 9 U = 18, app_state.h) to
 // within one device px of half, as Android's is half its touch slop. Floor
 // 1, so a small scale never zeroes it.
-inline constexpr int kHoverSlopW = 5;
+inline constexpr int kHoverSlopU = 5;
 inline int hover_slop_px() {
-    return scaled_px(kHoverSlopW, 1);
+    return scaled_px(kHoverSlopU, 1);
 }
 
 // THE LEVEL SLIDER'S TRAVEL (architect 2026-11-05, the level case,
 // AppState::ChromePress's Level kind): the pointer motion that carries a
-// case's travel fraction across its whole range 0..1 — kLevelTravelW = 800 W
+// case's travel fraction across its whole range 0..1 — kLevelTravelU = 800 U
 // through scaled_px, 1600 device px on the tablet at 200 %, 800 at 100 %;
 // the fraction per device px is 1 / level_travel_px(). A gesture length, a
-// whole W (his "round each up", 2026-11-05); floor 1, so a small scale never zeroes it. The drag is RELATIVE on
+// whole U (his "round each up", 2026-11-05); floor 1, so a small scale never zeroes it. The drag is RELATIVE on
 // it — the fraction at the press plus the motion over this length, the
 // square-law taper turning it into dB (level_db_from_travel, app_state.h) —
 // so a fine level needs a long stroke and a coarse one a short one, the pen
 // covering 0 to -60 dB in about three quarters of the well's width. Its
 // one reader is the drag (GuiInputHandler::update_level_press_motion,
 // input_pointer.cpp).
-inline constexpr double kLevelTravelW = 800.0;
+inline constexpr double kLevelTravelU = 800.0;
 inline int level_travel_px() {
-    return scaled_px(kLevelTravelW, 1);
+    return scaled_px(kLevelTravelU, 1);
 }
 
 // (THE FACES' FADES HAVE NO LENGTH HERE: the hover and every state's fade
@@ -2961,7 +2963,7 @@ inline bool flag_hit_rect_contains(const FlagHitRect& r, double x, double y) {
 // reason at its definition, render.cpp: a plate from before a resize stands
 // until the worker republishes). render_center_lines owns THE
 // CENTER LINES, OVER THE WAVEFORM (architect 2026-10-09 evening): each
-// channel's exact zero, one W in `center`, painted live after the
+// channel's exact zero, one U in `center`, painted live after the
 // plate and before the stems (build_canvas_list's order) — the canvas's
 // lines stay these two painters' and the plate wears its two inks alone
 // (WaveformPlateInks). The ground round the area is
@@ -3062,7 +3064,7 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // it has no separation from the main chrome"): THE FLAT WELL'S SEAM IS ONE
 // LINE OF `well_border`, THE WELL'S LINES' TONE (architect 2026-11-17: the
 // well's lines and the stereo divider in one tone; its line of
-// kArcDarkTones, gui_theme.h), ONE W (hairline_px, the line rule of
+// kArcDarkTones, gui_theme.h), ONE U (hairline_px, the line rule of
 // 2026-11-04), across the waveform area, the panel's whole width
 // (2026-11-19). CHROME, NOT WAVEFORM:
 // inert to every input (point_on_waveform_divider below). THE ROW STANDS
@@ -3080,10 +3082,10 @@ bool direct_pixel_target(cairo_t* cr, DirectPixelTarget& out);
 // ring's sides, the scanner and the zoom anchor's
 // stem each one solid line down the area's whole height, painted after the
 // divider (build_canvas_list's order). On the tablet at 200 % and
-// the key 28 W tall the canvas is 1072 rows,
-// 236-1307 (main.cpp's lane table, the icon rows' pads 7 W each side,
+// the key 28 U tall the canvas is 1072 rows,
+// 236-1307 (main.cpp's lane table, the icon rows' pads 7 U each side,
 // architect 2026-11-20): the upper well's band 535 rows
-// (236-770), the divider rows 771-772 (one W), the lower well's band 535
+// (236-770), the divider rows 771-772 (one U), the lower well's band 535
 // rows (773-1307) and NO SPARE ROW (1072 less the divider's 2 is even; an
 // odd remainder would be the canvas's last row, ONE CHANNEL'S BAND below).
 //
@@ -3140,7 +3142,7 @@ inline WaveformChannelBand waveform_channel_band(int area_h, int divider_px,
 // (architect 2026-11-14: horizontals under the one rule with the
 // verticals, "a split that may not be needed"; "I would expect snapping
 // nothing to integers and leaving them rounding to yield decent results"):
-// a line `t` rows thick (one W, waveform_line_px) CENTERED ON THE REAL ROW
+// a line `t` rows thick (one U, waveform_line_px) CENTERED ON THE REAL ROW
 // `yc` (window y) is the real interval [yc − t / 2, yc + t / 2], CUT TO THE
 // AREA'S ROWS [area.y, area.y + area.h] as a real interval, painted across
 // the area's whole columns at each row's exact coverage (the sink's blended
@@ -3664,7 +3666,7 @@ inline uint32_t argb32_opaque_word(GuiColor c) {
 // THE ANTIALIASING (2026-10-30) IS exact coverage of
 // one grown shape, computed on the GPU from the column bounds — the plate's
 // own road; the lines of the canvas (the grid, the center lines, the stem,
-// the playhead, the scanner, the anchor: one W, waveform_line_px) take
+// the playhead, the scanner, the anchor: one U, waveform_line_px) take
 // their exact coverage at their exact places by a rule of their own
 // (architect 2026-11-14; the line rule at waveform_line_px), the
 // divider's row whole cells —
@@ -4210,7 +4212,7 @@ struct GuiPlateColumns {
 //
 // THE RESTING CURSOR IS ONE STATIC TONE (architect 2026-11-04: a fading line
 // measured ~46 % app / ~53 % SurfaceFlinger at 90 presents a second, the
-// present itself the cost — "seems like it's unavoidable"): a solid one-W line, opaque
+// present itself the cost — "seems like it's unavoidable"): a solid one-U line, opaque
 // on every pixel it covers whole,
 // in the palette's `playhead_line` (2026-11-21; its line of
 // kArcDarkTones, gui_theme.h): A5ABB5, Arc's `.h4` / `.category-label`,
@@ -4260,7 +4262,7 @@ void render_playhead(GuiCanvasSink& sink,
 //     TRIANGLE (the anchor's stem it previews has no head); once the zoom
 //     seats, the white anchor stem is the mark and no hover line is drawn.
 //     The gate — the pen in range with no contact, the pen latch not
-//     holding (no line after a lift until 18 W of motion or a leave: "it
+//     holding (no line after a lift until 18 U of motion or a leave: "it
 //     should wait to prevent every lift turning into a hover blip"), the
 //     main page taking a press there, no seat — is the walk's
 //     (GuiInputHandler::walk_hover_line), its answer AppState::HoverLine; a
@@ -4284,7 +4286,7 @@ void render_playhead(GuiCanvasSink& sink,
 //     "an even more dark and faint version of the playhead stem"), ITS
 //     TRIANGLE THE SAME TONE ("same color as the hover stem").
 //     The order is the compiled row's numbers' (kArcDarkTones, gui_theme.h).
-//   ITS FORM: the playhead's line's — a one-W line (waveform_line_px)
+//   ITS FORM: the playhead's line's — a one-U line (waveform_line_px)
 //     centered on its exact place `x` (device px from area.x), drawn wherever
 //     any of its real interval lies inside the strip and cut at both edges
 //     (waveform_line_span), at exact coverage, down THE CANVAS'S WHOLE
@@ -4460,7 +4462,7 @@ void render_strip_anchor_stem(GuiCanvasSink& sink,
 // surface's right edge; left unclamped, the end's grab zone, anchored on the
 // bound's right edge, loses its bound-edge pixel to the lane clip. Clamping
 // lands the wall on the last visible column so the zone's inside reach
-// stays whole on the bar's end (its 2 W outside reach is past the glass
+// stays whole on the bar's end (its 2 U outside reach is past the glass
 // there and the lane's clip cuts it, as it cuts any zone at the strip's
 // edge; THE TRIM BAR'S CAPS AND GRABS).
 // Begin/frame-0 already stands at 0, unaffected.
@@ -4509,7 +4511,7 @@ TrimBoundColumn trim_bound_column(double displayed_ms,
 // begin zone's inner RIGHT edge (x + inside) and hi the end zone's inner
 // LEFT edge, exclusive (x + 1 − inside), x each bound's exact place
 // (TrimBoundColumn::x) and `inside` a zone's inside reach
-// (trim_grab_inside_px, 12 W, 24 device px on the tablet; architect
+// (trim_grab_inside_px, 12 U, 24 device px on the tablet; architect
 // 2026-11-20), whether the zone is on screen, part on it or
 // wholly past an edge. In the NARROW case, where the two inside reaches
 // cross and trim_endcap_rect splits the zones at the midpoint, hi is under
@@ -4589,8 +4591,8 @@ double displayed_trim_ms(int64_t frame,
 // on the last column's left edge, the end zone stands up to a px left of
 // the box's end, and a begin on the named start a fraction of a px left of
 // the strip has its bound at 0. EACH ZONE REACHES `outside`
-// (trim_grab_outside_px, 2 W) PAST ITS BOUND AND `inside`
-// (trim_grab_inside_px, 12 W) INTO THE SPAN (architect 2026-11-20): the
+// (trim_grab_outside_px, 2 U) PAST ITS BOUND AND `inside`
+// (trim_grab_inside_px, 12 U) INTO THE SPAN (architect 2026-11-20): the
 // begin's [B_b − outside, B_b + inside), the end's
 // [B_e − inside, B_e + outside).
 // THE NARROW CASE (architect 2026-10-03; the split 2026-11-20):
@@ -4786,13 +4788,13 @@ struct FlagLaneRects {
 // GuiPaintHandler::stem_stands_at).
 // The painters publish one for EVERY SELECTED LIVE CUE AND DIFF
 // FLAG, ENABLED OR DISABLED (architect 2026-11-11), they walk
-// WHOSE LINE REACHES THE WAVEFORM'S COLUMNS — any of the one-W line's real
+// WHOSE LINE REACHES THE WAVEFORM'S COLUMNS — any of the one-U line's real
 // interval inside them (architect 2026-11-15, the no-grid arc; the gate is
 // the line's own span, waveform_line_span below, never a column) —
 // (resolve_flag_face's `stem`; an `h` item is one cue), and THE STEM PAINTER
 // (GuiPaintHandler::standing_stem_spans, the one geometry both halves of
 // the stem read) paints THE SELECTION STEM — a
-// solid one-W `cue_outline` line down
+// solid one-U `cue_outline` line down
 // the canvas's whole height — on every entry (architect 2026-11-05), so the
 // stem and its chip can never disagree about a place. The flag PAINTERS
 // are the only producers — the two live columns', and the `h` view's diff
@@ -5045,7 +5047,7 @@ struct FlagEditorBox {
 // THE FIELD IS GTK'S IN-PLACE CELL EDITOR ON THE LANE'S WHOLE ROWS
 // (architect 2026-10-09; the look 2026-11-18 / 19; the ruling and its
 // reason at the cue block's EDITING paragraph):
-// the entry's fill `ruler_face` inside a one-W border of the accent
+// the entry's fill `ruler_face` inside a one-U border of the accent
 // (cue_editor_border_px), square-cornered, its text and caret `field_text`
 // on the label's own baseline and seat, the caret and the selection band
 // THE TEXT'S LINE BOX ROWS (cue_line_box_top_px, cue_line_box_h_px), so

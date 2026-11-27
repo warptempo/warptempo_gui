@@ -121,7 +121,7 @@ void paint_entry(cairo_t* cr, const GuiRect& box,
     if (progress && *progress > 0.0) {
         const double t   = std::min(*progress, 1.0);
         const double ix0 = x0 + b, ix1 = x1 - b, iy1 = y1 - b;
-        const double line = static_cast<double>(scaled_px(kEntryProgressW, 1));
+        const double line = static_cast<double>(scaled_px(kEntryProgressU, 1));
         pass.rounded_rect_cut(ix0, y0 + b, ix1, iy1, r, r, ix0, iy1 - line,
                               ix0 + t * (ix1 - ix0), iy1, p.cue);
     }

@@ -204,7 +204,7 @@ shopt -s nocaseglob
 #      role, which left 2026-10-30 with the laptop GUI (one device, no mirror),
 #      waveform_column_px, retired 2026-11-01 night, waveform and its older name
 #      chrome, which left 2026-11-01 with the color presets (one palette),
-#      tooltip_gap, settled 2026-11-07 at 1 W, audio_level, the project
+#      tooltip_gap, settled 2026-11-07 at 1 U, audio_level, the project
 #      voice's level, retired 2026-11-11 with the AUDIO case,
 #      waveform_switch_px, the plate's switch width, a tuning key for part of
 #      2026-11-14, fixed at 2 device px (waveform_fade_px in its seat until
@@ -306,7 +306,7 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # 2026-11-01 with the presets -- the program has one palette -- and chrome
 # with it; bevel_light and bevel_dark, the fortepiano chrome's tuning
 # keys, which left 2026-10-23 with it; strip_pad, the simple layout's
-# tuning key (2026-10-22), settled at 13 W the same day and made a constant
+# tuning key (2026-10-22), settled at 13 U the same day and made a constant
 # in the program (src/gui/program_spec.h); and the cues' tuning keys of
 # 2026-10-26, all settled that day and constants in the program since:
 # cue_shadow (the label's shadow, on) in the morning, then
@@ -327,8 +327,8 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # device running the program; and waveform_column_px, the waveform's
 # column width, a tuning key retired 2026-11-01 night; and tooltip_gap, the
 # ground between a tooltip and the button it stands above, a tuning key of
-# 2026-11-07's session 90, settled in session 91 at 1 W and a constant in the
-# program since (src/gui/render.h's kTooltipGapW); and audio_level, the
+# 2026-11-07's session 90, settled in session 91 at 1 U and a constant in the
+# program since (src/gui/render.h's kTooltipGapU); and audio_level, the
 # project voice's level, retired 2026-11-11 with the AUDIO case: the voice
 # plays at 0 dB; and waveform_switch_px, the waveform's switch width, a tuning
 # key of 2026-11-14 retired the same day: the width is 2 device px in the
@@ -340,7 +340,7 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # window's theme key of 2026-11-05, retired 2026-11-21: one look, Arc-Dark,
 # the program's one theme; and the seven tuning keys retired 2026-11-22,
 # each now a constant in the program: key_height and key_width, the key's
-# box (36 x 28 W, Arc's icon button), and run_gap (6 W, Arc's toolbar
+# box (36 x 28 U, Arc's icon button), and run_gap (6 U, Arc's toolbar
 # groups' gap), src/gui/render.h; lamp_hold_ms (85 ms, the tablet's own
 # value), src/gui/main.cpp; tooltip_delay_ms (GTK's own 500 / 60 / 500 ms
 # timeouts), src/gui/render.h; sweep_highlight (3 %, Arc's row-hover
@@ -348,8 +348,8 @@ ADDED_KEYS_SHOWN="${ADDED_KEYS_SHOWN% }"
 # whole doubling), src/gui/render.h; and the on-screen keyboard's three
 # tuning keys of 2026-10-29, retired 2026-11-26, each now a constant in the
 # program: osk_key_w and osk_key_h, the keyboard's key box (the program key
-# rotated, 28 x 36 W, src/gui/render.h's kKeyHeightW x kKeyWidthW), and
-# osk_font_px, its caps' size (the Keys face's 12 W, src/gui/gui_font.h).
+# rotated, 28 x 36 U, src/gui/render.h's kKeyHeightU x kKeyWidthU), and
+# osk_font_px, its caps' size (the Keys face's 12 U, src/gui/gui_font.h).
 # A LEVEL TUNED UNDER THE OLD NAME DOES NOT TRAVEL THROUGH setup:
 # the old line is deleted and ADDED_LINES' noise_level line (the defaults
 # file's) takes its place, so the planner renames the two lines by hand at the

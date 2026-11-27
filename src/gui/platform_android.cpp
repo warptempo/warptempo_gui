@@ -2936,7 +2936,7 @@ void GuiPlatform::end_pen_hover() {
 // ONE CALLER, on_motion_event's `pen_in_range`, read by the sampling there
 // (the Ctrl bit and the retained anchor's release (b) and (c)). (The pen's
 // one distance the GUI keeps, the hover face's re-arm after a lift, is a
-// chrome length in W and so lives at the GUI's latch, which owns the scale:
+// chrome length in U and so lives at the GUI's latch, which owns the scale:
 // kPenHotRearmPx, input_handler.h. A hover face shows for a pen in range,
 // AppState::FaceFades.)
 bool GuiPlatform::pen_report_in_range(int32_t masked) {

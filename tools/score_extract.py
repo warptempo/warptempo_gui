@@ -331,14 +331,14 @@ FADE_FLOOR = 16.0
 DIFF_W, DIFF_H = 480, 270
 # THE DEFAULT FIT BOX (--fit's default): THE TABLET'S SCORE-PAGE BOX, the score viewer's fit box
 # modal_box_interior_rect(app, 0) (src/gui/modal_box.h) on the Galaxy Tab S10 FE's 2304 x 1440 at gui_scale 200
-# (the unit: 1 W = 2 device px), derived from the program's layout and printed by the viewer itself at its open
+# (the unit: 1 U = 2 device px), derived from the program's layout and printed by the viewer itself at its open
 # (score_viewer.cpp's feed_decoder), the line the pair is checked against:
 #   ACROSS: the box stands on the panel's columns (well_columns, render.h: the canvas edge to edge since send Z,
 #   2026-11-19), x 0 .. 2303, and its interior, the flat pane, is the box's whole width: x 0, WIDTH 2304.
-#   DOWN (the key 28 W tall = 56 device px, render.h's kKeyHeightW): the box (modal_box_rect) runs from the trim lane's
+#   DOWN (the key 28 U tall = 56 device px, render.h's kKeyHeightU): the box (modal_box_rect) runs from the trim lane's
 #   first row (top_trim_row_area) to the controls row's top (modal_controls_row_rect, the bottom icon row's lane).
-#   The band above the trim lane is the title bar's 28 W (56), the pad's 7 W (14), the key's 28 W (56) and the
-#   pad's 7 W again (14; the icon rows' pads symmetric since 2026-11-20, send EE), 140 rows; under the box, the
+#   The band above the trim lane is the title bar's 28 U (56), the pad's 7 U (14), the key's 28 U (56) and the
+#   pad's 7 U again (14; the icon rows' pads symmetric since 2026-11-20, send EE), 140 rows; under the box, the
 #   bottom icon row (14 + 56 + 14 = 84 rows) over the status bar (2 + 44 = 46 rows) on the window's foot, from row
 #   1440 - 46 - 84 = 1310. So the box is rows 140..1309 (its first rows the line under the top icon row, its last
 #   the well's foot), and its interior (modal_box_interior_rect) one hairline (2 device px) in: y 142..1307,

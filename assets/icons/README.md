@@ -121,8 +121,8 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
   uniformly by 10 / 1409 so the capital stands on rows 3 to 13, the cap top and the baseline on whole units, centered
   in the box; across it the ink's left edge on the whole unit nearest centered, as Papirus seats a size that does not
   divide (A x 3 to 12.752, 0.124 left of center; B x 4 to 12.864, its stem's left edge on x 4, 0.432 right of center);
-  the face's quadratic curves kept as it draws them, coordinates to three decimals; nothing redrawn. The key's 16 W
-  box (`src/gui/icons.h`'s THE BOX) draws them at zoom 2 on the tablet, 10 W tall, the top, the baseline and the left
+  the face's quadratic curves kept as it draws them, coordinates to three decimals; nothing redrawn. The key's 16 U
+  box (`src/gui/icons.h`'s THE BOX) draws them at zoom 2 on the tablet, 10 U tall, the top, the baseline and the left
   edge on whole pixels wherever the box stands on whole pixels. The counters wind against the outer contour, as the
   face draws them, so the nonzero fill leaves them hollow. The two outlines are the face's, under its license, the SIL Open Font License 1.1
   (`fonts/LICENSE-Liberation-OFL.txt`).
@@ -152,8 +152,8 @@ ONE ROAD, THE BOX (`src/gui/icons.h`'s THE BOX, the lengths' one owner). Every d
 seat asks, its canvas's origin on the seat's exact place, nothing between its geometry and the paint but that zoom and
 that place: no whole-pixel fit of its ink (architect 2026-11-26). A seat names a box, scaled with the window as every
 chrome length, and the drawing is its whole canvas scaled into it (`icons::draw_glyph`; each seat's placement at its
-painter). The keys', the list rows' and the cards' drawing stands in a 16 W box (Papirus's 16-px drawings at their
-native size), the title bar's note in a 12 W box, its ink's left edge and its ink's middle seated
+painter). The keys', the list rows' and the cards' drawing stands in a 16 U box (Papirus's 16-px drawings at their
+native size), the title bar's note in a 12 U box, its ink's left edge and its ink's middle seated
 (`icons::glyph_ink_in_box`), and the battery sized by its ink, its ink's height the title bar's cap band
 (`icons::glyph_box_for_ink_height`; architect 2026-11-17, session 140: "otherwise it looks like it's falling out of the
 line"), its top on the cap band's top (`src/gui/render.h`'s title bar block, THE BATTERY). A drawing's ink is its exact
@@ -231,8 +231,8 @@ changed, two of them wrapped in their transform.
 | `GoUp` | `symbolic/actions/go-up-symbolic.svg (-> actions/go-up.svg)` | `86b31dec3b65c47c5f0c8965da8463c35365cf0f1046c6a391a9a8083ff2d938` |  |
 | `BboxPrev` | `tools/icons/own/BboxPrev.svg` | `07195df200437a8a9a6380560b434b493a1c694983fd30cab23ec691df419b42` | no bboxprev; ours, go-first's arrow to a line 2 wide, as drawn, pointing left (re-picked 2026-11-22, send MM) |
 | `BboxNext` | `tools/icons/own/BboxPrev.svg` | `07195df200437a8a9a6380560b434b493a1c694983fd30cab23ec691df419b42` | no bboxnext; ours, go-first's arrow to a line 2 wide, mirrored left-right to point right (re-picked 2026-11-22, send MM); one source with BboxPrev, another drawing by the transform |
-| `TabA` | `tools/icons/own/TabA.svg` | `aad555a6ce88e0890847b4d71b04889135762d95d853be3fc6f7f44d54b1e854` | ours, Liberation Sans Bold's own outline of the capital A, 10 tall in the 16 box, on Papirus's grid (2026-11-24, send QQ; resized, "PG_1_P1") |
-| `TabB` | `tools/icons/own/TabB.svg` | `ea2aa841b93fc31581ac6759c24bbee148e9047aa02d4bb6dc88e087f6236cfa` | ours, Liberation Sans Bold's own outline of the capital B, 10 tall in the 16 box, on Papirus's grid (2026-11-24, send QQ; resized, "PG_1_P1") |
+| `TabA` | `tools/icons/own/TabA.svg` | `493111688a1292829932b6e99e4e00b542bd6ae61379477bc0369aa68a5b32cd` | ours, Liberation Sans Bold's own outline of the capital A, 10 tall in the 16 box, on Papirus's grid (2026-11-24, send QQ; resized, "PG_1_P1") |
+| `TabB` | `tools/icons/own/TabB.svg` | `ae13d548b6bcc11eba4a2586e99978515ffb7b3d479629b5de121574b558eccb` | ours, Liberation Sans Bold's own outline of the capital B, 10 tall in the 16 box, on Papirus's grid (2026-11-24, send QQ; resized, "PG_1_P1") |
 | `ZoomOriginal` | `symbolic/actions/zoom-original-symbolic.svg (-> actions/zoom-original.svg)` | `4ccc559527aecd140fd0e8b5de9881ce6bfff978b4cd28be366f0b5d509a489f` |  |
 | `GoPrevious` | `symbolic/actions/go-previous-symbolic.svg (-> actions/go-previous.svg)` | `5bc42db4e2cbf4bdc12a91f3430cf01447ba558645cffd499b318861df771d92` |  |
 | `GoNext` | `symbolic/actions/go-next-symbolic.svg (-> actions/go-next.svg)` | `9a99f8bd24357cf56535e3c50d97874056c5928f12bca038025316309597ba07` |  |
