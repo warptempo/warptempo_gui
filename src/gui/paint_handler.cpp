@@ -5902,9 +5902,9 @@ void GuiPaintHandler::paint_bottom_strip(cairo_t* cr) {
 // commit and its Esc the cancel. The line is the existing text_editor
 // machinery — selection, caret, click-to-caret, byte-identical editing —
 // through the scroll offset (text_editor::State::view_offset_px), and a
-// refused Enter selects the whole text, nothing recolored, its owner's
-// card saying why (architect 2026-10-03; render.h's palette block, A
-// REFUSED ENTER RECOLOURS NOTHING).
+// refused Enter leaves the field as it stands, nothing recolored, its
+// owner's card saying why (text_editor::refuse; render.h's palette block,
+// A REFUSED ENTER RECOLORS NOTHING).
 //
 // EVERY BUTTON CARRIES A TOOLTIP (architect 2026-08-13: "we just do a tooltip
 // just like the regular icon tooltips"), through the roster's own machinery
@@ -6176,8 +6176,8 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 // placement block) IS THE PAGE'S ONLY CONTROL: ENTER COMMITS AND ESC
 // CANCELS, each through the editor's own key route
 // (GuiInputHandler::handle_settings_editor_key: the commit's refusal
-// selects the whole text and cards why, the page standing — A REFUSED ENTER
-// RECOLOURS NOTHING, architect 2026-10-03; a commit or a cancel brings the
+// leaves the field as it stands and cards why, the page standing — A REFUSED
+// ENTER RECOLORS NOTHING, architect 2026-10-03; a commit or a cancel brings the
 // list the page was opened from back, seated as the route seats it), and
 // TAB KEEPS ITS COMPLETIONS, silent where it completes nothing
 // (route_modal_editor_key). THE ENTRY'S TEXT ALONE IS LIVE BESIDE IT: the

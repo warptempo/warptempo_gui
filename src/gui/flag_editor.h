@@ -35,7 +35,7 @@ struct GuiFlagEditor {
     // THE REFUSAL'S REASON (architect 2026-08-30, the strictness ruling;
     // 2026-10-03, no red frame): every commit refusal in this cluster
     // composes ONE sentence and feeds it to the stderr line AND to a normal
-    // card, because the refused field itself only selects its whole text
+    // card, because the refused field itself stands as it was
     // (text_editor::refuse) and says nothing of why — the card is the
     // refusal's one statement. The reference sits here rather than
     // in the dispatcher because the reason is composed where the fact lives —
@@ -246,8 +246,8 @@ struct GuiFlagEditor {
     // value alone, its sub-page no label, 2026-11-22); an EMPTY value CLEARS the
     // field (zero, its unset sentinel); any other value is judged by THE
     // FIELD'S OWN READER (read_bpm_beats, read_bpm_tempo — warpmarkers.h). A
-    // refusal leaves the editor standing, its value selected whole, one
-    // sentence on stderr and the card — two classes: the beats grammar, the
+    // refusal leaves the editor standing as it was, one sentence on stderr
+    // and the card — two classes: the beats grammar, the
     // tempo grammar (the low / high order is the RENDER key's grey, not a
     // field's refusal). On success the field is written — session-only, no undo, no
     // dirty, as every bpm value — and the editor closes; its route's close

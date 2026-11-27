@@ -246,8 +246,8 @@ std::string format_warpmarkers_text(const std::vector<GuiWarpMarker>& markers);
 //
 // ONE CALLER: GuiFlagEditor::commit_top_flag_edit — the candidate line's own
 // def against the rest of the column, the edited row excepted; a hit refuses
-// (the field's whole text selected, and the "duplicate label definition"
-// card) and commits nothing. The history revert asks nothing of labels: it
+// (the field standing as it was, and the "duplicate label definition" card)
+// and commits nothing. The history revert asks nothing of labels: it
 // is fully manual and always forces, and no label state it can build is
 // unloadable.
 // The phase reset column carries no labels at all, so it owes no counterpart

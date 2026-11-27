@@ -3361,8 +3361,8 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     //    triangle's right edge and any neighbouring label it reaches
     //    (architect 2026-10-09: "it may overlap with the flag and other
     //    elements, that's fine"). A refused Enter recolors nothing
-    //    (text_editor::refuse selects the whole text; the owner's card says
-    //    why). Since the editor opens on any store index
+    //    (text_editor::refuse leaves the field as it stands; the owner's
+    //    card says why). Since the editor opens on any store index
     //    (enter_top_flag_edit), disabled included, a disabled marker's field
     //    is this same box, never the inactive grey.
     // ON ITS REAL EDGES (architect 2026-11-15, the no-grid rule): the box's

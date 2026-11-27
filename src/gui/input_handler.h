@@ -3130,8 +3130,8 @@ private:
     //       no edge space, the incoming filter's alphabet, unique) and then
     //       as a file name (trim_preset_file_name_refusal — no slash, not
     //       "." or "..", architect 2026-11-25), a refusal
-    //       the editors' own shape (the whole text selected, the editor
-    //       standing, the card "Preset name rejected: <reason>"); under Save
+    //       the editors' own shape (the editor standing as it was, the
+    //       card "Preset name rejected: <reason>"); under Save
     //       As a name that commits adds the active tab's trim under it, under
     //       Rename it names the preset anew, its pair kept, uniqueness asked
     //       against the other presets — the same name back is no change,

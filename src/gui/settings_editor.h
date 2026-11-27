@@ -26,8 +26,8 @@ struct GuiInputHandler;
 // editable row whose key has no value list closes the page and opens this
 // editor ON THAT ROW'S KEY, ITS ENTRY PREFILLED WITH THE VALUE THE KEY HOLDS,
 // the caret at its end. It is the flag editor's primitive (text_editor::State,
-// kind-dispatched keyboard vocabulary, the whole text selected and a card on
-// a refusal) painted AS THE VALUE SUB-PAGE (architect 2026-11-20:
+// kind-dispatched keyboard vocabulary, the field standing as it was and a
+// card on a refusal) painted AS THE VALUE SUB-PAGE (architect 2026-11-20:
 // "a subpage where if the user clicks on a value a single line text input is
 // shown ... on that page, the only controls are the osk's esc and enter";
 // paint_handler.cpp's THE VALUE SUB-PAGE, the owner): the box's view one
@@ -68,8 +68,8 @@ struct GuiInputHandler;
 // "otherwise it's assumed I am editing one key only" — the editor a sub-page
 // of the page, as the value lists are;
 // GuiInputHandler::handle_settings_editor_key, the one return hook); a
-// refused commit leaves the editor standing, its whole text selected, and
-// reopens nothing.
+// refused commit leaves the editor standing as it was (text_editor::refuse)
+// and reopens nothing.
 //
 // TAB COMPLETES, IN TWO STAGES, on the open's key, under the ONE
 // AUTOCOMPLETE MODEL (route_modal_editor_key, input_key_dispatch.cpp: a Tab
@@ -411,7 +411,7 @@ struct GuiSettingsEditor {
 private:
     // THE LINE'S DOOR onto apply_device_setting (the head's item 1). Returns
     // true when `key` is a device key, the commit then fully handled — the
-    // field refused and its text selected on a refusal, the editor closed on
+    // field refused, standing as it was, on a refusal, the editor closed on
     // an applied or unchanged value; false otherwise, so commit() goes on to
     // commit_gui_setting and the engine arm.
     bool commit_device_setting(const std::string& key,

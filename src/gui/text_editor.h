@@ -17,7 +17,7 @@
 // keep it inline on AppState. Validation, commit semantics, and visual
 // rendering are the caller's concerns; this module only handles the
 // keyboard-driven mutation of `pending` + cursor state and exposes hooks
-// for blink and the refused commit's whole-text selection (refuse).
+// for blink and the refused commit's blink restart (refuse).
 //
 // Reuse: the several editor surfaces supply different
 // validators and writers but reuse this state shape and keystroke routing.
@@ -51,7 +51,8 @@
 //     no Delete. THE SELECTION COMES FROM THE KEYS ALONE (architect
 //     2026-11-08): the field's tap seats the caret and its drag
 //     moves it, collapsing (begin_touch_caret_drag's declaration,
-//     input_handler.h); a refused Enter selects the whole text (refuse).
+//     input_handler.h); a refused Enter leaves the selection as it stands
+//     (refuse).
 //   - GRAPHEME CLUSTERS ARE OUT OF SCOPE, deliberately and in the same class as
 //     the no-bidi and no-font-fallback exclusions: a combining mark is its own
 //     codepoint, so it carets and deletes separately from the base character it
@@ -385,11 +386,12 @@ struct State {
 
     // -1 means no selection. When >= 0, the selected range is
     // [min(selection_anchor, cursor_pos), max(...)). Set by a shifted LEFT /
-    // RIGHT (the anchor where the caret stood, the free end cursor_pos) and
-    // a refused Enter (refuse); cleared by a pointer caret placement or drag,
-    // an unshifted LEFT / RIGHT, any printable insertion, any backspace, a
-    // whole-text rewrite (the flag editor's extra keys, which seat the caret
-    // at the text's end), and by enter/deactivate.
+    // RIGHT (the anchor where the caret stood, the free end cursor_pos);
+    // cleared by a pointer caret placement or drag, an unshifted LEFT /
+    // RIGHT, any printable insertion, any backspace, a whole-text rewrite
+    // (the flag editor's extra keys, which seat the caret at the text's end),
+    // and by enter/deactivate. A refused Enter leaves it as it stands
+    // (refuse).
     int selection_anchor = -1;
 
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
@@ -465,14 +467,17 @@ inline int selection_end(const State& s) {
 // Reset `s` so `is_active` returns false.
 void deactivate(State& s);
 
-// A REFUSED ENTER (architect 2026-10-03, Windows' in-place edit): THE WHOLE
-// TEXT SELECTED in the selected pair, the caret at its end — so the first
-// keystroke replaces it (replace_selection). That and the refusing owner's
-// card are the whole refusal: no frame or face changes colour (architect
-// 2026-10-03: "a red outline and the card is redundant"), so the
-// session carries no refusal state. Every commit refusal of every editor
-// calls this; the cap's refusal (replace_selection) leaves the buffer and the
-// selection as they stand, being no Enter, and its caller's card says why.
+// A REFUSED ENTER (architect 2026-11-27: "Follow GTK."): THE FIELD STANDS AS
+// IT WAS — the text, the caret and the selection untouched — and the blink
+// restarts lit (restart_blink), so the caret shows at once, as after any
+// keystroke. GTK's way: no widget selects on a refusal; GtkEntry's
+// `activate` hands Enter to the application, and the caret and the selection
+// stay where they are. THE REFUSING OWNER'S CARD IS THE REFUSAL'S WHOLE
+// VISIBLE STATEMENT: no frame or face changes colour (architect 2026-10-03:
+// "a red outline and the card is redundant"), so the session carries no
+// refusal state. Every commit refusal of every editor calls this; the cap's
+// refusal (replace_selection) leaves the buffer and the selection as they
+// stand the same way, and its caller's card says why.
 void refuse(State& s);
 
 // Begin editing `target` with the given seed pending.
@@ -624,9 +629,9 @@ void touch_blink(State& s);
 
 // RESTART THE BLINK PHASE ALONE, the caret unmoved — for the callers that
 // move nothing: a finger's caret drag ending where its last frame seated the
-// caret, and an insert the capacity refused. Each restarts the phase so the caret
-// shows at once rather than possibly landing in the dark half of a period it
-// kept running through.
+// caret, an insert the capacity refused, and a refused Enter (refuse). Each
+// restarts the phase so the caret shows at once rather than possibly landing
+// in the dark half of a period it kept running through.
 void restart_blink(State& s);
 
 // THE ONE CLICK-X -> BYTE MAPPING: `boundaries` is the per-byte pen offset vector the

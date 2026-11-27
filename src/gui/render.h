@@ -918,10 +918,9 @@ void install_true_colors(bool on);
 // text selected in the selected pair inside the field.
 //
 // A REFUSED ENTER RECOLORS NOTHING (architect 2026-10-03: "a red outline and
-// the card is redundant"): it
-// SELECTS THE WHOLE TEXT in the selected pair inside the field
-// (text_editor::refuse), so the first keystroke replaces it, and the
-// refusing owner's CARD says why. No glyph marks it.
+// the card is redundant"): THE FIELD STANDS AS IT WAS, its text, caret and
+// selection untouched (text_editor::refuse, architect 2026-11-27, GTK's
+// way), and the refusing owner's CARD says why. No glyph marks it.
 //
 // THE HISTORY VIEW'S DIFF FLAGS are cues of their own three kinds, ONE CUE AN
 // ITEM (architect 2026-11-11; HistoryDiffFlag,
@@ -5053,7 +5052,7 @@ struct FlagEditorBox {
 // the committed run's own width and growing only with what is typed past it;
 // the cells riding its right edge keep their resting look. THE CHIP AND
 // THE STEM stay the cached pass's. A REFUSED COMMIT recolours nothing: the
-// whole text is selected (text_editor::refuse) and the refusing owner's card
+// field stands as it was (text_editor::refuse) and the refusing owner's card
 // says why, the modal editors' rule on this surface.
 //
 // THE TEXT IS THE LABEL FACE, matching the labels it replaces.

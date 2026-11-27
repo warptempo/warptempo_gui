@@ -385,7 +385,7 @@ void GuiFlagEditor::commit_iter_bound_edit() {
         viewport.invalidate_top_strip();
         // ONE COMPOSER, TWO READERS: the stderr line keeps the offending
         // token after the sentence; the card does not, that text standing
-        // selected in the field the refusal leaves.
+        // in the field the refusal leaves.
         const std::string refusal = range_bound_rejected(why);
         std::fprintf(stderr, "warptempo_gui: %s: %s\n",
                      refusal.c_str(), next.c_str());
@@ -490,11 +490,11 @@ void GuiFlagEditor::commit_phase_iter_bound_edit(int idx, MarkerCell side,
     }
     const GuiPhaseResetMarker& live = pv_const[static_cast<size_t>(idx)];
 
-    // The warp arm's refuse composer verbatim: text_editor::refuse (the whole
-    // text selected), a top-strip repaint, one stderr line keeping the
+    // The warp arm's refuse composer verbatim: text_editor::refuse (the field
+    // standing as it was), a top-strip repaint, one stderr line keeping the
     // offending token, one normal card carrying the sentence alone (that text
-    // standing selected in the field the refusal leaves), and the session
-    // left open for correction.
+    // standing in the field the refusal leaves), and the session left open
+    // for correction.
     auto refuse = [&](const std::string& why) {
         text_editor::refuse(app.top_flag_editor);
         viewport.invalidate_top_strip();
@@ -925,8 +925,8 @@ void GuiFlagEditor::payload_commit_tail(int reland_idx) {
 // commit's one owner (propose_payload_commit, above), pushing one undo entry
 // covering all touched markers.
 //
-// On failure: selects the whole pending text (text_editor::refuse), cards
-// the reason, leaves the editor active.
+// On failure: leaves the field as it stands (text_editor::refuse), cards the
+// reason, leaves the editor active.
 void GuiFlagEditor::commit_top_flag_edit() {
     if (!text_editor::is_active(app.top_flag_editor)) return;
     const int idx = app.top_flag_editor.target;
@@ -1440,8 +1440,8 @@ void GuiFlagEditor::wipe_bpm_state() {
 
 // THE BPM FORM'S FIELD COMMIT (the contract is at the declaration). The
 // refusal is the editors' one shape and the settings editor's words' shape:
-// the whole value selected, the editor standing, one composed sentence on
-// stderr and the card.
+// the editor standing as it was, one composed sentence on stderr and the
+// card.
 void GuiFlagEditor::commit_bpm_field() {
     if (!text_editor::is_active(app.settings_editor) ||
         app.settings_editor.kind != text_editor::Kind::BpmField)

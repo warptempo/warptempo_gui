@@ -220,7 +220,7 @@ std::optional<std::string> recall_setting_value(const AppState& app,
 // authored musical content, the two marker stores and the engine settings,
 // and nothing else). So the decision sits at each key's own commit arm: the
 // engine-key arm in commit() refuses under the lock with the lock's own card
-// and the selected text every other refusal there leaves, while
+// and the standing field every other refusal there leaves, while
 // commit_device_setting's keys, the `gui_scale` arm and the `score_path` arm
 // commit regardless.
 //
@@ -345,7 +345,7 @@ bool GuiSettingsEditor::commit_gui_setting(const std::string& key,
                                            const std::string& value) {
     // ONE COMPOSER, TWO READERS (architect 2026-08-30): the refusal sentence
     // is built once and read by the stderr line and by the card, the refused
-    // field saying nothing of why (its whole text selected, nothing more).
+    // field saying nothing of why (it stands as it was, nothing more).
     auto reject = [&](const std::string& reason) {
         text_editor::refuse(app.settings_editor);
         viewport.invalidate_dialog_editor_box();
@@ -715,7 +715,7 @@ void GuiSettingsEditor::commit() {
 //
 // THE LINE'S DOOR (the contract at the declaration): the one body decides,
 // and this door does to the field what the outcome says — the refused field
-// with its text selected, or the editor closed. The key is the open's, one
+// standing as it was, or the editor closed. The key is the open's, one
 // of the line editor's rows (architect 2026-11-19), so the four
 // listed keys' arms below are reached through the list's door alone.
 bool GuiSettingsEditor::commit_device_setting(const std::string& key,

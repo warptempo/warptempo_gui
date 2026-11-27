@@ -713,7 +713,7 @@ struct Viewport {
     // (settings_editor); THE CARET BLINK — main.cpp's per-tick
     // transitions; THE REFUSAL — every refused commit in settings_editor,
     // the trim preset name's (input_key_dispatch) and the BPM field
-    // commit's (flag_editor), the text selected whole; THE POINTER'S TEXT
+    // commit's (flag_editor), the caret's blink restarted; THE POINTER'S TEXT
     // DRAG — input_pointer's `g.dialog` sites (the glass's caret drag,
     // click-to-caret, the drag's motion and its release).
     void invalidate_dialog_editor_box();

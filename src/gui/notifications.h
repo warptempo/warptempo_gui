@@ -186,9 +186,9 @@
 //     "This field is full" at route_modal_editor_key — the settings recall's
 //     own replace_selection call staying silent, that text being the
 //     product's). The card drops the offending text, which stands on screen
-//     in the refused field, selected whole (text_editor::refuse; the field
-//     changes no colour, architect 2026-10-03, so the card is the refusal's
-//     one statement).
+//     in the refused field as it was (text_editor::refuse, architect
+//     2026-11-27; the field changes no colour, architect 2026-10-03, so the
+//     card is the refusal's one statement).
 //   * THE PROPAGATE REPORTS: the phase-reset pastes' "Stopped at …",
 //     kNothingMatched (propagate_blocks.h, two readers) and the two
 //     "nothing changed" sentences (architect 2026-11-18, "E. Agree."):

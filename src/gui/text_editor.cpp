@@ -222,9 +222,9 @@ bool replace_selection(State& s, const std::string& raw) {
 }
 
 void refuse(State& s) {
-    s.selection_anchor = 0;
-    s.cursor_pos       = static_cast<int>(s.pending.size());
-    touch_blink(s);
+    // The field stands as it was; the blink alone restarts (the contract is
+    // at the declaration).
+    restart_blink(s);
 }
 
 void deactivate(State& s) {

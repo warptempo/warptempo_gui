@@ -6603,8 +6603,8 @@ void GuiInputHandler::open_trim_preset_name_editor(bool rename) {
 }
 
 // THE NAME EDITOR'S COMMIT (the declaration's contract). The refusal is the
-// editors' own shape and the settings editor's words' shape — the whole text
-// selected, the editor standing, one composed sentence on stderr and the card.
+// editors' own shape and the settings editor's words' shape — the editor
+// standing as it was, one composed sentence on stderr and the card.
 void GuiInputHandler::commit_trim_preset_name() {
     if (!text_editor::is_active(app.settings_editor) ||
         app.settings_editor.kind != text_editor::Kind::TrimPresetName)
@@ -8902,7 +8902,7 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
     if (app.top_flag_editor.kind == text_editor::Kind::IterBound) {
         // The ITERATION BOUND editor: the payload editor's route — the same
         // modal route, the same top-strip repaint, its whole surface (a
-        // refusal's selected text included) being the field in the strip.
+        // refusal's restarted caret included) being the field in the strip.
         return route_modal_editor_key(
             app.top_flag_editor, key, mods,
             /*autocomplete=*/nullptr,
@@ -8911,9 +8911,9 @@ bool GuiInputHandler::handle_top_flag_editor_key(GuiKey key,
             [this] { viewport.invalidate_top_strip(); });
     }
     // FlagPayload: the same modal route, the same top-strip repaint. A
-    // refusal recolours nothing and only selects the field's text
-    // (render_flag_editor_box, architect 2026-10-03), so the strip is the
-    // whole damage of its every keystroke.
+    // refusal recolours nothing and only restarts the caret's blink
+    // (render_flag_editor_box, architect 2026-10-03; text_editor::refuse),
+    // so the strip is the whole damage of its every keystroke.
     return route_modal_editor_key(
         app.top_flag_editor, key, mods,
         [this] { return flag_editor.complete_label_reference(); },
