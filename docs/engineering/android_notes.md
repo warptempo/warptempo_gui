@@ -1091,12 +1091,15 @@ leaves the mark down.
 
 THE REASON IS THE CAR'S STALL OF 2026-11-26 (architect: "stop() waits only
 while our own callback is inside, never for the device to call again"). He
-toggled the Bluetooth codec until the car dropped the link; Android's audio HAL
-retried the A2DP start for 10 s, and for those 10 s the keep-alive stream
-stayed STARTED, was never marked disconnected, and its data callback was simply
-not called. The fence of that day counted callback invocations (two after the
-lowering, with an escape on a dead or terminal stream), so RELEASE's `stop()`
-waited the whole run on the screen thread. A proof that needs the device to
+toggled the Bluetooth codec until the car missed a switch; Android's audio HAL
+retried the A2DP start until its Bluetooth stack gave the car up, 15 s after
+the unanswered request (all three stalls of that day ended so: §11.4b), and
+through the run the keep-alive stream stayed STARTED, was never marked
+disconnected, and its data callback was simply not called. The fence of that
+day counted callback invocations (two after the lowering, with an escape on a
+dead or terminal stream), so RELEASE's `stop()` waited on the screen thread
+until the stall ended: 10 s from the press, Android's "isn't responding"
+dialog at 14:33:25.787 ("Waited 10001ms"), the one freeze. A proof that needs the device to
 call again can be held by the device; the mark needs only our own code to
 leave.
 
@@ -1201,9 +1204,15 @@ started and uncalled — two to six such lines in a switch that takes, 416 in
 the fifteen seconds of the one that did not (the stream's
 frame count says 14.4 s of its 55.8 s went uncalled). WHAT RELEASE DOES IN THE
 CAR, then: the app's stream is not on the link during the switch, so none of
-that reaches the app. NOT ESTABLISHED: that an idle link spares the car's miss
-(one switch of one took that evening; his own test with the app closed, "it
-worked"). AFTER RELEASE THE LINK STREAMS ON FOR 3.0 s: Android's output goes
+that reaches the app. NOT ESTABLISHED: that an idle link spares the car's miss.
+THE MISSES BY LINK STATE over both of that day's tests, thirteen switches: the
+app's stream live 10, missed 3; RELEASE lit 3 (14:33:59, 14:35:42, 20:56:13),
+missed 0; his own test with the app closed, "it worked". Not proof (three
+clean tries at a three-in-ten rate happen one time in three), but every miss
+was on a live stream. The afternoon's two misses ended as the evening's did,
+Android's timer 15.0 s after the request (§11.4b). The car also dropped the
+link once by itself with no switch pending (14:35:05.293, `BTA_AV_CLOSE_EVT`
+in state Opened). AFTER RELEASE THE LINK STREAMS ON FOR 3.0 s: Android's output goes
 to standby that long after its last stream closes (the close at 20:56:09.277,
 the link's SUSPEND at 20:56:12.273).
 
