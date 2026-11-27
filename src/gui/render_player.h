@@ -893,7 +893,10 @@ private:
     // item's folder list and its place in it. `tapped` is true on the row
     // tap's own play alone (open_row's), which seats no band and scrolls
     // nothing; every other play brings the item's row into view. Returns
-    // whether it played; a refusal has raised its card and changed nothing.
+    // whether it bound the item — true also where the device refused the
+    // launch and the item rests paused at its start under that card
+    // (rest_if_launch_refused); a decode refusal has raised its card and
+    // changed nothing.
     bool play_wav(const std::filesystem::path& path,
                   const std::vector<AppState::FolderOverlayRow>& folder_wavs,
                   int index, bool tapped);
@@ -901,14 +904,20 @@ private:
     // the natural end's auto-advance below, the deliberate next_track above
     // and resume()'s end rule (the PLAY key at the end). The next wav of the item's folder as listed, played from its
     // start; never across folders and never a wrap, the wall being
-    // render_player_next_track_actionable. Returns whether it played — a
-    // refused decode has raised its own card and left the item untouched.
+    // render_player_next_track_actionable. Returns whether it bound the next
+    // wav (play_wav's answer) — a refused decode has raised its own card and
+    // left the item untouched.
     bool advance_to_next_in_item_folder();
     // THE RESUME ROAD'S ONE LAUNCH: the item LIVE from `from` to its end, the
     // row damaged and the head unit told. Its two callers have already
     // chosen `from` and passed their guards: resume() through the PLAY key's
-    // end rule, resume_at() through the live seek's clamp.
+    // end rule, resume_at() through the live seek's clamp. Over a refused
+    // device it rests PAUSED at `from` instead (rest_if_launch_refused).
     void play_live_from(int64_t from);
+    // A launch the device refused, rested PAUSED at `from` under the card,
+    // never left LIVE; answers whether it rested (the rule at the
+    // definition, architect 2026-11-26).
+    bool rest_if_launch_refused(int64_t from);
     // The natural end: the fence through the one stop body, then — with the
     // REPEAT ONE lamp lit — the item again from its start (the sanctioned
     // exception at the head of this file), else the shared forward step
@@ -919,12 +928,12 @@ private:
     // lit lamp never falls through to the advance.
     // A NATURAL
     // END IS THE CURSOR REACHING THE END, NOT THE ABSENCE OF A DEVICE
-    // (2026-08-28): a Bluetooth drop, a headphone pull and an audio device
-    // that never came up all leave the session word's playing bit down, and the
-    // tick asks GuiPlayback::device_unavailable FIRST so every one of them
-    // pauses in place instead of arriving here and advancing to a wav
-    // nothing can play — a whole folder at tick rate, in the never-came-up
-    // case.
+    // (2026-08-28): a Bluetooth drop or a headphone pull under a sounding
+    // item leaves the session word's playing bit down, and the tick asks
+    // GuiPlayback::device_unavailable FIRST so it pauses in place instead of
+    // arriving here and advancing to a wav nothing can play. A launch the
+    // device refuses — the device that never came up included — is never
+    // left LIVE at all (rest_if_launch_refused, architect 2026-11-26).
     void on_natural_end();
     // The wav rows of the live listing, in listing order.
     std::vector<AppState::FolderOverlayRow> listing_wavs() const;

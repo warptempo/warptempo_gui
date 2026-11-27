@@ -20,6 +20,12 @@ using Folder    = AppState::RenderPlayer::Folder;
 using Row       = AppState::FolderOverlayRow;
 using Transport = AppState::RenderPlayer::Transport;
 
+// THE REFUSED DEVICE'S CARD, one sentence for its two sayers: the tick's
+// no-device arm (a drop under a sounding item) and a refused launch's rest
+// (rest_if_launch_refused). ONE CLAUSE (2026-09-01): a card is one clause.
+constexpr const char* kRenderPlayerNoDeviceCard =
+    "No audio device to play the wav";
+
 // -- Damage and status --------------------------------------------------------
 
 void GuiRenderPlayer::damage_band() {
@@ -859,6 +865,10 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     // project's playhead does not move.
     playback.play(0, rp.frames);
     rp.transport = Transport::Live;
+    // A REFUSED DEVICE LEAVES THE NEW ITEM BOUND AND PAUSED AT ITS START,
+    // under the card (rest_if_launch_refused); the band, the damage and the
+    // head unit below follow the item as at any change.
+    (void)rest_if_launch_refused(0);
     // THE BAND FOLLOWS THE ITEM AT A CHANGE (2026-08-28, the contract at the
     // head of render_player.h): this is the ONE place the item changes, so
     // seating the highlight here covers every change the transport makes on its
@@ -897,7 +907,8 @@ bool GuiRenderPlayer::play_wav(const std::filesystem::path& path,
     }
     damage_band();
     damage_row();
-    // The head unit: a new item, playing (the inventory at the declaration).
+    // The head unit: a new item, playing — or resting at its start after a
+    // refused launch (the inventory at the declaration).
     publish_media_state();
     return true;
 }
@@ -1003,7 +1014,9 @@ void GuiRenderPlayer::pause() {
     // the user put it, so the player's two pauses are the whole
     // resting-write set — this arm and the tick's dead-device arm, which
     // reads the predictor's position exactly as this one does and writes
-    // it before the stop body too (up() unloads the item and writes no
+    // it before the stop body too — beside a refused launch's rest, which
+    // writes the launch's own `from` before the same body
+    // (rest_if_launch_refused; up() unloads the item and writes no
     // resume point at all).
     rp.resume_frame =
         std::clamp<int64_t>(playback.cursor(), 0, rp.frames);
@@ -1057,9 +1070,51 @@ void GuiRenderPlayer::play_live_from(int64_t from) {
     rp.painted_cursor = -1;
     playback.play(from, rp.frames);
     rp.transport = Transport::Live;
+    if (rest_if_launch_refused(from)) return;
     damage_row();
     // The head unit: playing again (the inventory at the declaration).
     publish_media_state();
+}
+
+// A LAUNCH OVER A REFUSED DEVICE RESTS WHERE IT WAS TO PLAY FROM (architect
+// 2026-11-26). The Play face greys only for a device that never came up
+// (device_absent), so a press can still meet a refused reopen — or a refused
+// start, or a drop seen at the publish's own re-check
+// (GuiPlayback::launch_window) — and play() then returns with NOTHING
+// SOUNDING. Left LIVE there, the transport met the tick's no-device arm,
+// which parks the resume point at the ENGINE'S HELD CURSOR: a paused move
+// was lost — the car's seek, Home, SeekTo (seek_to's PAUSED arm moves
+// resume_frame, never the engine) and the scrub's drop (resume_at hands its
+// target to play_live_from alone). So right after each launch's play() —
+// play_live_from's (resume(), resume_at()) and play_wav's — this asks
+// device_unavailable and, refused, takes THE PAUSE'S OWN SEATING at `from`:
+// the resume point written first, then the one stop body, whose player fork
+// parks the transport at PAUSED (its one writer of that state), damages the
+// row and pushes the head unit's paused state; then the card said ONCE
+// (play() itself cards nothing). The transport is never left LIVE, so the
+// tick's no-device arm never runs for this launch and never cards it again;
+// the next Play resumes from `from`. On a NEW item (play_wav) `from` is its
+// start and the item stays bound, the band following it as at any change.
+// THE READ IS THIS LAUNCH'S OWN VERDICT: every refusal inside play() leaves
+// the stream null (or, the device never having come up, device_ready false),
+// and both are written on this thread alone (a refused open sets nothing, a
+// refused start and the publish's dead re-check close the stream), so a
+// refused launch answers true and a good one false. The one other writer is
+// the error callback's latch, on the device's thread: a drop landing between
+// play()'s return and this read answers true for a launch that did start —
+// a real drop, after which nothing sounds (the callback lowers the playing
+// bit itself), so the rest is the tick's pause with the point at `from`,
+// where the engine's held cursor all but stands.
+// PRECONDITION: the transport is LIVE (each caller has just written it), so
+// the fork takes it down. THE LIVE RESEEK (seek_to's LIVE arm) does not ask
+// it: it would need the device to drop and be refused inside one frame,
+// before the tick pauses.
+bool GuiRenderPlayer::rest_if_launch_refused(int64_t from) {
+    if (!playback.device_unavailable()) return false;
+    app.render_player.resume_frame = from;
+    playback_lifecycle.stop_playback_if_playing();
+    status(kRenderPlayerNoDeviceCard);
+    return true;
 }
 
 // THE TWO FOLDER WALKS SAY NOTHING AT ALL (architect 2026-08-31 — the
@@ -1402,23 +1457,25 @@ void GuiRenderPlayer::tick() {
         // NO DEVICE PAUSES, IT DOES NOT ADVANCE (the rule at on_natural_end's
         // declaration): an engine that cannot sound leaves the session word's
         // playing bit down exactly as a finished window does, so this arm
-        // stands ABOVE the
-        // natural-end test — and it covers BOTH shapes, the device that went
-        // away mid-play (the AAudio latch) and the device that never came up
-        // (an init that failed), either of which
-        // would otherwise race through the folder a wav per tick. It is the pause
-        // arm of toggle_pause with one line added — the resume point is the
-        // engine's held cursor (a suspended device holds it rather than
-        // extrapolating), read before the stop body, whose fence returns at
-        // once on a dead or absent device and whose player fork moves the
-        // transport to PAUSED and pushes the head unit's own state —
-        // PAUSED AT THE HELD CURSOR EVEN WHERE THAT IS FRAME 0, which is the
-        // whole reason the state is stored: the next Play resumes this item at
-        // that cursor rather than restarting it. ONE LINE FOR BOTH SHAPES:
-        // what the user needs to know is that nothing will sound, not which
-        // way it will not. Nothing here retries, and this fork is a READ
-        // (device_unavailable, never the reopen): on Android the next play
-        // PRESS reopens the device — the main window's launch gates through
+        // stands ABOVE the natural-end test, or a device that went away
+        // mid-play (the AAudio latch) would read as a natural end and walk on
+        // to the next wav. A LAUNCH THE DEVICE REFUSED NEVER REACHES THIS ARM
+        // — a refused reopen, or the device that never came up (an init that
+        // failed): the launch rests itself paused where it was to play from,
+        // under the same card (rest_if_launch_refused, architect 2026-11-26).
+        // It is the pause arm of toggle_pause with one line added — the
+        // resume point is the engine's held cursor (a suspended device holds
+        // it rather than extrapolating), read before the stop body, whose
+        // fence returns at once on a dead or absent device and whose player
+        // fork moves the transport to PAUSED and pushes the head unit's own
+        // state — PAUSED AT THE HELD CURSOR EVEN WHERE THAT IS FRAME 0, which
+        // is the whole reason the state is stored: the next Play resumes this
+        // item at that cursor rather than restarting it. ONE LINE FOR EVERY
+        // SHAPE (this arm's and the refused launch's): what the user needs to
+        // know is that nothing will sound, not which way it will not. Nothing
+        // here retries, and this fork is a READ (device_unavailable, never
+        // the reopen): on Android the next play PRESS reopens the device —
+        // the main window's launch gates through
         // GuiPlayback::ensure_device_available_for_play, this player's own
         // road through play()'s head check (the one reopen body, both).
         // The resume point is the predictor's position, as the pause above
@@ -1431,8 +1488,7 @@ void GuiRenderPlayer::tick() {
         // Nothing follows this stop: the device is not touched here, and what
         // really closes a stream that went away is the reopen the next play
         // press takes.
-        // ONE CLAUSE (2026-09-01): a card is one clause.
-        status("No audio device to play the wav");
+        status(kRenderPlayerNoDeviceCard);
         return;
     }
     // THE NATURAL END IS THE FLAG'S DROP, the main window's tick's own shape
