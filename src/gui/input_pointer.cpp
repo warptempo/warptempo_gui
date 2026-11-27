@@ -4153,10 +4153,13 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     // Audacious's own slider — dead while stopped), IDLE being no item bound
     // (the invariant at AppState::RenderPlayer::transport).
     if (!player_scrub_takes_press()) return true;
-    // THE PRESS TAKES THE SCALE: on the knob the knob turns toward the
-    // accent over Arc's 200 ms from now (the knob's press_face below; gtk3
-    // CSS lines 1144 .. 1150, no 50 ms line on the scale's slider), on the
-    // trough the knob is carried at rest; a pen in contact hovers nothing
+    // THE PRESS TAKES THE SCALE AND HOLDS THE KNOB, on the knob or on the
+    // trough beside it (architect 2026-11-27, render.h's scrub block): the
+    // knob turns toward the accent over Arc's 200 ms from now (the knob's
+    // press_face below; gtk3 CSS lines 1144 .. 1150, no 50 ms line on the
+    // scale's slider), a trough press's knob fading in at the place it
+    // jumped to (its record on no box, the fade's damage the disc at the
+    // published center); a pen in contact hovers nothing
     // (AppState::FaceFades); the arm below damages the item.
     // THE THUMB IS RESOLVED WHERE IT IS PAINTED (ON SCREEN IS AS PAINTED,
     // the displayed-not-live rule displayed_or_live_target_map states,
@@ -4178,9 +4181,8 @@ bool GuiInputHandler::claim_player_scrub_press(const GuiPointerPlace& at,
     const bool on_thumb =
         thumb_x >= 0.0 &&
         render_player_scrub_handle_hit(track, thumb_x, at.rx, at.ry);
-    if (on_thumb)
-        press_face({AppState::FaceFades::Surface::Knob, 0,
-                    app.modal_dialog.owner, app.modal_dialog.session});
+    press_face({AppState::FaceFades::Surface::Knob, 0,
+                app.modal_dialog.owner, app.modal_dialog.session});
     drag          = AppState::RenderPlayer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
@@ -4224,9 +4226,8 @@ bool GuiInputHandler::finish_player_scrub_release(double x) {
     if (!drag.armed) return false;
     const AppState::RenderPlayer::ScrubDrag ended = drag;
     // The knob's held fade stops where it stands (hold_face).
-    if (drag.on_thumb)
-        hold_face({AppState::FaceFades::Surface::Knob, 0,
-                   app.modal_dialog.owner, app.modal_dialog.session});
+    hold_face({AppState::FaceFades::Surface::Knob, 0,
+               app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -4276,9 +4277,8 @@ void GuiInputHandler::clear_player_scrub_drag() {
     // press left it, the key reading PLAY, and the clock's position
     // returns from the drop's time to the item's position (its rect damaged).
     // The knob's held fade stops where it stands (hold_face).
-    if (drag.on_thumb)
-        hold_face({AppState::FaceFades::Surface::Knob, 0,
-                   app.modal_dialog.owner, app.modal_dialog.session});
+    hold_face({AppState::FaceFades::Surface::Knob, 0,
+               app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::RenderPlayer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -4351,8 +4351,9 @@ bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
     // show: the scrub dead), takes no press (score_scrub_takes_press, the
     // refusals' one owner, the knob's hover reading it too).
     if (!score_scrub_takes_press()) return true;
-    // The press takes the scale, and on the knob turns it toward the accent
-    // (the render player's claim's rule, below).
+    // The press takes the scale and holds the knob, on the knob or on the
+    // trough, turning it toward the accent (the render player's claim's
+    // rule, below).
     // THE THUMB AS PAINTED (ON SCREEN IS AS PAINTED), its published exact
     // center: on its disc the press takes it where it stands, the grab
     // offset kept against that painted center (the render player's claim);
@@ -4363,9 +4364,8 @@ bool GuiInputHandler::claim_score_scrub_press(const GuiPointerPlace& at,
         render_player_scrub_handle_hit(track, thumb_x, at.rx, at.ry);
     AppState::ScoreViewer::ScrubDrag& drag = app.score_viewer.scrub;
     const bool media = score_viewer_has_soundtrack(app);
-    if (on_thumb)
-        press_face({AppState::FaceFades::Surface::Knob, 0,
-                    app.modal_dialog.owner, app.modal_dialog.session});
+    press_face({AppState::FaceFades::Surface::Knob, 0,
+                app.modal_dialog.owner, app.modal_dialog.session});
     drag          = AppState::ScoreViewer::ScrubDrag{};
     drag.armed    = true;
     drag.on_thumb = on_thumb;
@@ -4420,9 +4420,8 @@ bool GuiInputHandler::finish_score_scrub_release() {
     if (!drag.armed) return false;
     const AppState::ScoreViewer::ScrubDrag ended = drag;
     // The knob's held fade stops where it stands (hold_face).
-    if (drag.on_thumb)
-        hold_face({AppState::FaceFades::Surface::Knob, 0,
-                   app.modal_dialog.owner, app.modal_dialog.session});
+    hold_face({AppState::FaceFades::Surface::Knob, 0,
+               app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::ScoreViewer::ScrubDrag{};
     const GuiRect track = app.modal_dialog.scrub;
     if (track.w > 0 && track.h > 0) viewport.invalidate_rect(track);
@@ -4484,9 +4483,8 @@ void GuiInputHandler::clear_score_scrub_drag() {
     // the press found.
     const AppState::ScoreViewer::ScrubDrag ended = drag;
     // The knob's held fade stops where it stands (hold_face).
-    if (drag.on_thumb)
-        hold_face({AppState::FaceFades::Surface::Knob, 0,
-                   app.modal_dialog.owner, app.modal_dialog.session});
+    hold_face({AppState::FaceFades::Surface::Knob, 0,
+               app.modal_dialog.owner, app.modal_dialog.session});
     drag = AppState::ScoreViewer::ScrubDrag{};
     if (score_viewer != nullptr) score_viewer->display_page(ended.press_page);
     const GuiRect track = app.modal_dialog.scrub;

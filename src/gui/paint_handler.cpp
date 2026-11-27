@@ -7290,10 +7290,11 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // `thumb_x_of()` answers once the item is published (architect
     // 2026-11-15, the no-grid arc: the knob at its position's exact place,
     // render.h's scrub block). `thumb_pressed`: the owner's drag holds the
-    // knob (its ScrubDrag armed on_thumb), its look Lit from the grab to the
-    // lift — the whole disc fading toward the accent from the grab, and at
-    // the lift back from the value it had reached (paint_scale; a press on
-    // the trough carries the knob at rest; GuiInputHandler::hold_face). AT
+    // knob (its ScrubDrag armed, the press on the knob or on the trough
+    // beside it; architect 2026-11-27, render.h's scrub block), its look Lit
+    // from the grab to the lift — the whole disc fading toward the accent
+    // from the grab, and at the lift back from the value it had reached
+    // (paint_scale; GuiInputHandler::press_face / hold_face). AT
     // REST UNDER THE HOVERING PEN its fill Arc's hover face; EVERY CHANGE OF
     // ITS LOOK FADES 200 ms, the held accent included (gtk3 CSS lines
     // 1144 .. 1150; architect 2026-11-20), the knob painted
@@ -7438,8 +7439,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         const int64_t pos = render_player_position(app, playback);
         if (scrub_w > 0) {
             paint_scrub_item(scrub_x0, scrub_w,
-                             app.render_player.scrub.armed &&
-                                 app.render_player.scrub.on_thumb,
+                             app.render_player.scrub.armed,
                              [&]() -> double {
                 // The drag's carried center while the thumb is being dragged
                 // (the sound paused under the hold and the seek committing at
@@ -7514,8 +7514,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             const ScoreFrameRange fr = score_viewer_frame_range(app);
             if (ml.scrub_w > 0) {
                 paint_scrub_item(ml.scrub_x0, ml.scrub_w,
-                                 app.score_viewer.scrub.armed &&
-                                     app.score_viewer.scrub.on_thumb,
+                                 app.score_viewer.scrub.armed,
                                  [&]() -> double {
                     // The drag's carried center while the thumb is dragged,
                     // the cursor's own exact place otherwise.
@@ -7566,8 +7565,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             // otherwise (score_scrub_x_of) — the step.
             if (sl.scrub_w > 0) {
                 paint_scrub_item(sl.scrub_x0, sl.scrub_w,
-                                 app.score_viewer.scrub.armed &&
-                                     app.score_viewer.scrub.on_thumb,
+                                 app.score_viewer.scrub.armed,
                                  [&]() -> double {
                     return app.score_viewer.scrub.armed
                                ? app.score_viewer.scrub.marker_x

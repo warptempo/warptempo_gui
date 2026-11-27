@@ -9683,7 +9683,9 @@ struct AppState {
     //              the scale's item (architect 2026-10-02) — on the knob's
     //              disc the knob is taken
     //              where it stands, its grab offset kept (`grab_dx`), and
-    //              anywhere else on the item it jumps to the press — its
+    //              anywhere else on the item it jumps to the press, the
+    //              knob held either way (its held look, render.h's scrub
+    //              block; architect 2026-11-27) — its
     //              painted x following the pointer — clamped onto the
     //              thumb's own travel, never the item's ends — with nothing
     //              seeked, the seek committing at the release (the product's
@@ -9760,9 +9762,13 @@ struct AppState {
         int64_t                    resume_frame   = 0;
         int64_t                    painted_cursor = -1;
         struct ScrubDrag {
-            bool armed    = false;
+            bool armed    = false;  // the drag stands: the knob held, its
+                                    // look the held one however the press
+                                    // took it (render.h's scrub block)
             double marker_x = 0.0;  // the thumb's carried center, a real place
-            bool on_thumb = false;  // armed on the knob's disc, not the trough
+            bool on_thumb = false;  // armed on the knob's disc, not the
+                                    // trough: the grab offset and the
+                                    // motionless tap's no-seek, not the look
             double grab_dx = 0.0;   // the press's real x − the thumb's painted
                                     // center; 0 off the thumb
             bool moved    = false;  // the carried center has moved
@@ -9909,8 +9915,10 @@ struct AppState {
     //              or its failure repaints the face it decides.
     struct ScoreViewer {
         struct ScrubDrag {
-            bool armed      = false;
-            bool on_thumb   = false;  // taken on the thumb
+            bool armed      = false;  // the drag stands: the knob held
+                                      // (RenderPlayer::ScrubDrag's rule)
+            bool on_thumb   = false;  // taken on the thumb: the grab offset
+                                      // and the tap's no-seek, not the look
             bool moved      = false;  // a motion moved it
             double grab_dx  = 0.0;    // the press's real x − the thumb's painted
                                       // center; 0 off the thumb

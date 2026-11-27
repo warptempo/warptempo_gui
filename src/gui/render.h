@@ -1582,9 +1582,13 @@ inline int program_run_gap_px() {
 //     trough's center row (the tablet: rows 1335..1368), its fill
 //     `key_face` in a ONE-W RIM of `scale_slider_border` (Arc's
 //     slider border 262933, its line of kArcDarkTones); HELD — the owner's ScrubDrag
-//     armed ON THE KNOB (RenderPlayer::ScrubDrag::on_thumb, the score
-//     viewer's the same; a press on the trough beside it carries the knob
-//     at rest) — THE WHOLE DISC THE ACCENT, no rim (Arc's slider:active);
+//     armed (RenderPlayer::ScrubDrag::armed, the score viewer's the same),
+//     HOWEVER THE PRESS TOOK IT, on the knob or on the trough beside it
+//     (architect 2026-11-27: "Follow GTK"; gtkrange.c, gtk-3-24: with
+//     gtk-primary-button-warps-slider a trough press warps the slider under
+//     the pointer and grabs it, and update_slider_state gives the grabbed
+//     slider GTK_STATE_FLAG_ACTIVE) — THE WHOLE DISC THE ACCENT, no rim
+//     (Arc's slider:active);
 //     UNDER THE HOVERING PEN, at rest, ITS FILL `key_hover_face` inside the
 //     unchanged rim (Arc's scale slider:hover, 505666, measured on his
 //     desktop; architect 2026-11-18 / 2026-11-20); EVERY CHANGE
