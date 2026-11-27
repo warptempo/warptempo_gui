@@ -327,20 +327,23 @@ public:
     // runs only while our own data callback is inside — made only of our
     // own callbacks' runtimes, ordinarily one or none (a callback entering
     // after the lowering can add its own) — never for the device to call
-    // again: no future callback is needed to end it, so a device that stops
-    // calling, a dead stream or none (released, release_device below) cannot
-    // hold it (the proof at playback_aaudio.cpp's GuiPlayback::stop(),
-    // architect 2026-11-26). Once it returns no callback is in the render arm
-    // until the next publish, and everything a fill did is ordered before
-    // what the caller does next (and a fill that was in flight at the
-    // lowering can commit no terminal: its exchange expects the word its gate
-    // acquired, which the lowering changed). THE DEVICE IS NOT STOPPED HERE:
-    // the stream keeps running, silent, between plays. Safe to call when not
-    // playing; it still fences. Main thread
-    // only. The cursor retains its last value, which is what the predictor's
-    // last observation rests on, so a main-thread read after the stop still
-    // answers where playback stopped — through cursor(), never off the atomic
-    // itself.
+    // again: no future callback is needed to end THE FENCE, so a device that
+    // stops calling, a dead stream or none (released, release_device below)
+    // cannot hold it (the proof at playback_aaudio.cpp's GuiPlayback::stop(),
+    // architect 2026-11-26). The claim is the fence's alone: after it the
+    // session's underrun count is read off the stream handle, a device call
+    // that can wait in a stall on the Legacy path (the proof's (c)). Once
+    // it returns no callback is in the render arm until the next publish,
+    // and everything a fill did is ordered before what the caller does next
+    // (and a fill that was in flight at the lowering can commit no terminal:
+    // its exchange expects the word its gate acquired, which the lowering
+    // changed). THE DEVICE IS NOT STOPPED HERE: the stream keeps running
+    // between plays, the project voice writing silence and the noise bed,
+    // when audible, still playing through it. Safe to call when not playing;
+    // it still fences. Main thread only. The cursor retains its last value,
+    // which is what the predictor's last observation rests on, so a
+    // main-thread read after the stop still answers where playback stopped —
+    // through cursor(), never off the atomic itself.
     void stop();
 
     // Re-anchor the free-running cursor predictor on the audio thread's cycle

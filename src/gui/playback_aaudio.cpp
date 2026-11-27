@@ -754,10 +754,14 @@ void GuiPlayback::launch_window(int64_t start_sample, int64_t end_sample,
     // THE HEAD CHECK: a dead stream closed and reopened (reopen_stream_if_dead,
     // the one body the launch press's ensure_device_available_for_play also
     // calls). It stays here even though the main window's gates have already
-    // run it at the press — the render player's play road has no gate ahead
-    // of this call, and the two-case argument below rests on this check
-    // standing at the head. A failed reopen returns silently: the gates have
-    // carded, and the player's road reads device_unavailable at its tick.
+    // run it at the press — the render player's and the score viewer's play
+    // roads have no gate ahead of this call, and the two-case argument below
+    // rests on this check standing at the head. A failed reopen returns
+    // silently: the main window's gates have carded, and each player reads
+    // device_unavailable right after this call returns, in the launching
+    // call itself, resting the launch paused under its card
+    // (GuiRenderPlayer::rest_if_launch_refused,
+    // GuiScoreViewer::rest_at_refused_launch; architect 2026-11-26).
     if (!reopen_stream_if_dead(*impl_, kReleaseEndedByPlay)) return;
 
     // Publish FIRST, start SECOND: the command packet and the session word
@@ -899,9 +903,15 @@ void GuiPlayback::stop() {
     //      bit down and touches no sample, but its mark is up), so
     //      back-to-back callbacks can each add their own runtime — ordinarily
     //      the wait is one callback's or none. NO FUTURE CALLBACK IS NEEDED
-    //      TO END IT, AND NO STATE OF THE DEVICE CAN EXTEND IT: a stream that
-    //      stops calling leaves the mark down and stop() returns at once, as
-    //      it does over a dead stream or none. The evidence: the car's
+    //      TO END THE FENCE, AND NO STATE OF THE DEVICE CAN EXTEND IT: a
+    //      stream that stops calling leaves the mark down and the fence ends
+    //      at once, as it does over a dead stream or none. THE CLAIM IS THE
+    //      FENCE'S ALONE: after it stop() reads the session's underrun count
+    //      (report_xrun_count, AAudioStream_getXRunCount on the stream
+    //      handle), a device call, which on the Legacy path takes
+    //      AudioTrack's own lock and so can wait in a stall — accepted with
+    //      the device worker's removal (android_notes.md §11.4b; architect
+    //      2026-11-26). The evidence: the car's
     //      stalls of 2026-11-26, the stream STARTED and its data callback
     //      uncalled until Android's Bluetooth stack gave the car up, 15 s
     //      after its unanswered request; the old fence waited 10 s inside

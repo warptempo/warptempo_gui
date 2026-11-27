@@ -304,7 +304,7 @@ void GuiScoreViewer::play() {
     if (fr.length() < 2) return;
     int64_t from = score_viewer_position(app, playback);
     if (from >= fr.end - 1) from = fr.begin;
-    play_live_from(from);
+    (void)play_live_from(from);
 }
 
 void GuiScoreViewer::play_from(int64_t frame) {
@@ -317,30 +317,31 @@ void GuiScoreViewer::play_from(int64_t frame) {
     // the live seek's clamp and never the PLAY key's end rule — a target in
     // the range's last frame or at its end stops one short of the last frame,
     // so the natural end takes over at once and rests at the range's end. The
-    // drop is a seek, so the position is written with it.
+    // drop is a seek, so the position is written with it — here on a launch,
+    // by the refused launch's rest otherwise (one write either way).
     const ScoreFrameRange fr = score_viewer_frame_range(app);
     if (fr.length() < 2) return;
     const int64_t from = std::clamp(frame, fr.begin, fr.end - 2);
     active_view_state(app).score_position = from;
-    play_live_from(from);
-    write_score_viewer_file(app);
+    if (play_live_from(from)) write_score_viewer_file(app);
 }
 
-void GuiScoreViewer::play_live_from(int64_t from) {
+bool GuiScoreViewer::play_live_from(int64_t from) {
     AppState::ScoreViewer& sv = app.score_viewer;
     sv.painted_cursor = -1;
     playback.play(from, score_viewer_frame_range(app).end);
     if (playback.device_unavailable()) {
         rest_at_refused_launch(from);
-        return;
+        return false;
     }
     sv.transport = Transport::Live;
     follow_cursor(from);
     damage_row();
+    return true;
 }
 
 // A LAUNCH OVER A REFUSED DEVICE RESTS WHERE IT WAS TO PLAY FROM (architect
-// 2026-11-26). The Play face is lit while the device came up once
+// 2026-11-26). The Play face is enabled while the device came up once
 // (device_absent false), but the press's reopen can still be refused — or
 // the reopened stream's start, or a drop seen at the publish's own re-check
 // (GuiPlayback::launch_window) — and play() then returns with NOTHING

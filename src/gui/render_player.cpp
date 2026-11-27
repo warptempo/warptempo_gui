@@ -1369,9 +1369,11 @@ void GuiRenderPlayer::car_seek(bool forward) {
 // continuing to the next wav (architect 2026-10-26). Never across
 // folders and never a wrap — the wall is the act's own owner above, so the
 // button's face and every caller ask one question. Returns whether the
-// next wav played; a refused decode has raised its own card and left the item
-// where it was, which is what lets the natural end's Repeat One arm and its
-// rest read this as "nothing happened".
+// next wav was bound — play_wav's verdict, true also where the device refused
+// the launch and the new item rests PAUSED at its start under that card
+// (rest_if_launch_refused); a refused decode has raised its own card and left
+// the item where it was, which is what lets the natural end's Repeat One arm
+// and its rest read this as "nothing happened".
 bool GuiRenderPlayer::advance_to_next_in_item_folder() {
     if (!render_player_next_track_actionable(app)) return false;
     const AppState::RenderPlayer& rp = app.render_player;
@@ -1396,10 +1398,12 @@ void GuiRenderPlayer::on_natural_end() {
     // IT CONTINUES IF THERE IS A NEXT TRACK AND STOPS DEAD WHERE IT IS
     // OTHERWISE (architect 2026-10-26, "advance to the next one if
     // possible"; the score viewer's one rule): the two arms below play again
-    // and take LIVE with them, and where neither does the transport stays
-    // PAUSED AT THE ITEM'S END — the clock reading its length, the thumb at
-    // the right, the scrub live, the key reading PLAY, whose press at that
-    // rest is resume()'s end rule.
+    // and take LIVE with them — or, the device refusing that launch, rest the
+    // item they bound PAUSED AT ITS START under the card
+    // (rest_if_launch_refused) — and where neither binds one the transport
+    // stays PAUSED AT THE ITEM'S END — the clock reading its length, the
+    // thumb at the right, the scrub live, the key reading PLAY, whose press
+    // at that rest is resume()'s end rule.
     playback_lifecycle.stop_playback_if_playing();
     // REPEAT ONE, ONE OF NOTHING LOOPS' TWO SANCTIONED EXCEPTIONS (architect
     // 2026-08-28; the other is the car's loop of the trim on the project
