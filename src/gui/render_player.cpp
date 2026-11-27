@@ -363,9 +363,22 @@ void GuiRenderPlayer::delete_batch_folders(
         }
     }
     // THE LISTING FROM DISK AGAIN, whatever failed: a partial removal shows
-    // what is left, and no row is lit (the seat rule's memory-less arm,
-    // rebuild_rows — the folder it stood on is gone).
+    // what is left, and AFTER A DELETE NO ROW IS LIT (architect 2026-11-27:
+    // "None" — "Like a file manager, for example, if I delete a file, it
+    // won't automatically select the first file on the list. It'll just have
+    // no selection."; folder_overlay.h's head): the rebuild names no folder
+    // to seat on (the folder the band stood on is gone, and so is the one a
+    // delete from inside a folder leaves), so its seat rule lights none.
+    // THE SCROLL: a delete in the folder list keeps that list where it stood,
+    // clamped onto the shorter listing; a delete from inside a folder lands
+    // in another listing, which rests at its top as every entry does.
+    const bool same_listing = rp.folder == Folder::Root;
+    const double scroll_before = app.folder_overlay.scroll_px;
     enter(Folder::Root, {}, {});
+    if (same_listing) {
+        app.folder_overlay.scroll_px = scroll_before;
+        folder_overlay::clamp_scroll(app);
+    }
     // THE LAST FOLDER GONE CLOSES THE PLAYER (architect 2026-10-01): a root
     // listing with no folder left has nothing to play or open, so the player
     // takes itself down through its own close act — the PLAYER key's road,
@@ -386,17 +399,10 @@ void GuiRenderPlayer::delete_render(const AppState::RenderEntry& entry) {
         delete_batch_folders({entry.batch_folder});
         return;
     }
-    // The deleted row's place in the listing, read before the rebuild: the
-    // band's seat after it (the question's veil kept the listing as it
-    // stood since the press).
-    const AppState::FolderOverlay& ov = app.folder_overlay;
-    int place = -1;
-    for (size_t i = 0; i < ov.rows.size(); ++i) {
-        if (ov.rows[i].path == entry.wav_path) {
-            place = static_cast<int>(i);
-            break;
-        }
-    }
+    // The list's scroll, read before the rebuild (which rests every listing
+    // it builds at its top): the delete keeps the list where it stood (the
+    // question's veil kept the listing as it stood since the press).
+    const double scroll_before = app.folder_overlay.scroll_px;
     // THE BOUND ITEM. This render: unloaded through up()'s own road (the Up
     // tail; the player stands on with nothing loaded), so no transport,
     // scrub, Repeat One replay or car act reads the file about to go. Another
@@ -439,24 +445,25 @@ void GuiRenderPlayer::delete_render(const AppState::RenderEntry& entry) {
             carded = true;
         }
     }
-    // THE LISTING FROM DISK AGAIN, whatever failed, and THE BAND ON THE ROW
-    // THAT TOOK THE DELETED ONE'S PLACE (architect 2026-11-25) — the next
-    // render, the new last row when the last went. The rebuild's own seat
-    // rule would take the bound item's row; this reseat after it is the
-    // delete's, the row centered as every rebuild's seat is, the band and the
-    // row already damaged by the rebuild and the head unit told the new
-    // title off a live transport (the question paused it).
+    // THE LISTING FROM DISK AGAIN, whatever failed, and AFTER A DELETE NO ROW
+    // IS LIT (architect 2026-11-27: "None" — "Like a file manager, for
+    // example, if I delete a file, it won't automatically select the first
+    // file on the list. It'll just have no selection."; folder_overlay.h's
+    // head). The rebuild's own seat rule would light a bound item's row — a
+    // surviving render of this folder, paused by the question's rise — and
+    // this seat after it is the delete's: none, the item staying bound and
+    // paused, the Play button and the car's toggle resuming it and lighting
+    // its row then (render_player_band_row, play_button_act). THE SCROLL
+    // STAYS WHERE IT STOOD, clamped onto the shorter listing, never a jump
+    // to the top for a delete in the middle. The band and the row are
+    // already damaged by the rebuild (the band is one fixed rect), and the
+    // head unit is told the title anew off a non-live transport (the
+    // question paused it).
     enter(Folder::Batch, entry.batch_folder, {});
-    AppState::FolderOverlay& listed = app.folder_overlay;
-    const int n = static_cast<int>(listed.rows.size());
-    if (place >= 0 && n > 0) {
-        const int seat = std::min(place, n - 1);
-        if (seat != listed.highlight_row) {
-            listed.highlight_row = seat;
-            folder_overlay::scroll_row_centered(app, seat);
-            if (rp.transport != Transport::Live) publish_media_state();
-        }
-    }
+    (void)folder_overlay::set_highlight(app, -1);
+    app.folder_overlay.scroll_px = scroll_before;
+    folder_overlay::clamp_scroll(app);
+    if (rp.transport != Transport::Live) publish_media_state();
 }
 
 void GuiRenderPlayer::open_row(int index, bool tapped) {
@@ -564,13 +571,20 @@ const AppState::RenderEntry* GuiRenderPlayer::highlighted_entry() const {
 }
 
 // THE ROW THE BAND NAMES (the contract at the declaration, app_state.h):
-// the lit row, else inside a batch folder the listing's first render, else
-// none.
+// the lit row, else inside a batch folder the bound item's row where it is
+// listed, else the listing's first render, else none.
 int render_player_band_row(const AppState& a) {
     const AppState::FolderOverlay& ov = a.folder_overlay;
     const int n = static_cast<int>(ov.rows.size());
     if (ov.highlight_row >= 0 && ov.highlight_row < n) return ov.highlight_row;
     if (a.render_player.folder != Folder::Batch) return -1;
+    if (!a.render_player.item.empty()) {
+        for (int i = 0; i < n; ++i) {
+            const Row& r = ov.rows[static_cast<size_t>(i)];
+            if (r.kind == Row::Kind::Wav && r.path == a.render_player.item)
+                return i;
+        }
+    }
     for (int i = 0; i < n; ++i)
         if (ov.rows[static_cast<size_t>(i)].kind == Row::Kind::Wav) return i;
     return -1;
@@ -972,7 +986,29 @@ void GuiRenderPlayer::play_button_act() {
         open_row(row, /*tapped=*/false);
         return;
     }
+    // THE TRANSPORT'S OWN ITEM WITH NO ROW LIT (a render's delete leaves a
+    // surviving item bound and paused with none lit, architect 2026-11-27;
+    // render_player_band_row names its row then): the toggle below resumes
+    // it, and ITS ROW IS LIT FIRST, the playing render's row — a seat that
+    // reflects something (folder_overlay.h's head), play_wav's keep-visible
+    // seat's shape, the band and the row damaged with it.
+    seat_band_on_listed_item();
     transport_toggle_act();
+}
+
+// THE ITEM'S ROW LIT WHERE NO ROW IS (the contract at the declaration).
+void GuiRenderPlayer::seat_band_on_listed_item() {
+    const AppState::RenderPlayer& rp = app.render_player;
+    if (app.folder_overlay.highlight_row >= 0) return;
+    if (rp.transport == Transport::Idle || rp.item.empty()) return;
+    const int row = render_player_band_row(app);
+    if (row < 0) return;
+    const Row& r = app.folder_overlay.rows[static_cast<size_t>(row)];
+    if (r.kind != Row::Kind::Wav || r.path != rp.item) return;
+    if (folder_overlay::set_highlight(app, row)) {
+        damage_band();
+        damage_row();
+    }
 }
 
 void GuiRenderPlayer::transport_toggle_act() {
@@ -1970,7 +2006,7 @@ void GuiRenderPlayer::publish_media_state() {
     // 2026-09-17). The close pushes nothing at all and the car transport's
     // tick takes the wire back (the reasoning is at close()'s tail), so no
     // road reaches this body with the mode down — the nine call sites are
-    // rebuild_rows, delete_render (its reseat after the rebuild),
+    // rebuild_rows, delete_render (its seat of none after the rebuild),
     // move_highlight, set_highlight, play_wav, play_live_from (the resume's
     // road), seek_to (twice) and the stop body's player fork, and that fork
     // is itself gated on the mode bit. The arm stays because the fault it

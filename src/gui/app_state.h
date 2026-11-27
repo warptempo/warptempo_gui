@@ -10585,10 +10585,13 @@ const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 
 // THE ROW THE BAND NAMES for the Play button and the car: THE LIT ROW; with
 // NO ROW LIT (folder_overlay.h's head, architect 2026-11-27) inside a batch
-// folder, THE LISTING'S FIRST RENDER — what Play plays from none, the row
-// then lit as the playing render's (play_wav's seat); at the root with none
-// lit, and on an empty listing, -1 (nothing to play: the transport's own
-// arm answers there). TWO READERS: render_player_highlight_act_row below
+// folder, THE BOUND ITEM'S ROW where it is listed — the state a render's
+// delete leaves, the surviving item paused (GuiRenderPlayer::delete_render):
+// Play resumes it, its row lit first (seat_band_on_listed_item) — else THE
+// LISTING'S FIRST RENDER — what Play plays from none, the row then lit as
+// the playing render's (play_wav's seat); at the root with none lit, and on
+// an empty listing, -1 (nothing to play: the transport's own arm answers
+// there). TWO READERS: render_player_highlight_act_row below
 // and the head unit's silence-track title (GuiRenderPlayer::
 // publish_media_state), so the title names what the console's button would
 // start. The row keys (Load in place, Delete) read the lit row alone.
@@ -10598,7 +10601,8 @@ int render_player_band_row(const AppState& a);
 // THE ROW SPACE WOULD OPEN, or −1 for "the transport's own business"
 // (architect 2026-08-31 — SPACE IS HIGHLIGHT-DRIVEN IN THE PLAYER). It
 // answers the band's row (render_player_band_row: the highlighted row, or
-// with none lit inside a folder its first render) when that row is a FOLDER
+// with none lit inside a folder the bound item's row or its first render)
+// when that row is a FOLDER
 // or a WAV THAT
 // IS NOT THE TRANSPORT'S ITEM — the two rows whose open act Space runs
 // instead of toggling (going up is the controls row's own button) — and −1 on

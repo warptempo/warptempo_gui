@@ -392,8 +392,11 @@ struct GuiRenderPlayer {
     // a filesystem failure cards CRITICAL naming the folder by its name, with
     // the full path and the system's words on stderr (failure.h's two
     // clauses), and the walk goes on to the next folder. The ROOT listing is
-    // entered and rebuilt from disk after, whatever failed, no row lit
-    // (rebuild_rows' seat). A success is silent: the rows
+    // entered and rebuilt from disk after, whatever failed, NO ROW LIT
+    // (architect 2026-11-27: "None" — after a delete, no selection;
+    // rebuild_rows' seat names no folder), the folder list's scroll kept
+    // where it stood (clamped) for a delete made there, the list at its top
+    // for one made from inside a folder. A success is silent: the rows
     // leaving the listing are its answer — and when the rebuilt root lists
     // no folder at all, the player closes itself through close(), its own
     // close act (architect 2026-10-01; the rule is at the body).
@@ -417,9 +420,10 @@ struct GuiRenderPlayer {
     // file already missing is silent, a removal that fails cards CRITICAL
     // naming the render by its entry id with the system's words, the full
     // path on stderr (failure.h's two clauses), once for the render. The
-    // folder's listing is rebuilt from disk after, whatever failed, and THE
-    // BAND STANDS ON THE ROW THAT TOOK THE DELETED ONE'S PLACE — the next
-    // render, or the new last row when the last went.
+    // folder's listing is rebuilt from disk after, whatever failed, and NO
+    // ROW IS LIT (architect 2026-11-27: "None" — after a delete, no
+    // selection, as a file manager leaves it), the list's scroll kept where
+    // it stood, clamped onto the shorter listing.
     void delete_render(const AppState::RenderEntry& entry);
     // The widget's two mechanics with the player's damage on top
     // (folder_overlay.h owns the clamps and the scroll-into-view; the
@@ -447,7 +451,13 @@ struct GuiRenderPlayer {
     //     transport's item                     -> play that row, live or
     //                                             paused or idle alike.
     //   NO ROW LIT inside a folder             -> the same two arms on the
-    //                                             listing's FIRST RENDER
+    //                                             bound item's row where it
+    //                                             is listed (the transport's
+    //                                             own: the toggle below, the
+    //                                             row lit first,
+    //                                             seat_band_on_listed_item),
+    //                                             else on the listing's FIRST
+    //                                             RENDER
     //                                             (render_player_band_row,
     //                                             architect 2026-11-27).
     //   otherwise the TRANSPORT, whose three states are STORED in
@@ -488,6 +498,18 @@ struct GuiRenderPlayer {
     // highlight arm would let a focus loss START a walked-to row instead of
     // pausing what sounds.
     void transport_toggle_act();
+    // THE ITEM'S ROW LIT WHERE NO ROW IS (architect 2026-11-27): with NO ROW
+    // LIT and a bound item (live or paused) listed in the folder the band
+    // stands in — the state a render's delete leaves (delete_render: no row
+    // lit after a delete, the surviving item paused by the question) — seat
+    // the band on the item's row, the playing render's row being a seat that
+    // reflects something (folder_overlay.h's head), with the keep-visible
+    // scroll and the band's and the row's damage. Otherwise nothing. ONE
+    // CALLER, play_button_act's transport tail (the Play button and the car's
+    // toggle past its LIVE arm), ahead of the toggle that resumes the item;
+    // the imposed interrupts call transport_toggle_act direct and light
+    // nothing, a pause reflecting no choice.
+    void seat_band_on_listed_item();
     // Pause a live transport (the resume point is the engine's own position)
     // or resume a paused one; a no-op with no item. ITS TWO ARMS ARE BODIES
     // OF THEIR OWN (architect 2026-10-26, the score viewer's shape),
@@ -830,8 +852,8 @@ struct GuiRenderPlayer {
     // covers the pause, the natural end's last-wav rest, the dead
     // device, the rebind ahead of the next item and the Up act's own stop;
     // THE BAND'S FOUR WRITERS — move_highlight, set_highlight, rebuild_rows
-    // and one render's delete's reseat after its rebuild (delete_render,
-    // architect 2026-11-25) — EACH GATED ON `transport != Live`, since the
+    // and one render's delete's seat of none after its rebuild (delete_render,
+    // architect 2026-11-27) — EACH GATED ON `transport != Live`, since the
     // highlight is the title only where the item is not: the two wrappers
     // carry the router's Up/Down walk and the pointer's row lift, and
     // rebuild_rows carries EVERY entry, which is why open() and up() have no
@@ -890,8 +912,8 @@ private:
     // centered in the band (folder_overlay::scroll_row_centered, 2026-10-26),
     // none leaving the listing at its top.
     // Damages the band. ONE CALLER RESEATS AFTER IT: one render's delete
-    // (delete_render), whose band stands on the deleted row's place, not on
-    // the item's row (architect 2026-11-25).
+    // (delete_render), which lights no row over a bound item's and keeps the
+    // list's scroll (architect 2026-11-27: no row lit after a delete).
     // `seat_folder` IS REQUIRED AND IS EMPTY EVERYWHERE BUT UP: entering a
     // folder is memory-less by ruling, so a caller must state that it names
     // none rather than inherit a default (the rule and the architect's words
@@ -979,11 +1001,13 @@ private:
     // every other entry's (memory-less, and reached only with no item bound —
     // a bound item's own folder is the band's, by construction, so `Root`
     // never carries one) but ONE RENDER'S DELETE's (delete_render), whose
-    // rebuild may find ANOTHER render bound and whose reseat lands the band
-    // on the deleted row's place: the band stood on the deleted render at
+    // rebuild may find ANOTHER render bound and whose seat after it lights no
+    // row (architect 2026-11-27): the band stood on the deleted render at
     // the press, off the item's row, so no band leaves the item's row there
     // and the resume point stays as the question's rise left it (architect
-    // 2026-11-25: the item stays bound and paused); and play_wav's own seat
+    // 2026-11-25: the item stays bound and paused), Play resuming it there
+    // with its row lit (seat_band_on_listed_item, which lands ON the item's
+    // row); and play_wav's own seat
     // lands ON the item's row it
     // just bound, fresh, never paused. COMING BACK CHANGES NOTHING: the
     // abandon is one-way, and a paused item the band never leaves resumes

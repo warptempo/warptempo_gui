@@ -6760,9 +6760,13 @@ void GuiInputHandler::confirm_trim_preset_delete() {
     if (index < 0 || index >= n) return;
     ov.trim_presets.erase(ov.trim_presets.begin() + index);
     (void)persist_trim_presets(ov.trim_presets);
-    // THE ROW THAT TAKES ITS PLACE: the next one at the same index, the new
-    // last when the last went (the clamp), none when the list empties.
-    build_trim_presets_rows(index);
+    // AFTER A DELETE NO ROW IS LIT (architect 2026-11-27: "None" — "Like a
+    // file manager, for example, if I delete a file, it won't automatically
+    // select the first file on the list. It'll just have no selection.";
+    // folder_overlay.h's head). The re-list keeps the list's scroll, clamped
+    // onto the shorter listing (build_trim_presets_rows), never a jump to
+    // the top for a delete in the middle.
+    build_trim_presets_rows(-1);
     viewport.invalidate_all();
 }
 

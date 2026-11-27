@@ -1979,9 +1979,9 @@ struct GuiInputHandler {
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS' ANSWERS (architect
     // 2026-10-28), called by GuiPrompt when TRIM_PRESET_DELETE_CONFIRM
     // or TRIM_PRESET_SAVE_CONFIRM answers: Delete removes the parked
-    // preset (AppState::FolderOverlay::trim_pending) and seats the
-    // highlight on the row that takes its place — the next, the new last
-    // when the last went, none when the list empties; Save gives the
+    // preset (AppState::FolderOverlay::trim_pending) and lights NO ROW
+    // after it (architect 2026-11-27: "None"), the list's scroll kept where
+    // the rows allow; Save gives the
     // parked preset the active tab's trim, its name kept. Each writes the
     // file whole and re-lists, the list standing. Cancel drops the parked
     // row and changes nothing. The raises are trim_presets_delete and
@@ -3169,7 +3169,7 @@ private:
     //       (AppState::FolderOverlay::trim_pending); Save gives the preset
     //       the active tab's trim, its name kept, THE HIGHLIGHT FOLLOWING THE
     //       PRESET to its row in the list's order (found by name), and
-    //       Delete's answer seats the row that takes its place. ON AN EMPTY
+    //       Delete's answer lights no row (architect 2026-11-27). ON AN EMPTY
     //       LIST SAVE IS SAVE AS (2026-10-28: "with no presets
     //       yet, both create a new preset"): the name editor, no question;
     //       with no row lit on a list that holds presets SAVE greys

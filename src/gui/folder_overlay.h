@@ -106,12 +106,14 @@
 // folder just left by Up (GuiRenderPlayer::up), the preset whose pair is the
 // trim or the one just saved or named (open_trim_presets and its re-lists),
 // the settings row or BPM field just edited (the sub-page's return onto its
-// row), the seat a delete leaves (GuiRenderPlayer::delete_render,
-// confirm_trim_preset_delete), and the row the user tapped or walked to; every
-// other open seats NONE (-1, highlight_row's own value of "none" on a
-// non-empty listing as on an empty one: set_highlight(-1)). FROM NONE the
-// walk takes THE FIRST ROW in either direction (move_highlight_target), the
-// render player's Play plays the listing's first render
+// row), and the row the user tapped or walked to; every other open seats
+// NONE (-1, highlight_row's own value of "none" on a non-empty listing as on
+// an empty one: set_highlight(-1)), and AFTER EVERY DELETE NO ROW IS LIT
+// (architect 2026-11-27: "None"; GuiRenderPlayer::delete_render,
+// delete_batch_folders, confirm_trim_preset_delete, each keeping the list's
+// scroll where the rows allow). FROM NONE the walk takes THE FIRST ROW in
+// either direction (move_highlight_target), the render player's Play
+// resumes a bound item listed there or plays the listing's first render
 // (render_player_band_row), and the car's acts follow (render_player.h's THE
 // CAR'S OWN ACTS); the painter lights nothing and every row hovers.
 //
