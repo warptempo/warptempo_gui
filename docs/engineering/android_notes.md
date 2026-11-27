@@ -1113,9 +1113,8 @@ started and uncalled since it began, ran its stop request and its close in
 THE STREAM IS OPENED ONCE, STARTED ONCE AND NEVER STOPPED BETWEEN PLAYS. It
 starts at open (`init`, and the reopen after a disconnect) and is stopped only
 where it is about to be CLOSED — shutdown, the dead-stream reopen and RELEASE's
-press (below), all through the device job's close (`close_stream_handle`,
-which holds the file's one `requestStop`; §11.4b). Open and start are one
-body, so a standing stream is always one whose start request was accepted. (An `init` with RELEASE seated lit opens no stream.) Between
+press (below), all in `close_stream`, which holds the file's one remaining
+`requestStop`. (An `init` with RELEASE seated lit opens no stream.) Between
 plays the callback's `playing` gate writes silence and never reaches the render
 body. The cost is a running stream on an already screen-on tablet (a few mW, no
 wakelock change), accepted.
@@ -1212,97 +1211,52 @@ A step-shaped click at a play START — the render body beginning mid-waveform a
 whatever sample sits there, with no ramp — is a different thing and is
 untouched.
 
-### 11.4b The screen never waits on Android's audio: the device worker (2026-11-26)
+### 11.4b The device worker: built and removed (2026-11-26)
 
-THE RULE (architect 2026-11-26: "Keep the screen live while Android's audio is
-stuck"; its one owner is the head of `playback_aaudio.cpp`, beside the
-THREADING block). EVERY AAUDIO CONTROL CALL — the builder, `openStream` and
-the getters read at the open, `requestStart`, `requestStop`, `close` — RUNS ON
-ONE DEVICE WORKER THREAD of the engine, asleep on a condition variable between
-jobs. A job has one shape, {a stream to close, or none; open after, or not}:
-RELEASE is {close}; every reopen of a dead or null stream is {close what
-stands, open}, one job, so the close precedes the open on one thread; `init` is
-{open} and `shutdown` {close}. The open is OPEN AND START, OR LEAVE NOTHING: a
-refused start closes the stream inside the job.
+BUILT in send VV (`3f0c022c`), REMOVED the same night in send XX, the stop
+fence of §11.4 kept: the source is back to `572df9a5`'s. What it was: every
+AAudio control call (the builder, `openStream`, `requestStart`,
+`requestStop`, `close`, and the underrun line's two `getXRunCount` reads) ran
+on one device worker thread; the screen thread waited for a job's answer at
+most `kDeviceJobWaitMs`, 1000 ms, and past it the device was PENDING until
+Android answered — the sound keys greyed, the card "Sound device is not
+answering", the answer adopted at the next tick, no queued play.
 
-THE BOUND. The screen thread posts the job and waits for its answer at most
-`kDeviceJobWaitMs`, 1000 ms. The ordinary times in his tablet's log
-(`openStream` called to returned; `requestStart` called to returned):
-Bluetooth, the Legacy path, 10–37 ms and 25–30 ms; the speaker, MMAP,
-79–265 ms and 20–25 ms. Inside the bound the screen thread is parked, the
-worker's calls land in the order written, and the press is what it always was.
-`init` and `shutdown` wait with no bound (a piece's open and close keep waiting
-for Android; nothing is unsaved there).
+WHY IT WENT (architect 2026-11-26: "if the car cannot produce it, why even
+bother with it? We could just leave it, or if possible, maybe we can even
+remove the pending road. I use only 2 devices, the car and the headphones, and
+neither produces it."). The tablet's two logs of that day (the afternoon's
+toggling and the evening's car test):
 
-PENDING. Past the bound the device is pending until Android answers. Nothing is
-published, no second job is posted (one job in flight, no queue, NO QUEUED
-PLAY: the press plays at once or not at all), the sound keys grey
-(`GuiPlayback::device_absent_or_pending`: Play, the A/B audition, RELEASE, the
-render player's and the score viewer's Play), a press whose device call
-overran — RELEASE's own included — and every press that cannot be greyed cards
-"Sound device is not answering" (`playback_device_refusal_card`), and NOISE's
-wake is skipped while its drag still sets the level. The render player's and
-the score viewer's own launches over a pending device do not go Live: they
-rest paused where they were to start and card the same sentence. The answer is
-ADOPTED on the screen thread at the next 5 ms tick
-(`GuiPlayback::adopt_device_answer`, one plain bool compare at rest; the
-timerfd tick runs at rest, so the platform has no new wake source) or at the
-head of the next press that would post. An unadopted stream has had its start
-accepted and may already be calling back: with the playing bit down it writes silence and the bed, exactly the
-keep-alive, and §11.4's mark fences it as it fences an adopted one. The log
-says one line at the overrun (which job) and one at the answer (how many ms
-after the post, what it left).
+- THREE STALLS (14:32:36 and 14:33:10, 20:56:57), each the car not answering
+  the `SETCONFIG` of a codec switch, EACH ENDED BY ANDROID'S OWN TIMER 15.0 s
+  AFTER THAT REQUEST (15.009 s and 15.001 s measured; the first about 15.02 s,
+  its request before the log's buffer). The afternoon's exits read
+  `bta_av_rcfg_failed` then `API_CLOSE RCFG -> CLOSING`, the evening's
+  `STR_DISC_FAIL RCFG -> INIT`.
+- THE ONE FREEZE WAS THE OLD STOP FENCE (§11.4): in the second afternoon run
+  RELEASE's lift was read at 14:33:15.780 and its stop reached `requestStop`
+  at 14:33:25.794, 61 ms after the stall's end; Android's dialog came at
+  14:33:25.787 ("Waited 10001ms"), and his Close at 14:35:20 ended the session.
+- NO SOUND-DEVICE CALL WAS EVER SLOW: every open, start, stop request and close
+  in both logs answered within 265 ms (the speaker's MMAP open; Bluetooth's
+  opens 10 to 63 ms), and the stop request and close made inside the evening's
+  stall in 2 ms (20:57:11.751 to .753). AN OPEN INSIDE A STALL WAS NEVER MADE,
+  by the app or by any other audio client, and the pending road never ran.
+  Reaching it takes a missed switch, RELEASE, then a second sound press inside
+  the same fifteen seconds (or a miss with RELEASE lit: none in three); without
+  the worker its worst case is a freeze bounded by what remains of the fifteen
+  seconds.
 
-THE EVIDENCE AND WHAT IT DOES NOT SHOW (the laptop's log, 2026-11-26). With the
-keep-alive live and RELEASE dark he toggled HD audio until the car dropped the
-link; Android's HAL retried the A2DP start about every 30 ms for 8 s and then
-for 14 s, each run ending on Android's own teardown, the car reconnecting by
-itself. The screen thread hung for each run (one "isn't responding" dialog,
-whose Close is the data risk). THE STALL PROVEN IN THAT LOG WAS THE STOP FENCE
-(§11.4), not a control call: no AAudio control call was made during a run, so
-whether an open, start, stop-request or close would itself stall in one is
-unproven either way — each is a binder call into the same audio server. The
-worker makes the question moot for the screen; its two log lines will answer
-it the next time a run happens.
-
-THE NEXT RUN, THAT EVENING (send VV on the tablet, the car test; §11.4a's
-missed codec switch, fifteen seconds long). NEITHER LINE WAS LOGGED. Every
-control call of the test ran on the worker's thread and the longest job, an
-open with its start on the car's new route, took 63 ms. THE STOP REQUEST AND
-THE CLOSE MADE INSIDE THE RUN ANSWERED IN 2 ms, so those two do not stall in
-such a run; an open inside one has still not been made. THE PENDING ROAD (the
-card, the greyed sound keys, the adoption) HAS NEVER RUN ON THE TABLET: the
-one stall his two devices have produced leaves Android's calls answering.
-
-THE UNDERRUN READS ARE THE WORKER'S TOO (Android's source, read 2026-11-26:
-`platform/frameworks/av` at android14-release, android15-release and main, the
-three alike). The underrun line (said once per session that lost something)
-asks for `AAudioStream_getXRunCount` at a launch and at its stop. On the MMAP
-path (the tablet's speaker) that is a member of the client stream
-(`AudioStreamInternal::getXRunCount`: `return mXRunCount;`). ON THE LEGACY
-PATH (Bluetooth: the car, the headphones) it is `AudioStreamTrack::
-getXRunCount` -> `AudioTrack::getUnderrunCount()`, WHICH TAKES
-`AudioTrack::mLock`, and the track's own callback thread holds that lock
-across binder calls into the audio server: `restoreTrack_l` from
-`processAudioBuffer` / `obtainBuffer` after the track is invalidated
-(`createTrack` over binder, up to three tries with 500 ms sleeps between
-them, its own comment naming Bluetooth A2DP codec churn) and
-`restartIfDisabled`'s start in `releaseBuffer`. So in exactly the car's stall a
-Play or a Stop on the screen thread could have waited on that lock. The two
-reads are handed to the worker as NOTES (a stamp at the launch, a report at
-the stop) that the screen thread never waits for: one lock and one wake each,
-a stop with no session posting nothing; the worker keeps the session's floor
-and says the line (each count is read when the worker reaches its note, so in
-a stall the session's figure is the difference of two late reads); notes run in order and ahead of any job posted after them,
-and a full store (eight) drops the note and voids the floor, so no mispaired
-count is ever said. THE WORKER THEREFORE MAKES EVERY AAUDIO CALL ON A STREAM;
-the screen thread and the two callbacks make none.
-
-NOT BUILT (his rulings of the same day): a watchdog on missing callbacks —
-during a stall the stream still says STARTED, so Play launches, the line runs
-with no sound and Stop works at once, and that picture is accepted; a queued
-or deferred Play; an automatic release at the doze; a bound on a piece's open
-or close.
+WHAT CAME BACK WITH THE RESTORE: every device call on the screen thread
+(`start_stream`, a refused start retried at the next play; `close_stream`);
+the underrun line's two reads there (`report_xrun_count`: on the Legacy path,
+Bluetooth, `AudioTrack::getUnderrunCount` takes `AudioTrack::mLock`, which the
+track's callback thread holds across its own binder calls while it restores
+itself, so in a stall a Play or a Stop could wait on it — accepted with the
+rest; Android's source at android14-release, android15-release and main, read
+2026-11-26); `device_absent` as the faces' read. NOT TO BE RE-PROPOSED WITHOUT
+A LOGGED DEVICE CALL PAST A SECOND (closed_questions.md).
 
 ### 11.5 The disconnect (UNTESTED ON HARDWARE)
 
@@ -1310,9 +1264,8 @@ The KA17-unplugged case. The error callback writes four atomics and logs —
 NO AAudio call, which is Google's own rule for that thread. It marks the stream
 dead, clears `output_rate` (so the cursor holds, the graph-suspension clause)
 and clears `playing` (so the run loop's next tick reads a natural end and tears
-the scanner down through the product's one stop body). The NEXT press hands
-the dead stream to the device worker, which closes it and opens a new one
-(§11.4b) — at the NEW device's
+the scanner down through the product's one stop body). The NEXT `play()` closes
+the dead stream on the main thread and opens a new one — at the NEW device's
 granted rate, so the rate ratio is recomputed per open and a 44.1 k DAC would
 simply make the ratio 1.0 with no other edit.
 
