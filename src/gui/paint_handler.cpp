@@ -6151,8 +6151,9 @@ void paint_modal_page(cairo_t* cr, const AppState& app, bool question) {
 //     (settings_editor.h's head), the BPM field's value, the preset's name —
 //     Regular 12 W at pen kEntryPenW (9 W) inside its left edge on the
 //     line-box baseline (+18 W of its 28), the caret one W in the field's
-//     text tone over the line box's rows, ALWAYS SHOWN (its blink the
-//     tick's), the selection the selection pair.
+//     text tone over the line box's rows, its blink the tick's, NOT DRAWN
+//     WHILE A SELECTION STANDS (text_editor::cursor_visible_now), the
+//     selection the selection pair.
 // ON THE TABLET (200 %; the view's top row 142): the entry x 24..2279,
 // rows 166..221 (1128 x 28 W), its text's pen x 42, its inner width
 // 42..2261.
@@ -6296,8 +6297,9 @@ void paint_value_page(cairo_t* cr, AppState& app, text_editor::State* ed) {
     // THE CARET, one W wide from its byte's exact x over the line box's
     // rows, in the field's text, cut at the entry's padding box (one border
     // in) — at the inner right edge it stands in the pad, GtkEntry's seat;
-    // shown on the blink's lit phases (the entry always holds the focus), the
-    // selection never gated.
+    // shown on the blink's lit phases (the entry always holds the focus) and
+    // only while no selection stands, the band then alone
+    // (text_editor::cursor_visible_now owns both gates).
     if (text_editor::cursor_visible_now(*ed)) {
         cairo_save(cr);
         cairo_rectangle(cr, entry.x + b, entry.y + b, entry.w - 2 * b,

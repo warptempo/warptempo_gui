@@ -391,7 +391,8 @@ struct State {
     // RIGHT, any printable insertion, any backspace, a whole-text rewrite
     // (the flag editor's extra keys, which seat the caret at the text's end),
     // and by enter/deactivate. A refused Enter leaves it as it stands
-    // (refuse).
+    // (refuse). While a selection stands the caret is not drawn
+    // (cursor_visible_now).
     int selection_anchor = -1;
 
     // HORIZONTAL VIEW OFFSET, in pixels: how far the visible text window has
@@ -656,8 +657,15 @@ static_assert(kCaretDarkPhases == 9 && kCaretSteadyFromMs == 11200,
               "gtk-3-24's defaults give nine dark phases, the caret lit for "
               "good from 11 200 ms");
 
-// Whether the caret is drawn this frame: false for an inactive editor; else
-// read off the time since State::blink_epoch, the last activity —
+// Whether the caret is drawn this frame: false for an inactive editor, and
+// FALSE WHILE A SELECTION STANDS (architect 2026-11-27, "agree"): the band
+// alone shows, and the caret is back the moment the selection collapses —
+// GTK's way, gtk_entry_draw (gtkentry.c) drawing the cursor only when
+// `selection_bound == current_pos`; an empty selection (the anchor on the
+// caret) is no selection (has_selection), so the caret shows. ONE PREDICATE
+// for both painters and the tick's compares (main.cpp), so no caret is
+// painted and no flip damaged for a hidden caret. Else read off the time
+// since State::blink_epoch, the last activity —
 //   lit  [0, kCaretPendMs)                              the pend, solid
 //   dark [kCaretPendMs + j * kCaretCycleMs,
 //         ... + kCaretDarkMs)              j = 0 .. kCaretDarkPhases - 1

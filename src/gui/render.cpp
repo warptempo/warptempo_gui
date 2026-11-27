@@ -3446,12 +3446,11 @@ void render_flag_editor_box(cairo_t* cr, AppState& app, const GuiAudio& audio) {
     }
 
     // 4. The caret: a blink-gated one-W line FROM THE CURSOR'S OWN BYTE
-    //    BOUNDARY'S EXACT x on the band's exact rows, at exact coverage. IT
-    //    IS INK, NOT FIELD, so it stays the box's TEXT color, `field_ink`,
-    //    wherever it lands (architect 2026-10-03) — a caret that changed
-    //    color on crossing a selection edge would be stating something about
-    //    the selection rather than about the cursor. (It stands at the
-    //    band's edge, never inside it.)
+    //    BOUNDARY'S EXACT x on the band's exact rows, at exact coverage, in
+    //    the box's TEXT color, `field_ink` (architect 2026-10-03). It is
+    //    drawn only while no selection stands (text_editor::cursor_visible_now
+    //    owns the gate, architect 2026-11-27): beside a band the band alone
+    //    shows.
     if (text_editor::cursor_visible_now(ed))
         paint_ink_rect(cr,
                        GuiRectF{text_origin_x + caret_off, band_y,

@@ -485,7 +485,8 @@ KeyAction handle_key(State& s, GuiKey key, GuiInputState mods) {
 }
 
 bool cursor_visible_now(const State& s) {
-    if (!is_active(s)) return false;
+    // No caret beside a standing selection (the declaration's ruling).
+    if (!is_active(s) || has_selection(s)) return false;
     using namespace std::chrono;
     const auto now = steady_clock::now();
     const auto ms  = duration_cast<milliseconds>(now - s.blink_epoch).count();

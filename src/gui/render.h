@@ -895,7 +895,8 @@ void install_true_colors(bool on);
 // sides (cue_editor_border_px), no radius; the text Regular 12 W in the
 // field text (`field_text`, the text tone), THE CARET ONE W in it, THE
 // SELECTED SUBSTRING the selection pair (`selected_fill` under
-// `selected_text`: on arc_dark the accent under the lit print) — the
+// `selected_text`: on arc_dark the accent under the lit print), the caret
+// not drawn while a selection stands (text_editor::cursor_visible_now) — the
 // caret and the selection band on THE TEXT'S LINE BOX ROWS
 // (cue_line_box_top_px, cue_line_box_h_px), which in the 16 W lane inside
 // the one-W border are the box's whole inner 14 W (the value editors'
