@@ -3308,7 +3308,7 @@ inline int grab_moved_threshold_px() {
 }
 
 // What action triggered the modal prompt; the activate-response dispatch
-// switches on this together with the response key. Save/Discard/Cancel
+// switches on this together with the response key. Discard / Cancel / Save
 // applies to the unsaved-work prompt (CLOSE_WINDOW, the quit gesture).
 //
 // EVERY TRIGGER IS A QUESTION (architect 2026-08-30): no trigger only
@@ -3323,7 +3323,7 @@ enum class DialogTrigger {
     // destination blocks' existing resets.
     PASTE_CONFIRM,
     // THE PULL'S CONFIRMATION (architect 2026-10-19): "Pull GitHub's newer
-    // checkpoint and reload this piece?", OK / Cancel (its OK discards the
+    // checkpoint and reload this piece?", Cancel / OK (its OK discards the
     // session). Raised by the publish chord,
     // Ctrl+Shift+S, in either view (SAVE's long press on the main page, the
     // `h` view's Save key), only when the pull
@@ -3331,7 +3331,7 @@ enum class DialogTrigger {
     // AppState::pending_history_pull.
     PULL_CONFIRM,
     // THE RENDER PLAYER'S LOAD CONFIRMATION (2026-08-28): "Load '<id>' in
-    // place?", OK / Cancel. ONE PROMPT BODY, TWO SUBJECTS (architect
+    // place?", Cancel / OK. ONE PROMPT BODY, TWO SUBJECTS (architect
     // 2026-08-29): the RENDER PLAYER's — raised by its Load in place button,
     // the entry parked at AppState::RenderPlayer::pending_load, OK running
     // the shared load_render_entry_in_place — and the `h` VIEW's, raised by
@@ -3346,7 +3346,7 @@ enum class DialogTrigger {
     // which the prompt reaches through its input-handler back-pointer.
     LOAD_IN_PLACE_CONFIRM,
     // REVERT'S CONFIRMATION (architect 2026-09-13): "Discard unsaved
-    // changes and reload?", OK / Cancel, raised only over a DIRTY session by
+    // changes and reload?", Cancel / OK, raised only over a DIRTY session by
     // GuiPrompt::request_close on the Revert target (a clean session reverts
     // with no question). OK completes the close as a reopen of the project
     // already open; Cancel leaves the session standing.
@@ -3359,12 +3359,12 @@ enum class DialogTrigger {
     // render list "Delete '<entry id>'?", raised by the Delete key on the
     // highlighted render, parked at pending_delete_render, and "Delete
     // '<folder name>'?" by its long press, the listed folder parked at
-    // pending_delete. Delete / Cancel. The act destroys files and nothing
+    // pending_delete. Cancel / Delete. The act destroys files and nothing
     // takes it back, so only the Delete answer's own press confirms.
     RENDER_PLAYER_DELETE_CONFIRM,
     // THE SCORE VIEWER'S RESET (architect 2026-10-26: "a modal
     // confirmation because there's no undo"): "Reset the page range to every
-    // page?", OK / Cancel, raised over the standing viewer by its RESET key
+    // page?", Cancel / OK, raised over the standing viewer by its RESET key
     // (GuiScoreViewer::raise_reset). OK writes the range 0 / 0
     // (GuiScoreViewer::confirm_reset); Cancel leaves it as it stood. It
     // STANDS OVER THE VIEWER as the load confirmation stands over the render
@@ -3373,10 +3373,10 @@ enum class DialogTrigger {
     // confirms.
     SCORE_RESET_CONFIRM,
     // THE TRIM PRESETS LIST'S TWO CONFIRMATIONS (architect 2026-10-28,
-    // the render player's delete's shape): "Delete '<name>'?" with Delete /
-    // Cancel, raised by the list's Delete key on the highlighted preset, and
+    // the render player's delete's shape): "Delete '<name>'?" with Cancel /
+    // Delete, raised by the list's Delete key on the highlighted preset, and
     // "Save the current trim as '<name>'?" with
-    // Save / Cancel, raised by its Save key on the highlighted preset (his
+    // Cancel / Save, raised by its Save key on the highlighted preset (his
     // glass, Windows' dialog words: Save writes into the preset
     // chosen, Save As names a new one) — the subject parked at
     // AppState::FolderOverlay::trim_pending. Each STANDS OVER THE
@@ -3414,17 +3414,29 @@ enum class DialogTrigger {
 // now" — no button of the modal family has one: the on-screen keyboard
 // stands only under an editor, and an editor's page has no button). Two
 // facts shape it:
-//   (i)  CANCEL STANDS LAST — the non-destructive answer, in the same seat
-//        on every prompt, the right end of the flush-right row (Windows' OK /
-//        Cancel order). Every answer table below puts Cancel's '\x1b' last
-//        (kPromptAnswerTablesValid asserts it): the unsaved-work prompt
-//        (Save / Discard / CANCEL), its save-failed restatement (Retry /
-//        Discard / CANCEL), THE PHASE RESET PASTE'S CONFIRMATION (Yes /
-//        CANCEL), THE LOAD CONFIRMATION (OK / CANCEL — one prompt body, two
+//   (i)  THE AFFIRMATIVE STANDS LAST, CANCEL BESIDE IT ON ITS LEFT —
+//        GtkDialog's order (gtk-alternative-button-order FALSE; the GNOME
+//        HIG, Mousepad's unsaved-changes dialog). The affirmative takes the
+//        right end of the flush-right row, the same seat on every prompt
+//        (architect 2026-11-27: "Put the affirmative action on the right and
+//        the cancel on the left. Reasoning is bottom right is my resting
+//        position, and at dialog boxes I generally want to confirm. That's by
+//        far the more common case."); Cancel, the non-destructive answer,
+//        the seat left of it on every prompt; a third answer, the
+//        alternative, the far left (on three answers [Discard] [Cancel]
+//        [Save]: "agree"). Every answer
+//        table below puts the affirmative last and Cancel's '\x1b' second to
+//        last (kPromptAnswerTablesValid asserts it): the unsaved-work prompt
+//        (Discard / Cancel / SAVE), its save-failed restatement (Discard /
+//        Cancel / RETRY), THE PHASE RESET PASTE'S CONFIRMATION (Cancel /
+//        YES), THE LOAD CONFIRMATION (Cancel / OK — one prompt body, two
 //        subjects: the render player's highlighted entry and the `h` view's
-//        viewed walk member), the revert confirmation (OK / CANCEL), the
-//        pull's (OK / CANCEL), the score viewer's reset (OK / CANCEL) and the
-//        deletes and the trim preset's save (Delete or Save / CANCEL).
+//        viewed walk member), the revert confirmation (Cancel / OK), the
+//        pull's (Cancel / OK), the score viewer's reset (Cancel / OK) and the
+//        deletes and the trim preset's save (Cancel / DELETE or SAVE).
+//        On the tablet the affirmative stands at x 2122..2291, Cancel at
+//        1944..2113 and the alternative at 1766..1935 (the word rows' one
+//        layout, modal_word_buttons, paint_handler.cpp).
 //   (ii) THE PAINTED GATE below answers no press until the prompt has been on
 //        screen.
 //
@@ -3452,9 +3464,9 @@ enum class DialogTrigger {
 // save-failed rung, the one such route — leaves rects whose Discard/Cancel
 // keys are still live in the new set, on the very seats the new row's
 // answers take (the word buttons stand on the bottom icon row's fixed
-// seats, so Retry / Discard / Cancel lands where Save / Discard / Cancel
-// stood), so the stale-rect press would answer a question never seen,
-// destructively. The
+// seats, so Discard / Cancel / Retry lands where Discard / Cancel / Save
+// stood, Discard and Cancel each on its own seat again), so the stale-rect
+// press would answer a question never seen, destructively. The
 // dialog's TOOLTIP WAIT is deliberately not gated: a stale hit names a button
 // for the wait until THE NEXT DELIVERED MOTION, which is what re-runs
 // update_modal_dialog_hover (the modal branches of on_motion are its only
@@ -3478,34 +3490,37 @@ struct PromptAnswer {
     char        key;
     const char* word;
 };
-// THE ANSWER TABLES, one per answer set, each named for its words; the
-// raises pass one to PromptState::present. Cancel LAST on every one
-// (PromptState's fact (i)).
-inline constexpr PromptAnswer kPromptSaveDiscardCancel[] = {
-    {'s', "Save"}, {'d', "Discard"}, {'\x1b', "Cancel"}};
-inline constexpr PromptAnswer kPromptRetryDiscardCancel[] = {
-    {'r', "Retry"}, {'d', "Discard"}, {'\x1b', "Cancel"}};
-inline constexpr PromptAnswer kPromptYesCancel[] = {
-    {'y', "Yes"}, {'\x1b', "Cancel"}};
-inline constexpr PromptAnswer kPromptOkCancel[] = {
-    {'o', "OK"}, {'\x1b', "Cancel"}};
-inline constexpr PromptAnswer kPromptDeleteCancel[] = {
-    {'d', "Delete"}, {'\x1b', "Cancel"}};
+// THE ANSWER TABLES, one per answer set, each named for its words in
+// painted order, left to right; the raises pass one to PromptState::present.
+// The affirmative LAST and Cancel beside it on every one (PromptState's fact
+// (i)).
+inline constexpr PromptAnswer kPromptDiscardCancelSave[] = {
+    {'d', "Discard"}, {'\x1b', "Cancel"}, {'s', "Save"}};
+inline constexpr PromptAnswer kPromptDiscardCancelRetry[] = {
+    {'d', "Discard"}, {'\x1b', "Cancel"}, {'r', "Retry"}};
+inline constexpr PromptAnswer kPromptCancelYes[] = {
+    {'\x1b', "Cancel"}, {'y', "Yes"}};
+inline constexpr PromptAnswer kPromptCancelOk[] = {
+    {'\x1b', "Cancel"}, {'o', "OK"}};
+inline constexpr PromptAnswer kPromptCancelDelete[] = {
+    {'\x1b', "Cancel"}, {'d', "Delete"}};
 // THE TRIM PRESET'S SAVE (architect 2026-10-28): its answer is the
 // act's own word (TRIM_PRESET_SAVE_CONFIRM).
-inline constexpr PromptAnswer kPromptSaveCancel[] = {
-    {'s', "Save"}, {'\x1b', "Cancel"}};
+inline constexpr PromptAnswer kPromptCancelSave[] = {
+    {'\x1b', "Cancel"}, {'s', "Save"}};
 // EVERY ANSWER TABLE, THE ONE LIST OF THEM: the well-formedness check below
 // walks it. A table a raise passes must be listed here.
 inline constexpr std::span<const PromptAnswer> kPromptAnswerTables[] = {
-    kPromptSaveDiscardCancel, kPromptRetryDiscardCancel, kPromptYesCancel,
-    kPromptOkCancel, kPromptDeleteCancel, kPromptSaveCancel};
-// A TABLE IS WELL FORMED when every dispatch char is distinct and the last
-// answer is Cancel's, the '\x1b' its button carries and every activate_response
-// arm forks on (the buttons are a prompt's one road, architect 2026-10-30).
+    kPromptDiscardCancelSave, kPromptDiscardCancelRetry, kPromptCancelYes,
+    kPromptCancelOk, kPromptCancelDelete, kPromptCancelSave};
+// A TABLE IS WELL FORMED when every dispatch char is distinct, it holds at
+// least Cancel and an affirmative, and the second-to-last answer is Cancel's,
+// the '\x1b' its button carries and every activate_response arm forks on (the
+// buttons are a prompt's one road, architect 2026-10-30) — the affirmative
+// last, at the row's right end (PromptState's fact (i)).
 inline constexpr bool prompt_answers_valid(std::span<const PromptAnswer> t) {
     const std::size_t N = t.size();
-    if (N == 0 || t[N - 1].key != '\x1b') return false;
+    if (N < 2 || t[N - 2].key != '\x1b') return false;
     for (std::size_t i = 0; i < N; ++i) {
         for (std::size_t j = 0; j < i; ++j)
             if (t[j].key == t[i].key) return false;
@@ -3519,7 +3534,7 @@ inline constexpr bool kPromptAnswerTablesValid = [] {
 }();
 static_assert(kPromptAnswerTablesValid,
               "a prompt's dispatch chars must be unique, and Cancel ('\\x1b') "
-              "must stand last");
+              "must stand second to last, the affirmative last");
 
 struct PromptState {
     bool                     active = false;
@@ -8044,7 +8059,7 @@ struct AppState {
     // don't really need it" — there is already a way to
     // step backwards and forwards, and the member the walk stands on is the
     // one the lane is showing): the key raises the CONFIRMATION straight away,
-    // "Load '<member label>' in place?" OK / Cancel —
+    // "Load '<member label>' in place?" Cancel / OK —
     // the render player's own confirmation body, one prompt with two subjects
     // (DialogTrigger::LOAD_IN_PLACE_CONFIRM; the subject parked here is
     // `pending_load_member` below) — and OK runs the walk's own act.
@@ -8885,7 +8900,7 @@ struct AppState {
 
     // THE PULL PARKED UNDER ITS QUESTION (architect 2026-09-27): a pull that
     // changes the open piece asks "Pull GitHub's newer checkpoint and reload
-    // this piece?" (DialogTrigger::PULL_CONFIRM, OK / Cancel,
+    // this piece?" (DialogTrigger::PULL_CONFIRM, Cancel / OK,
     // 2026-10-19), and the plan the press made waits here for the answer —
     // OK runs it (GuiInputHandler::answer_history_pull), Cancel drops it.
     // Self-contained (it carries the clone, the directory and the base name),

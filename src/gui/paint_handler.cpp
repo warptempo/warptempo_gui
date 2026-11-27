@@ -6894,12 +6894,13 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     //      THE ANSWERS ARE ARC'S WORD BUTTONS WHERE THE BOTTOM ICON ROW'S
     //        KEYS STAND — THIS PLAN, the overlays' own row walk and no
     //        second painter: a question's answers in its table's order,
-    //        Cancel last (AppState::PromptState::answers, each carrying its
+    //        the affirmative last and Cancel beside it (AppState::
+    //        PromptState's fact (i); PromptState::answers, each carrying its
     //        dispatch char as `response_key`), the progress page's one
     //        Cancel; laid by the word rows' one rule (modal_word_buttons on
     //        modal_controls_seats: max(85 W, the widest word + 34 W) each,
-    //        4 W apart, flush right 6 W inside the panel — on the tablet OK
-    //        x 1944..2113 and Cancel x 2122..2291 on rows 1324..1379), on
+    //        4 W apart, flush right 6 W inside the panel — on the tablet
+    //        Cancel x 1944..2113 and OK x 2122..2291 on rows 1324..1379), on
     //        the row's ground in the body tone with NO timestamp,
     //        NO roster key and none of an overlay's own controls
     //        (modal_owns_bottom_row). EVERY ANSWER IS LIVE while its page

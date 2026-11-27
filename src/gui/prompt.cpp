@@ -42,22 +42,22 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
     // the time-sorted store (equal times reload legal), trim bounds persist
     // whatever the store holds (inverted bounds reload intact), and
     // settings persist the committed state — the honest invariant is that
-    // the GUI never writes a LOAD-invalid state. Save / Discard
-    // (discard-and-proceed) / Cancel; the buttons wear their plain words, the
-    // prompt's one road (PromptState's declaration owns the rule).
+    // the GUI never writes a LOAD-invalid state. Discard
+    // (discard-and-proceed) / Cancel / Save; the buttons wear their plain
+    // words, the prompt's one road (PromptState's declaration owns the rule).
     // Through `present`, the state's one raise route: it clears the PAINTED
     // bit, so nothing this prompt asks can be answered until the painter has
     // put it on the screen (the rule is at PromptState).
     app.prompt.present("Save unsaved changes?",
-                       kPromptSaveDiscardCancel,
+                       kPromptDiscardCancelSave,
                        t);
     viewport.invalidate_all();
 }
 
 // THE REVERT CONFIRMATION (architect 2026-09-13): a dirty session's Revert
 // (Open Project's long press) asks one question, and it is a discard-only one because a revert
-// never saves — Save / Discard / Cancel would offer an answer the act does not
-// have. OK / Cancel, Cancel LAST as on every prompt; OK's `o` is its
+// never saves — Discard / Cancel / Save would offer an answer the act does not
+// have. Cancel / OK, the affirmative last as on every prompt; OK's `o` is its
 // dispatch char alone, its press the answer (no key reaches a prompt,
 // architect 2026-10-30). The stop below is every prompt's own
 // opening act, not something this one adds: playback stops and an A/B audition ends, exactly as
@@ -65,7 +65,7 @@ void GuiPrompt::open_unsaved(DialogTrigger t) {
 void GuiPrompt::open_revert_confirm() {
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Discard unsaved changes and reload?",
-                       kPromptOkCancel,
+                       kPromptCancelOk,
                        DialogTrigger::REVERT_CONFIRM);
     viewport.invalidate_all();
 }
@@ -85,7 +85,7 @@ void GuiPrompt::open_revert_confirm() {
 // Single-key response dispatch. The trigger captured at prompt-open
 // time selects which response set is in play; the key picks the
 // response. On a Save failure, the prompt mutates in place to a
-// retry/discard/cancel state — same trigger, new text and response
+// discard/cancel/retry state — same trigger, new text and response
 // set — rather than dismissing.
 void GuiPrompt::activate_response(char k) {
     if (!app.prompt.active) return;
@@ -261,7 +261,7 @@ void GuiPrompt::activate_response(char k) {
                 // (kCheckpointPublishing) — so this rung inherits whichever
                 // sentence and asks the one thing only it knows to ask.
                 app.prompt.present("Retry the failed save?",
-                                   kPromptRetryDiscardCancel,
+                                   kPromptDiscardCancelRetry,
                                    trigger);
                 viewport.invalidate_all();
                 return;

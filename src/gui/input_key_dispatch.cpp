@@ -2792,7 +2792,7 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 //     the answer being what the next press acts on — silent in the view, whose
 //     status bar's walk line shows the asking, and a card outside it, where
 //     the status bar carries no GitHub word; BEHIND is the PULL
-//     (run_history_pull_press, its OK / Cancel confirmation when the pull
+//     (run_history_pull_press, its Cancel / OK confirmation when the pull
 //     changes the open piece; the press owns the one road); UP TO DATE OR
 //     AHEAD COMMITS: the act saves first, and the worker commits whatever git
 //     sees in the three sidecars and pushes, or pushes what the branch already
@@ -3259,7 +3259,7 @@ void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
 // `Pull refused: this device has moved`, the status taking what the refs now
 // show. THE QUESTION IS ASKED ONLY WHEN THE PULL CHANGES THE OPEN PIECE, and
 // only here, by the key — never by an asynchronous arrival: "Pull GitHub's
-// newer checkpoint and reload this piece?", OK / Cancel (architect
+// newer checkpoint and reload this piece?", Cancel / OK (architect
 // 2026-10-19: one road, OK reloads — a confirmation whose OK discards the
 // session). A pull that leaves
 // the open piece alone runs at once: the face said Pull, and nothing on
@@ -3302,7 +3302,7 @@ void GuiInputHandler::run_history_pull_press(const GuiHistoryDiff& session) {
     app.pending_history_pull = std::move(plan);
     playback_lifecycle.stop_playback_for_modal_open();
     app.prompt.present("Pull GitHub's newer checkpoint and reload this piece?",
-                       kPromptOkCancel,
+                       kPromptCancelOk,
                        DialogTrigger::PULL_CONFIRM);
     viewport.invalidate_all();
 }
@@ -6681,12 +6681,12 @@ void GuiInputHandler::trim_presets_save() {
     ov.trim_pending = h;
     // THE QUESTION NAMES THE PRESET, single-quoted and spelled raw as the
     // player's delete names its folder: nothing takes a save into it back.
-    // Save / Cancel, Cancel LAST.
+    // Cancel / Save, the affirmative last (PromptState's fact (i)).
     app.prompt.present(
         "Save the current trim as '" +
             ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
             "'?",
-        kPromptSaveCancel,
+        kPromptCancelSave,
         DialogTrigger::TRIM_PRESET_SAVE_CONFIRM);
     viewport.invalidate_all();
 }
@@ -6705,12 +6705,12 @@ void GuiInputHandler::trim_presets_delete() {
         return;
     }
     ov.trim_pending = ov.highlight_row;
-    // Delete / Cancel, Cancel LAST.
+    // Cancel / Delete, the affirmative last (PromptState's fact (i)).
     app.prompt.present(
         "Delete '" +
             ov.trim_presets[static_cast<std::size_t>(ov.trim_pending)].name +
             "'?",
-        kPromptDeleteCancel,
+        kPromptCancelDelete,
         DialogTrigger::TRIM_PRESET_DELETE_CONFIRM);
     viewport.invalidate_all();
 }
@@ -7006,7 +7006,7 @@ void GuiInputHandler::revert_project(bool question_asked) {
 // members and the lane already shows the one the walk stands on, so the key
 // raises THE CONFIRMATION straight away — the render player's own prompt body
 // with the walk member as its subject, "Load '<member label>' in place?",
-// OK / Cancel, the buttons its one road (architect 2026-10-30).
+// Cancel / OK, the buttons its one road (architect 2026-10-30).
 //
 // THE MODE IS THE CALLER'S GATE rather than a term of this body: the one key
 // caller is on_key's `'` arm under history_mode.active, which is where the
@@ -7035,10 +7035,10 @@ void GuiInputHandler::history_load_in_place() {
     app.history_mode.pending_load_member = member;
     // The member in the ONE spelling both walks share (member_label — the
     // short SHA on the Remote tab, the displayed number on the Local one).
-    // Cancel LAST, as on every prompt.
+    // Cancel / OK, the affirmative last, as on every prompt.
     app.prompt.present(
         "Load '" + app.history_mode.member_label(member) + "' in place?",
-        kPromptOkCancel,
+        kPromptCancelOk,
         DialogTrigger::LOAD_IN_PLACE_CONFIRM);
     viewport.invalidate_all();
 }
@@ -8213,14 +8213,14 @@ void GuiInputHandler::render_player_load_in_place() {
     // THE CONFIRMATION: the entry's id in its one spelling (render_entry_id,
     // renders_dir.h) and SINGLE-QUOTED like every other name in a sentence
     // (2026-09-01, the product's one quoting form on cards and prompts alike),
-    // OK / Cancel — Cancel LAST like every prompt's; `o` is OK's dispatch
-    // char. The ONE LOAD PROMPT, raised from its TWO subjects (architect
-    // 2026-08-28): it is this same prompt body that the `h` view's Load in
-    // Place raises on its viewed member; the buttons are its one road
+    // Cancel / OK — the affirmative last like every prompt's; `o` is OK's
+    // dispatch char. The ONE LOAD PROMPT, raised from its TWO subjects
+    // (architect 2026-08-28): it is this same prompt body that the `h` view's
+    // Load in Place raises on its viewed member; the buttons are its one road
     // (architect 2026-10-30). Through PromptState::present, the one raise
     // route, so the painted gate holds.
     app.prompt.present("Load '" + render_entry_id(*entry) + "' in place?",
-                       kPromptOkCancel,
+                       kPromptCancelOk,
                        DialogTrigger::LOAD_IN_PLACE_CONFIRM);
     viewport.invalidate_all();
 }
@@ -8278,11 +8278,11 @@ void GuiInputHandler::render_player_delete(bool all) {
     // one spelling (render_entry_id, as the load question names it), a folder
     // by its own name, the path's last component — because the deletion is
     // permanent and the question is its only safeguard; the count is the
-    // rows the press parked. Delete / Cancel, Cancel LAST: nothing takes a
-    // deletion back, so only the Delete answer's own press confirms. Through
-    // PromptState::present, the one raise route, so the painted gate holds. A
-    // shifted press over a one-folder root parks that one folder — the
-    // highlighted one — and asks the named question, the shift line being
+    // rows the press parked. Cancel / Delete, the affirmative last: nothing
+    // takes a deletion back, so only the Delete answer's own press confirms.
+    // Through PromptState::present, the one raise route, so the painted gate
+    // holds. A shifted press over a one-folder root parks that one folder —
+    // the highlighted one — and asks the named question, the shift line being
     // absent there for the same reason.
     const std::string question =
         render
@@ -8291,7 +8291,7 @@ void GuiInputHandler::render_player_delete(bool all) {
             ? "Delete all " + std::to_string(folders.size()) + " folders?"
             : "Delete '" + folders.front().filename().string() + "'?";
     app.prompt.present(question,
-                       kPromptDeleteCancel,
+                       kPromptCancelDelete,
                        DialogTrigger::RENDER_PLAYER_DELETE_CONFIRM);
     viewport.invalidate_all();
 }

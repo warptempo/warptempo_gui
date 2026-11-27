@@ -466,7 +466,7 @@ void GuiScoreViewer::raise_reset() {
     // Delete question's own step, a modal surface opening over its transport.
     if (app.score_viewer.transport == Transport::Live) toggle_play();
     app.prompt.present("Reset the page range to every page?",
-                       kPromptOkCancel,
+                       kPromptCancelOk,
                        DialogTrigger::SCORE_RESET_CONFIRM);
     viewport.invalidate_all();
 }

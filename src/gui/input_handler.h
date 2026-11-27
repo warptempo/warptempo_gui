@@ -3343,7 +3343,7 @@ private:
     // the commit worker; a load that fails never reaches a reopen). A clean
     // session reopens with no
     // question; a dirty one is asked "Discard unsaved changes and reload?",
-    // OK / Cancel, as the load confirmation is
+    // Cancel / OK, as the load confirmation is
     // (GuiPrompt::request_close). A running
     // render is killed by the teardown's worker join, as the picker's reopen
     // kills one. Legal on a read-only tab, under the iteration lock and in the
@@ -4587,7 +4587,7 @@ private:
     // THE `h` VIEW'S OWN LOAD ROAD (architect 2026-08-29): bare `'` there
     // (the view's Load in Place button) raises
     // THE SAME PROMPT on the VIEWED walk member — "Load '<member label>' in
-    // place?", OK / Cancel —
+    // place?", Cancel / OK —
     // and the OK runs that walk's own act (the fork is at
     // confirm_load_in_place, the one site of it). Its guards: the mode
     // standing, no prompt or editor, no player and no
@@ -4607,7 +4607,7 @@ private:
     // '<entry id>'?" (render_entry_id) — or, held, the listed folder at
     // pending_delete — "Delete '<folder name>'?". Either way it pauses a live
     // transport first, the load's own opening step, and raises the
-    // RENDER_PLAYER_DELETE_CONFIRM prompt, Delete / Cancel. With nothing to
+    // RENDER_PLAYER_DELETE_CONFIRM prompt, Cancel / Delete. With nothing to
     // delete — a face painted live whose act went dead inside the frame — it
     // cards "There is no folder to delete" / "There is no render to delete"
     // (the face greys on the same question,
@@ -4860,7 +4860,7 @@ private:
     // THE PULL (architect 2026-09-27): the publish chord (SAVE's long press
     // on the main page, the `h` view's Save key) while the GitHub status reads
     // Behind, on the session that press read. The press plans it (plan_history_pull, local
-    // and synchronous), asks its OK / Cancel confirmation only when the pull
+    // and synchronous), asks its Cancel / OK confirmation only when the pull
     // changes the open piece, and runs it (execute_history_pull) at once
     // otherwise — the one road.
     void run_history_pull_press(const GuiHistoryDiff& session);

@@ -37,7 +37,7 @@
 // REVERT is Revert's (Ctrl+Alt+O): it COMPLETES AS A REOPEN, naming the
 // project already open, and differs in the QUESTION alone — a revert never
 // saves, so a dirty session is asked "Discard unsaved changes and reload?"
-// with OK / Cancel (REVERT_CONFIRM) instead of Save / Discard / Cancel, and a
+// with Cancel / OK (REVERT_CONFIRM) instead of Discard / Cancel / Save, and a
 // clean one reopens with no question at all.
 enum class GuiCloseTarget { Exit, Reopen, Revert };
 
@@ -111,7 +111,7 @@ struct GuiPrompt {
     // `question_asked` SKIPS THE QUESTION, for the one road that has asked its
     // own already: the pull's reload (architect 2026-09-27), whose
     // confirmation "Pull GitHub's newer checkpoint and reload this piece?"
-    // (OK / Cancel) is the discard question, completes its
+    // (Cancel / OK) is the discard question, completes its
     // Revert with no second one.
     void request_close(GuiCloseTarget target, bool question_asked = false);
     void activate_response(char k);
