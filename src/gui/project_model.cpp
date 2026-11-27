@@ -4,10 +4,94 @@
 #include "settings_io.h"      // kSidecarExtensions, the one sidecar list
 
 #include <algorithm>
+#include <cstddef>
+#include <string_view>
 #include <system_error>
 #include <utility>
 
 namespace {
+
+// THE PROJECT NAMES' NATURAL ORDER (architect 2026-11-27, Thunar's way:
+// names in natural, case-insensitive order; his caution: "Just make sure
+// that this isn't going to pose problems where, for example, a 2-digit
+// number is deemed to come after a 3-digit number ... Case blind should be
+// fine because I don't plan to use letters, at least not in the first part
+// of a project name. It'll be the KV number."). THE RULE, its one statement:
+// the two names are walked together; A RUN OF ASCII DIGITS COMPARES BY ITS
+// NUMBER — leading zeros skipped, then the longer run the greater, then
+// digit by digit (no integer parse: a run of any length compares, with no
+// overflow); ANY OTHER BYTE compares with the ASCII letters folded to lower
+// case, a byte >= 0x80 as it is; a digit run met by a non-digit byte
+// compares as bytes (its first digit against that byte); a proper prefix
+// sorts first. So 9 < 10 < 64 < 100 < 550, "K64" < "K550", "a" < "B". No
+// locale, no collation library. NAMES EQUAL UNDER THAT RULE ("064" and "64")
+// FALL TO PLAIN BYTE ORDER (project_name_before), so the order is total and
+// the same at every walk.
+// A STRICT WEAK ORDER, as std::sort needs: each name maps to a sequence of
+// tokens — a digit run's number, or one folded byte — compared
+// lexicographically, a prefix first; the tokens are totally preordered (the
+// numbers by value among themselves and, since no non-digit byte lies inside
+// '0' .. '9', all as one block at the digits' place among the bytes), so the
+// lexicographic compare is a total preorder, and the byte tie-break, itself a
+// total order, refines it into a total order.
+constexpr bool is_ascii_digit(unsigned char c) { return c >= '0' && c <= '9'; }
+constexpr unsigned char folded_byte(unsigned char c) {
+    return (c >= 'A' && c <= 'Z') ? static_cast<unsigned char>(c - 'A' + 'a')
+                                  : c;
+}
+// Negative, zero or positive as `a` sorts before, with or after `b` under
+// THE RULE above (the byte tie-break not applied).
+constexpr int natural_name_compare(std::string_view a, std::string_view b) {
+    std::size_t i = 0, j = 0;
+    while (i < a.size() && j < b.size()) {
+        const auto ca = static_cast<unsigned char>(a[i]);
+        const auto cb = static_cast<unsigned char>(b[j]);
+        if (is_ascii_digit(ca) && is_ascii_digit(cb)) {
+            std::size_t ie = i, je = j;
+            while (ie < a.size() &&
+                   is_ascii_digit(static_cast<unsigned char>(a[ie])))
+                ++ie;
+            while (je < b.size() &&
+                   is_ascii_digit(static_cast<unsigned char>(b[je])))
+                ++je;
+            std::size_t iz = i, jz = j;
+            while (iz < ie && a[iz] == '0') ++iz;
+            while (jz < je && b[jz] == '0') ++jz;
+            if (ie - iz != je - jz) return ie - iz < je - jz ? -1 : 1;
+            for (std::size_t k = 0; k < ie - iz; ++k)
+                if (a[iz + k] != b[jz + k])
+                    return a[iz + k] < b[jz + k] ? -1 : 1;
+            i = ie;
+            j = je;
+            continue;
+        }
+        const unsigned char fa = folded_byte(ca), fb = folded_byte(cb);
+        if (fa != fb) return fa < fb ? -1 : 1;
+        ++i;
+        ++j;
+    }
+    if (i < a.size()) return 1;
+    if (j < b.size()) return -1;
+    return 0;
+}
+// THE MEMBERSHIP LIST'S COMPARATOR: the natural order, its ties in plain
+// byte order (THE RULE above).
+constexpr bool project_name_before(std::string_view a, std::string_view b) {
+    const int c = natural_name_compare(a, b);
+    return c < 0 || (c == 0 && a < b);
+}
+// THE RULE's cases, stated at compile time.
+static_assert(project_name_before("9", "10"));
+static_assert(project_name_before("64_x", "550_x"));
+static_assert(!project_name_before("550_x", "64_x"));
+static_assert(project_name_before("K64", "K550"));
+static_assert(project_name_before("a", "B"));
+static_assert(project_name_before("A", "b"));
+static_assert(natural_name_compare("064", "64") == 0);
+static_assert(project_name_before("064", "64"));
+static_assert(!project_name_before("64", "064"));
+static_assert(project_name_before("K64", "K64_x"));
+static_assert(!project_name_before("550 - 1", "550 - 1"));
 
 // A sidecar extension is one of the product's three (kSidecarExtensions,
 // sidecar_set.h — the one list), read by the walk below.
@@ -170,7 +254,11 @@ std::vector<std::string> enumerate_project_names(
         std::string name = de.path().filename().string();
         if (is_last_project_name(name)) names.push_back(std::move(name));
     });
-    std::sort(names.begin(), names.end());
+    // THE NATURAL ORDER (project_name_before, THE RULE at its head).
+    std::sort(names.begin(), names.end(), [](const std::string& x,
+                                             const std::string& y) {
+        return project_name_before(x, y);
+    });
     return names;
 }
 
@@ -187,7 +275,7 @@ std::expected<GuiProjectSource, std::string> startup_source(
         auto remembered = resolve_project(projects_path / config.last_project);
         if (remembered) return remembered;
     }
-    // Then the FIRST VALID project in name order.
+    // Then the FIRST VALID project in the membership list's natural order.
     for (const std::string& name : enumerate_project_names(projects_path)) {
         auto candidate = resolve_project(projects_path / name);
         if (candidate) return candidate;

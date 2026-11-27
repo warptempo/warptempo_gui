@@ -102,9 +102,11 @@ std::expected<GuiProjectSource, std::string> resolve_project(
     const std::filesystem::path& folder);
 
 // EVERY DIRECTORY DIRECTLY UNDER `projects_path` WHOSE NAME THE DEVICE CONFIG
-// CAN CARRY, BY NAME, in PLAIN BYTE ORDER (std::string's operator<) — the ONE
-// order the product uses for folder names, so the startup fallback's "first
-// valid project" and the Open project picker's row walk agree on what "first"
+// CAN CARRY, BY NAME, in NATURAL ORDER — a digit run by its number, the
+// letters case-blind, ties in plain byte order (architect 2026-11-27;
+// project_name_before, project_model.cpp, the rule's one statement) — the
+// ONE order of the project names, so the startup fallback's "first valid
+// project" and the Open project picker's row walk agree on what "first"
 // means. THE NAME GRAMMAR IS THE ONE MEMBERSHIP TEST HERE
 // (is_last_project_name, device_config.h — see the head of this file); folder
 // SHAPE is not asked, because shape is asked where a name is CHOSEN
