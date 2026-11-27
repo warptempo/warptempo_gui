@@ -248,8 +248,9 @@ inline constexpr int64_t kPlayerPreviousThresholdMs = 3000;
 // ENTERS THE NEWEST BATCH FOLDER (architect 2026-09-15): the highest
 // leading-index folder under tmp/ (max_renders_batch_index, renders_dir.h —
 // never a filesystem timestamp), the root listing the fallback when there is
-// none or the newest holds no playable wav; either way the band seats on row
-// 0, entering being memory-less. The open takes the
+// none or the newest holds no playable wav; either way NO ROW IS LIT
+// (folder_overlay.h's head, architect 2026-11-27), entering being
+// memory-less, and the listing rests at its top. The open takes the
 // modal-open stop, the mode bit, a fresh modal session, that one listing and
 // a whole-window damage. close() takes the panel down around
 // unload_item(), which is THE ONE OWNER of the ordering the engine's pointer
@@ -358,7 +359,7 @@ struct GuiRenderPlayer {
     void open_row(int index, bool tapped);
     // One folder up — THE MODAL ROW'S UP BUTTON (2026-09-01), and THE CAR'S
     // OWN PREVIOUS AT REST: car_previous() composes this body at the band's
-    // first row, so the act has TWO roads on ONE body (the button and
+    // first row and with no row lit, so the act has TWO roads on ONE body (the button and
     // car_previous()'s rest arm; its live arm is a seek, architect
     // 2026-11-25). The highlight pair is the
     // plain band walk and the Home button the previous-track act, so leaving
@@ -391,8 +392,8 @@ struct GuiRenderPlayer {
     // a filesystem failure cards CRITICAL naming the folder by its name, with
     // the full path and the system's words on stderr (failure.h's two
     // clauses), and the walk goes on to the next folder. The ROOT listing is
-    // entered and rebuilt from disk after, whatever failed, the band on its
-    // top row. A success is silent: the rows
+    // entered and rebuilt from disk after, whatever failed, no row lit
+    // (rebuild_rows' seat). A success is silent: the rows
     // leaving the listing are its answer — and when the rebuilt root lists
     // no folder at all, the player closes itself through close(), its own
     // close act (architect 2026-10-01; the rule is at the body).
@@ -445,6 +446,10 @@ struct GuiRenderPlayer {
     //   HIGHLIGHT on a WAV that is NOT the
     //     transport's item                     -> play that row, live or
     //                                             paused or idle alike.
+    //   NO ROW LIT inside a folder             -> the same two arms on the
+    //                                             listing's FIRST RENDER
+    //                                             (render_player_band_row,
+    //                                             architect 2026-11-27).
     //   otherwise the TRANSPORT, whose three states are STORED in
     //   AppState::RenderPlayer::transport — LIVE the sounding one, PAUSED an
     //   item the transport parked AT WHATEVER FRAME (a pause that caught the
@@ -602,12 +607,18 @@ struct GuiRenderPlayer {
     // car_previous() — REWIND: WHILE LIVE it is car_seek() back (architect
     //   2026-11-25: "render player in car should also do ... skip back/forth
     //   when audio is playing"). At REST (paused and idle alike) it walks the
-    //   band UP one row, and AT THE BAND'S FIRST ROW it goes UP A FOLDER (up()
-    //   whole: the item unloaded, the sound stopped, the band seated on the
-    //   folder just left); at the ROOT's first row it is a silent walled no-op.
+    //   band UP one row, and AT THE BAND'S FIRST ROW — or with NO ROW LIT
+    //   (folder_overlay.h's head, architect 2026-11-27) — it goes UP A FOLDER
+    //   (up() whole: the item unloaded, the sound stopped, the band seated on
+    //   the folder just left); at the ROOT's first row, or none, it is a
+    //   silent walled no-op.
     // car_next() — FAST-FORWARD: WHILE LIVE it is car_seek() forward; at REST
-    //   it walks the band DOWN one row, a silent walled no-op at the
+    //   it walks the band DOWN one row — from NO ROW LIT onto the first row
+    //   (the walk's from-none landing) — a silent walled no-op at the
     //   listing's last row.
+    // car_toggle()'s Play from NO ROW LIT is the tablet's: inside a folder
+    //   the listing's first render (render_player_band_row), at the root
+    //   nothing.
     //   Changing track from the car is therefore pause, step, play (architect
     //   2026-11-25, accepted).
     // car_seek() — THE CAR'S ONE SEEK (architect 2026-11-25), the live arm of
@@ -873,8 +884,11 @@ private:
     // Rebuild the listing for the live folder: rows, scroll 0, hover and
     // press cleared, and the highlight through THE SEAT RULE'S THREE ARMS —
     // the transport's item's row if it is here, else `seat_folder`'s row if
-    // the caller named one and it is here, else row 0 — the seated row
-    // centered in the band (folder_overlay::scroll_row_centered, 2026-10-26).
+    // the caller named one and it is here, else NONE (a row is lit only
+    // where it reflects something, folder_overlay.h's head, architect
+    // 2026-11-27) — a seated row
+    // centered in the band (folder_overlay::scroll_row_centered, 2026-10-26),
+    // none leaving the listing at its top.
     // Damages the band. ONE CALLER RESEATS AFTER IT: one render's delete
     // (delete_render), whose band stands on the deleted row's place, not on
     // the item's row (architect 2026-11-25).

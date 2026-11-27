@@ -8334,8 +8334,10 @@ static void paint_modal_box(cairo_t* cr, const AppState& app,
 // first row's capitals 13 W under the view's top at scroll 0 by the list's
 // head pad (folder_overlay::head_pad_px).
 // TWO MARKS, ONE ROW EACH AND POSSIBLY THE SAME ROW: the HIGHLIGHT (the
-// row Load in place and the highlight pair act on) and the TRANSPORT'S
-// ITEM, which its row does not mark (architect 2026-10-23).
+// row Load in place and the highlight pair act on — on NO ROW where none
+// reflects anything, nothing lit then: folder_overlay.h's head, architect
+// 2026-11-27) and the TRANSPORT'S ITEM, which its row does not mark
+// (architect 2026-10-23).
 static constexpr double kListDrawingMarginW = 6.0;
 static constexpr double kListDrawingBoxW    = 16.0;
 static constexpr double kListDrawingYW =

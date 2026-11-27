@@ -86,11 +86,34 @@
 // highlight buttons' row walk keeping the focused row visible. No header
 // row, no columns, no scrollbar: the offset is the
 // whole scroll state, and an over-long listing simply scrolls. A LISTING
-// OPENS WITH ITS SEATED ROW CENTERED in the band, as close to center as the
-// listing's ends allow (scroll_row_centered, architect 2026-10-26); every
+// OPENS WITH ITS LIT ROW CENTERED in the band, as close to center as the
+// listing's ends allow (scroll_row_centered, architect 2026-10-26), and AT
+// ITS TOP WITH NO ROW LIT (the rule below); every
 // later walk moves the offset by the least amount (scroll_row_into_view);
 // A TAP ON A ROW MOVES IT NOT AT ALL (seat_tapped_row, architect
 // 2026-11-21).
+//
+// A ROW IS LIT ONLY WHERE IT REFLECTS SOMETHING; OTHERWISE NO ROW IS LIT
+// (architect 2026-11-27: "when you open a list, like the player, the
+// picker, or the settings, by default, one option is selected ... it
+// seemed awkward because I had picked or done something to another item
+// and it ended up on the first. Like a file manager, for example, if I
+// delete a file, it won't automatically select the first file on the list.
+// It'll just have no selection." — "Agree"). THE RULE'S ONE STATEMENT; the
+// sites cite it. A lit row reflects the open project (the picker), a
+// setting's current value (a value list), the playing render
+// (GuiRenderPlayer::play_wav) or the transport's item at an entry, the
+// folder just left by Up (GuiRenderPlayer::up), the preset whose pair is the
+// trim or the one just saved or named (open_trim_presets and its re-lists),
+// the settings row or BPM field just edited (the sub-page's return onto its
+// row), the seat a delete leaves (GuiRenderPlayer::delete_render,
+// confirm_trim_preset_delete), and the row the user tapped or walked to; every
+// other open seats NONE (-1, highlight_row's own value of "none" on a
+// non-empty listing as on an empty one: set_highlight(-1)). FROM NONE the
+// walk takes THE FIRST ROW in either direction (move_highlight_target), the
+// render player's Play plays the listing's first render
+// (render_player_band_row), and the car's acts follow (render_player.h's THE
+// CAR'S OWN ACTS); the painter lights nothing and every row hovers.
 //
 // THE BAND IS THE MODAL FAMILY'S AND THE ROW IS THE LIST'S. Two owners,
 // neither restated here:
@@ -545,13 +568,15 @@ inline void scroll_row_into_view(AppState& a, int index) {
 // call it after their seat (the project picker's, the settings page's, the
 // value list's and the BPM form's builds, the trim presets list's open, the render
 // player's every rebuild, each a
-// fresh listing — the page's first key row, row 0, lands at the listing's
-// head, scroll 0, the clamp ruling a centered row 0 out,
-// and a value list's return seats the page on that key's row); the
+// fresh listing — a lit row near the head lands at the listing's head,
+// scroll 0, the clamp ruling a centered row 0 out, and a value list's
+// return seats the page on that key's row); A SEAT OF NONE (the head's
+// rule: no row reflects anything) asks nothing of it and the listing rests
+// at its top, scroll 0, the fresh overlay's offset under the clamp. The
 // highlight pair's walk keeps scroll_row_into_view's least-move rule (a
 // step scrolls by one row, every list widget's rule), and a tap
 // moves the offset not at all (seat_tapped_row, architect 2026-11-21).
-// Returns whether the offset moved.
+// Returns whether the offset moved; false for no row (-1).
 inline bool scroll_row_centered(AppState& a, int index) {
     const int n = static_cast<int>(a.folder_overlay.rows.size());
     if (index < 0 || index >= n) return false;
@@ -592,19 +617,30 @@ inline bool row_is_inert(const AppState& a, int index) {
     return row_is_inert(a.folder_overlay, index);
 }
 
-// Seat the highlight on `index`, clamped into the listing (-1 for an empty
-// one), scrolling the band to keep it visible. Returns whether the band
+// THE SEAT'S ONE TARGET, both seats' below: `index` clamped onto the
+// listing's last row, and NONE (-1) for a negative `index` or an empty
+// listing — the model's one way to say "no row lit" (the head's rule: a
+// row is lit only where it reflects something, architect 2026-11-27).
+inline int seat_target(const AppState::FolderOverlay& ov, int index) {
+    const int n = static_cast<int>(ov.rows.size());
+    if (n <= 0 || index < 0) return -1;
+    return std::min(index, n - 1);
+}
+
+// Seat the highlight on `index`, clamped onto the listing's last row, or
+// on NONE for -1 (seat_target; an empty listing has none), scrolling the
+// band to keep a seated row visible — none moves the scroll not at all.
+// Returns whether the band
 // changed. AN INERT ROW IS NEVER SEATED (row_is_inert): a seat on one is
 // refused whole, the band unchanged — every seat names an actionable row
-// by construction (the builders' seats, the walk's landing, a lift on an
-// acting row), so the refusal is the rule's statement, not a road.
+// or none by construction (the builders' seats, the walk's landing, a lift
+// on an acting row), so the refusal is the rule's statement, not a road.
 // ITS SCROLL IS THE WALK'S AND THE OPEN-TIME SEATS' (the builders', the
 // player's item change), NEVER A TAP'S: a row the pointer tapped is seated
 // by seat_tapped_row below.
 inline bool set_highlight(AppState& a, int index) {
     AppState::FolderOverlay& ov = a.folder_overlay;
-    const int n  = static_cast<int>(ov.rows.size());
-    const int to = n <= 0 ? -1 : std::clamp(index, 0, n - 1);
+    const int to = seat_target(ov, index);
     if (row_is_inert(a, to)) return false;
     bool changed = false;
     if (to != ov.highlight_row) {
@@ -630,29 +666,29 @@ inline bool set_highlight(AppState& a, int index) {
 // what the tap opens — the press's own face, the accent on the pressed row,
 // the one picture before the act (paint_list_view), as Arc's. Its one
 // road: the row's lift (GuiInputHandler::folder_overlay_highlight_row,
-// through picker_set_highlight and GuiRenderPlayer::set_highlight). The
-// inert row and the clamp as set_highlight's. Returns whether the
-// highlight moved.
+// through picker_set_highlight and GuiRenderPlayer::set_highlight), whose
+// row is always one. The inert row and the target as set_highlight's
+// (seat_target). Returns whether the highlight moved.
 inline bool seat_tapped_row(AppState& a, int index) {
     AppState::FolderOverlay& ov = a.folder_overlay;
-    const int n  = static_cast<int>(ov.rows.size());
-    const int to = n <= 0 ? -1 : std::clamp(index, 0, n - 1);
+    const int to = seat_target(ov, index);
     if (row_is_inert(a, to)) return false;
     if (to == ov.highlight_row) return false;
     ov.highlight_row = to;
     return true;
 }
 
-// THE ROW A WALK STEPS FROM: the highlight, or row 0 where the band has no
-// seat (an empty listing, or one whose rows have not been seated yet). ONE
-// OWNER, TWO READERS — move_highlight_target below, the step itself, and
-// THE CAR'S PREVIOUS, whose rest arm asks whether the walk is at
-// the band's first row before leaving the folder instead
-// (GuiRenderPlayer::car_previous). They must not drift: a fork that measured
-// from the raw field and a step that measures from this would disagree about
-// where a seatless band begins.
+// THE ROW A WALK STEPS FROM: the highlight, or -1 where NO ROW IS LIT (the
+// head's rule, architect 2026-11-27) — and a walk from none steps from no
+// row: it TAKES THE FIRST ROW, whichever its direction
+// (move_highlight_target below). ONE OWNER, TWO READERS —
+// move_highlight_target, the step itself, and THE CAR'S PREVIOUS, whose
+// rest arm steps up only from a lit row below the first and otherwise
+// leaves the folder (GuiRenderPlayer::car_previous: at the first row and
+// from none alike). They must not drift: both read "where the walk starts"
+// here, never a field of their own.
 inline int walk_origin_row(const AppState::FolderOverlay& ov) {
-    return ov.highlight_row < 0 ? 0 : ov.highlight_row;
+    return ov.highlight_row < 0 ? -1 : ov.highlight_row;
 }
 inline int walk_origin_row(const AppState& a) {
     return walk_origin_row(a.folder_overlay);
@@ -670,12 +706,22 @@ inline int walk_origin_row(const AppState& a) {
 // A content with no inert row lands where the clamp lands, unchanged. A
 // listing of inert rows alone has no producer and answers -1, as an empty
 // one does.
+// FROM NONE (walk_origin_row's -1; the head's rule, architect 2026-11-27)
+// EITHER DIRECTION LANDS ON THE FIRST ROW — the first acting row from the
+// listing's top, the skip stepping down past an inert row there — the
+// walk's one start where nothing is lit.
 // (The page form answers over `ov`, row_is_inert's page form's reason.)
 inline int move_highlight_target(const AppState::FolderOverlay& ov,
                                  int delta) {
     const int n = static_cast<int>(ov.rows.size());
     if (n <= 0) return -1;
-    const int landing = std::clamp(walk_origin_row(ov) + delta, 0, n - 1);
+    const int origin = walk_origin_row(ov);
+    if (origin < 0) {
+        for (int to = 0; to < n; ++to)
+            if (!row_is_inert(ov, to)) return to;
+        return -1;
+    }
+    const int landing = std::clamp(origin + delta, 0, n - 1);
     const int step    = delta < 0 ? -1 : +1;
     for (int to = landing; to >= 0 && to < n; to += step)
         if (!row_is_inert(ov, to)) return to;
@@ -688,8 +734,8 @@ inline int move_highlight_target(const AppState& a, int delta) {
 }
 
 // Move the highlight by `delta` rows, clamped; an empty listing has nothing
-// to move and a -1 highlight walks from row 0 (the origin owner above).
-// Returns whether the band changed.
+// to move and a walk from none takes the first row (the landing owner
+// above). Returns whether the band changed.
 inline bool move_highlight(AppState& a, int delta) {
     const int to = move_highlight_target(a, delta);
     if (to < 0) return false;
@@ -699,9 +745,10 @@ inline bool move_highlight(AppState& a, int delta) {
 // WOULD A WALK OF `delta` ROWS MOVE THE HIGHLIGHT (architect 2026-10-10, the
 // render player's Highlight Previous / Next buttons): the walk's landing row
 // differs from the row the highlight stands on. False on an empty listing and
-// at the wall the walk clamps to; a -1 highlight is actionable, the walk
-// starting FROM row 0 (walk_origin_row) and applying its delta exactly as
-// the highlight pair's step does: DOWN lands on row 1, UP on row 0. It
+// at the wall the walk clamps to; with NO ROW LIT both directions are
+// actionable on a listing with an acting row, the walk taking the first
+// row (move_highlight_target's from-none arm), exactly as the highlight
+// pair's step does. It
 // reads the one landing
 // owner, so it agrees with the walk about the inert rows: a step that the
 // skip clamps back onto the highlight's own row is no step. The band's scroll-into-view

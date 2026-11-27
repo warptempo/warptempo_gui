@@ -3014,8 +3014,8 @@ private:
     //     open_settings_page: the opener, open_project_picker's own guards
     //       (a prompt, a standing picker, a load) and its modal stop, seated
     //       on `seat_key`'s row (build_settings_page_rows): none from `;`
-    //       and the Settings key, the editor's open key from the line
-    //       editor's return (handle_settings_editor_key).
+    //       and the Settings key — no row lit — the editor's open key from
+    //       the line editor's return (handle_settings_editor_key).
     //     build_settings_page_rows: kSettingsEditorKeys exactly (settings_
     //       editor.h), the device keys first and then the piece rows
     //       (kSettingsPagePieceKeys, with
@@ -3028,8 +3028,9 @@ private:
     //       `seat_key`'s row, centered as far as the listing's ends allow
     //       (scroll_row_centered) — a value list's or the line editor's
     //       return seating the key it showed; with no seat key — `;` and the
-    //       Settings key — the FIRST KEY ROW, row 0, at the top (that
-    //       clamp).
+    //       Settings key — NO ROW LIT, the listing at its top (a row is lit
+    //       only where it reflects something, folder_overlay.h's head,
+    //       architect 2026-11-27).
     //     settings_page_commit: THE OPEN ACT on row `index` — the row's tap,
     //       its one road: on the row of a key with a value list
     //       (settings_key_has_value_list, settings_editor.h) THAT KEY'S VALUE
@@ -3103,11 +3104,14 @@ private:
     //       file read into the overlay (AppState::FolderOverlay::
     //       trim_presets) and the rows built, SEATED on `seat_name`'s preset
     //       when one is named (the name editor's return), else on the preset
-    //       whose pair IS the active tab's trim, else on row 0 — an empty
-    //       list seating nothing — centered as far as the ends allow.
+    //       whose pair IS the active tab's trim, else on NONE (a row is lit
+    //       only where it reflects something, folder_overlay.h's head,
+    //       architect 2026-11-27), a lit row centered as far as the ends
+    //       allow, none leaving the list at its top.
     //     build_trim_presets_rows: the rows from the overlay's presets,
-    //       rebuilt whole, the highlight seated on `highlight` (clamped into
-    //       the listing) — the open's and every act's re-list.
+    //       rebuilt whole, the highlight seated on `highlight` (clamped onto
+    //       the listing's last row, -1 none) — the open's and every act's
+    //       re-list.
     //     trim_presets_apply: THE OPEN ACT on row `index` — the row's tap
     //       (its press-and-lift), the one road to it: its pair written as
     //       BOTH bounds of the active tab's
@@ -3212,16 +3216,19 @@ private:
     //   entry and exit wiping the owner. THE BPM MODE IS EXACTLY THE FORM'S
     //   SESSION (AppState::bpm_mode_enabled): the form standing, or the line
     //   editor one of its rows opened.
-    //     open_bpm_form: the opener — the Ctrl+B arm's tail and the field
-    //       editor's return (handle_settings_editor_key), SEATED on `seat`'s
-    //       row; a fresh picker session, the shared modal stop (a no-op at
+    //     open_bpm_form: the opener — the Ctrl+B arm's tail, seated on
+    //       NONE (std::nullopt: a row is lit only where it reflects
+    //       something, folder_overlay.h's head, architect 2026-11-27), and
+    //       the field editor's return (handle_settings_editor_key), SEATED on
+    //       `seat`'s row; a fresh picker session, the shared modal stop (a no-op at
     //       the return, playback stopped at the first open). NO GUARDS OF ITS
     //       OWN: the Ctrl+B arm is reached with no prompt, picker, editor or
     //       load standing (the keyboard gate, the picker's router, the
     //       loading gate), and the return runs on a closed editor — and a
     //       refused open here would leave the mode resting without its form.
     //     build_bpm_form_rows: the rows from the owner's three fields
-    //       (bpm_field_text, warpmarkers.h), the highlight seated on `seat`.
+    //       (bpm_field_text, warpmarkers.h), the highlight seated on `seat`,
+    //       none for std::nullopt.
     //     bpm_form_commit: THE OPEN ACT on row `index` — the row's tap, its
     //       one road: the form closes (close_picker, the mode STANDING — the
     //       overlay and the on-screen keyboard never both stand) and THE
@@ -3321,8 +3328,8 @@ private:
     void open_trim_preset_name_editor(bool rename);
     void trim_presets_delete();
     void commit_trim_preset_name();
-    void open_bpm_form(GuiBpmField seat);
-    void build_bpm_form_rows(GuiBpmField seat);
+    void open_bpm_form(std::optional<GuiBpmField> seat);
+    void build_bpm_form_rows(std::optional<GuiBpmField> seat);
     void bpm_form_commit(int index);
     void bpm_form_render();
     void close_bpm_form();

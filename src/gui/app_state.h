@@ -9468,26 +9468,32 @@ struct AppState {
     //                 IT AND THEN OPENS THE ROW (architect 2026-08-29: a click
     //                 activates, Plasma's single-click and GNOME's touch
     //                 agreeing), Up/Down walk it
-    //                 without opening anything, every player listing
-    //                 rebuild seats it on the transport's item's row if that
-    //                 row is in the new listing, else on row 0; -1 only for an
-    //                 empty listing. Under the PLAYER it is what Enter, the
-    //                 Load in place button and the PLAY BUTTON (2026-08-31)
-    //                 act on: Play reads the highlight FIRST
-    //                 (render_player_highlight_act_row) and falls to the
+    //                 without opening anything. -1 IS NONE, on a non-empty
+    //                 listing as on an empty one: A ROW IS LIT ONLY WHERE IT
+    //                 REFLECTS SOMETHING (architect 2026-11-27; the rule's
+    //                 one statement is folder_overlay.h's head, the seat
+    //                 folder_overlay::set_highlight, -1 its none). Every
+    //                 player listing rebuild seats it on the transport's
+    //                 item's row if that row is in the new listing, else on
+    //                 the folder Up just left, else on none. Under the
+    //                 PLAYER it is what the Load in place button and the
+    //                 PLAY BUTTON (2026-08-31) act on: Play reads the band
+    //                 FIRST (render_player_highlight_act_row, through
+    //                 render_player_band_row — with none lit inside a
+    //                 folder, the listing's first render) and falls to the
     //                 transport's own toggle only where the band stands on
-    //                 the transport's item or nowhere;
-    //                 under a PICKER it is THE WHOLE STATE — what Enter
-    //                 opens, with no field beside it. The project picker
+    //                 the transport's item or names no row;
+    //                 under a PICKER it is THE WHOLE STATE, with no field
+    //                 beside it. The project picker
     //                 seats it on the CURRENT project's row at the open, the
-    //                 settings page on its FIRST KEY ROW (and, at a value
-    //                 list's return, on that key's row), the value list
-    //                 on the LIVE value's (the listed device key's), the
+    //                 settings page on none (and, at a value list's or the
+    //                 line editor's return, on that key's row), the value
+    //                 list on the LIVE value's (the listed device key's), the
     //                 trim presets list on the preset whose pair is the
-    //                 active tab's trim, else on row 0 (at the name
-    //                 editor's return, on the named row), the BPM form on
-    //                 its `beats=` row (at the field editor's return, on
-    //                 that field's row).
+    //                 active tab's trim (at the name editor's return, on the
+    //                 named row), the BPM form on none (at the field
+    //                 editor's return, on that field's row) — each on none
+    //                 where what it reflects is not listed.
     //                 IT NEVER STANDS ON AN INERT ROW (folder_overlay.h's
     //                 set_highlight and its walk);
     //   `press`       THE ROW PRESS ARM (the chrome shape: arm at the press,
@@ -10573,13 +10579,27 @@ inline std::string trim_presets_button_shift_hint(
 // render_player.cpp beside the member it feeds.
 const AppState::RenderEntry* render_player_highlighted_entry(const AppState& a);
 
+// THE ROW THE BAND NAMES for the Play button and the car: THE LIT ROW; with
+// NO ROW LIT (folder_overlay.h's head, architect 2026-11-27) inside a batch
+// folder, THE LISTING'S FIRST RENDER — what Play plays from none, the row
+// then lit as the playing render's (play_wav's seat); at the root with none
+// lit, and on an empty listing, -1 (nothing to play: the transport's own
+// arm answers there). TWO READERS: render_player_highlight_act_row below
+// and the head unit's silence-track title (GuiRenderPlayer::
+// publish_media_state), so the title names what the console's button would
+// start. The row keys (Load in place, Delete) read the lit row alone.
+// Defined in render_player.cpp.
+int render_player_band_row(const AppState& a);
+
 // THE ROW SPACE WOULD OPEN, or −1 for "the transport's own business"
 // (architect 2026-08-31 — SPACE IS HIGHLIGHT-DRIVEN IN THE PLAYER). It
-// answers the highlighted row's index when that row is a FOLDER or a WAV THAT
+// answers the band's row (render_player_band_row: the highlighted row, or
+// with none lit inside a folder its first render) when that row is a FOLDER
+// or a WAV THAT
 // IS NOT THE TRANSPORT'S ITEM — the two rows whose open act Space runs
 // instead of toggling (going up is the controls row's own button) — and −1 on
 // the transport's own item, on an empty band
-// and on a highlight out of range, which is where the transport's fork takes
+// and at the root with no row lit, which is where the transport's fork takes
 // over. Defined in render_player.cpp beside the act it forks.
 //
 // ONE OWNER, THREE READERS, and they are three because the act, the face and
@@ -10658,9 +10678,9 @@ int render_player_highlight_act_row(const AppState& a);
 //   not move the highlight — an empty listing, or the wall the walk clamps
 //   to (row 0 for Highlight Previous, the last row for Highlight Next) —
 //   through folder_overlay::move_highlight_actionable, the step's own owner,
-//   so the face and the arrow keys cannot disagree. A highlight standing on
-//   no row is lit: the walk starts FROM row 0 there (walk_origin_row) and
-//   applies its delta, as the keys do — Down lands on row 1, Up on row 0. The
+//   so the face and the arrow keys cannot disagree. With NO ROW LIT both are
+//   live: the walk from none takes the first row in either direction
+//   (move_highlight_target, architect 2026-11-27). The
 //   keys stay silent at the walls and the grey is the buttons' whole message.
 //   DELETE greys where the band stands on nothing its list deletes
 //   (render_player_delete_actionable, the act's own question, in both lists).
@@ -10707,13 +10727,14 @@ bool render_player_button_enabled(const AppState& a,
 // and the Grid Iterations lamp dark — the terms of the roster's own one-file
 // archival render into a batch cell (the miscellaneous render's arm,
 // handle_render_dispatch_keys: no source is silent, and "archival is a
-// plain-mode act"), where Render All, its hold, refuses too; the twin rule
-// adds nothing, a highlight standing exactly where the list holds a preset
-// (folder_overlay::set_highlight's clamp). A RUNNING RENDER IS NO TERM (the
+// plain-mode act"), where Render All, its hold, refuses too; WITH NO ROW
+// LIT (folder_overlay.h's head, architect 2026-11-27) the face greys and
+// Render All with it, though the list holds presets. A RUNNING RENDER IS NO TERM (the
 // dispatch kills it and parks the new command, newest wins), nor is the
 // tab's lock (a render writes no authoring), and a name that is no file
 // name is a refusal that cards, not a grey (trim_presets_render); SAVE with
-// no highlight (an empty list, where it creates, Save
+// no highlight (an empty list, or no row lit — folder_overlay.h's head —
+// where it creates, Save
 // As's act) and with a highlight whose pair is not the active tab's trim,
 // GREYING only where the highlighted pair already is the tab's trim (the
 // no-op the open's seat stands on when a preset names the window on screen;
@@ -10782,12 +10803,13 @@ int render_player_root_folder_count(const AppState& a);
 // one — with one, the long press reaches what the plain press does). Defined
 // in render_player.cpp beside the listing it counts.
 int render_player_batch_render_count(const AppState& a);
-// WOULD DELETE ACT — its face's one arm under the TWIN RULE, in each list
-// the band on a row of the kind its plain press deletes: at the root a batch
-// folder (the shifted press needing any batch folder at all, and the band
-// standing on a row whenever the listing has one, the two collapse into
-// this), inside a batch folder a render (its long press, the folder's own
-// delete, standing exactly where the folder lists a render). The act asks
+// WOULD DELETE ACT — its face's one arm, in each list the band on a row of
+// the kind its plain press deletes: at the root a batch folder, inside a
+// batch folder a render. With a row lit its long press (every batch folder
+// at the root, the folder's own delete inside one) has something to take
+// wherever the plain press does; WITH NO ROW LIT (folder_overlay.h's head,
+// architect 2026-11-27) the face greys and the long press with it, though
+// the listing holds what that press would take. The act asks
 // the same question at its head and cards where the face would grey
 // (render_player_delete, input_key_dispatch.cpp).
 bool render_player_delete_actionable(const AppState& a);

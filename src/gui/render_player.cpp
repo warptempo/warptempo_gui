@@ -136,25 +136,27 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
 
     // THE INITIAL HIGHLIGHT of every rebuild, THREE ARMS IN ORDER: the
     // transport's item's row when it is in this listing; else the row of
-    // `seat_folder` when the caller named one and it is listed; else row 0 —
-    // and -1 only for an empty listing.
+    // `seat_folder` when the caller named one and it is listed; else NONE —
+    // A ROW IS LIT ONLY WHERE IT REFLECTS SOMETHING (architect 2026-11-27,
+    // folder_overlay.h's head), and the first two arms are what a row here
+    // can reflect.
     // THE SECOND ARM IS THE UP ACT'S ALONE (architect 2026-09-11): pressing
     // Up inside a batch folder is not a memory of where the band once was but
     // something happening right now — "I'm pressing Up on a specific folder,
     // and I expect that folder to be highlighted" — so up() names the folder
     // it is leaving and the root listing seats the band on that folder's row.
     // EVERY OTHER CALLER NAMES NONE, and ENTERING A FOLDER STAYS
-    // MEMORY-LESS: the band takes the folder's top, or the item's row when
-    // the item lives there, and a file played earlier that is no longer the
-    // item is never sought out. A named folder that is not in the listing —
-    // deleted while the player stood, the listing being rebuilt from disk at
-    // every entry — falls through to row 0 like any other miss.
-    // ROW 0 IS THE FIRST REAL ROW (no listing carries a `..` row), so the
-    // seat is a batch folder or a wav and the highlight-driven Space
-    // (2026-08-31) acts on content at every entry.
+    // MEMORY-LESS: no row lit, or the item's row when the item lives there,
+    // and a file played earlier that is no longer the item is never sought
+    // out. A named folder that is not in the listing — deleted while the
+    // player stood, the listing being rebuilt from disk at every entry —
+    // falls through to none like any other miss. FROM NONE the Play button
+    // and the car's toggle play the listing's first render
+    // (render_player_band_row; at the root, nothing to play) and the walk
+    // takes the first row (folder_overlay::move_highlight_target).
     ov.scroll_px     = 0.0;
     ov.press         = AppState::FolderOverlayPress{};
-    ov.highlight_row = ov.rows.empty() ? -1 : 0;
+    ov.highlight_row = -1;
     bool seated = false;
     if (!rp.item.empty()) {
         for (size_t i = 0; i < ov.rows.size(); ++i) {
@@ -178,7 +180,8 @@ void GuiRenderPlayer::rebuild_rows(const std::filesystem::path& seat_folder) {
     // THE SEATED ROW LANDS CENTERED (folder_overlay::scroll_row_centered,
     // architect 2026-10-26) on EVERY rebuild — the open's root listing, a
     // folder entered and the Up act's root entry — since each is a fresh
-    // listing opening; the walks inside it keep the least move.
+    // listing opening, and with none lit the listing rests at its top; the
+    // walks inside it keep the least move.
     folder_overlay::clamp_scroll(app);
     if (ov.highlight_row >= 0)
         folder_overlay::scroll_row_centered(app, ov.highlight_row);
@@ -351,8 +354,8 @@ void GuiRenderPlayer::delete_batch_folders(
         }
     }
     // THE LISTING FROM DISK AGAIN, whatever failed: a partial removal shows
-    // what is left, and the band takes the listing's top (the seat rule's
-    // memory-less arm — the folder it stood on is gone).
+    // what is left, and no row is lit (the seat rule's memory-less arm,
+    // rebuild_rows — the folder it stood on is gone).
     enter(Folder::Root, {}, {});
     // THE LAST FOLDER GONE CLOSES THE PLAYER (architect 2026-10-01): a root
     // listing with no folder left has nothing to play or open, so the player
@@ -456,9 +459,9 @@ void GuiRenderPlayer::open_row(int index, bool tapped) {
         case Row::Kind::Folder:
             switch (app.render_player.folder) {
                 case Folder::Root:
-                    // Entering names no folder to seat on: the band takes
-                    // this listing's top, or the item's row if the item lives
-                    // in here (the seat rule at rebuild_rows).
+                    // Entering names no folder to seat on: no row lit, or
+                    // the item's row if the item lives in here (the seat
+                    // rule at rebuild_rows).
                     enter(Folder::Batch, row.path, {});
                     return;
                 case Folder::Batch:
@@ -551,27 +554,41 @@ const AppState::RenderEntry* GuiRenderPlayer::highlighted_entry() const {
     return render_player_highlighted_entry(app);
 }
 
+// THE ROW THE BAND NAMES (the contract at the declaration, app_state.h):
+// the lit row, else inside a batch folder the listing's first render, else
+// none.
+int render_player_band_row(const AppState& a) {
+    const AppState::FolderOverlay& ov = a.folder_overlay;
+    const int n = static_cast<int>(ov.rows.size());
+    if (ov.highlight_row >= 0 && ov.highlight_row < n) return ov.highlight_row;
+    if (a.render_player.folder != Folder::Batch) return -1;
+    for (int i = 0; i < n; ++i)
+        if (ov.rows[static_cast<size_t>(i)].kind == Row::Kind::Wav) return i;
+    return -1;
+}
+
 // THE ROW SPACE WOULD OPEN (architect 2026-08-31) — the contract and the
 // three-reader inventory are at the declaration (app_state.h). The fork is the
-// row's KIND plus one identity compare: a folder is always somewhere to go, a
+// band's row (render_player_band_row: the lit row, or with none lit inside a
+// folder its first render) — its KIND plus one identity compare: a folder is
+// always somewhere to go, a
 // wav is somewhere to go unless it is what is already bound, and the
 // transport's own item hands the press back to the transport. (Going up is
 // the modal row's own button; no row navigates.)
 int render_player_highlight_act_row(const AppState& a) {
     const AppState::FolderOverlay& ov = a.folder_overlay;
-    if (ov.highlight_row < 0 ||
-        ov.highlight_row >= static_cast<int>(ov.rows.size()))
-        return -1;
-    const Row& r = ov.rows[static_cast<size_t>(ov.highlight_row)];
+    const int row = render_player_band_row(a);
+    if (row < 0) return -1;
+    const Row& r = ov.rows[static_cast<size_t>(row)];
     switch (r.kind) {
         case Row::Kind::Folder:
             // A FOLDER ROW IN A LISTING THAT CARRIES NONE cannot exist: only
             // the root — `tmp/` itself — builds folder rows (rebuild_rows),
             // which is also why open_row's own batch arm returns doing
             // nothing — no producer, so this arm claims no dead press.
-            return ov.highlight_row;
+            return row;
         case Row::Kind::Wav:
-            return r.path == a.render_player.item ? -1 : ov.highlight_row;
+            return r.path == a.render_player.item ? -1 : row;
         case Row::Kind::Plain:
         case Row::Kind::Disabled:
             return -1;   // the pickers' kinds; no player listing carries them
@@ -708,10 +725,10 @@ bool render_player_button_enabled(const AppState& a,
                    !load_in_place_render_blocked(a) &&
                    render_player_highlighted_entry(a) != nullptr;
         // DELETE (architect 2026-09-29; in both lists 2026-11-25): the act's
-        // own question under the twin rule (render_player_delete_actionable —
-        // the band on a batch folder at the root, on a render inside a batch
-        // folder, which in each list is also every case the shifted press
-        // has something to take). A RUNNING RENDER IS NO TERM: no run can
+        // own question (render_player_delete_actionable — the band on a
+        // batch folder at the root, on a render inside a batch folder; with
+        // no row lit the face greys, its long press with it: the twin's
+        // reading is at the declaration). A RUNNING RENDER IS NO TERM: no run can
         // stand while the player does (open() refuses over one, and nothing
         // under the player starts one). THE LOCKS ARE NO TERM: a delete
         // writes no authoring.
@@ -917,8 +934,11 @@ void GuiRenderPlayer::play_button_act() {
     // THE HIGHLIGHT LEADS (architect 2026-08-31 — PLAY IS HIGHLIGHT-
     // DRIVEN IN THE PLAYER). A folder or
     // a wav that is NOT the transport's item under the band is somewhere to
-    // GO, and Play goes there whatever is playing; the transport's own item
-    // and an empty band fall through to transport_toggle_act below, which
+    // GO, and Play goes there whatever is playing — with NO ROW LIT inside a
+    // folder, the listing's first render (render_player_band_row, architect
+    // 2026-11-27), its row then lit by play_wav's seat as the playing
+    // render's; the transport's own item and a band naming no row (an empty
+    // one, the root with none lit) fall through to transport_toggle_act below, which
     // the IMPOSED INTERRUPTS reach WITHOUT this fork (the reasons are at that
     // body). THE CAR'S TOGGLE REACHES THIS WHOLE BODY past its LIVE arm
     // (architect 2026-09-07, from the car: the Accord's play does exactly
@@ -1327,8 +1347,10 @@ void GuiRenderPlayer::car_toggle() {
 // AT REST THE BAND IS THE PLAYLIST: a row above steps to it, and the FIRST row
 // leaves the folder instead — the one direction of travel that does, because
 // a listener knows which file starts a folder and never how many it holds,
-// so this exit is always deliberate. At the ROOT's first row up() is its own
-// silent wall. Changing track from the car is pause, step, play.
+// so this exit is always deliberate — and so does a band with NO ROW LIT
+// (architect 2026-11-27; walk_origin_row's -1, no row above it). At the
+// ROOT's first row, or none, up() is its own silent wall. Changing track
+// from the car is pause, step, play.
 void GuiRenderPlayer::car_previous() {
     if (app.render_player.transport == Transport::Live) {
         car_seek(/*forward=*/false);
@@ -1340,8 +1362,10 @@ void GuiRenderPlayer::car_previous() {
 
 // THE WHEEL'S FAST-FORWARD — Rewind's mirror image with ONE difference, and it
 // is the ruling's own: this act NEVER LEAVES A FOLDER. While live, the car's
-// seek forward; at rest, one row down and no further, the listing's last row
-// a silent wall (move_highlight's own clamp), never an exit and never a wrap.
+// seek forward; at rest, one row down and no further — from NO ROW LIT the
+// first row (the walk's from-none landing, architect 2026-11-27) — the
+// listing's last row a silent wall (move_highlight's own clamp), never an
+// exit and never a wrap.
 void GuiRenderPlayer::car_next() {
     if (app.render_player.transport == Transport::Live) {
         car_seek(/*forward=*/true);
@@ -1634,17 +1658,18 @@ bool GuiRenderPlayer::open() {
     app.folder_overlay       = AppState::FolderOverlay{};
     app.folder_overlay.owner = AppState::FolderOverlay::Owner::Player;
     // The open names no folder to seat on: ENTERING STAYS MEMORY-LESS
-    // whichever listing rp.folder now names, so the band takes the newest
-    // batch folder's top, or tmp/'s own top on the fallback. ONE REBUILD,
+    // whichever listing rp.folder now names, so NO ROW IS LIT (nothing is
+    // bound; folder_overlay.h's head) in the newest batch folder, or in
+    // tmp/'s own listing on the fallback. ONE REBUILD,
     // ONE PUSH: rp.folder / rp.batch_dir are already the folder decided
     // above, so this is the whole entry — no separate enter() call chases
     // it with a second rebuild and a second publish. THE HEAD UNIT IS
     // PUBLISHED BY THIS REBUILD and the open adds no push of its own: the
     // session goes ACTIVE with the mode (2026-08-28) and its title is the
-    // silence track naming the fresh band's row — the newest batch folder's
-    // first cell, or `tmp/`'s own top row (its first batch folder, or nothing
-    // listed at all) on the fallback. Every field the push reads is written
-    // above this line.
+    // silence track naming the fresh band's row (render_player_band_row) —
+    // the newest batch folder's first cell, what Play would start from none,
+    // or on the fallback `tmp/` naming itself. Every field the push reads
+    // is written above this line.
     rebuild_rows({});
     // A modal OPEN damages the whole window: the row's chrome greys, the band
     // appears over the waveform, and the modal row has no rect before its
@@ -1962,9 +1987,11 @@ void GuiRenderPlayer::publish_media_state() {
     // THE SILENCE TRACK — what plays while the listener is at the top level
     // walking folders (his own framing). THE ARTIST IS THE FOLDER THE BAND IS
     // IN, `tmp` at the root and the batch folder's own name inside one, and
-    // THE TITLE IS THE HIGHLIGHTED ROW'S OWN NAME, which is what the console's
-    // button would start — a wav's or a folder's, bare, the artist under it
-    // already saying where that name lives.
+    // THE TITLE IS THE BAND'S ROW'S OWN NAME (render_player_band_row: the
+    // highlighted row, or with no row lit inside a folder its first render),
+    // which is what the console's button would start — a wav's or a
+    // folder's, bare, the artist under it already saying where that name
+    // lives.
     //
     // POSITION 0 AND THE DURATION UNKNOWN (-1, which the consuming side turns
     // into "no duration key at all"): the state says PLAYING at speed 1.0, so
@@ -1978,14 +2005,14 @@ void GuiRenderPlayer::publish_media_state() {
                                    : rp.batch_dir)
             .filename()
             .string();
-    const int row = ov.highlight_row;
-    if (row >= 0 && row < static_cast<int>(ov.rows.size())) {
+    const int row = render_player_band_row(app);
+    if (row >= 0) {
         st.title = ov.rows[static_cast<size_t>(row)].name;
     } else {
-        // A listing with no rows, or one whose band has no seat — a batch
-        // folder's cells deleted from outside while the player stood: THE
-        // LISTED FOLDER NAMES ITSELF, the one road with nothing to highlight,
-        // so the title is never empty while the session stands.
+        // A band naming no row — the root with no row lit (the console's
+        // button starts nothing there), or a listing with no rows: THE
+        // LISTED FOLDER NAMES ITSELF, so the title is never empty while the
+        // session stands.
         st.title = st.artist;
     }
     gui.publish_media_state(st);

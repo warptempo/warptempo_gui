@@ -5927,11 +5927,12 @@ void GuiInputHandler::build_project_picker_rows() {
     }
     // THE BAND OPENS ON THE CURRENT PROJECT — name to name on both sides, the
     // model's resolved folder name here and the same string assigned verbatim
-    // by the field's one producer there (AppState::project_name). Row 0 when
-    // the open project is somehow not listed (a folder renamed under a
-    // running session), which the same-project no-op then simply never
-    // takes.
-    int current = 0;
+    // by the field's one producer there (AppState::project_name). NO ROW LIT
+    // when the open project is somehow not listed (a folder renamed under a
+    // running session; a row is lit only where it reflects something,
+    // folder_overlay.h's head), which the same-project no-op then simply
+    // never takes.
+    int current = -1;
     for (size_t i = 0; i < ov.rows.size(); ++i) {
         if (ov.rows[i].name == app.project_name) {
             current = static_cast<int>(i);
@@ -6100,14 +6101,15 @@ void GuiInputHandler::open_settings_page(std::string_view seat_key) {
 // `seat_key`'s row — a value list's return (return_to_settings_page) seats
 // the key it was showing, the line editor's return (open_settings_page from
 // handle_settings_editor_key) the key it was opened with — and, with no seat
-// key (`;` and the Settings key), THE FIRST KEY ROW, row 0; either through
-// the one set_highlight, the landing centering it as far as the listing's
-// ends allow (scroll_row_centered), which for row 0 is the top.
+// key (`;` and the Settings key), NONE, the listing at its top (a row is lit only
+// where it reflects something, folder_overlay.h's head, architect
+// 2026-11-27); either through the one set_highlight, a lit row landing
+// centered as far as the listing's ends allow (scroll_row_centered).
 void GuiInputHandler::build_settings_page_rows(std::string_view seat_key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov       = AppState::FolderOverlay{};
     ov.owner = AppState::FolderOverlay::Owner::SettingsPage;
-    int seat = 0;
+    int seat = -1;
     const auto list = [&](std::span<const char* const> keys) {
         for (const char* key : keys) {
             const bool editable = is_settings_editor_key(key);
@@ -6209,9 +6211,10 @@ void GuiInputHandler::settings_page_commit(int index) {
 // row value shares), seated by the one set_highlight and centered in the
 // band (scroll_row_centered, architect 2026-10-26). Every listed key's live
 // value is in its list by the load wall's own grammars but `noise`'s, whose
-// live name may have no folder (the absent-folder rule, noise.h): the first
-// row stands then, and a list with no rows seats nothing (set_highlight's
-// -1).
+// live name may have no folder (the absent-folder rule, noise.h): NO ROW IS
+// LIT then (a row is lit only where it reflects something,
+// folder_overlay.h's head, architect 2026-11-27), as in a list with no rows
+// (set_highlight's -1).
 void GuiInputHandler::build_value_list_rows(const std::string& key) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov           = AppState::FolderOverlay{};
@@ -6228,7 +6231,6 @@ void GuiInputHandler::build_value_list_rows(const std::string& key) {
         row.value = std::move(value);
         ov.rows.push_back(std::move(row));
     }
-    if (live < 0 && !ov.rows.empty()) live = 0;
     folder_overlay::clamp_scroll(app);
     folder_overlay::set_highlight(app, live);
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
@@ -6288,8 +6290,10 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
         score_viewer_project_folder(app), audio.total_frames());
     // THE SEAT: the named preset (the return), else the preset whose pair is
     // the active tab's trim — the window on screen named, the first in the
-    // list's order when two names share the pair — else row 0.
-    int seat = 0;
+    // list's order when two names share the pair — else NONE, the list at
+    // its top (a row is lit only where it reflects something,
+    // folder_overlay.h's head, architect 2026-11-27).
+    int seat = -1;
     bool seated = false;
     for (std::size_t i = 0; i < ov.trim_presets.size() && !seated; ++i) {
         if (!seat_name.empty() && ov.trim_presets[i].name == seat_name) {
@@ -6317,7 +6321,8 @@ void GuiInputHandler::open_trim_presets(std::string_view seat_name) {
 // (architect 2026-10-28: "names are descriptive enough and the odd
 // proportional spacing looks bad") — no span; the list's open seat (the
 // preset whose pair is the active tab's trim) is how a match shows. The highlight is seated through
-// the one set_highlight, clamped into the listing, -1 for an empty one.
+// the one set_highlight, clamped onto the listing's last row, -1 (none) for
+// an empty one and for a seat of none.
 void GuiInputHandler::build_trim_presets_rows(int highlight) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov.rows.clear();
@@ -6671,8 +6676,9 @@ void GuiInputHandler::commit_trim_preset_name() {
 }
 
 // SAVE: its question over the list on the highlighted preset (the
-// declaration's contract), or, WITH NO PRESET TO SAVE INTO — an empty list,
-// no highlight — SAVE AS's name editor, no question, there being nothing to
+// declaration's contract), or, WITH NO PRESET TO SAVE INTO — an empty list
+// or no row lit (folder_overlay.h's head) — SAVE AS's name editor, no
+// question, there being nothing to
 // overwrite (architect 2026-10-28: "with no presets yet, both create a new
 // preset"). The greyed face's road is silent
 // — the button's press never arms — so this guard is the face's own
@@ -6832,11 +6838,13 @@ bool trim_presets_button_enabled(const AppState& a,
 // picker's shared machinery below; the field's commit is the flag editor
 // cluster's (GuiFlagEditor::commit_bpm_field), beside the mode it serves.
 
-// THE OPENER — the Ctrl+B arm's tail, seated on `beats=`, and the line
-// editor's return, seated on its field (handle_settings_editor_key). No
+// THE OPENER — the Ctrl+B arm's tail, seated on NONE (std::nullopt: a row
+// is lit only where it reflects something, folder_overlay.h's head,
+// architect 2026-11-27), and the line editor's return, seated on its field
+// (handle_settings_editor_key). No
 // guards of its own (the declaration says why); the shared modal stop, a
 // no-op at the return.
-void GuiInputHandler::open_bpm_form(GuiBpmField seat) {
+void GuiInputHandler::open_bpm_form(std::optional<GuiBpmField> seat) {
     playback_lifecycle.stop_playback_for_modal_open();
     app.picker.active  = true;
     app.picker.session = text_editor::next_session_id();
@@ -6849,10 +6857,11 @@ void GuiInputHandler::open_bpm_form(GuiBpmField seat) {
 // expected to have expert knowledge"), its text the field's key and
 // value, `<key>=<value>` (bpm_field_text: an unset field the empty value,
 // `beats=`; the line editor opens on the value past the `=` alone,
-// bpm_form_commit), so row f is field f. THE SEAT is `seat`'s row,
-// through the one set_highlight, landed centered as far as the listing's
-// ends allow (scroll_row_centered), the settings page's landing.
-void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
+// bpm_form_commit), so row f is field f. THE SEAT is `seat`'s row, none
+// for std::nullopt (the listing at its top),
+// through the one set_highlight, a lit row landed centered as far as the
+// listing's ends allow (scroll_row_centered), the settings page's landing.
+void GuiInputHandler::build_bpm_form_rows(std::optional<GuiBpmField> seat) {
     AppState::FolderOverlay& ov = app.folder_overlay;
     ov       = AppState::FolderOverlay{};
     ov.owner = AppState::FolderOverlay::Owner::BpmForm;
@@ -6866,7 +6875,7 @@ void GuiInputHandler::build_bpm_form_rows(GuiBpmField seat) {
         ov.rows.push_back(std::move(row));
     }
     folder_overlay::clamp_scroll(app);
-    folder_overlay::set_highlight(app, static_cast<int>(seat));
+    folder_overlay::set_highlight(app, seat ? static_cast<int>(*seat) : -1);
     folder_overlay::scroll_row_centered(app, ov.highlight_row);
 }
 
@@ -7741,7 +7750,7 @@ bool GuiInputHandler::handle_mode_keys(GuiKey key, GuiInputState mods) {
         // listening session running. Space is the picker router's consumed
         // nothing and the line editor's typed character, so playback cannot
         // restart until the form closes.
-        open_bpm_form(GuiBpmField::Beats);
+        open_bpm_form(std::nullopt);
         // The open FOCUSES the owner and LANDS the playhead on it — the
         // marker lane owns the playhead (land_playhead_on_marker,
         // input_pointer.cpp), and the open hands the lane a new focus: the
