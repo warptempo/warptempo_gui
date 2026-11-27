@@ -9,4 +9,4 @@ noise_level=-inf
 noise_restore_level=-10.012147317984738
 noise_attenuation_level=-12
 noise_crossfade_s=4
-lit_lamps=
+lit_lamps=magnify
