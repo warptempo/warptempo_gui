@@ -29,7 +29,7 @@
 // 2026-10-29: "since settings has a multiline page, we should make bpm a
 // form like settings"), the settings page's shape — the
 // sweep's three `key=value` lines, `beats=`, `low=` and `high=`, a row's tap
-// opening the line editor on it — its controls row Render and Cancel in the
+// opening the line editor on it — its controls row Cancel and Render in the
 // trim list's cluster.
 // Which one fills it is
 // AppState::FolderOverlay::owner, and that tag IS the standing predicate

@@ -5688,7 +5688,7 @@ void GuiPaintHandler::paint_scanner(GuiCanvasSink& sink, const GuiRect& area) {
 //   * AN OVERLAY STANDS — the RENDER PLAYER (its transport row), the PICKER
 //     in its five contents (the project picker's and the value list's
 //     Cancel, the settings page's Close, the trim presets list's cluster,
-//     the BPM form's RENDER and Cancel) or THE SCORE VIEWER (its keys, scrub
+//     the BPM form's Cancel and RENDER) or THE SCORE VIEWER (its keys, scrub
 //     and page cell or clock): that overlay's controls row, live.
 // Then paint_modal_dialog paints that row on the row's rows — and the top
 // icon row lights the same page's opener (roster_face_page_owner,
@@ -6489,8 +6489,8 @@ static ScoreMediaRowLayout score_media_row_layout(const BottomRowSeats& seats) {
 // left;
 // that ruling named the player and the score viewer alone): this list keeps
 // its pair and its words in the one cluster flush right. THE BPM FORM'S ROW
-// (architect 2026-10-29) is the same cluster with no pair: RENDER and
-// CANCEL, two word buttons. `n_glyph` the pair's count (2, or 0), `words`
+// (architect 2026-10-29) is the same cluster with no pair: CANCEL and
+// RENDER, two word buttons. `n_glyph` the pair's count (2, or 0), `words`
 // the words; the answer each button's left column and width, in the plan's
 // order (the pair first). On a row too narrow, the words start at the row's
 // first column and the pair before them is cut off the row's left (the
@@ -6717,7 +6717,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                              row_page.owner ==
                                  AppState::FolderOverlay::Owner::TrimPresets;
     // THE BPM FORM (2026-10-29): a list whose controls row is two word keys
-    // in the trim list's cluster, RENDER and CANCEL.
+    // in the trim list's cluster, CANCEL and RENDER.
     const bool    row_bpm  = row_list &&
                              row_page.owner ==
                                  AppState::FolderOverlay::Owner::BpmForm;
@@ -6815,7 +6815,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
     // the trim presets list, its six words SAVE, SAVE AS, RENAME, DELETE,
     // RENDER and CLOSE after its two keys, the player's highlight pair, or
     // under the
-    // BPM form its two, RENDER and CANCEL. `lit` is
+    // BPM form its two, CANCEL and RENDER. `lit` is
     // the roster's SELECTED face — the row's one lamp, Repeat one, and no other button has a state to say. `player_act` is the
     // player's dispatch vocabulary; the other two stay zero/false on its
     // buttons.
@@ -7178,12 +7178,14 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         word(Act::Close, kModalCloseLabel);
     } else if (row_bpm) {
         // THE BPM FORM'S ROW (architect 2026-10-29), in painted order, the
-        // trim list's cluster flush right (key_cluster_row_layout): RENDER,
-        // which greys until the three fields are set and low <= high, and
-        // CANCEL (kModalCancelLabel's rule, the form asking for a choice),
-        // CANCEL LAST. No OK: a row's tap is the edit, RENDER the answer.
-        // Each face is the act's own truthful answer
-        // (bpm_form_button_enabled).
+        // trim list's cluster flush right (key_cluster_row_layout): CANCEL
+        // (kModalCancelLabel's rule, the form asking for a choice), then
+        // RENDER, which greys until the three fields are set and low <= high
+        // — RENDER, the affirmative, at the right end and Cancel on its left,
+        // as a question's answers stand (AppState::PromptState's fact (i);
+        // architect 2026-11-27, on the BPM form Cancel · Render: "agree").
+        // No OK: a row's tap is the edit, RENDER the answer. Each face is the
+        // act's own truthful answer (bpm_form_button_enabled).
         using Act = AppState::BpmFormButtonAct;
         const auto word = [&](Act act, std::string_view w) {
             DialogButtonPlan b;
@@ -7192,8 +7194,8 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
             b.enabled = bpm_form_button_enabled(app, act);
             plan.push_back(std::move(b));
         };
-        word(Act::Render, "Render");
         word(Act::Cancel, kModalCancelLabel);
+        word(Act::Render, "Render");
     } else {
         // THE PICKER'S ROW IS ONE BUTTON (architect 2026-08-29): a click on a
         // row opens it, so there is nothing for an OK to add. ITS WORD IS WHAT LEAVING DOES (the rule at
@@ -7620,7 +7622,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
         //    shape instead — the highlight pair and four words, one cluster
         //    flush right — laid out with the widths above
         //    (key_cluster_row_layout), and THE BPM FORM'S (2026-10-29) the
-        //    same cluster of two, RENDER and CANCEL; nothing else stands on
+        //    same cluster of two, CANCEL and RENDER; nothing else stands on
         //    either for this branch to paint. --
         dlg.owner  = AppState::ModalDialogOwner::Picker;
     }

@@ -6045,13 +6045,15 @@ struct AppState {
     // THE BPM FORM'S BUTTONS (architect 2026-10-29), its dispatch
     // vocabulary, in the row's order, ONE ABUTTING CLUSTER FLUSH RIGHT as
     // the trim presets list's (key_cluster_row_layout, paint_handler.cpp):
-    // RENDER, a word button, which renders
-    // the sweep and closes the form (GuiInputHandler::bpm_form_render), and
-    // CANCEL, which closes the form and the mode with it
-    // (close_bpm_form) — the Cancel word kModalCancelLabel's rule, the form
-    // asking for a choice. No OK: a row's tap is the edit and RENDER the
-    // answer. The faces are bpm_form_button_enabled's.
-    enum class BpmFormButtonAct { None, Render, Cancel };
+    // CANCEL, which closes the form and the mode with it (close_bpm_form) —
+    // the Cancel word kModalCancelLabel's rule, the form asking for a
+    // choice — and then RENDER, a word button, which renders the sweep and
+    // closes the form (GuiInputHandler::bpm_form_render): the affirmative at
+    // the right end and Cancel on its left, as a question's answers stand
+    // (PromptState's fact (i); architect 2026-11-27, on the BPM form
+    // Cancel · Render: "agree"). No OK: a row's tap is the edit and RENDER
+    // the answer. The faces are bpm_form_button_enabled's.
+    enum class BpmFormButtonAct { None, Cancel, Render };
     struct ModalDialogButton {
         // The PAINTED BOX, border included (architect 2026-11-19: "the
         // border is clickable") — the hit box (point_on_key, materials.h; the
@@ -8792,7 +8794,7 @@ struct AppState {
     // the sweep's ladder; the three `key=value` lines `beats=`, `low=` and
     // `high=`, no title row, the open act the line editor
     // opened PREFILLED on the row's value once the form has closed, its
-    // controls row RENDER · Cancel, BpmFormButtonAct).
+    // controls row Cancel · RENDER, BpmFormButtonAct).
     // The struct keeps its shape rather
     // than folding into the overlay's tag, the two saying different things:
     // this one that A PICKER STANDS (the modal owner), the tag WHOSE ROWS the

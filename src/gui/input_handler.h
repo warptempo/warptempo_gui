@@ -2915,7 +2915,7 @@ private:
     // Close under the settings page (a button's word says what leaving does,
     // kModalCancelLabel, app_state.h, architect 2026-10-28) —
     // the trim presets list's row the player's shape instead, the BPM
-    // form's RENDER and Cancel in that cluster — and route_picker_key below is its whole
+    // form's Cancel and RENDER in that cluster — and route_picker_key below is its whole
     // key vocabulary, its opener's chords and the tooltip lamp's. FIVE CONTENTS — the project picker, the settings
     // page (2026-10-28), the value list (2026-10-25), the page's row for a
     // listed key, the trim presets list (2026-10-28) and the BPM form
