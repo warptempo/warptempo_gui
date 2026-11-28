@@ -247,11 +247,11 @@ scripts/warptempo_sync setup
 # the same plan, then "Proceed? [y/N]": read it, then type y. The last line starts "done:"
 ```
 
-Then check. On the tablet, tap Toggle History View in the icon row (hold the S Pen just above an icon to read its name); after a moment the bottom row ends with `GitHub: up to date`. From the laptop:
+Then check. On the tablet, tap Toggle History View in the icon row (hold the S Pen just above an icon to read its name); after a moment SAVE there is no longer grey (its tooltip: Force Save and Commit) and no red card stands. From the laptop:
 
 ```bash
 adb logcat -d -s warptempo:I | grep -E 'working_column|GitHub'
-# a line with working_column= (a piece opened), and none with "GitHub refused" or "GitHub offline"
+# a line with working_column= (a piece opened), and none with "GitHub refused", "GitHub offline" or "GitHub could not be checked"
 adb shell run-as com.warptempo.gui cat /data/user/0/com.warptempo.gui/files/warptempo_gui/config
 # twelve lines, in this order (the values here an example; a first run writes the lines of the repository's assets/device_config_defaults, below):
 #   gui_scale=200                 (the tablet's scale, which a first run stamps; change it in the app)
@@ -448,7 +448,7 @@ adb logcat -d -s warptempo:I | tail -20
 # the last lines name the reason: usually the config file, or a piece folder missing a file
 ```
 
-`GitHub: refused` on the tablet: its deploy key is missing. Setup replaces the tablet's history and backs nothing up, so first copy the tablet's files home, in case it holds commits GitHub never got:
+The red card "GitHub refused this device" on the tablet: its deploy key is missing. Setup replaces the tablet's history and backs nothing up, so first copy the tablet's files home, in case it holds commits GitHub never got:
 
 ```bash
 adb pull /sdcard/Android/data/com.warptempo.gui/files ~/tablet_files_copy
@@ -470,7 +470,8 @@ The laptop's clone diverged (`git status -sb` says `ahead` and `behind` at once,
 ```bash
 projects="$WARPTEMPO_PROJECTS_PATH"
 git -C "$projects/.." reset --hard origin/main
-# HEAD is now at … : the laptop is GitHub's again. On the tablet, diverged means its
+# HEAD is now at … : the laptop is GitHub's again. On the tablet, diverged (the red card
+# "This device and GitHub have both moved") means its
 # clone is re-placed by scripts/warptempo_sync setup (copy its files home first, above)
 ```
 
