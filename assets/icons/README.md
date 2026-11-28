@@ -16,7 +16,7 @@ whose names are mostly links into the 16-px `actions/`, `apps/` and `panel/` tre
 `actions/`, `devices/` and `panel/` trees where his pick lives there. THE ROSTER is the parked picks of session 123
 (his sheets of session 140) WITH ROWS RE-PICKED BY HIM: 2026-11-17 ("the first alternative for each one"), the
 picker's Up (`GoParentFolder`), re-picked once more 2026-11-23 (send OO, below); 2026-11-22 (send II, off the alternates sheet; eight of them re-picked again the same day, send MM, and some again
-2026-11-23, sends NN and OO, each marked so), TWENTY-ONE ROWS — Previous / Next Marker (`BboxPrev` / `BboxNext`) OUR
+2026-11-23, sends NN and OO, each marked so), NINETEEN ROWS — Previous / Next Marker (`BboxPrev` / `BboxNext`) OUR
 OWN arrow to a line (send MM, THE OWN DRAWINGS below), Next's mirrored to point right; Score (`ViewMediaLyrics`)
 `folder-music`, two beamed notes; Source (`ViewMediaTrack`) `media-optical`, a disc; Value Drag
 (`TransformMoveVertical`) OUR OWN double arrow, one head up and one down on one stem (re-picked once more 2026-11-23,
@@ -25,8 +25,7 @@ send NN, THE OWN DRAWINGS below); Follow (`GoJump`) `go-first-rtl`, an arrow rig
 (re-picked once more 2026-11-23, send OO); Jump to Defining (`GoJumpDeclaration`) `go-jump-declaration`; Grid
 Iterations (`Mathmode`) `insert-math-expression`; Target (`ViewMediaVisualization`) `kdenlive-show-audiothumb`;
 Magnification (`ZoomInY`) `audio-volume-high`; Warp (`Speedometer`) `slow_off`, a gauge; FIT's recall
-(`ZoomPrevious`) `view-restore` (re-picked once more 2026-11-24, below); Older / Newer (`KeyframePrevious` / `KeyframeNext`) `keyframe-previous` /
-`keyframe-next`; Session History (`DeepHistory`) `network-unavailable`, a faded network port and a cross (send MM);
+(`ZoomPrevious`) `view-restore` (re-picked once more 2026-11-24, below); Session History (`DeepHistory`) `network-unavailable`, a faded network port and a cross (send MM);
 the score's Start / End (`ZoneIn` / `ZoneOut`) (re-picked once more 2026-11-23, send OO, and again 2026-11-24,
 below); Save (`DocumentSave`) `media-floppy`; Cumulative (`BlackSum`)
 OUR OWN serifed sigma (re-picked once more 2026-11-23, send OO, its serifs send PP); Flatten (`Merge`) `tool-brush`,
@@ -34,7 +33,8 @@ a brush (send MM); and
 2026-11-23 (send OO, his picks off the mocks; with Restrict, Start / End and Cumulative above, ten rows, every one
 then OUR OWN, Start / End since re-picked again), SIX MORE ROWS — the picker's Up (`GoParentFolder`) `folder-symbolic`'s folder with
 an up arrow cut out of it; the score's Previous / Next Page (`GoPreviousViewPage` / `GoNextViewPage`)
-`go-previous`'s head without its stem, Next's mirrored to point right; and SAVE's three history-view faces, Commit
+`go-previous`'s head without its stem, Next's mirrored to point right (the history view's Older / Newer wear the same
+two, architect 2026-11-27); and SAVE's three history-view faces, Commit
 (`VcsCommit`) `go-up`'s arrow standing on a line, Pull (`VcsPull`) `go-down`'s arrow landing on it, and Check
 (`NetworkConnect`) the two arrows side by side, one up and one down; and 2026-11-24 (send QQ, his pick "L1"), TWO ROWS
 ADDED, the tab pair's Tab A / Tab B (`TabA` / `TabB`) OUR OWN, Liberation Sans Bold's own outlines of the two capitals
@@ -66,8 +66,8 @@ It writes only its rows' files and removes nothing, so a rerun leaves the licenc
 THE TWO CARDS ARE IMPORTED AS PAPIRUS DRAWS THEM: Papirus's `dialog-information` and `dialog-error` already cut their
 mark (an i, an !) out of a filled disc, the mark's subpaths wound against the disc's, so one color shows it.
 EVERY FILE IS A DISTINCT DRAWING, by its written shapes and transforms rather than by name (the importer flags a
-share; there is none — the score viewer's page keys wear our own head without a stem, not GoPrevious's / GoNext's
-arrows). ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM, twice: `BboxPrev` and `BboxNext` are both the marker
+share; there is none — the score viewer's page keys and the history view's Older / Newer wear our own head without a
+stem, not GoPrevious's / GoNext's arrows). ONE SOURCE MAY MAKE TWO DRAWINGS BY THE TRANSFORM, twice: `BboxPrev` and `BboxNext` are both the marker
 pair's own drawing, and `GoPreviousViewPage` and `GoNextViewPage` both the score's own page head, Previous's as
 drawn and Next's mirrored (the importer notes the shared source).
 
@@ -94,7 +94,8 @@ keys' straight arrows (architect 2026-11-23, send OO); Papirus's own drawings ke
 - THE SCORE'S PAGE KEYS' (send OO, "P1"), `GoPreviousViewPage.svg`: `actions/go-previous.svg`'s head with the stem
   removed — its vertices 2,8 8,2 9.5,3.5 and 9.5,12.5 8,14 kept, the stem's two inner corners replaced by the arms'
   own meeting point 5,8 — the ink re-centered (shifted 2.25 right, ink x 4.25 to 11.75, y 2 to 14). Previous Page
-  wears it as drawn, Next Page mirrored (THE TRANSFORM, below).
+  wears it as drawn, Next Page mirrored (THE TRANSFORM, below); the history view's Older and Newer wear the same two,
+  a member older / newer in the walk (architect 2026-11-27: "use the same arrows that the score viewer uses for PDFs").
 - RESTRICT'S (send OO, "C2"), `TimelineUseZoneOn.svg`: the playhead stopped at the window's edge, a dot and a wall
   with nothing between and no arrow — go-first's dot (r 2) at cx 6, cy 8, the marker pair's wall, 2 wide, rows 2 to
   14, at x 10 to 12, the clear gap 2, the ink x 4 to 12, centered. Follow keeps Papirus's `go-first-rtl`, an arrow
@@ -202,8 +203,6 @@ changed, two of them wrapped in their transform.
 | `DeepHistory` | `panel/network-unavailable.svg (-> panel/network-wired-offline.svg)` | `ffd38f78062e37210ae4d1c38b985b7fdee67f71bfca5fbd99c2b319a37dee65` | no deep-history; network-unavailable, a faded network port and a cross (re-picked 2026-11-22, send MM) |
 | `BlackSum` | `tools/icons/own/BlackSum.svg` | `2392ce32f645000760e5c1dc1439b12d42be2ac5a62c6271955be19c3642a2a4` | no black_sum; ours, a serifed sigma, no Papirus source (re-picked 2026-11-23, send PP) |
 | `DocumentRevert` | `symbolic/actions/document-revert-symbolic.svg (-> actions/document-revert.svg)` | `3ebae2dd73ccf42a5f0d12d7e5548e025f3dd2dced023a73f98fc60f67cd0118` |  |
-| `KeyframePrevious` | `actions/keyframe-previous.svg` | `dcb56a7748d890872d1e1566d192691b5c65300a9e13d629dbdd3830c33789c2` | a stopwatch and a triangle back (re-picked 2026-11-22) |
-| `KeyframeNext` | `actions/keyframe-next.svg` | `649db167a62c4c238f4febefb2f2cc376ada0bae88e9bb158187067f0c1f501d` | a stopwatch and a triangle forward (re-picked 2026-11-22) |
 | `DialogOkApply` | `symbolic/actions/feather-check-symbolic.svg (-> symbolic/actions/dino-tick-symbolic.svg)` | `7353cf8a23d1e471aa100fbedbabe074b3ae7e12c630c0feba9942281e15c4a5` | no dialog-ok-apply; a check |
 | `ViewMediaTrack` | `devices/media-optical.svg` | `6f4c817244f11723618f299ef1b4c8c3fbd975373f713bc81aa88700f4f651ad` | no view-media-track; media-optical, a disc (re-picked 2026-11-22) |
 | `ViewMediaVisualization` | `actions/kdenlive-show-audiothumb.svg` | `fddf283c83384e1e93ffdfca989766e5757cc95eef5396f5c25d81a3b3788b52` | no view-media-visualization; kdenlive-show-audiothumb, an arrow through chevrons (re-picked 2026-11-22) |
@@ -237,8 +236,8 @@ changed, two of them wrapped in their transform.
 | `GoPrevious` | `symbolic/actions/go-previous-symbolic.svg (-> actions/go-previous.svg)` | `5bc42db4e2cbf4bdc12a91f3430cf01447ba558645cffd499b318861df771d92` |  |
 | `GoNext` | `symbolic/actions/go-next-symbolic.svg (-> actions/go-next.svg)` | `9a99f8bd24357cf56535e3c50d97874056c5928f12bca038025316309597ba07` |  |
 | `GoParentFolder` | `tools/icons/own/GoParentFolder.svg` | `4ce683ce9e12073ec478a87fa7c0c36d65d983a3ced004fc3ac4011f0528f02f` | ours, folder-symbolic's folder with an up arrow cut out of its body, his pick over go-parent-folder (re-picked 2026-11-23, send OO) |
-| `GoPreviousViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `2ace6a993255466adb18f55cea123a41c7e84321dcd25e5e4090b503718e9aa5` | no go-previous-view-page; ours, go-previous's head without its stem, as drawn, pointing left (re-picked 2026-11-23, send OO) |
-| `GoNextViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `2ace6a993255466adb18f55cea123a41c7e84321dcd25e5e4090b503718e9aa5` | no go-next-view-page; ours, go-previous's head without its stem, mirrored left-right to point right (re-picked 2026-11-23, send OO); one source with GoPreviousViewPage, another drawing by the transform |
+| `GoPreviousViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `931808a66e53ebb8cc6cb5bd0c3f8837090c17fa5bca938dbf83fa2bfd52ac0c` | no go-previous-view-page; ours, go-previous's head without its stem, as drawn, pointing left (re-picked 2026-11-23, send OO) |
+| `GoNextViewPage` | `tools/icons/own/GoPreviousViewPage.svg` | `931808a66e53ebb8cc6cb5bd0c3f8837090c17fa5bca938dbf83fa2bfd52ac0c` | no go-next-view-page; ours, go-previous's head without its stem, mirrored left-right to point right (re-picked 2026-11-23, send OO); one source with GoPreviousViewPage, another drawing by the transform |
 | `EditReset` | `symbolic/actions/object-rotate-left-symbolic.svg (-> actions/object-rotate-left.svg)` | `d99b6f9e536672447d619a3d789b7b459a0bb2f0accd9e4c5c0a4570775a005b` | no edit-reset; the counter-clockwise arrow |
 | `ZoneIn` | `actions/bookmark-new.svg` | `429836f934162dde2a393530e4059488b7bff1ee362a1c0536c0072a9d33d6c2` | no zone-in; bookmark-new, a bookmark ribbon with a plus cut out of it, his pick (re-picked 2026-11-24, "G") |
 | `ZoneOut` | `actions/bookmark-remove.svg` | `eb0f48f2370eb6f36062e0e5e3ef6e959c81e5ae51cb553ff8ec29573ed49e53` | no zone-out; bookmark-remove, a bookmark ribbon with a minus cut out of it, his pick (re-picked 2026-11-24, "G") |

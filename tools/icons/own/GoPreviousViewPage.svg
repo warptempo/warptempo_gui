@@ -8,7 +8,9 @@
       whole ink re-centered in the 16 canvas (shifted 2.25 right, its ink x
       4.25 to 11.75, y 2 to 14). Previous Page (GoPreviousViewPage) wears it
       as drawn and Next Page (GoNextViewPage) its exact left-right mirror,
-      the importer's transform (tools/icons/import_papirus.py). A modified
+      the importer's transform (tools/icons/import_papirus.py); the history
+      view's Older / Newer (HistoryOlder / HistoryNewer) wear the same two,
+      a member older / newer in the walk (architect 2026-11-27). A modified
       copy of a papirus-icon-theme drawing, GPL-3.0
       (assets/icons/LICENSE-GPL-3.txt). -->
  <g transform="translate(2.25,0)">

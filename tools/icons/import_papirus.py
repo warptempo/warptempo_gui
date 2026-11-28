@@ -15,8 +15,9 @@ Papirus's go-first, architect 2026-11-22, send MM; Value Drag's double
 arrow, go-first's arrow upright with a head each way, architect
 2026-11-23, send NN; and, architect 2026-11-23, send OO, his picks off the
 mocks: Cumulative's sigma, drawn outright with no Papirus source; the
-score's page keys' head, go-previous's without its stem; Restrict's dot
-and wall, go-first's dot and the marker pair's line; the picker's Up,
+score's page keys' head, go-previous's without its stem (the history
+view's Older / Newer its second reader, architect 2026-11-27); Restrict's
+dot and wall, go-first's dot and the marker pair's line; the picker's Up,
 folder-symbolic's folder with an up arrow cut out of it; Commit and Pull,
 go-up's and go-down's arrows on a line; and Check, the two arrows side by
 side; and, architect 2026-11-24, send QQ, his pick "L1", the tab pair's A
@@ -100,11 +101,11 @@ OWN_DIR = os.path.join(REPO, 'tools', 'icons', 'own')
 # 140) WITH ONE ROW KEPT OF TWO RE-PICKED BY HIM 2026-11-17, session 140
 # ("the first alternative for each one"): GoParentFolder (the 16-px actions
 # tree, no symbolic twin; re-picked once more, below); AND
-# TWENTY-ONE ROWS RE-PICKED BY HIM 2026-11-22, send II, off the alternates
+# NINETEEN ROWS RE-PICKED BY HIM 2026-11-22, send II, off the alternates
 # sheet: BboxPrev / BboxNext, ViewMediaLyrics,
 # ViewMediaTrack, TransformMoveVertical, GoJump, TimelineUseZoneOn,
 # GoJumpDeclaration, Mathmode, ViewMediaVisualization, ZoomInY, Speedometer,
-# ZoomPrevious, KeyframePrevious, KeyframeNext, DeepHistory, ZoneIn, ZoneOut,
+# ZoomPrevious, DeepHistory, ZoneIn, ZoneOut,
 # DocumentSave, BlackSum and Merge, most from the 16-px actions, devices and
 # panel trees (ZoomPrevious and ZoneIn / ZoneOut re-picked once more,
 # below); AND EIGHT OF
@@ -202,10 +203,6 @@ ROSTER = [
      'no black_sum; ours, a serifed sigma, no Papirus source (re-picked '
      '2026-11-23, send PP)'),
     ('DocumentRevert', SYM + 'actions/document-revert-symbolic.svg', ''),
-    ('KeyframePrevious', 'actions/keyframe-previous.svg',
-     'a stopwatch and a triangle back (re-picked 2026-11-22)'),
-    ('KeyframeNext', 'actions/keyframe-next.svg',
-     'a stopwatch and a triangle forward (re-picked 2026-11-22)'),
     ('DialogOkApply', SYM + 'actions/feather-check-symbolic.svg',
      'no dialog-ok-apply; a check'),
     ('ViewMediaTrack', 'devices/media-optical.svg',

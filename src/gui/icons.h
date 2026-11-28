@@ -17,7 +17,8 @@
 // importer's transform; TransformMoveVertical the double arrow from the same
 // go-first; and, architect 2026-11-23, BlackSum a sigma (ours outright, no
 // Papirus source), GoPreviousViewPage / GoNextViewPage go-previous's head
-// without its stem (one source, Next's mirrored),
+// without its stem (one source, Next's mirrored; the score viewer's page
+// keys and, architect 2026-11-27, the history view's Older / Newer),
 // TimelineUseZoneOn go-first's dot and the marker pair's wall,
 // GoParentFolder folder-symbolic's folder with an up arrow cut out,
 // VcsCommit / VcsPull go-up's / go-down's arrow on a line, NetworkConnect
@@ -69,12 +70,13 @@
 //   (architect 2026-11-22): the PLAYER key and the render player's
 //   wav rows; SOURCE's disc, ViewMediaTrack, is the key's alone.
 // THE ROSTER IS AS RULED (2026-11-17; 2026-11-22; 2026-11-23; 2026-11-24;
-// 2026-11-26);
+// 2026-11-26; 2026-11-27);
 // a re-pick is
 // a row of the importer's table and a rerun. EVERY FILE IS A
 // DISTINCT DRAWING (by the written shapes and transforms; the icon
 // theme's names are often symlinks, so one drawing is one enumerator) — the
-// score viewer's page keys, GoPreviousViewPage / GoNextViewPage, wear our
+// score viewer's page keys and the history view's Older / Newer
+// (architect 2026-11-27), GoPreviousViewPage / GoNextViewPage, wear our
 // own head without a stem, not GoPrevious's / GoNext's arrows; BboxPrev and
 // BboxNext share one source file, and so do the two page keys, two drawings
 // each by the transform. EVERY DRAWING IS PAPIRUS'S BUT THE FOURTEEN OF OUR
@@ -142,8 +144,8 @@ namespace icons {
     X(Merge) X(AudioHeadphones) X(Lock) X(SettingsConfigure)             \
     X(HelpWhatsthis) X(BluetoothPaired) X(ViewMediaLyrics)               \
     X(ShallowHistory)                                                    \
-    X(DeepHistory) X(BlackSum) X(DocumentRevert) X(KeyframePrevious)     \
-    X(KeyframeNext) X(DialogOkApply) X(ViewMediaTrack)                   \
+    X(DeepHistory) X(BlackSum) X(DocumentRevert)                         \
+    X(DialogOkApply) X(ViewMediaTrack)                                   \
     X(ViewMediaVisualization) X(Speedometer) X(ChronometerStart)         \
     X(MediaPlaybackStart) X(MediaPlaybackStop) X(MediaPlaybackPause)     \
     X(MediaSkipBackward) X(MediaSkipForward) X(MediaSeekBackward)        \

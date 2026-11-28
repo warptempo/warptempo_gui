@@ -18662,9 +18662,10 @@ inline constexpr RedesignTooltipText redesign_button_tooltip(RedesignButton b) {
 }
 
 // THE KEY'S GLYPH (THE ROSTER AS RULED, architect 2026-11-02, and
-// Papirus's, 2026-11-17, re-picked by him 2026-11-22 and 2026-11-23 — the
-// marker pair, DRAG, RESTRICT, CUMULATIVE and SAVE's Commit / Pull / Check
-// faces wearing our own drawings (icons.h's head) —
+// Papirus's, 2026-11-17, re-picked by him 2026-11-22, 2026-11-23 and
+// 2026-11-27 — the marker pair, DRAG, RESTRICT, CUMULATIVE, SAVE's Commit /
+// Pull / Check faces and the history view's OLDER / NEWER wearing our own
+// drawings (icons.h's head) —
 // rows of the importer's table: EDIT, HISTORY, SOURCE, TARGET, SESSION and
 // LOCK one glyph each, no state swap; PLAYER the headphones, shared with the
 // render player's wav rows (architect 2026-11-22); BPM shares the title
@@ -18719,8 +18720,16 @@ inline constexpr icons::Icon redesign_button_icon(RedesignButton b) {
         case RedesignButton::SessionHistory:            return Icon::DeepHistory;
         case RedesignButton::HistoryCumulative:         return Icon::BlackSum;
         case RedesignButton::HistoryRevert:             return Icon::DocumentRevert;
-        case RedesignButton::HistoryOlder:              return Icon::KeyframePrevious;
-        case RedesignButton::HistoryNewer:              return Icon::KeyframeNext;
+        // OLDER / NEWER wear the score viewer's page keys' drawings, our own
+        // head without a stem, Newer's mirrored (architect 2026-11-27: "I was
+        // thinking of having the left and right arrows for the history. Also
+        // use the same arrows that the score viewer uses for PDFs. The arrows
+        // that we created by removing the stems from the papyrus arrow."):
+        // one drawing, two readers, a page back / forward in the score and a
+        // member older / newer in the walk, distinct from the nudge pair's
+        // stemmed arrows that hold the same seats outside the view.
+        case RedesignButton::HistoryOlder:              return Icon::GoPreviousViewPage;
+        case RedesignButton::HistoryNewer:              return Icon::GoNextViewPage;
         case RedesignButton::IconLoadInPlace:           return Icon::DialogOkApply;
         case RedesignButton::ViewSource:                return Icon::ViewMediaTrack;
         case RedesignButton::ViewTarget:                return Icon::ViewMediaVisualization;
