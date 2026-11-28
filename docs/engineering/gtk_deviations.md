@@ -9,7 +9,8 @@ A line here is not closed: it is a standing choice, open to his word. A new depa
 arc that makes it; one that is brought to GTK's leaves.
 
 GTK's numbers below were read at the source (gtk-3-24: `gtksettings.c`, `gtktooltip.c`, `gtkentry.c`; xfce4-notifyd's
-`xfce-notify-common.h`) on 2026-11-27. GTK's side of the "Pointer and widgets" lines is from that day's survey and
+`xfce-notify-common.h`; for the digits' line Adwaita's `_common.scss` and
+Arc's `common/gtk-3.0/sass/`) on 2026-11-27. GTK's side of the "Pointer and widgets" lines is from that day's survey and
 its links (GTK's documentation of each property), not re-read line by line.
 
 ## Timing and slop
@@ -47,4 +48,5 @@ its links (GTK's documentation of each property), not re-read line by line.
 | The answers' paint | Every answer alike | GTK's default is alike too; Arc offers `suggested-action` (blue) and `destructive-action` (red) to an app that asks | Not taken | `paint_modal_page` |
 | The title bar's name | Left, 6 U after the note | GTK's own header is left too; his desktop's centered titles are xfwm's | Closed (closed_questions.md) | `paint_title_bar` |
 | "Settings" | The word | Xfce says "Preferences" | Not taken | the roster's tooltips |
+| The digits | A digit never kerns against a digit: every number, on every text, stands on the face's equal digit slots | Pango shapes with the face's kerning, and Liberation Sans kerns one digit pair, "11", by 0.89 U (1.8 device px) in Regular 12 U. Adwaita asks tabular digits (`tnum`) on the spin button, the scale's marks and value and the progress bar's text, Arc's sheet nowhere; the face has no `tnum` to answer, its digits being tabular already, and neither sheet turns kerning off | A count beside a date read as two kinds of digits ("right now it's very inconsistent", architect 2026-11-27), and a time must not walk as it runs (2026-11-05) | text_shape.h's THE DIGITS' RULE |
 | The on-screen keyboard | The program's own | GTK has none | The tablet's one keyboard | onscreen_keyboard.h |
