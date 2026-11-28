@@ -470,8 +470,8 @@ void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
         // or a place of one width for another, every digit sharing one
         // advance — are a change the stack's rect compare cannot see), and
         // the stack's owner damages what a new width moved (a place named or
-        // dropped, a count gaining a digit, an "11" kerned in a place: each
-        // card its content's width, architect 2026-11-19).
+        // dropped, a count gaining a digit: each card its content's width,
+        // architect 2026-11-19).
         if (card->text != words) {
             card->text = std::move(words);
             for (const AppState::NotificationPainted& p : st.painted)

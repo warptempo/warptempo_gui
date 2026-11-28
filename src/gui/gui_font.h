@@ -99,9 +99,8 @@
 // its own true advances, TRACKING 0 (the heights-only rule's "no manual
 // kerning — let the spacing be set by the font", architect 2026-10-09), the
 // one shaping chokepoint unchanged (text_shape.h) — the face's own kerning
-// on every surface but the time fields, whose runs shape with `kern` off
-// (text_shape::Kerning, architect 2026-11-05: the pair "11" kerned the
-// digits into a walk; paint_handler.cpp's THE TIME FIELDS block).
+// on every text but between two digits, which never kern (text_shape.h's
+// THE DIGITS' RULE, architect 2026-11-27: every digit one slot of 0.556 em).
 //
 // EVERY FACE DRAWS ITS ANTIALIASED OUTLINE AT EVERY SIZE, NEVER AN EMBEDDED
 // BITMAP STRIKE (architect 2026-10-06): the install hides any strike from

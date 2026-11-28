@@ -934,7 +934,8 @@ int notification_card_max_w_px(const AppState& a);
 // under it starts a tooltip (recompute_redesign_button_hover's under_card).
 // WORKED ON THE TABLET (2304 x 1440 at 200 %, the key 28 U tall; the advances
 // MEASURED off fonts/LiberationSans-Regular.ttf at 24 px the product's way —
-// unhinted hmtx advances and the GPOS `kern` pairs, each to 1/64 px, which
+// unhinted hmtx advances and the GPOS `kern` pairs under the digits' rule,
+// each to 1/64 px, which
 // gives "2 warp markers coincide" its recorded 260.1 — the boxes
 // DERIVED from them by the painter's arithmetic): THE STRUCK CARD of one
 // run, "2 warp markers coincide at 00:12.345" — its sentence's advance 400.2
@@ -943,11 +944,11 @@ int notification_card_max_w_px(const AppState& a);
 // 1783 .. 1814, rows 60 .. 91; its pen x 1843, its line box rows 62 .. 89,
 // the baseline on row 84; over the title bar's rows 32 .. 55 and the top
 // icon row's 56 .. 119 (the keys' faces 70 .. 125 covered to row 119). Every
-// digit has one advance (13.34 px; the colon, the point and the comma 6.67),
-// so a place spells 106.75 px whatever it reads, less 1.78 px for each "11"
-// in it (the one kerned pair among its characters): the card's width moves
-// only with the number of places named and the digits of the two counts,
-// never with a place's own value beyond that pair. THE LONGEST FORM, three
+// digit has one advance (13.34 px; the colon, the point and the comma 6.67)
+// and no digit kerns against a digit (text_shape.h's THE DIGITS' RULE), so
+// a place spells 106.75 px whatever it reads: the card's width moves only
+// with the number of places named and the digits of the two counts, never
+// with a place's own value. THE LONGEST FORM, three
 // places and the rest, "10 warp markers coincide at 00:12.345, 01:23.456,
 // 02:05.000 and 2 more", advances 781.8 px: 898 wide (449 U), x 1374 ..
 // 2271, against the ceiling's 1396 (698 U) — a sentence's room of 1280 px,

@@ -2162,13 +2162,11 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 //   time_label_metrics.
 //
 // The digits are TABULAR — Liberation Sans's every digit 0.556 em, Regular
-// and Bold alike — AND EVERY RUN IS SHAPED WITH KERNING OFF
-// (text_shape::Kerning::Off, architect 2026-11-05: the face's GPOS kerns
-// the pair "11" by about 1.2 px at 22 px, so under its kerning a time
-// holding "11" runs narrower than the specimen and its later digits walk;
-// 11:11.111 measured 3.7 px narrower than 04:49.027 on the tablet) — so
-// every digit slot is one advance and the colons, the point and the slash
-// stand still as the time runs.
+// and Bold alike — AND NO DIGIT KERNS AGAINST A DIGIT (text_shape.h's THE
+// DIGITS' RULE, every text's, architect 2026-11-27; for these fields it is
+// what keeps a time holding "11", the face's one kerned digit pair, the
+// specimen's width, 2026-11-05) — so every digit slot is one advance and
+// the colons, the point and the slash stand still as the time runs.
 //
 // EVERY TIME LABEL PRESSES NOTHING (architect 2026-11-20: "it no longer
 // carries button look"): the bottom left's timestamp is ground
@@ -2180,7 +2178,7 @@ static const TransportRowDef& transport_row_seated(const TransportRowDef& def,
 // "a 1 is skinnier than a 0", nothing in the field or right of it may move as
 // the time runs): the widest digit in every digit slot of the kind's
 // specimen, shaped through the one chokepoint at the live scale in the
-// kind's face with kerning off — the widest digit is picked by advance, all
+// kind's face — the widest digit is picked by advance, all
 // ten being 0.556 em, so the specimens are "00:00.000" and "00:00 /
 // 00:00". THE TIMESTAMP'S CELL — its specimen's ink's whole hull united
 // with its advance, standing where the run at the pen puts it — is THE
@@ -2243,11 +2241,11 @@ static std::string clock_time_text(const AppState& app,
 //
 // THE CELL IS THE SPECIMEN'S INK'S WHOLE HULL, THE SLOT ITS ADVANCE
 // (architect 2026-11-05; THE TIME FIELDS' block): `time_w` is the
-// specimen's advance sum, shaped with kerning off, so every time is that
-// wide and no glyph ever walks; `ink_l` / `ink_r` are its ink's real edges
-// from origin 0 (text_shape::ink_left_px / ink_right_px, unrounded), and
-// `cell_w` = ceil(ink_r - ink_l) its ink's whole hull in px. Every shaping
-// here is text_shape::Kerning::Off, the fields' own option.
+// specimen's advance sum, so under the digits' rule (text_shape.h) every
+// time is that wide and no glyph ever walks; `ink_l` / `ink_r` are its
+// ink's real edges from origin 0 (text_shape::ink_left_px / ink_right_px,
+// unrounded), and `cell_w` = ceil(ink_r - ink_l) its ink's whole hull in
+// px.
 struct TimeFieldMetrics {
     int    percent  = -1;     // the scale this was measured at
     double time_w   = 0.0;    // the widest-digit specimen's shaped width
@@ -2264,14 +2262,13 @@ static const TimeFieldMetrics& measure_time_field(TimeFieldMetrics& m,
     double widest_w = -1.0;
     for (char d = '0'; d <= '9'; ++d) {
         const char one[2] = {d, '\0'};
-        const double w = text_shape::shape_text_run(
-                             font, one, text_shape::Kerning::Off).width_px;
+        const double w = text_shape::shape_text_run(font, one).width_px;
         if (w > widest_w) { widest_w = w; widest = d; }
     }
     std::string specimen(shape);
     for (char& c : specimen) if (c == 'D') c = widest;
     const text_shape::ShapedRun run =
-        text_shape::shape_text_run(font, specimen, text_shape::Kerning::Off);
+        text_shape::shape_text_run(font, specimen);
     m.time_w  = run.width_px;
     m.ink_l   = text_shape::ink_left_px(run);
     m.ink_r   = text_shape::ink_right_px(run);
@@ -2294,7 +2291,7 @@ static const TimeFieldMetrics& time_label_metrics() {
 
 // THE OVERLAYS' TIME LABEL'S SLOT (the rule at THE TIME FIELDS' block):
 // its width the specimen's advance rounded up to a whole U (label_w_px's
-// rule over the measured advance, kerning off), and, from its left edge
+// rule over the measured advance), and, from its left edge
 // `x` on the case's rows, its box.
 static int time_label_w_px() {
     const double factor = gui_scale_factor();
@@ -2306,14 +2303,13 @@ static GuiRect time_label_rect(int x, int case_y) {
     return GuiRect{x, case_y, time_label_w_px(), icon_case_h_px()};
 }
 // THE OVERLAYS' TIME LABEL PAINTED: `text` alone (architect 2026-11-19),
-// kerning off, its pen the slot's left edge, on the line-box baseline,
-// clipped to the slot.
+// its pen the slot's left edge, on the line-box baseline, clipped to the
+// slot.
 static void paint_time_text(cairo_t* cr, const GuiRect& slot,
                             const std::string& text) {
     if (text.empty()) return;
     const GuiFont font = gui_font(GuiFace::Program);
-    const text_shape::ShapedRun run =
-        text_shape::shape_text_run(font, text, text_shape::Kerning::Off);
+    const text_shape::ShapedRun run = text_shape::shape_text_run(font, text);
     cairo_save(cr);
     cairo_rectangle(cr, slot.x, slot.y, slot.w, slot.h);
     cairo_clip(cr);
@@ -2462,7 +2458,7 @@ static void row8_block_walk(bool history, const Row8Block& b,
 // after this"; the active tab is the top icon row's tab pair): ONE BOLD
 // 18 U RUN (GuiFace::Timestamp, Arc's `.h2` size, architect 2026-11-26) in
 // its own tone `timestamp_text`, Arc's `.h4` A5ABB5 (architect 2026-11-25),
-// kerning off (THE TIME FIELDS' block) — NO ENTRY (architect 2026-11-19:
+// its slot fixed (THE TIME FIELDS' block) — NO ENTRY (architect 2026-11-19:
 // "probably doesn't need to be ... in its own input box"). ITS PEN
 // kBottomLeftPenU (14 U, render.h; "And then we put the timestamp line at
 // 14W") from the panel's left edge — the status bar's column under it
@@ -2597,7 +2593,7 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
     // 1716..1997 and 2010..2291 (Play 2220..2291); the timestamp from x 28
     // (kBottomLeftPenU):
     // its advance 162.09 px (the shaped 26.6 advance sum of
-    // "00:00.000" in the Bold 18 U, kerning off; 81.07 U is the nominal
+    // "00:00.000" in the Bold 18 U; 81.07 U is the nominal
     // design advance), its cell x 27..191 by
     // rows 1330..1371 (the line box's, the baseline at 1364). IN
     // THE HISTORY
@@ -2711,8 +2707,8 @@ void GuiPaintHandler::paint_bottom_row_buttons_and_clock(cairo_t* cr) {
         const std::string time_text = clock_time_text(app, audio);
         set_palette_source(cr, palette().timestamp_text);
         if (clock_drawn && !time_text.empty()) {
-            const text_shape::ShapedRun t = text_shape::shape_text_run(
-                font, time_text, text_shape::Kerning::Off);
+            const text_shape::ShapedRun t =
+                text_shape::shape_text_run(font, time_text);
             text_shape::show_shaped_run(cr, t, run.pen, run.baseline);
         }
     }
@@ -7486,7 +7482,7 @@ void GuiPaintHandler::paint_modal_dialog(cairo_t* cr) {
                           .value_or(pos)
                     : pos;
             // PLAIN TEXT (THE TIME FIELDS' block): the run at its slot's
-            // pen, kerning off, in the text tone (paint_time_text).
+            // pen, in the text tone (paint_time_text).
             paint_time_text(cr, time_label_rect(clock_x0, seats.case_y),
                             time_label_text(at, rp.frames, sr));
             cairo_restore(cr);

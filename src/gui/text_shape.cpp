@@ -107,13 +107,15 @@ private:
 // axis, 2026-10-09, the lift negative in Liberation Sans, added as it
 // comes; the pipe onto the digits' band, 2026-10-09: matched by glyph id
 // after substitution,
-// HarfBuzz's up-positive sense, the advance untouched). THE ONE FEATURE
-// SWITCH is `kern` (Kerning, text_shape.h): shaped with no feature list
-// under Kerning::On, the face's own GPOS kerning applied as HarfBuzz's
-// default; under Kerning::Off the one feature `kern = 0` over the whole
-// run, every other default feature untouched.
+// HarfBuzz's up-positive sense, the advance untouched). THE DIGITS' RULE
+// (text_shape.h, its owner) is the one feature asked: `kern = 0` over each
+// maximal run of two or more ASCII digits, the feature's range [start, end)
+// the run's byte indices — the buffer's clusters, an ASCII digit's cluster
+// its own byte index as hb_buffer_add_utf8 numbers them — and no feature
+// list where the text holds no such run, the face's own GPOS kerning and
+// every other default feature applied as HarfBuzz's defaults.
 void append_glyphs(const GuiFont& font, std::string_view utf8,
-                   Kerning kerning, ShapedRun& run) {
+                   ShapedRun& run) {
     const double         tracking = gui_tracking_px(font);
     cairo_scaled_font_t* scaled   = gui_outline_scaled_font(font);
     ScaledFontFace       locked(scaled);
@@ -128,14 +130,25 @@ void append_glyphs(const GuiFont& font, std::string_view utf8,
     hb_buffer_set_direction(buffer.get(), HB_DIRECTION_LTR);
     hb_buffer_guess_segment_properties(buffer.get());
 
-    if (kerning == Kerning::Off) {
-        const hb_feature_t kern_off{HB_TAG('k', 'e', 'r', 'n'), 0,
-                                    HB_FEATURE_GLOBAL_START,
-                                    HB_FEATURE_GLOBAL_END};
-        hb_shape(hb_font, buffer.get(), &kern_off, 1);
-    } else {
-        hb_shape(hb_font, buffer.get(), nullptr, 0);
+    // The digit runs' features, gathered into one reused per-thread list
+    // (refilled at every shape, so a shape allocates nothing once it has
+    // grown; append_glyphs is never re-entered from inside itself).
+    thread_local std::vector<hb_feature_t> digit_runs;
+    digit_runs.clear();
+    const auto is_digit = [](char c) { return c >= '0' && c <= '9'; };
+    for (std::size_t i = 0; i < utf8.size();) {
+        if (!is_digit(utf8[i])) { ++i; continue; }
+        std::size_t end = i + 1;
+        while (end < utf8.size() && is_digit(utf8[end])) ++end;
+        if (end - i >= 2)
+            digit_runs.push_back(hb_feature_t{HB_TAG('k', 'e', 'r', 'n'), 0,
+                                              static_cast<unsigned>(i),
+                                              static_cast<unsigned>(end)});
+        i = end;
     }
+    hb_shape(hb_font, buffer.get(),
+             digit_runs.empty() ? nullptr : digit_runs.data(),
+             static_cast<unsigned>(digit_runs.size()));
 
     unsigned            count = 0;
     const hb_glyph_info_t*     infos =
@@ -160,40 +173,36 @@ void append_glyphs(const GuiFont& font, std::string_view utf8,
 
 } // namespace
 
-ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8,
-                         Kerning kerning) {
+ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8) {
     ShapedRun run;
     run.font = font;
     if (utf8.empty()) return run;
-    append_glyphs(font, utf8, kerning, run);
+    append_glyphs(font, utf8, run);
     return run;
 }
 
-SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
-                       Kerning kerning) {
+SharedRun memoized_run(const GuiFont& font, std::string_view utf8) {
     // The contract, the premise identity rests on and the clear's harmlessness
     // are at the declaration. The key is the font's two fields' bytes —
     // the face, which fixes the size (gui_font.h's GuiFont), and the scale —
-    // the kerning option's (2026-11-05: a run shaped with `kern` off is
-    // another run of the same bytes), then the text's: the uses' faces
-    // differ in the first, so the ruler's
+    // then the text's (the digits' rule reads the text alone, so the bytes
+    // fix it): the uses' faces differ in the first, so the ruler's
     // timestamps, the cue labels, the word buttons' words and the title bar's runs never collide.
     constexpr std::size_t kMemoCap = 4096;
     static std::unordered_map<std::string, SharedRun> memo;
     std::string key;
-    key.reserve(utf8.size() + 2 * sizeof(int) + 1);
+    key.reserve(utf8.size() + 2 * sizeof(int));
     const int face = static_cast<int>(font.face);
     key.append(reinterpret_cast<const char*>(&face), sizeof face);
     key.append(reinterpret_cast<const char*>(&font.percent),
                sizeof font.percent);
-    key.push_back(kerning == Kerning::Off ? '\1' : '\0');
     key.append(utf8);
     const auto it = memo.find(key);
     if (it != memo.end()) return it->second;
     if (memo.size() >= kMemoCap) memo.clear();
     return memo
         .emplace(std::move(key), std::make_shared<const ShapedRun>(
-                                     shape_text_run(font, utf8, kerning)))
+                                     shape_text_run(font, utf8)))
         .first->second;
 }
 

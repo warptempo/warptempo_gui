@@ -19,7 +19,7 @@
 // run shaped by HarfBuzz on the face's scaled font (gui_outline_scaled_font:
 // the live face set's file for the use, outlines only), on that font's OWN
 // FreeType face (hb-ft), full GPOS/GSUB (the `kern` feature alone
-// switchable, Kerning below: off in the time fields, 2026-11-05), its own
+// turned off, over a run of digits: THE DIGITS' RULE below), its own
 // advances less the tracking
 // (gui_tracking_px, gui_font.h), the four math signs set onto the hyphen's
 // axis and the pipe onto the digits' band where the live set lifts them
@@ -94,27 +94,40 @@ struct ShapedRun {
     double                   width_px = 0.0;
 };
 
-// THE ONE SHAPING OPTION — KERNING ON OR OFF (architect 2026-11-05). On is
-// the face's own GPOS `kern`, every text surface's default. OFF IS THE TIME
-// FIELDS' ALONE (paint_handler.cpp's THE TIME FIELDS block:
-// measure_time_field's specimen shapings and every time field's painted run
-// — the bottom left's timestamp, the render player's time label, the score
-// viewer's media label): Liberation
-// Sans Bold kerns the pair "11" by about 1.2 px at 22 px, so under the
-// face's kerning a time holding "11" ran narrower than the specimen and its
-// later digits walked as the time ran (11:11.111 measured 3.7 px narrower
-// than 04:49.027 on the tablet); with `kern` off every digit
-// slot is its advance and every time is the specimen's width. Nothing else
-// loses kerning — the ruler's timestamps, the status bar, the labels and
-// the lists keep the face's.
-enum class Kerning { On, Off };
-
+// THE DIGITS' RULE — A DIGIT NEVER KERNS AGAINST A DIGIT, ON EVERY TEXT THE
+// APP SHAPES (architect 2026-11-27; his question, a history count's even
+// digits beside a commit date's pinched ones: "Should we do that everywhere
+// or nowhere? Because right now it's very inconsistent.", and his "1 agree"
+// to everywhere). In every run, each maximal run of TWO OR MORE ASCII
+// DIGITS shapes with the one feature `kern = 0` over its bytes (a HarfBuzz
+// feature range, start and end the run's byte indices, which are the
+// buffer's clusters: append_glyphs, text_shape.cpp); a run with no such
+// stretch shapes with no feature list, the face's every default applied.
+// Everything else keeps the face's own GPOS kerning.
+//
+// WHY THIS IS THE WHOLE OF IT (measured on the bundled files, fontTools and
+// HarfBuzz, 2026-11-27): Liberation Sans's ten digits all advance 1139 of
+// 2048 per em (0.556 em), Regular and Bold alike, and of each weight's 908
+// kerning pairs EXACTLY ONE touches a digit, "11": -152 / 2048 em in
+// Regular (0.89 U at 12 U, 1.78 device px on the tablet), -113 / 2048 em in
+// Bold (0.66 U at 12 U, 0.99 U at the timestamp's 18 U, 0.55 U at the
+// ruler's 10 U). So with `kern` off over the digit runs every digit stands
+// on one slot of 0.556 em, every number of n digits is n slots wide, and a
+// time never walks as it runs (the time fields' fixed slots, paint_handler.
+// cpp's THE TIME FIELDS block, 2026-11-05). THE RANGE TOUCHES NOTHING ELSE:
+// the face pairs no digit with a non-digit, so the letters, signs and
+// spaces round a run kern exactly as the face kerns them, and a lone digit
+// is in no range, there being no pair of it to turn off.
+//
+// A DEPARTURE FROM GTK (its line in docs/engineering/gtk_deviations.md):
+// Pango shapes with the face's kerning and would pinch the "11"; Adwaita
+// asks `tnum` on a few widgets and Arc's sheet nowhere, and the face has no
+// `tnum`, its digits being tabular already.
+//
 // Lay `utf8` out on `font`: HarfBuzz on its face less the tracking (LTR,
-// script and language guessed from the text, full GPOS/GSUB — the `kern`
-// feature alone switched by `kerning`, the one option above). An empty
-// string shapes to an empty run of width 0.
-ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8,
-                         Kerning kerning = Kerning::On);
+// script and language guessed from the text, full GPOS/GSUB under the
+// digits' rule above). An empty string shapes to an empty run of width 0.
+ShapedRun shape_text_run(const GuiFont& font, std::string_view utf8);
 
 // A SHARED HANDLE on one memoized run (memoized_run below): its holders read
 // the memo's own run, never a copy of its glyphs, and the run is const behind
@@ -134,13 +147,12 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // every damage rect while a card stands; 2026-11-19). A run is a pure
 // function of its font and its text — HarfBuzz on the face's own scaled font,
 // the tracking and the lifts all the font's (this file's head, gui_font.h),
-// and a GuiFont is its face, percent and size alone (gui_font.h) — and of
-// the one shaping option (Kerning above; every memoized use today shapes
-// with the default, On) — so a run
-// is looked up here by the face, the percent, the size, the option and the
+// the digits' rule (above) the text's own, and a GuiFont is its face,
+// percent and size alone (gui_font.h) — so a run
+// is looked up here by the face, the percent, the size and the
 // text's bytes, and only a text not yet seen under that key is shaped.
 // IDENTITY RESTS ON THAT PREMISE: a hit returns
-// the very run shape_text_run returned for the same font, option and bytes, so the
+// the very run shape_text_run returned for the same font and bytes, so the
 // caller's show_shaped_run puts down the same glyphs at the same offsets as a
 // fresh shape would. THE ANSWER IS A HANDLE (SharedRun), so a hit hands out
 // the run without copying its glyph vector — into a cue layout and again into
@@ -152,8 +164,7 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // font every shape runs on is (gui_outline_scaled_font): every caller paints
 // the flag cache, the editor or the ruler on it, and the handles never leave
 // that thread.
-SharedRun memoized_run(const GuiFont& font, std::string_view utf8,
-                       Kerning kerning = Kerning::On);
+SharedRun memoized_run(const GuiFont& font, std::string_view utf8);
 
 // Paint `run` with its baseline origin at EXACTLY (x, y) in cairo's current
 // source, on the run's own font, under the context's clip: no rounding of
