@@ -42,7 +42,7 @@
 // overlays' time labels — the render player's and the score viewer's
 // "mm:ss / mm:ss" — and the tooltip's name line), LABEL 12 (the cues'
 // labels and the lane's editors, the history lane's labels with them),
-// HINT 12 (the tooltip's hint line), BOLD 12 (THE TITLE BAR: the brand and
+// HINT 12 (the tooltip's hint line), BOLD 12 (THE TITLE BAR: the title and
 // its right group, render.h's title bar block), SMALL 10 (the ruler's
 // digits), KEYS 12 (the on-screen keyboard's caps, architect 2026-11-26:
 // "the font is already 12W"),
@@ -176,7 +176,7 @@ struct GuiFaceSize {
 };
 inline constexpr GuiFaceSize kGuiFaceSizes[kGuiFaceCount] = {
     {0, 12.0},   // Body: the lists, the cards, the pages, the status bar
-    {1, 12.0},   // Bold: the title bar (the brand and its right group)
+    {1, 12.0},   // Bold: the title bar (the title and its right group)
     {1, 10.0},   // Small: the ruler's digits
     {0, 12.0},   // Program: the overlays' time labels, the tooltip's name
     {0, 12.0},   // Keys: the on-screen keyboard's caps

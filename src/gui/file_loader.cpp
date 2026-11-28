@@ -356,9 +356,10 @@ bool GuiFileLoader::load_file(const GuiProjectSource& project,
     // "K551". The folder is what the architect calls the project, and it reads
     // and versions better than either the audio filename or the output
     // `title=` settings key (a different thing entirely: that one names the
-    // render). The platform's window title has no surface (set_project_title,
-    // platform_android.h); the dirty indicator is the Save key's grey on the
-    // bottom icon row.
+    // render). The title bar shows it, "<piece> - Warptempo" (title_bar_run,
+    // render.h's title bar block; architect 2026-11-27); the platform's
+    // window title has no surface (set_project_title, platform_android.h);
+    // the dirty indicator is the Save key's grey on the bottom icon row.
     //
     // TAKEN FROM THE RESOLVED PROJECT, never derived from the source's parent:
     // the model already answered which folder this is, and a derivation off the

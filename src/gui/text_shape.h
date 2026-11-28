@@ -141,7 +141,7 @@ using SharedRun = std::shared_ptr<const ShapedRun>;
 // labels at every flag-cache rebuild) and THE RULER'S TIMESTAMPS on the Small
 // face (paint_handler.cpp's paint_ruler_row, whose majors re-shaped the same
 // strings at every repaint a pan's damage reached the ruler); the title
-// bar's brand and battery + clock runs and the score row's page-cell
+// bar's title and battery + clock runs and the score row's page-cell
 // measure shape through it too, and so do THE NOTIFICATION CARDS' sentences
 // and their wrapped lines (paint_notifications' layout, which runs under
 // every damage rect while a card stands; 2026-11-19). A run is a pure

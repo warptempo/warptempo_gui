@@ -1261,12 +1261,40 @@ constexpr int kMinWindowHeightPx = 480;
 //     good now. It looks like it's aligned with the buttons"), ITS INK
 //     CENTERED ON THE BAR'S ROWS EXACTLY (the note inks symmetrically in
 //     its canvas, so this is the box centered, its top +8 U; on the
-//     tablet the ink 17.5 .. 38.5). THEN THE BRAND, "Warptempo" (kLogoBrand,
-//     a constant), ITS PEN kTitleNoteGapU = 6 U AFTER THE NOTE'S INK'S RIGHT
-//     EDGE (architect 2026-11-19: "Maybe one more W spacing between
-//     the note and the warptempo font" — one more than the picture's 5),
-//     both off the drawing's real ink box, not its 12 U box (on the tablet
-//     the ink 16 .. 28 with Papirus's note, the pen 28 + 12 = 40).
+//     tablet the ink 17.5 .. 38.5). THEN THE TITLE, ONE RUN
+//     "<piece> - Warptempo" (title_bar_run below, the spelling's one owner;
+//     architect 2026-11-27: "we could have the note glyph then the project
+//     name, and then the app name. with a dash in between"), ITS PEN
+//     kTitleNoteGapU = 6 U AFTER THE NOTE'S INK'S RIGHT EDGE (architect
+//     2026-11-19: "Maybe one more W spacing between the note and the
+//     warptempo font" — one more than the picture's 5), both off the
+//     drawing's real ink box, not its 12 U box (on the tablet the ink
+//     16 .. 28 with Papirus's note, the pen 28 + 12 = 40). THE PIECE is
+//     AppState::project_name VERBATIM, the project folder's name the
+//     picker lists ("550 - 1" for the first movement of K. 550: "the
+//     projects are already titled like that"), so the bar reads
+//     "550 - 1 - Warptempo"; with no piece (the open's held frame, a fresh
+//     set before its load: main.cpp's THE HOLD'S ONE FRAME) the run is
+//     "Warptempo" alone. A NAME TOO LONG FOR THE ROOM IS CUT, no ellipsis and
+//     no wrap (architect 2026-11-27: "the line is truncated and obscured. We
+//     don't need anything more than that"; the lists' names' rule,
+//     folder_overlay.h's THE ROW): the run is painted under a clip ending on
+//     the right group's first column (logo_legend_layout's extent, the
+//     limiter lamp's left edge's column), so no title ink stands under the
+//     lamps, the percent, the battery or the clock; no gap is authored
+//     before the lamps. Left-aligned (closed: the name centered); the
+//     history view puts nothing of its own on the bar.
+//     ITS DAMAGE: the piece's name is written once per object set, by
+//     GuiFileLoader::load_file under the open's presentation hold, and the
+//     first frame painted after it is the hold's release, which damages the
+//     whole window (GuiPlatform::release_presentation; paint_one_frame's
+//     hold gate paints nothing between the held frame and that release), so
+//     the name owes no damage of its own. The clip's edge moves only with
+//     the right group's extent, and refresh_logo_legend's damage (main.cpp:
+//     the extent last painted united with the new one, each running from
+//     its first column through the panel's last) holds every column from
+//     the nearer of the two edges rightward — every column where a cut
+//     title's ink can appear or vanish — so the clip owes nothing either.
 //   ON THE RIGHT, THE GROUP "[limiter][clip] 92% <battery>  |  02:12 PM" AS
 //     ONE TEXT RUN in the Bold 12 U (architect 2026-11-19: the pipe "could
 //     just become a text pipe, since we're going to use those text pipes
@@ -1358,11 +1386,22 @@ inline constexpr double kTitleBarU           = 28.0;
 inline constexpr double kTitleBaselineU      = 18.0;
 inline constexpr double kTitleNoteBoxU       = 12.0;  // the note's drawing box (the body's size)
 inline constexpr double kTitleNoteInsetU     = 8.0;   // the panel's left edge to the note's ink
-inline constexpr double kTitleNoteGapU       = 6.0;   // the note's ink's right edge to the brand's pen
+inline constexpr double kTitleNoteGapU       = 6.0;   // the note's ink's right edge to the title's pen
 inline constexpr double kTitleRightInsetU    = 8.0;   // the right group's last ink to the panel's right edge
 inline constexpr double kLogoLampU           = 8.0;   // each lamp's square
 inline constexpr double kLogoLampGapU        = 4.0;   // the clip lamp to the percent's first ink
-inline constexpr const char* kLogoBrand = "Warptempo";
+inline constexpr const char* kLogoBrand = "Warptempo";  // the app's name, the title's last part
+inline constexpr std::string_view kTitleSeparator = " - ";  // a spaced hyphen, U+002D, as Mousepad and Thunar title their windows
+// THE TITLE'S ONE COMPOSER (the title bar block above; architect
+// 2026-11-27): "<piece> - Warptempo", the piece's name verbatim, or the
+// app's name alone with no piece.
+inline std::string title_bar_run(std::string_view piece) {
+    if (piece.empty()) return std::string(kLogoBrand);
+    std::string run(piece);
+    run += kTitleSeparator;
+    run += kLogoBrand;
+    return run;
+}
 inline constexpr const char* kLogoLegendInkSet = "0123456789%: AMP";
 inline int title_bar_h_px() {
     return scaled_px(kTitleBarU, 1);

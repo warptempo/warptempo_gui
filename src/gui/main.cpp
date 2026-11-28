@@ -1570,8 +1570,11 @@ struct GuiProjectOutcome {
 // UTC), and DAMAGES THE LEGEND'S RECT ALONE, only when the composed legend
 // changed — the rect the painter last published united with the new
 // legend's own layout (logo_legend_extent), so a percent growing leftward
-// ("99%" to "100%") repaints its new columns too. The note and the brand
-// never change and are never damaged here.
+// ("99%" to "100%") repaints its new columns too — and with them every
+// column where the title's clip, which ends on the extent's first column,
+// cuts more or less of a long title (the proof at render.h's title bar
+// block). The note and the title are never damaged here: the piece's name
+// changes only under the open's hold, whose release repaints the window.
 void refresh_logo_legend(AppState& app, GuiPlatform& gui) {
     const std::time_t now    = std::time(nullptr);
     const int64_t     minute = static_cast<int64_t>(now) / 60;
@@ -2756,7 +2759,9 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
             //   * THE KEYS grey and dark: redesign_button_enabled's and
             //     redesign_button_selected's no-piece terms; the glyphs as
             //     the roster draws them.
-            //   * THE TITLE BAR as always (refresh_logo_legend above).
+            //   * THE TITLE BAR: the note, the title "Warptempo" alone (no
+            //     piece yet: title_bar_run's empty arm, render.h), the right
+            //     group as always (refresh_logo_legend above).
             //   * NO CARD, NO TOOLTIP, NO OVERLAY: none can stand in a fresh
             //     set before its load (every press is dropped, and nothing
             //     raises a card ahead of the load).

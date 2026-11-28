@@ -125,9 +125,10 @@ public:
     bundled_icon_files();
     // THE WINDOW TITLE HAS NO SURFACE: the activity is fullscreen and
     // landscape-only with no system titlebar, so this setter stores nothing
-    // and paints nothing (the app paints no caption, 2026-10-24). It stays on
-    // the API because the GUI calls it from its load path unconditionally,
-    // with the source's parent folder basename (file_loader.cpp). THE DIRTY
+    // and paints nothing (the piece's name stands in the GUI's own title
+    // bar, title_bar_run, render.h). It stays on the API because the GUI
+    // calls it from its load path unconditionally, with the project's name
+    // (file_loader.cpp). THE DIRTY
     // INDICATOR IS THE SAVE BUTTON'S GREY (architect 2026-10-05,
     // plain_save_actionable), the product's one.
     void set_project_title(std::string project_name);

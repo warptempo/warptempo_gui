@@ -4201,12 +4201,15 @@ struct GuiIconRowFingerprint {
     bool operator==(const GuiIconRowFingerprint&) const = default;
 };
 // The title bar (paint_title_bar, architect 2026-11-19): the right group
-// the tick composed (AppState::logo_legend) — the note and the brand are
-// constants, the lane's rect the globals' and the `band` member's.
+// the tick composed (AppState::logo_legend) and the piece's name the title
+// reads (AppState::project_name; title_bar_run, render.h, architect
+// 2026-11-27) — the note and the app's name are constants, the lane's rect
+// the globals' and the `band` member's.
 struct GuiUpperRowsFingerprint {
     GuiChromeGlobalsFingerprint globals;
     GuiIconRowFingerprint       band;
     GuiLogoLegend               logo;
+    std::string                 piece;
     bool operator==(const GuiUpperRowsFingerprint&) const = default;
 };
 // The bottom icon row's clock cell (paint_bottom_row_buttons_and_clock):
@@ -5000,10 +5003,14 @@ struct AppState {
     // string for the picker's "already open" no-op and its opening highlight
     // to hold. ONE PRODUCER, GuiFileLoader::load_file, which is handed the
     // resolved project and assigns it here beside the window title; nothing
-    // else writes it. FOUR READERS, re-derived by grep: the OPEN
+    // else writes it. SIX READERS, re-derived by grep: the OPEN
     // PROJECT PICKER (its "already open" no-op and the row its highlight opens on),
-    // REVERT (GuiInputHandler::revert_project, which reopens this name), and
-    // the two media pushes, where it is the head unit's ALBUM — the console's
+    // REVERT (GuiInputHandler::revert_project, which reopens this name), the
+    // PULL'S REOPEN GATE (GuiInputHandler::execute_history_pull, which
+    // dry-runs this folder against the staged sidecars), THE TITLE BAR
+    // ("<piece> - Warptempo", title_bar_run, render.h's title bar block;
+    // architect 2026-11-27), and the two media pushes, where it is the head
+    // unit's ALBUM — the console's
     // dim top line: the RENDER PLAYER's, the folder riding ARTIST below it
     // beside the bare name of the playing or highlighted item as the title
     // (GuiRenderPlayer::publish_media_state), and the CAR TRANSPORT's with

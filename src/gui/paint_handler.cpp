@@ -1493,7 +1493,7 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
     // its own flat fill in the title tone `ground` (2F343F,
     // its line of kArcDarkTones: "the darkest color would only apply to the top line,
     // the title bar", architect 2026-11-18), then the note, the
-    // brand and the right group in `title_text`. NO SHADOW (the flat look).
+    // title and the right group in `title_text`. NO SHADOW (the flat look).
     const GuiRect lane{band.x, band.y, band.w,
                        std::min(band.h, title_bar_h_px())};
     if (lane.w <= 0 || lane.h <= 0) return;
@@ -1529,23 +1529,33 @@ void GuiPaintHandler::paint_title_bar(cairo_t* cr, const GuiRect& band) {
                           note_ink.y,
                       note_box, ink_word);
 
-    // THE BRAND, a constant: ITS PEN kTitleNoteGapU AFTER THE NOTE'S INK'S
-    // RIGHT EDGE (architect 2026-11-19), the ink's real edge.
+    // THE RIGHT GROUP'S LAYOUT (logo_legend_layout), published as painted
+    // for the tick's damage; its extent's first column ends the title's clip.
+    const LogoLegendLayout l = logo_legend_layout(app, app.logo_legend);
+    app.logo_legend_rect = l.extent;
+
+    // THE TITLE, "<piece> - Warptempo" (title_bar_run, render.h's title bar
+    // block, where its damage is proved; architect 2026-11-27): ITS PEN
+    // kTitleNoteGapU AFTER THE NOTE'S INK'S RIGHT EDGE (architect
+    // 2026-11-19), the ink's real edge, CUT on the right group's first
+    // column (no ellipsis, no wrap).
     set_palette_source(cr, ink);
     {
         const GuiFont bold = gui_font(GuiFace::Bold);
-        const text_shape::SharedRun brand =
-            text_shape::memoized_run(bold, kLogoBrand);
+        const text_shape::SharedRun title =
+            text_shape::memoized_run(bold, title_bar_run(app.project_name));
         const double x = note_x + note_ink.w +
                          static_cast<double>(scaled_px(kTitleNoteGapU));
-        text_shape::show_shaped_run(cr, *brand, x, baseline);
+        cairo_save(cr);
+        cairo_rectangle(cr, lane.x, lane.y, std::max(0, l.extent.x - lane.x),
+                        lane.h);
+        cairo_clip(cr);
+        text_shape::show_shaped_run(cr, *title, x, baseline);
+        cairo_restore(cr);
     }
 
-    // THE RIGHT GROUP (logo_legend_layout): the run "  |  <clock>", the
-    // battery in its cell, the run "<percent> ", the two lamps — published
-    // as painted for the tick's damage.
-    const LogoLegendLayout l = logo_legend_layout(app, app.logo_legend);
-    app.logo_legend_rect = l.extent;
+    // THE RIGHT GROUP: the run "  |  <clock>", the battery in its cell, the
+    // run "<percent> ", the two lamps.
     text_shape::show_shaped_run(cr, *l.clock, l.clock_x, l.baseline);
     if (l.percent)
         text_shape::show_shaped_run(cr, *l.percent, l.percent_x, l.baseline);
@@ -8765,8 +8775,9 @@ void GuiPaintHandler::widen_floater_hulls(GuiFloaterHulls& h) {
 //     read;
 //   * THE TITLE BAR (paint_title_bar, the first rows of the top icon
 //     row's lane): the right group the tick composed (AppState::logo_legend);
-//     the note, the brand, the well's columns and the lane's rect are the
-//     globals' and the top icon row's;
+//     the piece's name (AppState::project_name, the title's one input of
+//     its own, title_bar_run); the note, the app's name, the well's columns
+//     and the lane's rect are the globals' and the top icon row's;
 //   * THE TOP ICON ROW (paint_icon_row; the fingerprint's `band`): its
 //     lane (the pads among the
 //     lane's inputs, its rect moving with it); the `h` view; the standing
@@ -8790,7 +8801,8 @@ GuiUpperRowsFingerprint GuiPaintHandler::upper_rows_fingerprint() {
     fp.globals = GuiChromeGlobalsFingerprint{
         app.width, app.height, gui_scale_percent(), palette_generation()};
 
-    fp.logo = app.logo_legend;
+    fp.logo  = app.logo_legend;
+    fp.piece = app.project_name;
 
     fp.band.lane    = top_icon_row_area(app);
     fp.band.history = app.history_mode.active;

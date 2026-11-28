@@ -1472,8 +1472,8 @@ int GuiPlatform::display_width_px() const { return width_; }
 
 // A NativeActivity under Theme.NoTitleBar has no system titlebar and no
 // task-switcher string a native app can rewrite, so a window title has
-// nowhere to go (the app paints no window chrome; the title bar
-// carries the brand, never the piece). The setter is therefore a silent
+// nowhere to go (the app paints no window chrome; the piece's name stands
+// in the GUI's own title bar, title_bar_run, render.h). The setter is therefore a silent
 // no-op, kept because the GUI calls it unconditionally from the load path.
 // UNSAVED WORK IS SHOWN by the SAVE BUTTON'S GREY (architect 2026-10-05,
 // plain_save_actionable), the product's one dirty indicator.

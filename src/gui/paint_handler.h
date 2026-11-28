@@ -1251,7 +1251,8 @@ private:
     // THE TITLE BAR (2026-11-19; render.h's title bar block): the first
     // 28 U of `band`, the one lane of the title bar and the top icon row —
     // its own fill in the title tone, the note, the
-    // brand and the right group (the lamps, the percent, the battery, the
+    // title (title_bar_run, cut on the right group's first column) and the
+    // right group (the lamps, the percent, the battery, the
     // pipe, the clock) — painted by paint_icon_row after the lane's body
     // tone; publishes the right group's rect (AppState::logo_legend_rect).
     void paint_title_bar(cairo_t* cr, const GuiRect& band);
