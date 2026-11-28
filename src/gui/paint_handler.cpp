@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <initializer_list>
 #include <limits>
 #include <numbers>
@@ -1045,117 +1046,145 @@ static constexpr const char* kSegmentSeparator = " | ";
 //
 // THE HISTORY VIEW'S ONE LINE, composed for THE STATUS BAR'S FIRST FIELD
 // (status_bar_text; 2026-11-19). While the mode stands this line is
-// what that field is for.
+// what that field is for. IT IS SPELLED IN GITHUB'S WORDS (architect
+// 2026-11-27: "the exact wording from GitHub's commit page is committed X
+// hours ago, and Y Markers changed. The Y markers change part is our version
+// of Y files changed"; "GitHub, for example, never mixes the plus-minus
+// notation with sentence format"):
 //
-// THE SHAPE (architect 2026-09-28; the date after the position 2026-11-25):
-// SEGMENTS SEPARATED BY ` | `, every one alike — the POSITION `x/y`, then on
-// the commit walk the DATE segment `YYYY-MM-DD hh:mm AM` when the window
-// holds a member, then the SCALE segment `Scale: [-]<then token> [+]<now
-// token>` when the scale changed (both below) — so an absent segment leaves
-// no separator behind it and nothing leads or trails: `03/14 | 2026-11-24
-// 03:38 PM | Scale: [-]1.0 [+]1.1`, `03/14 | 2026-11-24 03:38 PM`, `007/114`
-// on the local walk, `0/0` the empty window. The same shape on BOTH walks,
-// the date the commit walk's alone.
+//   COMMIT WALK  `<short SHA> | Committed <time> | <N> markers changed |
+//                Scale changed`
+//                `a1b2c3d | Committed 15 hours ago | 3 markers changed |
+//                Scale changed`,
+//                `a1b2c3d | Committed yesterday | 0 markers changed`,
+//                `a1b2c3d | Committed on Oct 3 | 1 marker changed`,
+//                `a1b2c3d | Committed on Oct 3, 2025 | 12 markers changed`
+//   LOCAL WALK   `<signed position> | <N> markers changed | Scale changed`
+//                `+0 | 0 markers changed`, `+1 | 1 marker changed`,
+//                `-2 | 3 markers changed | Scale changed`, `? | 2 markers
+//                changed`
+//
+// SEGMENTS SEPARATED BY ` | ` (kSegmentSeparator), each shown only where it
+// has something to say, so an absent segment leaves no separator behind it
+// and nothing leads or trails. THE EMPTY WINDOW (the commit walk before the
+// prefetch has delivered a member) has no member and no delta: the line is
+// EMPTY, no segment at all, and the bar shows nothing for it.
+//
+// THE FIRST SEGMENT NAMES THE MEMBER, AND IN THE ONE SPELLING THE `'` LOAD'S
+// QUESTION NAMES IT BY: HistoryMode::member_label (app_state.h), the one
+// owner of a member's spelling on both walks, so the bar and the question
+// name one member one way on either walk (architect 2026-11-27: "Maybe we
+// should include the SHA ... And then it would be SHA pipe committed X hours
+// ago, pipe three markers changed"; to the asymmetry it closes, "the session
+// walk now uses -1 in the status and -1 in the load question, whereas the git
+// walk uses the timestamp ... and the SHA in the question"). It is the
+// status bar's own face, Liberation Sans Regular, as every segment ("maybe
+// it makes more sense to just have it be sans all the way through and no
+// monospace"). The line shows no `x/y` position (architect 2026-11-27:
+// "Position, I would just get rid of. GitHub doesn't use it ... rarely am I
+// going to want to go deep into the commits. They mostly function as a
+// sanity check for me to see if my hand accidentally slipped"). The later
+// segments' places move with the earlier ones' widths, unpadded: the order
+// is his ("SHA, pipe, time, pipe, count, pipe, scale. I'm really just most
+// commonly just looking at the very first page anyways ... usually I'm
+// working in rapid sequence, so I'm usually seeing the ... committed X hours
+// ago notice"):
+//   * ON THE COMMIT WALK, the viewed commit's seven-character SHA
+//     (member_label's COMMIT arm, short_sha, history_diff.h), then
+//     `Committed <time>`: the viewed commit's committer
+//     time (GuiHistoryDiff::commit_time_at — the walk read it off the commit,
+//     so this runs no git) against the device's clock now, in GitHub's
+//     relative words (github_relative_time, history_diff.h, the rule ported
+//     exactly and its one statement: "15 hours ago", "yesterday", "on Oct 3";
+//     architect 2026-11-27: "Let's just use the GitHub rule ... we should
+//     just use the rule exactly"). The exact date and time show nowhere. The
+//     words age as the device's clock runs: the tick's comparator recomposes
+//     this line on every tick (refresh_status_bar, main.cpp), which is the
+//     whole of how "now" becomes "1 minute ago" — no wake or timer of the
+//     line's own.
+//   * ON THE LOCAL WALK, THE VIEWED STATE'S SIGNED DISTANCE FROM THE SAVE in
+//     the car console's own spelling (architect 2026-11-27: "I prefer the way
+//     that the card [the car] does it, which is 0 is save, +1 means we've done
+//     one action past save, -1 means we've undone one since the save, and
+//     there's no ... indication of how far up or down the number goes ... a
+//     simple signed position rather than an X out of Y"): `+0` at the save,
+//     `+1` one action past it, `-2` two undone behind it, `?` where no save is
+//     in reach — HistoryMode::member_label's LOCAL arm (app_state.h), the one
+//     owner of a member's spelling, so the `'` load's question names the
+//     state as this segment does ("Load '+1' in place?"); it composes through
+//     UndoHistory::save_distance_spelling, the one composer the car's title
+//     reads too, fed the member's number in the session walk's counting
+//     (HistoryMode::member_number). The live history
+//     IS the walk's timeline while the view stands (GuiHistoryLocalWalk
+//     captures app.history's two stacks at the entry and nothing pushes, pops
+//     or saves under a standing view: a save closes it in the same act), so
+//     the live saved reference measures the walk's members. No time: a local
+//     state is no commit.
+//
+// THE COUNT, `<N> markers changed` (`1 marker changed`), wherever there is a
+// displayed delta, on both walks (architect 2026-11-27: "X markers changed,
+// which is a total of both phase and warp, and removed, added, and
+// rewritten"): N is the displayed delta's items, the six vectors summed —
+// warp and phase reset, added, removed and changed — exactly the items the
+// lane paints for both columns (rebuild_history_diff_flags,
+// waveform_cache.cpp), whichever column the lane shows: a moved marker 2, a
+// value changed in place 1 (no coalescing, architect 2026-11-11 at
+// GuiHistoryWarpChange). ZERO READS `0 markers changed`, the digit standing
+// in its place for his zero check (architect 2026-11-27: "my real interest i
+// guess is seeing zero changes to sanity check my workflow").
+//
+// THE SCALE, the two words `Scale changed`, where the displayed delta's
+// `scale_changed` is set — the lane's own comparison, iterative against the
+// next-newer member or cumulative against the live now side (architect
+// 2026-11-27: "just simply say the words scale changed, and the user can
+// load in place and see the old scale"). A value both sides agree on is not
+// a difference, and this view shows differences (architect 2026-08-05), so
+// there is no unchanged arm.
+//
 // THE LINE CARRIES NO GITHUB WORD (architect 2026-11-27: "i tihnk the
 // 'Github: up to date' notice was design for multi-device setup that no
 // longer exists - it simply takes up space"): Save's face in the view and
 // THE GITHUB CARD (notifications.h), a failing status's standing red card,
-// are the status's whole report.
-// THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
-// token and `[+]` before the now one, spelled here: the lane's labels carry
-// the side by the strike (architect 2026-10-26; history_diff_label), and
-// this line, a plain run, has no strike to carry it. THE LINE STANDS AT
-// THE STATUS BAR'S LEFT, its first field (paint_status_bar the one painter
-// of it), under the bottom icon row.
-//
-// THE LINE NAMES NO COMMIT (architect 2026-09-28): no short SHA, so the
-// position (and on the commit walk the commit's date) is the line's only
-// reference to the member.
-// The member's NAME still has its one owner, HistoryMode::member_label
-// (app_state.h), which the `'` load confirmation reads — the line does not.
-//
-// THE SEGMENT APPEARS ONLY WHEN THE SCALE CHANGED (architect 2026-08-05): a
-// value that both sides agree
-// on is not a difference, and this view shows differences. So there is no
-// unchanged arm at all, and the both-sides-empty case is covered by the same
-// test rather than by one of its own. A side carrying no `scale=` line has an
-// EMPTY token and shows as its bracket with nothing after it — unreachable
-// while `scale` is a required settings key and every walk member is
-// strict-load clean, and kept as the least-surprising shape rather than a
-// refusal.
-//
-// THE POSITION IS THE ACTIVE WALK'S (2026-08-07): `x/y` reads the viewed
-// member's DISPLAYED NUMBER and the walk's count, so a Local tab counts the
-// session's own timeline states with the same two numbers in the same place.
-// THE COUNT RUNS UPWARD FROM THE PIECE'S PAST (2026-09-17) — the oldest
-// member is 1 and the newest is y — and the arithmetic that turns the walk's
-// index into that number has ONE OWNER, HistoryMode::member_number
-// (app_state.h). THE NUMBER IS ZERO-PADDED to the count's digit count
-// (architect 2026-09-28): `03/14`, `007/114`, `1/1`, `0/0` — the position
-// keeps one width while `,` / `.` walk, so it never moves what follows it.
+// are the status's whole report. THE LINE STANDS AT THE STATUS BAR'S LEFT,
+// its first field (paint_status_bar the one painter of it), under the bottom
+// icon row.
 //
 // The reference is non-const because both walks COMPUTE THEIR DELTA LAZILY AND
 // CACHE IT (displayed_delta, app_state.h) — the composition itself writes
 // nothing.
 static std::string history_walk_line(AppState& app) {
-    const std::size_t count = app.history_mode.walk_count();
-    // AN EMPTY WALK READS `0/0` (2026-08-07), not nothing: a blank cell
-    // beside a blank lane would say only that the cell has stopped working.
-    // ONE SPELLING FOR BOTH WALKS, and only the
-    // COMMIT walk can reach it — its empty window, a visit opened before the
-    // prefetch has delivered member 0. The LOCAL walk is never empty while the
-    // mode stands: the one entry owner binds it before `active` goes up and its
-    // member count is U + R + 1, so a session that has authored nothing reads
-    // `1/1` — one state compared against itself. The zero arm therefore
-    // describes the commit side alone, and it lives inside member_number
-    // with the counting it belongs to rather than as a test of this line's own.
-    const std::string total = std::to_string(count);
-    std::string line = std::to_string(
-        app.history_mode.member_number(app.history_mode.walk_index()));
-    if (line.size() < total.size())
-        line.insert(0, total.size() - line.size(), '0');
-    line += '/';
-    line += total;
-    // THE DATE SEGMENT, SECOND, RIGHT AFTER THE POSITION (architect
-    // 2026-11-25: "github history should show date of commit"): the viewed
-    // commit's committer time in the DEVICE'S LOCAL TIME, the date ISO and
-    // the time the title bar clock's own spelling (clock_spelling,
-    // gui_battery.h, the one owner) — `2026-11-24 03:38 PM` — read from the
-    // walk's member (GuiHistoryDiff::commit_time_at; the walk read it off the
-    // commit, so this runs no git). It stands second, by his agreed
-    // example's order, the bar clipping at its right edge. THE COMMIT WALK ONLY: a local member is no commit and has no
-    // time, and the empty window (`0/0`) has no member, so neither shows the
-    // segment.
-    if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
+    std::string line;
+    const auto segment = [&line](const std::string& s) {
+        if (!line.empty()) line += kSegmentSeparator;
+        line += s;
+    };
+    AppState::HistoryMode& mode = app.history_mode;
+    if (mode.source == GuiHistoryWalkSource::Commit) {
+        // The SHA and the time name the one viewed commit, mode.index (which
+        // is walk_index() on this walk); both are empty in the empty window.
+        if (const std::string sha = mode.member_label(mode.index, app.history);
+            !sha.empty())
+            segment(sha);
         if (const std::optional<std::int64_t> t =
-                app.history_mode.session.commit_time_at(
-                    app.history_mode.index)) {
-            const std::time_t when = static_cast<std::time_t>(*t);
-            std::tm local{};
-            localtime_r(&when, &local);
-            char date[16];
-            std::snprintf(date, sizeof(date), "%04d-%02d-%02d",
-                          local.tm_year + 1900, local.tm_mon + 1,
-                          local.tm_mday);
-            line += kSegmentSeparator;
-            line += date;
-            line += ' ';
-            line += clock_spelling(local);
-        }
+                mode.session.commit_time_at(mode.index))
+            segment("Committed " +
+                    github_relative_time(
+                        *t, static_cast<std::int64_t>(std::time(nullptr))));
+    } else {
+        segment(mode.member_label(mode.walk_index(), app.history));
     }
-    // THE SCALE SEGMENT, LAST: something always precedes it (the position,
-    // `0/0` at worst), so the separator is unconditional.
-    const GuiHistoryCommitDelta* d =
-        app.history_mode.displayed_delta();
     // No unavailable-delta arm: walk membership is the strict whole-set load
-    // (history_diff.h's gate, 2026-08-04), so every commit this line can name
-    // has a real delta.
-    if (d && d->scale_changed) {
-        line += kSegmentSeparator;
-        line += "Scale: [-]";
-        line += d->then_scale_token;
-        line += " [+]";
-        line += d->now_scale_token;
+    // (history_diff.h's gate, 2026-08-04), so every member this line can name
+    // has a real delta; nullptr is the empty window alone.
+    const GuiHistoryCommitDelta* d = mode.displayed_delta();
+    if (d) {
+        const std::size_t n =
+            d->warp_added.size() + d->warp_removed.size() +
+            d->warp_changed.size() + d->phase_reset_added.size() +
+            d->phase_reset_removed.size() + d->phase_reset_changed.size();
+        segment(n == 1 ? std::string("1 marker changed")
+                       : std::to_string(n) + " markers changed");
+        if (d->scale_changed) segment("Scale changed");
     }
     return line;
 }

@@ -101,8 +101,8 @@ std::string status_bar_text(AppState& app);
 //     `reset` live, `#reset` disabled. A phase-reset same-frame CHANGED item
 //     IS a disable toggle, so `reset` (struck) beside `#reset` — or the
 //     reverse — is the toggle in the file's own spelling.
-// (The status bar's walk line spells its own `Scale: [-]<then> [+]<now>`,
-// history_walk_line in paint_handler.cpp: a struck run has no road there.)
+// (The status bar's walk line shows no token: a changed scale is its two
+// words `Scale changed`, history_walk_line in paint_handler.cpp.)
 //
 // A warp token is rest-of-line, the whole payload. ASCII by construction:
 // every token comes from a sidecar grammar that is ASCII-only.

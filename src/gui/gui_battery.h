@@ -79,9 +79,10 @@ struct GuiLogoLegend {
 // WI-FI IS NOT PART OF THIS (architect 2026-10-01: "maybe later").
 //
 // THE CLOCK'S SPELLING IS ITS OWN FUNCTION, clock_spelling below, the one
-// owner of how the product spells a local time of day: the history view's
-// walk line spells a commit's time through it too (architect 2026-11-25;
-// history_walk_line, paint_handler.cpp), so the two cannot drift.
+// owner of how the product spells a local time of day; its one reader is
+// the composer below (the history view's walk line words a commit's time
+// relatively and spells no time of day: github_relative_time,
+// history_diff.h).
 inline std::string clock_spelling(const std::tm& local) {
     int hour = local.tm_hour % 12;
     if (hour == 0) hour = 12;

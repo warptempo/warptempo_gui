@@ -19,7 +19,10 @@
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <map>
 #include <optional>
@@ -934,6 +937,109 @@ std::string short_sha(const std::string& sha) {
     return (sha.size() >= 7) ? sha.substr(0, 7) : sha;
 }
 
+// GitHub's rule, step for step (the rule, its source and what is not ported
+// are at the declaration): elapsedTime's split, then roundToSingleUnit's
+// rounding, then the words.
+std::string github_relative_time(std::int64_t then, std::int64_t now) {
+    const std::int64_t elapsed = std::max<std::int64_t>(now - then, 0);
+    const std::time_t then_t = static_cast<std::time_t>(then);
+    const std::time_t now_t  = static_cast<std::time_t>(now);
+    std::tm t{};
+    std::tm n{};
+    localtime_r(&then_t, &t);
+    localtime_r(&now_t, &n);
+
+    if (elapsed >= std::int64_t{30} * 86400) {
+        static constexpr const char* kMonths[12] = {
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        std::string s = "on ";
+        s += kMonths[t.tm_mon];
+        s += ' ';
+        s += std::to_string(t.tm_mday);
+        if (t.tm_year != n.tm_year) {
+            s += ", ";
+            s += std::to_string(t.tm_year + 1900);
+        }
+        return s;
+    }
+
+    // elapsedTime: integer floors.
+    const std::int64_t sec = elapsed;
+    const std::int64_t min = sec / 60;
+    const std::int64_t hr  = min / 60;
+    const std::int64_t day = hr / 24;
+    std::int64_t days    = day;
+    std::int64_t hours   = hr - day * 24;
+    std::int64_t minutes = min - hr * 60;
+    std::int64_t seconds = sec - min * 60;
+
+    // roundToSingleUnit.
+    if (seconds >= 55) minutes += 1;              // round(seconds / 60)
+    if (minutes || hours || days) seconds = 0;
+    if (minutes >= 55) hours += 1;                // round(minutes / 60)
+    if (hours || days) minutes = 0;
+    if (days || hours >= 21) {
+        // The local calendar's day numbers (days since the epoch of each
+        // side's local date).
+        const auto day_number = [](const std::tm& x) {
+            using namespace std::chrono;
+            return static_cast<std::int64_t>(
+                sys_days{year{x.tm_year + 1900} /
+                         month{static_cast<unsigned>(x.tm_mon + 1)} /
+                         std::chrono::day{static_cast<unsigned>(x.tm_mday)}}
+                    .time_since_epoch()
+                    .count());
+        };
+        const std::int64_t cal = std::abs(day_number(n) - day_number(t));
+        if (cal) {
+            days = cal;                 // "yesterday" is a calendar day
+        } else if (days) {
+            hours += days * 24;         // the same date (a 25 hour day)
+            days = 0;
+        } else {
+            days += 1;                  // round(hours / 24), hours 21..24
+        }
+    }
+    if (days) hours = 0;
+    std::int64_t weeks  = 0;
+    std::int64_t months = 0;
+    if (days) {
+        if (days < 27) {
+            if (days >= 6) {
+                weeks = (days + 3) / 7;   // round(days / 7): no half falls
+                days  = 0;
+            }
+        } else {
+            months = std::abs(
+                static_cast<std::int64_t>(t.tm_year - n.tm_year) * 12 +
+                (t.tm_mon - n.tm_mon));
+            if (months) days = 0;
+        }
+    }
+    if (weeks >= 4) {                     // round(weeks / 4)
+        months += 1;
+        weeks = 0;
+    }
+
+    // The words (Intl.RelativeTimeFormat, `numeric: 'auto'`).
+    const auto ago = [](std::int64_t k, const char* unit) {
+        std::string s = std::to_string(k);
+        s += ' ';
+        s += unit;
+        if (k != 1) s += 's';
+        s += " ago";
+        return s;
+    };
+    if (months) return months == 1 ? "last month" : ago(months, "month");
+    if (weeks)  return weeks == 1 ? "last week" : ago(weeks, "week");
+    if (days)   return days == 1 ? "yesterday" : ago(days, "day");
+    if (hours)  return ago(hours, "hour");
+    if (minutes) return ago(minutes, "minute");
+    if (seconds < 10) return "now";
+    return ago(seconds, "second");
+}
+
 bool read_commit_sidecars(const std::string&        repo_root,
                           const std::string&        spelling,
                           const std::string&        base_name,
@@ -1528,10 +1634,10 @@ void scan_history_walk(
     // THE VERDICT IS THE WALK'S OWN: a walk that could not be read (a clone
     // that will not open, a HEAD or an object that cannot be read) ends the run
     // NOT ok, while a walk that read and found nothing is the ruled empty
-    // success, the view opening at `0/0` with the counted line silent — there
-    // is no count to explain, only a piece with no checkpoint behind it yet. The
-    // two cannot be confused: the walk runs in this process and answers
-    // true-with-nothing or false, never a silence to interpret.
+    // success, the view opening on an empty window with the counted line
+    // silent — there is no count to explain, only a piece with no checkpoint
+    // behind it yet. The two cannot be confused: the walk runs in this process
+    // and answers true-with-nothing or false, never a silence to interpret.
     const auto walk_failed = [&on_done, &base_name](const std::string& diag) {
         GuiHistoryScanResult failed;
         failed.ok = false;
@@ -1710,11 +1816,12 @@ bool GuiHistoryDiff::init(const AppState&           app,
 
     // AN EMPTY WALK IS A LEGAL STANDING STATE (architect 2026-08-09), whether
     // the scan is still streaming or has FINISHED with nothing: the view opens
-    // at `0/0` over a blank Remote lane, and the blank lane is the honest
-    // display of a piece with no eligible checkpoint behind it. Both terminal
-    // zeros — no commit touches the sidecars at all, and every touching commit
-    // refusing the strict load — open exactly like the mid-scan window does, so
-    // emptiness is nowhere a refusal and `done` is nowhere a term.
+    // on an empty window over a blank Remote lane, and the blank lane is the
+    // honest display of a piece with no eligible checkpoint behind it. Both
+    // terminal zeros — no commit touches the sidecars at all, and every
+    // touching commit refusing the strict load — open exactly like the
+    // mid-scan window does, so emptiness is nowhere a refusal and `done` is
+    // nowhere a term.
     //
     // WHAT THE OLD REFUSAL COST is why it went: FORCE SAVE AND COMMIT LIVES
     // ONLY INSIDE THIS VIEW (the main page's Save and Commit, SAVE's long
@@ -1899,7 +2006,8 @@ GuiHistoryCommitDelta compute_commit_delta(
 
     // THE SCALE PAIR RIDES THE SAME SUBSTITUTION as the marker columns: then is
     // whichever side is older in this reading, now whichever is newer, so the
-    // corner's `Scale: [-]a [+]b` says the same kind of thing in both.
+    // walk line's `Scale changed` (history_walk_line) answers the same
+    // comparison the lane makes, in both readings.
     d.then_scale_token = scale_token_of(engine_block_of(then_settings));
     d.now_scale_token  = scale_token_of(engine_block_of(now_settings));
     d.scale_changed    = (d.then_scale_token != d.now_scale_token);

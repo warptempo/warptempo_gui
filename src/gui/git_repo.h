@@ -141,7 +141,8 @@ using GuiGitPathFilter = std::function<bool(std::string_view repo_path)>;
 // ONE COMMIT THE WALK KEPT (GuiGitRepo::walk_head): its full 40-hex name and
 // its COMMITTER TIME as git records it, seconds since the Unix epoch in UTC
 // (libgit2's git_commit_time; the offset the commit carries is not read — the
-// one reader shows the device's local time, architect 2026-11-25).
+// one reader words it against the device's local calendar,
+// github_relative_time, history_diff.h; architect 2026-11-25).
 struct GuiGitWalkCommit {
     std::string  sha;
     std::int64_t time = 0;
@@ -243,7 +244,8 @@ public:
     // read; an empty list is an answer. Each commit comes back with ITS
     // COMMITTER TIME (GuiGitWalkCommit), read off the commit the walk already
     // has open to diff (architect 2026-11-25: the history view's walk line
-    // shows it).
+    // shows it, in GitHub's relative words, github_relative_time,
+    // history_diff.h).
     bool walk_head(const GuiGitPathFilter& accept,
                    std::vector<GuiGitWalkCommit>& commits,
                    std::string& diag) const;

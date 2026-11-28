@@ -239,7 +239,9 @@ enum class GuiHistoryCompare {
 //   walk already speaks.
 //
 // THE DELTA VOCABULARY IS IDENTICAL on both, which is what makes one lane serve
-// them: the six entry vectors and the `scale` pair the walk line displays.
+// them: the six entry vectors (the lane's items, summed into the walk line's
+// `<N> markers changed`) and the `scale` pair whose change the walk line
+// reports (`Scale changed`).
 // Viewport, trim and the rest of the GUI-kind keys never appear, because they
 // are not undoable.
 enum class GuiHistoryWalkSource {
@@ -355,11 +357,15 @@ struct GuiHistoryCommitDelta {
     // THE SCALE IS THE ONLY SETTINGS KEY THIS MODE DISPLAYS (architect's
     // ruling, kept 2026-10-28) — a recorded asymmetry, not an oversight: every
     // other settings delta (title, bpm, notes, url, cover, every per-tab
-    // view-state key) is deliberately absent from the walk line's segment
+    // view-state key) is deliberately absent from the walk line, whose
+    // `Scale changed` segment reads `scale_changed` alone
     // (history_walk_line, paint_handler.cpp), so the mode shows authoring
     // history rather than session bookkeeping. The tokens are the `scale=`
     // value text VERBATIM from each side, empty where that side carried no
-    // `scale=` line at all.
+    // `scale=` line at all; they are the comparison's operands, and no
+    // surface shows them (architect 2026-11-27: "just simply say the words
+    // scale changed, and the user can load in place and see the old
+    // scale").
     std::string then_scale_token;
     std::string now_scale_token;
     bool        scale_changed = false;
@@ -445,7 +451,7 @@ struct GuiHistoryCommitSidecars {
     // THE COMMIT'S COMMITTER TIME, UTC seconds (GuiGitWalkCommit, git_repo.h)
     // — THE WALK'S, set by scan_history_walk from walk_head's answer, so every
     // member of the prefetch store carries it (architect 2026-11-25: the walk
-    // line's date segment, GuiHistoryDiff::commit_time_at). The `'` load's
+    // line's time segment, GuiHistoryDiff::commit_time_at). The `'` load's
     // own read (read_commit_sidecars) leaves it 0: that road shows no time.
     std::int64_t commit_time = 0;
     GuiHistorySidecarBlob warpmarkers;
@@ -454,11 +460,50 @@ struct GuiHistoryCommitSidecars {
 };
 
 // THE SEVEN-CHARACTER SPELLING every user-facing line uses for a commit —
-// the `'` load confirmation's question through
-// AppState::HistoryMode::member_label, and every reason this module composes.
+// the `'` load confirmation's question and the history view's commit walk
+// line's first segment, both through AppState::HistoryMode::member_label,
+// and every reason this module composes.
 // The full SHA is returned unchanged when it is shorter than seven, which no
 // git answer is.
 std::string short_sha(const std::string& sha);
+
+// A COMMIT'S TIME IN GITHUB'S WORDS — the text after "Committed " on the
+// history view's commit walk line (history_walk_line, paint_handler.cpp;
+// architect 2026-11-27: "I think I'd like to use natural language like
+// GitHub does. Like, for example, 15 hours ago, yesterday, 2 days ago ...
+// that is the scale at which granularity matters ... changes from a long
+// time ago all sort of blur together anyways"; "Let's just use the GitHub
+// rule ... we should just use the rule exactly"). `then` is the commit's
+// time and `now` the moment asked about, both seconds since the epoch, both
+// parameters: one pure function, no git and no clock of its own.
+//
+// THE RULE IS GITHUB'S <relative-time> ELEMENT WITH ITS DEFAULTS
+// (github/relative-time-element, read at main 2026-11-27:
+// src/relative-time-element.ts and src/duration.ts, elapsedTime and
+// roundToSingleUnit), its English words Intl.RelativeTimeFormat's under
+// `numeric: 'auto'`:
+//   * 30 DAYS OR MORE (the element's `P30D` threshold): the date, "on Oct 3",
+//     the year after a comma where it is not now's ("on Oct 3, 2025"), in
+//     the device's local calendar.
+//   * UNDER IT, the elapsed time split into whole days, hours, minutes and
+//     seconds and ROUNDED TO ONE UNIT: 55 seconds or more round up a minute,
+//     55 minutes or more an hour; from 21 hours (or any whole day) THE DAYS
+//     ARE CALENDAR DAYS, local, so "yesterday" is the day before today
+//     however few hours back (21 hours or more on today's own date reads
+//     "yesterday" too, the element's rounding of hours to a day); 6 to 26
+//     days round to weeks (6..10 one, 11..17 two, 18..24 three, 25..26 four,
+//     which is a month); 27 days or more are a month where the local
+//     calendar month differs, else the days stand.
+//   * THE WORDS: under 10 seconds "now", else "N seconds ago"; "1 minute
+//     ago" / "N minutes ago"; "1 hour ago" / "N hours ago"; "yesterday" /
+//     "N days ago"; "last week" / "N weeks ago"; "last month" / "N months
+//     ago".
+// NOT PORTED: the element measures its 30 days by adding the elapsed time's
+// 30-day "months" to now on the UTC calendar, so its switch to a date can
+// come a day or two late (in March); ours is 30 days flat. A TIME AHEAD OF
+// `now` (a commit made on a clock ahead of the device's) reads "now", a
+// domain clamp where the element would say "in N ...".
+std::string github_relative_time(std::int64_t then, std::int64_t now);
 
 // READ ONE COMMIT'S SIDECARS BY SPELLING — the load-in-place-from-a-commit
 // path's input
@@ -661,7 +706,8 @@ std::string read_history_walk_tip(const std::string& source_audio_path);
 //
 // `ok` FALSE IS A READ THAT DID NOT ANSWER, never a history that is empty. The
 // two are the arc's whole reason for this type: an empty history is the ruled
-// empty success — the view opens at `0/0` and Save and commit is live — while a
+// empty success — the view opens on an empty window and Save and commit is
+// live — while a
 // read this program could not get an answer out of knows NOTHING about the
 // piece's history, and reading that silence as "no checkpoints" would establish
 // an empty walk the view would then show as the piece's whole history.
@@ -739,7 +785,7 @@ void scan_history_walk(
 // a visit opened while the scan is still running sees members appended in walk
 // order (newest first, so every arrival is OLDER than everything already there)
 // and answers a larger commit_count() from one tick to the next. Nothing an
-// existing index means changes when that happens — `n/N` grows, the `,` wall
+// existing index means changes when that happens — the `,` wall
 // moves outward, and the lane repaints because the flag cache's fingerprint
 // carries the count.
 class GuiHistoryDiff {
@@ -772,8 +818,9 @@ public:
     //
     // MEMBERSHIP IS NEVER A REFUSAL (architect 2026-08-09). A walk with no
     // eligible commit is AVAILABLE whether its scan is still streaming or has
-    // FINISHED empty: the view opens at `0/0` over a blank lane, populating live
-    // in the first case and resting in the second. The two terminal zeros —
+    // FINISHED empty: the view opens on an empty window over a blank lane, its
+    // walk line empty, populating live in the first case and resting in the
+    // second. The two terminal zeros —
     // no commit touching the sidecars, and every touching commit refusing the
     // strict load — are ordinary, and the reasoning is at the site in the
     // definition. Which is exactly why the scan failure is its own answer:
@@ -803,8 +850,10 @@ public:
 
     // THE COMMIT'S COMMITTER TIME, UTC seconds, as the walk read it
     // (GuiHistoryCommitSidecars::commit_time) — no git at the call. Empty for
-    // an out-of-range index, which is the empty window's `0/0` (architect
-    // 2026-11-25; its one reader the walk line, history_walk_line).
+    // an out-of-range index, which is the empty window, whose walk line is
+    // empty (architect 2026-11-25; its one reader the walk line's
+    // `Committed <time>` segment, history_walk_line, through
+    // github_relative_time).
     std::optional<std::int64_t> commit_time_at(std::size_t index) const;
 
     // The commit's delta IN ONE OF THE TWO READINGS (GuiHistoryCompare above),
@@ -928,10 +977,10 @@ private:
 // SO THE MEMBERS ARE THE TIMELINE'S STATES, newest first, and every adjacent
 // pair (k, k−1) brackets exactly one event. THE WALK IS THEREFORE NEVER EMPTY:
 // a session that has authored nothing is N = 1, the live state alone, reading
-// `1/1` and comparing against itself (architect 2026-08-08: "once we've reached
-// the undo history, even if there is nothing in it, we are comparing one state
-// against an identical state"). `0/0` on a Local tab means the walk was never
-// initialized, and nothing else.
+// `+0 | 0 markers changed` and comparing against itself (architect 2026-08-08:
+// "once we've reached the undo history, even if there is nothing in it, we
+// are comparing one state against an identical state"). A member count of
+// zero on a Local tab means the walk was never initialized, and nothing else.
 //
 // WHICH MAKES THE ITERATIVE READING EXACTLY ONE EVENT — THE COMMIT WALK'S OWN
 // FORWARD PAIRING, verbatim: member k against member k−1, the next-newer
@@ -997,11 +1046,11 @@ public:
     // read only through the frozen sizes above.
     void init(const AppState& app, const GuiHistoryNowSide& now);
 
-    // How many STATES the timeline carries — U + R + 1, the `n/N` denominator
-    // the corner shows on the Local tab, and fixed for the visit. It is never zero once init has
-    // run against a session: a session that has authored nothing answers 1, the
-    // live state alone. Zero is the UNINITIALIZED answer (no visit has bound this
-    // walk), which is the only way a Local tab can read `0/0`.
+    // How many STATES the timeline carries — U + R + 1, the Local tab's member
+    // count (HistoryMode::walk_count), fixed for the visit. It is never zero
+    // once init has run against a session: a session that has authored
+    // nothing answers 1, the live state alone. Zero is the UNINITIALIZED
+    // answer (no visit has bound this walk), which no live Local tab reads.
     std::size_t entry_count() const { return count_; }
 
     // WHERE THE SESSION STANDS in the walk — the live member's index, which is

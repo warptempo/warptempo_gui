@@ -120,10 +120,11 @@ GuiHistoryPrefetch::DrainResult GuiHistoryPrefetch::drain() {
             // the eager init printed, moved to the moment the count is final.
             // IT PRINTS ON AN EMPTY WALK TOO (2026-08-09, with the terminal-zero
             // refusal's deletion): a run that hid EVERY candidate is exactly
-            // when the number explains something, the view opening at `0/0` over
-            // a blank lane with no other account of why. It is the ONE
-            // explanation the feature offers — the entry's two refusal messages
-            // died with the refusal rather than moving here beside it.
+            // when the number explains something, the view opening on an empty
+            // window over a blank lane with no other account of why. It is the
+            // ONE explanation the feature offers — the entry's two refusal
+            // messages died with the refusal rather than moving here beside
+            // it.
             //
             // A FAILED RUN PRINTS NOTHING HERE, and needs no term of its
             // own: every arm that ends a run NOT ok returns before a single

@@ -201,7 +201,9 @@ struct GuiInputHandler;
 //     <index>_<distance>
 //
 // <index> IS THE LIVE STATE'S NUMBER in the session walk's counting, the same
-// number the `h` view's Local walk shows for the state on screen: N − live
+// number the `h` view's Local walk counts the state on screen by
+// (HistoryMode::member_number; the view shows it nowhere, naming a local
+// state by its signed distance from the save, the <distance> below): N − live
 // index = (U + R + 1) − R = U + 1 with U = undo_stack.size() and
 // R = redo_stack.size(). It is that ONE ARITHMETIC here rather than a call
 // into HistoryMode::member_number, because the walk is bound only while the
@@ -223,8 +225,12 @@ struct GuiInputHandler;
 //
 // SPELLING: ALWAYS SIGNED (architect 2026-09-22), as a sweep cell's hop entry
 // is (format_signed_hops spells `+2`) — "+2" after the save, "+0" at it, "-2"
-// behind it. HIS EXAMPLE: open, drop two, save, drop two -> "5_+2"; Previous
-// twice -> "3_+0"; Previous twice more -> "1_-2".
+// behind it. THE DISTANCE AND ITS `?` HAVE ONE COMPOSER,
+// UndoHistory::save_distance_spelling (app_state.h), which the history view's
+// Local walk line reads too for the viewed member (architect 2026-11-27: "I
+// prefer the way that the card [the car] does it"). HIS EXAMPLE: open, drop
+// two, save, drop two -> "5_+2"; Previous twice -> "3_+0"; Previous twice
+// more -> "1_-2".
 std::string car_transport_title_line(const UndoHistory& history);
 
 struct GuiCarTransport {

@@ -4938,6 +4938,6 @@ public:
     // THE ARRIVAL HOOK, from the platform's prefetch ready fd (main.cpp's
     // wiring): drain the worker's queue into the store and, while the view
     // stands, react to what arrived — damage the window so the lane and the
-    // `n/N` corner catch up with a walk that just grew.
+    // walk line catch up with a walk that just grew.
     void on_history_prefetch_ready();
 };

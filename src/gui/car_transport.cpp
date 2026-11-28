@@ -10,19 +10,14 @@
 
 // The title (the formula, his example and the spelling at the declaration).
 std::string car_transport_title_line(const UndoHistory& history) {
-    const int64_t u = static_cast<int64_t>(history.undo_stack.size());
     // The live state's number in the session walk's counting: U + 1.
-    std::string s = std::to_string(u + 1);
+    const int64_t live = static_cast<int64_t>(history.undo_stack.size()) + 1;
+    std::string s = std::to_string(live);
     s += '_';
-    if (!history.saved_valid) {
-        s += '?';
-        return s;
-    }
-    // ALWAYS SIGNED, as a sweep cell's hop entry is (format_signed_hops): the
-    // sign then the magnitude, a zero carrying '+'.
-    const int64_t distance = -static_cast<int64_t>(history.saved_distance);
-    s += distance < 0 ? '-' : '+';
-    s += std::to_string(distance < 0 ? -distance : distance);
+    // The live state's signed distance from the save, or `?`, in the one
+    // spelling the history view's Local walk line shares
+    // (UndoHistory::save_distance_spelling, app_state.h).
+    s += history.save_distance_spelling(live);
     return s;
 }
 

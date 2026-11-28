@@ -785,6 +785,32 @@ struct UndoHistory {
         saved_valid    = true;
     }
 
+    // A STATE'S SIGNED DISTANCE FROM THE SAVE, SPELLED — THE ONE COMPOSER of
+    // the spelling the car console's title carries after its underscore
+    // (car_transport_title_line, car_transport.h: the live state's) and the
+    // history view's Local walk line shows first (history_walk_line,
+    // paint_handler.cpp: the viewed member's; architect 2026-11-27: "0 is
+    // save, +1 means we've done one action past save, -1 means we've undone
+    // one since the save, and there's no ... indication of how far up or down
+    // the number goes ... a simple signed position rather than an X out of
+    // Y"). `state_number` is the state's number in the session walk's
+    // counting, oldest 1, the live state U + 1 (U = undo_stack.size()); the
+    // saved state's number is U + 1 + saved_distance under this struct's sign
+    // convention, and the distance is the one minus the other. ALWAYS SIGNED
+    // (architect 2026-09-22), as a sweep cell's hop entry is
+    // (format_signed_hops): the sign then the magnitude, a zero carrying '+'
+    // — "+2", "+0", "-2". `?` where no save is in reach (saved_valid false).
+    std::string save_distance_spelling(std::int64_t state_number) const {
+        if (!saved_valid) return "?";
+        const std::int64_t saved_number =
+            static_cast<std::int64_t>(undo_stack.size()) + 1 +
+            saved_distance;
+        const std::int64_t d = state_number - saved_number;
+        std::string s(1, d < 0 ? '-' : '+');
+        s += std::to_string(d < 0 ? -d : d);
+        return s;
+    }
+
     void reset() {
         undo_stack.clear();
         redo_stack.clear();
@@ -7932,10 +7958,13 @@ struct AppState {
     // the `#` where its line is disabled); a moved marker is a removed item
     // and an added one. The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
-    // marker stands exactly where it stood. The status bar carries the walk line: the member's position, then on the
-    // commit walk the commit's date and time, then the `Scale:` segment when the `scale=`
-    // value changed, separated by ` | ` (history_walk_line,
-    // paint_handler.cpp, owns its shape).
+    // marker stands exactly where it stood. The status bar carries the walk
+    // line in GitHub's words: on the commit walk the commit's short SHA, then
+    // `Committed <time>` (GitHub's relative time), on the local walk the
+    // member's signed distance from the save (the car title's spelling), then
+    // `<N> markers changed`, then
+    // `Scale changed` where the `scale=` value changed, separated by ` | `
+    // (history_walk_line, paint_handler.cpp, owns its shape).
     //
     // THE WALK IS LOAD-GATED (architect 2026-08-04): membership is the
     // load-in-place gate itself — each candidate commit's three sidecars must
@@ -7943,7 +7972,7 @@ struct AppState {
     // history_diff.h, the `'` act's own validation, one predicate) —
     // so every checkpoint the mode can step to is one `'` can load.
     // Ineligible commits leave the walk, one stderr line counting
-    // them, and the corner's n/N counts the ELIGIBLE list.
+    // them, and the walk steps over the ELIGIBLE list alone.
     //
     // AND THE WALK IS UNCAPPED AND PREFETCHED (architect 2026-08-07): that gate
     // is what made `h` stall, so the whole git half runs at STARTUP on a
@@ -7952,7 +7981,7 @@ struct AppState {
     // The visit BINDS to that store instead of building a list, which has three
     // visible consequences: entry is instant; a view opened while the scan is
     // still running shows an empty or partial walk and FILLS IN under the user,
-    // `n/N` growing and the `,` wall moving outward; and the store is re-warmed
+    // the `,` wall moving outward; and the store is re-warmed
     // after a checkpoint publishes and whenever an entry finds it stale. A kick
     // that would land while this view stands is DEFERRED to the exit — the
     // visit's list must not be swapped underneath it.
@@ -8029,7 +8058,8 @@ struct AppState {
     //   lane offering none. The Local walk cannot reach it on a live tab (U + R
     //   + 1 members, bound before the mode goes up), so the REMOTE walk is where
     //   it shows: a piece whose every checkpoint refuses the strict load opens
-    //   the view at `0/0`, and that button is the one greyed there.
+    //   the view on an empty window (an empty walk line), and that button is
+    //   the one greyed there.
     //   REVERT IS NOT A THIRD (architect 2026-08-15): its key is admitted
     //   only with a diff flag selected, so this partition answers DEAD on an
     //   empty subject, but no face reads that answer — a grey tracking the
@@ -8066,19 +8096,24 @@ struct AppState {
     // OWN UNDO/REDO TIMELINE read through the identical delta machinery — every
     // state Ctrl+Z and Ctrl+Shift+Z can reach plus the live one, newest first
     // (GuiHistoryLocalWalk, history_diff.h, owns the model and
-    // the pairing derivation). The lane, the flags, the colours, the corner's `n/N`, the
-    // walk's `,` / `.` and the diff-flag cycle are all SOURCE-AGNOSTIC — they
-    // read the displayed delta and
+    // the pairing derivation). The lane, the flags, the colours, the walk
+    // line's count and scale, the walk's `,` / `.` and the diff-flag cycle are
+    // all SOURCE-AGNOSTIC — they read the displayed delta and
     // the active walk's position, never a named walk. (The trim bar and its
     // framing read no delta at all: the bar shows the tab's own trim window
-    // in the view and its double tap frames it.) The corner itself is wholly
-    // source-agnostic (2026-09-28: it carries no SHA). TWO surfaces are not,
+    // in the view and its double tap frames it.) The walk line's FIRST
+    // SEGMENT names the member in its walk's own terms — the commit's short
+    // SHA (its time the segment after), or the local state's signed distance
+    // from the save — through member_label below (history_walk_line,
+    // paint_handler.cpp, architect 2026-11-27). TWO surfaces beyond it fork
+    // too,
     // and each says why at its own site: the `'` LOAD-IN-PLACE, which is LIVE ON BOTH WALKS
     // wherever the active walk carries a member and FORKS ON THE
     // SOURCE — its confirmation names the viewed member in the walk's own
-    // spelling (member_label below: a short SHA on the Remote tab, a member
-    // NUMBER on the Local one), and the act behind its Load is a different
-    // function per walk (the fork at confirm_load_in_place) — and
+    // spelling (member_label below: a short SHA on the Remote tab, the
+    // state's signed distance from the save on the Local one, as the walk
+    // line's first segment shows it), and the act behind its Load is a
+    // different function per walk (the fork at confirm_load_in_place) — and
     // FORCE SAVE AND COMMIT, whose reach
     // and grey stay the commit walk's because the act publishes into the
     // repository. THE REVERT ACT IS LIVE ON LOCAL FLAGS and deliberately so: it
@@ -8528,7 +8563,8 @@ struct AppState {
         // of how a member is named to the user on either walk, read by the
         // confirmation's own question.
 
-        // How many members the ACTIVE walk carries — the `n/N` denominator.
+        // How many members the ACTIVE walk carries — the walls' bound and the
+        // `'` load's admission (the walk line shows no count of members).
         std::size_t walk_count() const {
             return source == GuiHistoryWalkSource::Local
                        ? local.entry_count()
@@ -8542,7 +8578,7 @@ struct AppState {
             return source == GuiHistoryWalkSource::Local ? local_index : index;
         }
 
-        // A MEMBER'S DISPLAYED NUMBER, AND THE WALKS COUNT UPWARD FROM THE
+        // A MEMBER'S NUMBER, AND THE WALKS COUNT UPWARD FROM THE
         // PIECE'S PAST (architect 2026-09-17: "it feels like the numbers count
         // in reverse. If I drop two markers and hit `h` then `g`, I see 1/3; I
         // would expect 3/3. Reverse the ordering — the first becomes last and
@@ -8557,12 +8593,17 @@ struct AppState {
         // the counting direction is ONE EXPRESSION here rather than an
         // inversion of the walk.
         //
-        // ZERO ON AN EMPTY WALK, the commit walk's `0/0` and the one case with
-        // no member to number (the local walk is never empty). THREE READERS,
-        // greped 2026-09-17: the walk line (history_walk_line,
-        // paint_handler.cpp), member_label's LOCAL arm below — so the corner
-        // and the `'` confirmation cannot number one member two ways — and the
-        // local load's own success line on stderr
+        // ZERO ON AN EMPTY WALK, the commit walk's empty window and the one
+        // case with no member to number (the local walk is never empty). THREE
+        // READERS, greped 2026-11-27: the walk line's LOCAL first segment
+        // (history_walk_line, paint_handler.cpp), which shows no number but
+        // measures the viewed member's distance from the save by it — the
+        // number is the session walk's counting, the live state U + 1, the
+        // currency UndoHistory::save_distance_spelling takes (the walk line
+        // reads it through member_label's LOCAL arm below, which is also the
+        // `'` confirmation's naming of a local member, the same spelling);
+        // and the local load's own success line on stderr, a diagnostic that
+        // keeps the number
         // (load_history_local_entry_in_place, which reads it before the close
         // that resets this struct).
         std::size_t member_number(std::size_t member) const {
@@ -8572,17 +8613,26 @@ struct AppState {
 
         // A MEMBER'S USER-FACING SPELLING, the ONE OWNER for both walks
         // (2026-08-28, hoisted for the `'` load's own naming): on the LOCAL
-        // walk the member's displayed NUMBER — member_number above, the
-        // corner's own `n/N` arithmetic, the only name a local member has; on
-        // the COMMIT walk the seven-character SHA every user-facing line
-        // spells (short_sha, history_diff.h). Its reader is the `'`
-        // confirmation's question; the corner names no member (2026-09-28:
-        // its position is member_number's alone). Empty for an
-        // out-of-range commit index (sha_at's own answer), which is exactly
-        // the empty walk.
-        std::string member_label(std::size_t member) const {
+        // walk THE STATE'S SIGNED DISTANCE FROM THE SAVE, the car console's
+        // spelling — `+1`, `+0`, `-2`, `?` where no save is in reach —
+        // composed by UndoHistory::save_distance_spelling from `history` (the
+        // live session's, which is the walk's timeline while the view stands)
+        // and member_number above (architect 2026-11-27, to the question's
+        // naming a local state by the status bar's own spelling: "1 agree");
+        // on the COMMIT walk the seven-character SHA every user-facing line
+        // spells (short_sha, history_diff.h). TWO READERS: the `'`
+        // confirmation's question ("Load '+1' in place?", "Load 'a1b2c3d' in
+        // place?") and the walk line's first segment on both walks
+        // (history_walk_line, paint_handler.cpp; architect 2026-11-27, the
+        // SHA leading the commit walk line: "SHA, pipe, time, pipe, count,
+        // pipe, scale"), so the bar and the question cannot name one member
+        // two ways. Empty for an out-of-range commit index (sha_at's own
+        // answer), which is exactly the empty walk, whose line is empty.
+        std::string member_label(std::size_t member,
+                                 const UndoHistory& history) const {
             if (source == GuiHistoryWalkSource::Local)
-                return std::to_string(member_number(member));
+                return history.save_distance_spelling(
+                    static_cast<std::int64_t>(member_number(member)));
             return short_sha(session.sha_at(member));
         }
 
@@ -17722,8 +17772,9 @@ inline bool redesign_button_selected(const AppState& a, int64_t total_frames,
         case RedesignButton::HistoryRevert:
         // THE WALK'S TWO STEPS ARE MOMENTARY like copy and paste, not toggles
         // like iteration: each is a step that completes, with no
-        // state to stay lit for. WHERE the walk stands is the corner readout's
-        // `n/N`, which says it in numbers, and the pair's ENABLED face at
+        // state to stay lit for. WHERE the walk stands is the walk line's
+        // first segment (the commit's time, or the local state's distance
+        // from the save; history_walk_line), and the pair's ENABLED face at
         // the walls (2026-08-30); a lit arrow could only mean "you pressed
         // this", which the click face already says for as long as it is true.
         case RedesignButton::HistoryOlder:

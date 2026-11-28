@@ -963,7 +963,7 @@ void GuiInputHandler::close_history_mode() {
 
     // A DISCRETE COMMAND, so FULL-WINDOW DAMAGE (the CADENCE rule's discrete
     // class): the lane swaps its whole content, the stems in the waveform swap
-    // with it, and the status bar rewrites its `x/y` walk line.
+    // with it, and the status bar rewrites its walk line.
     // Narrow damage would have to know all three, and none of them is worth a
     // rect. It covers the republication's own damage too, which is why the
     // rebuild above emits its own and nothing here has to widen for it.
@@ -1384,11 +1384,12 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 // The DRAIN is unconditional: the store is the app's, not the view's, and it
 // must stay current whether or not anyone is looking. What is conditional is the
 // REACTION, and it is the whole of what a growing walk needs while the view
-// stands: the window is damaged, because `n/N` in the bottom corner and the
-// diff lane both read a count that just changed — the lane through the flag
-// cache's own fingerprint field, which is why an empty-walk entry's first
+// stands: the window is damaged, because the walk line and the diff lane both
+// read a walk that just grew — the line's segments arriving with an empty
+// window's first member, the lane through the flag cache's own fingerprint
+// field (it carries the count), which is why an empty-walk entry's first
 // member repaints rather than sitting blank.
-// FULL-WINDOW DAMAGE, the mode edges' own class: the corner and the lane are two
+// FULL-WINDOW DAMAGE, the mode edges' own class: the line and the lane are two
 // surfaces and neither is worth a rect.
 //
 // TWO EDGES REACT, NOT ONE (2026-08-09): an APPEND, above, and the run BECOMING
@@ -1397,9 +1398,9 @@ void GuiInputHandler::kick_history_prefetch_if_stale() {
 //
 // AND A RUN THAT FINISHES FAILED ENDS THE VISIT (2026-08-09). The view's premise
 // is that this session knows the piece's history; a walk of the history that
-// could not be read means it does not, and the `0/0` blank lane would then be a LIE — it
-// says "no checkpoints" where the truth is "unknown" — with no account
-// anywhere of why. So the failure gets the refusal it would have got
+// could not be read means it does not, and the empty window's blank lane would
+// then be a LIE — it says "no checkpoints" where the truth is "unknown" —
+// with no account anywhere of why. So the failure gets the refusal it would have got
 // a moment earlier: init's own one-line stderr shape, printed here from the
 // reason the store recorded, and the view CLOSED through the one exit owner, so
 // the lane republishes exactly as any other close does. The next `h` meets init's stable refusal with the same line.
@@ -2572,8 +2573,8 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // member is a STATE of
     // this session's timeline, and loading a state in place is exactly what the
     // act does). The two differ only in how the member is SPELLED in the
-    // confirmation — a short SHA on the Remote tab, a NUMBER on the Local one
-    // — and the routing lives at confirm_load_in_place, not here.
+    // confirmation — a short SHA on the Remote tab, the state's signed
+    // distance from the save on the Local one (member_label) — and the routing lives at confirm_load_in_place, not here.
     //
     // THE TERM IS THE ACTIVE WALK'S, ONE TERM FOR BOTH (2026-08-09): the walk
     // must have a member. The act names THE VIEWED one,
@@ -2581,8 +2582,8 @@ static bool history_mode_allowlist_refuses(GuiKey key, GuiInputState mods,
     // nothing to load, and one decision refuses the key and greys the top
     // icon row's load-in-place button. Both walks can be empty: the Local walk
     // carries U + R + 1 members and is empty only UNBOUND, and the Remote one
-    // opens at `0/0` whenever a piece has no eligible checkpoint, a legal
-    // standing state (the vocabulary fork is at member_label's spelling and at
+    // opens on an empty window whenever a piece has no eligible checkpoint, a
+    // legal standing state (the vocabulary fork is at member_label's spelling and at
     // confirm_load_in_place).
     const bool is_load_in_place =
         (key == GuiKeys::Apostrophe && bare &&
@@ -5581,9 +5582,9 @@ bool GuiInputHandler::load_history_commit_in_place(std::size_t member) {
 // `member` is the VIEWED MEMBER'S INDEX in the local walk — what the one
 // caller (confirm_load_in_place) parked and hands over, the same currency its
 // commit sibling takes (2026-09-17), so the fork passes ONE number and
-// neither arm maps it on the way (the member's displayed NUMBER —
-// member_number, app_state.h — is a naming of the index rather than a second
-// address).
+// neither arm maps it on the way (the member's NUMBER — member_number,
+// app_state.h, which the question's signed spelling and this act's stderr
+// line read — is a naming of the index rather than a second address).
 //
 // IT IS NEVER A ROLLBACK. The member's state is applied ON TOP of the current
 // one as ONE NEW UNDO ENTRY, exactly as loading a commit is, so Ctrl+Z
@@ -5658,11 +5659,13 @@ bool GuiInputHandler::load_history_local_entry_in_place(std::size_t member) {
         return false;
     }
 
-    // THE DISPLAYED NUMBER IS READ WHILE THE WALK STILL STANDS — the close
+    // THE MEMBER'S NUMBER IS READ WHILE THE WALK STILL STANDS — the close
     // below resets HistoryMode whole, and member_number counts against the
     // walk's own member count — and it is used by the stderr line at the tail,
-    // which runs long after that close. One owner for the naming, here as
-    // everywhere (member_number, app_state.h).
+    // which runs long after that close. The stderr line is a diagnostic and
+    // keeps the number; the interface names a local state by its signed
+    // distance from the save (member_label, app_state.h). One owner for the
+    // number, here as everywhere (member_number, app_state.h).
     const std::size_t number = app.history_mode.member_number(member);
 
     // COPIED BEFORE ANYTHING IS WRITTEN (see the header): the pointers name the
@@ -7119,10 +7122,19 @@ void GuiInputHandler::history_load_in_place() {
     // the two subjects is standing (the player's entry, or this member).
     app.history_mode.pending_load_member = member;
     // The member in the ONE spelling both walks share (member_label — the
-    // short SHA on the Remote tab, the displayed number on the Local one).
-    // Cancel / Load, the affirmative last, as on every prompt.
+    // short SHA on the Remote tab, on the Local one the state's signed
+    // distance from the save, "Load '+1' in place?", each as the walk line's
+    // first segment shows it; architect 2026-11-27). THE TEXT IS COMPOSED
+    // HERE, ONCE, and the parked index is what the answer acts on; neither
+    // can drift apart
+    // while the question stands, the local timeline and its saved reference
+    // being frozen under the view and every act that could move them silent
+    // under a question (the car console's admits() refuses under a prompt
+    // and in the view). Cancel / Load, the affirmative last, as on every
+    // prompt.
     app.prompt.present(
-        "Load '" + app.history_mode.member_label(member) + "' in place?",
+        "Load '" + app.history_mode.member_label(member, app.history) +
+            "' in place?",
         kPromptCancelLoad,
         DialogTrigger::LOAD_IN_PLACE_CONFIRM);
     viewport.invalidate_all();
@@ -8470,9 +8482,9 @@ void GuiInputHandler::confirm_load_in_place() {
         // INDEX IS ALL THAT CROSSES, on both arms (2026-09-17) — the commit
         // walk has two roads and two spellings of a member's address, so that
         // act reads the address inside itself, ahead of the close that drops
-        // the session, and the local arm maps the index onto no displayed
-        // number (the number is a naming of the index,
-        // HistoryMode::member_number).
+        // the session, and the local arm maps the index onto no number or
+        // spelling (both are namings of the index, HistoryMode::member_number
+        // and member_label).
         // Each act owns every refusal on its own route and names it on stderr
         // AND on a notification card (2026-08-29), so nothing is said here.
         (void)(app.history_mode.source == GuiHistoryWalkSource::Local
