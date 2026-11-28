@@ -45,7 +45,7 @@
 // the bottom icon row (architect 2026-11-19: the process line "a
 // must-have" there; render.h's status bar block, paint_handler.cpp's
 // status_bar_text the one composer and paint_status_bar the painter: its first
-// field, the selection count and the history view's GitHub word beside it) — A
+// field and the selection count beside it) — A
 // BATCH'S PROGRESS IS THE PROGRESS MODAL'S (2026-10-14; the progress page:
 // "Rendering...", the bar and "X of Y" in the modal family's box from the
 // Render press to the batch's terminal, AppState::BatchProgress), THE STATUS
@@ -227,20 +227,23 @@
 //     GitHub's checkpoint of this piece would not load" and "Pull failed:
 //     nothing was changed"; and the checkpoint's clean ending, "Nothing to
 //     commit" (architect 2026-11-17: the worker found the sidecars
-//     clean and nothing owed, on_history_checkpoint_complete). UNDER
-//     `offline` THE KEY ASKS GITHUB AGAIN (architect 2026-09-28) and cards
-//     nothing in the view, the status bar's walk line carrying the answer,
-//     and "Asking GitHub again" on the main page, whose status bar carries
-//     no GitHub word.
-//     The GitHub CHECK itself raises nothing — its failing readings print one
-//     stderr line each and the status word is state.
+//     clean and nothing owed, on_history_checkpoint_complete); and under
+//     the status that could not be checked "GitHub could not be checked"
+//     (architect 2026-11-27). UNDER `offline` THE KEY ASKS GITHUB AGAIN
+//     (architect 2026-09-28) and cards nothing in the view, where Save's
+//     face greys while the check runs and then wears the answer, and
+//     "Asking GitHub again" on the main page, whose Save key wears the
+//     dirty mark alone.
+//     The GitHub CHECK raises no card of its own — its failing readings
+//     print one stderr line each — and its failing answer is THE GITHUB
+//     CARD below, state worn as a card.
 //
 // CRITICAL (STANDING) — never TIMED OUT and never BUMPED (architect
 // 2026-08-30: "critical cards keep standing"): no clock, and a later success
 // clears nothing. Down only by a DELIBERATE dismissal: a click or tap on it,
-// or the whole stack's dismissal (a long press on any card) — THE ONE
-// EXCEPTION the struck card below, which also clears by itself. THE
-// PRODUCERS, and nothing else (re-greped 2026-11-19): the three
+// or the whole stack's dismissal (a long press on any card) — THE TWO
+// EXCEPTIONS the struck card and the GitHub card below, which also clear by
+// themselves. THE PRODUCERS, and nothing else (re-greped 2026-11-27): the three
 // checkpoint failures ("Checkpoint failed: nothing was committed", "Checkpoint
 // failed: files written but not committed", "Checkpoint committed but not
 // pushed") and the three pre-commit refusals ("Checkpoint refused: GitHub has
@@ -251,7 +254,7 @@
 // clone left for the user to finish by hand); and the render player's
 // "Could not delete '<folder>': <system words>" (render_player.cpp, one card
 // per folder, since files may be half gone and the listing is all that says
-// which); and THE STRUCK CARD below.
+// which); and THE STRUCK CARD and THE GITHUB CARD below.
 //
 // THE STRUCK CARD, STATE WORN AS A CARD (architect 2026-11-19: "I
 // lean towards giving them a red card. There's never a reason to leave a
@@ -328,6 +331,45 @@
 // HISTORY VIEW authors nothing and leaves the live store as it stands, so
 // the card stands or not as the live piece is; the diff's own struck items
 // are a commit's, not the piece's, and raise nothing.
+//
+// THE GITHUB CARD, A FAILING STATUS WORN AS A CARD (architect 2026-11-27:
+// "I prefer that we show a red card permanently where there's any failure.
+// Where the key is grayed, I would expect that it's attempting to negotiate
+// a commit. And where it's refused to diverge, I would expect a failure as
+// well. A red card. So, in other words, the GitHub word would have no need
+// at that point"): ONE STANDING CARD bound to the project's GitHub status
+// (AppState::github_status, GuiGitHubStatus, history_diff.h) while it is a
+// FAILING one. ITS WORDS, one a status, one clause, no key named
+// (github_card_words, notifications.cpp, the one table; a status with no
+// words is no failing one):
+//     Refused    "GitHub refused this device"
+//     Diverged   "This device and GitHub have both moved"
+//     Unreadable "GitHub could not be checked"
+//     Ahead      "This device has checkpoints GitHub does not have"
+// No card under UpToDate, Checking, Offline (Save wears Check GitHub),
+// Behind (Save wears Pull) or Unchecked (no check yet, or no clone: no
+// failure of GitHub's). Save's face in the history view and this card are
+// the status's whole report; the status bar carries no GitHub word.
+//   * RAISED AT TWO EVENTS AND NO OTHER: THE CHECK'S ANSWER
+//     (GuiInputHandler::on_github_check_complete) — wherever he is, the main
+//     page included, the check running at every project open — and AN
+//     ENTRY TO THE HISTORY VIEW whose standing status is failing
+//     (GuiInputHandler::open_history_mode_fresh). A raise while the card
+//     stands re-words it in place if the words differ and otherwise does
+//     nothing; never a second card.
+//   * RE-WORDED IN PLACE OR CLEARED BY ITSELF by the tick's sync
+//     (GuiNotifications::sync_github_card, main.cpp), which never raises: a
+//     standing card follows the status — another failing status re-words it
+//     (a checkpoint's own reading, Ahead after a push that did not land),
+//     and the moment the status is no longer failing it goes (a check
+//     dispatched reads Checking; a push that landed reads UpToDate; a pull
+//     reads UpToDate).
+//   * TAPPED AWAY (the lift on it, or the whole stack's dismissal) it STAYS
+//     AWAY until the next of the two events with a failing status, or the
+//     next project's open (a fresh AppState, whose open runs the check).
+// AN ACT'S ANSWER RAISES NO STATUS CARD: the checkpoint's own failure cards
+// (on_history_checkpoint_complete), the pull's and the publish key's
+// (run_publish_chord) are the act's, and stand or time out as their own.
 //
 // WHAT IS NOT A CARD, by ruling — these and no others:
 //   * A BENIGN REFUSAL OF A ONE-DIMENSIONAL COMMAND ALREADY AT ITS STATE
@@ -1096,6 +1138,19 @@ struct GuiNotifications {
     // key has not moved asks nothing more than six compares.
     void sync_struck_card(const GuiAudio& audio);
 
+    // THE GITHUB CARD (the head's THE GITHUB CARD; architect 2026-11-27).
+    // RAISE: at the check's answer and at an entry to the history view
+    // (their two callers, GuiInputHandler::on_github_check_complete and
+    // open_history_mode_fresh) — a failing status raises the card, or
+    // re-words a standing one in place where the words differ; a status
+    // that is not failing does nothing here (the sync takes the card down).
+    void raise_github_card();
+    // SYNC: on the run loop's tick, never raising — a standing card is
+    // re-worded in place to a failing status's words or cleared by itself
+    // when the status is no longer failing; with no card standing (never
+    // raised, tapped away, or the stack dismissed) one id compare.
+    void sync_github_card();
+
     // The hover walk, from the motion handler and the tick: which card the
     // pointer rests on. Entering a visible normal card banks its remaining
     // life; leaving re-arms it unless a press still holds it. A card whose
@@ -1117,4 +1172,14 @@ private:
     // the last one ends, and banks nothing for a card already due.
     void rebank(uint64_t id, int64_t now);
     AppState::Notification* find(uint64_t id);
+    // THE STATE CARDS' TWO SHARED STEPS (the struck card and the GitHub
+    // card, the two critical cards a state takes down): RETIRE card `id`
+    // from the stack, its hover with it, damaging the stack; RE-WORD a
+    // standing card in place where `words` differ — the same card, its seat
+    // kept, ITS OWN PAINTED RECT DAMAGED (new words on an unmoved rect are a
+    // change the stack's rect compare cannot see) and the stack's owner
+    // damaging what a new width moved (each card its content's width,
+    // architect 2026-11-19).
+    void retire_state_card(uint64_t id);
+    void reword_state_card(AppState::Notification& card, std::string words);
 };

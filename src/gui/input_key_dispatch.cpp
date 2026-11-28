@@ -1172,22 +1172,23 @@ void GuiInputHandler::republish_history_lane_now() {
 // THE ENTRY CHECKS GITHUB WHERE NO ANSWER STANDS (architect 2026-10-28: "every
 // time I pop in and out of the history it says checking"): a visit that bootstrapped a clone dispatches
 // the GitHub check (dispatch_github_check) when the status reads UNCHECKED (no
-// reading: the project's own check could not classify, or a checkpoint ended
-// WriteFailed before taking one) or OFFLINE (the link may have come up since —
-// the publish chord asks again on the same reasoning, run_publish_chord,
-// architect 2026-09-28). UP TO DATE, AHEAD, BEHIND, DIVERGED and REFUSED
-// STAND, and the status bar's walk line says "as of the last check"
-// truthfully, because
+// reading taken), UNREADABLE (the clone could not be read or
+// fetched into, architect 2026-11-27 — what may have cleared since) or
+// OFFLINE (the link may have come up since — the publish chord asks again on
+// the same reasoning, run_publish_chord, architect 2026-09-28). UP TO DATE,
+// AHEAD, BEHIND, DIVERGED and REFUSED STAND, and Save's face and the GitHub
+// card (notifications.h's THE GITHUB CARD, raised again at this entry for a
+// failing status) say "as of the last check" truthfully, because
 // every act of this program that can move either side writes its own reading:
 // the PROJECT OPEN dispatches the check (main.cpp's open arm); the CHECKPOINT'S
 // completion writes the act's own fetched reading
 // (on_history_checkpoint_complete); a PULL writes UpToDate, and its plan and
 // its delayed refusals write what the refs show (run_history_pull_press,
 // execute_history_pull). THE OTHER DEVICE MOVING GITHUB BETWEEN TWO VISITS is
-// met by the act, not the word: the checkpoint fetches first and refuses on a
+// met by the act, not the status: the checkpoint fetches first and refuses on a
 // moved remote (RemoteMoved), the pull's plan refuses a branch no longer
 // strictly behind the refs the last fetch left (plan_history_pull's Moved).
-// The cost is a stale word in the walk line until the next act or project
+// The cost is a stale face (and a stale card) until the next act or project
 // open.
 void GuiInputHandler::open_history_mode_fresh() {
     // THE STALENESS KICK, ABOVE EVERYTHING (2026-08-07): the walk lives in the
@@ -1278,16 +1279,25 @@ void GuiInputHandler::open_history_mode_fresh() {
     app.history_mode = std::move(fresh);
     // THE GITHUB CHECK, at an entry that bootstrapped a clone WHERE NO ANSWER
     // STANDS (the ruling and its proof are at the head of this owner):
-    // Unchecked or Offline dispatches, and the status reads Checking until
-    // the worker answers, Save's face greying meanwhile; every other reading
-    // (Checking itself included — an answer is already on its way) is shown
-    // as it stands, a Refused one until the piece is reopened or an act
-    // re-reads it (architect 2026-10-28).
+    // Unchecked, Unreadable or Offline dispatches, and the status reads
+    // Checking until the worker answers, Save's face greying meanwhile (and a
+    // standing GitHub card going with the failing status, the tick's
+    // sync_github_card); every other reading (Checking itself included — an
+    // answer is already on its way) is shown as it stands, a Refused one
+    // until the piece is reopened or an act re-reads it (architect
+    // 2026-10-28).
     if (history_remote_walk_available(app) &&
         (app.github_status == GuiGitHubStatus::Unchecked ||
+         app.github_status == GuiGitHubStatus::Unreadable ||
          app.github_status == GuiGitHubStatus::Offline)) {
         dispatch_github_check();
     }
+    // AN ENTRY WHOSE STANDING STATUS IS FAILING RAISES THE GITHUB CARD
+    // (architect 2026-11-27; notifications.h's THE GITHUB CARD — Refused,
+    // Diverged, Ahead, and Unreadable on a visit with no clone to re-ask): a
+    // card tapped away stands again here; a status the dispatch above just
+    // turned to Checking raises nothing, the check's answer being its raise.
+    notifications.raise_github_card();
     drop_lane_stash_across_history_edge();
     // AND THE LANE IS REPUBLISHED IN THIS PRESS (2026-08-07): the view opens
     // showing the viewed checkpoint's flags rather than an empty lane that fills
@@ -2797,11 +2807,12 @@ bool history_mode_key_blocked_in_every_state(GuiKey key, GuiInputState mods) {
 //     face (history_checkpoint_actionable and its two siblings, app_state.h)
 //     greys every status the act cannot run, and on the main page the face is
 //     the dirty mark alone, so every status reaches here — Checking, Refused,
-//     Unchecked and Diverged each card their sentence; OFFLINE ASKS GITHUB
-//     AGAIN (dispatch_github_check; architect 2026-09-28) and nothing else,
-//     the answer being what the next press acts on — silent in the view, whose
-//     status bar's walk line shows the asking, and a card outside it, where
-//     the status bar carries no GitHub word; BEHIND is the PULL
+//     Unchecked, Diverged and Unreadable each card their sentence; OFFLINE
+//     ASKS GITHUB AGAIN (dispatch_github_check; architect 2026-09-28) and
+//     nothing else, the answer being what the next press acts on — silent in
+//     the view, where Save's face greys while the check runs and then wears
+//     the answer, and a card outside it, where Save wears the dirty mark
+//     alone; BEHIND is the PULL
 //     (run_history_pull_press, its Cancel / Pull confirmation when the pull
 //     changes the open piece; the press owns the one road); UP TO DATE OR
 //     AHEAD COMMITS: the act saves first, and the worker commits whatever git
@@ -2844,13 +2855,12 @@ void GuiInputHandler::run_publish_chord() {
         // BE STALE — a view opened while the link was still coming up would
         // read offline for its whole life — so the act never answers from it.
         // The press asks again through the check's one dispatcher and does
-        // nothing else: in the view the status bar's walk line turns to
-        // `checking...` and then the answer, and the next press acts on it
-        // (Behind puts the Pull face up; the Save key reads CHECK on these
-        // terms in the view, redesign_button_glyph's fourth glyph,
-        // 2026-10-28). No card in the view — the walk line shows the asking;
-        // OUTSIDE IT the status bar carries no GitHub word, so the press says
-        // what it did.
+        // nothing else: in the view Save's face greys while the check runs
+        // and then wears the answer, and the next press acts on it (Behind
+        // puts the Pull face up; the Save key reads CHECK on these terms in
+        // the view, redesign_button_glyph's fourth glyph, 2026-10-28). No
+        // card in the view — the face shows the asking; OUTSIDE IT Save wears
+        // the dirty mark alone, so the press says what it did.
         dispatch_github_check();
         if (!in_view) {
             notifications.notify(AppState::NotificationClass::Normal,
@@ -2862,11 +2872,18 @@ void GuiInputHandler::run_publish_chord() {
                              "GitHub refused this device");
         return;
     case GuiGitHubStatus::Unchecked:
-        // No reading at all: the check could not classify this clone (a
-        // read that did not answer; a detached or unborn HEAD is Refused,
-        // head_on_main), and its entry line on stderr says which.
+        // No reading at all: the project's check has not answered (it was
+        // cancelled) — a source with no clone never reaches here, refused
+        // above as unavailable.
         notifications.notify(AppState::NotificationClass::Normal,
                              "GitHub has not been checked");
+        return;
+    case GuiGitHubStatus::Unreadable:
+        // THE CLONE COULD NOT BE READ OR FETCHED INTO (architect
+        // 2026-11-27): the check's stderr line says which. The view's entry
+        // asks again (open_history_mode_fresh).
+        notifications.notify(AppState::NotificationClass::Normal,
+                             "GitHub could not be checked");
         return;
     case GuiGitHubStatus::Diverged:
         // FAST-FORWARD ONLY: no in-app resolution. The fix is named on stderr.
@@ -3239,8 +3256,9 @@ void GuiInputHandler::dispatch_github_check() {
     job.source_audio_path = app.source_audio_path;
     job.projects_repo     = app.projects_repo;
     app.github_status     = GuiGitHubStatus::Checking;
-    // The walk line and Save's face read the status: the face through the
-    // tick's comparator, the line through this damage while the view stands.
+    // Save's face reads the status through the tick's comparator, and a
+    // standing GitHub card leaves with the failing status through the tick's
+    // sync (sync_github_card); this damage repaints the view while it stands.
     if (app.history_mode.active) viewport.invalidate_all();
     history_commit_worker.dispatch(
         std::move(job),
@@ -3249,12 +3267,15 @@ void GuiInputHandler::dispatch_github_check() {
         });
 }
 
-// THE CHECK'S ANSWER, on the main thread. ADVISORY: a status and nothing else
-// — no card (the failing readings printed their cause on stderr from the
-// worker), and the walk line's GitHub word and Save's face are the whole
-// report.
+// THE CHECK'S ANSWER, on the main thread: the status, and A FAILING ONE
+// RAISES THE GITHUB CARD (architect 2026-11-27: "I prefer that we show a red
+// card permanently where there's any failure"; notifications.h's THE GITHUB
+// CARD) wherever he is, the main page included — the check runs at every
+// project open. Save's face and the card are the whole report; the failing
+// readings printed their cause on stderr from the worker.
 void GuiInputHandler::on_github_check_complete(GuiGitHubStatus status) {
     app.github_status = status;
+    notifications.raise_github_card();
     if (app.history_mode.active) viewport.invalidate_all();
 }
 

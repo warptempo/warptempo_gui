@@ -428,14 +428,7 @@ void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
     // CLEARED BY ITSELF: no warp marker coincides, so the state the card
     // said is no longer true (an undo, a delete, a move apart).
     if (count == 0) {
-        if (card != nullptr) {
-            const uint64_t id = card->id;
-            if (st.hovered_id == id) set_hover(0);
-            std::erase_if(st.cards, [id](const AppState::Notification& n) {
-                return n.id == id;
-            });
-            viewport.invalidate_notification_stack();
-        }
+        if (card != nullptr) retire_state_card(card->id);
         st.struck_card_id = 0;
         return;
     }
@@ -465,19 +458,11 @@ void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
     if (runs.size() > kNamedPlaces)
         words += " and " + std::to_string(runs.size() - kNamedPlaces) + " more";
     if (card != nullptr) {
-        // RE-WORDED IN PLACE: the same card, its seat in the stack kept. ITS
-        // OWN PAINTED RECT IS DAMAGED (new words on an unmoved rect — a count
-        // or a place of one width for another, every digit sharing one
-        // advance — are a change the stack's rect compare cannot see), and
-        // the stack's owner damages what a new width moved (a place named or
-        // dropped, a count gaining a digit: each card its content's width,
-        // architect 2026-11-19).
-        if (card->text != words) {
-            card->text = std::move(words);
-            for (const AppState::NotificationPainted& p : st.painted)
-                if (p.id == card->id) viewport.invalidate_rect(p.rect);
-            viewport.invalidate_notification_stack();
-        }
+        // RE-WORDED IN PLACE (reword_state_card): a count or a place of one
+        // width for another, every digit sharing one advance, is new words
+        // on an unmoved rect; a place named or dropped, a count gaining a
+        // digit, a new width.
+        reword_state_card(*card, std::move(words));
         return;
     }
     // TAPPED AWAY (or never raised): it stands again only after an edit (or
@@ -485,6 +470,86 @@ void GuiNotifications::sync_struck_card(const GuiAudio& audio) {
     if (!edited) return;
     notify(AppState::NotificationClass::Critical, std::move(words));
     st.struck_card_id = st.cards.front().id;
+}
+
+// THE GITHUB CARD'S WORDS — THE ONE TABLE (notifications.h's THE GITHUB
+// CARD; architect 2026-11-27): one clause each, no key named, no period. A
+// status with no words is no failing one and wears no card.
+static const char* github_card_words(GuiGitHubStatus status) {
+    switch (status) {
+    case GuiGitHubStatus::Refused:
+        return "GitHub refused this device";
+    case GuiGitHubStatus::Diverged:
+        return "This device and GitHub have both moved";
+    case GuiGitHubStatus::Unreadable:
+        return "GitHub could not be checked";
+    case GuiGitHubStatus::Ahead:
+        return "This device has checkpoints GitHub does not have";
+    case GuiGitHubStatus::Unchecked:
+    case GuiGitHubStatus::Checking:
+    case GuiGitHubStatus::UpToDate:
+    case GuiGitHubStatus::Behind:
+    case GuiGitHubStatus::Offline:
+        return nullptr;
+    }
+    return nullptr;
+}
+
+void GuiNotifications::raise_github_card() {
+    // THE TWO EVENTS' ONE RAISE (notifications.h's THE GITHUB CARD): a
+    // failing status stands as the card — a standing one re-worded in place,
+    // else a new critical card; a status that is not failing raises nothing
+    // (a standing card is the tick's sync's to take down).
+    AppState::Notifications& st = app.notifications;
+    const char* words = github_card_words(app.github_status);
+    if (words == nullptr) return;
+    if (AppState::Notification* card =
+            st.github_card_id != 0 ? find(st.github_card_id) : nullptr) {
+        reword_state_card(*card, words);
+        return;
+    }
+    notify(AppState::NotificationClass::Critical, words);
+    st.github_card_id = st.cards.front().id;
+}
+
+void GuiNotifications::sync_github_card() {
+    // THE TICK'S SYNC (notifications.h's THE GITHUB CARD), NEVER A RAISE:
+    // with no card standing it owes nothing — tapped away, it stays away
+    // until the next of the two events — and a standing card follows the
+    // status, re-worded to a failing one's words or CLEARED BY ITSELF when
+    // the status is no longer failing.
+    AppState::Notifications& st = app.notifications;
+    if (st.github_card_id == 0) return;
+    AppState::Notification* card = find(st.github_card_id);
+    if (card == nullptr) {
+        st.github_card_id = 0;
+        return;
+    }
+    const char* words = github_card_words(app.github_status);
+    if (words == nullptr) {
+        retire_state_card(card->id);
+        st.github_card_id = 0;
+        return;
+    }
+    reword_state_card(*card, words);
+}
+
+void GuiNotifications::retire_state_card(uint64_t id) {
+    AppState::Notifications& st = app.notifications;
+    if (st.hovered_id == id) set_hover(0);
+    std::erase_if(st.cards, [id](const AppState::Notification& n) {
+        return n.id == id;
+    });
+    viewport.invalidate_notification_stack();
+}
+
+void GuiNotifications::reword_state_card(AppState::Notification& card,
+                                         std::string words) {
+    if (card.text == words) return;
+    card.text = std::move(words);
+    for (const AppState::NotificationPainted& p : app.notifications.painted)
+        if (p.id == card.id) viewport.invalidate_rect(p.rect);
+    viewport.invalidate_notification_stack();
 }
 
 void GuiNotifications::press_hold_edge(uint64_t id) {

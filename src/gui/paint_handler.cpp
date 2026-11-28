@@ -1047,17 +1047,21 @@ static constexpr const char* kSegmentSeparator = " | ";
 // (status_bar_text; 2026-11-19). While the mode stands this line is
 // what that field is for.
 //
-// THE SHAPE (architect 2026-09-28; the GitHub segment ahead of the scale
-// 2026-09-29; the date after the position 2026-11-25): SEGMENTS SEPARATED BY
-// ` | `, every one alike — the POSITION `x/y`, then on the commit walk the
-// DATE segment `YYYY-MM-DD hh:mm AM` when the window holds a member, then the
-// GITHUB segment `GitHub: <word>` when there is one, then the SCALE segment
-// `Scale: [-]<then token> [+]<now token>` when the scale changed (all three
-// below) — so an absent segment leaves no separator behind it and nothing
-// leads or trails: `03/14 | 2026-11-24 03:38 PM | GitHub: up to date |
-// Scale: [-]1.0 [+]1.1`, `03/14 | 2026-11-24 03:38 PM | GitHub: behind`,
-// `007/114` on the local walk. The same shape on BOTH walks, the date the
-// commit walk's alone. THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
+// THE SHAPE (architect 2026-09-28; the date after the position 2026-11-25):
+// SEGMENTS SEPARATED BY ` | `, every one alike — the POSITION `x/y`, then on
+// the commit walk the DATE segment `YYYY-MM-DD hh:mm AM` when the window
+// holds a member, then the SCALE segment `Scale: [-]<then token> [+]<now
+// token>` when the scale changed (both below) — so an absent segment leaves
+// no separator behind it and nothing leads or trails: `03/14 | 2026-11-24
+// 03:38 PM | Scale: [-]1.0 [+]1.1`, `03/14 | 2026-11-24 03:38 PM`, `007/114`
+// on the local walk, `0/0` the empty window. The same shape on BOTH walks,
+// the date the commit walk's alone.
+// THE LINE CARRIES NO GITHUB WORD (architect 2026-11-27: "i tihnk the
+// 'Github: up to date' notice was design for multi-device setup that no
+// longer exists - it simply takes up space"): Save's face in the view and
+// THE GITHUB CARD (notifications.h), a failing status's standing red card,
+// are the status's whole report.
+// THE SCALE SEGMENT KEEPS ITS SIGNS, `[-]` before the then
 // token and `[+]` before the now one, spelled here: the lane's labels carry
 // the side by the strike (architect 2026-10-26; history_diff_label), and
 // this line, a plain run, has no strike to carry it. THE LINE STANDS AT
@@ -1118,9 +1122,8 @@ static std::string history_walk_line(AppState& app) {
     // the time the title bar clock's own spelling (clock_spelling,
     // gui_battery.h, the one owner) — `2026-11-24 03:38 PM` — read from the
     // walk's member (GuiHistoryDiff::commit_time_at; the walk read it off the
-    // commit, so this runs no git). It stands second, ahead of the GitHub
-    // word, by his agreed example's order, the bar clipping at its right
-    // edge. THE COMMIT WALK ONLY: a local member is no commit and has no
+    // commit, so this runs no git). It stands second, by his agreed
+    // example's order, the bar clipping at its right edge. THE COMMIT WALK ONLY: a local member is no commit and has no
     // time, and the empty window (`0/0`) has no member, so neither shows the
     // segment.
     if (app.history_mode.source == GuiHistoryWalkSource::Commit) {
@@ -1138,25 +1141,6 @@ static std::string history_walk_line(AppState& app) {
             line += date;
             line += ' ';
             line += clock_spelling(local);
-        }
-    }
-    // THE GITHUB SEGMENT, THIRD, AHEAD OF THE SCALE (architect 2026-09-27;
-    // its seat 2026-09-29): how this device stands against
-    // GitHub as of the last check — `GitHub: checking...` / `up to date` /
-    // `ahead` / `behind` / `diverged` / `offline` / `refused`
-    // (github_status_word) — in the line's own `Label: value` shape, on BOTH
-    // walks, because what the view's Save key does depends on it
-    // whichever walk is showing. It stands ahead of the scale because the
-    // status bar clips its line at the panel's right edge (paint_status_bar):
-    // where the line is wider than the bar the cut falls on the scale, which
-    // the diff lane also shows, and never on the word Ctrl+S forks on. A visit with no clone (the local fallback)
-    // has no segment, and neither has an Unchecked status. The position
-    // always precedes it (`0/0` at worst), so the separator is unconditional.
-    if (history_remote_walk_available(app)) {
-        if (const char* word = github_status_word(app.github_status)) {
-            line += kSegmentSeparator;
-            line += "GitHub: ";
-            line += word;
         }
     }
     // THE SCALE SEGMENT, LAST: something always precedes it (the position,
@@ -1196,15 +1180,14 @@ static std::string history_walk_line(AppState& app) {
 //      switch, so it never mixes), "1 warp marker selected", "5 warp markers
 //      selected", "1 phase reset selected", "3 phase resets selected" (warp
 //      is never the unmarked default). Nothing else rides it.
-//   3. GITHUB, IN THE HISTORY VIEW ONLY ("Keep it in the history only"): the
-//      remote's standing state the view already prints — the walk line's
-//      own "GitHub: <word>" segment (github_status_word), so field 1 carries
-//      it and no third field is composed (the history view has no other
-//      word for the remote; nothing here opens the network).
+// NO GITHUB FIELD AND NO GITHUB WORD (architect 2026-11-27: "it simply takes
+// up space"): the remote's standing state is Save's face in the history view
+// and THE GITHUB CARD (notifications.h), a failing status's standing red
+// card.
 // UNDER AN OVERLAY OR A MODAL (modal_box_stands — the folder overlay's
 // contents, a value sub-page, the score viewer, a question's page — or an
-// open text editor, the flag editor's among them) the bar keeps fields 1
-// and 3 and DROPS FIELD 2 (his "agree").
+// open text editor, the flag editor's among them) the bar keeps field 1 and
+// DROPS FIELD 2 (his "agree").
 // WHILE A BATCH'S PROGRESS STANDS THE BAR IS BLANK (architect 2026-11-20,
 // to "blank the status bar while the progress page stands": "agree"): the
 // string is empty for as long as AppState::batch_progress is

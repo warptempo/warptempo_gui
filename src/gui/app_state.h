@@ -7933,8 +7933,7 @@ struct AppState {
     // and an added one. The flags sit at their
     // authored frames through the live lane's own column mapping, so a removed
     // marker stands exactly where it stood. The status bar carries the walk line: the member's position, then on the
-    // commit walk the commit's date and time, then the
-    // `GitHub: <word>` segment, then the `Scale:` segment when the `scale=`
+    // commit walk the commit's date and time, then the `Scale:` segment when the `scale=`
     // value changed, separated by ` | ` (history_walk_line,
     // paint_handler.cpp, owns its shape).
     //
@@ -8951,13 +8950,15 @@ struct AppState {
     // against GitHub as of the last fetch. PER PROJECT, born Unchecked with
     // this AppState, written on the MAIN THREAD alone: Checking when a check
     // is dispatched (GuiInputHandler::dispatch_github_check — every project
-    // open, an `h` entry while Unchecked or Offline (2026-10-28: a standing
-    // answer is reused, open_history_mode_fresh's head), and the publish
+    // open, an `h` entry while Unchecked, Unreadable or Offline (2026-10-28:
+    // a standing answer is reused, open_history_mode_fresh's head), and the publish
     // chord in either view while Offline — SAVE's long press on the main
     // page, the `h` view's Save key), the
     // check's reading at its completion, the checkpoint act's own fetched
     // reading at its completion, and UpToDate when a pull lands. READ BY
-    // the status bar's `h` walk line (its `GitHub: <word>` segment), by the Save
+    // THE GITHUB CARD (notifications.h; architect 2026-11-27: a failing
+    // status is one standing red card, raised at the check's answer and the
+    // view's entry, re-worded or cleared by the tick), by the Save
     // button's face in the view (its grey, the Pull glyph while Behind and
     // the Check glyph where the chord asks again —
     // history_checkpoint_actionable, history_pull_actionable,
@@ -9092,6 +9093,12 @@ struct AppState {
         int                              struck_seen_rate  = 0;
         long                             struck_seen_total = 0;
         std::string                      struck_seen_text;
+        // THE GITHUB CARD'S ID (notifications.h's THE GITHUB CARD; its
+        // writers GuiNotifications::raise_github_card and sync_github_card,
+        // architect 2026-11-27): the card's id while it was last raised (0
+        // none; a card no longer in the stack was tapped away). Per
+        // AppState, so per project, as the status it wears.
+        uint64_t                         github_card_id    = 0;
     };
     Notifications notifications;
 
@@ -14883,8 +14890,9 @@ inline bool history_revert_actionable(const AppState& a) {
 // SessionHistory arm); SAVE'S FACE in the view through the three
 // predicates below, which grey the checkpoint act without a clone (so the
 // act, run_publish_chord, never meets one in the view; a main-page press
-// asks its own transient session's verdict there and cards it); the status bar's walk line's GitHub SEGMENT (history_walk_line), which stands
-// only on a visit that has a clone; and the FAILED-SCAN ARRIVAL
+// asks its own transient session's verdict there and cards it); the entry's
+// GitHub re-ask (open_history_mode_fresh), which dispatches the check only
+// on a visit that has a clone; and the FAILED-SCAN ARRIVAL
 // (on_history_prefetch_ready), which is the odd one out — it does not refuse
 // an act but CARVES A FALLBACK VISIT OUT of the closer that ends a visit whose
 // remote premise failed, such a visit never having had that premise. The
@@ -14926,8 +14934,10 @@ inline bool history_pull_actionable(const AppState& a) {
 // already owes, and a tree git sees clean with nothing owed ends
 // NothingToCommit, which cards (on_history_checkpoint_complete). So the face
 // is lit whenever a commit can be made. Every other status greys the face —
-// Checking, Refused, Diverged and Unchecked, each carded by the key at the
-// act (run_publish_chord) for a status that moved inside the painted frame —
+// Checking, Refused, Diverged, Unreadable and Unchecked, each carded by the
+// key at the act (run_publish_chord) for a status that moved inside the
+// painted frame, and the failing ones worn by THE GITHUB CARD
+// (notifications.h, architect 2026-11-27) —
 // Behind is the PULL's face instead (history_pull_actionable above) and
 // Offline the CHECK's (history_github_recheck_actionable below). So an
 // offline device takes no checkpoint (architect 2026-09-27). (Outside the
@@ -14957,7 +14967,8 @@ inline bool history_checkpoint_actionable(const AppState& a) {
 // GitHub status reads OFFLINE: the reading may be minutes old (the hotspot
 // coming up after the view opened), so the chord and the Save button's lift
 // DISPATCH THE CHECK (dispatch_github_check, its one dispatcher) and nothing
-// else — the status bar's walk line reads `checking...` and then the answer, and the next press
+// else — the face greys while the check runs and then wears the answer, a
+// failing one raising THE GITHUB CARD (notifications.h), and the next press
 // acts on it (Behind puts the Pull face up). The face is live on these terms
 // (a face that advertises an act dispatches it) and greys under Checking like
 // every other status in flight, and it names the act (2026-10-28): Save's

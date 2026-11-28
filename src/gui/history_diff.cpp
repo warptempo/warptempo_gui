@@ -2235,12 +2235,18 @@ std::vector<std::string> checkpoint_paths(const std::string& project_directory,
 // THE STATUS THE REFS SHOW NOW: the checked-out `branch` against
 // `refs/remotes/origin/<branch>` (compare_with_origin), no network — the
 // check's reading after its fetch. Diverged prints its cause on one stderr
-// line; a reading that does not answer is Unchecked.
+// line; a branch that could not be compared with the fetched ref is
+// Unreadable (architect 2026-11-27: the clone could not be read, so GitHub
+// could not be checked), its line on stderr too.
 GuiGitHubStatus github_status_from_refs(const GuiGitRepo&  repo,
                                         const std::string& branch) {
     const GuiGitUpstream up = repo.compare_with_origin(branch);
     if (up.reading != GuiGitUpstream::Reading::Compared) {
-        return GuiGitHubStatus::Unchecked;
+        std::fprintf(stderr,
+                     "warptempo_gui: GitHub could not be checked: could not "
+                     "compare '%s' with 'origin/%s'\n",
+                     branch.c_str(), branch.c_str());
+        return GuiGitHubStatus::Unreadable;
     }
     if (up.ahead > 0 && up.behind > 0) {
         std::fprintf(stderr,
@@ -2607,38 +2613,31 @@ GuiHistoryCommitOutcome commit_history_checkpoint(
 // the GitHub check
 // ---------------------------------------------------------------------------
 
-const char* github_status_word(GuiGitHubStatus status) {
-    switch (status) {
-    case GuiGitHubStatus::Unchecked: return nullptr;
-    case GuiGitHubStatus::Checking:  return "checking...";
-    case GuiGitHubStatus::UpToDate:  return "up to date";
-    case GuiGitHubStatus::Ahead:     return "ahead";
-    case GuiGitHubStatus::Behind:    return "behind";
-    case GuiGitHubStatus::Diverged:  return "diverged";
-    case GuiGitHubStatus::Offline:   return "offline";
-    case GuiGitHubStatus::Refused:   return "refused";
-    }
-    return nullptr;
-}
-
-// THE CHECK IS ADVISORY: it owns no failure. Every answer is a status, the
-// two failing ones printing their cause on one stderr line (the screen's word
-// is the state; the terminal carries why), and a check that cannot classify
-// answers Unchecked in silence — the `h` entry has already said on stderr why
-// that visit has no remote walk.
+// THE CHECK OWNS NO CARD: every answer is a status, each failing one
+// printing its cause on one stderr line (the screen's report is the status,
+// worn by Save's face and THE GITHUB CARD, notifications.h; the terminal
+// carries why). A source with no clone answers Unchecked in silence — no
+// failure of GitHub's, and the `h` entry has already said on stderr why that
+// visit has no remote walk.
 GuiGitHubStatus check_github(const std::string&       source_audio_path,
                              const std::string&       projects_repo,
                              const std::atomic<bool>& cancel) {
     // THE CLONE AND THE GUARD, through the header's own derivation — the same
     // answer the `h` entry binds to. A guard refusal is Refused (the clone's
-    // remotes are not the projects home); any other header refusal has no
-    // clone to ask and answers Unchecked.
+    // remotes are not the projects home); a source with no clone has nothing
+    // to ask and answers Unchecked; A CLONE THAT WOULD NOT OPEN under a good
+    // root is Unreadable (architect 2026-11-27: GitHub could not be checked).
     const GuiHistoryRepoRoot root =
         resolve_repo_root_for_source(source_audio_path);
     if (!root.ok) return GuiGitHubStatus::Unchecked;
     GuiFailure                open_reason;
     std::optional<GuiGitRepo> repo = open_clone_for(root.path, open_reason);
-    if (!repo) return GuiGitHubStatus::Unchecked;
+    if (!repo) {
+        std::fprintf(stderr,
+                     "warptempo_gui: GitHub could not be checked: %s\n",
+                     open_reason.diagnostic.c_str());
+        return GuiGitHubStatus::Unreadable;
+    }
     // THE COLD-START LOCK RECOVERY, before the fetch can write.
     recover_stale_locks_once(*repo, root.path);
     GuiFailure  guard_reason;
@@ -2676,13 +2675,13 @@ GuiGitHubStatus check_github(const std::string&       source_audio_path,
                      diag.c_str());
         return GuiGitHubStatus::Offline;
     case GuiGitFetch::LocalFailed:
-        // THIS CLONE FAILED THE FETCH, not the network: no reading, and no
-        // new word — the status bar shows none, stderr says why.
+        // THIS CLONE FAILED THE FETCH, not the network: Unreadable, GitHub
+        // could not be checked (architect 2026-11-27), stderr saying why.
         std::fprintf(stderr,
-                     "warptempo_gui: GitHub not checked: the fetch failed in "
-                     "this clone: %s\n",
+                     "warptempo_gui: GitHub could not be checked: the fetch "
+                     "failed in this clone: %s\n",
                      diag.c_str());
-        return GuiGitHubStatus::Unchecked;
+        return GuiGitHubStatus::Unreadable;
     case GuiGitFetch::Fetched:
         break;
     }

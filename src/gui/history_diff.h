@@ -1186,26 +1186,38 @@ enum class GuiHistoryCommitOutcome {
 };
 
 // THE GITHUB STATUS (architect 2026-09-27) — how this device's branch stands
-// against GitHub, as of the last fetch. The status bar's `h` walk line says it as
-// `GitHub: <word>` (github_status_word), and it selects what the publish
-// chord (Ctrl+Shift+S, in either view) does: UpToDate commits, Ahead
-// commits or retries the push, Behind pulls, Offline asks GitHub again, and
-// the rest refuse with a card (run_publish_chord).
-//   Unchecked — no reading: the project's first check has not been
-//               dispatched, or the check could not classify (no clone, a
-//               read that did not answer, a fetch that failed in the clone
-//               rather than on the network). The walk line shows no
-//               GitHub word.
-//   Checking  — a check is on the worker.
-//   UpToDate  — nothing either way.
-//   Ahead     — this branch has commits GitHub has not (a push that failed).
-//   Behind    — GitHub has commits this branch has not; the pull's case.
-//   Diverged  — both have moved; fast-forward only, so no in-app answer.
-//   Offline   — the fetch could not reach GitHub; the publish chord
-//               dispatches the check again.
-//   Refused   — GitHub declined this device, the guard refused the clone's
-//               remotes, or HEAD is not on main (another branch, or
-//               detached: main is the only branch, architect 2026-09-28).
+// against GitHub, as of the last fetch. It selects what the publish chord
+// (Ctrl+Shift+S, in either view) does: UpToDate commits, Ahead commits or
+// retries the push, Behind pulls, Offline asks GitHub again, and the rest
+// refuse with a card (run_publish_chord). THE SCREEN'S WHOLE REPORT OF IT IS
+// SAVE'S FACE IN THE HISTORY VIEW AND THE GITHUB CARD (architect 2026-11-27:
+// "I prefer that we show a red card permanently where there's any failure";
+// the status bar carries no GitHub word): the face greys, wears Pull or wears
+// Check GitHub (history_checkpoint_actionable and its siblings, app_state.h),
+// and a FAILING status — Refused, Diverged, Unreadable, Ahead — is the one
+// standing card of notifications.h's THE GITHUB CARD
+// (github_card_words, notifications.cpp, its one table of words).
+//   Unchecked  — no reading: the project's first check has not been
+//                dispatched, the source has no clone (no failure of
+//                GitHub's: the history entry says why there is no remote
+//                walk), or the check was cancelled.
+//   Checking   — a check is on the worker.
+//   UpToDate   — nothing either way.
+//   Ahead      — this branch has commits GitHub has not (a push that failed).
+//   Behind     — GitHub has commits this branch has not; the pull's case.
+//   Diverged   — both have moved; fast-forward only, so no in-app answer.
+//   Offline    — the fetch could not reach GitHub; the publish chord
+//                dispatches the check again.
+//   Refused    — GitHub declined this device, the guard refused the clone's
+//                remotes, or HEAD is not on main (another branch, or
+//                detached: main is the only branch, architect 2026-09-28).
+//   Unreadable — GITHUB COULD NOT BE CHECKED (architect 2026-11-27): the
+//                clone exists and this device could not read it or fetch
+//                into it — the clone that would not open, a fetch that
+//                failed in the clone rather than on the network
+//                (GuiGitFetch::LocalFailed), or the branch that could not be
+//                compared with the fetched ref. A failing status: the
+//                network was never the cause, so it is no Offline.
 enum class GuiGitHubStatus {
     Unchecked,
     Checking,
@@ -1215,15 +1227,12 @@ enum class GuiGitHubStatus {
     Diverged,
     Offline,
     Refused,
+    Unreadable,
 };
 
-// The walk line's word for a status — "checking...", "up to date", "ahead",
-// "behind", "diverged", "offline", "refused" — or null for Unchecked.
-const char* github_status_word(GuiGitHubStatus status);
-
 // THE GITHUB CHECK — the check job's whole body, run on the checkpoint worker
-// at every project open, an `h` entry with no standing answer (Unchecked or
-// Offline, 2026-10-28; open_history_mode_fresh) and the publish chord under
+// at every project open, an `h` entry with no standing answer (Unchecked,
+// Offline or Unreadable, 2026-10-28; open_history_mode_fresh) and the publish chord under
 // Offline: derive the clone from the source
 // through the same three steps resolve_history_walk_header takes
 // (resolve_repo_root_for_source, open_clone_for and the projects-home guard
@@ -1232,11 +1241,13 @@ const char* github_status_word(GuiGitHubStatus status);
 // (GuiGitRepo::fetch_origin — `refs/heads/<branch>` into
 // `refs/remotes/origin/<branch>`), and compare the branch with that ref
 // (compare_with_origin).
-// The reading, or Unchecked where there is none
-// (GuiGitHubStatus). Offline and Refused print their cause on one stderr
-// line, and so does a fetch that failed in the clone (GuiGitFetch::
-// LocalFailed), which answers Unchecked — advisory: a state and one line,
-// owning no failure and raising no card. `cancel` is the worker's abandon
+// The reading (GuiGitHubStatus): Unchecked where the source has no clone;
+// Unreadable where the clone would not open, the fetch failed in the clone
+// (GuiGitFetch::LocalFailed) or the branch could not be compared after the
+// fetch. Offline, Refused, Diverged and Unreadable print their cause on one
+// stderr line. The check itself raises no card: its caller on the main
+// thread (GuiInputHandler::on_github_check_complete) hands a failing answer
+// to THE GITHUB CARD (notifications.h). `cancel` is the worker's abandon
 // token: a set token ends the fetch at its next callback and answers
 // Unchecked, which nobody reads.
 GuiGitHubStatus check_github(const std::string&       source_audio_path,

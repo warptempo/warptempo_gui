@@ -2620,6 +2620,13 @@ GuiProjectOutcome run_project(GuiPlatform&            gui,
         // strike to ask about.
         if (audio.total_frames() > 0 && !app.loading)
             notifications.sync_struck_card(audio);
+        // THE GITHUB CARD THE SAME WAY (architect 2026-11-27;
+        // notifications.h's THE GITHUB CARD, GuiNotifications::
+        // sync_github_card): a standing card follows the project's GitHub
+        // status, re-worded or cleared by itself, never raised here (its two
+        // raises are the check's answer and the history view's entry); one
+        // id compare when no card stands.
+        notifications.sync_github_card();
 
         // THE TITLE BAR'S RIGHT GROUP, ON EVERY TICK for the same reason: the
         // wall clock and the battery move whatever the project is doing
